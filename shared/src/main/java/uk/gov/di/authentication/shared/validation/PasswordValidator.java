@@ -1,6 +1,5 @@
 package uk.gov.di.authentication.shared.validation;
 
-
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 
@@ -12,7 +11,7 @@ public class PasswordValidator {
     private static final Pattern PASSWORD_REGEX = Pattern.compile(".*\\d.*");
     private CommonPasswordsService commonPasswordsService;
 
-    public PasswordValidator(CommonPasswordsService commonPasswordsService){
+    public PasswordValidator(CommonPasswordsService commonPasswordsService) {
         this.commonPasswordsService = commonPasswordsService;
     }
 
@@ -34,6 +33,4 @@ public class PasswordValidator {
 
         return Optional.empty();
     }
-
-
 }

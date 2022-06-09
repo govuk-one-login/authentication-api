@@ -95,7 +95,8 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
         LOG.info("Received request");
 
         PasswordValidator passwordValidator = new PasswordValidator(commonPasswordsService);
-        Optional<ErrorResponse> passwordValidationErrors = passwordValidator.validate(request.getPassword());
+        Optional<ErrorResponse> passwordValidationErrors =
+                passwordValidator.validate(request.getPassword());
 
         if (passwordValidationErrors.isEmpty()) {
             if (authenticationService.userExists(request.getEmail())) {

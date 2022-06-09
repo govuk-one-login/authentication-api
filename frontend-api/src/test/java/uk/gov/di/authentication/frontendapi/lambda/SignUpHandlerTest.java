@@ -47,8 +47,8 @@ import java.util.stream.Stream;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
@@ -64,7 +64,8 @@ class SignUpHandlerTest {
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ClientService clientService = mock(ClientService.class);
     private final AuditService auditService = mock(AuditService.class);
-    private final CommonPasswordsService commonPasswordsService = mock(CommonPasswordsService.class);
+    private final CommonPasswordsService commonPasswordsService =
+            mock(CommonPasswordsService.class);
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final ClientID CLIENT_ID = new ClientID();
     private static final URI REDIRECT_URI = URI.create("test-uri");
@@ -214,7 +215,8 @@ class SignUpHandlerTest {
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody("{ \"password\": \"TestCommonPassword1\", \"email\": \"joe.bloggs@test.com\" }");
+        event.setBody(
+                "{ \"password\": \"TestCommonPassword1\", \"email\": \"joe.bloggs@test.com\" }");
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));

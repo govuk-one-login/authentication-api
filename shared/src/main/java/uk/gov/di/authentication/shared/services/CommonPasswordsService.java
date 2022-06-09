@@ -23,8 +23,8 @@ public class CommonPasswordsService {
     public boolean isCommonPassword(String password) {
         return commonPasswordsMapper.load(CommonPassword.class, password) != null;
     }
+
     private void warmUp(String tableName) {
         dynamoDB.describeTable(tableName);
     }
 }
-

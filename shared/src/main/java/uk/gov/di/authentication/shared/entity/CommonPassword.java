@@ -15,6 +15,4 @@ public class CommonPassword {
         this.password = password;
         return this;
     }
-
-
 }
