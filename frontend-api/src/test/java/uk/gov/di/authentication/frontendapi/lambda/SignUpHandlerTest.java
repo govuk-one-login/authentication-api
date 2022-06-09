@@ -36,6 +36,7 @@ import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.shared.validation.PasswordValidator;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
@@ -66,6 +67,7 @@ class SignUpHandlerTest {
     private final AuditService auditService = mock(AuditService.class);
     private final CommonPasswordsService commonPasswordsService =
             mock(CommonPasswordsService.class);
+    private final PasswordValidator passwordValidator = mock(PasswordValidator.class);
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final ClientID CLIENT_ID = new ClientID();
     private static final URI REDIRECT_URI = URI.create("test-uri");
@@ -89,7 +91,7 @@ class SignUpHandlerTest {
     @BeforeEach
     void setUp() {
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("1.0");
-        when(commonPasswordsService.isCommonPassword("TestCommonPassword1")).thenReturn(true);
+        doReturn(Optional.of(ErrorResponse.ERROR_1006)).when(passwordValidator).validate("pwd");
         handler =
                 new SignUpHandler(
                         configurationService,
@@ -98,7 +100,8 @@ class SignUpHandlerTest {
                         clientService,
                         authenticationService,
                         auditService,
-                        commonPasswordsService);
+                        commonPasswordsService,
+                        passwordValidator);
     }
 
     private static Stream<Boolean> consentValues() {
@@ -197,30 +200,15 @@ class SignUpHandlerTest {
     }
 
     @Test
-    void shouldReturn400IfPasswordContainsNoNumber() {
+    void shouldReturn400IfPasswordInvalid() {
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody("{ \"password\": \"computer\", \"email\": \"joe.bloggs@test.com\" }");
+        event.setBody("{ \"password\": \"pwd\", \"email\": \"joe.bloggs@test.com\" }");
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1007));
-
-        verifyNoInteractions(auditService);
-    }
-
-    @Test
-    void shouldReturn400IfPasswordIsTooCommon() {
-        usingValidSession();
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody(
-                "{ \"password\": \"TestCommonPassword1\", \"email\": \"joe.bloggs@test.com\" }");
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1040));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1006));
 
         verifyNoInteractions(auditService);
     }

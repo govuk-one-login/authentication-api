@@ -48,6 +48,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
 
     private final AuditService auditService;
     private final CommonPasswordsService commonPasswordsService;
+    private final PasswordValidator passwordValidator;
 
     public SignUpHandler(
             ConfigurationService configurationService,
@@ -56,7 +57,8 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
             ClientService clientService,
             AuthenticationService authenticationService,
             AuditService auditService,
-            CommonPasswordsService commonPasswordsService) {
+            CommonPasswordsService commonPasswordsService,
+            PasswordValidator passwordValidator) {
         super(
                 SignupRequest.class,
                 configurationService,
@@ -66,6 +68,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                 authenticationService);
         this.auditService = auditService;
         this.commonPasswordsService = commonPasswordsService;
+        this.passwordValidator = passwordValidator;
     }
 
     public SignUpHandler() {
@@ -76,6 +79,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
         super(SignupRequest.class, configurationService);
         this.auditService = new AuditService(configurationService);
         this.commonPasswordsService = new CommonPasswordsService(configurationService);
+        this.passwordValidator = new PasswordValidator(commonPasswordsService);
     }
 
     @Override
@@ -94,7 +98,6 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
 
         LOG.info("Received request");
 
-        PasswordValidator passwordValidator = new PasswordValidator(commonPasswordsService);
         Optional<ErrorResponse> passwordValidationErrors =
                 passwordValidator.validate(request.getPassword());
 
