@@ -46,8 +46,8 @@ performance_tuning = {
     scaling_trigger = 0
   }
 }
-lambda_max_concurrency = 0
-lambda_min_concurrency = 50
-keep_lambdas_warm      = true
-endpoint_memory_size   = 4096
-scaling_trigger        = 0.6
+lambda_max_concurrency = 10
+lambda_min_concurrency = 5
+keep_lambdas_warm      = false
+endpoint_memory_size   = 2048
+scaling_trigger        = 0.8
