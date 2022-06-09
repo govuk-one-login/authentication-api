@@ -163,11 +163,11 @@ class StartHandlerTest {
                         "aws-session-id",
                         SESSION_ID,
                         TEST_CLIENT_ID,
-                        auditService.UNKNOWN,
-                        auditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
                         "123.123.123.123",
-                        PERSISTENT_ID,
-                        AuditService.UNKNOWN);
+                        AuditService.UNKNOWN,
+                        PERSISTENT_ID);
     }
 
     @Test
@@ -227,11 +227,11 @@ class StartHandlerTest {
                         "aws-session-id",
                         SESSION_ID,
                         TEST_CLIENT_ID,
-                        auditService.UNKNOWN,
-                        auditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
                         "123.123.123.123",
-                        PERSISTENT_ID,
-                        AuditService.UNKNOWN);
+                        AuditService.UNKNOWN,
+                        PERSISTENT_ID);
     }
 
     @Test
