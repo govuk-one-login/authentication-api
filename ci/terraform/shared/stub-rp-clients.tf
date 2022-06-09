@@ -78,7 +78,7 @@ resource "aws_dynamodb_table_item" "stub_rp_client" {
       N = "1"
     }
     ConsentRequired = {
-      N = "1"
+      N = var.stub_rp_clients[count.index].consent_required
     }
     IdentityVerificationSupported = {
       N = var.stub_rp_clients[count.index].identity_verification_supported
