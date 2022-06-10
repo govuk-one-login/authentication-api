@@ -51,7 +51,6 @@ import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 import java.net.URI;
 import java.security.KeyPair;
 import java.security.PrivateKey;
-import java.security.interfaces.RSAPrivateKey;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
@@ -322,8 +321,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var expiryDate = NowHelper.nowPlus(5, ChronoUnit.MINUTES);
         claimsSet.getExpirationTime().setTime(expiryDate.getTime());
         var privateKeyJWT =
-                new PrivateKeyJWT(
-                        claimsSet, JWSAlgorithm.RS256, (RSAPrivateKey) privateKey, null, null);
+                new PrivateKeyJWT(claimsSet, JWSAlgorithm.RS256, privateKey, null, null);
         Map<String, List<String>> customParams = new HashMap<>();
         customParams.put(
                 "grant_type", Collections.singletonList(GrantType.REFRESH_TOKEN.getValue()));
@@ -426,8 +424,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         new ClientID(CLIENT_ID), new Audience(ROOT_RESOURCE_URL + TOKEN_ENDPOINT));
         claimsSet.getExpirationTime().setTime(expiryDate.getTime());
         PrivateKeyJWT privateKeyJWT =
-                new PrivateKeyJWT(
-                        claimsSet, JWSAlgorithm.RS256, (RSAPrivateKey) privateKey, null, null);
+                new PrivateKeyJWT(claimsSet, JWSAlgorithm.RS256, privateKey, null, null);
         String code = new AuthorizationCode().toString();
         VectorOfTrust vectorOfTrust = VectorOfTrust.getDefaults();
         if (vtr.isPresent()) {

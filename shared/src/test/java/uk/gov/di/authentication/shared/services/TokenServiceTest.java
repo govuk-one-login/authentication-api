@@ -52,7 +52,6 @@ import java.nio.ByteBuffer;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
-import java.security.interfaces.RSAPrivateKey;
 import java.text.ParseException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -470,12 +469,7 @@ public class TokenServiceTest {
                 new JWTAuthenticationClaimsSet(new ClientID(clientId), new Audience(TOKEN_URI));
         claimsSet.getExpirationTime().setTime(expiryTime);
         PrivateKeyJWT privateKeyJWT =
-                new PrivateKeyJWT(
-                        claimsSet,
-                        JWSAlgorithm.RS256,
-                        (RSAPrivateKey) keyPair.getPrivate(),
-                        null,
-                        null);
+                new PrivateKeyJWT(claimsSet, JWSAlgorithm.RS256, keyPair.getPrivate(), null, null);
         Map<String, List<String>> privateKeyParams = privateKeyJWT.toParameters();
         return URLUtils.serializeParameters(privateKeyParams);
     }

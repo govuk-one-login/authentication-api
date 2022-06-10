@@ -65,7 +65,6 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
-import java.security.interfaces.RSAPrivateKey;
 import java.text.ParseException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -493,7 +492,7 @@ public class TokenHandlerTest {
                 new ClientID(CLIENT_ID),
                 URI.create(TOKEN_URI),
                 JWSAlgorithm.RS256,
-                (RSAPrivateKey) privateKey,
+                privateKey,
                 null,
                 null);
     }
