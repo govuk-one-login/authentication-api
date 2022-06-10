@@ -192,10 +192,15 @@ public class AuthorizationService {
     private boolean areScopesValid(List<String> scopes, ClientRegistry clientRegistry) {
         for (String scope : scopes) {
             if (ValidScopes.getAllValidScopes().stream().noneMatch(t -> t.equals(scope))) {
+                LOG.warn("Scopes have been requested which are not yet supported");
                 return false;
             }
         }
-        return clientRegistry.getScopes().containsAll(scopes);
+        if (!clientRegistry.getScopes().containsAll(scopes)) {
+            LOG.warn("Scopes have been requested which this client is not supported to request");
+            return false;
+        }
+        return true;
     }
 
     private boolean areClaimsValid(OIDCClaimsRequest claimsRequest, ClientRegistry clientRegistry) {
@@ -208,10 +213,16 @@ public class AuthorizationService {
                         .collect(Collectors.toList());
         for (String claim : claimNames) {
             if (ValidClaims.getAllValidClaims().stream().noneMatch(t -> t.equals(claim))) {
+                LOG.warn("Claims have been requested which are not yet supported");
                 return false;
             }
         }
-        return clientRegistry.getClaims().containsAll(claimNames);
+        if (!clientRegistry.getClaims().containsAll(claimNames)) {
+            LOG.warn("Claims have been requested which this client is not supported to request");
+            return false;
+        }
+
+        return true;
     }
 
     public String getExistingOrCreateNewPersistentSessionId(Map<String, String> headers) {
