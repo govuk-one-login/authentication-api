@@ -272,7 +272,8 @@ public class IPVCallbackHandler
                                 if (Objects.isNull(userIdentityUserInfo)) {
                                     LOG.error("IPV UserIdentityRequest failed.");
                                     throw new RuntimeException("IPV UserIdentityRequest failed.");
-                                } else {
+                                }
+                                if (configurationService.isIdentityTraceLoggingEnabled()) {
                                     LOG.info(
                                             "IPV UserIdentityRequest succeeded: {}",
                                             userIdentityUserInfo.toJSONObject().toJSONString());
@@ -431,7 +432,12 @@ public class IPVCallbackHandler
                         sectorIdentifier,
                         pairwiseSubject.getValue(),
                         logIds);
-        sqsClient.send(objectMapper.writeValueAsString(spotRequest));
-        LOG.info("SPOT request placed on queue");
+        var spotRequestString = objectMapper.writeValueAsString(spotRequest);
+        sqsClient.send(spotRequestString);
+        if (configurationService.isIdentityTraceLoggingEnabled()) {
+            LOG.info("SPOT request placed on queue: {}", spotRequestString);
+        } else {
+            LOG.info("SPOT request placed on queue");
+        }
     }
 }

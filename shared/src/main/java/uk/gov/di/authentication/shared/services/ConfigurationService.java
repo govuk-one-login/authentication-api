@@ -186,6 +186,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("SPOT_ENABLED", "false").equals("true");
     }
 
+    public boolean isIdentityTraceLoggingEnabled() {
+        return System.getenv()
+                .getOrDefault("IDENTITY_TRACE_LOGGING_ENABLED", "false")
+                .equals("true");
+    }
+
     public long getIDTokenExpiry() {
         return Long.parseLong(System.getenv().getOrDefault("ID_TOKEN_EXPIRY", "120"));
     }
