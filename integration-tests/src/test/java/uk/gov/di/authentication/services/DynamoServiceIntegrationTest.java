@@ -6,6 +6,8 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
+import uk.gov.di.authentication.shared.entity.MFAMethod;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
@@ -31,6 +33,8 @@ class DynamoServiceIntegrationTest {
             ValidScopes.getClaimsForListOfScopes(SCOPES.toStringList());
     private static final ClientConsent CLIENT_CONSENT =
             new ClientConsent(CLIENT_ID, CLAIMS, CREATED_DATE_TIME.toString());
+
+    private static final String TEST_MFA_APP_CREDENTIAL = "test-mfa-app-credential";
 
     @RegisterExtension
     protected static final UserStoreExtension userStore = new UserStoreExtension();
@@ -108,11 +112,40 @@ class DynamoServiceIntegrationTest {
     }
 
     @Test
+    void shouldUpdateEmailAndDeletePreviousItemsWithMfaMethods() {
+        setUpDynamo();
+
+        dynamoService.updateMFAMethod(
+                TEST_EMAIL, MFAMethodType.AUTH_APP, true, TEST_MFA_APP_CREDENTIAL);
+        UserProfile userProfile =
+                dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL).orElseThrow();
+
+        UserCredentials userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+
+        testUpdateEmail(userProfile, userCredentials);
+    }
+
+    @Test
     void shouldHaveZeroConsentsAfterSignUp() {
         setUpDynamo();
         UserProfile userProfile = dynamoService.getUserProfileByEmail(TEST_EMAIL);
 
         assertThat(userProfile.getClientConsent(), equalTo(null));
+    }
+
+    @Test
+    void shouldAddAuthAppMFAMethod() {
+        setUpDynamo();
+        dynamoService.updateMFAMethod(
+                TEST_EMAIL, MFAMethodType.AUTH_APP, true, TEST_MFA_APP_CREDENTIAL);
+        UserCredentials updatedUserCredentials =
+                dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+
+        assertThat(updatedUserCredentials.getMfaMethods().size(), equalTo(1));
+        MFAMethod mfaMethod = updatedUserCredentials.getMfaMethods().get(0);
+        assertThat(mfaMethod.getMfaMethodType(), equalTo(MFAMethodType.AUTH_APP.getValue()));
+        assertThat(mfaMethod.isEnabled(), equalTo(true));
+        assertThat(mfaMethod.getCredentialValue(), equalTo(TEST_MFA_APP_CREDENTIAL));
     }
 
     private void testUpdateEmail(UserProfile userProfile, UserCredentials userCredentials) {
@@ -155,5 +188,6 @@ class DynamoServiceIntegrationTest {
         assertThat(before.getMigratedPassword(), equalTo(after.getMigratedPassword()));
         assertThat(before.getSubjectID(), equalTo(after.getSubjectID()));
         assertThat(before.getCreated(), equalTo(after.getCreated()));
+        assertThat(before.getMfaMethods(), equalTo(after.getMfaMethods()));
     }
 }
