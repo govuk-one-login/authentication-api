@@ -16,7 +16,7 @@ dependencies {
             configurations.ssm,
             configurations.cloudwatch,
             "org.eclipse.jetty:jetty-server:11.0.9",
-            "com.amazonaws:aws-java-sdk-lambda:1.12.235",
+            "com.amazonaws:aws-java-sdk-lambda:1.12.237",
             "com.google.protobuf:protobuf-java:3.21.1",
             "com.google.code.gson:gson:2.9.0"
 
