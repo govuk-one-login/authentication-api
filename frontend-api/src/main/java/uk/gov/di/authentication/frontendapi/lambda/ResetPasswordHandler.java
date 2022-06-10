@@ -16,7 +16,6 @@ import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.helpers.Argon2MatcherHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
-import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -25,11 +24,13 @@ import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
+import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.shared.validation.PasswordValidator;
 
 import java.util.Optional;
 
@@ -44,6 +45,8 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
     private final AwsSqsClient sqsClient;
     private final CodeStorageService codeStorageService;
     private final AuditService auditService;
+    private final CommonPasswordsService commonPasswordsService;
+    private final PasswordValidator passwordValidator;
 
     private static final Logger LOG = LogManager.getLogger(ResetPasswordHandler.class);
 
@@ -55,7 +58,9 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             SessionService sessionService,
             ClientSessionService clientSessionService,
             ClientService clientService,
-            AuditService auditService) {
+            AuditService auditService,
+            CommonPasswordsService commonPasswordsService,
+            PasswordValidator passwordValidator){
         super(
                 ResetPasswordCompletionRequest.class,
                 configurationService,
@@ -67,6 +72,8 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
         this.sqsClient = sqsClient;
         this.codeStorageService = codeStorageService;
         this.auditService = auditService;
+        this.commonPasswordsService = commonPasswordsService;
+        this.passwordValidator = passwordValidator;
     }
 
     public ResetPasswordHandler() {
@@ -84,6 +91,8 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
         this.codeStorageService =
                 new CodeStorageService(new RedisConnectionService(configurationService));
         this.auditService = new AuditService(configurationService);
+        this.commonPasswordsService = new CommonPasswordsService(configurationService);
+        this.passwordValidator = new PasswordValidator(commonPasswordsService);
     }
 
     @Override
@@ -94,10 +103,13 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             UserContext userContext) {
         LOG.info("Request received to ResetPasswordHandler");
         try {
-            Optional<ErrorResponse> errorResponse =
-                    ValidationHelper.validatePassword(request.getPassword());
-            if (errorResponse.isPresent()) {
-                return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
+            Optional<ErrorResponse> passwordValidationError =
+                    passwordValidator.validate(request.getPassword());
+
+            LOG.info(passwordValidationError);
+
+            if (passwordValidationError.isPresent()) {
+                return generateApiGatewayProxyErrorResponse(400, passwordValidationError.get());
             }
             UserCredentials userCredentials;
             if (nonNull(request.getCode())) {
