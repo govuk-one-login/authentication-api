@@ -9,8 +9,17 @@ notify_template_map = {
 
 cloudwatch_log_retention = 5
 
+performance_tuning = {
+  authorizer = {
+    memory          = 1024
+    concurrency     = 3
+    max_concurrency = 10
+    scaling_trigger = 0.6
+  }
+}
+
 lambda_max_concurrency = 10
-lambda_min_concurrency = 3
+lambda_min_concurrency = 1
 keep_lambdas_warm      = false
 endpoint_memory_size   = 1024
-scaling_trigger        = 0.6
+scaling_trigger        = 0.8
