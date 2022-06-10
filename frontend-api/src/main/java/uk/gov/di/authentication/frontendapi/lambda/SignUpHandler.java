@@ -98,10 +98,11 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
 
         LOG.info("Received request");
 
-        Optional<ErrorResponse> passwordValidationErrors =
+        Optional<ErrorResponse> passwordValidationError =
                 passwordValidator.validate(request.getPassword());
 
-        if (passwordValidationErrors.isEmpty()) {
+        if (passwordValidationError.isEmpty()) {
+            LOG.info("No password validation errors found");
             if (authenticationService.userExists(request.getEmail())) {
 
                 auditService.submitAuditEvent(
@@ -156,7 +157,8 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
             }
         } else {
-            return generateApiGatewayProxyErrorResponse(400, passwordValidationErrors.get());
+            LOG.info("Error message:" + passwordValidationError.get().getMessage());
+            return generateApiGatewayProxyErrorResponse(400, passwordValidationError.get());
         }
     }
 }
