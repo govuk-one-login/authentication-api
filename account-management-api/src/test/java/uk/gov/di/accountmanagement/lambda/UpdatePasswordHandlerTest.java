@@ -17,14 +17,18 @@ import uk.gov.di.authentication.shared.helpers.Argon2EncoderHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.authentication.shared.validation.PasswordValidator;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -40,17 +44,21 @@ class UpdatePasswordHandlerTest {
     private final DynamoService dynamoService = mock(DynamoService.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private final AuditService auditService = mock(AuditService.class);
+    private final CommonPasswordsService commonPasswordsService =
+            mock(CommonPasswordsService.class);
+    private final PasswordValidator passwordValidator = mock(PasswordValidator.class);
 
     private UpdatePasswordHandler handler;
     private static final String EXISTING_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String NEW_PASSWORD = "password2";
     private static final String CURRENT_PASSWORD = "password1";
+    private static final String INVALID_PASSWORD = "pwd";
     private static final Subject SUBJECT = new Subject();
     private final Json objectMapper = SerializationService.getInstance();
 
     @BeforeEach
     public void setUp() {
-        handler = new UpdatePasswordHandler(dynamoService, sqsClient, auditService);
+        handler = new UpdatePasswordHandler(dynamoService, sqsClient, auditService, commonPasswordsService, passwordValidator);
     }
 
     @Test
@@ -156,5 +164,29 @@ class UpdatePasswordHandlerTest {
                         "123.123.123.123",
                         userProfile.getPhoneNumber(),
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
+    }
+
+    @Test
+    public void shouldReturn400WhenPasswordValidationFails() throws Json.JsonException {
+        doReturn(Optional.of(ErrorResponse.ERROR_1006)).when(passwordValidator).validate(INVALID_PASSWORD);
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setBody(
+                format(
+                        "{ \"email\": \"%s\", \"newPassword\": \"%s\" }",
+                        EXISTING_EMAIL_ADDRESS, INVALID_PASSWORD));
+        APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =
+                new APIGatewayProxyRequestEvent.ProxyRequestContext();
+        Map<String, Object> authorizerParams = new HashMap<>();
+        authorizerParams.put("principalId", SUBJECT.getValue());
+        proxyRequestContext.setIdentity(identityWithSourceIp("123.123.123.123"));
+        proxyRequestContext.setAuthorizer(authorizerParams);
+        event.setRequestContext(proxyRequestContext);
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1006));
+        verify(dynamoService, never()).updatePassword(EXISTING_EMAIL_ADDRESS, NEW_PASSWORD);
+
     }
 }

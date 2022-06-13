@@ -99,6 +99,14 @@ public class UpdatePasswordHandler
                                         objectMapper.readValue(
                                                 input.getBody(), UpdatePasswordRequest.class);
 
+                                Optional<ErrorResponse> passwordValidationError =
+                                        passwordValidator.validate(updatePasswordRequest.getNewPassword());
+
+                                if (passwordValidationError.isPresent()) {
+                                    LOG.info("Error message:" + passwordValidationError.get().getMessage());
+                                    return generateApiGatewayProxyErrorResponse(400, passwordValidationError.get());
+                                }
+
                                 UserProfile userProfile =
                                         dynamoService.getUserProfileByEmail(
                                                 updatePasswordRequest.getEmail());
@@ -114,14 +122,6 @@ public class UpdatePasswordHandler
                                                 .getUserCredentialsFromEmail(
                                                         updatePasswordRequest.getEmail())
                                                 .getPassword();
-
-                                Optional<ErrorResponse> passwordValidationError =
-                                        passwordValidator.validate(updatePasswordRequest.getNewPassword());
-
-                                if (passwordValidationError.isPresent()) {
-                                    LOG.info("Error message:" + passwordValidationError.get().getMessage());
-                                    return generateApiGatewayProxyErrorResponse(400, passwordValidationError.get());
-                                }
 
 
                                 if (isNewPasswordSameAsCurrentPassword(
