@@ -29,6 +29,7 @@ class PasswordValidatorTest {
                 Arguments.of("", ErrorResponse.ERROR_1005),
                 Arguments.of(null, ErrorResponse.ERROR_1005),
                 Arguments.of("passw0r", ErrorResponse.ERROR_1006),
+                Arguments.of("passwordpasswordpassword", ErrorResponse.ERROR_1007),
                 Arguments.of("TestCommonPassword1", ErrorResponse.ERROR_1040));
     }
 

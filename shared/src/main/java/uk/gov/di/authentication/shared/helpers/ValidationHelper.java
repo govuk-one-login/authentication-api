@@ -60,6 +60,16 @@ public class ValidationHelper {
         return Optional.empty();
     }
 
+    public static boolean hasAtLeastOneDigit(String string) {
+        char[] charArray = string.toCharArray();
+        for (char c : charArray) {
+            if (Character.isDigit(c)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public static Optional<ErrorResponse> validateEmailAddressUpdate(
             String existingEmail, String replacementEmail) {
         if (existingEmail.equals(replacementEmail)) {

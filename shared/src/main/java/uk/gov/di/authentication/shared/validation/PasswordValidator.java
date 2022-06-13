@@ -1,14 +1,13 @@
 package uk.gov.di.authentication.shared.validation;
 
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 
 import java.util.Optional;
-import java.util.regex.Pattern;
 
 public class PasswordValidator {
 
-    private static final Pattern PASSWORD_REGEX = Pattern.compile(".*\\d.*");
     private CommonPasswordsService commonPasswordsService;
 
     public PasswordValidator(CommonPasswordsService commonPasswordsService) {
@@ -23,7 +22,7 @@ public class PasswordValidator {
         if (password.length() < 8) {
             return Optional.of(ErrorResponse.ERROR_1006);
         }
-        if (!PASSWORD_REGEX.matcher(password).matches()) {
+        if (!ValidationHelper.hasAtLeastOneDigit(password)) {
             return Optional.of(ErrorResponse.ERROR_1007);
         }
 
