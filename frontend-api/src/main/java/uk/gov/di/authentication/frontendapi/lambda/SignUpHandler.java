@@ -157,7 +157,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
             }
         } else {
-            LOG.info("Error message: %s", passwordValidationError.get().getMessage());
+            LOG.info("Error message: {}", passwordValidationError.get().getMessage());
             return generateApiGatewayProxyErrorResponse(400, passwordValidationError.get());
         }
     }
