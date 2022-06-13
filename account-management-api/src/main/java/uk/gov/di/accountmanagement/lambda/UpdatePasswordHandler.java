@@ -22,11 +22,14 @@ import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.authentication.shared.validation.PasswordValidator;
 
 import java.util.Map;
+import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
@@ -42,6 +45,8 @@ public class UpdatePasswordHandler
     private final DynamoService dynamoService;
     private final AwsSqsClient sqsClient;
     private final AuditService auditService;
+    private final CommonPasswordsService commonPasswordsService;
+    private final PasswordValidator passwordValidator;
 
     private static final Logger LOG = LogManager.getLogger(UpdatePasswordHandler.class);
 
@@ -50,10 +55,12 @@ public class UpdatePasswordHandler
     }
 
     public UpdatePasswordHandler(
-            DynamoService dynamoService, AwsSqsClient sqsClient, AuditService auditService) {
+            DynamoService dynamoService, AwsSqsClient sqsClient, AuditService auditService, CommonPasswordsService commonPasswordsService, PasswordValidator passwordValidator) {
         this.dynamoService = dynamoService;
         this.sqsClient = sqsClient;
         this.auditService = auditService;
+        this.commonPasswordsService = commonPasswordsService;
+        this.passwordValidator = passwordValidator;
     }
 
     public UpdatePasswordHandler(ConfigurationService configurationService) {
@@ -64,6 +71,8 @@ public class UpdatePasswordHandler
                         configurationService.getEmailQueueUri(),
                         configurationService.getSqsEndpointUri());
         this.auditService = new AuditService(configurationService);
+        this.commonPasswordsService = new CommonPasswordsService(configurationService);
+        this.passwordValidator = new PasswordValidator(commonPasswordsService);
     }
 
     @Override
@@ -106,7 +115,16 @@ public class UpdatePasswordHandler
                                                         updatePasswordRequest.getEmail())
                                                 .getPassword();
 
-                                if (verifyPassword(
+                                Optional<ErrorResponse> passwordValidationError =
+                                        passwordValidator.validate(updatePasswordRequest.getNewPassword());
+
+                                if (passwordValidationError.isPresent()) {
+                                    LOG.info("Error message:" + passwordValidationError.get().getMessage());
+                                    return generateApiGatewayProxyErrorResponse(400, passwordValidationError.get());
+                                }
+
+
+                                if (isNewPasswordSameAsCurrentPassword(
                                         currentPassword, updatePasswordRequest.getNewPassword())) {
                                     return generateApiGatewayProxyErrorResponse(
                                             400, ErrorResponse.ERROR_1024);
@@ -147,7 +165,7 @@ public class UpdatePasswordHandler
                         });
     }
 
-    private static boolean verifyPassword(String hashedPassword, String password) {
+    private static boolean isNewPasswordSameAsCurrentPassword(String hashedPassword, String password) {
         return Argon2MatcherHelper.matchRawStringWithEncoded(password, hashedPassword);
     }
 }
