@@ -46,29 +46,22 @@ performance_tuning = {
     scaling_trigger = 0
   }
 
-  start = {
-    memory          = 1024
-    concurrency     = 3
-    max_concurrency = 10
-    scaling_trigger = 0.6
-  }
-
   reset-password = {
     memory          = 1024
-    concurrency     = 1
+    concurrency     = 2
     max_concurrency = 10
-    scaling_trigger = 0.8
+    scaling_trigger = 0.5
   }
 
   reset-password-request = {
     memory          = 1024
-    concurrency     = 1
+    concurrency     = 2
     max_concurrency = 10
-    scaling_trigger = 0.8
+    scaling_trigger = 0.5
   }
 }
 lambda_max_concurrency = 10
-lambda_min_concurrency = 2
+lambda_min_concurrency = 3
 keep_lambdas_warm      = false
 endpoint_memory_size   = 1024
-scaling_trigger        = 0.8
+scaling_trigger        = 0.6
