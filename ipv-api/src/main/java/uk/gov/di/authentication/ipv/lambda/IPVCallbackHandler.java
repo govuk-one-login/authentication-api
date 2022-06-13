@@ -157,7 +157,7 @@ public class IPVCallbackHandler
                                                         sessionCookiesIds.getClientSessionId())
                                                 .orElse(null);
                                 if (Objects.isNull(clientSession)) {
-                                    LOG.error("ClientSession not found");
+                                    LOG.warn("ClientSession not found");
                                     throw new RuntimeException();
                                 }
                                 attachLogFieldToLogs(
@@ -345,7 +345,7 @@ public class IPVCallbackHandler
                                                         ResponseHeaders.LOCATION,
                                                         redirectURI.toString()));
                             } catch (NoSuchElementException e) {
-                                LOG.error("Session not found", e);
+                                LOG.warn("Session not found", e);
                                 throw new RuntimeException("Session not found", e);
                             } catch (ParseException e) {
                                 LOG.info(
