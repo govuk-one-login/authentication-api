@@ -65,10 +65,10 @@ resource "aws_lambda_alias" "endpoint_lambda" {
   function_version = aws_lambda_function.endpoint_lambda.version
 }
 
-resource "time_sleep" "wait_60_seconds" {
+resource "time_sleep" "wait_for_alias_to_reassign" {
   depends_on = [aws_lambda_alias.endpoint_lambda]
 
-  create_duration = "30s"
+  create_duration = "45s"
 }
 
 resource "aws_lambda_provisioned_concurrency_config" "endpoint_lambda_concurrency_config" {
@@ -78,6 +78,10 @@ resource "aws_lambda_provisioned_concurrency_config" "endpoint_lambda_concurrenc
   qualifier     = aws_lambda_alias.endpoint_lambda.name
 
   provisioned_concurrent_executions = var.provisioned_concurrency
+
+  depends_on = [
+    time_sleep.wait_for_alias_to_reassign
+  ]
 }
 
 resource "aws_appautoscaling_target" "lambda_target" {
