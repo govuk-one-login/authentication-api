@@ -68,7 +68,7 @@ resource "aws_lambda_alias" "endpoint_lambda" {
 resource "time_sleep" "wait_for_alias_to_reassign" {
   depends_on = [aws_lambda_alias.endpoint_lambda]
 
-  create_duration = "45s"
+  create_duration = "120s"
 }
 
 resource "aws_lambda_provisioned_concurrency_config" "endpoint_lambda_concurrency_config" {
