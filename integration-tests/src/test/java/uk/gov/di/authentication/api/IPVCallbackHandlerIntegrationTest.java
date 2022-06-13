@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.api;
 
+import com.google.gson.internal.LinkedTreeMap;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
@@ -9,6 +10,7 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
+import net.minidev.json.JSONArray;
 import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,6 +43,7 @@ import java.util.Optional;
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED;
@@ -146,12 +149,31 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         assertTrue(
                 identityCredentials
                         .map(IdentityCredentials::getAdditionalClaims)
-                        .filter(t -> t.containsKey(ValidClaims.ADDRESS.getValue()))
-                        .filter(
-                                t ->
-                                        t.get(ValidClaims.ADDRESS.getValue())
-                                                .equals("some-address-claim"))
+                        .map(t -> t.get(ValidClaims.ADDRESS.getValue()))
                         .isPresent());
+        assertTrue(
+                identityCredentials
+                        .map(IdentityCredentials::getAdditionalClaims)
+                        .map(t -> t.get(ValidClaims.PASSPORT.getValue()))
+                        .isPresent());
+
+        var addressClaim =
+                objectMapper.readValue(
+                        identityCredentials
+                                .get()
+                                .getAdditionalClaims()
+                                .get(ValidClaims.ADDRESS.getValue()),
+                        JSONArray.class);
+        assertThat(((LinkedTreeMap) addressClaim.get(0)).size(), equalTo(8));
+
+        var passportClaim =
+                objectMapper.readValue(
+                        identityCredentials
+                                .get()
+                                .getAdditionalClaims()
+                                .get(ValidClaims.PASSPORT.getValue()),
+                        JSONArray.class);
+        assertThat(((LinkedTreeMap) passportClaim.get(0)).size(), equalTo(2));
     }
 
     private void setUpDynamo() {
