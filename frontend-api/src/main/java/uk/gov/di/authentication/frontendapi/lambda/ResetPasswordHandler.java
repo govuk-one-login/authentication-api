@@ -106,9 +106,8 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             Optional<ErrorResponse> passwordValidationError =
                     passwordValidator.validate(request.getPassword());
 
-            LOG.info(passwordValidationError);
-
             if (passwordValidationError.isPresent()) {
+                LOG.info("Error message: {}", passwordValidationError.get().getMessage());
                 return generateApiGatewayProxyErrorResponse(400, passwordValidationError.get());
             }
             UserCredentials userCredentials;
