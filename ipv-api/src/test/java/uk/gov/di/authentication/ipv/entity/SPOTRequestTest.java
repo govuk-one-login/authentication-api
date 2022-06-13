@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.ipv.entity;
 
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.entity.IdentityClaims;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
@@ -28,7 +29,7 @@ class SPOTRequestTest {
         assertEquals(4, spotRequest.getSpotClaims().size());
         assertEquals(
                 List.of("<JWT-encoded VC 1>", "<JWT-encoded VC 2>"),
-                spotRequest.getSpotClaims().get("https://vocab.account.gov.uk/v1/credentialJWT"));
+                spotRequest.getSpotClaims().get(IdentityClaims.CREDENTIAL_JWT.getValue()));
         assertEquals("P2", spotRequest.getSpotClaims().get("vot"));
         assertEquals("/trustmark", spotRequest.getSpotClaims().get("vtm"));
         assertEquals(saltString, Base64.getEncoder().encodeToString(spotRequest.getSalt()));

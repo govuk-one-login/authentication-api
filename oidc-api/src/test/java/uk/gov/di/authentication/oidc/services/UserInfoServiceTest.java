@@ -44,6 +44,8 @@ import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.ADDRESS_CLAIM;
+import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.PASSPORT_CLAIM;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 class UserInfoServiceTest {
@@ -54,10 +56,6 @@ class UserInfoServiceTest {
     private final DynamoDocAppService dynamoDocAppService = mock(DynamoDocAppService.class);
     private static final Subject INTERNAL_SUBJECT = new Subject("internal-subject");
     private static final Subject SUBJECT = new Subject("some-subject");
-    private static final String ADDRESS_CLAIM =
-            "[{\"addressCountry\":\"GB\",\"uprn\":null,\"buildingName\":\"\",\"streetName\":\"HADLEY ROAD\",\"postalCode\":\"BA2 5AA\",\"buildingNumber\":\"8\",\"addressLocality\":\"BATH\",\"validFrom\":\"2000-01-01\"}]";
-    private static final String PASSPORT_CLAIM =
-            "[{\"documentNumber\":\"12345678\",\"expiryDate\":\"2022-02-01\"}]";
     private static final List<String> SCOPES =
             List.of(
                     OIDCScopeValue.OPENID.getValue(),
@@ -200,7 +198,7 @@ class UserInfoServiceTest {
                 userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()),
                 equalTo(coreIdentityJWT));
         var addressClaim = (JSONArray) userInfo.getClaim(ValidClaims.ADDRESS.getValue());
-        assertThat(((LinkedTreeMap) addressClaim.get(0)).size(), equalTo(8));
+        assertThat(((LinkedTreeMap) addressClaim.get(0)).size(), equalTo(7));
         var passportClaim = (JSONArray) userInfo.getClaim(ValidClaims.PASSPORT.getValue());
         assertThat(((LinkedTreeMap) passportClaim.get(0)).size(), equalTo(2));
     }

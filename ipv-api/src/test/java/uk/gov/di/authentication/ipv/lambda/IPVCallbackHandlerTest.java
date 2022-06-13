@@ -76,6 +76,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.ADDRESS_CLAIM;
+import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.CORE_IDENTITY_CLAIM;
+import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.CREDENTIAL_JWT_CLAIM;
+import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.PASSPORT_CLAIM;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class IPVCallbackHandlerTest {
@@ -105,14 +109,6 @@ class IPVCallbackHandlerTest {
     private static final State RP_STATE = new State();
     private static final URI IPV_URI = URI.create("http://ipv/");
     private static final ClientID CLIENT_ID = new ClientID();
-    private static final String ADDRESS_CLAIM =
-            "[{\"buildingNumber\":\"10\",\"streetName\":\"DowningStreet\",\"dependentAddressLocality\":\"Westminster\",\"addressLocality\":\"London\",\"postalCode\":\"SW1A2AA\",\"addressCountry\":\"GB\",\"validFrom\":\"2019-07-24\"}]";
-    private static final String PASSPORT_CLAIM =
-            "[{\"documentNumber\":\"12345678\",\"expiryDate\":\"2022-02-01\"}]";
-    private static final String CORE_IDENTITY_CLAIM =
-            "{\"name\":[{\"nameParts\":[{\"type\":\"GivenName\",\"value\":\"kenneth\"},{\"type\":\"FamilyName\",\"value\":\"decerqueira\"}]}],\"birthDate\":[{\"value\":\"1964-11-07\"}]}";
-
-    private static final String CREDENTIAL_JWT_CLAIM = "some-credential-jwt";
 
     private static final Subject PUBLIC_SUBJECT =
             new Subject("TsEVC7vg0NPAmzB33vRUFztL2c0-fecKWKcc73fuDhc");
@@ -235,9 +231,9 @@ class IPVCallbackHandlerTest {
                                 "P2",
                                 "vtm",
                                 OIDC_BASE_URL + "/trustmark",
-                                "https://vocab.account.gov.uk/v1/coreIdentity",
+                                IdentityClaims.CORE_IDENTITY.getValue(),
                                 CORE_IDENTITY_CLAIM,
-                                "https://vocab.account.gov.uk/v1/credentialJWT",
+                                IdentityClaims.CREDENTIAL_JWT.getValue(),
                                 CREDENTIAL_JWT_CLAIM));
         claims.putAll(userIdentityAdditionalClaims);
 

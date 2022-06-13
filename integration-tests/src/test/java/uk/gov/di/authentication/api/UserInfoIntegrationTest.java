@@ -42,15 +42,13 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.ADDRESS_CLAIM;
+import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.PASSPORT_CLAIM;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
-    private static final String ADDRESS_CLAIM =
-            "[{\"addressCountry\":\"GB\",\"uprn\":null,\"buildingName\":\"\",\"streetName\":\"HADLEY ROAD\",\"postalCode\":\"BA2 5AA\",\"buildingNumber\":\"8\",\"addressLocality\":\"BATH\",\"validFrom\":\"2000-01-01\"}]";
-    private static final String PASSPORT_CLAIM =
-            "[{\"documentNumber\":\"1223456\",\"expiryDate\":\"2022-02-02\"}]";
     private static final String TEST_PHONE_NUMBER = "01234567890";
     private static final String FORMATTED_PHONE_NUMBER = "+441234567890";
     private static final String TEST_PASSWORD = "password-1";
@@ -196,7 +194,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(userInfoResponse.getPhoneNumberVerified(), equalTo(true));
         assertThat(userInfoResponse.getSubject(), equalTo(PUBLIC_SUBJECT));
         var addressClaim = (JSONArray) userInfoResponse.getClaim(ValidClaims.ADDRESS.getValue());
-        assertThat(((JSONObject) addressClaim.get(0)).size(), equalTo(8));
+        assertThat(((JSONObject) addressClaim.get(0)).size(), equalTo(7));
         var passportClaim = (JSONArray) userInfoResponse.getClaim(ValidClaims.PASSPORT.getValue());
         assertThat(((JSONObject) passportClaim.get(0)).size(), equalTo(2));
         assertThat(
