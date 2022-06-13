@@ -60,7 +60,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             ClientService clientService,
             AuditService auditService,
             CommonPasswordsService commonPasswordsService,
-            PasswordValidator passwordValidator){
+            PasswordValidator passwordValidator) {
         super(
                 ResetPasswordCompletionRequest.class,
                 configurationService,

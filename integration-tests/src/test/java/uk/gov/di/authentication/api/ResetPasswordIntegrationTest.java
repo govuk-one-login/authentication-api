@@ -92,7 +92,9 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
         var response =
                 makeRequest(
-                        Optional.of(new ResetPasswordCompletionRequest(null, CommonPasswordsExtension.TEST_COMMON_PASSWORD)),
+                        Optional.of(
+                                new ResetPasswordCompletionRequest(
+                                        null, CommonPasswordsExtension.TEST_COMMON_PASSWORD)),
                         constructFrontendHeaders(sessionId),
                         Map.of());
 

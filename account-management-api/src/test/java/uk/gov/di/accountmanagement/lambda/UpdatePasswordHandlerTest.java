@@ -58,7 +58,13 @@ class UpdatePasswordHandlerTest {
 
     @BeforeEach
     public void setUp() {
-        handler = new UpdatePasswordHandler(dynamoService, sqsClient, auditService, commonPasswordsService, passwordValidator);
+        handler =
+                new UpdatePasswordHandler(
+                        dynamoService,
+                        sqsClient,
+                        auditService,
+                        commonPasswordsService,
+                        passwordValidator);
     }
 
     @Test
@@ -168,7 +174,9 @@ class UpdatePasswordHandlerTest {
 
     @Test
     public void shouldReturn400WhenPasswordValidationFails() throws Json.JsonException {
-        doReturn(Optional.of(ErrorResponse.ERROR_1006)).when(passwordValidator).validate(INVALID_PASSWORD);
+        doReturn(Optional.of(ErrorResponse.ERROR_1006))
+                .when(passwordValidator)
+                .validate(INVALID_PASSWORD);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(
                 format(
@@ -187,6 +195,5 @@ class UpdatePasswordHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1006));
         verify(dynamoService, never()).updatePassword(EXISTING_EMAIL_ADDRESS, NEW_PASSWORD);
-
     }
 }

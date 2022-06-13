@@ -71,7 +71,9 @@ class ResetPasswordHandlerTest {
 
     @BeforeEach
     public void setUp() {
-        doReturn(Optional.of(ErrorResponse.ERROR_1007)).when(passwordValidator).validate("password");
+        doReturn(Optional.of(ErrorResponse.ERROR_1007))
+                .when(passwordValidator)
+                .validate("password");
 
         handler =
                 new ResetPasswordHandler(

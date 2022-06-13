@@ -87,7 +87,9 @@ public class UpdatePasswordIntegrationTest extends ApiGatewayHandlerIntegrationT
 
         var response =
                 makeRequest(
-                        Optional.of(new UpdatePasswordRequest(TEST_EMAIL, CommonPasswordsExtension.TEST_COMMON_PASSWORD)),
+                        Optional.of(
+                                new UpdatePasswordRequest(
+                                        TEST_EMAIL, CommonPasswordsExtension.TEST_COMMON_PASSWORD)),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Collections.emptyMap(),

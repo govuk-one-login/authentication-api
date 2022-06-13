@@ -55,7 +55,11 @@ public class UpdatePasswordHandler
     }
 
     public UpdatePasswordHandler(
-            DynamoService dynamoService, AwsSqsClient sqsClient, AuditService auditService, CommonPasswordsService commonPasswordsService, PasswordValidator passwordValidator) {
+            DynamoService dynamoService,
+            AwsSqsClient sqsClient,
+            AuditService auditService,
+            CommonPasswordsService commonPasswordsService,
+            PasswordValidator passwordValidator) {
         this.dynamoService = dynamoService;
         this.sqsClient = sqsClient;
         this.auditService = auditService;
@@ -100,11 +104,15 @@ public class UpdatePasswordHandler
                                                 input.getBody(), UpdatePasswordRequest.class);
 
                                 Optional<ErrorResponse> passwordValidationError =
-                                        passwordValidator.validate(updatePasswordRequest.getNewPassword());
+                                        passwordValidator.validate(
+                                                updatePasswordRequest.getNewPassword());
 
                                 if (passwordValidationError.isPresent()) {
-                                    LOG.info("Error message:" + passwordValidationError.get().getMessage());
-                                    return generateApiGatewayProxyErrorResponse(400, passwordValidationError.get());
+                                    LOG.info(
+                                            "Error message:"
+                                                    + passwordValidationError.get().getMessage());
+                                    return generateApiGatewayProxyErrorResponse(
+                                            400, passwordValidationError.get());
                                 }
 
                                 UserProfile userProfile =
@@ -122,7 +130,6 @@ public class UpdatePasswordHandler
                                                 .getUserCredentialsFromEmail(
                                                         updatePasswordRequest.getEmail())
                                                 .getPassword();
-
 
                                 if (isNewPasswordSameAsCurrentPassword(
                                         currentPassword, updatePasswordRequest.getNewPassword())) {
@@ -165,7 +172,8 @@ public class UpdatePasswordHandler
                         });
     }
 
-    private static boolean isNewPasswordSameAsCurrentPassword(String hashedPassword, String password) {
+    private static boolean isNewPasswordSameAsCurrentPassword(
+            String hashedPassword, String password) {
         return Argon2MatcherHelper.matchRawStringWithEncoded(password, hashedPassword);
     }
 }
