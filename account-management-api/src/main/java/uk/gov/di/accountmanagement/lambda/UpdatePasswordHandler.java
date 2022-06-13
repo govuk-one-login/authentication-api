@@ -109,8 +109,8 @@ public class UpdatePasswordHandler
 
                                 if (passwordValidationError.isPresent()) {
                                     LOG.info(
-                                            "Error message:"
-                                                    + passwordValidationError.get().getMessage());
+                                            "Error message: %s",
+                                                    passwordValidationError.get().getMessage());
                                     return generateApiGatewayProxyErrorResponse(
                                             400, passwordValidationError.get());
                                 }

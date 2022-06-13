@@ -84,7 +84,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
     }
 
     @Test
-    public void shouldReturn400ForRequestWithCommonPassword() throws Json.JsonException {
+    void shouldReturn400ForRequestWithCommonPassword() throws Json.JsonException {
         String subject = "new-subject";
         String sessionId = redis.createSession();
         userStore.signUp(EMAIL_ADDRESS, "password-1", new Subject(subject));

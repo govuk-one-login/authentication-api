@@ -173,7 +173,7 @@ class UpdatePasswordHandlerTest {
     }
 
     @Test
-    public void shouldReturn400WhenPasswordValidationFails() throws Json.JsonException {
+    void shouldReturn400WhenPasswordValidationFails() throws Json.JsonException {
         doReturn(Optional.of(ErrorResponse.ERROR_1006))
                 .when(passwordValidator)
                 .validate(INVALID_PASSWORD);
