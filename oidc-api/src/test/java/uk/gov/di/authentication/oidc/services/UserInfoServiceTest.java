@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.oidc.services;
 
+import com.google.gson.internal.LinkedTreeMap;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.crypto.ECDSASigner;
@@ -11,6 +12,7 @@ import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
+import net.minidev.json.JSONArray;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,6 +44,8 @@ import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.ADDRESS_CLAIM;
+import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.PASSPORT_CLAIM;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 class UserInfoServiceTest {
@@ -52,8 +56,6 @@ class UserInfoServiceTest {
     private final DynamoDocAppService dynamoDocAppService = mock(DynamoDocAppService.class);
     private static final Subject INTERNAL_SUBJECT = new Subject("internal-subject");
     private static final Subject SUBJECT = new Subject("some-subject");
-    private static final String ADDRESS_CLAIM = "some-address-claim";
-    private static final String PASSPORT_CLAIM = "some-passport-claim";
     private static final List<String> SCOPES =
             List.of(
                     OIDCScopeValue.OPENID.getValue(),
@@ -195,8 +197,10 @@ class UserInfoServiceTest {
         assertThat(
                 userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()),
                 equalTo(coreIdentityJWT));
-        assertThat(userInfo.getClaim(ValidClaims.ADDRESS.getValue()), equalTo(ADDRESS_CLAIM));
-        assertThat(userInfo.getClaim(ValidClaims.PASSPORT.getValue()), equalTo(PASSPORT_CLAIM));
+        var addressClaim = (JSONArray) userInfo.getClaim(ValidClaims.ADDRESS.getValue());
+        assertThat(((LinkedTreeMap) addressClaim.get(0)).size(), equalTo(7));
+        var passportClaim = (JSONArray) userInfo.getClaim(ValidClaims.PASSPORT.getValue());
+        assertThat(((LinkedTreeMap) passportClaim.get(0)).size(), equalTo(2));
     }
 
     @Test

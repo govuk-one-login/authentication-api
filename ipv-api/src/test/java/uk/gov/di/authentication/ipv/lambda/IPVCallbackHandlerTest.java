@@ -21,6 +21,7 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
+import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.BeforeEach;
@@ -75,6 +76,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.ADDRESS_CLAIM;
+import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.CORE_IDENTITY_CLAIM;
+import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.CREDENTIAL_JWT_CLAIM;
+import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.PASSPORT_CLAIM;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class IPVCallbackHandlerTest {
@@ -104,11 +109,6 @@ class IPVCallbackHandlerTest {
     private static final State RP_STATE = new State();
     private static final URI IPV_URI = URI.create("http://ipv/");
     private static final ClientID CLIENT_ID = new ClientID();
-    private static final String ADDRESS_CLAIM = "some-address-claim";
-    private static final String PASSPORT_CLAIM = "some-passport-claim";
-    private static final String CORE_IDENTITY_CLAIM = "some-core-identity-jwt";
-
-    private static final String CREDENTIAL_JWT_CLAIM = "some-credential-jwt";
 
     private static final Subject PUBLIC_SUBJECT =
             new Subject("TsEVC7vg0NPAmzB33vRUFztL2c0-fecKWKcc73fuDhc");
@@ -215,8 +215,15 @@ class IPVCallbackHandlerTest {
         usingValidSession();
         usingValidClientSession();
 
+        Map<String, Object> userIdentityAdditionalClaims = new HashMap<>();
+
+        for (var entry : additionalClaims.entrySet()) {
+            userIdentityAdditionalClaims.put(
+                    entry.getKey(), objectMapper.readValue(entry.getValue(), JSONArray.class));
+        }
+
         var claims =
-                new HashMap<>(
+                new HashMap<String, Object>(
                         Map.of(
                                 "sub",
                                 "sub-val",
@@ -224,11 +231,11 @@ class IPVCallbackHandlerTest {
                                 "P2",
                                 "vtm",
                                 OIDC_BASE_URL + "/trustmark",
-                                "https://vocab.account.gov.uk/v1/coreIdentity",
+                                IdentityClaims.CORE_IDENTITY.getValue(),
                                 CORE_IDENTITY_CLAIM,
-                                "https://vocab.account.gov.uk/v1/credentialJWT",
+                                IdentityClaims.CREDENTIAL_JWT.getValue(),
                                 CREDENTIAL_JWT_CLAIM));
-        claims.putAll(additionalClaims);
+        claims.putAll(userIdentityAdditionalClaims);
 
         var response =
                 makeHandlerRequest(

@@ -22,6 +22,7 @@ import com.nimbusds.oauth2.sdk.id.JWTID;
 import com.nimbusds.openid.connect.sdk.UserInfoRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.entity.IdentityClaims;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
@@ -125,24 +126,18 @@ class IPVTokenServiceTest {
         assertThat(
                 ((ArrayList)
                                 userIdentityUserInfo.getClaim(
-                                        "https://vocab.account.gov.uk/v1/credentialJWT"))
+                                        IdentityClaims.CREDENTIAL_JWT.getValue()))
                         .size(),
                 equalTo(2));
         assertThat(
-                ((HashMap)
-                                userIdentityUserInfo.getClaim(
-                                        "https://vocab.account.gov.uk/v1/coreIdentity"))
+                ((HashMap) userIdentityUserInfo.getClaim(IdentityClaims.CORE_IDENTITY.getValue()))
                         .size(),
                 equalTo(2));
         assertTrue(
-                ((HashMap)
-                                userIdentityUserInfo.getClaim(
-                                        "https://vocab.account.gov.uk/v1/coreIdentity"))
+                ((HashMap) userIdentityUserInfo.getClaim(IdentityClaims.CORE_IDENTITY.getValue()))
                         .containsKey("name"));
         assertTrue(
-                ((HashMap)
-                                userIdentityUserInfo.getClaim(
-                                        "https://vocab.account.gov.uk/v1/coreIdentity"))
+                ((HashMap) userIdentityUserInfo.getClaim(IdentityClaims.CORE_IDENTITY.getValue()))
                         .containsKey("birthDate"));
     }
 

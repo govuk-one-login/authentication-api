@@ -3,6 +3,7 @@ package uk.gov.di.authentication.oidc.services;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
+import net.minidev.json.JSONArray;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.app.services.DynamoDocAppService;
@@ -10,8 +11,10 @@ import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
 import uk.gov.di.authentication.oidc.exceptions.UserInfoException;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.DynamoIdentityService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.util.Objects;
 
@@ -20,6 +23,7 @@ public class UserInfoService {
     private final AuthenticationService authenticationService;
     private final DynamoIdentityService identityService;
     private final DynamoDocAppService dynamoDocAppService;
+    protected final Json objectMapper = SerializationService.getInstance();
 
     private static final Logger LOG = LogManager.getLogger(UserInfoService.class);
 
@@ -81,7 +85,17 @@ public class UserInfoService {
         if (Objects.nonNull(identityCredentials.getAdditionalClaims())) {
             identityCredentials.getAdditionalClaims().entrySet().stream()
                     .filter(t -> accessTokenInfo.getIdentityClaims().contains(t.getKey()))
-                    .forEach(t -> userInfo.setClaim(t.getKey(), t.getValue()));
+                    .forEach(
+                            t -> {
+                                try {
+                                    userInfo.setClaim(
+                                            t.getKey(),
+                                            objectMapper.readValue(t.getValue(), JSONArray.class));
+                                } catch (Json.JsonException e) {
+                                    LOG.error("Unable to deserialize additional identity claims");
+                                    throw new RuntimeException();
+                                }
+                            });
         }
         return userInfo;
     }
