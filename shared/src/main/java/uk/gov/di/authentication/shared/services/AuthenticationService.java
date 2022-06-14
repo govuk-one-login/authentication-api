@@ -68,5 +68,9 @@ public interface AuthenticationService {
     byte[] getOrGenerateSalt(UserProfile userProfile);
 
     public void updateMFAMethod(
-            String email, MFAMethodType mfaMethodType, boolean enabled, String credentialValue);
+            String email,
+            MFAMethodType mfaMethodType,
+            boolean methodVerified,
+            boolean enabled,
+            String credentialValue);
 }

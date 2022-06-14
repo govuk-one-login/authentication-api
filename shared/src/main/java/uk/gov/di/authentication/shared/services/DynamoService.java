@@ -301,11 +301,19 @@ public class DynamoService implements AuthenticationService {
 
     @Override
     public void updateMFAMethod(
-            String email, MFAMethodType mfaMethodType, boolean enabled, String credentialValue) {
+            String email,
+            MFAMethodType mfaMethodType,
+            boolean methodVerified,
+            boolean enabled,
+            String credentialValue) {
         String dateTime = NowHelper.toTimestampString(NowHelper.now());
         MFAMethod mfaMethod =
                 new MFAMethod(
-                        MFAMethodType.AUTH_APP.getValue(), credentialValue, enabled, dateTime);
+                        MFAMethodType.AUTH_APP.getValue(),
+                        credentialValue,
+                        methodVerified,
+                        enabled,
+                        dateTime);
         userCredentialsMapper.save(
                 userCredentialsMapper
                         .load(UserCredentials.class, email.toLowerCase(Locale.ROOT))

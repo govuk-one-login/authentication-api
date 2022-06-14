@@ -9,9 +9,6 @@ public class NowHelper {
 
     private static final NowClock clock = new NowClock(Clock.systemUTC());
 
-    private static final SimpleDateFormat timestampFormat =
-            new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSS");
-
     public static Date now() {
         return clock.now();
     }
@@ -25,7 +22,7 @@ public class NowHelper {
     }
 
     public static String toTimestampString(Date date) {
-        return timestampFormat.format(date);
+        return new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSS").format(date);
     }
 
     public static class NowClock {

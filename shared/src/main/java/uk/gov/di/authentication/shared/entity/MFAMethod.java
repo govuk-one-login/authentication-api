@@ -13,19 +13,26 @@ public class MFAMethod {
     public static final String ATTRIBUTE_MFA_METHOD_TYPE = "MfaMethodType";
     public static final String ATTRIBUTE_CREDENTIAL_VALUE = "CredentialValue";
     public static final String ATTRIBUTE_ENABLED = "Enabled";
+    public static final String ATTRIBUTE_METHOD_VERIFIED = "MethodVerified";
     public static final String ATTRIBUTE_UPDATED = "Updated";
 
     private String mfaMethodType;
     private String credentialValue;
+    private boolean methodVerified;
     private boolean enabled;
     private String updated;
 
     public MFAMethod() {}
 
     public MFAMethod(
-            String mfaMethodType, String credentialValue, boolean enabled, String updated) {
+            String mfaMethodType,
+            String credentialValue,
+            boolean methodVerified,
+            boolean enabled,
+            String updated) {
         this.mfaMethodType = mfaMethodType;
         this.credentialValue = credentialValue;
+        this.methodVerified = methodVerified;
         this.enabled = enabled;
         this.updated = updated;
     }
@@ -47,6 +54,16 @@ public class MFAMethod {
 
     public MFAMethod setCredentialValue(String credentialValue) {
         this.credentialValue = credentialValue;
+        return this;
+    }
+
+    @DynamoDBAttribute(attributeName = ATTRIBUTE_METHOD_VERIFIED)
+    public boolean isMethodVerified() {
+        return methodVerified;
+    }
+
+    public MFAMethod setMethodVerified(boolean methodVerified) {
+        this.methodVerified = methodVerified;
         return this;
     }
 
@@ -81,6 +98,9 @@ public class MFAMethod {
                                         ATTRIBUTE_CREDENTIAL_VALUE,
                                         new AttributeValue(getCredentialValue())),
                                 Map.entry(
+                                        ATTRIBUTE_METHOD_VERIFIED,
+                                        new AttributeValue().withN(isMethodVerified() ? "1" : "0")),
+                                Map.entry(
                                         ATTRIBUTE_ENABLED,
                                         new AttributeValue().withN(isEnabled() ? "1" : "0")),
                                 Map.entry(ATTRIBUTE_UPDATED, new AttributeValue(getUpdated()))));
@@ -93,12 +113,13 @@ public class MFAMethod {
         MFAMethod that = (MFAMethod) o;
         return Objects.equals(mfaMethodType, that.mfaMethodType)
                 && Objects.equals(credentialValue, that.credentialValue)
+                && Objects.equals(methodVerified, that.methodVerified)
                 && Objects.equals(enabled, that.enabled)
                 && Objects.equals(updated, that.updated);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(mfaMethodType, credentialValue, enabled, updated);
+        return Objects.hash(mfaMethodType, credentialValue, methodVerified, enabled, updated);
     }
 }
