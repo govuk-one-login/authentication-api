@@ -20,6 +20,7 @@ import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.Argon2EncoderHelper;
 import uk.gov.di.authentication.shared.helpers.Argon2MatcherHelper;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 
@@ -301,7 +302,7 @@ public class DynamoService implements AuthenticationService {
     @Override
     public void updateMFAMethod(
             String email, MFAMethodType mfaMethodType, boolean enabled, String credentialValue) {
-        String dateTime = LocalDateTime.now().toString();
+        String dateTime = NowHelper.toTimestampString(NowHelper.now());
         MFAMethod mfaMethod =
                 new MFAMethod(
                         MFAMethodType.AUTH_APP.getValue(), credentialValue, enabled, dateTime);
