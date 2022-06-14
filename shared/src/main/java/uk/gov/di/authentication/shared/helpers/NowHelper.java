@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.shared.helpers;
 
+import java.text.SimpleDateFormat;
 import java.time.Clock;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
@@ -18,6 +19,10 @@ public class NowHelper {
 
     public static Date nowMinus(long amount, ChronoUnit unit) {
         return clock.nowMinus(amount, unit);
+    }
+
+    public static String toTimestampString(Date date) {
+        return new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSS").format(date);
     }
 
     public static class NowClock {

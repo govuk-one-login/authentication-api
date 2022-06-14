@@ -2,6 +2,7 @@ package uk.gov.di.authentication.shared.services;
 
 import com.nimbusds.oauth2.sdk.id.Subject;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -65,4 +66,11 @@ public interface AuthenticationService {
     void bulkAdd(List<UserCredentials> userCredentialsList, List<UserProfile> userProfileList);
 
     byte[] getOrGenerateSalt(UserProfile userProfile);
+
+    public void updateMFAMethod(
+            String email,
+            MFAMethodType mfaMethodType,
+            boolean methodVerified,
+            boolean enabled,
+            String credentialValue);
 }

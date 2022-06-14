@@ -6,7 +6,10 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBIndexHashKey;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import uk.gov.di.authentication.shared.dynamodb.DynamoDBItem;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class UserCredentials implements DynamoDBItem {
@@ -17,6 +20,7 @@ public class UserCredentials implements DynamoDBItem {
     public static final String ATTRIBUTE_CREATED = "Created";
     public static final String ATTRIBUTE_UPDATED = "Updated";
     public static final String ATTRIBUTE_MIGRATED_PASSWORD = "MigratedPassword";
+    public static final String ATTRIBUTE_MFA_METHODS = "MfaMethods";
 
     private String email;
     private String subjectID;
@@ -24,6 +28,7 @@ public class UserCredentials implements DynamoDBItem {
     private String created;
     private String updated;
     private String migratedPassword;
+    private List<MFAMethod> mfaMethods;
 
     public UserCredentials() {}
 
@@ -89,6 +94,26 @@ public class UserCredentials implements DynamoDBItem {
         return this;
     }
 
+    @DynamoDBAttribute(attributeName = ATTRIBUTE_MFA_METHODS)
+    public List<MFAMethod> getMfaMethods() {
+        return mfaMethods;
+    }
+
+    public void setMfaMethods(List<MFAMethod> mfaMethods) {
+        this.mfaMethods = mfaMethods;
+    }
+
+    public UserCredentials setMfaMethod(MFAMethod mfaMethod) {
+        if (this.mfaMethods == null) {
+            this.mfaMethods = List.of(mfaMethod);
+        } else {
+            this.mfaMethods.removeIf(
+                    t -> t.getMfaMethodType().equals(mfaMethod.getMfaMethodType()));
+            this.mfaMethods.add(mfaMethod);
+        }
+        return this;
+    }
+
     @Override
     public Map<String, AttributeValue> toItem() {
         Map<String, AttributeValue> attributes = new HashMap<>();
@@ -103,6 +128,11 @@ public class UserCredentials implements DynamoDBItem {
             attributes.put(ATTRIBUTE_UPDATED, new AttributeValue(getUpdated()));
         if (getMigratedPassword() != null)
             attributes.put(ATTRIBUTE_MIGRATED_PASSWORD, new AttributeValue(getMigratedPassword()));
+        if (getMfaMethods() != null) {
+            Collection<AttributeValue> methods = new ArrayList<>();
+            getMfaMethods().forEach(m -> methods.add(m.toAttributeValue()));
+            attributes.put(ATTRIBUTE_MFA_METHODS, new AttributeValue().withL(methods));
+        }
         return attributes;
     }
 }
