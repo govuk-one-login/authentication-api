@@ -34,7 +34,9 @@ public class DynamoDocAppService {
                         .setSubjectID(subjectID)
                         .setCredential(credential)
                         .setTimeToExist(
-                                NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS).getTime());
+                                NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS)
+                                        .toInstant()
+                                        .getEpochSecond());
 
         docAppCredentialMapper.save(docAppCredential);
     }

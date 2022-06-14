@@ -39,13 +39,17 @@ public class DynamoIdentityService {
                             .setSubjectID(subjectID)
                             .setCoreIdentityJWT(coreIdentityJWT)
                             .setTimeToExist(
-                                    NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS).getTime()));
+                                    NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS)
+                                            .toInstant()
+                                            .getEpochSecond()));
         } else {
             identityCredentialsMapper.save(
                     identityCredentials
                             .setCoreIdentityJWT(coreIdentityJWT)
                             .setTimeToExist(
-                                    NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS).getTime()));
+                                    NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS)
+                                            .toInstant()
+                                            .getEpochSecond()));
         }
     }
 
@@ -68,7 +72,9 @@ public class DynamoIdentityService {
                         .setSubjectID(subjectID)
                         .setAdditionalClaims(additionalClaims)
                         .setTimeToExist(
-                                NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS).getTime());
+                                NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS)
+                                        .toInstant()
+                                        .getEpochSecond());
 
         identityCredentialsMapper.save(identityCredentials);
     }
