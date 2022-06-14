@@ -32,9 +32,11 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.shared.validation.PasswordValidator;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
@@ -52,6 +54,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -70,6 +73,9 @@ class SignUpHandlerTest {
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ClientService clientService = mock(ClientService.class);
     private final AuditService auditService = mock(AuditService.class);
+    private final CommonPasswordsService commonPasswordsService =
+            mock(CommonPasswordsService.class);
+    private final PasswordValidator passwordValidator = mock(PasswordValidator.class);
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final ClientID CLIENT_ID = new ClientID();
     private static final URI REDIRECT_URI = URI.create("test-uri");
@@ -93,6 +99,7 @@ class SignUpHandlerTest {
     @BeforeEach
     void setUp() {
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("1.0");
+        doReturn(Optional.of(ErrorResponse.ERROR_1006)).when(passwordValidator).validate("pwd");
         handler =
                 new SignUpHandler(
                         configurationService,
@@ -100,7 +107,9 @@ class SignUpHandlerTest {
                         clientSessionService,
                         clientService,
                         authenticationService,
-                        auditService);
+                        auditService,
+                        commonPasswordsService,
+                        passwordValidator);
     }
 
     private static Stream<Boolean> consentValues() {
@@ -199,15 +208,15 @@ class SignUpHandlerTest {
     }
 
     @Test
-    void shouldReturn400IfPasswordFailsValidation() {
+    void shouldReturn400IfPasswordInvalid() {
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody("{ \"password\": \"computer\", \"email\": \"joe.bloggs@test.com\" }");
+        event.setBody("{ \"password\": \"pwd\", \"email\": \"joe.bloggs@test.com\" }");
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1007));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1006));
 
         verifyNoInteractions(auditService);
     }

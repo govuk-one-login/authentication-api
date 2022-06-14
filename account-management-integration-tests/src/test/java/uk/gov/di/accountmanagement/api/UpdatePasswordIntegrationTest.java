@@ -9,6 +9,7 @@ import uk.gov.di.accountmanagement.entity.UpdatePasswordRequest;
 import uk.gov.di.accountmanagement.lambda.UpdatePasswordHandler;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.extensions.CommonPasswordsExtension;
 
 import java.util.Collections;
 import java.util.List;
@@ -74,6 +75,28 @@ public class UpdatePasswordIntegrationTest extends ApiGatewayHandlerIntegrationT
 
         assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
         assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1024)));
+
+        assertNoNotificationsReceived(notificationsQueue);
+
+        assertNoAuditEventsReceived(auditTopic);
+    }
+
+    @Test
+    void shouldReturn400WhenNewPasswordIsInvalid() throws Exception {
+        String publicSubjectID = userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
+
+        var response =
+                makeRequest(
+                        Optional.of(
+                                new UpdatePasswordRequest(
+                                        TEST_EMAIL, CommonPasswordsExtension.TEST_COMMON_PASSWORD)),
+                        Collections.emptyMap(),
+                        Collections.emptyMap(),
+                        Collections.emptyMap(),
+                        Map.of("principalId", publicSubjectID));
+
+        assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
+        assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1040)));
 
         assertNoNotificationsReceived(notificationsQueue);
 

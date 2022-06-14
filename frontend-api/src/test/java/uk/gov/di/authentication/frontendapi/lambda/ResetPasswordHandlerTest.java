@@ -21,9 +21,11 @@ import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
+import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.shared.validation.PasswordValidator;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -32,6 +34,7 @@ import java.util.Optional;
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -52,6 +55,9 @@ class ResetPasswordHandlerTest {
     private final ClientService clientService = mock(ClientService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final AuditService auditService = mock(AuditService.class);
+    private final CommonPasswordsService commonPasswordsService =
+            mock(CommonPasswordsService.class);
+    private final PasswordValidator passwordValidator = mock(PasswordValidator.class);
     private final Context context = mock(Context.class);
     private static final String CODE = "12345678901";
     private static final String NEW_PASSWORD = "Pa55word!";
@@ -65,6 +71,10 @@ class ResetPasswordHandlerTest {
 
     @BeforeEach
     public void setUp() {
+        doReturn(Optional.of(ErrorResponse.ERROR_1007))
+                .when(passwordValidator)
+                .validate("password");
+
         handler =
                 new ResetPasswordHandler(
                         authenticationService,
@@ -74,7 +84,9 @@ class ResetPasswordHandlerTest {
                         sessionService,
                         clientSessionService,
                         clientService,
-                        auditService);
+                        auditService,
+                        commonPasswordsService,
+                        passwordValidator);
     }
 
     @Test

@@ -9,6 +9,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.sharedtest.extensions.AuditSnsTopicExtension;
 import uk.gov.di.authentication.sharedtest.extensions.ClientStoreExtension;
+import uk.gov.di.authentication.sharedtest.extensions.CommonPasswordsExtension;
 import uk.gov.di.authentication.sharedtest.extensions.DocumentAppCredentialStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.IdentityStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
@@ -121,6 +122,10 @@ public abstract class HandlerIntegrationTest<Q, S> {
     @RegisterExtension
     protected static final DocumentAppCredentialStoreExtension documentAppCredentialStore =
             new DocumentAppCredentialStoreExtension();
+
+    @RegisterExtension
+    protected static final CommonPasswordsExtension commonPasswords =
+            new CommonPasswordsExtension();
 
     protected Map<String, String> constructHeaders(Optional<HttpCookie> cookie) {
         final Map<String, String> headers = new HashMap<>();
