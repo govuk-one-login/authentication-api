@@ -121,7 +121,7 @@ public abstract class HandlerIntegrationTest<Q, S> {
 
     @RegisterExtension
     protected static final DocumentAppCredentialStoreExtension documentAppCredentialStore =
-            new DocumentAppCredentialStoreExtension();
+            new DocumentAppCredentialStoreExtension(180);
 
     @RegisterExtension
     protected static final CommonPasswordsExtension commonPasswords =

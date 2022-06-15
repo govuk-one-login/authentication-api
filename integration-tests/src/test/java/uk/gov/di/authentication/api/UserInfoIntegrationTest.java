@@ -15,6 +15,7 @@ import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.oidc.exceptions.UserInfoException;
 import uk.gov.di.authentication.oidc.lambda.UserInfoHandler;
 import uk.gov.di.authentication.shared.entity.AccessTokenStore;
 import uk.gov.di.authentication.shared.entity.ClientType;
@@ -24,6 +25,7 @@ import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.extensions.DocumentAppCredentialStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.IdentityStoreExtension;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 import uk.gov.di.authentication.sharedtest.helper.SignedCredentialHelper;
@@ -44,6 +46,7 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.ADDRESS_CLAIM;
 import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.PASSPORT_CLAIM;
@@ -222,36 +225,11 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @Test
     void shouldCallUserInfoWithAccessTokenAndReturn200ForDocAppUser()
             throws Json.JsonException, ParseException {
-
+        var documentAppCredentialStore = new DocumentAppCredentialStoreExtension(180);
         documentAppCredentialStore.addCredential(
                 DOC_APP_PUBLIC_SUBJECT.getValue(), DOC_APP_CREDENTIAL);
-
-        var claimsSet =
-                new JWTClaimsSet.Builder()
-                        .claim("scope", DOC_APP_SCOPES.toStringList())
-                        .issuer("issuer-id")
-                        .expirationTime(EXPIRY_DATE)
-                        .issueTime(NowHelper.now())
-                        .claim("client_id", "app-client-id-one")
-                        .subject(DOC_APP_PUBLIC_SUBJECT.getValue())
-                        .jwtID(UUID.randomUUID().toString())
-                        .build();
-        var signedJWT = tokenSigner.signJwt(claimsSet);
-        var accessToken = new BearerAccessToken(signedJWT.serialize());
-        var accessTokenStore =
-                new AccessTokenStore(accessToken.getValue(), INTERNAL_SUBJECT.getValue());
-        var accessTokenStoreString = objectMapper.writeValueAsString(accessTokenStore);
-        redis.addToRedis(
-                ACCESS_TOKEN_PREFIX + APP_CLIENT_ID + "." + DOC_APP_PUBLIC_SUBJECT,
-                accessTokenStoreString,
-                300L);
-        setUpDynamo(null, null, 0);
-
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        Map.of("Authorization", accessToken.toAuthorizationHeader()),
-                        Map.of());
+        setUpAppClientInDynamo();
+        var response = makeDocAppUserinfoRequest();
 
         assertThat(response, hasStatus(200));
 
@@ -259,6 +237,33 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(userInfoResponse.getClaim("doc-app-credential"), equalTo(DOC_APP_CREDENTIAL));
         assertThat(userInfoResponse.getSubject(), equalTo(DOC_APP_PUBLIC_SUBJECT));
         assertThat(userInfoResponse.toJWTClaimsSet().getClaims().size(), equalTo(2));
+
+        assertNoAuditEventsReceived(auditTopic);
+    }
+
+    @Test
+    void shouldNotReturnDocAppCredentialWhenTTLHasExpired() {
+        var documentAppCredentialStore = new DocumentAppCredentialStoreExtension(0);
+        documentAppCredentialStore.addCredential(
+                DOC_APP_PUBLIC_SUBJECT.getValue(), DOC_APP_CREDENTIAL);
+        setUpAppClientInDynamo();
+
+        assertThrows(
+                UserInfoException.class,
+                this::makeDocAppUserinfoRequest,
+                "Expected to throw exception");
+
+        assertNoAuditEventsReceived(auditTopic);
+    }
+
+    @Test
+    void shouldThrowWhenNoDocAppCredentialIsPresentInDB() {
+        setUpAppClientInDynamo();
+
+        assertThrows(
+                UserInfoException.class,
+                this::makeDocAppUserinfoRequest,
+                "Expected to throw exception");
 
         assertNoAuditEventsReceived(auditTopic);
     }
@@ -306,6 +311,32 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 Map.of());
     }
 
+    private APIGatewayProxyResponseEvent makeDocAppUserinfoRequest() throws Json.JsonException {
+        var claimsSet =
+                new JWTClaimsSet.Builder()
+                        .claim("scope", DOC_APP_SCOPES.toStringList())
+                        .issuer("issuer-id")
+                        .expirationTime(EXPIRY_DATE)
+                        .issueTime(NowHelper.now())
+                        .claim("client_id", "app-client-id-one")
+                        .subject(DOC_APP_PUBLIC_SUBJECT.getValue())
+                        .jwtID(UUID.randomUUID().toString())
+                        .build();
+        var signedJWT = tokenSigner.signJwt(claimsSet);
+        var accessToken = new BearerAccessToken(signedJWT.serialize());
+        var accessTokenStore =
+                new AccessTokenStore(accessToken.getValue(), INTERNAL_SUBJECT.getValue());
+        var accessTokenStoreString = objectMapper.writeValueAsString(accessTokenStore);
+        redis.addToRedis(
+                ACCESS_TOKEN_PREFIX + APP_CLIENT_ID + "." + DOC_APP_PUBLIC_SUBJECT,
+                accessTokenStoreString,
+                300L);
+        return makeRequest(
+                Optional.empty(),
+                Map.of("Authorization", accessToken.toAuthorizationHeader()),
+                Map.of());
+    }
+
     private void setUpDynamo(
             String coreIdentityJWT, Map<String, String> additionalClaims, long ttl) {
         IdentityStoreExtension identityStore = new IdentityStoreExtension(ttl);
@@ -332,6 +363,10 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 "https://test.com",
                 "public",
                 true);
+    }
+
+    private void setUpAppClientInDynamo() {
+        KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         clientStore.registerClient(
                 APP_CLIENT_ID,
                 "app-test-client",
