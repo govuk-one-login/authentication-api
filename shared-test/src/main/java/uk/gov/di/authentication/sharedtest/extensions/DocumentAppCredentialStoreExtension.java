@@ -8,6 +8,7 @@ import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import uk.gov.di.authentication.app.entity.DocAppCredential;
 import uk.gov.di.authentication.app.services.DynamoDocAppService;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.DynamoTestConfiguration;
 
 import java.util.Optional;
@@ -22,18 +23,23 @@ public class DocumentAppCredentialStoreExtension extends DynamoExtension
     public static final String SUBJECT_ID_FIELD = "SubjectID";
 
     private DynamoDocAppService dynamoDocAppService;
+    private final ConfigurationService configuration;
+
+    public DocumentAppCredentialStoreExtension(long ttl) {
+        createInstance();
+        this.configuration =
+                new DynamoTestConfiguration(REGION, ENVIRONMENT, DYNAMO_ENDPOINT) {
+                    @Override
+                    public long getAccessTokenExpiry() {
+                        return ttl;
+                    }
+                };
+        dynamoDocAppService = new DynamoDocAppService(configuration);
+    }
 
     @Override
     public void beforeAll(ExtensionContext context) throws Exception {
         super.beforeAll(context);
-
-        var configuration =
-                new DynamoTestConfiguration(REGION, ENVIRONMENT, DYNAMO_ENDPOINT) {
-                    @Override
-                    public long getAccessTokenExpiry() {
-                        return 180;
-                    }
-                };
 
         dynamoDocAppService = new DynamoDocAppService(configuration);
     }

@@ -33,6 +33,16 @@ public abstract class DynamoExtension extends BaseAwsResourceExtension
         createTables();
     }
 
+    protected void createInstance() {
+        dynamoDB =
+                AmazonDynamoDBClientBuilder.standard()
+                        .withEndpointConfiguration(
+                                new AwsClientBuilder.EndpointConfiguration(DYNAMO_ENDPOINT, REGION))
+                        .build();
+
+        createTables();
+    }
+
     protected abstract void createTables();
 
     protected boolean tableExists(String tableName) {

@@ -80,7 +80,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
 
     @RegisterExtension
     protected static final DocumentAppCredentialStoreExtension credentialExtension =
-            new DocumentAppCredentialStoreExtension();
+            new DocumentAppCredentialStoreExtension(180);
 
     protected final ConfigurationService configurationService =
             new DocAppCallbackHandlerIntegrationTest.TestConfigurationService(

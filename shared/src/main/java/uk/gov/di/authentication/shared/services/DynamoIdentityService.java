@@ -55,7 +55,8 @@ public class DynamoIdentityService {
 
     public Optional<IdentityCredentials> getIdentityCredentials(String subjectID) {
         return Optional.ofNullable(
-                identityCredentialsMapper.load(IdentityCredentials.class, subjectID));
+                        identityCredentialsMapper.load(IdentityCredentials.class, subjectID))
+                .filter(t -> t.getTimeToExist() > NowHelper.now().toInstant().getEpochSecond());
     }
 
     public void deleteIdentityCredentials(String subjectID) {

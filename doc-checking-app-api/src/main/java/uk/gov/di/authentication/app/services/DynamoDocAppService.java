@@ -42,7 +42,8 @@ public class DynamoDocAppService {
     }
 
     public Optional<DocAppCredential> getDocAppCredential(String subjectID) {
-        return Optional.ofNullable(docAppCredentialMapper.load(DocAppCredential.class, subjectID));
+        return Optional.ofNullable(docAppCredentialMapper.load(DocAppCredential.class, subjectID))
+                .filter(t -> t.getTimeToExist() > NowHelper.now().toInstant().getEpochSecond());
     }
 
     public void deleteDocAppCredential(String subjectID) {
