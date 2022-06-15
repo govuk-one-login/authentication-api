@@ -6,11 +6,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.audit.AuditPayload.AuditEvent;
 import uk.gov.di.audit.AuditPayload.AuditEvent.User;
+import uk.gov.di.authentication.audit.configuration.TXMAConfiguration;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.nio.ByteBuffer;
+import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -28,6 +30,7 @@ public class CounterFraudAuditLambdaTest {
 
     private final KmsConnectionService kms = mock(KmsConnectionService.class);
     private final ConfigurationService config = mock(ConfigurationService.class);
+    private final TXMAConfiguration txmaConfiguration = mock(TXMAConfiguration.class);
 
     @BeforeEach
     public void setUp() {
@@ -36,11 +39,12 @@ public class CounterFraudAuditLambdaTest {
         when(config.getAuditHmacSecret()).thenReturn("i-am-a-fake-hash-key");
         when(kms.validateSignature(any(ByteBuffer.class), any(ByteBuffer.class), eq("key_alias")))
                 .thenReturn(true);
+        when(txmaConfiguration.getObfuscationHMACSecret()).thenReturn(Optional.empty());
     }
 
     @Test
     void handlesRequestsAppropriately() {
-        var handler = new CounterFraudAuditLambda(kms, config);
+        var handler = new CounterFraudAuditLambda(kms, config, txmaConfiguration);
 
         var payload =
                 AuditEvent.newBuilder()
@@ -70,7 +74,7 @@ public class CounterFraudAuditLambdaTest {
 
     @Test
     void shouldHashSensitiveFields() {
-        var handler = new CounterFraudAuditLambda(kms, config);
+        var handler = new CounterFraudAuditLambda(kms, config, txmaConfiguration);
 
         var payload =
                 AuditEvent.newBuilder()
@@ -107,8 +111,48 @@ public class CounterFraudAuditLambdaTest {
     }
 
     @Test
+    void shouldAdditionallyHashSensitiveFieldsWithTxmaKeyIfPresent() {
+        var handler = new CounterFraudAuditLambda(kms, config, txmaConfiguration);
+        when(txmaConfiguration.getObfuscationHMACSecret())
+                .thenReturn(Optional.of("an-alternative-hash-key"));
+
+        var payload =
+                AuditEvent.newBuilder()
+                        .setUser(
+                                User.newBuilder()
+                                        .setId("test-id")
+                                        .setEmail("test-example@digital.cabinet-office.gov.uk")
+                                        .setPhoneNumber("test-phone-number")
+                                        .setIpAddress("test-ip-address")
+                                        .build())
+                        .build();
+
+        handler.handleAuditEvent(payload);
+
+        LogEvent logEvent = logging.events().get(0);
+
+        assertThat(
+                logEvent,
+                hasObjectMessageProperty(
+                        "user.email.txma",
+                        "3d947d8758e25daf9ebd49f54a14b97eab971d648046b5d2cf123e1b93d4c81c"));
+        assertThat(
+                logEvent,
+                hasObjectMessageProperty(
+                        "user.id.txma",
+                        "5a180d8cc70faf7a2ac589a991aa44b29a7849f12555fbaf7c37a804c45a45b2"));
+        assertThat(
+                logEvent,
+                hasObjectMessageProperty(
+                        "user.phone.txma",
+                        "dbbb41f8142c64c9be09b201d80e927c26de47aa35ac98a82edee98afe5d3731"));
+
+        assertThat(logEvent, hasObjectMessageProperty("user.ip-address", "test-ip-address"));
+    }
+
+    @Test
     void shouldAddExtensionsToPayload() {
-        var handler = new CounterFraudAuditLambda(kms, config);
+        var handler = new CounterFraudAuditLambda(kms, config, txmaConfiguration);
 
         var payload =
                 AuditEvent.newBuilder()
@@ -126,7 +170,7 @@ public class CounterFraudAuditLambdaTest {
 
     @Test
     void shouldNotHashMissingSensitiveFields_Id() {
-        var handler = new CounterFraudAuditLambda(kms, config);
+        var handler = new CounterFraudAuditLambda(kms, config, txmaConfiguration);
 
         var payload =
                 AuditEvent.newBuilder()
@@ -146,7 +190,7 @@ public class CounterFraudAuditLambdaTest {
 
     @Test
     void shouldNotHashMissingSensitiveFields_Email() {
-        var handler = new CounterFraudAuditLambda(kms, config);
+        var handler = new CounterFraudAuditLambda(kms, config, txmaConfiguration);
 
         var payload =
                 AuditEvent.newBuilder()
@@ -166,7 +210,7 @@ public class CounterFraudAuditLambdaTest {
 
     @Test
     void shouldNotHashMissingSensitiveFields_Phone() {
-        var handler = new CounterFraudAuditLambda(kms, config);
+        var handler = new CounterFraudAuditLambda(kms, config, txmaConfiguration);
 
         var payload =
                 AuditEvent.newBuilder()
