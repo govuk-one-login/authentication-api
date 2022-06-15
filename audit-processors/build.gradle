@@ -33,7 +33,8 @@ dependencies {
             project(":shared-test"),
             configurations.lambda,
             configurations.sqs,
-            configurations.dynamodb
+            configurations.dynamodb,
+            configurations.secretsmanager
 
     testRuntimeOnly configurations.test_runtime
 }
