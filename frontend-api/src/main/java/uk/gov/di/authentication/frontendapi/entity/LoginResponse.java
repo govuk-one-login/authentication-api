@@ -2,6 +2,7 @@ package uk.gov.di.authentication.frontendapi.entity;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.validation.Required;
 
 public class LoginResponse {
@@ -14,6 +15,16 @@ public class LoginResponse {
     @Expose
     @Required
     private boolean mfaRequired;
+
+    @SerializedName("mfaMethodType")
+    @Expose
+    @Required
+    private MFAMethodType mfaMethodType;
+
+    @SerializedName("mfaMethodVerified")
+    @Expose
+    @Required
+    private boolean mfaMethodVerified;
 
     @SerializedName("phoneNumberVerified")
     @Expose
@@ -37,12 +48,16 @@ public class LoginResponse {
             boolean mfaRequired,
             boolean phoneNumberVerified,
             boolean latestTermsAndConditionsAccepted,
-            boolean consentRequired) {
+            boolean consentRequired,
+            MFAMethodType mfaMethodType,
+            boolean mfaMethodVerified) {
         this.redactedPhoneNumber = redactedPhoneNumber;
         this.mfaRequired = mfaRequired;
         this.phoneNumberVerified = phoneNumberVerified;
         this.latestTermsAndConditionsAccepted = latestTermsAndConditionsAccepted;
         this.consentRequired = consentRequired;
+        this.mfaMethodType = mfaMethodType;
+        this.mfaMethodVerified = mfaMethodVerified;
     }
 
     public String getRedactedPhoneNumber() {
@@ -63,5 +78,13 @@ public class LoginResponse {
 
     public boolean isConsentRequired() {
         return consentRequired;
+    }
+
+    public MFAMethodType getMfaMethodType() {
+        return mfaMethodType;
+    }
+
+    public boolean isMfaMethodVerified() {
+        return mfaMethodVerified;
     }
 }
