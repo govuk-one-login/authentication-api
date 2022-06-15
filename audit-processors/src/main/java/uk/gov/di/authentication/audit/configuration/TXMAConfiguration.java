@@ -31,7 +31,11 @@ public class TXMAConfiguration {
     }
 
     public Optional<String> getObfuscationHMACSecretArn() {
-        return Optional.ofNullable(System.getenv().get("TXMA_OBFUSCATION_SECRET_ARN"));
+        var arn = System.getenv().get("TXMA_OBFUSCATION_SECRET_ARN");
+        if (isNull(arn) || arn.isBlank()) {
+            return Optional.empty();
+        }
+        return Optional.of(arn);
     }
 
     public Optional<String> getObfuscationHMACSecret() {
