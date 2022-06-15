@@ -17,7 +17,8 @@ dependencies {
             configurations.ssm,
             configurations.sns,
             configurations.s3,
-            configurations.dynamodb
+            configurations.secretsmanager
+    configurations.dynamodb
 
     implementation "com.google.protobuf:protobuf-java:${dependencyVersions.protobuf_version}",
             "com.google.protobuf:protobuf-java-util:${dependencyVersions.protobuf_version}",

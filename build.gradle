@@ -78,6 +78,7 @@ subprojects {
         libphonenumber
         logging_runtime
         nimbus
+        secretsmanager
         s3
         sns
         sqs
@@ -127,6 +128,8 @@ subprojects {
 
         nimbus "com.nimbusds:oauth2-oidc-sdk:${dependencyVersions.nimbusds_oauth_version}",
                 "com.nimbusds:nimbus-jose-jwt:${dependencyVersions.nimbusds_jwt_version}"
+
+        secretsmanager "software.amazon.awssdk:secretsmanager:${dependencyVersions.aws_sdk_v2_version}"
 
         sns "com.amazonaws:aws-java-sdk-sns:${dependencyVersions.aws_sdk_version}"
 
