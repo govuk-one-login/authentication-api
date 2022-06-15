@@ -7,6 +7,7 @@ import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import uk.gov.di.authentication.shared.entity.IdentityCredentials;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoIdentityService;
 import uk.gov.di.authentication.sharedtest.basetest.DynamoTestConfiguration;
 
@@ -22,18 +23,24 @@ public class IdentityStoreExtension extends DynamoExtension implements AfterEach
     public static final String IDENTITY_CREDENTIALS_TABLE = "local-identity-credentials";
 
     private DynamoIdentityService dynamoService;
+    private final ConfigurationService configuration;
 
-    @Override
-    public void beforeAll(ExtensionContext context) throws Exception {
-        super.beforeAll(context);
-
+    public IdentityStoreExtension(long ttl) {
+        createInstance();
         var configuration =
                 new DynamoTestConfiguration(REGION, ENVIRONMENT, DYNAMO_ENDPOINT) {
                     @Override
                     public long getAccessTokenExpiry() {
-                        return 300;
+                        return ttl;
                     }
                 };
+        this.configuration = configuration;
+        dynamoService = new DynamoIdentityService(configuration);
+    }
+
+    @Override
+    public void beforeAll(ExtensionContext context) throws Exception {
+        super.beforeAll(context);
 
         dynamoService = new DynamoIdentityService(configuration);
     }
@@ -46,7 +53,7 @@ public class IdentityStoreExtension extends DynamoExtension implements AfterEach
     @Override
     protected void createTables() {
         if (!tableExists(IDENTITY_CREDENTIALS_TABLE)) {
-            createUserProfileTable(IDENTITY_CREDENTIALS_TABLE);
+            createIdentityCredentialTable();
         }
     }
 
@@ -62,10 +69,10 @@ public class IdentityStoreExtension extends DynamoExtension implements AfterEach
         return dynamoService.getIdentityCredentials(subjectID);
     }
 
-    private void createUserProfileTable(String tableName) {
+    private void createIdentityCredentialTable() {
         CreateTableRequest request =
                 new CreateTableRequest()
-                        .withTableName(tableName)
+                        .withTableName(IDENTITY_CREDENTIALS_TABLE)
                         .withKeySchema(new KeySchemaElement(SUBJECT_ID_FIELD, HASH))
                         .withBillingMode(BillingMode.PAY_PER_REQUEST)
                         .withAttributeDefinitions(new AttributeDefinition(SUBJECT_ID_FIELD, S));

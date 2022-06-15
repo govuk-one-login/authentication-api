@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.api;
 
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.Scope;
@@ -23,6 +24,7 @@ import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.extensions.IdentityStoreExtension;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 import uk.gov.di.authentication.sharedtest.helper.SignedCredentialHelper;
 
@@ -41,6 +43,7 @@ import static com.nimbusds.oauth2.sdk.token.BearerTokenError.INVALID_TOKEN;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.ADDRESS_CLAIM;
 import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.PASSPORT_CLAIM;
@@ -95,7 +98,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT,
                 accessTokenStoreString,
                 300L);
-        setUpDynamo(null, null);
+        setUpDynamo(null, null, 0);
 
         var response =
                 makeRequest(
@@ -136,7 +139,132 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @Test
     void shouldReturn200WhenIdentityIsEnabledAndIdentityClaimsArePresent()
             throws Json.JsonException, ParseException {
-        var configurationService = new UserInfoIntegrationTest.UserInfoConfigurationService();
+        var signedCredential = SignedCredentialHelper.generateCredential();
+        setUpDynamo(
+                signedCredential.serialize(),
+                Map.of(
+                        ValidClaims.ADDRESS.getValue(),
+                        ADDRESS_CLAIM,
+                        ValidClaims.PASSPORT.getValue(),
+                        PASSPORT_CLAIM),
+                180);
+
+        var response = makeIdentityUserinfoRequest();
+
+        assertThat(response, hasStatus(200));
+        var userInfoResponse = UserInfo.parse(response.getBody());
+        assertThat(userInfoResponse.getEmailVerified(), equalTo(true));
+        assertThat(userInfoResponse.getEmailAddress(), equalTo(TEST_EMAIL_ADDRESS));
+        assertThat(userInfoResponse.getPhoneNumber(), equalTo(FORMATTED_PHONE_NUMBER));
+        assertThat(userInfoResponse.getPhoneNumberVerified(), equalTo(true));
+        assertThat(userInfoResponse.getSubject(), equalTo(PUBLIC_SUBJECT));
+        var addressClaim = (JSONArray) userInfoResponse.getClaim(ValidClaims.ADDRESS.getValue());
+        assertThat(((JSONObject) addressClaim.get(0)).size(), equalTo(7));
+        var passportClaim = (JSONArray) userInfoResponse.getClaim(ValidClaims.PASSPORT.getValue());
+        assertThat(((JSONObject) passportClaim.get(0)).size(), equalTo(2));
+        assertThat(
+                userInfoResponse.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()),
+                equalTo(signedCredential.serialize()));
+        assertThat(userInfoResponse.toJWTClaimsSet().getClaims().size(), equalTo(8));
+
+        assertNoAuditEventsReceived(auditTopic);
+    }
+
+    @Test
+    void shouldNotReturnIdentityCredentialsWhenTTLHasExpired()
+            throws Json.JsonException, ParseException {
+        setUpDynamo(
+                SignedCredentialHelper.generateCredential().serialize(),
+                Map.of(
+                        ValidClaims.ADDRESS.getValue(),
+                        ADDRESS_CLAIM,
+                        ValidClaims.PASSPORT.getValue(),
+                        PASSPORT_CLAIM),
+                0);
+
+        var response = makeIdentityUserinfoRequest();
+
+        assertThat(response, hasStatus(200));
+        var userInfoResponse = UserInfo.parse(response.getBody());
+        assertThat(userInfoResponse.getEmailVerified(), equalTo(true));
+        assertThat(userInfoResponse.getEmailAddress(), equalTo(TEST_EMAIL_ADDRESS));
+        assertThat(userInfoResponse.getPhoneNumber(), equalTo(FORMATTED_PHONE_NUMBER));
+        assertThat(userInfoResponse.getPhoneNumberVerified(), equalTo(true));
+        assertThat(userInfoResponse.getSubject(), equalTo(PUBLIC_SUBJECT));
+        assertNull(userInfoResponse.getClaim(ValidClaims.ADDRESS.getValue()));
+        assertNull(userInfoResponse.getClaim(ValidClaims.PASSPORT.getValue()));
+        assertNull(userInfoResponse.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
+
+        assertNoAuditEventsReceived(auditTopic);
+    }
+
+    @Test
+    void shouldNotReturnIdentityCredentialsWhenNoneArePresentInDB()
+            throws Json.JsonException, ParseException {
+        setUpDynamo(null, null, 0);
+
+        var response = makeIdentityUserinfoRequest();
+
+        assertThat(response, hasStatus(200));
+        var userInfoResponse = UserInfo.parse(response.getBody());
+        assertThat(userInfoResponse.getEmailVerified(), equalTo(true));
+        assertThat(userInfoResponse.getEmailAddress(), equalTo(TEST_EMAIL_ADDRESS));
+        assertThat(userInfoResponse.getPhoneNumber(), equalTo(FORMATTED_PHONE_NUMBER));
+        assertThat(userInfoResponse.getPhoneNumberVerified(), equalTo(true));
+        assertThat(userInfoResponse.getSubject(), equalTo(PUBLIC_SUBJECT));
+        assertNull(userInfoResponse.getClaim(ValidClaims.ADDRESS.getValue()));
+        assertNull(userInfoResponse.getClaim(ValidClaims.PASSPORT.getValue()));
+        assertNull(userInfoResponse.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
+
+        assertNoAuditEventsReceived(auditTopic);
+    }
+
+    @Test
+    void shouldCallUserInfoWithAccessTokenAndReturn200ForDocAppUser()
+            throws Json.JsonException, ParseException {
+
+        documentAppCredentialStore.addCredential(
+                DOC_APP_PUBLIC_SUBJECT.getValue(), DOC_APP_CREDENTIAL);
+
+        var claimsSet =
+                new JWTClaimsSet.Builder()
+                        .claim("scope", DOC_APP_SCOPES.toStringList())
+                        .issuer("issuer-id")
+                        .expirationTime(EXPIRY_DATE)
+                        .issueTime(NowHelper.now())
+                        .claim("client_id", "app-client-id-one")
+                        .subject(DOC_APP_PUBLIC_SUBJECT.getValue())
+                        .jwtID(UUID.randomUUID().toString())
+                        .build();
+        var signedJWT = tokenSigner.signJwt(claimsSet);
+        var accessToken = new BearerAccessToken(signedJWT.serialize());
+        var accessTokenStore =
+                new AccessTokenStore(accessToken.getValue(), INTERNAL_SUBJECT.getValue());
+        var accessTokenStoreString = objectMapper.writeValueAsString(accessTokenStore);
+        redis.addToRedis(
+                ACCESS_TOKEN_PREFIX + APP_CLIENT_ID + "." + DOC_APP_PUBLIC_SUBJECT,
+                accessTokenStoreString,
+                300L);
+        setUpDynamo(null, null, 0);
+
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        Map.of("Authorization", accessToken.toAuthorizationHeader()),
+                        Map.of());
+
+        assertThat(response, hasStatus(200));
+
+        var userInfoResponse = UserInfo.parse(response.getBody());
+        assertThat(userInfoResponse.getClaim("doc-app-credential"), equalTo(DOC_APP_CREDENTIAL));
+        assertThat(userInfoResponse.getSubject(), equalTo(DOC_APP_PUBLIC_SUBJECT));
+        assertThat(userInfoResponse.toJWTClaimsSet().getClaims().size(), equalTo(2));
+
+        assertNoAuditEventsReceived(auditTopic);
+    }
+
+    private APIGatewayProxyResponseEvent makeIdentityUserinfoRequest() throws Json.JsonException {
+        var configurationService = new UserInfoConfigurationService();
         handler = new UserInfoHandler(configurationService);
         var claimsSetRequest =
                 new ClaimsSetRequest()
@@ -171,85 +299,16 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT,
                 objectMapper.writeValueAsString(accessTokenStore),
                 300L);
-        var signedCredential = SignedCredentialHelper.generateCredential();
-        setUpDynamo(
-                signedCredential.serialize(),
-                Map.of(
-                        ValidClaims.ADDRESS.getValue(),
-                        ADDRESS_CLAIM,
-                        ValidClaims.PASSPORT.getValue(),
-                        PASSPORT_CLAIM));
 
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        Map.of("Authorization", accessToken.toAuthorizationHeader()),
-                        Map.of());
-
-        assertThat(response, hasStatus(200));
-        var userInfoResponse = UserInfo.parse(response.getBody());
-        assertThat(userInfoResponse.getEmailVerified(), equalTo(true));
-        assertThat(userInfoResponse.getEmailAddress(), equalTo(TEST_EMAIL_ADDRESS));
-        assertThat(userInfoResponse.getPhoneNumber(), equalTo(FORMATTED_PHONE_NUMBER));
-        assertThat(userInfoResponse.getPhoneNumberVerified(), equalTo(true));
-        assertThat(userInfoResponse.getSubject(), equalTo(PUBLIC_SUBJECT));
-        var addressClaim = (JSONArray) userInfoResponse.getClaim(ValidClaims.ADDRESS.getValue());
-        assertThat(((JSONObject) addressClaim.get(0)).size(), equalTo(7));
-        var passportClaim = (JSONArray) userInfoResponse.getClaim(ValidClaims.PASSPORT.getValue());
-        assertThat(((JSONObject) passportClaim.get(0)).size(), equalTo(2));
-        assertThat(
-                userInfoResponse.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()),
-                equalTo(signedCredential.serialize()));
-        assertThat(userInfoResponse.toJWTClaimsSet().getClaims().size(), equalTo(8));
-
-        assertNoAuditEventsReceived(auditTopic);
+        return makeRequest(
+                Optional.empty(),
+                Map.of("Authorization", accessToken.toAuthorizationHeader()),
+                Map.of());
     }
 
-    @Test
-    void shouldCallUserInfoWithAccessTokenAndReturn200ForDocAppUser()
-            throws Json.JsonException, ParseException {
-
-        documentAppCredentialStore.addCredential(
-                DOC_APP_PUBLIC_SUBJECT.getValue(), DOC_APP_CREDENTIAL);
-
-        var claimsSet =
-                new JWTClaimsSet.Builder()
-                        .claim("scope", DOC_APP_SCOPES.toStringList())
-                        .issuer("issuer-id")
-                        .expirationTime(EXPIRY_DATE)
-                        .issueTime(NowHelper.now())
-                        .claim("client_id", "app-client-id-one")
-                        .subject(DOC_APP_PUBLIC_SUBJECT.getValue())
-                        .jwtID(UUID.randomUUID().toString())
-                        .build();
-        var signedJWT = tokenSigner.signJwt(claimsSet);
-        var accessToken = new BearerAccessToken(signedJWT.serialize());
-        var accessTokenStore =
-                new AccessTokenStore(accessToken.getValue(), INTERNAL_SUBJECT.getValue());
-        var accessTokenStoreString = objectMapper.writeValueAsString(accessTokenStore);
-        redis.addToRedis(
-                ACCESS_TOKEN_PREFIX + APP_CLIENT_ID + "." + DOC_APP_PUBLIC_SUBJECT,
-                accessTokenStoreString,
-                300L);
-        setUpDynamo(null, null);
-
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        Map.of("Authorization", accessToken.toAuthorizationHeader()),
-                        Map.of());
-
-        assertThat(response, hasStatus(200));
-
-        var userInfoResponse = UserInfo.parse(response.getBody());
-        assertThat(userInfoResponse.getClaim("doc-app-credential"), equalTo(DOC_APP_CREDENTIAL));
-        assertThat(userInfoResponse.getSubject(), equalTo(DOC_APP_PUBLIC_SUBJECT));
-        assertThat(userInfoResponse.toJWTClaimsSet().getClaims().size(), equalTo(2));
-
-        assertNoAuditEventsReceived(auditTopic);
-    }
-
-    private void setUpDynamo(String coreIdentityJWT, Map<String, String> additionalClaims) {
+    private void setUpDynamo(
+            String coreIdentityJWT, Map<String, String> additionalClaims, long ttl) {
+        IdentityStoreExtension identityStore = new IdentityStoreExtension(ttl);
         if (Objects.nonNull(additionalClaims)) {
             identityStore.addAdditionalClaims(PUBLIC_SUBJECT.getValue(), additionalClaims);
         }
@@ -289,7 +348,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 ClientType.APP);
     }
 
-    private class UserInfoConfigurationService extends IntegrationTestConfigurationService {
+    private static class UserInfoConfigurationService extends IntegrationTestConfigurationService {
 
         public UserInfoConfigurationService() {
             super(

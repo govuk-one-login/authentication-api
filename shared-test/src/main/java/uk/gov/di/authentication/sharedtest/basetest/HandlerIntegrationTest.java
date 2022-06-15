@@ -117,7 +117,7 @@ public abstract class HandlerIntegrationTest<Q, S> {
     protected static final ClientStoreExtension clientStore = new ClientStoreExtension();
 
     @RegisterExtension
-    protected static final IdentityStoreExtension identityStore = new IdentityStoreExtension();
+    protected static final IdentityStoreExtension identityStore = new IdentityStoreExtension(180);
 
     @RegisterExtension
     protected static final DocumentAppCredentialStoreExtension documentAppCredentialStore =
