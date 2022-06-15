@@ -1,3 +1,26 @@
+resource "aws_iam_policy" "txma_secrets_policy" {
+  count = var.txma_obfuscation_secret_arn == "" ? 0 : 1
+
+  name_prefix = "txma-hmac-key-secret-"
+  path        = "/${var.environment}/fraud-realtime-logging/"
+  description = "IAM policy for a lambda needing to access the HMAC key secret in TXMA secrets manager"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "secretsmanager:GetSecretValue"
+      ]
+
+      Resource = [
+        var.txma_obfuscation_secret_arn,
+      ]
+    }]
+  })
+}
+
 module "fraud_realtime_logging_role" {
   source = "../modules/lambda-role"
 
@@ -5,9 +28,10 @@ module "fraud_realtime_logging_role" {
   role_name   = "fraud-realtime-logging"
   vpc_arn     = local.authentication_vpc_arn
 
-  policies_to_attach = [
-    aws_iam_policy.fraud_realtime_logging_audit_payload_kms_verification.arn
-  ]
+  policies_to_attach = compact([
+    aws_iam_policy.fraud_realtime_logging_audit_payload_kms_verification.arn,
+    var.txma_obfuscation_secret_arn == "" ? null : aws_iam_policy.txma_secrets_policy[0].arn,
+  ])
 }
 
 resource "aws_iam_policy" "fraud_realtime_logging_audit_payload_kms_verification" {
@@ -67,9 +91,10 @@ resource "aws_lambda_function" "fraud_realtime_logging_lambda" {
   }
   environment {
     variables = {
-      AUDIT_SIGNING_KEY_ALIAS = local.audit_signing_key_alias_name
-      LOCALSTACK_ENDPOINT     = var.use_localstack ? var.localstack_endpoint : null
-      AUDIT_HMAC_SECRET       = random_password.hmac_key.result
+      AUDIT_SIGNING_KEY_ALIAS     = local.audit_signing_key_alias_name
+      LOCALSTACK_ENDPOINT         = var.use_localstack ? var.localstack_endpoint : null
+      AUDIT_HMAC_SECRET           = random_password.hmac_key.result
+      TXMA_OBFUSCATION_SECRET_ARN = var.txma_obfuscation_secret_arn
     }
   }
   kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
