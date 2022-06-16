@@ -1,5 +1,5 @@
 resource "aws_iam_policy" "txma_secrets_policy" {
-  count = var.txma_obfuscation_secret_arn == "" ? 0 : 1
+  count = var.txma_obfuscation_secret_arn == "" || var.txma_obfuscation_secret_kms_key_arn ? 0 : 1
 
   name_prefix = "txma-hmac-key-secret-"
   path        = "/${var.environment}/fraud-realtime-logging/"
@@ -17,12 +17,21 @@ resource "aws_iam_policy" "txma_secrets_policy" {
       Resource = [
         var.txma_obfuscation_secret_arn,
       ]
+      }, {
+      Effect = "Allow"
+      Action = [
+        "kms:Decrypt"
+      ]
+
+      Resource = [
+        var.txma_obfuscation_secret_kms_key_arn,
+      ]
     }]
   })
 }
 
 resource "aws_iam_role_policy_attachment" "txma_secrets_policy" {
-  count = var.txma_obfuscation_secret_arn == "" ? 0 : 1
+  count = var.txma_obfuscation_secret_arn == "" || var.txma_obfuscation_secret_kms_key_arn ? 0 : 1
 
   role       = module.fraud_realtime_logging_role.name
   policy_arn = aws_iam_policy.txma_secrets_policy[0].arn

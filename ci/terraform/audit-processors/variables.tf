@@ -69,3 +69,7 @@ variable "lambda_memory_size" {
 variable "txma_obfuscation_secret_arn" {
   default = ""
 }
+
+variable "txma_obfuscation_secret_kms_key_arn" {
+  default = ""
+}
