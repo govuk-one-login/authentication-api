@@ -1,5 +1,7 @@
 package uk.gov.di.authentication.audit.lambda;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.ObjectMessage;
 import uk.gov.di.audit.AuditPayload.AuditEvent;
 import uk.gov.di.audit.AuditPayload.AuditEvent.User;
@@ -8,25 +10,34 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
 import java.util.HashMap;
+import java.util.Optional;
 
 import static org.apache.commons.codec.binary.Hex.encodeHexString;
 import static uk.gov.di.authentication.audit.helper.HmacSha256Helper.hmacSha256;
 
 public class CounterFraudAuditLambda extends BaseAuditHandler {
 
-    private final TXMAConfiguration txmaConfiguration;
+    private static final Logger LOG = LogManager.getLogger(CounterFraudAuditLambda.class);
+    private final Optional<TXMAConfiguration> txmaConfiguration;
 
     public CounterFraudAuditLambda(
             KmsConnectionService kmsConnectionService,
             ConfigurationService service,
             TXMAConfiguration txmaConfiguration) {
         super(kmsConnectionService, service);
-        this.txmaConfiguration = txmaConfiguration;
+        this.txmaConfiguration = Optional.of(txmaConfiguration);
     }
 
     public CounterFraudAuditLambda() {
         super();
-        this.txmaConfiguration = new TXMAConfiguration();
+        Optional<TXMAConfiguration> config;
+        try {
+            config = Optional.of(new TXMAConfiguration());
+        } catch (Exception e) {
+            config = Optional.empty();
+            LOG.warn("Exception getting TXMA configuration ", e);
+        }
+        this.txmaConfiguration = config;
     }
 
     @Override
@@ -60,25 +71,30 @@ public class CounterFraudAuditLambda extends BaseAuditHandler {
                     "user.phone", encodeHexString(hmacSha256(user.getPhoneNumber(), hmacKey)));
         }
 
-        var newHmacKey = txmaConfiguration.getObfuscationHMACSecret();
-        newHmacKey.ifPresent(
-                key -> {
-                    if (isPresent(user.getId())) {
-                        eventData.put(
-                                "user.id.txma", encodeHexString(hmacSha256(user.getId(), key)));
-                    }
+        txmaConfiguration.ifPresent(
+                config -> {
+                    var newHmacKey = config.getObfuscationHMACSecret();
+                    newHmacKey.ifPresent(
+                            key -> {
+                                if (isPresent(user.getId())) {
+                                    eventData.put(
+                                            "user.id.txma",
+                                            encodeHexString(hmacSha256(user.getId(), key)));
+                                }
 
-                    if (isPresent(user.getEmail())) {
-                        eventData.put(
-                                "user.email.txma",
-                                encodeHexString(hmacSha256(user.getEmail(), key)));
-                    }
+                                if (isPresent(user.getEmail())) {
+                                    eventData.put(
+                                            "user.email.txma",
+                                            encodeHexString(hmacSha256(user.getEmail(), key)));
+                                }
 
-                    if (isPresent(user.getPhoneNumber())) {
-                        eventData.put(
-                                "user.phone.txma",
-                                encodeHexString(hmacSha256(user.getPhoneNumber(), key)));
-                    }
+                                if (isPresent(user.getPhoneNumber())) {
+                                    eventData.put(
+                                            "user.phone.txma",
+                                            encodeHexString(
+                                                    hmacSha256(user.getPhoneNumber(), key)));
+                                }
+                            });
                 });
 
         auditEvent
