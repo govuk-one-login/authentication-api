@@ -65,3 +65,7 @@ variable "lambda_memory_size" {
   default = 4096
   type    = number
 }
+
+variable "txma_obfuscation_secret_arn" {
+  default = ""
+}

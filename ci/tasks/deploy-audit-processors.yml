@@ -11,6 +11,7 @@ params:
   DEPLOY_ENVIRONMENT: build
   STATE_BUCKET: digital-identity-dev-tfstate
   AUDIT_STORE_EXPIRY_DAYS: 7
+  TXMA_OBFUSCATION_SECRET_ARN: ""
 inputs:
   - name: shared-terraform-outputs
   - name: api-terraform-src
@@ -38,6 +39,7 @@ run:
         -var 'logging_endpoint_arn=arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prod' \
         -var 'logging_endpoint_arns=["arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prod"]' \
         -var "audit_storage_expiry_days=${AUDIT_STORE_EXPIRY_DAYS}" \
+        -var "txma_obfuscation_secret_arn=${TXMA_OBFUSCATION_SECRET_ARN}" \
         -var-file "${DEPLOY_ENVIRONMENT}-overrides.tfvars" \
 
       terraform output --json > ../../../../terraform-outputs/${DEPLOY_ENVIRONMENT}-terraform-outputs.json
