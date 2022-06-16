@@ -16,7 +16,7 @@ public class RedisConfiguration extends SsmAwareConfiguration {
                     format("{0}-{1}-redis-port", ENVIRONMENT, REDIS_KEY),
                     format("{0}-{1}-redis-tls", ENVIRONMENT, REDIS_KEY));
 
-    public static Map<String, String> getSsmRedisParameters() {
+    public Map<String, String> getSsmRedisParameters() {
         return REDIS_SSM_PARAMETERS;
     }
 }

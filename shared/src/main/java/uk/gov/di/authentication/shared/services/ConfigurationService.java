@@ -4,13 +4,13 @@ import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagement;
 import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagementClient;
 import com.amazonaws.services.simplesystemsmanagement.model.GetParameterRequest;
-import com.amazonaws.services.simplesystemsmanagement.model.GetParametersRequest;
 import com.amazonaws.services.simplesystemsmanagement.model.ParameterNotFoundException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.bouncycastle.util.io.pem.PemReader;
 import uk.gov.di.authentication.shared.configuration.AuditPublisherConfiguration;
 import uk.gov.di.authentication.shared.configuration.BaseLambdaConfiguration;
+import uk.gov.di.authentication.shared.configuration.RedisConfiguration;
 import uk.gov.di.authentication.shared.helpers.CryptoProviderHelper;
 
 import java.io.IOException;
@@ -23,14 +23,14 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static java.text.MessageFormat.format;
 import static java.util.Objects.isNull;
 
-public class ConfigurationService implements BaseLambdaConfiguration, AuditPublisherConfiguration {
+public class ConfigurationService extends RedisConfiguration
+        implements BaseLambdaConfiguration, AuditPublisherConfiguration {
 
     private static final Logger LOG = LogManager.getLogger(ConfigurationService.class);
     private static ConfigurationService configurationService;
@@ -43,7 +43,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     private AWSSimpleSystemsManagement ssmClient;
-    private Map<String, String> ssmRedisParameters;
     private Optional<String> passwordPepper;
 
     private ECPublicKey docAppCredentialSigningPublicKey;
@@ -382,28 +381,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         } catch (ParameterNotFoundException e) {
             return Optional.empty();
         }
-    }
-
-    private Map<String, String> getSsmRedisParameters() {
-        if (ssmRedisParameters == null) {
-            var getParametersRequest =
-                    new GetParametersRequest()
-                            .withNames(
-                                    format(
-                                            "{0}-{1}-redis-master-host",
-                                            getEnvironment(), getRedisKey()),
-                                    format(
-                                            "{0}-{1}-redis-password",
-                                            getEnvironment(), getRedisKey()),
-                                    format("{0}-{1}-redis-port", getEnvironment(), getRedisKey()),
-                                    format("{0}-{1}-redis-tls", getEnvironment(), getRedisKey()))
-                            .withWithDecryption(true);
-            var result = getSsmClient().getParameters(getParametersRequest);
-            ssmRedisParameters =
-                    result.getParameters().stream()
-                            .collect(Collectors.toMap(p -> p.getName(), p -> p.getValue()));
-        }
-        return ssmRedisParameters;
     }
 
     private AWSSimpleSystemsManagement getSsmClient() {
