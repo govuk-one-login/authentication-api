@@ -21,6 +21,13 @@ resource "aws_iam_policy" "txma_secrets_policy" {
   })
 }
 
+resource "aws_iam_role_policy_attachment" "txma_secrets_policy" {
+  count = var.txma_obfuscation_secret_arn == "" ? 0 : 1
+
+  role       = module.fraud_realtime_logging_role.name
+  policy_arn = aws_iam_policy.txma_secrets_policy[0].arn
+}
+
 module "fraud_realtime_logging_role" {
   source = "../modules/lambda-role"
 
@@ -28,10 +35,9 @@ module "fraud_realtime_logging_role" {
   role_name   = "fraud-realtime-logging"
   vpc_arn     = local.authentication_vpc_arn
 
-  policies_to_attach = compact([
+  policies_to_attach = [
     aws_iam_policy.fraud_realtime_logging_audit_payload_kms_verification.arn,
-    var.txma_obfuscation_secret_arn == "" ? null : aws_iam_policy.txma_secrets_policy[0].arn,
-  ])
+  ]
 }
 
 resource "aws_iam_policy" "fraud_realtime_logging_audit_payload_kms_verification" {
