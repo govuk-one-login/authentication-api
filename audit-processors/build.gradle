@@ -17,10 +17,10 @@ dependencies {
             configurations.ssm,
             configurations.sns,
             configurations.s3,
-            configurations.secretsmanager,
             configurations.dynamodb
 
-    implementation "com.google.protobuf:protobuf-java:${dependencyVersions.protobuf_version}",
+    implementation configurations.secretsmanager,
+            "com.google.protobuf:protobuf-java:${dependencyVersions.protobuf_version}",
             "com.google.protobuf:protobuf-java-util:${dependencyVersions.protobuf_version}",
             "com.google.code.gson:gson:2.9.0"
 
