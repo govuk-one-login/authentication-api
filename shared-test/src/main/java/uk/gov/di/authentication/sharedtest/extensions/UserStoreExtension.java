@@ -10,6 +10,7 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
+import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -84,6 +85,10 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
 
     public void setPhoneNumberVerified(String email, boolean isVerified) {
         dynamoService.updatePhoneNumberVerifiedStatus(email, isVerified);
+    }
+
+    public List<MFAMethod> getMfaMethod(String email) {
+        return dynamoService.getUserCredentialsFromEmail(email).getMfaMethods();
     }
 
     public byte[] addSalt(String email) {
