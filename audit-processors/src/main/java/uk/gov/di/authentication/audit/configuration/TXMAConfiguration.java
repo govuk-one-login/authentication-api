@@ -3,12 +3,7 @@ package uk.gov.di.authentication.audit.configuration;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
-import software.amazon.awssdk.services.secretsmanager.model.DecryptionFailureException;
 import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueRequest;
-import software.amazon.awssdk.services.secretsmanager.model.InternalServiceErrorException;
-import software.amazon.awssdk.services.secretsmanager.model.InvalidParameterException;
-import software.amazon.awssdk.services.secretsmanager.model.InvalidRequestException;
-import software.amazon.awssdk.services.secretsmanager.model.ResourceNotFoundException;
 
 import java.util.Optional;
 
@@ -53,11 +48,7 @@ public class TXMAConfiguration {
                                                     secretsManagerClient.getSecretValue(
                                                             getSecretValueRequest);
                                             return getSecretValueResponse.secretString();
-                                        } catch (DecryptionFailureException
-                                                | InternalServiceErrorException
-                                                | InvalidParameterException
-                                                | InvalidRequestException
-                                                | ResourceNotFoundException e) {
+                                        } catch (Exception e) {
                                             LOG.error("Could not get secret from TXMA", e);
                                             return null;
                                         }
