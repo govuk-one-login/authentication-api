@@ -20,6 +20,16 @@ public class PhoneNumberHelper {
         }
     }
 
+    public static String getCountry(String phoneNumber) {
+        try {
+            return Integer.toString(
+                    PhoneNumberUtil.getInstance().parse(phoneNumber, "GB").getCountryCode());
+        } catch (NumberParseException e) {
+            LOG.warn("Error when trying to parse phone number");
+            throw new RuntimeException(e);
+        }
+    }
+
     public static String removeWhitespaceFromPhoneNumber(String phoneNumber) {
         return phoneNumber.replaceAll("\\s+", "");
     }
