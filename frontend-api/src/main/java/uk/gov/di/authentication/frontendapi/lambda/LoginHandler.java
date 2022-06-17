@@ -15,6 +15,9 @@ import uk.gov.di.authentication.shared.conditions.ConsentHelper;
 import uk.gov.di.authentication.shared.conditions.MfaHelper;
 import uk.gov.di.authentication.shared.conditions.TermsAndConditionsHelper;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.MFAMethod;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -36,6 +39,7 @@ import java.util.Optional;
 
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.LOG_IN_SUCCESS;
 import static uk.gov.di.authentication.frontendapi.services.UserMigrationService.userHasBeenPartlyMigrated;
+import static uk.gov.di.authentication.shared.conditions.MfaHelper.getPrimaryMFAMethod;
 import static uk.gov.di.authentication.shared.entity.Session.AccountState.EXISTING;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -64,14 +68,15 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 sessionService,
                 clientSessionService,
                 clientService,
-                authenticationService);
+                authenticationService,
+                true);
         this.codeStorageService = codeStorageService;
         this.userMigrationService = userMigrationService;
         this.auditService = auditService;
     }
 
     public LoginHandler(ConfigurationService configurationService) {
-        super(LoginRequest.class, configurationService);
+        super(LoginRequest.class, configurationService, true);
         this.codeStorageService =
                 new CodeStorageService(new RedisConnectionService(configurationService));
         this.userMigrationService =
@@ -99,7 +104,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
             Optional<UserProfile> userProfileMaybe =
                     authenticationService.getUserProfileByEmailMaybe(request.getEmail());
-            if (userProfileMaybe.isEmpty()) {
+            if (userProfileMaybe.isEmpty() || userContext.getUserCredentials().isEmpty()) {
 
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.NO_ACCOUNT_WITH_EMAIL,
@@ -116,6 +121,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             }
 
             UserProfile userProfile = userProfileMaybe.get();
+            UserCredentials userCredentials = userContext.getUserCredentials().get();
 
             int incorrectPasswordCount =
                     codeStorageService.getIncorrectPasswordCount(request.getEmail());
@@ -175,6 +181,15 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             var isMfaRequired =
                     MfaHelper.mfaRequired(userContext.getClientSession().getAuthRequestParams());
             var consentRequired = ConsentHelper.userHasNotGivenConsent(userContext);
+
+            Optional<MFAMethod> mfaMethod = getPrimaryMFAMethod(userCredentials);
+            MFAMethodType mfaMethodType =
+                    mfaMethod
+                            .map(m -> MFAMethodType.valueOf(m.getMfaMethodType()))
+                            .orElse(MFAMethodType.SMS);
+            boolean mfaMethodVerified =
+                    mfaMethod.map(m -> m.isMethodVerified()).orElse(isPhoneNumberVerified);
+
             LOG.info("User has successfully logged in");
 
             auditService.submitAuditEvent(
@@ -195,7 +210,9 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                             isMfaRequired,
                             isPhoneNumberVerified,
                             termsAndConditionsAccepted,
-                            consentRequired));
+                            consentRequired,
+                            mfaMethodType,
+                            mfaMethodVerified));
         } catch (JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }

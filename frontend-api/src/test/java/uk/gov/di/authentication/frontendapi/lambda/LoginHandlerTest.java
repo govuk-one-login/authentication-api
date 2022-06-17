@@ -16,6 +16,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
 import uk.gov.di.authentication.frontendapi.helpers.RedactPhoneNumberHelper;
@@ -23,6 +25,8 @@ import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.MFAMethod;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
@@ -61,6 +65,7 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.shared.entity.MFAMethodType.SMS;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
@@ -71,12 +76,22 @@ class LoginHandlerTest {
 
     private static final String EMAIL = "joe.bloggs@test.com";
     private static final String PASSWORD = "computer-1";
-    private UserCredentials userCredentials =
+    private final UserCredentials userCredentials =
             new UserCredentials().setEmail(EMAIL).setPassword(PASSWORD);
+
+    private final UserCredentials userCredentialsAuthApp =
+            new UserCredentials()
+                    .setEmail(EMAIL)
+                    .setPassword(PASSWORD)
+                    .setMfaMethod(AUTH_APP_MFA_METHOD);
     private static final String PHONE_NUMBER = "01234567890";
     private static final ClientID CLIENT_ID = new ClientID();
+    private static final MFAMethod AUTH_APP_MFA_METHOD =
+            new MFAMethod()
+                    .setMfaMethodType(MFAMethodType.AUTH_APP.getValue())
+                    .setMethodVerified(true)
+                    .setEnabled(true);
     private static final Json objectMapper = SerializationService.getInstance();
-
     private LoginHandler handler;
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -89,7 +104,7 @@ class LoginHandlerTest {
     private final UserMigrationService userMigrationService = mock(UserMigrationService.class);
     private final AuditService auditService = mock(AuditService.class);
 
-    private final Session session = new Session(IdGenerator.generate());
+    private final Session session = new Session(IdGenerator.generate()).setEmailAddress(EMAIL);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging = new CaptureLoggingExtension(LoginHandler.class);
@@ -113,8 +128,6 @@ class LoginHandlerTest {
         when(clientService.getClient(CLIENT_ID.getValue()))
                 .thenReturn(Optional.of(generateClientRegistry()));
 
-        when(authenticationService.getUserCredentialsFromEmail(EMAIL)).thenReturn(userCredentials);
-
         handler =
                 new LoginHandler(
                         configurationService,
@@ -127,8 +140,10 @@ class LoginHandlerTest {
                         auditService);
     }
 
-    @Test
-    void shouldReturn200IfLoginIsSuccessful() throws JsonProcessingException, Json.JsonException {
+    @ParameterizedTest
+    @EnumSource(MFAMethodType.class)
+    void shouldReturn200IfLoginIsSuccessful(MFAMethodType mfaMethodType)
+            throws JsonProcessingException, Json.JsonException {
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("1.0");
         String persistentId = "some-persistent-id-value";
         Map<String, String> headers = new HashMap<>();
@@ -137,9 +152,10 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(authenticationService.login(userCredentials, PASSWORD)).thenReturn(true);
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         usingValidSession();
+        usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
+
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         event.setHeaders(headers);
@@ -171,9 +187,10 @@ class LoginHandlerTest {
                         persistentId);
     }
 
-    @Test
-    void shouldReturn200IfLoginIsSuccessfulAndTermsAndConditionsNotAccepted()
-            throws JsonProcessingException, Json.JsonException {
+    @ParameterizedTest
+    @EnumSource(MFAMethodType.class)
+    void shouldReturn200IfLoginIsSuccessfulAndTermsAndConditionsNotAccepted(
+            MFAMethodType mfaMethodType) throws JsonProcessingException, Json.JsonException {
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("2.0");
         String persistentId = "some-persistent-id-value";
         Map<String, String> headers = new HashMap<>();
@@ -182,10 +199,10 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-
-        when(authenticationService.login(userCredentials, PASSWORD)).thenReturn(true);
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         usingValidSession();
+        usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
+
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         event.setHeaders(headers);
@@ -220,20 +237,23 @@ class LoginHandlerTest {
                 .save(argThat(session -> session.isNewAccount() == Session.AccountState.EXISTING));
     }
 
-    @Test
-    void shouldReturn200IfMigratedUserHasBeenProcessesSuccessfully()
+    @ParameterizedTest
+    @EnumSource(MFAMethodType.class)
+    void shouldReturn200IfMigratedUserHasBeenProcessesSuccessfully(MFAMethodType mfaMethodType)
             throws JsonProcessingException, Json.JsonException {
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("1.0");
         String legacySubjectId = new Subject().getValue();
         UserProfile userProfile = generateUserProfile(legacySubjectId);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-
-        userCredentials.setPassword(null);
-
-        when(userMigrationService.processMigratedUser(userCredentials, PASSWORD)).thenReturn(true);
+        UserCredentials applicableUserCredentials =
+                usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
+        applicableUserCredentials.setPassword(null);
+        when(userMigrationService.processMigratedUser(applicableUserCredentials, PASSWORD))
+                .thenReturn(true);
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         usingValidSession();
+
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
@@ -251,16 +271,17 @@ class LoginHandlerTest {
                 .save(argThat(session -> session.isNewAccount() == Session.AccountState.EXISTING));
     }
 
-    @Test
-    void shouldReturn200IfPasswordIsEnteredAgain()
+    @ParameterizedTest
+    @EnumSource(MFAMethodType.class)
+    void shouldReturn200IfPasswordIsEnteredAgain(MFAMethodType mfaMethodType)
             throws JsonProcessingException, Json.JsonException {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(authenticationService.login(userCredentials, PASSWORD)).thenReturn(true);
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
 
         usingValidSession();
+        usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
@@ -278,16 +299,17 @@ class LoginHandlerTest {
                 .save(argThat(session -> session.isNewAccount() == Session.AccountState.EXISTING));
     }
 
-    @Test
-    void shouldChangeStateToAccountTemporarilyLockedAfter5UnsuccessfulAttempts() {
+    @ParameterizedTest
+    @EnumSource(MFAMethodType.class)
+    void shouldChangeStateToAccountTemporarilyLockedAfter5UnsuccessfulAttempts(
+            MFAMethodType mfaMethodType) {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-
-        when(authenticationService.login(userCredentials, PASSWORD)).thenReturn(false);
         when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(5);
-
         usingValidSession();
+        usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
+
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
@@ -298,16 +320,17 @@ class LoginHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1028));
     }
 
-    @Test
-    void shouldKeepUserLockedWhenTheyEnterSuccessfulLoginRequestInNewSession() {
+    @ParameterizedTest
+    @EnumSource(MFAMethodType.class)
+    void shouldKeepUserLockedWhenTheyEnterSuccessfulLoginRequestInNewSession(
+            MFAMethodType mfaMethodType) {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-
-        when(authenticationService.login(userCredentials, PASSWORD)).thenReturn(true);
         when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(5);
-
         usingValidSession();
+        usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
+
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
@@ -330,22 +353,23 @@ class LoginHandlerTest {
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
     }
 
-    @Test
-    void shouldRemoveIncorrectPasswordCountRemovesUponSuccessfulLogin()
+    @ParameterizedTest
+    @EnumSource(MFAMethodType.class)
+    void shouldRemoveIncorrectPasswordCountRemovesUponSuccessfulLogin(MFAMethodType mfaMethodType)
             throws JsonProcessingException, Json.JsonException {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-
+        UserCredentials applicableUserCredentials = usingApplicableUserCredentials(mfaMethodType);
         when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(4);
-
         usingValidSession();
+
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        when(authenticationService.login(userCredentials, PASSWORD)).thenReturn(true);
+        when(authenticationService.login(applicableUserCredentials, PASSWORD)).thenReturn(true);
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
 
         APIGatewayProxyResponseEvent result2 = handler.handleRequest(event, context);
@@ -355,17 +379,19 @@ class LoginHandlerTest {
         LoginResponse response = objectMapper.readValue(result2.getBody(), LoginResponse.class);
     }
 
-    @Test
-    void shouldReturn401IfUserHasInvalidCredentials() {
+    @ParameterizedTest
+    @EnumSource(MFAMethodType.class)
+    void shouldReturn401IfUserHasInvalidCredentials(MFAMethodType mfaMethodType) {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
+        usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
-        when(authenticationService.login(userCredentials, PASSWORD)).thenReturn(false);
+
         usingValidSession();
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -386,14 +412,18 @@ class LoginHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1008));
     }
 
-    @Test
-    void shouldReturn401IfMigratedUserHasInvalidCredentials() {
+    @ParameterizedTest
+    @EnumSource(MFAMethodType.class)
+    void shouldReturn401IfMigratedUserHasInvalidCredentials(MFAMethodType mfaMethodType) {
         String legacySubjectId = new Subject().getValue();
         UserProfile userProfile = generateUserProfile(legacySubjectId);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
 
-        when(userMigrationService.processMigratedUser(userCredentials, PASSWORD)).thenReturn(false);
+        UserCredentials applicableUserCredentials = usingApplicableUserCredentials(mfaMethodType);
+
+        when(userMigrationService.processMigratedUser(applicableUserCredentials, PASSWORD))
+                .thenReturn(false);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
@@ -477,6 +507,22 @@ class LoginHandlerTest {
     private void usingValidSession() {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
+    }
+
+    private UserCredentials usingApplicableUserCredentials(MFAMethodType mfaMethodType) {
+        UserCredentials applicableUserCredentials =
+                mfaMethodType.equals(SMS) ? userCredentials : userCredentialsAuthApp;
+        when(authenticationService.getUserCredentialsFromEmail(EMAIL))
+                .thenReturn(applicableUserCredentials);
+        return applicableUserCredentials;
+    }
+
+    private UserCredentials usingApplicableUserCredentialsWithLogin(
+            MFAMethodType mfaMethodType, boolean loginSuccessful) {
+        UserCredentials applicableUserCredentials = usingApplicableUserCredentials(mfaMethodType);
+        when(authenticationService.login(applicableUserCredentials, PASSWORD))
+                .thenReturn(loginSuccessful);
+        return applicableUserCredentials;
     }
 
     private UserProfile generateUserProfile(String legacySubjectId) {

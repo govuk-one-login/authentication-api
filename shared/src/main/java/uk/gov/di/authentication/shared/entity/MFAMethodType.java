@@ -1,7 +1,8 @@
 package uk.gov.di.authentication.shared.entity;
 
 public enum MFAMethodType {
-    AUTH_APP("AUTH_APP");
+    AUTH_APP("AUTH_APP"),
+    SMS("SMS");
 
     private String value;
 

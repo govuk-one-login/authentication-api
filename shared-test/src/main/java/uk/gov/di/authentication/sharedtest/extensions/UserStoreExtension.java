@@ -10,6 +10,7 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -97,6 +98,16 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
 
     public void updateTermsAndConditions(String email, String version) {
         dynamoService.updateTermsAndConditions(email, version);
+    }
+
+    public void updateMFAMethod(
+            String email,
+            MFAMethodType mfaMethodType,
+            boolean methodVerified,
+            boolean enabled,
+            String credentialValue) {
+        dynamoService.updateMFAMethod(
+                email, mfaMethodType, methodVerified, enabled, credentialValue);
     }
 
     @Override

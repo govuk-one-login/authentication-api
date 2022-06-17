@@ -15,6 +15,7 @@ import uk.gov.di.authentication.frontendapi.entity.LoginRequest;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
 import uk.gov.di.authentication.frontendapi.lambda.LoginHandler;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
@@ -34,6 +35,8 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.LOG_IN_SUCCESS;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
+import static uk.gov.di.authentication.shared.entity.MFAMethodType.AUTH_APP;
+import static uk.gov.di.authentication.shared.entity.MFAMethodType.SMS;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.authentication.sharedtest.helper.KeyPairHelper.GENERATE_RSA_KEY_PAIR;
@@ -55,7 +58,10 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @ParameterizedTest
     @MethodSource("vectorOfTrust")
     void shouldSuccessfullyProcessLoginRequestForDifferentVectorOfTrusts(
-            CredentialTrustLevel level, String termsAndConditionsVersion)
+            CredentialTrustLevel level,
+            String termsAndConditionsVersion,
+            MFAMethodType mfaMethodType,
+            boolean mfaMethodVerified)
             throws Json.JsonException {
         String email = "joe.bloggs+3@digital.cabinet-office.gov.uk";
         String password = "password-1";
@@ -63,7 +69,13 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         userStore.signUp(email, password);
         userStore.addPhoneNumber(email, phoneNumber);
         userStore.updateTermsAndConditions(email, termsAndConditionsVersion);
-        String sessionId = redis.createSession();
+        if (mfaMethodType.equals(SMS)) {
+            userStore.setPhoneNumberVerified(email, mfaMethodVerified);
+        } else {
+            userStore.updateMFAMethod(
+                    email, mfaMethodType, mfaMethodVerified, true, "auth-app-credential");
+        }
+        String sessionId = redis.createUnauthenticatedSessionWithEmail(email);
 
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
@@ -112,17 +124,45 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 loginResponse.getLatestTermsAndConditionsAccepted(),
                 equalTo(termsAndConditionsVersion.equals(CURRENT_TERMS_AND_CONDITIONS)));
 
+        assertThat(loginResponse.getMfaMethodType(), equalTo(mfaMethodType));
+        if (mfaMethodType.equals(SMS)) {
+            assertThat(loginResponse.isPhoneNumberVerified(), equalTo(mfaMethodVerified));
+            assertThat(
+                    loginResponse.isMfaMethodVerified(),
+                    equalTo(loginResponse.isPhoneNumberVerified()));
+        } else {
+            assertThat(loginResponse.isMfaMethodVerified(), equalTo(mfaMethodVerified));
+        }
+
         assertEventTypesReceived(auditTopic, List.of(LOG_IN_SUCCESS));
     }
 
     private static Stream<Arguments> vectorOfTrust() {
         return Stream.of(
-                Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS),
-                Arguments.of(LOW_LEVEL, CURRENT_TERMS_AND_CONDITIONS),
-                Arguments.of(MEDIUM_LEVEL, CURRENT_TERMS_AND_CONDITIONS),
-                Arguments.of(null, OLD_TERMS_AND_CONDITIONS),
-                Arguments.of(LOW_LEVEL, OLD_TERMS_AND_CONDITIONS),
-                Arguments.of(MEDIUM_LEVEL, OLD_TERMS_AND_CONDITIONS));
+                Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS, SMS, true),
+                Arguments.of(LOW_LEVEL, CURRENT_TERMS_AND_CONDITIONS, SMS, true),
+                Arguments.of(MEDIUM_LEVEL, CURRENT_TERMS_AND_CONDITIONS, SMS, true),
+                Arguments.of(null, OLD_TERMS_AND_CONDITIONS, SMS, true),
+                Arguments.of(LOW_LEVEL, OLD_TERMS_AND_CONDITIONS, SMS, true),
+                Arguments.of(MEDIUM_LEVEL, OLD_TERMS_AND_CONDITIONS, SMS, true),
+                Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS, SMS, false),
+                Arguments.of(LOW_LEVEL, CURRENT_TERMS_AND_CONDITIONS, SMS, false),
+                Arguments.of(MEDIUM_LEVEL, CURRENT_TERMS_AND_CONDITIONS, SMS, false),
+                Arguments.of(null, OLD_TERMS_AND_CONDITIONS, SMS, false),
+                Arguments.of(LOW_LEVEL, OLD_TERMS_AND_CONDITIONS, SMS, false),
+                Arguments.of(MEDIUM_LEVEL, OLD_TERMS_AND_CONDITIONS, SMS, false),
+                Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP, true),
+                Arguments.of(LOW_LEVEL, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP, true),
+                Arguments.of(MEDIUM_LEVEL, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP, true),
+                Arguments.of(null, OLD_TERMS_AND_CONDITIONS, AUTH_APP, true),
+                Arguments.of(LOW_LEVEL, OLD_TERMS_AND_CONDITIONS, AUTH_APP, true),
+                Arguments.of(MEDIUM_LEVEL, OLD_TERMS_AND_CONDITIONS, AUTH_APP, true),
+                Arguments.of(null, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP, false),
+                Arguments.of(LOW_LEVEL, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP, false),
+                Arguments.of(MEDIUM_LEVEL, CURRENT_TERMS_AND_CONDITIONS, AUTH_APP, false),
+                Arguments.of(null, OLD_TERMS_AND_CONDITIONS, AUTH_APP, false),
+                Arguments.of(LOW_LEVEL, OLD_TERMS_AND_CONDITIONS, AUTH_APP, false),
+                Arguments.of(MEDIUM_LEVEL, OLD_TERMS_AND_CONDITIONS, AUTH_APP, false));
     }
 
     @Test
@@ -131,7 +171,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         String email = "joe.bloggs+4@digital.cabinet-office.gov.uk";
         String password = "password-1";
         userStore.signUp(email, "wrong-password");
-        String sessionId = redis.createSession();
+        String sessionId = redis.createUnauthenticatedSessionWithEmail(email);
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", sessionId);
         headers.put("X-API-Key", FRONTEND_API_KEY);
