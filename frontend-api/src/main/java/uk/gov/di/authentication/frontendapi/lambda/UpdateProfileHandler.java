@@ -9,6 +9,8 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.bouncycastle.util.encoders.Base32;
+import org.bouncycastle.util.encoders.DecoderException;
 import uk.gov.di.authentication.frontendapi.entity.UpdateProfileRequest;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
@@ -37,11 +39,13 @@ import java.time.ZoneId;
 import java.util.Optional;
 import java.util.Set;
 
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_AUTH_APP;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_CONSENT_UPDATED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_PHONE_NUMBER;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_REQUEST_ERROR;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_REQUEST_RECEIVED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE;
+import static uk.gov.di.authentication.shared.entity.MFAMethodType.AUTH_APP;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
@@ -168,15 +172,14 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                     ClientSession clientSession = userContext.getClientSession();
 
                     if (clientSession == null) {
-                        return generateErrorResponse(ErrorResponse.ERROR_1000, context);
+                        return generateErrorResponse(ErrorResponse.ERROR_1018, context);
                     }
                     AuthenticationRequest authorizationRequest;
                     try {
                         authorizationRequest =
                                 AuthenticationRequest.parse(clientSession.getAuthRequestParams());
                     } catch (ParseException e) {
-                        LOG.info("Cannot retrieve auth request params from client session id");
-                        return generateErrorResponse(ErrorResponse.ERROR_1001, context);
+                        return generateErrorResponse(ErrorResponse.ERROR_1038, context);
                     }
                     String clientId = authorizationRequest.getClientID().getValue();
 
@@ -208,6 +211,23 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                     LOG.info(
                             "Updated terms and conditions for Version: {}",
                             configurationService.getTermsAndConditionsVersion());
+                    break;
+                }
+            case REGISTER_AUTH_APP:
+                {
+                    try {
+                        Base32.decode(request.getProfileInformation());
+                    } catch (DecoderException e) {
+                        return generateErrorResponse(ErrorResponse.ERROR_1041, context);
+                    }
+                    authenticationService.updateMFAMethod(
+                            userContext.getSession().getEmailAddress(),
+                            AUTH_APP,
+                            false,
+                            true,
+                            request.getProfileInformation());
+                    auditableEvent = UPDATE_PROFILE_AUTH_APP;
+                    LOG.info("MFA Method has been updated for type: {}", AUTH_APP);
                     break;
                 }
             default:
@@ -262,8 +282,8 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                                         LocalDateTime.now(ZoneId.of("UTC")).toString()));
 
         LOG.info(
-                "Consent value successfully added to ClientConsentObject. Attempting to update UserProfile with ClientConsent: {}",
-                clientConsentToUpdate);
+                "Consent value successfully added to ClientConsentObject. Attempting to update UserProfile with claims: {}",
+                clientConsentToUpdate.getClaims());
 
         authenticationService.updateConsent(email, clientConsentToUpdate);
     }
