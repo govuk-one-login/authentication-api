@@ -26,7 +26,7 @@ public class ApiGatewayResponseHelper {
     private static final String CONTENT_TYPE_OPTIONS_HEADER_VALUE = "nosniff";
     private static final String CONTENT_SECURITY_POLICY_HEADER_VALUE = "frame-ancestors 'none'";
     private static final String STRICT_TRANSPORT_SECURITY_HEADER_VALUE =
-            "max-age=31536000; includeSubDomains";
+            "max-age=31536000; includeSubDomains; preload";
     private static final String X_FRAME_OPTIONS_HEADER_VALUE = "DENY";
 
     private static final Logger LOG = LogManager.getLogger(ApiGatewayResponseHelper.class);

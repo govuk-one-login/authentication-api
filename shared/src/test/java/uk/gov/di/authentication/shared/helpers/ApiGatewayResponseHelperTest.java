@@ -24,7 +24,9 @@ public class ApiGatewayResponseHelperTest {
                 result.getHeaders(), hasEntry("Content-Security-Policy", "frame-ancestors 'none'"));
         assertThat(
                 result.getHeaders(),
-                hasEntry("Strict-Transport-Security", "max-age=31536000; includeSubDomains"));
+                hasEntry(
+                        "Strict-Transport-Security",
+                        "max-age=31536000; includeSubDomains; preload"));
         assertThat(result.getHeaders(), hasEntry("X-Frame-Options", "DENY"));
     }
 
@@ -41,7 +43,9 @@ public class ApiGatewayResponseHelperTest {
                 result.getHeaders(), hasEntry("Content-Security-Policy", "frame-ancestors 'none'"));
         assertThat(
                 result.getHeaders(),
-                hasEntry("Strict-Transport-Security", "max-age=31536000; includeSubDomains"));
+                hasEntry(
+                        "Strict-Transport-Security",
+                        "max-age=31536000; includeSubDomains; preload"));
         assertThat(result.getHeaders(), hasEntry("X-Frame-Options", "DENY"));
     }
 
@@ -58,7 +62,9 @@ public class ApiGatewayResponseHelperTest {
                 result.getHeaders(), hasEntry("Content-Security-Policy", "frame-ancestors 'none'"));
         assertThat(
                 result.getHeaders(),
-                hasEntry("Strict-Transport-Security", "max-age=31536000; includeSubDomains"));
+                hasEntry(
+                        "Strict-Transport-Security",
+                        "max-age=31536000; includeSubDomains; preload"));
         assertThat(result.getHeaders(), hasEntry("X-Frame-Options", "DENY"));
     }
 }
