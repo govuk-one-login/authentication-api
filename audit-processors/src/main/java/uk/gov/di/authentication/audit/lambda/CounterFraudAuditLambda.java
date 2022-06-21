@@ -10,7 +10,6 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
 import java.util.HashMap;
-import java.util.Optional;
 
 import static org.apache.commons.codec.binary.Hex.encodeHexString;
 import static uk.gov.di.authentication.audit.helper.HmacSha256Helper.hmacSha256;
@@ -18,26 +17,25 @@ import static uk.gov.di.authentication.audit.helper.HmacSha256Helper.hmacSha256;
 public class CounterFraudAuditLambda extends BaseAuditHandler {
 
     private static final Logger LOG = LogManager.getLogger(CounterFraudAuditLambda.class);
-    private final Optional<TXMAConfiguration> txmaConfiguration;
+    private final String hmacKey;
 
     public CounterFraudAuditLambda(
             KmsConnectionService kmsConnectionService,
             ConfigurationService service,
             TXMAConfiguration txmaConfiguration) {
         super(kmsConnectionService, service);
-        this.txmaConfiguration = Optional.of(txmaConfiguration);
+        this.hmacKey =
+                txmaConfiguration
+                        .getObfuscationHMACSecret()
+                        .orElseGet(() -> this.service.getAuditHmacSecret());
     }
 
     public CounterFraudAuditLambda() {
         super();
-        Optional<TXMAConfiguration> config;
-        try {
-            config = Optional.of(new TXMAConfiguration());
-        } catch (Exception e) {
-            config = Optional.empty();
-            LOG.warn("Exception getting TXMA configuration ", e);
-        }
-        this.txmaConfiguration = config;
+        var config = new TXMAConfiguration();
+        this.hmacKey =
+                config.getObfuscationHMACSecret()
+                        .orElseGet(() -> this.service.getAuditHmacSecret());
     }
 
     @Override
@@ -54,8 +52,6 @@ public class CounterFraudAuditLambda extends BaseAuditHandler {
 
         User user = auditEvent.getUser();
 
-        var hmacKey = this.service.getAuditHmacSecret();
-
         eventData.put("user.ip-address", user.getIpAddress());
 
         if (isPresent(user.getId())) {
@@ -70,32 +66,6 @@ public class CounterFraudAuditLambda extends BaseAuditHandler {
             eventData.put(
                     "user.phone", encodeHexString(hmacSha256(user.getPhoneNumber(), hmacKey)));
         }
-
-        txmaConfiguration.ifPresent(
-                config -> {
-                    var newHmacKey = config.getObfuscationHMACSecret();
-                    newHmacKey.ifPresent(
-                            key -> {
-                                if (isPresent(user.getId())) {
-                                    eventData.put(
-                                            "user.id.txma",
-                                            encodeHexString(hmacSha256(user.getId(), key)));
-                                }
-
-                                if (isPresent(user.getEmail())) {
-                                    eventData.put(
-                                            "user.email.txma",
-                                            encodeHexString(hmacSha256(user.getEmail(), key)));
-                                }
-
-                                if (isPresent(user.getPhoneNumber())) {
-                                    eventData.put(
-                                            "user.phone.txma",
-                                            encodeHexString(
-                                                    hmacSha256(user.getPhoneNumber(), key)));
-                                }
-                            });
-                });
 
         auditEvent
                 .getExtensionsMap()
