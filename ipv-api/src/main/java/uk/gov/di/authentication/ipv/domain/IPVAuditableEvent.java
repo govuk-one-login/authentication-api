@@ -11,7 +11,8 @@ public enum IPVAuditableEvent implements AuditableEvent {
     IPV_CAPACITY_REQUESTED,
     IPV_SPOT_REQUESTED,
     PROCESSING_IDENTITY_REQUEST,
-    SPOT_RESPONSE_RECEIVED;
+    IPV_SUCCESSFUL_SPOT_RESPONSE_RECEIVED,
+    IPV_UNSUCCESSFUL_SPOT_RESPONSE_RECEIVED;
 
     public AuditableEvent parseFromName(String name) {
         return valueOf(name);
