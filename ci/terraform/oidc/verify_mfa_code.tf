@@ -36,7 +36,7 @@ module "verify_mfa_code" {
     TEST_CLIENT_VERIFY_PHONE_NUMBER_OTP = var.test_client_verify_phone_number_otp
     TEST_CLIENTS_ENABLED                = var.test_clients_enabled
   }
-  handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.VerifyMfaHandler::handleRequest"
+  handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.VerifyMfaCodeHandler::handleRequest"
 
   rest_api_id      = aws_api_gateway_rest_api.di_authentication_frontend_api.id
   root_resource_id = aws_api_gateway_rest_api.di_authentication_frontend_api.root_resource_id
