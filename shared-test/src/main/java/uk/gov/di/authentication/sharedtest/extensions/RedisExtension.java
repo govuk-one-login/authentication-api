@@ -174,7 +174,7 @@ public class RedisExtension
         return code;
     }
 
-    public void blockPhoneCode(String email) {
+    public void blockMfaCodesForEmail(String email) {
         new CodeStorageService(redis).saveBlockedForEmail(email, CODE_BLOCKED_KEY_PREFIX, 10);
     }
 

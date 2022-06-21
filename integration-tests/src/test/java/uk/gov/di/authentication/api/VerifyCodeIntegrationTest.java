@@ -170,7 +170,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     void shouldReturnMaxCodesReachedIfPhoneNumberCodeIsBlocked() throws Json.JsonException {
         String sessionId = redis.createSession();
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
-        redis.blockPhoneCode(EMAIL_ADDRESS);
+        redis.blockMfaCodesForEmail(EMAIL_ADDRESS);
 
         VerifyCodeRequest codeRequest =
                 new VerifyCodeRequest(NotificationType.VERIFY_PHONE_NUMBER, "123456");
@@ -189,7 +189,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     void shouldReturnMaxCodesReachedIfEmailCodeIsBlocked() throws Json.JsonException {
         String sessionId = redis.createSession();
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
-        redis.blockPhoneCode(EMAIL_ADDRESS);
+        redis.blockMfaCodesForEmail(EMAIL_ADDRESS);
 
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(VERIFY_EMAIL, "123456");
 

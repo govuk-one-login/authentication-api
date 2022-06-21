@@ -46,7 +46,9 @@ public enum ErrorResponse {
     ERROR_1038(1038, "Invalid Authentication Request"),
     ERROR_1039(1039, "User entered invalid password reset code too many times"),
     ERROR_1040(1040, "Password is too common"),
-    ERROR_1041(1041, "Auth app secret is invalid");
+    ERROR_1041(1041, "Auth app secret is invalid"),
+    ERROR_1042(1042, "User entered invalid authenticator app verification code too many times"),
+    ERROR_1043(1043, "User entered invalid authenticator app code");
 
     private int code;
 

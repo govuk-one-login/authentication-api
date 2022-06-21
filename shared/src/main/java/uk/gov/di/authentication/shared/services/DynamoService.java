@@ -321,6 +321,24 @@ public class DynamoService implements AuthenticationService {
     }
 
     @Override
+    public void setMFAMethodVerifiedTrue(String email, MFAMethodType mfaMethodType) {
+        var dateTime = NowHelper.toTimestampString(NowHelper.now());
+        var userCredentials =
+                userCredentialsMapper.load(UserCredentials.class, email.toLowerCase(Locale.ROOT));
+        var mfaMethod =
+                userCredentials.getMfaMethods().stream()
+                        .filter(
+                                method ->
+                                        method.getMfaMethodType().equals(mfaMethodType.getValue()))
+                        .findFirst()
+                        .orElseThrow();
+
+        mfaMethod.setMethodVerified(true);
+        mfaMethod.setUpdated(dateTime);
+        userCredentialsMapper.save(userCredentials);
+    }
+
+    @Override
     public UserProfile getUserProfileFromSubject(String subject) {
         Map<String, AttributeValue> eav = new HashMap<>();
         eav.put(":val1", new AttributeValue().withS(subject));
