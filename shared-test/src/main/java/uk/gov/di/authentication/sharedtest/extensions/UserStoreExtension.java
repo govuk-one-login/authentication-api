@@ -105,6 +105,10 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
         dynamoService.updateTermsAndConditions(email, version);
     }
 
+    public void addMfaMethod(String email, MFAMethodType mfaMethodType, boolean isVerified, boolean isEnabled, String credentialValue){
+        dynamoService.updateMFAMethod(email, mfaMethodType, isVerified, isEnabled, credentialValue);
+    }
+
     public void updateMFAMethod(
             String email,
             MFAMethodType mfaMethodType,
