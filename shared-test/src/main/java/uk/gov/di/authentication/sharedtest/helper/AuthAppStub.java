@@ -11,9 +11,9 @@ import javax.crypto.spec.SecretKeySpec;
 import java.util.concurrent.TimeUnit;
 
 public class AuthAppStub {
-    private final Logger LOG = LogManager.getLogger(AuthAppStub.class);
-    private final int CODE_DIGITS = 6;
-    private final long TIME_WINDOW_IN_MILLISECONDS = TimeUnit.SECONDS.toMillis(30);
+    private static final Logger LOG = LogManager.getLogger(AuthAppStub.class);
+    private static final int CODE_DIGITS = 6;
+    private static final long TIME_WINDOW_IN_MILLISECONDS = TimeUnit.SECONDS.toMillis(30);
 
     public String getAuthAppOneTimeCode(String secret) {
         return getAuthAppOneTimeCode(secret, NowHelper.now().getTime());

@@ -35,7 +35,7 @@ import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.a
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
-public class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
+class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String EMAIL_ADDRESS = "test@test.com";
     private static final String USER_PASSWORD = "TestPassword123!";
     private static final String CLIENT_ID = "test-client-id";

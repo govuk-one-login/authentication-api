@@ -2,6 +2,7 @@ package uk.gov.di.authentication.shared.validation;
 
 import org.apache.commons.codec.binary.Base32;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
@@ -19,29 +20,22 @@ import java.util.concurrent.TimeUnit;
 
 public class AuthAppCodeValidator extends MfaCodeValidator {
 
-    private final int WINDOW_TIME;
-    private final int ALLOWED_WINDOWS;
+    private final int windowTime;
+    private final int allowedWindows;
     private final DynamoService dynamoService;
     private final UserContext userContext;
 
     public AuthAppCodeValidator(
-            MFAMethodType mfaMethodType,
             UserContext userContext,
             CodeStorageService codeStorageService,
             ConfigurationService configurationService,
             DynamoService dynamoService,
             int maxRetries) {
-        super(
-                mfaMethodType,
-                userContext,
-                codeStorageService,
-                configurationService,
-                dynamoService,
-                maxRetries);
+        super(userContext, codeStorageService, maxRetries);
         this.dynamoService = dynamoService;
         this.userContext = userContext;
-        this.WINDOW_TIME = configurationService.getAuthAppCodeWindowLength();
-        this.ALLOWED_WINDOWS = configurationService.getAuthAppCodeAllowedWindows();
+        this.windowTime = configurationService.getAuthAppCodeWindowLength();
+        this.allowedWindows = configurationService.getAuthAppCodeAllowedWindows();
     }
 
     @Override
@@ -92,7 +86,7 @@ public class AuthAppCodeValidator extends MfaCodeValidator {
                                 method ->
                                         method.getMfaMethodType()
                                                 .equals(MFAMethodType.AUTH_APP.getValue()))
-                        .filter(authAppMethod -> authAppMethod.isEnabled())
+                        .filter(MFAMethod::isEnabled)
                         .findAny();
 
         if (mfaMethod.isPresent()) {
@@ -120,10 +114,15 @@ public class AuthAppCodeValidator extends MfaCodeValidator {
 
         final long timeWindow = getTimeWindowFromTime(timestamp);
 
-        for (int i = -((ALLOWED_WINDOWS - 1) / 2); i <= ALLOWED_WINDOWS / 2; ++i) {
-            long hash = calculateCode(decodedKey, timeWindow + i);
-            if (hash == code) {
-                return true;
+        for (int i = -((allowedWindows - 1) / 2); i <= allowedWindows / 2; ++i) {
+            try {
+                int calculatedCodeHash = calculateCode(decodedKey, timeWindow + i);
+                if (calculatedCodeHash == code) {
+                    return true;
+                }
+            } catch (NoSuchAlgorithmException | InvalidKeyException e) {
+                LOG.error("Error calculating TOTP hash from decoded secret", e);
+                return false;
             }
         }
         return false;
@@ -134,7 +133,8 @@ public class AuthAppCodeValidator extends MfaCodeValidator {
         return codec32.decode(secret.toUpperCase());
     }
 
-    private int calculateCode(byte[] key, long time) throws RuntimeException {
+    private int calculateCode(byte[] key, long time)
+            throws NoSuchAlgorithmException, InvalidKeyException {
         byte[] data = new byte[8];
 
         for (int i = 8; i-- > 0; time >>>= 8) {
@@ -143,32 +143,28 @@ public class AuthAppCodeValidator extends MfaCodeValidator {
 
         SecretKeySpec signKey = new SecretKeySpec(key, "HmacSHA1");
 
-        try {
-            Mac mac = Mac.getInstance("HmacSHA1");
-            mac.init(signKey);
+        Mac mac = Mac.getInstance("HmacSHA1");
+        mac.init(signKey);
 
-            byte[] hash = mac.doFinal(data);
+        byte[] hash = mac.doFinal(data);
 
-            int offset = hash[hash.length - 1] & 0xF;
+        int offset = hash[hash.length - 1] & 0xF;
 
-            long truncatedHash = 0;
+        long truncatedHash = 0;
 
-            for (int i = 0; i < 4; ++i) {
-                truncatedHash <<= 8;
+        for (int i = 0; i < 4; ++i) {
+            truncatedHash <<= 8;
 
-                truncatedHash |= (hash[offset + i] & 0xFF);
-            }
-
-            truncatedHash &= 0x7FFFFFFF;
-            truncatedHash %= (int) Math.pow(10, 6);
-
-            return (int) truncatedHash;
-        } catch (NoSuchAlgorithmException | InvalidKeyException ex) {
-            throw new RuntimeException("Unable to perform operation");
+            truncatedHash |= (hash[offset + i] & 0xFF);
         }
+
+        truncatedHash &= 0x7FFFFFFF;
+        truncatedHash %= (int) Math.pow(10, 6);
+
+        return (int) truncatedHash;
     }
 
     private long getTimeWindowFromTime(long time) {
-        return time / TimeUnit.SECONDS.toMillis(WINDOW_TIME);
+        return time / TimeUnit.SECONDS.toMillis(windowTime);
     }
 }

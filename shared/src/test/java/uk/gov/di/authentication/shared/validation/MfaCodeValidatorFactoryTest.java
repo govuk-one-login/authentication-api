@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class MfaCodeValidatorFactoryTest {
+class MfaCodeValidatorFactoryTest {
     private ConfigurationService configurationService;
     private UserContext userContext;
     private CodeStorageService codeStorageService;

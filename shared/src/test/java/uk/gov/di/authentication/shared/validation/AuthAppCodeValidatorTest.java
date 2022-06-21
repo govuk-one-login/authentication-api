@@ -97,7 +97,6 @@ class AuthAppCodeValidatorTest {
 
         this.authAppCodeValidator =
                 new AuthAppCodeValidator(
-                        MFAMethodType.AUTH_APP,
                         mockUserContext,
                         mockCodeStorageService,
                         mockConfigurationService,
@@ -114,7 +113,6 @@ class AuthAppCodeValidatorTest {
 
         this.authAppCodeValidator =
                 new AuthAppCodeValidator(
-                        MFAMethodType.AUTH_APP,
                         mockUserContext,
                         mockCodeStorageService,
                         mockConfigurationService,
@@ -133,7 +131,6 @@ class AuthAppCodeValidatorTest {
 
         this.authAppCodeValidator =
                 new AuthAppCodeValidator(
-                        MFAMethodType.AUTH_APP,
                         mockUserContext,
                         mockCodeStorageService,
                         mockConfigurationService,
@@ -159,7 +156,6 @@ class AuthAppCodeValidatorTest {
 
         this.authAppCodeValidator =
                 new AuthAppCodeValidator(
-                        MFAMethodType.AUTH_APP,
                         mockUserContext,
                         mockCodeStorageService,
                         mockConfigurationService,
@@ -188,7 +184,6 @@ class AuthAppCodeValidatorTest {
 
         this.authAppCodeValidator =
                 new AuthAppCodeValidator(
-                        MFAMethodType.AUTH_APP,
                         mockUserContext,
                         mockCodeStorageService,
                         mockConfigurationService,

@@ -9,6 +9,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import java.util.Optional;
 
 public class MfaCodeValidatorFactory {
+    private MfaCodeValidatorFactory() {}
 
     public static Optional<MfaCodeValidator> getMfaCodeValidator(
             MFAMethodType mfaMethodType,
@@ -26,14 +27,13 @@ public class MfaCodeValidatorFactory {
                                 : configurationService.getCodeMaxRetries();
                 return Optional.of(
                         new AuthAppCodeValidator(
-                                mfaMethodType,
                                 userContext,
                                 codeStorageService,
                                 configurationService,
                                 dynamoService,
                                 codeMaxRetries));
+            default:
+                return Optional.empty();
         }
-
-        return Optional.empty();
     }
 }

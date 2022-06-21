@@ -2,7 +2,6 @@ package uk.gov.di.authentication.sharedtest.helper;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -21,7 +20,6 @@ class AuthAppStubTest {
         this.authAppStub = new AuthAppStub();
         this.authAppCodeValidator =
                 new AuthAppCodeValidator(
-                        MFAMethodType.AUTH_APP,
                         mock(UserContext.class),
                         mock(CodeStorageService.class),
                         mock(ConfigurationService.class),
