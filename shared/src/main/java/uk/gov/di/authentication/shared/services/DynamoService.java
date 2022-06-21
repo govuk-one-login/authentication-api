@@ -327,7 +327,9 @@ public class DynamoService implements AuthenticationService {
                 userCredentialsMapper.load(UserCredentials.class, email.toLowerCase(Locale.ROOT));
         var mfaMethod =
                 userCredentials.getMfaMethods().stream()
-                        .filter(method -> method.getMfaMethodType().equals(mfaMethodType))
+                        .filter(
+                                method ->
+                                        method.getMfaMethodType().equals(mfaMethodType.getValue()))
                         .findFirst();
         mfaMethod.ifPresent(method -> method.setMethodVerified(true));
         userCredentialsMapper.save(userCredentials);
