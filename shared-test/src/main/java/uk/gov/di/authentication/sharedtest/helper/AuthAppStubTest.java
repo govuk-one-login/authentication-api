@@ -19,13 +19,14 @@ class AuthAppStubTest {
     @BeforeEach
     void setUp() {
         this.authAppStub = new AuthAppStub();
-        this.authAppCodeValidator = new AuthAppCodeValidator(
-                MFAMethodType.AUTH_APP,
-                mock(UserContext.class),
-                mock(CodeStorageService.class),
-                mock(ConfigurationService.class),
-                mock(DynamoService.class),
-                99999);
+        this.authAppCodeValidator =
+                new AuthAppCodeValidator(
+                        MFAMethodType.AUTH_APP,
+                        mock(UserContext.class),
+                        mock(CodeStorageService.class),
+                        mock(ConfigurationService.class),
+                        mock(DynamoService.class),
+                        99999);
     }
 
     @Test
@@ -34,5 +35,4 @@ class AuthAppStubTest {
 
         assertTrue(authAppCodeValidator.isCodeValid(generatedCode, "ORSXG5BNORSXQ5A="));
     }
-
 }

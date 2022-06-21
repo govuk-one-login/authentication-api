@@ -11,6 +11,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Optional;

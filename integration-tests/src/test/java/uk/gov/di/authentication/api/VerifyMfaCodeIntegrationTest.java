@@ -46,7 +46,7 @@ public class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTe
     private String sessionId;
 
     @BeforeEach
-    void beforeEachSetup () {
+    void beforeEachSetup() {
         handler = new VerifyMfaCodeHandler(TEST_CONFIGURATION_SERVICE);
         userStore.signUp(EMAIL_ADDRESS, USER_PASSWORD);
 
@@ -60,9 +60,11 @@ public class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
     @Test
     void whenValidAuthAppCodeReturn204() {
-        userStore.addMfaMethod(EMAIL_ADDRESS, MFAMethodType.AUTH_APP, true, true, AUTH_APP_SECRET_BASE_32);
+        userStore.addMfaMethod(
+                EMAIL_ADDRESS, MFAMethodType.AUTH_APP, true, true, AUTH_APP_SECRET_BASE_32);
         String code = AUTH_APP_STUB.getAuthAppOneTimeCode(AUTH_APP_SECRET_BASE_32);
-        VerifyMfaCodeRequest codeRequest = new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, code, true);
+        VerifyMfaCodeRequest codeRequest =
+                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, code, true);
 
         var response =
                 makeRequest(
@@ -76,10 +78,12 @@ public class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
     @Test
     void whenTwoMinuteOldValidAuthAppCodeReturn204() throws Json.JsonException {
-        userStore.addMfaMethod(EMAIL_ADDRESS, MFAMethodType.AUTH_APP, true, true, AUTH_APP_SECRET_BASE_32);
+        userStore.addMfaMethod(
+                EMAIL_ADDRESS, MFAMethodType.AUTH_APP, true, true, AUTH_APP_SECRET_BASE_32);
         long oneMinuteAgo = NowHelper.nowMinus(2, ChronoUnit.MINUTES).getTime();
         String code = AUTH_APP_STUB.getAuthAppOneTimeCode(AUTH_APP_SECRET_BASE_32, oneMinuteAgo);
-        VerifyMfaCodeRequest codeRequest = new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, code, true);
+        VerifyMfaCodeRequest codeRequest =
+                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, code, true);
 
         var response =
                 makeRequest(
@@ -93,10 +97,12 @@ public class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
     @Test
     void whenFiveMinuteOldAuthAppCodeReturn400() throws Json.JsonException {
-        userStore.addMfaMethod(EMAIL_ADDRESS, MFAMethodType.AUTH_APP, true, true, AUTH_APP_SECRET_BASE_32);
+        userStore.addMfaMethod(
+                EMAIL_ADDRESS, MFAMethodType.AUTH_APP, true, true, AUTH_APP_SECRET_BASE_32);
         long tenMinutesAgo = NowHelper.nowMinus(5, ChronoUnit.MINUTES).getTime();
         String code = AUTH_APP_STUB.getAuthAppOneTimeCode(AUTH_APP_SECRET_BASE_32, tenMinutesAgo);
-        VerifyMfaCodeRequest codeRequest = new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, code, true);
+        VerifyMfaCodeRequest codeRequest =
+                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, code, true);
 
         var response =
                 makeRequest(
@@ -110,9 +116,11 @@ public class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
     @Test
     void whenWrongSecretUsedByAuthAppReturn400() {
-        userStore.addMfaMethod(EMAIL_ADDRESS, MFAMethodType.AUTH_APP, true, true, AUTH_APP_SECRET_BASE_32);
+        userStore.addMfaMethod(
+                EMAIL_ADDRESS, MFAMethodType.AUTH_APP, true, true, AUTH_APP_SECRET_BASE_32);
         String invalidCode = AUTH_APP_STUB.getAuthAppOneTimeCode("O5ZG63THFVZWKY3SMV2A====");
-        VerifyMfaCodeRequest codeRequest = new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, invalidCode, true);
+        VerifyMfaCodeRequest codeRequest =
+                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, invalidCode, true);
 
         var response =
                 makeRequest(
@@ -127,9 +135,11 @@ public class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
     @Test
     void whenAuthAppMfaMethodIsNotEnabledReturn400() {
-        userStore.addMfaMethod(EMAIL_ADDRESS, MFAMethodType.AUTH_APP, true, false, AUTH_APP_SECRET_BASE_32);
+        userStore.addMfaMethod(
+                EMAIL_ADDRESS, MFAMethodType.AUTH_APP, true, false, AUTH_APP_SECRET_BASE_32);
         String code = AUTH_APP_STUB.getAuthAppOneTimeCode(AUTH_APP_SECRET_BASE_32);
-        VerifyMfaCodeRequest codeRequest = new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, code, true);
+        VerifyMfaCodeRequest codeRequest =
+                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, code, true);
 
         var response =
                 makeRequest(
@@ -144,7 +154,8 @@ public class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
     @Test
     void whenParametersMissingReturn400() throws Json.JsonException {
-        userStore.addMfaMethod(EMAIL_ADDRESS, MFAMethodType.AUTH_APP, true, true, AUTH_APP_SECRET_BASE_32);
+        userStore.addMfaMethod(
+                EMAIL_ADDRESS, MFAMethodType.AUTH_APP, true, true, AUTH_APP_SECRET_BASE_32);
         String code = AUTH_APP_STUB.getAuthAppOneTimeCode(AUTH_APP_SECRET_BASE_32);
         VerifyMfaCodeRequest codeRequest = new VerifyMfaCodeRequest(null, code, true);
 
@@ -160,9 +171,11 @@ public class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
     @Test
     void whenCodeSubmissionBlockedReturn400() throws Json.JsonException {
-        userStore.addMfaMethod(EMAIL_ADDRESS, MFAMethodType.AUTH_APP, true, true, AUTH_APP_SECRET_BASE_32);
+        userStore.addMfaMethod(
+                EMAIL_ADDRESS, MFAMethodType.AUTH_APP, true, true, AUTH_APP_SECRET_BASE_32);
         String code = AUTH_APP_STUB.getAuthAppOneTimeCode(AUTH_APP_SECRET_BASE_32);
-        VerifyMfaCodeRequest codeRequest = new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, code, false);
+        VerifyMfaCodeRequest codeRequest =
+                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, code, false);
 
         redis.blockMfaCodesForEmail(EMAIL_ADDRESS);
 
@@ -179,9 +192,11 @@ public class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
     @Test
     void whenCodeRetriesLimitExceededBlockEmailAndReturn400() throws Json.JsonException {
-        userStore.addMfaMethod(EMAIL_ADDRESS, MFAMethodType.AUTH_APP, true, true, AUTH_APP_SECRET_BASE_32);
+        userStore.addMfaMethod(
+                EMAIL_ADDRESS, MFAMethodType.AUTH_APP, true, true, AUTH_APP_SECRET_BASE_32);
         String invalidCode = AUTH_APP_STUB.getAuthAppOneTimeCode("O5ZG63THFVZWKY3SMV2A====");
-        VerifyMfaCodeRequest codeRequest = new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, invalidCode, false);
+        VerifyMfaCodeRequest codeRequest =
+                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, invalidCode, false);
 
         for (int i = 0; i < 5; i++) {
             makeRequest(
@@ -201,15 +216,14 @@ public class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTe
         assertEquals(0, redis.getSession(sessionId).getRetryCount());
     }
 
-
     private void setUpTestWithoutSignUp(String sessionId, Scope scope) throws Json.JsonException {
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(
-                        ResponseType.CODE,
-                        scope,
-                        new ClientID(CLIENT_ID),
-                        URI.create(REDIRECT_URI))
+                                ResponseType.CODE,
+                                scope,
+                                new ClientID(CLIENT_ID),
+                                URI.create(REDIRECT_URI))
                         .nonce(new Nonce())
                         .state(new State())
                         .build();

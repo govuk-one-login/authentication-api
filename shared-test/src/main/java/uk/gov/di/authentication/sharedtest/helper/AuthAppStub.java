@@ -5,6 +5,7 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+
 import java.util.concurrent.TimeUnit;
 
 public class AuthAppStub {

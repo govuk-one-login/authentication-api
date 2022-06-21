@@ -74,7 +74,5 @@ public interface AuthenticationService {
             boolean enabled,
             String credentialValue);
 
-    void setMFAMethodVerifiedTrue(
-            String email,
-            MFAMethodType mfaMethodType);
+    void setMFAMethodVerifiedTrue(String email, MFAMethodType mfaMethodType);
 }

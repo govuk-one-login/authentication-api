@@ -24,7 +24,8 @@ public class MfaCodeValidatorFactoryTest {
     void setUp() {
         this.configurationService = mock(ConfigurationService.class);
         when(configurationService.getCodeMaxRetries()).thenReturn(CODE_MAX_RETRIES);
-        when(configurationService.getCodeMaxRetriesRegistration()).thenReturn(CODE_MAX_RETRIES_REGISTRATION);
+        when(configurationService.getCodeMaxRetriesRegistration())
+                .thenReturn(CODE_MAX_RETRIES_REGISTRATION);
         this.userContext = mock(UserContext.class);
         this.codeStorageService = mock(CodeStorageService.class);
         this.dynamoService = mock(DynamoService.class);

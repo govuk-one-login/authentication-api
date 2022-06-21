@@ -129,7 +129,6 @@ class AuthAppCodeValidatorTest {
         when(mockUserContext.getSession()).thenReturn(mockSession);
         when(mockCodeStorageService.isBlockedForEmail("email-address", CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(false);
-        //when(mockConfigurationService.getMaxPasswordRetries()).thenReturn(5);
         when(mockDynamoService.getUserCredentialsFromEmail("email-address"))
                 .thenReturn(mock(UserCredentials.class));
 
