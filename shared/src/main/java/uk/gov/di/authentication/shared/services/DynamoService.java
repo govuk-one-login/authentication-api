@@ -322,7 +322,7 @@ public class DynamoService implements AuthenticationService {
 
     @Override
     public void setMFAMethodVerifiedTrue(String email, MFAMethodType mfaMethodType) {
-        String dateTime = NowHelper.toTimestampString(NowHelper.now());
+        var dateTime = NowHelper.toTimestampString(NowHelper.now());
         var userCredentials =
                 userCredentialsMapper.load(UserCredentials.class, email.toLowerCase(Locale.ROOT));
         var mfaMethod =
@@ -330,8 +330,11 @@ public class DynamoService implements AuthenticationService {
                         .filter(
                                 method ->
                                         method.getMfaMethodType().equals(mfaMethodType.getValue()))
-                        .findFirst();
-        mfaMethod.ifPresent(method -> method.setMethodVerified(true));
+                        .findFirst()
+                        .orElseThrow();
+
+        mfaMethod.setMethodVerified(true);
+        mfaMethod.setUpdated(dateTime);
         userCredentialsMapper.save(userCredentials);
     }
 

@@ -50,7 +50,7 @@ class AuthAppCodeValidatorTest {
                 authAppStub.getAuthAppOneTimeCode(
                         "test-credential-value", NowHelper.now().getTime());
 
-        assertEquals(Optional.empty(), authAppCodeValidator.codeValidationErrors(authCode));
+        assertEquals(Optional.empty(), authAppCodeValidator.validateCode(authCode));
     }
 
     @Test
@@ -59,7 +59,7 @@ class AuthAppCodeValidatorTest {
 
         assertEquals(
                 Optional.of(ErrorResponse.ERROR_1042),
-                authAppCodeValidator.codeValidationErrors("any-code"));
+                authAppCodeValidator.validateCode("any-code"));
     }
 
     @Test
@@ -68,7 +68,7 @@ class AuthAppCodeValidatorTest {
 
         assertEquals(
                 Optional.of(ErrorResponse.ERROR_1042),
-                authAppCodeValidator.codeValidationErrors("any-code"));
+                authAppCodeValidator.validateCode("any-code"));
     }
 
     @Test
@@ -77,7 +77,7 @@ class AuthAppCodeValidatorTest {
 
         assertEquals(
                 Optional.of(ErrorResponse.ERROR_1043),
-                authAppCodeValidator.codeValidationErrors("any-code"));
+                authAppCodeValidator.validateCode("any-code"));
     }
 
     @Test
@@ -85,8 +85,7 @@ class AuthAppCodeValidatorTest {
         setUpInvalidAuthCode();
 
         assertEquals(
-                Optional.of(ErrorResponse.ERROR_1043),
-                authAppCodeValidator.codeValidationErrors("111111"));
+                Optional.of(ErrorResponse.ERROR_1043), authAppCodeValidator.validateCode("111111"));
     }
 
     private void setUpBlockedUser() {

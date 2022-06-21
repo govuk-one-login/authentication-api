@@ -38,7 +38,6 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
@@ -92,7 +91,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             VerifyMfaCodeRequest codeRequest,
             UserContext userContext) {
 
-        attachSessionIdToLogs(userContext.getSession());
         attachLogFieldToLogs(
                 PERSISTENT_SESSION_ID, extractPersistentIdFromHeaders(input.getHeaders()));
         attachLogFieldToLogs(
@@ -121,7 +119,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1002);
             }
 
-            var errorResponse = mfaCodeValidator.get().codeValidationErrors(code);
+            var errorResponse = mfaCodeValidator.get().validateCode(code);
 
             processCodeSession(
                     errorResponse,

@@ -45,7 +45,7 @@ public class AuthAppCodeValidator extends MfaCodeValidator {
     }
 
     @Override
-    public Optional<ErrorResponse> codeValidationErrors(String code) {
+    public Optional<ErrorResponse> validateCode(String code) {
 
         if (isCodeBlockedForSession()) {
             LOG.info("Code blocked for session");

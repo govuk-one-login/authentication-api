@@ -57,5 +57,5 @@ public abstract class MfaCodeValidator {
         session.resetRetryCount();
     }
 
-    public abstract Optional<ErrorResponse> codeValidationErrors(String code);
+    public abstract Optional<ErrorResponse> validateCode(String code);
 }

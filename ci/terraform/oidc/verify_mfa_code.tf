@@ -79,8 +79,5 @@ module "verify_mfa_code" {
 
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_frontend_api,
-    aws_api_gateway_resource.connect_resource,
-    aws_api_gateway_resource.wellknown_resource,
-    aws_sqs_queue.email_queue,
   ]
 }

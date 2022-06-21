@@ -1,6 +1,8 @@
 package uk.gov.di.authentication.sharedtest.helper;
 
 import org.apache.commons.codec.binary.Base32;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 
 import javax.crypto.Mac;
@@ -9,10 +11,10 @@ import javax.crypto.spec.SecretKeySpec;
 import java.util.concurrent.TimeUnit;
 
 public class AuthAppStub {
+    private final Logger LOG = LogManager.getLogger(AuthAppStub.class);
     private final int CODE_DIGITS = 6;
     private final long TIME_WINDOW_IN_MILLISECONDS = TimeUnit.SECONDS.toMillis(30);
 
-    // secret must parse as valid base32, or else an exception will be thrown by the library
     public String getAuthAppOneTimeCode(String secret) {
         return getAuthAppOneTimeCode(secret, NowHelper.now().getTime());
     }
@@ -52,7 +54,7 @@ public class AuthAppStub {
 
             return (int) truncatedHash;
         } catch (Exception ex) {
-            // Zero return simulates InvalidKeyException or NoSuchAlgorithmException for test usage.
+            LOG.info("Exception: {}", ex.getMessage());
             return 0;
         }
     }
