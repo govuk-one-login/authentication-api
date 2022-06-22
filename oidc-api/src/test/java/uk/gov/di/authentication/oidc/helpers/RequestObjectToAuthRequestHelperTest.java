@@ -48,7 +48,7 @@ class RequestObjectToAuthRequestHelperTest {
                                 ResponseType.CODE,
                                 new Scope(OIDCScopeValue.OPENID),
                                 CLIENT_ID,
-                                REDIRECT_URI)
+                                null)
                         .requestObject(signedJWT)
                         .build();
 

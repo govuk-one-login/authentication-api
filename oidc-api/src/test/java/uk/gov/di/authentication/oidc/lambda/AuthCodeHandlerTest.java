@@ -5,7 +5,6 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jwt.JWTClaimsSet;
-import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseMode;
@@ -50,7 +49,6 @@ import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -91,6 +89,7 @@ class AuthCodeHandlerTest {
     private static final ClientID CLIENT_ID = new ClientID();
     private static final String AUDIENCE = "oidc-audience";
     private static final State STATE = new State();
+    private static final Nonce NONCE = new Nonce();
     private static final Json objectMapper = SerializationService.getInstance();
 
     private final AuthorizationService authorizationService = mock(AuthorizationService.class);
@@ -165,7 +164,7 @@ class AuthCodeHandlerTest {
             CredentialTrustLevel requestedLevel,
             CredentialTrustLevel finalLevel,
             boolean docAppJourney)
-            throws ClientNotFoundException, URISyntaxException, Json.JsonException, JOSEException {
+            throws ClientNotFoundException, Json.JsonException, JOSEException {
         AuthorizationCode authorizationCode = new AuthorizationCode();
         AuthenticationRequest authRequest =
                 generateValidSessionAndAuthRequest(requestedLevel, docAppJourney);
@@ -406,15 +405,11 @@ class AuthCodeHandlerTest {
                         .issuer(CLIENT_ID.getValue())
                         .build();
         var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
-        return generateAuthRequest(signedJWT);
-    }
-
-    private static AuthenticationRequest generateAuthRequest(SignedJWT signedJWT) {
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-        AuthenticationRequest.Builder builder =
-                new AuthenticationRequest.Builder(ResponseType.CODE, scope, CLIENT_ID, REDIRECT_URI)
-                        .requestObject(signedJWT);
-        return builder.build();
+        var scope = new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP);
+        return new AuthenticationRequest.Builder(ResponseType.CODE, scope, CLIENT_ID, REDIRECT_URI)
+                .state(STATE)
+                .nonce(NONCE)
+                .requestObject(signedJWT)
+                .build();
     }
 }

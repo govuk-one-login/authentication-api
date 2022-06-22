@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent.ProxyRequestContext;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent.RequestIdentity;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.PlainJWT;
 import com.nimbusds.oauth2.sdk.ErrorObject;
@@ -42,6 +43,7 @@ import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
@@ -64,6 +66,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR;
+import static uk.gov.di.authentication.oidc.helper.RequestObjectTestHelper.generateSignedJWT;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.hasContextData;
@@ -95,6 +98,7 @@ class AuthorisationHandlerTest {
     private Session session;
     private static final String CLIENT_SESSION_ID = "client-session-id";
     private static final State STATE = new State();
+    private static final Nonce NONCE = new Nonce();
 
     private AuthorisationHandler handler;
 
@@ -477,20 +481,35 @@ class AuthorisationHandlerTest {
     }
 
     @Test
-    void shouldRedirectToLoginWhenRequestObjectIsValid() {
+    void shouldRedirectToLoginWhenRequestObjectIsValid() throws JOSEException {
+        var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         when(configService.isDocAppApiEnabled()).thenReturn(true);
         when(requestObjectService.validateRequestObject(any(AuthenticationRequest.class)))
                 .thenReturn(Optional.empty());
         when(clientSessionService.generateClientSession(any(ClientSession.class)))
                 .thenReturn(CLIENT_SESSION_ID);
         var event = new APIGatewayProxyRequestEvent();
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience("https://localhost/authorize")
+                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", SCOPE)
+                        .claim("state", STATE.getValue())
+                        .claim("nonce", NONCE.getValue())
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .issuer(CLIENT_ID.getValue())
+                        .build();
         event.setQueryStringParameters(
                 Map.of(
-                        "client_id", "test-id",
-                        "redirect_uri", "http://localhost:8080",
-                        "scope", "openid",
-                        "response_type", "code",
-                        "request", new PlainJWT(new JWTClaimsSet.Builder().build()).serialize()));
+                        "client_id",
+                        CLIENT_ID.getValue(),
+                        "scope",
+                        "openid",
+                        "response_type",
+                        "code",
+                        "request",
+                        generateSignedJWT(jwtClaimsSet, keyPair).serialize()));
         event.setRequestContext(
                 new ProxyRequestContext()
                         .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
