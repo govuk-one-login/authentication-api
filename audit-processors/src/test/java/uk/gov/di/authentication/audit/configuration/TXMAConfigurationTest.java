@@ -10,6 +10,7 @@ import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -33,38 +34,42 @@ class TXMAConfigurationTest {
 
         var hmac = config.getObfuscationHMACSecret();
 
-        assertThat(hmac.get(), equalTo("a-valid-hmac-key"));
+        assertThat(hmac, equalTo("a-valid-hmac-key"));
         verify(secretsManagerClient, times(1)).getSecretValue(any(GetSecretValueRequest.class));
 
         hmac = config.getObfuscationHMACSecret();
 
-        assertThat(hmac.get(), equalTo("a-valid-hmac-key"));
+        assertThat(hmac, equalTo("a-valid-hmac-key"));
         verify(secretsManagerClient, times(1)).getSecretValue(any(GetSecretValueRequest.class));
     }
 
     @Test
-    void returnsEmptySecretWhenNoArnProvided() {
+    void throwsRuntimeExceptionWhenNoArnProvided() {
         var config = spy(txmaConfiguration);
         var result = GetSecretValueResponse.builder().secretString("a-valid-hmac-key").build();
         doReturn(Optional.empty()).when(config).getObfuscationHMACSecretArn();
         when(secretsManagerClient.getSecretValue(any(GetSecretValueRequest.class)))
                 .thenReturn(result);
 
-        var hmac = config.getObfuscationHMACSecret();
-
-        assertThat(hmac, equalTo(Optional.empty()));
+        assertThrows(
+                RuntimeException.class,
+                () -> {
+                    config.getObfuscationHMACSecret();
+                });
     }
 
     @Test
-    void returnsEmptySecretWhenExceptionOccurs() {
+    void throwsRuntimeExceptionWhenSecretUnreadable() {
         var config = spy(txmaConfiguration);
         var result = GetSecretValueResponse.builder().secretString("a-valid-hmac-key").build();
         doReturn(Optional.of("a-valid-arn")).when(config).getObfuscationHMACSecretArn();
         when(secretsManagerClient.getSecretValue(any(GetSecretValueRequest.class)))
                 .thenThrow(ResourceNotFoundException.class);
 
-        var hmac = config.getObfuscationHMACSecret();
-
-        assertThat(hmac, equalTo(Optional.empty()));
+        assertThrows(
+                RuntimeException.class,
+                () -> {
+                    config.getObfuscationHMACSecret();
+                });
     }
 }

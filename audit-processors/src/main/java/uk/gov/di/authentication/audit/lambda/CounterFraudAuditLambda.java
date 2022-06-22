@@ -24,18 +24,13 @@ public class CounterFraudAuditLambda extends BaseAuditHandler {
             ConfigurationService service,
             TXMAConfiguration txmaConfiguration) {
         super(kmsConnectionService, service);
-        this.hmacKey =
-                txmaConfiguration
-                        .getObfuscationHMACSecret()
-                        .orElseGet(() -> this.service.getAuditHmacSecret());
+        this.hmacKey = txmaConfiguration.getObfuscationHMACSecret();
     }
 
     public CounterFraudAuditLambda() {
         super();
         var config = new TXMAConfiguration();
-        this.hmacKey =
-                config.getObfuscationHMACSecret()
-                        .orElseGet(() -> this.service.getAuditHmacSecret());
+        this.hmacKey = config.getObfuscationHMACSecret();
     }
 
     @Override

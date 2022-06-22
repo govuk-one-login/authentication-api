@@ -12,7 +12,6 @@ import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.nio.ByteBuffer;
-import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -37,8 +36,7 @@ public class CounterFraudAuditLambdaTest {
     @BeforeEach
     public void setUp() {
         when(config.getAuditSigningKeyAlias()).thenReturn("key_alias");
-        when(txmaConfiguration.getObfuscationHMACSecret())
-                .thenReturn(Optional.of("i-am-a-fake-hash-key"));
+        when(txmaConfiguration.getObfuscationHMACSecret()).thenReturn("i-am-a-fake-hash-key");
         when(kms.validateSignature(any(ByteBuffer.class), any(ByteBuffer.class), eq("key_alias")))
                 .thenReturn(true);
         handler = new CounterFraudAuditLambda(kms, config, txmaConfiguration);
