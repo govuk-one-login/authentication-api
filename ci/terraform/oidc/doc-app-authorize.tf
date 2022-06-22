@@ -17,8 +17,8 @@ module "doc-app-authorize" {
   count  = var.doc_app_api_enabled ? 1 : 0
   source = "../modules/endpoint-module"
 
-  endpoint_name   = "doc-checking-app-authorize"
-  path_part       = "doc-checking-app-authorize"
+  endpoint_name   = "doc-app-authorize"
+  path_part       = "doc-app-authorize"
   endpoint_method = "POST"
   environment     = var.environment
 
@@ -41,10 +41,10 @@ module "doc-app-authorize" {
   root_resource_id = aws_api_gateway_rest_api.di_authentication_frontend_api.root_resource_id
   execution_arn    = aws_api_gateway_rest_api.di_authentication_frontend_api.execution_arn
 
-  memory_size                 = lookup(var.performance_tuning, "doc-checking-app-authorize", local.default_performance_parameters).memory
-  provisioned_concurrency     = lookup(var.performance_tuning, "doc-checking-app-authorize", local.default_performance_parameters).concurrency
-  max_provisioned_concurrency = lookup(var.performance_tuning, "doc-checking-app-authorize", local.default_performance_parameters).max_concurrency
-  scaling_trigger             = lookup(var.performance_tuning, "doc-checking-app-authorize", local.default_performance_parameters).scaling_trigger
+  memory_size                 = lookup(var.performance_tuning, "doc-app-authorize", local.default_performance_parameters).memory
+  provisioned_concurrency     = lookup(var.performance_tuning, "doc-app-authorize", local.default_performance_parameters).concurrency
+  max_provisioned_concurrency = lookup(var.performance_tuning, "doc-app-authorize", local.default_performance_parameters).max_concurrency
+  scaling_trigger             = lookup(var.performance_tuning, "doc-app-authorize", local.default_performance_parameters).scaling_trigger
 
   source_bucket                  = aws_s3_bucket.source_bucket.bucket
   lambda_zip_file                = aws_s3_bucket_object.doc_checking_app_api_release_zip.key
