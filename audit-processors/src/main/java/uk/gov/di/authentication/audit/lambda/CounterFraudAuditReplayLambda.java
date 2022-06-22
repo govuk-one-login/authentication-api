@@ -15,7 +15,9 @@ import uk.gov.di.audit.AuditPayload.AuditEvent;
 import uk.gov.di.audit.AuditPayload.AuditEvent.User;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.stream.Collectors;
 
 import static org.apache.commons.codec.binary.Hex.encodeHexString;
 import static uk.gov.di.authentication.audit.helper.HmacSha256Helper.hmacSha256;
@@ -52,16 +54,21 @@ public class CounterFraudAuditReplayLambda implements RequestHandler<S3Event, Vo
 
                             LOG.info("Processing file {}", key);
                             var content = client.getObjectAsString(bucket, key);
-                            try {
-                                var builder = AuditEvent.newBuilder();
-                                JsonFormat.parser().merge(content, builder);
-                                var auditEvent = builder.build();
+                            var records =
+                                    Arrays.stream(content.split("\n")).collect(Collectors.toList());
+                            records.forEach(
+                                    record -> {
+                                        try {
+                                            var builder = AuditEvent.newBuilder();
+                                            JsonFormat.parser().merge(record, builder);
+                                            var auditEvent = builder.build();
 
-                                handleAuditEvent(auditEvent);
-                                client.deleteObject(bucket, key);
-                            } catch (InvalidProtocolBufferException e) {
-                                LOG.error("Error parsing file content", e);
-                            }
+                                            handleAuditEvent(auditEvent);
+                                        } catch (InvalidProtocolBufferException e) {
+                                            LOG.error("Error parsing file content", e);
+                                        }
+                                    });
+                            client.deleteObject(bucket, key);
                         });
 
         return null;
