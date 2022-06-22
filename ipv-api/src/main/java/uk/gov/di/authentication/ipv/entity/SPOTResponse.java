@@ -16,12 +16,26 @@ public class SPOTResponse {
 
     @Expose @Required private SPOTStatus status;
 
+    @Expose private String reason;
+
+    @SerializedName(value = "log_ids")
+    @Expose
+    @Required
+    private LogIds logIds;
+
     public SPOTResponse() {}
 
-    public SPOTResponse(Map<String, Object> claims, String sub, SPOTStatus status) {
+    public SPOTResponse(
+            Map<String, Object> claims,
+            String sub,
+            SPOTStatus status,
+            String reason,
+            LogIds logIds) {
         this.claims = claims;
         this.sub = sub;
         this.status = status;
+        this.reason = reason;
+        this.logIds = logIds;
     }
 
     public Map<String, Object> getClaims() {
@@ -34,5 +48,13 @@ public class SPOTResponse {
 
     public SPOTStatus getStatus() {
         return status;
+    }
+
+    public String getReason() {
+        return reason;
+    }
+
+    public LogIds getLogIds() {
+        return logIds;
     }
 }
