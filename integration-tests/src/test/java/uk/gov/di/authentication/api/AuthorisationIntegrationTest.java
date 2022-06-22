@@ -604,6 +604,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 "scope",
                                 new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP)
                                         .toString())
+                        .claim("nonce", new Nonce())
                         .claim("client_id", CLIENT_ID)
                         .claim("state", new State())
                         .issuer(CLIENT_ID)

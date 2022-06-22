@@ -17,6 +17,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
+import uk.gov.di.authentication.oidc.helpers.RequestObjectToAuthRequestHelper;
 import uk.gov.di.authentication.oidc.services.AuthorizationService;
 import uk.gov.di.authentication.oidc.services.RequestObjectService;
 import uk.gov.di.authentication.shared.entity.ClientSession;
@@ -168,28 +169,27 @@ public class AuthorisationHandler
                                         authorizationService.validateAuthRequest(authRequest);
                             }
 
-                            return authRequestError
-                                    .map(
-                                            e ->
-                                                    generateErrorResponse(
-                                                            e.getRedirectURI(),
-                                                            authRequest.getState(),
-                                                            authRequest.getResponseMode(),
-                                                            e.getErrorObject(),
-                                                            context,
-                                                            ipAddress,
-                                                            persistentSessionId))
-                                    .orElseGet(
-                                            () ->
-                                                    getOrCreateSessionAndRedirect(
-                                                            queryStringParameters,
-                                                            sessionService
-                                                                    .getSessionFromSessionCookie(
-                                                                            input.getHeaders()),
-                                                            authRequest,
-                                                            context,
-                                                            ipAddress,
-                                                            persistentSessionId));
+                            if (authRequestError.isPresent()) {
+                                return generateErrorResponse(
+                                        authRequestError.get().getRedirectURI(),
+                                        authRequest.getState(),
+                                        authRequest.getResponseMode(),
+                                        authRequestError.get().getErrorObject(),
+                                        context,
+                                        ipAddress,
+                                        persistentSessionId);
+                            } else {
+                                authRequest =
+                                        RequestObjectToAuthRequestHelper.transform(authRequest);
+                                return getOrCreateSessionAndRedirect(
+                                        queryStringParameters,
+                                        sessionService.getSessionFromSessionCookie(
+                                                input.getHeaders()),
+                                        authRequest,
+                                        context,
+                                        ipAddress,
+                                        persistentSessionId);
+                            }
                         });
     }
 
