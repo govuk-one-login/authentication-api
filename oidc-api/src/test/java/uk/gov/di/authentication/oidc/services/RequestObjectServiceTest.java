@@ -46,6 +46,7 @@ class RequestObjectServiceTest {
     private KeyPair keyPair;
     private static final String SCOPE = "openid doc-checking-app";
     private static final State STATE = new State();
+    private static final Nonce NONCE = new Nonce();
     private static final ClientID CLIENT_ID = new ClientID("test-id");
     private static final String OIDC_BASE_URI = "https://localhost";
     private static final String AUDIENCE = "https://localhost/authorize";
@@ -78,7 +79,8 @@ class RequestObjectServiceTest {
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", scope.toString())
-                        .claim("state", new State())
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.toString())
                         .claim("client_id", CLIENT_ID.getValue())
                         .issuer(CLIENT_ID.getValue())
                         .build();
@@ -97,6 +99,8 @@ class RequestObjectServiceTest {
                         .claim("redirect_uri", "https://invalid-redirect-uri")
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", SCOPE)
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.toString())
                         .claim("client_id", CLIENT_ID.getValue())
                         .issuer(CLIENT_ID.getValue())
                         .build();
@@ -116,6 +120,8 @@ class RequestObjectServiceTest {
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", SCOPE)
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.toString())
                         .claim("client_id", CLIENT_ID.getValue())
                         .issuer(CLIENT_ID.getValue())
                         .build();
@@ -143,6 +149,8 @@ class RequestObjectServiceTest {
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", SCOPE)
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.toString())
                         .claim("state", new State())
                         .claim("client_id", CLIENT_ID.getValue())
                         .issuer(CLIENT_ID.getValue())
@@ -166,6 +174,8 @@ class RequestObjectServiceTest {
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE_IDTOKEN.toString())
                         .claim("scope", SCOPE)
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.toString())
                         .issuer(CLIENT_ID.getValue())
                         .claim("client_id", CLIENT_ID.getValue())
                         .build();
@@ -187,6 +197,8 @@ class RequestObjectServiceTest {
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", SCOPE)
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.toString())
                         .issuer(CLIENT_ID.getValue())
                         .claim("client_id", "invalid-client-id")
                         .build();
@@ -208,6 +220,8 @@ class RequestObjectServiceTest {
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", "openid profile")
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.toString())
                         .claim("client_id", CLIENT_ID.getValue())
                         .issuer(CLIENT_ID.getValue())
                         .build();
@@ -227,6 +241,8 @@ class RequestObjectServiceTest {
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", "openid")
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.toString())
                         .claim("client_id", CLIENT_ID.getValue())
                         .issuer(CLIENT_ID.getValue())
                         .build();
@@ -252,7 +268,8 @@ class RequestObjectServiceTest {
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", SCOPE)
-                        .claim("state", new State())
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.toString())
                         .claim("client_id", CLIENT_ID.getValue())
                         .issuer(CLIENT_ID.getValue())
                         .build();
@@ -273,7 +290,8 @@ class RequestObjectServiceTest {
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", SCOPE)
-                        .claim("state", new State())
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.getValue())
                         .claim("client_id", CLIENT_ID.getValue())
                         .issuer(CLIENT_ID.getValue())
                         .build();
@@ -297,6 +315,8 @@ class RequestObjectServiceTest {
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", "openid email")
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.getValue())
                         .claim("client_id", CLIENT_ID.getValue())
                         .issuer(CLIENT_ID.getValue())
                         .build();
@@ -316,6 +336,8 @@ class RequestObjectServiceTest {
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", "openid")
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.getValue())
                         .claim("client_id", CLIENT_ID.getValue())
                         .issuer(CLIENT_ID.getValue())
                         .build();
@@ -336,6 +358,8 @@ class RequestObjectServiceTest {
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", "openid")
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.getValue())
                         .claim("client_id", CLIENT_ID.getValue())
                         .issuer("invalid-client")
                         .build();
@@ -357,6 +381,8 @@ class RequestObjectServiceTest {
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", "openid")
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.getValue())
                         .claim("client_id", CLIENT_ID.getValue())
                         .claim("request", "some-random-request-value")
                         .issuer(CLIENT_ID.getValue())
@@ -378,6 +404,8 @@ class RequestObjectServiceTest {
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", "openid")
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.getValue())
                         .claim("client_id", CLIENT_ID.getValue())
                         .claim("request_uri", URI.create("https://localhost/request_uri"))
                         .issuer(CLIENT_ID.getValue())
@@ -400,6 +428,8 @@ class RequestObjectServiceTest {
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", SCOPE)
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.getValue())
                         .claim("client_id", CLIENT_ID.getValue())
                         .issuer(CLIENT_ID.getValue())
                         .build();
@@ -418,6 +448,7 @@ class RequestObjectServiceTest {
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", SCOPE)
+                        .claim("nonce", NONCE.getValue())
                         .claim("client_id", CLIENT_ID.getValue())
                         .issuer(CLIENT_ID.getValue())
                         .build();
@@ -430,6 +461,30 @@ class RequestObjectServiceTest {
         assertThat(
                 requestObjectError.get().getErrorObject().getDescription(),
                 equalTo("Request is missing state parameter"));
+        assertThat(requestObjectError.get().getRedirectURI().toString(), equalTo(REDIRECT_URI));
+    }
+
+    @Test
+    void shouldReturnErrorIfNonceIsMissingFromRequestObject() throws JOSEException {
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(AUDIENCE)
+                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", SCOPE)
+                        .claim("state", STATE.getValue())
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .issuer(CLIENT_ID.getValue())
+                        .build();
+        var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
+
+        var requestObjectError = service.validateRequestObject(generateAuthRequest(signedJWT));
+
+        assertTrue(requestObjectError.isPresent());
+        assertThat(requestObjectError.get().getErrorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
+        assertThat(
+                requestObjectError.get().getErrorObject().getDescription(),
+                equalTo("Request is missing nonce parameter"));
         assertThat(requestObjectError.get().getRedirectURI().toString(), equalTo(REDIRECT_URI));
     }
 

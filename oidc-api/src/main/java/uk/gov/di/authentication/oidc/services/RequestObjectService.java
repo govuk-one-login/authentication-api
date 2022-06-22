@@ -152,6 +152,15 @@ public class RequestObjectService {
                                         "Request is missing state parameter"),
                                 redirectURI));
             }
+            if (Objects.isNull(jwtClaimsSet.getClaim("nonce"))) {
+                LOG.warn("Nomce is missing from authRequest");
+                return Optional.of(
+                        new AuthRequestError(
+                                new ErrorObject(
+                                        OAuth2Error.INVALID_REQUEST_CODE,
+                                        "Request is missing nonce parameter"),
+                                redirectURI));
+            }
         } catch (ParseException e) {
             throw new RuntimeException(e);
         }
