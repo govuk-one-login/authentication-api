@@ -122,8 +122,7 @@ class DocAppCallbackHandlerTest {
         var response = makeHandlerRequest(event);
 
         assertThat(response, hasStatus(302));
-        var expectedRedirectURI =
-                new URIBuilder(LOGIN_URL).setPath("doc-checking-app-callback").build();
+        var expectedRedirectURI = new URIBuilder(LOGIN_URL).setPath("doc-app-callback").build();
         assertThat(response.getHeaders().get("Location"), equalTo(expectedRedirectURI.toString()));
 
         verify(auditService)
