@@ -3,7 +3,7 @@ doc_app_cri_data_endpoint          = "credentials/issue"
 doc_app_backend_uri                = "https://integration-doc-app-cri-stub.london.cloudapps.digital"
 doc_app_domain                     = "https://integration-doc-app-cri-stub.london.cloudapps.digital"
 doc_app_authorisation_client_id    = "authOrchestratorDocApp"
-doc_app_authorisation_callback_uri = "https://oidc.integration.account.gov.uk/doc-checking-app-callback"
+doc_app_authorisation_callback_uri = "https://oidc.integration.account.gov.uk/doc-app-callback"
 doc_app_authorisation_uri          = "https://integration-doc-app-cri-stub.london.cloudapps.digital/authorize"
 doc_app_auth_public_encryption_key = <<-EOT
 -----BEGIN PUBLIC KEY-----

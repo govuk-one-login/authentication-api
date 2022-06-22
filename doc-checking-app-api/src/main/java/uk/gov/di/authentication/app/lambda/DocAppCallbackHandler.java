@@ -44,7 +44,7 @@ public class DocAppCallbackHandler
     private final AuditService auditService;
     private final DynamoDocAppService dynamoDocAppService;
     protected final Json objectMapper = SerializationService.getInstance();
-    private static final String REDIRECT_PATH = "doc-checking-app-callback";
+    private static final String REDIRECT_PATH = "doc-app-callback";
 
     public DocAppCallbackHandler() {
         this(ConfigurationService.getInstance());
