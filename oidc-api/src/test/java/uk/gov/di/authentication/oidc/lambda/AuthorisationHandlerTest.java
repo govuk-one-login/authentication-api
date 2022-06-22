@@ -448,7 +448,6 @@ class AuthorisationHandlerTest {
         event.setQueryStringParameters(
                 Map.of(
                         "client_id", "test-id",
-                        "redirect_uri", "http://localhost:8080",
                         "scope", "openid",
                         "response_type", "code",
                         "request", new PlainJWT(new JWTClaimsSet.Builder().build()).serialize()));
