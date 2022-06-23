@@ -52,7 +52,6 @@ public class CounterFraudAuditReplayLambda implements RequestHandler<S3Event, Vo
                             var key = s3.getS3().getObject().getKey();
                             var bucket = s3.getS3().getBucket().getName();
 
-                            LOG.info("Processing file {}", key);
                             var content = client.getObjectAsString(bucket, key);
                             var records =
                                     Arrays.stream(content.split("\n")).collect(Collectors.toList());
