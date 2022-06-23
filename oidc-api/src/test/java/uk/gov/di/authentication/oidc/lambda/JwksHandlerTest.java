@@ -18,6 +18,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasHeader;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class JwksHandlerTest {
@@ -57,5 +58,15 @@ class JwksHandlerTest {
 
         assertThat(result, hasStatus(500));
         assertThat(result, hasBody("Error providing JWKs data"));
+    }
+
+    @Test
+    public void shouldSetACacheHeaderOfOneDayOnSuccess() throws JOSEException {
+        JWK opaqueSigningKey =
+                new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
+        when(tokenValidationService.getPublicJwkWithOpaqueId()).thenReturn(opaqueSigningKey);
+
+        var response = handler.handleRequest(new APIGatewayProxyRequestEvent(), context);
+        assertThat(response, hasHeader("Cache-Control", "max-age=86400"));
     }
 }
