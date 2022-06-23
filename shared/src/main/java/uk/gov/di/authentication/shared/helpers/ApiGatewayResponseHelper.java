@@ -77,17 +77,17 @@ public class ApiGatewayResponseHelper {
 
     public static APIGatewayProxyResponseEvent generateApiGatewayProxyResponse(
             int statusCode, String body, Map<String, List<String>> multiValueHeaders) {
-        APIGatewayProxyResponseEvent apiGatewayProxyResponseEvent =
-                new APIGatewayProxyResponseEvent();
-        apiGatewayProxyResponseEvent.setStatusCode(statusCode);
-        apiGatewayProxyResponseEvent.setBody(body);
+
+        var response =
+                new APIGatewayProxyResponseEvent()
+                        .withStatusCode(statusCode)
+                        .withBody(body)
+                        .withHeaders(SecurityHeaders.headers());
 
         if (multiValueHeaders != null) {
-            apiGatewayProxyResponseEvent.setMultiValueHeaders(multiValueHeaders);
+            response.setMultiValueHeaders(multiValueHeaders);
         }
 
-        apiGatewayProxyResponseEvent.setHeaders(SecurityHeaders.headers());
-
-        return apiGatewayProxyResponseEvent;
+        return response;
     }
 }
