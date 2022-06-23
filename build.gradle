@@ -30,7 +30,7 @@ ext {
         nimbusds_jwt_version: "9.23",
         protobuf_version: "3.21.1",
         junit: "5.8.2",
-        glassfish_version: "3.0.4",
+        glassfish_version: "3.0.5",
         xray: "2.11.2"
     ]
 
