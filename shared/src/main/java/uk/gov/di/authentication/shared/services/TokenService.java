@@ -226,7 +226,7 @@ public class TokenService {
         try {
             privateKeyJWT = PrivateKeyJWT.parse(requestString);
         } catch (ParseException e) {
-            LOG.warn("Could not parse Private Key JWT");
+            LOG.warn("Could not parse Private Key JWT", e);
             return Optional.empty();
         }
         if (Objects.isNull(privateKeyJWT.getClientID())) {
