@@ -14,6 +14,25 @@ import java.util.Map;
 
 public class ApiGatewayResponseHelper {
 
+    enum SecurityHeaders {
+        XSS_PROTECTION("X-XSS-Protection", "1; mode=block"),
+        CONTENT_TYPE_OPTIONS("X-Content-Type-Options", "nosniff"),
+        CONTENT_SECURITY_POLICY("Content-Security-Policy", "frame-ancestors 'none'"),
+        STRICT_TRANSPORT_SECURITY(
+                "Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload"),
+        FRAME_OPTIONS("X-Frame-Options", "DENY"),
+        CACHE_CONTROL(HttpHeaders.CACHE_CONTROL, "no-cache, no-store"),
+        PRAGMA(HttpHeaders.PRAGMA, "no-cache");
+
+        private final String headerName;
+        private final String headerValue;
+
+        SecurityHeaders(String headerName, String headerValue) {
+            this.headerName = headerName;
+            this.headerValue = headerValue;
+        }
+    }
+
     private static final String XSS_PROTECTION_HEADER_NAME = "X-XSS-Protection";
     private static final String CONTENT_TYPE_OPTIONS_HEADER_NAME = "X-Content-Type-Options";
     private static final String CONTENT_SECURITY_POLICY_HEADER_NAME = "Content-Security-Policy";
