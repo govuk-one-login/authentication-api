@@ -268,7 +268,9 @@ class IPVCallbackHandlerTest {
                                                 session.getSessionId(),
                                                 PERSISTENT_SESSION_ID,
                                                 REQUEST_ID,
-                                                CLIENT_ID.getValue()))));
+                                                CLIENT_ID.getValue(),
+                                                CLIENT_SESSION_ID),
+                                        CLIENT_ID.getValue())));
 
         verify(dynamoIdentityService)
                 .addAdditionalClaims(expectedPairwiseSub.getValue(), additionalClaims);

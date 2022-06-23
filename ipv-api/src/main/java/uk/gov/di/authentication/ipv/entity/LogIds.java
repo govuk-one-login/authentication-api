@@ -12,11 +12,19 @@ public class LogIds {
 
     @Expose private String clientId;
 
-    public LogIds(String sessionId, String persistentSessionId, String requestId, String clientId) {
+    @Expose private String clientSessionId;
+
+    public LogIds(
+            String sessionId,
+            String persistentSessionId,
+            String requestId,
+            String clientId,
+            String clientSessionId) {
         this.sessionId = sessionId;
         this.persistentSessionId = persistentSessionId;
         this.requestId = requestId;
         this.clientId = clientId;
+        this.clientSessionId = clientSessionId;
     }
 
     public LogIds() {}
@@ -35,5 +43,9 @@ public class LogIds {
 
     public String getClientId() {
         return clientId;
+    }
+
+    public String getClientSessionId() {
+        return clientSessionId;
     }
 }
