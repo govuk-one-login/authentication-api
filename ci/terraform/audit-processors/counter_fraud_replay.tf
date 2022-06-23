@@ -127,15 +127,14 @@ resource "aws_cloudwatch_log_group" "fraud_realtime_logging_replay_lambda_log_gr
   ]
 }
 
-# Comment out so we can dry run
-#resource "aws_cloudwatch_log_subscription_filter" "fraud_realtime_logging_replay_log_subscription" {
-#  count           = length(var.logging_endpoint_arns)
-#  name            = "${aws_lambda_function.fraud_realtime_logging_replay_lambda.function_name}-log-subscription-${count.index}"
-#  log_group_name  = aws_cloudwatch_log_group.fraud_realtime_logging_replay_lambda_log_group[0].name
-#  filter_pattern  = ""
-#  destination_arn = var.logging_endpoint_arns[count.index]
-#
-#  lifecycle {
-#    create_before_destroy = false
-#  }
-#}
+resource "aws_cloudwatch_log_subscription_filter" "fraud_realtime_logging_replay_log_subscription" {
+  count           = length(var.logging_endpoint_arns)
+  name            = "${aws_lambda_function.fraud_realtime_logging_replay_lambda.function_name}-log-subscription-${count.index}"
+  log_group_name  = aws_cloudwatch_log_group.fraud_realtime_logging_replay_lambda_log_group[0].name
+  filter_pattern  = ""
+  destination_arn = var.logging_endpoint_arns[count.index]
+
+  lifecycle {
+    create_before_destroy = false
+  }
+}
