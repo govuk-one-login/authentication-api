@@ -12,11 +12,12 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class ApiGatewayResponseHelper {
 
-    enum SecurityHeaders {
+    public enum SecurityHeaders {
         XSS_PROTECTION("X-XSS-Protection", "1; mode=block"),
         CONTENT_TYPE_OPTIONS("X-Content-Type-Options", "nosniff"),
         CONTENT_SECURITY_POLICY("Content-Security-Policy", "frame-ancestors 'none'"),
@@ -83,6 +84,29 @@ public class ApiGatewayResponseHelper {
                         .withStatusCode(statusCode)
                         .withBody(body)
                         .withHeaders(SecurityHeaders.headers());
+
+        if (multiValueHeaders != null) {
+            response.setMultiValueHeaders(multiValueHeaders);
+        }
+
+        return response;
+    }
+
+    public static APIGatewayProxyResponseEvent generateApiGatewayProxyResponse(
+            int statusCode,
+            String body,
+            Map<String, String> headers,
+            Map<String, List<String>> multiValueHeaders) {
+
+        var allHeaders = SecurityHeaders.headers();
+
+        Optional.ofNullable(headers).ifPresent(allHeaders::putAll);
+
+        var response =
+                new APIGatewayProxyResponseEvent()
+                        .withStatusCode(statusCode)
+                        .withBody(body)
+                        .withHeaders(allHeaders);
 
         if (multiValueHeaders != null) {
             response.setMultiValueHeaders(multiValueHeaders);

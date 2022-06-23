@@ -32,6 +32,7 @@ import java.text.ParseException;
 import java.util.Map;
 import java.util.Optional;
 
+import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
@@ -368,9 +369,9 @@ public class LogoutHandler
                 IpAddressHelper.extractIpAddress(input),
                 AuditService.UNKNOWN,
                 PersistentIdHelper.extractPersistentIdFromCookieHeader(input.getHeaders()));
-        return new APIGatewayProxyResponseEvent()
-                .withStatusCode(302)
-                .withHeaders(Map.of(ResponseHeaders.LOCATION, uri.toString()));
+
+        return generateApiGatewayProxyResponse(
+                302, "", Map.of(ResponseHeaders.LOCATION, uri.toString()), null);
     }
 
     private void destroySessions(Session session) {
