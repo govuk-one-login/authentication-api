@@ -142,7 +142,11 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 sectorId,
                                 pairwiseIdentifier,
                                 new LogIds(
-                                        sessionId, persistentSessionId, "request-i", CLIENT_ID))));
+                                        sessionId,
+                                        persistentSessionId,
+                                        "request-i",
+                                        CLIENT_ID,
+                                        clientSessionId))));
 
         var identityCredentials = identityStore.getIdentityCredentials(pairwiseIdentifier);
 

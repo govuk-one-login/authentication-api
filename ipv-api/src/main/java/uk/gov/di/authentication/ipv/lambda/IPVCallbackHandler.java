@@ -299,7 +299,8 @@ public class IPVCallbackHandler
                                                         session.getSessionId(),
                                                         persistentId,
                                                         context.getAwsRequestId(),
-                                                        clientId);
+                                                        clientId,
+                                                        sessionCookiesIds.getClientSessionId());
                                         queueSPOTRequest(
                                                 logIds,
                                                 getSectorIdentifierForClient(clientRegistry),
