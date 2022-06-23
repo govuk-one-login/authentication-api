@@ -52,6 +52,7 @@ import java.util.Optional;
 import static com.nimbusds.oauth2.sdk.OAuth2Error.ACCESS_DENIED_CODE;
 import static uk.gov.di.authentication.shared.entity.IdentityClaims.VOT;
 import static uk.gov.di.authentication.shared.entity.IdentityClaims.VTM;
+import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ClientSubjectHelper.getSectorIdentifierForClient;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
@@ -192,12 +193,13 @@ public class IPVCallbackHandler
                                                             errorObject.get().getDescription()),
                                                     authRequest.getState(),
                                                     authRequest.getResponseMode());
-                                    return new APIGatewayProxyResponseEvent()
-                                            .withStatusCode(302)
-                                            .withHeaders(
-                                                    Map.of(
-                                                            ResponseHeaders.LOCATION,
-                                                            errorResponse.toURI().toString()));
+                                    return generateApiGatewayProxyResponse(
+                                            302,
+                                            "",
+                                            Map.of(
+                                                    ResponseHeaders.LOCATION,
+                                                    errorResponse.toURI().toString()),
+                                            null);
                                 }
                                 var userProfile =
                                         dynamoService
@@ -327,12 +329,13 @@ public class IPVCallbackHandler
                                                         userIdentityError.get(),
                                                         authRequest.getState(),
                                                         authRequest.getResponseMode());
-                                        return new APIGatewayProxyResponseEvent()
-                                                .withStatusCode(302)
-                                                .withHeaders(
-                                                        Map.of(
-                                                                ResponseHeaders.LOCATION,
-                                                                errorResponse.toURI().toString()));
+                                        return generateApiGatewayProxyResponse(
+                                                302,
+                                                "",
+                                                Map.of(
+                                                        ResponseHeaders.LOCATION,
+                                                        errorResponse.toURI().toString()),
+                                                null);
                                     }
                                 }
                                 saveAdditionalClaimsToDynamo(pairwiseSubject, userIdentityUserInfo);
@@ -340,12 +343,11 @@ public class IPVCallbackHandler
                                         ConstructUriHelper.buildURI(
                                                 configurationService.getLoginURI().toString(),
                                                 REDIRECT_PATH);
-                                return new APIGatewayProxyResponseEvent()
-                                        .withStatusCode(302)
-                                        .withHeaders(
-                                                Map.of(
-                                                        ResponseHeaders.LOCATION,
-                                                        redirectURI.toString()));
+                                return generateApiGatewayProxyResponse(
+                                        302,
+                                        "",
+                                        Map.of(ResponseHeaders.LOCATION, redirectURI.toString()),
+                                        null);
                             } catch (NoSuchElementException e) {
                                 LOG.warn("Session not found", e);
                                 throw new RuntimeException("Session not found", e);

@@ -38,6 +38,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
@@ -285,10 +286,11 @@ public class AuthorisationHandler
                                 configurationService.getPersistentCookieMaxAge(),
                                 configurationService.getSessionCookieAttributes(),
                                 configurationService.getDomainName()));
-        return new APIGatewayProxyResponseEvent()
-                .withStatusCode(302)
-                .withHeaders(Map.of(ResponseHeaders.LOCATION, redirectURI))
-                .withMultiValueHeaders(Map.of(ResponseHeaders.SET_COOKIE, cookies));
+        return generateApiGatewayProxyResponse(
+                302,
+                "",
+                Map.of(ResponseHeaders.LOCATION, redirectURI),
+                Map.of(ResponseHeaders.SET_COOKIE, cookies));
     }
 
     private APIGatewayProxyResponseEvent generateErrorResponse(
@@ -317,8 +319,8 @@ public class AuthorisationHandler
                 errorObject.getCode(),
                 errorObject.getDescription());
         var error = new AuthenticationErrorResponse(redirectUri, errorObject, state, responseMode);
-        return new APIGatewayProxyResponseEvent()
-                .withStatusCode(302)
-                .withHeaders(Map.of(ResponseHeaders.LOCATION, error.toURI().toString()));
+
+        return generateApiGatewayProxyResponse(
+                302, "", Map.of(ResponseHeaders.LOCATION, error.toURI().toString()), null);
     }
 }

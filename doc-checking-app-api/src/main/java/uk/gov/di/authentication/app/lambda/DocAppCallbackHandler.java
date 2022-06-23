@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 
+import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
@@ -206,12 +207,13 @@ public class DocAppCallbackHandler
                                             ConstructUriHelper.buildURI(
                                                     configurationService.getLoginURI().toString(),
                                                     REDIRECT_PATH);
-                                    return new APIGatewayProxyResponseEvent()
-                                            .withStatusCode(302)
-                                            .withHeaders(
-                                                    Map.of(
-                                                            ResponseHeaders.LOCATION,
-                                                            redirectURI.toString()));
+                                    return generateApiGatewayProxyResponse(
+                                            302,
+                                            "",
+                                            Map.of(
+                                                    ResponseHeaders.LOCATION,
+                                                    redirectURI.toString()),
+                                            null);
 
                                 } catch (UnsuccesfulCredentialResponseException e) {
                                     auditService.submitAuditEvent(
