@@ -34,19 +34,25 @@ public class SPOTRequest {
     @Expose
     private LogIds logIds;
 
+    @SerializedName(value = "out_audience")
+    @Expose
+    private String audience;
+
     public SPOTRequest(
             Map<String, Object> spotClaims,
             String localAccountId,
             byte[] salt,
             String rpSectorId,
             String sub,
-            LogIds logIds) {
+            LogIds logIds,
+            String audience) {
         this.spotClaims = spotClaims;
         this.localAccountId = localAccountId;
         this.salt = salt;
         this.rpSectorId = rpSectorId;
         this.sub = sub;
         this.logIds = logIds;
+        this.audience = audience;
     }
 
     public SPOTRequest() {}
@@ -73,5 +79,9 @@ public class SPOTRequest {
 
     public LogIds getLogIds() {
         return logIds;
+    }
+
+    public String getAudience() {
+        return audience;
     }
 }

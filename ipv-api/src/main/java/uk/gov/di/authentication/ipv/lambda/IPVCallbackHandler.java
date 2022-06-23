@@ -306,7 +306,8 @@ public class IPVCallbackHandler
                                                 getSectorIdentifierForClient(clientRegistry),
                                                 userProfile,
                                                 pairwiseSubject,
-                                                userIdentityUserInfo);
+                                                userIdentityUserInfo,
+                                                clientId);
 
                                         auditService.submitAuditEvent(
                                                 IPVAuditableEvent.IPV_SPOT_REQUESTED,
@@ -401,7 +402,8 @@ public class IPVCallbackHandler
             String sectorIdentifier,
             UserProfile userProfile,
             Subject pairwiseSubject,
-            UserInfo userIdentityUserInfo)
+            UserInfo userIdentityUserInfo,
+            String clientId)
             throws JsonException {
 
         var spotClaimsBuilder =
@@ -432,7 +434,8 @@ public class IPVCallbackHandler
                         dynamoService.getOrGenerateSalt(userProfile),
                         sectorIdentifier,
                         pairwiseSubject.getValue(),
-                        logIds);
+                        logIds,
+                        clientId);
         var spotRequestString = objectMapper.writeValueAsString(spotRequest);
         sqsClient.send(spotRequestString);
         if (configurationService.isIdentityTraceLoggingEnabled()) {
