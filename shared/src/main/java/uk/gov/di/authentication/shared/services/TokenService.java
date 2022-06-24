@@ -432,6 +432,10 @@ public class TokenService {
             JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
             Date currentDateTime = NowHelper.now();
             if (DateUtils.isBefore(claimsSet.getExpirationTime(), currentDateTime, 30)) {
+                LOG.warn(
+                        "PrivateKeyJWT has expired. Expiration time: {}. Current time: {}",
+                        claimsSet.getExpirationTime(),
+                        currentDateTime);
                 return true;
             }
         } catch (java.text.ParseException e) {
@@ -465,6 +469,7 @@ public class TokenService {
                     KeyFactory kf = KeyFactory.getInstance("RSA");
                     return Collections.singletonList(kf.generatePublic(x509publicKey));
                 } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
+                    LOG.warn("Exception when selecting public key", e);
                     throw new RuntimeException(e);
                 }
             }
