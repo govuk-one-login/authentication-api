@@ -136,8 +136,9 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
             }
 
+            sessionService.save(session);
+
             if (errorResponse.isPresent()) {
-                sessionService.save(session);
                 processBlockedCodeSession(
                         errorResponse.get(),
                         session,

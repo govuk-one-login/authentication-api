@@ -30,6 +30,7 @@ import java.util.concurrent.TimeUnit;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_VERIFIED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.INVALID_CODE_SENT;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
@@ -64,6 +65,29 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         Map.of());
         assertThat(response, hasStatus(204));
 
+        assertEventTypesReceived(auditTopic, List.of(CODE_VERIFIED));
+    }
+
+    @Test
+    void shouldResetCodeRequestCountWhenSuccessfulEmailCodeAndReturn204()
+            throws Json.JsonException {
+        var sessionId = redis.createSession();
+        redis.incrementSessionCodeRequestCount(sessionId);
+        redis.incrementSessionCodeRequestCount(sessionId);
+        redis.incrementSessionCodeRequestCount(sessionId);
+        setUpTestWithoutSignUp(sessionId, withScope());
+        String code = redis.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
+        VerifyCodeRequest codeRequest = new VerifyCodeRequest(VERIFY_EMAIL, code);
+
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
+        var session = redis.getSession(sessionId);
+
+        assertThat(response, hasStatus(204));
+        assertThat(session.getCodeRequestCount(), equalTo(0));
         assertEventTypesReceived(auditTopic, List.of(CODE_VERIFIED));
     }
 
@@ -139,6 +163,37 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         Map.of());
 
         assertThat(response, hasStatus(204));
+        assertEventTypesReceived(auditTopic, List.of(CODE_VERIFIED));
+    }
+
+    @Test
+    void shouldResetCodeRequestCountWhenSuccessfulVerifyPhoneCodeAndReturn204()
+            throws Json.JsonException {
+        String sessionId = redis.createSession();
+        redis.incrementSessionCodeRequestCount(sessionId);
+        redis.incrementSessionCodeRequestCount(sessionId);
+        redis.incrementSessionCodeRequestCount(sessionId);
+        Scope scope = withScope();
+        setUpTestWithoutClientConsent(sessionId, scope);
+        Set<String> claims = ValidScopes.getClaimsForListOfScopes(scope.toStringList());
+        ClientConsent clientConsent =
+                new ClientConsent(
+                        CLIENT_ID, claims, LocalDateTime.now(ZoneId.of("UTC")).toString());
+        userStore.updateConsent(EMAIL_ADDRESS, clientConsent);
+        String code = redis.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 900);
+        VerifyCodeRequest codeRequest =
+                new VerifyCodeRequest(NotificationType.VERIFY_PHONE_NUMBER, code);
+
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
+
+        var session = redis.getSession(sessionId);
+
+        assertThat(response, hasStatus(204));
+        assertThat(session.getCodeRequestCount(), equalTo(0));
         assertEventTypesReceived(auditTopic, List.of(CODE_VERIFIED));
     }
 
