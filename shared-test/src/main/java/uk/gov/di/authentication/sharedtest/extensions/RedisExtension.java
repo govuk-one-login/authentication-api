@@ -147,6 +147,14 @@ public class RedisExtension
         return objectMapper.readValue(redis.getValue(sessionId), Session.class);
     }
 
+    public void incrementSessionCodeRequestCount(String sessionId) throws Json.JsonException {
+        var session =
+                objectMapper
+                        .readValue(redis.getValue(sessionId), Session.class)
+                        .incrementCodeRequestCount();
+        redis.saveWithExpiry(sessionId, objectMapper.writeValueAsString(session), 3600);
+    }
+
     public String generateAndSaveEmailCode(String email, long codeExpiryTime) {
         var code = new CodeGeneratorService().sixDigitCode();
         new CodeStorageService(redis).saveOtpCode(email, code, codeExpiryTime, VERIFY_EMAIL);

@@ -43,6 +43,7 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
@@ -149,6 +150,7 @@ class VerifyCodeHandlerTest {
 
         verify(codeStorageService).deleteOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL);
         assertThat(result, hasStatus(204));
+        verify(sessionService).save(session);
 
         verify(auditService)
                 .submitAuditEvent(
@@ -178,6 +180,7 @@ class VerifyCodeHandlerTest {
         assertThat(result, hasStatus(204));
         assertThat(session.getCurrentCredentialStrength(), equalTo(MEDIUM_LEVEL));
 
+        verify(sessionService, times(2)).save(session);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_VERIFIED,
@@ -353,7 +356,7 @@ class VerifyCodeHandlerTest {
 
         verify(codeStorageService).deleteOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS);
         assertThat(result, hasStatus(204));
-
+        verify(sessionService).save(session);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_VERIFIED,
