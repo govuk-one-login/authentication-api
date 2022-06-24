@@ -26,6 +26,12 @@ resource "aws_ssm_parameter" "ipv-capacity" {
   name  = "${var.environment}-ipv-capacity"
   type  = "String"
   value = var.ipv_capacity_allowed ? "1" : "0"
+
+  lifecycle {
+    ignore_changes = [
+      value
+    ]
+  }
 }
 
 data "aws_iam_policy_document" "ipv_capacity_parameter_policy_document" {
