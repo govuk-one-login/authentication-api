@@ -60,7 +60,7 @@ class CounterFraudAuditReplayLambdaTest {
         when(input.getRecords()).thenReturn(List.of(record));
         handler.handleRequest(input, mock(Context.class));
 
-        LogEvent logEvent = logging.events().get(1);
+        LogEvent logEvent = logging.events().get(0);
 
         assertThat(logEvent, hasObjectMessageProperty("event-id", "test-event-id"));
         assertThat(logEvent, hasObjectMessageProperty("request-id", "test-request-id"));
@@ -146,7 +146,7 @@ class CounterFraudAuditReplayLambdaTest {
         when(input.getRecords()).thenReturn(List.of(record));
         handler.handleRequest(input, mock(Context.class));
 
-        LogEvent logEvent = logging.events().get(1);
+        LogEvent logEvent = logging.events().get(0);
 
         assertThat(logEvent, hasObjectMessageProperty("event-id", "test-event-id"));
         assertThat(logEvent, hasObjectMessageProperty("request-id", "test-request-id"));
@@ -178,7 +178,7 @@ class CounterFraudAuditReplayLambdaTest {
                 logEvent,
                 hasObjectMessageProperty("extensions.extension-type", "test-extension-value"));
 
-        logEvent = logging.events().get(2);
+        logEvent = logging.events().get(1);
 
         assertThat(logEvent, hasObjectMessageProperty("event-id", "a-second-test-event-id"));
         assertThat(logEvent, hasObjectMessageProperty("request-id", "a-second-test-request-id"));
