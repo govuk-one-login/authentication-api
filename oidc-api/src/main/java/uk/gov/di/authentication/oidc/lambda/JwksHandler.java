@@ -11,6 +11,8 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
 
+import java.util.Map;
+
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
@@ -65,7 +67,9 @@ public class JwksHandler
                                 return generateApiGatewayProxyResponse(
                                         200,
                                         segmentedFunctionCall(
-                                                "serialiseJWKSet", () -> jwks.toString(true)));
+                                                "serialiseJWKSet", () -> jwks.toString(true)),
+                                        Map.of("Cache-Control", "max-age=86400"),
+                                        null);
                             } catch (Exception e) {
                                 LOG.error("Error in JWKs lambda", e);
                                 return generateApiGatewayProxyResponse(

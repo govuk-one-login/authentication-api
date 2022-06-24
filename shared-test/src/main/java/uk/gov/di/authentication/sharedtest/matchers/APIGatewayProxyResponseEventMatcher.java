@@ -7,20 +7,22 @@ import org.hamcrest.TypeSafeDiagnosingMatcher;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.net.URI;
+import java.util.Map;
 import java.util.function.Function;
 
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasEntry;
 import static uk.gov.di.authentication.sharedtest.exceptions.Unchecked.unchecked;
 
-public class APIGatewayProxyResponseEventMatcher<T, M extends Matcher>
+public class APIGatewayProxyResponseEventMatcher<T>
         extends TypeSafeDiagnosingMatcher<APIGatewayProxyResponseEvent> {
 
     private final String name;
     private final Function<APIGatewayProxyResponseEvent, T> mapper;
-    private final M matcher;
+    private final Matcher<T> matcher;
 
     private APIGatewayProxyResponseEventMatcher(
-            String name, Function<APIGatewayProxyResponseEvent, T> mapper, M matcher) {
+            String name, Function<APIGatewayProxyResponseEvent, T> mapper, Matcher<T> matcher) {
         this.name = name;
         this.mapper = mapper;
         this.matcher = matcher;
@@ -49,26 +51,23 @@ public class APIGatewayProxyResponseEventMatcher<T, M extends Matcher>
         return "an APIGatewayProxyResponseEvent with " + name + ": " + value;
     }
 
-    public static APIGatewayProxyResponseEventMatcher<Integer, Matcher<Integer>> hasStatus(
-            int statusCode) {
+    public static APIGatewayProxyResponseEventMatcher<Integer> hasStatus(int statusCode) {
         return new APIGatewayProxyResponseEventMatcher<>(
                 "status code", APIGatewayProxyResponseEvent::getStatusCode, equalTo(statusCode));
     }
 
-    public static APIGatewayProxyResponseEventMatcher<Integer, Matcher<Integer>> hasStatus(
+    public static APIGatewayProxyResponseEventMatcher<Integer> hasStatus(
             Matcher<Integer> statusCodeMatcher) {
         return new APIGatewayProxyResponseEventMatcher<>(
                 "status code", APIGatewayProxyResponseEvent::getStatusCode, statusCodeMatcher);
     }
 
-    public static APIGatewayProxyResponseEventMatcher<String, Matcher<String>> hasBody(
-            String body) {
+    public static APIGatewayProxyResponseEventMatcher<String> hasBody(String body) {
         return new APIGatewayProxyResponseEventMatcher<>(
                 "body", APIGatewayProxyResponseEvent::getBody, equalTo(body));
     }
 
-    public static APIGatewayProxyResponseEventMatcher<String, Matcher<String>> hasJsonBody(
-            Object body) {
+    public static APIGatewayProxyResponseEventMatcher<String> hasJsonBody(Object body) {
         var expectedValue =
                 unchecked(SerializationService.getInstance()::writeValueAsString).apply(body);
 
@@ -76,12 +75,18 @@ public class APIGatewayProxyResponseEventMatcher<T, M extends Matcher>
                 "body", APIGatewayProxyResponseEvent::getBody, equalTo(expectedValue));
     }
 
-    public static APIGatewayProxyResponseEventMatcher<Integer, Matcher<Integer>> isRedirect() {
+    public static APIGatewayProxyResponseEventMatcher<Map<? extends String, ? extends String>>
+            hasHeader(String key, String value) {
+
+        return new APIGatewayProxyResponseEventMatcher<>(
+                "body", APIGatewayProxyResponseEvent::getHeaders, hasEntry(key, value));
+    }
+
+    public static APIGatewayProxyResponseEventMatcher<Integer> isRedirect() {
         return hasStatus(302);
     }
 
-    public static APIGatewayProxyResponseEventMatcher<URI, Matcher<URI>> isRedirectTo(
-            Matcher<URI> expected) {
+    public static APIGatewayProxyResponseEventMatcher<URI> isRedirectTo(Matcher<URI> expected) {
         return new APIGatewayProxyResponseEventMatcher<>(
                 "redirect to",
                 apiGatewayProxyResponseEvent ->
