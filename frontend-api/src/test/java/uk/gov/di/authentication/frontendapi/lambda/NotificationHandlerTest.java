@@ -14,6 +14,7 @@ import uk.gov.di.authentication.shared.services.NotificationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.service.notify.NotificationClientException;
 
+import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -122,7 +123,9 @@ public class NotificationHandlerTest {
         String baseUrl = "http://account-management";
         var contactUsLinkUrl =
                 "https://localhost:8080/frontend/contact-us?referer=accountCreatedEmail";
+        var govUKAccountsUrl = URI.create("https://www.gov.uk/account");
         when(configService.getAccountManagementURI()).thenReturn(baseUrl);
+        when(configService.getGovUKAccountsURL()).thenReturn(govUKAccountsUrl);
 
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_EMAIL_ADDRESS, ACCOUNT_CREATED_CONFIRMATION);
@@ -133,6 +136,7 @@ public class NotificationHandlerTest {
 
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("contact-us-link", contactUsLinkUrl);
+        personalisation.put("gov-uk-accounts-url", govUKAccountsUrl.toString());
 
         verify(notificationService)
                 .sendEmail(TEST_EMAIL_ADDRESS, personalisation, ACCOUNT_CREATED_CONFIRMATION);

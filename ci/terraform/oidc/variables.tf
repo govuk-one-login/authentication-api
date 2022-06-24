@@ -179,6 +179,11 @@ variable "dns_state_role" {
   type = string
 }
 
+variable "gov_uk_accounts_url" {
+  type    = string
+  default = "https://www.gov.uk/account"
+}
+
 variable "shared_state_bucket" {
   type = string
 }
