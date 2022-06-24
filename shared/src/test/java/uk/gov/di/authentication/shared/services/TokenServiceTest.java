@@ -37,6 +37,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import uk.gov.di.authentication.shared.entity.AccessTokenStore;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
@@ -52,6 +54,7 @@ import java.nio.ByteBuffer;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
 import java.text.ParseException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -64,6 +67,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -162,7 +166,7 @@ public class TokenServiceTest {
                         null,
                         false);
 
-        assertSuccessfullTokenResponse(tokenResponse);
+        assertSuccessfulTokenResponse(tokenResponse);
         assertNotNull(tokenResponse.getOIDCTokens().getRefreshToken());
         RefreshTokenStore refreshTokenStore =
                 new RefreshTokenStore(
@@ -214,7 +218,7 @@ public class TokenServiceTest {
                         oidcClaimsRequest,
                         false);
 
-        assertSuccessfullTokenResponse(tokenResponse);
+        assertSuccessfulTokenResponse(tokenResponse);
 
         assertNotNull(tokenResponse.getOIDCTokens().getRefreshToken());
         assertNull(
@@ -278,17 +282,30 @@ public class TokenServiceTest {
                         null,
                         false);
 
-        assertSuccessfullTokenResponse(tokenResponse);
+        assertSuccessfulTokenResponse(tokenResponse);
 
         assertNull(tokenResponse.getOIDCTokens().getRefreshToken());
     }
 
-    @Test
-    void shouldSuccessfullyValidatePrivateKeyJWT() throws JOSEException {
+    private static Stream<JWSAlgorithm> supportedAlgorithms() {
+        return Stream.of(
+                JWSAlgorithm.RS256,
+                JWSAlgorithm.RS384,
+                JWSAlgorithm.RS512,
+                JWSAlgorithm.PS256,
+                JWSAlgorithm.PS384,
+                JWSAlgorithm.PS512);
+    }
+
+    @ParameterizedTest
+    @MethodSource("supportedAlgorithms")
+    void shouldSuccessfullyValidatePrivateKeyJWT(JWSAlgorithm algorithm) throws JOSEException {
         KeyPair keyPair = generateRsaKeyPair();
         String publicKey = Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded());
         Date expiryDate = NowHelper.nowPlus(5, ChronoUnit.MINUTES);
-        String requestParams = generateSerialisedPrivateKeyJWT(keyPair, expiryDate.getTime());
+        String requestParams =
+                generateSerialisedPrivateKeyJWT(
+                        algorithm, keyPair.getPrivate(), expiryDate.getTime());
         assertThat(
                 tokenService.validatePrivateKeyJWT(requestParams, publicKey, TOKEN_URI, CLIENT_ID),
                 equalTo(Optional.empty()));
@@ -299,7 +316,8 @@ public class TokenServiceTest {
         KeyPair keyPair = generateRsaKeyPair();
         String publicKey = Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded());
         Date expiryDate = NowHelper.nowMinus(2, ChronoUnit.MINUTES);
-        String requestParams = generateSerialisedPrivateKeyJWT(keyPair, expiryDate.getTime());
+        String requestParams =
+                generateSerialisedPrivateKeyJWT(keyPair.getPrivate(), expiryDate.getTime());
         assertThat(
                 tokenService.validatePrivateKeyJWT(requestParams, publicKey, TOKEN_URI, CLIENT_ID),
                 equalTo(Optional.of(OAuth2Error.INVALID_GRANT)));
@@ -310,7 +328,8 @@ public class TokenServiceTest {
         KeyPair keyPair = generateRsaKeyPair();
         String publicKey = Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded());
         Date expiryDate = NowHelper.nowPlus(5, ChronoUnit.MINUTES);
-        String requestParams = generateSerialisedPrivateKeyJWT(keyPair, expiryDate.getTime());
+        String requestParams =
+                generateSerialisedPrivateKeyJWT(keyPair.getPrivate(), expiryDate.getTime());
         assertThat(
                 tokenService.validatePrivateKeyJWT(
                         requestParams, publicKey, TOKEN_URI, "wrong-client-id"),
@@ -324,7 +343,8 @@ public class TokenServiceTest {
         String publicKey =
                 Base64.getMimeEncoder().encodeToString(keyPairTwo.getPublic().getEncoded());
         Date expiryDate = NowHelper.nowPlus(5, ChronoUnit.MINUTES);
-        String requestParams = generateSerialisedPrivateKeyJWT(keyPair, expiryDate.getTime());
+        String requestParams =
+                generateSerialisedPrivateKeyJWT(keyPair.getPrivate(), expiryDate.getTime());
         assertThat(
                 tokenService.validatePrivateKeyJWT(requestParams, publicKey, TOKEN_URI, CLIENT_ID),
                 equalTo(Optional.of(OAuth2Error.INVALID_CLIENT)));
@@ -335,7 +355,7 @@ public class TokenServiceTest {
         KeyPair keyPair = generateRsaKeyPair();
         Date expiryDate = NowHelper.nowPlus(5, ChronoUnit.MINUTES);
         String requestParams =
-                generateSerialisedPrivateKeyJWT(keyPair, expiryDate.getTime(), CLIENT_ID);
+                generateSerialisedPrivateKeyJWT(keyPair.getPrivate(), expiryDate.getTime());
         assertThat(
                 tokenService.getClientIDFromPrivateKeyJWT(requestParams),
                 equalTo(Optional.of(CLIENT_ID)));
@@ -457,19 +477,19 @@ public class TokenServiceTest {
         assertTrue(errorObject.isPresent());
     }
 
-    private String generateSerialisedPrivateKeyJWT(KeyPair keyPair, long expiryTime)
+    private String generateSerialisedPrivateKeyJWT(PrivateKey privateKey, long expiryTime)
             throws JOSEException {
-        return generateSerialisedPrivateKeyJWT(keyPair, expiryTime, CLIENT_ID);
+        return generateSerialisedPrivateKeyJWT(JWSAlgorithm.RS256, privateKey, expiryTime);
     }
 
     private String generateSerialisedPrivateKeyJWT(
-            KeyPair keyPair, long expiryTime, String clientId) throws JOSEException {
+            JWSAlgorithm algorithm, PrivateKey privateKey, long expiryTime) throws JOSEException {
 
         JWTAuthenticationClaimsSet claimsSet =
-                new JWTAuthenticationClaimsSet(new ClientID(clientId), new Audience(TOKEN_URI));
+                new JWTAuthenticationClaimsSet(new ClientID(CLIENT_ID), new Audience(TOKEN_URI));
         claimsSet.getExpirationTime().setTime(expiryTime);
         PrivateKeyJWT privateKeyJWT =
-                new PrivateKeyJWT(claimsSet, JWSAlgorithm.RS256, keyPair.getPrivate(), null, null);
+                new PrivateKeyJWT(claimsSet, algorithm, privateKey, null, null);
         Map<String, List<String>> privateKeyParams = privateKeyJWT.toParameters();
         return URLUtils.serializeParameters(privateKeyParams);
     }
@@ -480,7 +500,6 @@ public class TokenServiceTest {
                         .keyID(KEY_ID)
                         .algorithm(JWSAlgorithm.ES256)
                         .generate();
-        ECDSASigner ecdsaSigner = new ECDSASigner(ecSigningKey);
         SignedJWT signedIdToken = createSignedIdToken(ecSigningKey);
         SignResult idTokenSignedResult = new SignResult();
         byte[] idTokenSignatureDer =
@@ -532,7 +551,7 @@ public class TokenServiceTest {
         return kpg.generateKeyPair();
     }
 
-    private void assertSuccessfullTokenResponse(OIDCTokenResponse tokenResponse)
+    private void assertSuccessfulTokenResponse(OIDCTokenResponse tokenResponse)
             throws ParseException, Json.JsonException {
         String accessTokenKey = ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT;
         assertNotNull(tokenResponse.getOIDCTokens().getAccessToken());
