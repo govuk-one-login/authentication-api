@@ -1,0 +1,37 @@
+platform: linux
+image_resource:
+  type: registry-image
+  source:
+    repository: governmentpaas/awscli
+    tag: "469ceea7a619b0abdd6cb27efd4d3bd5e9be3ddb"  # pragma: allowlist secret
+    username: ((docker-hub-username))
+    password: ((docker-hub-password))
+params:
+  ENVIRONMENT: build
+  DEPLOYER_ROLE_ARN: ((deployer-role-arn-non-prod))
+  DESIRED_STATE: "0"
+run:
+  path: sh
+  args:
+    - -c
+    - |
+      set -eu
+      export AWS_DEFAULT_REGION=eu-west-2
+      STS_TOKEN="$(aws sts assume-role --role-arn="${DEPLOYER_ROLE_ARN}" --role-session-name="concourse-ipv-switch-${ENVIRONMENT}")"
+
+      export AWS_ACCESS_KEY_ID="$(echo ${STS_TOKEN} | jq -r .Credentials.AccessKeyId)"
+      export AWS_SECRET_ACCESS_KEY="$(echo ${STS_TOKEN} | jq -r .Credentials.SecretAccessKey)"
+      export AWS_SESSION_TOKEN="$(echo ${STS_TOKEN} | jq -r .Credentials.SessionToken)"
+
+      echo -n "Setting parameter to ${DESIRED_STATE} ... " 
+      aws ssm put-parameter --name "${ENVIRONMENT}-ipv-capacity" --overwrite --value "${DESIRED_STATE}" > /dev/null
+      echo " done!"
+      
+      echo "Checking state ..."       
+      IPV_CAPACITY=$(aws ssm get-parameter --name "${ENVIRONMENT}-ipv-capacity" | jq -r .Parameter.Value)
+      
+      if [[ ${IPV_CAPACITY} -eq "1" ]]; then
+        echo "IPV is now ON"
+      else
+        echo "IPV is now OFF"
+      fi
