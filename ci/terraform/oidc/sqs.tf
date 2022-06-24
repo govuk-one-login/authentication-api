@@ -172,6 +172,7 @@ resource "aws_lambda_function" "email_sqs_lambda" {
       ACCOUNT_MANAGEMENT_URI    = module.dns.account_management_url
       RESET_PASSWORD_ROUTE      = var.reset_password_route
       CONTACT_US_LINK_ROUTE     = var.contact_us_link_route
+      GOV_UK_ACCOUNTS_URL       = var.gov_uk_accounts_url
       NOTIFY_API_KEY            = var.notify_api_key
       NOTIFY_URL                = var.notify_url
       NOTIFY_TEST_DESTINATIONS  = var.notify_test_destinations

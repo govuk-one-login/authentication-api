@@ -87,6 +87,9 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                         case ACCOUNT_CREATED_CONFIRMATION:
                             notifyPersonalisation.put(
                                     "contact-us-link", buildContactUsUrl("accountCreatedEmail"));
+                            notifyPersonalisation.put(
+                                    "gov-uk-accounts-url",
+                                    configurationService.getGovUKAccountsURL().toString());
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     notifyPersonalisation,

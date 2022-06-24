@@ -187,6 +187,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("FRONTEND_BASE_URL", "");
     }
 
+    public URI getGovUKAccountsURL() {
+        return URI.create(System.getenv().getOrDefault("GOV_UK_ACCOUNTS_URL", ""));
+    }
+
     public boolean getHeadersCaseInsensitive() {
         return System.getenv().getOrDefault("HEADERS_CASE_INSENSITIVE", "false").equals("true");
     }
