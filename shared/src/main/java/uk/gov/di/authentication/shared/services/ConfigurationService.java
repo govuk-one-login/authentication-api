@@ -373,6 +373,11 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("TEST_CLIENTS_ENABLED", "false").equals("true");
     }
 
+    public boolean isResourceIdScopeEnabled() {
+        return Boolean.parseBoolean(
+                System.getenv().getOrDefault("RESOURCE_ID_SCOPE_ENABLED", "false"));
+    }
+
     public String getTokenSigningKeyAlias() {
         return System.getenv("TOKEN_SIGNING_KEY_ALIAS");
     }

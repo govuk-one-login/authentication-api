@@ -198,6 +198,7 @@ public class TokenServiceTest {
     void shouldIncludeResourceIdWhenRequired()
             throws ParseException, JOSEException, Json.JsonException {
         when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
+        when(configurationService.isResourceIdScopeEnabled()).thenReturn(true);
         createSignedIdToken();
         createSignedAccessToken();
         Map<String, Object> additionalTokenClaims = new HashMap<>();

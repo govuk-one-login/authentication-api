@@ -306,7 +306,7 @@ public class TokenService {
             idTokenClaims.setClaim("vot", vot);
         }
         idTokenClaims.setClaim("vtm", trustMarkUri.toString());
-        if (requiresResourceId) {
+        if (requiresResourceId && configService.isResourceIdScopeEnabled()) {
             idTokenClaims.setClaim(
                     CustomScopeValue.RESOURCE_ID.getValue(), subject.getValue().split(":")[4]);
         }
