@@ -22,7 +22,7 @@ run:
       export AWS_SECRET_ACCESS_KEY="$(echo ${STS_TOKEN} | jq -r .Credentials.SecretAccessKey)"
       export AWS_SESSION_TOKEN="$(echo ${STS_TOKEN} | jq -r .Credentials.SessionToken)"
 
-      IPV_CAPACITY=$(aws ssm get-parameter --name build-ipv-capacity | jq -r .Parameter.Value)
+      IPV_CAPACITY=$(aws ssm get-parameter --name "${ENVIRONMENT}-ipv-capacity" | jq -r .Parameter.Value)
       
       if [[ ${IPV_CAPACITY} -eq "1" ]]; then
         echo "IPV is currently ON"
