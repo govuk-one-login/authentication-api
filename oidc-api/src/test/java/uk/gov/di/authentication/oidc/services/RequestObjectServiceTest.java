@@ -18,6 +18,7 @@ import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
+import uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 
 import java.net.URI;
@@ -43,6 +44,7 @@ class RequestObjectServiceTest {
     private static final String REDIRECT_URI = "https://localhost:8080";
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
+    private final IPVCapacityService ipvCapacityService = mock(IPVCapacityService.class);
     private KeyPair keyPair;
     private static final String SCOPE = "openid doc-checking-app";
     private static final State STATE = new State();
@@ -56,7 +58,9 @@ class RequestObjectServiceTest {
     void setup() {
         when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_BASE_URI));
         keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
-        service = new RequestObjectService(dynamoClientService, configurationService);
+        service =
+                new RequestObjectService(
+                        dynamoClientService, configurationService, ipvCapacityService);
         var clientRegistry =
                 generateClientRegistry(
                         ClientType.APP.getValue(),
@@ -82,6 +86,32 @@ class RequestObjectServiceTest {
                         .claim("nonce", NONCE.getValue())
                         .claim("state", STATE.toString())
                         .claim("client_id", CLIENT_ID.getValue())
+                        .issuer(CLIENT_ID.getValue())
+                        .build();
+        var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
+
+        var requestObjectError = service.validateRequestObject(generateAuthRequest(signedJWT));
+
+        assertThat(requestObjectError, equalTo(Optional.empty()));
+    }
+
+    @Test
+    void shouldSuccessfullyProcessRequestUriPayloadWhenVtrIsPresent() throws JOSEException {
+        when(ipvCapacityService.isIPVCapacityAvailable()).thenReturn(true);
+        List<String> scopes = new ArrayList<>();
+        scopes.add("openid");
+        scopes.add("doc-checking-app");
+        var scope = Scope.parse(scopes);
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(AUDIENCE)
+                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", scope.toString())
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.toString())
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .claim("vtr", JsonArrayHelper.jsonArrayOf("P2.Cl.Cm"))
                         .issuer(CLIENT_ID.getValue())
                         .build();
         var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);

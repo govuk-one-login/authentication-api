@@ -10,6 +10,10 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
+import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
+import uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 
 import java.net.URI;
@@ -54,6 +58,48 @@ class RequestObjectToAuthRequestHelperTest {
 
         var transformedAuthRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
 
+        assertThat(transformedAuthRequest.getState(), equalTo(STATE));
+        assertThat(transformedAuthRequest.getNonce(), equalTo(NONCE));
+        assertThat(transformedAuthRequest.getRedirectionURI(), equalTo(REDIRECT_URI));
+        assertThat(transformedAuthRequest.getScope(), equalTo(scope));
+        assertThat(transformedAuthRequest.getClientID(), equalTo(CLIENT_ID));
+        assertThat(transformedAuthRequest.getResponseType(), equalTo(ResponseType.CODE));
+        assertThat(transformedAuthRequest.getRequestObject(), equalTo(signedJWT));
+    }
+
+    @Test
+    void shouldConvertRequestObjectToAuthRequestWhenVTRClaimIsPresent() throws JOSEException {
+        var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(AUDIENCE)
+                        .claim("redirect_uri", REDIRECT_URI.toString())
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", scope.toString())
+                        .claim("nonce", NONCE)
+                        .claim("state", STATE)
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .claim("vtr", JsonArrayHelper.jsonArrayOf("P2.Cl.Cm"))
+                        .issuer(CLIENT_ID.getValue())
+                        .build();
+        var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
+        var authRequest =
+                new AuthenticationRequest.Builder(
+                                ResponseType.CODE,
+                                new Scope(OIDCScopeValue.OPENID),
+                                CLIENT_ID,
+                                null)
+                        .requestObject(signedJWT)
+                        .build();
+
+        var transformedAuthRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
+
+        var vtr =
+                VectorOfTrust.parseFromAuthRequestAttribute(
+                        transformedAuthRequest.getCustomParameter("vtr"));
+        assertThat(vtr.getCredentialTrustLevel(), equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
+        assertThat(vtr.getLevelOfConfidence(), equalTo(LevelOfConfidence.MEDIUM_LEVEL));
         assertThat(transformedAuthRequest.getState(), equalTo(STATE));
         assertThat(transformedAuthRequest.getNonce(), equalTo(NONCE));
         assertThat(transformedAuthRequest.getRedirectionURI(), equalTo(REDIRECT_URI));

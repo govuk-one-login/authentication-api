@@ -29,15 +29,20 @@ public class RequestObjectToAuthRequestHelper {
             var jwtClaimsSet = signedJWT.getJWTClaimsSet();
             var responseType =
                     ResponseType.parse(jwtClaimsSet.getClaim("response_type").toString());
-            return new AuthenticationRequest.Builder(
-                            responseType,
-                            Scope.parse(jwtClaimsSet.getClaim("scope").toString()),
-                            new ClientID(jwtClaimsSet.getClaim("client_id").toString()),
-                            URI.create((String) jwtClaimsSet.getClaim("redirect_uri")))
-                    .state(new State(jwtClaimsSet.getClaim("state").toString()))
-                    .nonce(new Nonce(jwtClaimsSet.getClaim("nonce").toString()))
-                    .requestObject(authRequest.getRequestObject())
-                    .build();
+            var builder =
+                    new AuthenticationRequest.Builder(
+                                    responseType,
+                                    Scope.parse(jwtClaimsSet.getClaim("scope").toString()),
+                                    new ClientID(jwtClaimsSet.getClaim("client_id").toString()),
+                                    URI.create((String) jwtClaimsSet.getClaim("redirect_uri")))
+                            .state(new State(jwtClaimsSet.getClaim("state").toString()))
+                            .nonce(new Nonce(jwtClaimsSet.getClaim("nonce").toString()))
+                            .requestObject(authRequest.getRequestObject());
+
+            if (Objects.nonNull(jwtClaimsSet.getClaim("vtr"))) {
+                builder.customParameter("vtr", (String) jwtClaimsSet.getClaim("vtr"));
+            }
+            return builder.build();
         } catch (ParseException | com.nimbusds.oauth2.sdk.ParseException e) {
             LOG.error("Parse exception thrown whilst converting RequestObject to Auth Request", e);
             throw new RuntimeException(e);
