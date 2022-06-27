@@ -7,6 +7,7 @@ import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.Session;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -25,6 +26,15 @@ public class ValidationHelper {
     private static final List<String> ALLOWED_TEST_NUMBERS = List.of("07700900222");
 
     private ValidationHelper() {}
+
+    public static Optional<ErrorResponse> validatePhoneNumber(
+            String currentPhoneNumber, String newPhoneNumber) {
+        if (Objects.nonNull(currentPhoneNumber)
+                && currentPhoneNumber.equals(PhoneNumberHelper.formatPhoneNumber(newPhoneNumber))) {
+            return Optional.of(ErrorResponse.ERROR_1044);
+        }
+        return validatePhoneNumber(newPhoneNumber);
+    }
 
     public static Optional<ErrorResponse> validatePhoneNumber(String phoneNumberInput) {
         if (ALLOWED_TEST_NUMBERS.contains(phoneNumberInput)) return Optional.empty();

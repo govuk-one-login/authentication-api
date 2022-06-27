@@ -284,6 +284,35 @@ class ValidationHelperTest {
                         STORED_VALID_CODE));
     }
 
+    @Test
+    void shouldSuccessfullyValidatePhoneNumberWhenNewNumberIsDifferentToCurrentNumber() {
+
+        assertThat(
+                ValidationHelper.validatePhoneNumber("+447911123456", "07700900222"),
+                equalTo(Optional.empty()));
+    }
+
+    @Test
+    void shouldSuccessfullyValidatePhoneNumberWhenCurrentNumberIsNotPresent() {
+        assertThat(
+                ValidationHelper.validatePhoneNumber(null, "07700900222"),
+                equalTo(Optional.empty()));
+    }
+
+    @Test
+    void shouldReturnErrorWhenNewInternationPhoneNumberIsSameToCurrentNumber() {
+        assertThat(
+                ValidationHelper.validatePhoneNumber("+33645453322", "+33645453322"),
+                equalTo(Optional.of(ErrorResponse.ERROR_1044)));
+    }
+
+    @Test
+    void shouldReturnErrorWhenNewNumberIsTheSameAsCurrentNumber() {
+        assertThat(
+                ValidationHelper.validatePhoneNumber("+447911123456", "07911123456"),
+                equalTo(Optional.of(ErrorResponse.ERROR_1044)));
+    }
+
     @ParameterizedTest
     @MethodSource("validateCodeTestParameters")
     void shouldReturnCorrectErrorForCodeValidationScenarios(

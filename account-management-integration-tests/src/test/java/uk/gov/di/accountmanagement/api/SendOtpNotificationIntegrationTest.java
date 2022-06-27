@@ -141,4 +141,26 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
         assertNoAuditEventsReceived(auditTopic);
     }
+
+    @Test
+    void shouldReturn400WhenNewPhoneNumberIsTheSameAsCurrentPhoneNumber()
+            throws Json.JsonException {
+        userStore.signUp(TEST_EMAIL, "password");
+        userStore.addPhoneNumber(TEST_EMAIL, "+447755551084");
+        var response =
+                makeRequest(
+                        Optional.of(
+                                new SendNotificationRequest(
+                                        TEST_EMAIL, VERIFY_PHONE_NUMBER, "07755551084")),
+                        Collections.emptyMap(),
+                        Collections.emptyMap(),
+                        Collections.emptyMap());
+
+        assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
+        assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1044)));
+
+        NotificationAssertionHelper.assertNoNotificationsReceived(notificationsQueue);
+
+        assertNoAuditEventsReceived(auditTopic);
+    }
 }
