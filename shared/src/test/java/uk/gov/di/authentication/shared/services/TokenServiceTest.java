@@ -47,6 +47,7 @@ import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.sharedtest.helper.SubjectHelper;
 import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
@@ -94,8 +95,8 @@ public class TokenServiceTest {
             mock(RedisConnectionService.class);
     private final TokenService tokenService =
             new TokenService(configurationService, redisConnectionService, kmsConnectionService);
-    private static final Subject PUBLIC_SUBJECT = new Subject("public-subject");
-    private static final Subject INTERNAL_SUBJECT = new Subject("internal-subject");
+    private static final Subject PUBLIC_SUBJECT = SubjectHelper.govUkSignInSubject();
+    private static final Subject INTERNAL_SUBJECT = SubjectHelper.govUkSignInSubject();
     private static final Scope SCOPES =
             new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.PHONE);
     private static final String VOT = CredentialTrustLevel.MEDIUM_LEVEL.getValue();
