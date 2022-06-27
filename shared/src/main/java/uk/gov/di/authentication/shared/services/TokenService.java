@@ -42,6 +42,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.AccessTokenStore;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
+import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
@@ -127,6 +128,9 @@ public class TokenService {
                 segmentedFunctionCall(
                         "AccessTokenHash.compute",
                         () -> AccessTokenHash.compute(accessToken, TOKEN_ALGORITHM, null));
+
+        var requiresResourceId = scopesForToken.contains(CustomScopeValue.RESOURCE_ID.getValue());
+
         SignedJWT idToken =
                 segmentedFunctionCall(
                         "generateIDToken",
@@ -137,7 +141,8 @@ public class TokenService {
                                         additionalTokenClaims,
                                         accessTokenHash,
                                         vot,
-                                        isDocAppJourney));
+                                        isDocAppJourney,
+                                        requiresResourceId));
         if (scopesForToken.contains(OIDCScopeValue.OFFLINE_ACCESS.getValue())) {
             RefreshToken refreshToken =
                     segmentedFunctionCall(
@@ -282,7 +287,8 @@ public class TokenService {
             Map<String, Object> additionalTokenClaims,
             AccessTokenHash accessTokenHash,
             String vot,
-            boolean isDocAppJourney) {
+            boolean isDocAppJourney,
+            boolean requiresResourceId) {
 
         LOG.info("Generating IdToken");
         URI trustMarkUri = buildURI(configService.getOidcApiBaseURL().get(), "/trustmark");
@@ -300,6 +306,11 @@ public class TokenService {
             idTokenClaims.setClaim("vot", vot);
         }
         idTokenClaims.setClaim("vtm", trustMarkUri.toString());
+        if (requiresResourceId && configService.isResourceIdScopeEnabled()) {
+            idTokenClaims.setClaim(
+                    CustomScopeValue.RESOURCE_ID.getValue(), subject.getValue().split(":")[4]);
+        }
+
         try {
             return generateSignedJWT(idTokenClaims.toJWTClaimsSet(), Optional.empty());
         } catch (com.nimbusds.oauth2.sdk.ParseException e) {

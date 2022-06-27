@@ -19,6 +19,9 @@ public class CustomScopeValue extends Scope.Value {
             new CustomScopeValue(
                     "doc-checking-app", Requirement.OPTIONAL, new String[] {"read"}, true);
 
+    public static final CustomScopeValue RESOURCE_ID =
+            new CustomScopeValue("resource-id", Requirement.OPTIONAL, new String[] {"read"}, true);
+
     private final String[] claims;
 
     private boolean privateScope = true;
