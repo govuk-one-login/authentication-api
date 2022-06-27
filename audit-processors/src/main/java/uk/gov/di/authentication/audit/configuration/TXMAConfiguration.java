@@ -15,7 +15,7 @@ public class TXMAConfiguration {
 
     private final SecretsManagerClient secretsManagerClient;
 
-    private Optional<String> cachedObfuscationHMACSecret;
+    private String cachedObfuscationHMACSecret;
 
     public TXMAConfiguration() {
         this.secretsManagerClient = SecretsManagerClient.builder().build();
@@ -33,7 +33,7 @@ public class TXMAConfiguration {
         return Optional.of(arn);
     }
 
-    public Optional<String> getObfuscationHMACSecret() {
+    public String getObfuscationHMACSecret() {
         if (isNull(cachedObfuscationHMACSecret)) {
             cachedObfuscationHMACSecret =
                     getObfuscationHMACSecretArn()
@@ -50,9 +50,15 @@ public class TXMAConfiguration {
                                             return getSecretValueResponse.secretString();
                                         } catch (Exception e) {
                                             LOG.error("Could not get secret from TXMA", e);
-                                            return null;
+                                            throw new RuntimeException(
+                                                    "Invalid configuration. HMAC secret key cannot be read.",
+                                                    e);
                                         }
-                                    });
+                                    })
+                            .orElseThrow(
+                                    () ->
+                                            new RuntimeException(
+                                                    "Invalid configuration. HMAC secret key not specified."));
         }
         return cachedObfuscationHMACSecret;
     }

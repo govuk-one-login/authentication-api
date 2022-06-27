@@ -1,6 +1,66 @@
-resource "aws_iam_policy" "txma_secrets_policy" {
-  count = var.txma_obfuscation_secret_arn == "" || var.txma_obfuscation_secret_kms_key_arn == "" ? 0 : 1
+resource "random_password" "hmac_key" {
+  length = 32
 
+  override_special = "!&#$^<>-"
+  min_lower        = 3
+  min_numeric      = 3
+  min_special      = 3
+  min_upper        = 3
+}
+
+data "aws_iam_policy_document" "key_policy" {
+  count = var.txma_obfuscation_secret_arn == "" ? 1 : 0
+
+  policy_id = "key-policy-ssm"
+  statement {
+    sid = "Enable IAM User Permissions for root user"
+    actions = [
+      "kms:*",
+    ]
+    effect = "Allow"
+    principals {
+      type = "AWS"
+      identifiers = [
+        format(
+          "arn:%s:iam::%s:root",
+          data.aws_partition.current.partition,
+          data.aws_caller_identity.current.account_id
+        )
+      ]
+    }
+    resources = ["*"]
+  }
+}
+
+resource "aws_kms_key" "secrets_manager_key" {
+  count = var.txma_obfuscation_secret_arn == "" ? 1 : 0
+
+  description             = "KMS key for secrets manager"
+  deletion_window_in_days = 30
+  enable_key_rotation     = true
+  policy                  = data.aws_iam_policy_document.key_policy[0].json
+
+  customer_master_key_spec = "SYMMETRIC_DEFAULT"
+  key_usage                = "ENCRYPT_DECRYPT"
+
+  tags = local.default_tags
+}
+
+resource "aws_secretsmanager_secret" "hmac_secret" {
+  count = var.txma_obfuscation_secret_arn == "" ? 1 : 0
+
+  name_prefix = "hmac-secret-key-"
+  kms_key_id  = aws_kms_key.secrets_manager_key[0].id
+}
+
+resource "aws_secretsmanager_secret_version" "hmac_secret" {
+  count = var.txma_obfuscation_secret_arn == "" ? 1 : 0
+
+  secret_id     = aws_secretsmanager_secret.hmac_secret[0].id
+  secret_string = random_password.hmac_key.result
+}
+
+resource "aws_iam_policy" "txma_secrets_policy" {
   name_prefix = "txma-hmac-key-secret-"
   path        = "/${var.environment}/fraud-realtime-logging/"
   description = "IAM policy for a lambda needing to access the HMAC key secret in TXMA secrets manager"
@@ -15,7 +75,7 @@ resource "aws_iam_policy" "txma_secrets_policy" {
       ]
 
       Resource = [
-        var.txma_obfuscation_secret_arn,
+        var.txma_obfuscation_secret_arn == "" ? aws_secretsmanager_secret.hmac_secret[0].arn : var.txma_obfuscation_secret_arn,
       ]
       }, {
       Effect = "Allow"
@@ -24,17 +84,14 @@ resource "aws_iam_policy" "txma_secrets_policy" {
       ]
 
       Resource = [
-        var.txma_obfuscation_secret_kms_key_arn,
+        var.txma_obfuscation_secret_arn == "" ? aws_kms_key.secrets_manager_key[0].arn : var.txma_obfuscation_secret_kms_key_arn,
       ]
     }]
   })
-}
 
-resource "aws_iam_role_policy_attachment" "txma_secrets_policy" {
-  count = var.txma_obfuscation_secret_arn == "" || var.txma_obfuscation_secret_kms_key_arn == "" ? 0 : 1
-
-  role       = module.fraud_realtime_logging_role.name
-  policy_arn = aws_iam_policy.txma_secrets_policy[0].arn
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 module "fraud_realtime_logging_role" {
@@ -46,6 +103,7 @@ module "fraud_realtime_logging_role" {
 
   policies_to_attach = [
     aws_iam_policy.fraud_realtime_logging_audit_payload_kms_verification.arn,
+    aws_iam_policy.txma_secrets_policy.arn,
   ]
 }
 
@@ -70,16 +128,6 @@ resource "aws_iam_policy" "fraud_realtime_logging_audit_payload_kms_verification
       ]
     }]
   })
-}
-
-resource "random_password" "hmac_key" {
-  length = 32
-
-  override_special = "!&#$^<>-"
-  min_lower        = 3
-  min_numeric      = 3
-  min_special      = 3
-  min_upper        = 3
 }
 
 resource "aws_lambda_function" "fraud_realtime_logging_lambda" {
@@ -108,8 +156,7 @@ resource "aws_lambda_function" "fraud_realtime_logging_lambda" {
     variables = {
       AUDIT_SIGNING_KEY_ALIAS     = local.audit_signing_key_alias_name
       LOCALSTACK_ENDPOINT         = var.use_localstack ? var.localstack_endpoint : null
-      AUDIT_HMAC_SECRET           = random_password.hmac_key.result
-      TXMA_OBFUSCATION_SECRET_ARN = var.txma_obfuscation_secret_arn
+      TXMA_OBFUSCATION_SECRET_ARN = var.txma_obfuscation_secret_arn == "" ? aws_secretsmanager_secret.hmac_secret[0].arn : var.txma_obfuscation_secret_arn
     }
   }
   kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn

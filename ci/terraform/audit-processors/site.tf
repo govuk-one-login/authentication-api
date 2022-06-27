@@ -33,6 +33,7 @@ provider "aws" {
     sns    = var.aws_endpoint
   }
 }
+
 locals {
   // Using a local rather than the default_tags option on the AWS provider, as the latter has known issues which produce errors on apply.
   default_tags = {
@@ -40,3 +41,8 @@ locals {
     application = "audit-processors"
   }
 }
+
+
+data "aws_caller_identity" "current" {}
+
+data "aws_partition" "current" {}
