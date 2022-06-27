@@ -13,6 +13,7 @@ import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -22,6 +23,7 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.util.Map;
+import java.util.Optional;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -194,6 +196,29 @@ class SendOtpNotificationHandlerTest {
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1012));
 
+        verifyNoInteractions(auditService);
+    }
+
+    @Test
+    void shouldReturn400IfNewPhoneNumberIsTheSameAsCurrentPhoneNumber() {
+        when(dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
+                .thenReturn(
+                        Optional.of(
+                                new UserProfile()
+                                        .setEmail(TEST_EMAIL_ADDRESS)
+                                        .setPhoneNumber("+447755551084")
+                                        .setPhoneNumberVerified(true)));
+        var event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of());
+        event.setBody(
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\" }",
+                        TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER));
+
+        var result = handler.handleRequest(event, context);
+
+        assertEquals(400, result.getStatusCode());
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1044));
         verifyNoInteractions(auditService);
     }
 

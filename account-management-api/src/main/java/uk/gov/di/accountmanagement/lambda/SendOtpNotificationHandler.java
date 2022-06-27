@@ -13,6 +13,7 @@ import uk.gov.di.accountmanagement.entity.SendNotificationRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
@@ -129,8 +130,15 @@ public class SendOtpNotificationHandler
                                                 context);
                                     case VERIFY_PHONE_NUMBER:
                                         LOG.info("NotificationType is VERIFY_PHONE_NUMBER");
-                                        Optional<ErrorResponse> phoneNumberValidationError =
+                                        var existingPhoneNumber =
+                                                dynamoService
+                                                        .getUserProfileByEmailMaybe(
+                                                                sendNotificationRequest.getEmail())
+                                                        .map(UserProfile::getPhoneNumber)
+                                                        .orElse(null);
+                                        var phoneNumberValidationError =
                                                 ValidationHelper.validatePhoneNumber(
+                                                        existingPhoneNumber,
                                                         sendNotificationRequest.getPhoneNumber());
                                         if (phoneNumberValidationError.isPresent()) {
                                             return generateApiGatewayProxyErrorResponse(
