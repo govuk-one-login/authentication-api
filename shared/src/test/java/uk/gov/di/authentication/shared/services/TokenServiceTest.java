@@ -43,6 +43,7 @@ import org.mockito.ArgumentCaptor;
 import uk.gov.di.authentication.shared.entity.AccessTokenStore;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
+import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -73,6 +74,7 @@ import java.util.stream.Stream;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.startsWith;
 import static org.hamcrest.core.Is.is;
@@ -168,6 +170,11 @@ public class TokenServiceTest {
                         false);
 
         assertSuccessfulTokenResponse(tokenResponse);
+
+        assertThat(
+                tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaims(),
+                not(hasKey(CustomScopeValue.RESOURCE_ID.getValue())));
+
         assertNotNull(tokenResponse.getOIDCTokens().getRefreshToken());
         RefreshTokenStore refreshTokenStore =
                 new RefreshTokenStore(
@@ -185,6 +192,46 @@ public class TokenServiceTest {
         var jti = refreshToken.getJWTClaimsSet().getJWTID();
         assertThat(redisKey.getValue(), startsWith(REFRESH_TOKEN_PREFIX));
         assertThat(redisKey.getValue().split(":")[1], equalTo(jti));
+    }
+
+    @Test
+    void shouldIncludeResourceIdWhenRequired()
+            throws ParseException, JOSEException, Json.JsonException {
+        when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
+        createSignedIdToken();
+        createSignedAccessToken();
+        Map<String, Object> additionalTokenClaims = new HashMap<>();
+        additionalTokenClaims.put("nonce", nonce);
+
+        var scopes = new Scope(CustomScopeValue.RESOURCE_ID);
+
+        Set<String> claimsForListOfScopes =
+                ValidScopes.getClaimsForListOfScopes(scopes.toStringList());
+
+        OIDCTokenResponse tokenResponse =
+                tokenService.generateTokenResponse(
+                        CLIENT_ID,
+                        INTERNAL_SUBJECT,
+                        scopes,
+                        additionalTokenClaims,
+                        PUBLIC_SUBJECT,
+                        VOT,
+                        Collections.singletonList(
+                                new ClientConsent(
+                                        CLIENT_ID,
+                                        claimsForListOfScopes,
+                                        LocalDateTime.now(ZoneId.of("UTC")).toString())),
+                        false,
+                        null,
+                        false);
+
+        assertSuccessfulTokenResponse(tokenResponse);
+
+        var jwtClaimsSet = tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet();
+
+        assertThat(
+                jwtClaimsSet.getStringClaim(CustomScopeValue.RESOURCE_ID.getValue()),
+                equalTo(PUBLIC_SUBJECT.getValue().substring(20)));
     }
 
     @Test
@@ -220,6 +267,10 @@ public class TokenServiceTest {
                         false);
 
         assertSuccessfulTokenResponse(tokenResponse);
+
+        assertThat(
+                tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaims(),
+                not(hasKey(CustomScopeValue.RESOURCE_ID.getValue())));
 
         assertNotNull(tokenResponse.getOIDCTokens().getRefreshToken());
         assertNull(
@@ -284,6 +335,10 @@ public class TokenServiceTest {
                         false);
 
         assertSuccessfulTokenResponse(tokenResponse);
+
+        assertThat(
+                tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaims(),
+                not(hasKey(CustomScopeValue.RESOURCE_ID.getValue())));
 
         assertNull(tokenResponse.getOIDCTokens().getRefreshToken());
     }
@@ -570,9 +625,6 @@ public class TokenServiceTest {
                 header.getKeyID(),
                 is("1d504aece298a14d74ee0a02b6740b4372a1fab4206778e486ba72770ff4beb8"));
 
-        assertThat(
-                tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaims().size(),
-                equalTo(9));
         assertThat(
                 tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaim("sub"),
                 equalTo(PUBLIC_SUBJECT.getValue()));
