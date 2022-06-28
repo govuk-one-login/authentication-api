@@ -11,7 +11,6 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
-import org.bouncycastle.util.encoders.Base32;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -286,7 +285,7 @@ class UpdateProfileHandlerTest {
     }
 
     @Test
-    void shouldReturn204WhenUpdatingTermsAndConditionsAuthApp() {
+    void shouldReturn204WhenUpdatingAuthAppSecret() {
         usingValidSession();
         usingValidClientSession();
         when(authenticationService.getUserProfileFromEmail(TEST_EMAIL_ADDRESS))
@@ -294,7 +293,7 @@ class UpdateProfileHandlerTest {
         when(clientRegistry.getClientID()).thenReturn(CLIENT_ID.getValue());
         when(clientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.of(clientRegistry));
 
-        var authAppSecret = Base32.toBase32String("some-secret".getBytes());
+        var authAppSecret = "JZ5PYIOWNZDAOBA65S5T77FEEKYCCIT2VE4RQDAJD7SO73T3LODA";
         var event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(
