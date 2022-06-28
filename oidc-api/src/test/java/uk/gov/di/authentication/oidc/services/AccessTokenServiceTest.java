@@ -102,10 +102,10 @@ class AccessTokenServiceTest {
 
     @ParameterizedTest
     @MethodSource("identityEnabled")
-    void shouldReturnAccessTokenInfoWhenAccessTokenIsValid(boolean identityEndpoint)
+    void shouldReturnAccessTokenInfoWhenAccessTokenIsValid(boolean identityEnabled)
             throws Json.JsonException, AccessTokenException {
         List<String> expectedIdentityClaims = null;
-        if (identityEndpoint) {
+        if (identityEnabled) {
             accessToken = createSignedAccessToken(oidcValidClaimsRequest, false);
             expectedIdentityClaims =
                     oidcValidClaimsRequest.getUserInfoClaimsRequest().getEntries().stream()
@@ -114,7 +114,7 @@ class AccessTokenServiceTest {
         }
         when(tokenValidationService.validateAccessTokenSignature(accessToken)).thenReturn(true);
         when(clientService.getClient(CLIENT_ID))
-                .thenReturn(Optional.of(generateClientRegistry(SCOPES)));
+                .thenReturn(Optional.of(generateClientRegistry(SCOPES, true)));
         when(redisConnectionService.getValue(ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + SUBJECT))
                 .thenReturn(
                         objectMapper.writeValueAsString(
@@ -122,7 +122,7 @@ class AccessTokenServiceTest {
                                         accessToken.getValue(), INTERNAL_SUBJECT.getValue())));
 
         var accessTokenInfo =
-                validationService.parse(accessToken.toAuthorizationHeader(), identityEndpoint);
+                validationService.parse(accessToken.toAuthorizationHeader(), identityEnabled);
 
         assertThat(
                 accessTokenInfo.getAccessTokenStore().getToken(), equalTo(accessToken.getValue()));
@@ -132,6 +132,31 @@ class AccessTokenServiceTest {
         assertThat(accessTokenInfo.getSubject(), equalTo(SUBJECT.getValue()));
         assertThat(accessTokenInfo.getScopes(), equalTo(SCOPES));
         assertThat(accessTokenInfo.getIdentityClaims(), equalTo(expectedIdentityClaims));
+    }
+
+    @Test
+    void shouldNotReturnIdentityClaimsWhenClientIsNotConfiguredForIdentity()
+            throws Json.JsonException, AccessTokenException {
+        accessToken = createSignedAccessToken(oidcValidClaimsRequest, false);
+        when(tokenValidationService.validateAccessTokenSignature(accessToken)).thenReturn(true);
+        when(clientService.getClient(CLIENT_ID))
+                .thenReturn(Optional.of(generateClientRegistry(SCOPES, false)));
+        when(redisConnectionService.getValue(ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + SUBJECT))
+                .thenReturn(
+                        objectMapper.writeValueAsString(
+                                new AccessTokenStore(
+                                        accessToken.getValue(), INTERNAL_SUBJECT.getValue())));
+
+        var accessTokenInfo = validationService.parse(accessToken.toAuthorizationHeader(), true);
+
+        assertThat(
+                accessTokenInfo.getAccessTokenStore().getToken(), equalTo(accessToken.getValue()));
+        assertThat(
+                accessTokenInfo.getAccessTokenStore().getInternalSubjectId(),
+                equalTo(INTERNAL_SUBJECT.getValue()));
+        assertThat(accessTokenInfo.getSubject(), equalTo(SUBJECT.getValue()));
+        assertThat(accessTokenInfo.getScopes(), equalTo(SCOPES));
+        assertThat(accessTokenInfo.getIdentityClaims(), equalTo(null));
     }
 
     @ParameterizedTest
@@ -193,7 +218,7 @@ class AccessTokenServiceTest {
         var scopes = List.of(OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.ADDRESS.getValue());
         when(tokenValidationService.validateAccessTokenSignature(accessToken)).thenReturn(true);
         when(clientService.getClient(CLIENT_ID))
-                .thenReturn(Optional.of(generateClientRegistry(scopes)));
+                .thenReturn(Optional.of(generateClientRegistry(scopes, true)));
 
         var accessTokenException =
                 assertThrows(
@@ -216,7 +241,7 @@ class AccessTokenServiceTest {
         accessToken = createSignedAccessToken(invalidClaimsRequest, false);
         when(tokenValidationService.validateAccessTokenSignature(accessToken)).thenReturn(true);
         when(clientService.getClient(CLIENT_ID))
-                .thenReturn(Optional.of(generateClientRegistry(SCOPES)));
+                .thenReturn(Optional.of(generateClientRegistry(SCOPES, true)));
         when(redisConnectionService.getValue(ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + SUBJECT))
                 .thenReturn(
                         objectMapper.writeValueAsString(
@@ -241,7 +266,7 @@ class AccessTokenServiceTest {
         }
         when(tokenValidationService.validateAccessTokenSignature(accessToken)).thenReturn(true);
         when(clientService.getClient(CLIENT_ID))
-                .thenReturn(Optional.of(generateClientRegistry(SCOPES)));
+                .thenReturn(Optional.of(generateClientRegistry(SCOPES, true)));
         when(redisConnectionService.getValue(ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + SUBJECT))
                 .thenReturn(null);
 
@@ -266,7 +291,7 @@ class AccessTokenServiceTest {
         }
         when(tokenValidationService.validateAccessTokenSignature(accessToken)).thenReturn(true);
         when(clientService.getClient(CLIENT_ID))
-                .thenReturn(Optional.of(generateClientRegistry(SCOPES)));
+                .thenReturn(Optional.of(generateClientRegistry(SCOPES, true)));
         when(redisConnectionService.getValue(ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + SUBJECT))
                 .thenReturn(
                         objectMapper.writeValueAsString(
@@ -299,12 +324,13 @@ class AccessTokenServiceTest {
         assertThat(accessTokenException.getError(), equalTo(BearerTokenError.INVALID_TOKEN));
     }
 
-    private ClientRegistry generateClientRegistry(List<String> scopes) {
+    private ClientRegistry generateClientRegistry(List<String> scopes, boolean identitySupported) {
         return new ClientRegistry()
                 .setRedirectUrls(singletonList("http://localhost/redirect"))
                 .setClientID(CLIENT_ID)
                 .setContacts(singletonList("joe.bloggs@digital.cabinet-office.gov.uk"))
                 .setPublicKey(null)
+                .setIdentityVerificationSupported(identitySupported)
                 .setScopes(scopes);
     }
 

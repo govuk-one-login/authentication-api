@@ -101,7 +101,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT,
                 accessTokenStoreString,
                 300L);
-        setUpDynamo(null, null, 0);
+        setUpDynamo(null, null, 0, false);
 
         var response =
                 makeRequest(
@@ -150,7 +150,8 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         ADDRESS_CLAIM,
                         ValidClaims.PASSPORT.getValue(),
                         PASSPORT_CLAIM),
-                180);
+                180,
+                true);
 
         var response = makeIdentityUserinfoRequest();
 
@@ -183,7 +184,8 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         ADDRESS_CLAIM,
                         ValidClaims.PASSPORT.getValue(),
                         PASSPORT_CLAIM),
-                0);
+                0,
+                true);
 
         var response = makeIdentityUserinfoRequest();
 
@@ -204,7 +206,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @Test
     void shouldNotReturnIdentityCredentialsWhenNoneArePresentInDB()
             throws Json.JsonException, ParseException {
-        setUpDynamo(null, null, 0);
+        setUpDynamo(null, null, 0, true);
 
         var response = makeIdentityUserinfoRequest();
 
@@ -338,7 +340,10 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     private void setUpDynamo(
-            String coreIdentityJWT, Map<String, String> additionalClaims, long ttl) {
+            String coreIdentityJWT,
+            Map<String, String> additionalClaims,
+            long ttl,
+            boolean identitySupported) {
         IdentityStoreExtension identityStore = new IdentityStoreExtension(ttl);
         if (Objects.nonNull(additionalClaims)) {
             identityStore.addAdditionalClaims(PUBLIC_SUBJECT.getValue(), additionalClaims);
@@ -362,7 +367,9 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "public",
-                true);
+                true,
+                ClientType.WEB,
+                identitySupported);
     }
 
     private void setUpAppClientInDynamo() {

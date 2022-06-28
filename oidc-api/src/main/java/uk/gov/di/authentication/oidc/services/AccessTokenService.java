@@ -81,11 +81,11 @@ public class AccessTokenService {
                         "Unable to validate AccessToken signature", BearerTokenError.INVALID_TOKEN);
             }
             var clientID = signedJWT.getJWTClaimsSet().getStringClaim("client_id");
-            var client = clientService.getClient(clientID);
+            var client = clientService.getClient(clientID).orElse(null);
 
             attachLogFieldToLogs(CLIENT_ID, clientID);
 
-            if (client.isEmpty()) {
+            if (Objects.isNull(client)) {
                 LOG.warn("Client not found");
                 throw new AccessTokenException("Client not found", BearerTokenError.INVALID_TOKEN);
             }
@@ -94,12 +94,13 @@ public class AccessTokenService {
                             .stream()
                             .map(Objects::toString)
                             .collect(Collectors.toList());
-            if (!areScopesValid(scopes) || !client.get().getScopes().containsAll(scopes)) {
+            if (!areScopesValid(scopes) || !client.getScopes().containsAll(scopes)) {
                 LOG.warn("Invalid Scopes: {}", scopes);
                 throw new AccessTokenException("Invalid Scopes", OAuth2Error.INVALID_SCOPE);
             }
             List<String> identityClaims = null;
-            if (identityEnabled) {
+            if (identityEnabled && client.isIdentityVerificationSupported()) {
+                LOG.info("Identity is enabled AND client supports identity verification");
                 identityClaims = getIdentityClaims(signedJWT.getJWTClaimsSet());
             }
             var subject = signedJWT.getJWTClaimsSet().getSubject();
@@ -162,7 +163,7 @@ public class AccessTokenService {
     private List<String> getIdentityClaims(JWTClaimsSet claimsSet)
             throws com.nimbusds.oauth2.sdk.ParseException, AccessTokenException {
         if (Objects.isNull(claimsSet.getClaim("claims"))) {
-            LOG.warn("No identity claims in AccessToken");
+            LOG.info("No identity claims in AccessToken");
             return null;
         }
         var identityClaims =
