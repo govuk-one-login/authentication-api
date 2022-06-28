@@ -182,15 +182,15 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     MfaHelper.mfaRequired(userContext.getClientSession().getAuthRequestParams());
             var consentRequired = ConsentHelper.userHasNotGivenConsent(userContext);
 
-            Optional<MFAMethod> mfaMethod = getPrimaryMFAMethod(userCredentials);
-            MFAMethodType mfaMethodType =
+            var mfaMethod = getPrimaryMFAMethod(userCredentials);
+            var mfaMethodType =
                     mfaMethod
                             .map(m -> MFAMethodType.valueOf(m.getMfaMethodType()))
                             .orElse(MFAMethodType.SMS);
             boolean mfaMethodVerified =
-                    mfaMethod.map(m -> m.isMethodVerified()).orElse(isPhoneNumberVerified);
+                    mfaMethod.map(MFAMethod::isMethodVerified).orElse(isPhoneNumberVerified);
 
-            LOG.info("User has successfully logged in");
+            LOG.info("User has successfully logged in with MFAType: {}", mfaMethodType);
 
             auditService.submitAuditEvent(
                     LOG_IN_SUCCESS,
@@ -208,7 +208,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     new LoginResponse(
                             redactedPhoneNumber,
                             isMfaRequired,
-                            isPhoneNumberVerified,
                             termsAndConditionsAccepted,
                             consentRequired,
                             mfaMethodType,

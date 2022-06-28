@@ -26,11 +26,6 @@ public class LoginResponse {
     @Required
     private boolean mfaMethodVerified;
 
-    @SerializedName("phoneNumberVerified")
-    @Expose
-    @Required
-    private boolean phoneNumberVerified;
-
     @SerializedName(value = "latestTermsAndConditionsAccepted")
     @Expose
     @Required
@@ -46,14 +41,12 @@ public class LoginResponse {
     public LoginResponse(
             String redactedPhoneNumber,
             boolean mfaRequired,
-            boolean phoneNumberVerified,
             boolean latestTermsAndConditionsAccepted,
             boolean consentRequired,
             MFAMethodType mfaMethodType,
             boolean mfaMethodVerified) {
         this.redactedPhoneNumber = redactedPhoneNumber;
         this.mfaRequired = mfaRequired;
-        this.phoneNumberVerified = phoneNumberVerified;
         this.latestTermsAndConditionsAccepted = latestTermsAndConditionsAccepted;
         this.consentRequired = consentRequired;
         this.mfaMethodType = mfaMethodType;
@@ -66,10 +59,6 @@ public class LoginResponse {
 
     public boolean isMfaRequired() {
         return mfaRequired;
-    }
-
-    public boolean isPhoneNumberVerified() {
-        return phoneNumberVerified;
     }
 
     public boolean getLatestTermsAndConditionsAccepted() {

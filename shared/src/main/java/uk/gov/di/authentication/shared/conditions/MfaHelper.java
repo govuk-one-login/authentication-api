@@ -32,9 +32,6 @@ public class MfaHelper {
     public static Optional<MFAMethod> getPrimaryMFAMethod(UserCredentials userCredentials) {
         return Optional.ofNullable(userCredentials.getMfaMethods())
                 .flatMap(
-                        mfaMethods ->
-                                mfaMethods.stream()
-                                        .filter(mfaMethod -> mfaMethod.isEnabled())
-                                        .findFirst());
+                        mfaMethods -> mfaMethods.stream().filter(MFAMethod::isEnabled).findFirst());
     }
 }

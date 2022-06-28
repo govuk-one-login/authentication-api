@@ -3,7 +3,6 @@ package uk.gov.di.authentication.frontendapi.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -142,8 +141,7 @@ class LoginHandlerTest {
 
     @ParameterizedTest
     @EnumSource(MFAMethodType.class)
-    void shouldReturn200IfLoginIsSuccessful(MFAMethodType mfaMethodType)
-            throws JsonProcessingException, Json.JsonException {
+    void shouldReturn200IfLoginIsSuccessful(MFAMethodType mfaMethodType) throws Json.JsonException {
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("1.0");
         String persistentId = "some-persistent-id-value";
         Map<String, String> headers = new HashMap<>();
@@ -190,7 +188,7 @@ class LoginHandlerTest {
     @ParameterizedTest
     @EnumSource(MFAMethodType.class)
     void shouldReturn200IfLoginIsSuccessfulAndTermsAndConditionsNotAccepted(
-            MFAMethodType mfaMethodType) throws JsonProcessingException, Json.JsonException {
+            MFAMethodType mfaMethodType) throws Json.JsonException {
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("2.0");
         String persistentId = "some-persistent-id-value";
         Map<String, String> headers = new HashMap<>();
@@ -240,7 +238,7 @@ class LoginHandlerTest {
     @ParameterizedTest
     @EnumSource(MFAMethodType.class)
     void shouldReturn200IfMigratedUserHasBeenProcessesSuccessfully(MFAMethodType mfaMethodType)
-            throws JsonProcessingException, Json.JsonException {
+            throws Json.JsonException {
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("1.0");
         String legacySubjectId = new Subject().getValue();
         UserProfile userProfile = generateUserProfile(legacySubjectId);
@@ -274,7 +272,7 @@ class LoginHandlerTest {
     @ParameterizedTest
     @EnumSource(MFAMethodType.class)
     void shouldReturn200IfPasswordIsEnteredAgain(MFAMethodType mfaMethodType)
-            throws JsonProcessingException, Json.JsonException {
+            throws Json.JsonException {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -356,7 +354,7 @@ class LoginHandlerTest {
     @ParameterizedTest
     @EnumSource(MFAMethodType.class)
     void shouldRemoveIncorrectPasswordCountRemovesUponSuccessfulLogin(MFAMethodType mfaMethodType)
-            throws JsonProcessingException, Json.JsonException {
+            throws Json.JsonException {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));

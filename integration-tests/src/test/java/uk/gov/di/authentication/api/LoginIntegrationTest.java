@@ -125,14 +125,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 equalTo(termsAndConditionsVersion.equals(CURRENT_TERMS_AND_CONDITIONS)));
 
         assertThat(loginResponse.getMfaMethodType(), equalTo(mfaMethodType));
-        if (mfaMethodType.equals(SMS)) {
-            assertThat(loginResponse.isPhoneNumberVerified(), equalTo(mfaMethodVerified));
-            assertThat(
-                    loginResponse.isMfaMethodVerified(),
-                    equalTo(loginResponse.isPhoneNumberVerified()));
-        } else {
-            assertThat(loginResponse.isMfaMethodVerified(), equalTo(mfaMethodVerified));
-        }
+        assertThat(loginResponse.isMfaMethodVerified(), equalTo(mfaMethodVerified));
 
         assertEventTypesReceived(auditTopic, List.of(LOG_IN_SUCCESS));
     }
