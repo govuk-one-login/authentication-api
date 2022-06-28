@@ -2,18 +2,42 @@ plugins {
     id 'java'
 }
 
-group 'uk.gov.di.authentication.api'
+group 'uk.gov.di.authentication.utils'
 version 'unspecified'
 
-repositories {
-    mavenCentral()
-}
-
 dependencies {
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+    compileOnly configurations.lambda,
+            configurations.s3,
+            configurations.dynamodb
+
+    implementation project(":shared")
+
+    runtimeOnly configurations.logging_runtime
+
+    testImplementation configurations.tests,
+            configurations.lambda_tests,
+            configurations.s3,
+            configurations.lambda
+
+    testRuntimeOnly configurations.test_runtime
 }
 
 test {
     useJUnitPlatform()
+    environment "TRACING_ENABLED", "false"
 }
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
+
+task buildZip(type: Zip) {
+    from compileJava
+    from processResources
+    into("lib") {
+        from configurations.runtimeClasspath
+    }
+}
+
+build.dependsOn buildZip
