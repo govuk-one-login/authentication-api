@@ -26,6 +26,7 @@ dependencies {
     implementation project(":client-registry-api"), noXray
     implementation project(":ipv-api"), noXray
     implementation project(":doc-checking-app-api"), noXray
+    implementation project(":utils"), noXray
 
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"
 }
@@ -64,13 +65,15 @@ test {
                 project(":frontend-api").sourceSets.main.java,
                 project(":oidc-api").sourceSets.main.java,
                 project(":client-registry-api").sourceSets.main.java,
-                project(":shared").sourceSets.main.java)
+                project(":shared").sourceSets.main.java,
+                project(":utils").sourceSets.main.java)
 
         tasks.getByName("jacocoTestReport").classDirectories.from(
                 project(":client-registry-api").sourceSets.main.output,
                 project(":frontend-api").sourceSets.main.output,
                 project(":oidc-api").sourceSets.main.output,
-                project(":shared").sourceSets.main.output)
+                project(":shared").sourceSets.main.output,
+                project(":utils").sourceSets.main.output)
     }
     dependsOn ":composeUp"
 }

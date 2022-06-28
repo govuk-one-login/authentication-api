@@ -1,3 +1,4 @@
+rootProject.name = 'di-authentication-api'
 include 'account-management-api'
 include 'account-migrations'
 include 'audit-processors'
@@ -10,9 +11,7 @@ include 'oidc-api'
 include 'shared'
 include 'shared-test'
 include 'delivery-receipts-api'
-
-rootProject.name = 'di-authentication-api'
 include 'ipv-api'
 include 'delivery-receipts-integration-tests'
 include 'doc-checking-app-api'
-
+include 'utils'

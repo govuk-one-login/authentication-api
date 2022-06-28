@@ -329,6 +329,15 @@ task acctMgmtTerraform (type: Terraform) {
     dependsOn "auditTerraform"
 }
 
+task utilsTerraform (type: Terraform) {
+    terraformDirectory = layout.projectDirectory.dir("ci/terraform/utils")
+    environmentName = project.properties["terraformEnvironment"] ?: "localstack"
+    environmentVars = awsCredentialsEnvironment
+
+    dependsOn ":utils:buildZip"
+    dependsOn "oidcTerraform"
+}
+
 sonarqube {
     properties {
         property "sonar.projectKey", "alphagov_di-authentication-api"
