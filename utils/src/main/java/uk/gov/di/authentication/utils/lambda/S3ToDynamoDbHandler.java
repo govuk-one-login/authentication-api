@@ -54,7 +54,7 @@ public class S3ToDynamoDbHandler implements RequestHandler<S3Event, Void> {
         String line;
 
         try (var bufferedReader =
-                     new BufferedReader(new InputStreamReader(fileContent.getObjectContent()))) {
+                new BufferedReader(new InputStreamReader(fileContent.getObjectContent()))) {
             while ((line = bufferedReader.readLine()) != null) {
                 if (!line.isBlank()) {
                     batch.add(line.strip());

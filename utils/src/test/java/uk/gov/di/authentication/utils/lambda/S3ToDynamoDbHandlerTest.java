@@ -43,7 +43,10 @@ class S3ToDynamoDbHandlerTest {
 
     @BeforeEach
     void setUp() throws URISyntaxException, IOException {
-        URL resource = Thread.currentThread().getContextClassLoader().getResource("common_passwords_unit_test.txt");
+        URL resource =
+                Thread.currentThread()
+                        .getContextClassLoader()
+                        .getResource("common_passwords_unit_test.txt");
 
         Path path;
 
@@ -51,7 +54,7 @@ class S3ToDynamoDbHandlerTest {
             path = Paths.get(resource.toURI());
             this.mockS3TextContent = Files.readString(path, StandardCharsets.UTF_8);
 
-            InputStream mockInputStream = new ByteArrayInputStream( mockS3TextContent.getBytes() );
+            InputStream mockInputStream = new ByteArrayInputStream(mockS3TextContent.getBytes());
             var mockS3ObjectInputStream = new S3ObjectInputStream(mockInputStream, null);
 
             var mockS3Object = mock(S3Object.class);
@@ -64,15 +67,20 @@ class S3ToDynamoDbHandlerTest {
 
             this.handler = new S3ToDynamoDbHandler(mockCommonPasswordsService, mockS3Client);
 
-
             this.mockS3Event = mock(S3Event.class);
-            when(mockS3Event.getRecords()).thenReturn(List.of(mock(S3EventNotification.S3EventNotificationRecord.class)));
-            when(mockS3Event.getRecords().get(0).getS3()).thenReturn(mock(S3EventNotification.S3Entity.class));
-            when(mockS3Event.getRecords().get(0).getS3().getBucket()).thenReturn(mock(S3EventNotification.S3BucketEntity.class));
-            when(mockS3Event.getRecords().get(0).getS3().getBucket().getName()).thenReturn("test-bucket");
+            when(mockS3Event.getRecords())
+                    .thenReturn(List.of(mock(S3EventNotification.S3EventNotificationRecord.class)));
+            when(mockS3Event.getRecords().get(0).getS3())
+                    .thenReturn(mock(S3EventNotification.S3Entity.class));
+            when(mockS3Event.getRecords().get(0).getS3().getBucket())
+                    .thenReturn(mock(S3EventNotification.S3BucketEntity.class));
+            when(mockS3Event.getRecords().get(0).getS3().getBucket().getName())
+                    .thenReturn("test-bucket");
 
-            when(mockS3Event.getRecords().get(0).getS3().getObject()).thenReturn(mock(S3EventNotification.S3ObjectEntity.class));
-            when(mockS3Event.getRecords().get(0).getS3().getObject().getKey()).thenReturn("test-key");
+            when(mockS3Event.getRecords().get(0).getS3().getObject())
+                    .thenReturn(mock(S3EventNotification.S3ObjectEntity.class));
+            when(mockS3Event.getRecords().get(0).getS3().getObject().getKey())
+                    .thenReturn("test-key");
 
             this.mockContext = mock(Context.class);
 
@@ -93,11 +101,12 @@ class S3ToDynamoDbHandlerTest {
         mockInputAsArrayList.removeAll(Collections.singleton(null));
         mockInputAsArrayList.removeAll(Collections.singleton(""));
 
-        int numberOfBatchWritesExpected = (int) (Math.ceil((double) mockInputAsArrayList.size() / LINES_PER_BATCH_WRITE));
-        verify(mockCommonPasswordsService, times(numberOfBatchWritesExpected)).addBatchCommonPasswords(any(List.class));
+        int numberOfBatchWritesExpected =
+                (int) (Math.ceil((double) mockInputAsArrayList.size() / LINES_PER_BATCH_WRITE));
+        verify(mockCommonPasswordsService, times(numberOfBatchWritesExpected))
+                .addBatchCommonPasswords(any(List.class));
 
         verify(mockCommonPasswordsService).addBatchCommonPasswords(argument.capture());
         assertEquals(argument.getValue(), mockInputAsArrayList);
     }
-
 }

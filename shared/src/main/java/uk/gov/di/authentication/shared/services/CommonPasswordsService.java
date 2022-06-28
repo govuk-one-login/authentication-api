@@ -48,10 +48,12 @@ public class CommonPasswordsService {
             result.get(0)
                     .getUnprocessedItems()
                     .forEach(
-                            (key, value) -> value.forEach(
-                                    writeRequest -> LOG.error(
-                                            "Error produced by write request: {}",
-                                            writeRequest.toString())));
+                            (key, value) ->
+                                    value.forEach(
+                                            writeRequest ->
+                                                    LOG.error(
+                                                            "Error produced by write request: {}",
+                                                            writeRequest.toString())));
 
             LOG.error("Batch write failed with exception", e);
         }
