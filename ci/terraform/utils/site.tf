@@ -36,11 +36,11 @@ provider "aws" {
   skip_requesting_account_id  = var.use_localstack
 
   endpoints {
-    apigateway  = var.aws_endpoint
-    iam         = var.aws_endpoint
-    lambda      = var.aws_endpoint
-    s3          = var.aws_endpoint
-    dynamodb    = var.aws_dynamodb_endpoint
+    apigateway = var.aws_endpoint
+    iam        = var.aws_endpoint
+    lambda     = var.aws_endpoint
+    s3         = var.aws_endpoint
+    dynamodb   = var.aws_dynamodb_endpoint
   }
 }
 

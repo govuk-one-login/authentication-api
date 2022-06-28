@@ -26,7 +26,7 @@ resource "aws_lambda_function" "common_passwords_dynamo_update_lambda" {
 
   environment {
     variables = merge({
-      ENVIRONMENT             = var.environment
+      ENVIRONMENT = var.environment
     })
   }
 

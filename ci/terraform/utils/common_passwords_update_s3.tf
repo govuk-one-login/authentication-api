@@ -1,6 +1,6 @@
 resource "aws_s3_bucket" "common_passwords" {
   bucket = "${var.environment}-common-passwords-bucket"
-  tags = local.default_tags
+  tags   = local.default_tags
 
   lifecycle {
     prevent_destroy = true
