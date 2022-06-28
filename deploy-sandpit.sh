@@ -28,6 +28,7 @@ function usage() {
     -a, --account-management  run the account management terraform (default)
     --audit                   run the audit terraform
     -d, --delivery-receipts   run the delivery receipts terraform
+    -u, --utils               run the utils terraform
     --destroy                 run all terraform with the -destroy flag (destroys all managed resources)
     -p, --prompt              will prompt for plan review before applying any terraform
 
@@ -41,6 +42,7 @@ BUILD=0
 OIDC=0
 RECEIPTS=0
 SHARED=0
+UTILS=0
 CLEAN=""
 TERRAFORM_OPTS="-auto-approve"
 if [[ $# == 0 ]]; then
@@ -48,6 +50,7 @@ if [[ $# == 0 ]]; then
   BUILD=1
   OIDC=1
   SHARED=1
+  UTILS=1
 fi
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -71,6 +74,9 @@ while [[ $# -gt 0 ]]; do
       ;;
     -s|--shared)
       SHARED=1
+      ;;
+    -u|--utils)
+      UTILS=1
       ;;
     --destroy)
       TERRAFORM_OPTS="-destroy"
@@ -123,4 +129,8 @@ fi
 
 if [[ $RECEIPTS == "1" ]]; then
   runTerraform "delivery-receipts" "${TERRAFORM_OPTS}"
+fi
+
+if [[ $UTILS == "1" ]]; then
+  runTerraform "utils" "${TERRAFORM_OPTS}"
 fi
