@@ -7,10 +7,10 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
+import org.apache.commons.codec.CodecPolicy;
+import org.apache.commons.codec.binary.Base32;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.bouncycastle.util.encoders.Base32;
-import org.bouncycastle.util.encoders.DecoderException;
 import uk.gov.di.authentication.frontendapi.entity.UpdateProfileRequest;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
@@ -56,6 +56,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOG = LogManager.getLogger(UpdateProfileHandler.class);
+    private static final byte PAD_DEFAULT = '=';
 
     private final AuditService auditService;
 
@@ -215,9 +216,8 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                 }
             case REGISTER_AUTH_APP:
                 {
-                    try {
-                        Base32.decode(request.getProfileInformation());
-                    } catch (DecoderException e) {
+                    var base32 = new Base32(0, null, false, PAD_DEFAULT, CodecPolicy.STRICT);
+                    if (!base32.isInAlphabet(request.getProfileInformation())) {
                         return generateErrorResponse(ErrorResponse.ERROR_1041, context);
                     }
                     authenticationService.updateMFAMethod(

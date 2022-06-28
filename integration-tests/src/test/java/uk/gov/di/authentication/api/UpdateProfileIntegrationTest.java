@@ -6,7 +6,6 @@ import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
-import org.bouncycastle.util.encoders.Base32;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -146,7 +145,7 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
         var sessionId = redis.createSession();
         var clientSessionId = IdGenerator.generate();
         setUpTest(sessionId, clientSessionId);
-        var authAppSecret = Base32.toBase32String("some-secret".getBytes());
+        var authAppSecret = "JZ5PYIOWNZDAOBA65S5T77FEEKYCCIT2VE4RQDAJD7SO73T3LODA";
 
         var request = new UpdateProfileRequest(EMAIL_ADDRESS, REGISTER_AUTH_APP, authAppSecret);
 
