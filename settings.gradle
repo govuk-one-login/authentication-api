@@ -15,5 +15,3 @@ include 'ipv-api'
 include 'delivery-receipts-integration-tests'
 include 'doc-checking-app-api'
 include 'utils'
-include 'utils'
-

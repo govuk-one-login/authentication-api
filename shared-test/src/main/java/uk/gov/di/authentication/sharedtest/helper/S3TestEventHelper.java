@@ -9,6 +9,8 @@ import java.util.Collections;
 import static org.mockito.Mockito.mock;
 
 public class S3TestEventHelper {
+    private S3TestEventHelper() {}
+
     public static S3Event generateS3TestEvent(
             String awsRegion, String eventName, String bucketName, String fileName) {
         return new S3Event(

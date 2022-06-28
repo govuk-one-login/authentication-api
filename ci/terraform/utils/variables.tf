@@ -2,10 +2,6 @@ variable "aws_region" {
   default = "eu-west-2"
 }
 
-variable "common_state_bucket" {
-  type = string
-}
-
 variable "deployer_role_arn" {
   default     = ""
   description = "The name of the AWS role to assume, leave blank when running locally"

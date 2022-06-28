@@ -50,7 +50,6 @@ if [[ $# == 0 ]]; then
   BUILD=1
   OIDC=1
   SHARED=1
-  UTILS=1
 fi
 while [[ $# -gt 0 ]]; do
   case $1 in

@@ -10,7 +10,6 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.sharedtest.extensions.AuditSnsTopicExtension;
 import uk.gov.di.authentication.sharedtest.extensions.ClientStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.CommonPasswordsExtension;
-import uk.gov.di.authentication.sharedtest.extensions.CommonPasswordsS3Extension;
 import uk.gov.di.authentication.sharedtest.extensions.DocumentAppCredentialStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.IdentityStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
@@ -31,9 +30,6 @@ import static org.mockito.Mockito.mock;
 public abstract class HandlerIntegrationTest<Q, S> {
     protected static final String LOCAL_ENDPOINT_FORMAT =
             "http://localhost:45678/restapis/%s/local/_user_request_";
-    protected static final String S3_ENDPOINT =
-            System.getenv().getOrDefault("S3_ENDPOINT", "http://localhost:45678");
-    protected static final String REGION = System.getenv().getOrDefault("AWS_REGION", "eu-west-2");
     protected static final String LOCAL_API_GATEWAY_ID =
             Optional.ofNullable(System.getenv().get("API_GATEWAY_ID")).orElse("");
     protected static final String API_KEY =
@@ -130,10 +126,6 @@ public abstract class HandlerIntegrationTest<Q, S> {
     @RegisterExtension
     protected static final CommonPasswordsExtension commonPasswords =
             new CommonPasswordsExtension();
-
-    @RegisterExtension
-    protected static final CommonPasswordsS3Extension commonPasswordsS3 =
-            new CommonPasswordsS3Extension();
 
     protected Map<String, String> constructHeaders(Optional<HttpCookie> cookie) {
         final Map<String, String> headers = new HashMap<>();

@@ -15,7 +15,6 @@ dependencies {
     runtimeOnly configurations.logging_runtime
 
     testImplementation configurations.tests,
-            configurations.lambda_tests,
             configurations.s3,
             configurations.lambda
 

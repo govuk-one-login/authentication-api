@@ -17,7 +17,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 public class S3ToDynamoDbHandler implements RequestHandler<S3Event, Void> {
     private static final Logger LOG = LogManager.getLogger(S3ToDynamoDbHandler.class);
@@ -62,14 +61,11 @@ public class S3ToDynamoDbHandler implements RequestHandler<S3Event, Void> {
 
                 if (batch.size() % 500 == 0) {
                     addCommonPasswordsBatch(batch);
-                    TimeUnit.SECONDS.sleep(1);
                     batch = new ArrayList<>();
                 }
             }
         } catch (IOException e) {
             LOG.error("Error reading S3 object", e);
-        } catch (InterruptedException e) {
-            LOG.error("Interrupted exception during wait timer", e);
         }
 
         addCommonPasswordsBatch(batch);

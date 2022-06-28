@@ -9,6 +9,7 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.sharedtest.basetest.HandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.CommonPasswordsS3Extension;
 import uk.gov.di.authentication.sharedtest.helper.S3TestEventHelper;
@@ -22,19 +23,27 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static uk.gov.di.authentication.sharedtest.extensions.CommonPasswordsS3Extension.COMMON_PASSWORDS_BUCKET;
+import static uk.gov.di.authentication.sharedtest.extensions.CommonPasswordsS3Extension.TEST_FILE_NAME;
 
-public class CommonPasswordsS3ToDynamoIntegrationTest
-        extends HandlerIntegrationTest<S3Event, Void> {
+class CommonPasswordsS3ToDynamoIntegrationTest extends HandlerIntegrationTest<S3Event, Void> {
 
+    private static final String REGION =
+            Optional.ofNullable(System.getenv().get("AWS_REGION")).orElse("eu-west-2");
+    private static final String S3_ENDPOINT =
+            Optional.ofNullable(System.getenv().get("LOCALSTACK_ENDPOINT"))
+                    .orElse("http://localhost:45678");
     private static final S3Event testS3Event =
             S3TestEventHelper.generateS3TestEvent(
-                    REGION,
-                    "ObjectCreated:Put",
-                    CommonPasswordsS3Extension.COMMON_PASSWORDS_BUCKET,
-                    CommonPasswordsS3Extension.TEST_FILE_NAME);
+                    REGION, "ObjectCreated:Put", COMMON_PASSWORDS_BUCKET, TEST_FILE_NAME);
+
+    @RegisterExtension
+    protected static final CommonPasswordsS3Extension commonPasswordsS3 =
+            new CommonPasswordsS3Extension();
 
     @BeforeEach
     void setup() {
@@ -54,18 +63,9 @@ public class CommonPasswordsS3ToDynamoIntegrationTest
     void movedS3TextIntoDynamoWhenTriggered() throws Exception {
         handler.handleRequest(testS3Event, mock(Context.class));
 
-        List<String> testPasswords;
+        List<String> testPasswords = getTestFilePasswords();
 
-        try {
-            testPasswords = getTestFilePasswords();
-        } catch (Exception e) {
-            throw e;
-        }
-
-        testPasswords.forEach(
-                password -> {
-                    assertTrue(commonPasswords.isCommonPassword(password));
-                });
+        testPasswords.forEach(password -> assertTrue(commonPasswords.isCommonPassword(password)));
     }
 
     private List<String> getTestFilePasswords() throws Exception {
@@ -74,16 +74,13 @@ public class CommonPasswordsS3ToDynamoIntegrationTest
                         .getContextClassLoader()
                         .getResource("common_passwords_integration_test.txt");
         Path testFilePath = Paths.get(testFileUrl.toURI());
-        try {
-            String testFileContent = Files.readString(testFilePath);
-            String[] testFileContentAsArray = testFileContent.split("\r?\n|\r");
-            List<String> testFileContentAsArrayList =
-                    new ArrayList<>(Arrays.asList(testFileContentAsArray));
-            testFileContentAsArrayList.removeAll(Collections.singleton(null));
-            testFileContentAsArrayList.removeAll(Collections.singleton(""));
-            return testFileContentAsArrayList;
-        } catch (Exception e) {
-            throw e;
-        }
+
+        String testFileContent = Files.readString(testFilePath);
+        String[] testFileContentAsArray = testFileContent.split("\r?\n|\r");
+        List<String> testFileContentAsArrayList =
+                new ArrayList<>(Arrays.asList(testFileContentAsArray));
+        testFileContentAsArrayList.removeAll(Collections.singleton(null));
+        testFileContentAsArrayList.removeAll(Collections.singleton(""));
+        return testFileContentAsArrayList;
     }
 }

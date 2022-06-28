@@ -50,47 +50,41 @@ class S3ToDynamoDbHandlerTest {
 
         Path path;
 
-        try {
-            path = Paths.get(resource.toURI());
-            this.mockS3TextContent = Files.readString(path, StandardCharsets.UTF_8);
+        path = Paths.get(resource.toURI());
+        this.mockS3TextContent = Files.readString(path, StandardCharsets.UTF_8);
 
-            InputStream mockInputStream = new ByteArrayInputStream(mockS3TextContent.getBytes());
-            var mockS3ObjectInputStream = new S3ObjectInputStream(mockInputStream, null);
+        InputStream mockInputStream = new ByteArrayInputStream(mockS3TextContent.getBytes());
+        var mockS3ObjectInputStream = new S3ObjectInputStream(mockInputStream, null);
 
-            var mockS3Object = mock(S3Object.class);
-            when(mockS3Object.getObjectContent()).thenReturn(mockS3ObjectInputStream);
+        var mockS3Object = mock(S3Object.class);
+        when(mockS3Object.getObjectContent()).thenReturn(mockS3ObjectInputStream);
 
-            var mockS3Client = mock(AmazonS3.class);
-            when(mockS3Client.getObject("test-bucket", "test-key")).thenReturn(mockS3Object);
+        var mockS3Client = mock(AmazonS3.class);
+        when(mockS3Client.getObject("test-bucket", "test-key")).thenReturn(mockS3Object);
 
-            this.mockCommonPasswordsService = mock(CommonPasswordsService.class);
+        this.mockCommonPasswordsService = mock(CommonPasswordsService.class);
 
-            this.handler = new S3ToDynamoDbHandler(mockCommonPasswordsService, mockS3Client);
+        this.handler = new S3ToDynamoDbHandler(mockCommonPasswordsService, mockS3Client);
 
-            this.mockS3Event = mock(S3Event.class);
-            when(mockS3Event.getRecords())
-                    .thenReturn(List.of(mock(S3EventNotification.S3EventNotificationRecord.class)));
-            when(mockS3Event.getRecords().get(0).getS3())
-                    .thenReturn(mock(S3EventNotification.S3Entity.class));
-            when(mockS3Event.getRecords().get(0).getS3().getBucket())
-                    .thenReturn(mock(S3EventNotification.S3BucketEntity.class));
-            when(mockS3Event.getRecords().get(0).getS3().getBucket().getName())
-                    .thenReturn("test-bucket");
+        this.mockS3Event = mock(S3Event.class);
+        when(mockS3Event.getRecords())
+                .thenReturn(List.of(mock(S3EventNotification.S3EventNotificationRecord.class)));
+        when(mockS3Event.getRecords().get(0).getS3())
+                .thenReturn(mock(S3EventNotification.S3Entity.class));
+        when(mockS3Event.getRecords().get(0).getS3().getBucket())
+                .thenReturn(mock(S3EventNotification.S3BucketEntity.class));
+        when(mockS3Event.getRecords().get(0).getS3().getBucket().getName())
+                .thenReturn("test-bucket");
 
-            when(mockS3Event.getRecords().get(0).getS3().getObject())
-                    .thenReturn(mock(S3EventNotification.S3ObjectEntity.class));
-            when(mockS3Event.getRecords().get(0).getS3().getObject().getKey())
-                    .thenReturn("test-key");
+        when(mockS3Event.getRecords().get(0).getS3().getObject())
+                .thenReturn(mock(S3EventNotification.S3ObjectEntity.class));
+        when(mockS3Event.getRecords().get(0).getS3().getObject().getKey()).thenReturn("test-key");
 
-            this.mockContext = mock(Context.class);
-
-        } catch (Exception e) {
-            throw e;
-        }
+        this.mockContext = mock(Context.class);
     }
 
     @Test
-    void handleRequest() {
+    void shouldCallDynamoWithCorrectSetOfPasswords() {
 
         ArgumentCaptor<List<String>> argument = ArgumentCaptor.forClass(List.class);
 

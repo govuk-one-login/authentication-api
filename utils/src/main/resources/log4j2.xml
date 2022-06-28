@@ -2,7 +2,6 @@
     <Appenders>
         <Lambda name="Lambda">
             <JsonLayout compact="true" eventEol="true" objectMessageAsJsonObject="true" >
-                <KeyValuePair key="session-id" value="$${ctx:sessionId:-unknown}"/>
             </JsonLayout>
         </Lambda>
     </Appenders>

@@ -9,31 +9,36 @@ import com.amazonaws.services.s3.iterable.S3Objects;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.HeadBucketRequest;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
-public abstract class S3Extension extends BaseAwsResourceExtension implements BeforeAllCallback {
+import java.net.URISyntaxException;
 
-    protected AmazonS3 s3Client;
-    protected static final String S3_ENDPOINT =
-            System.getenv().getOrDefault("S3_ENDPOINT", "http://localhost:45678");
+public abstract class S3Extension extends BaseAwsResourceExtension
+        implements BeforeAllCallback, AfterAllCallback {
+
+    protected static final AmazonS3 s3Client =
+            AmazonS3Client.builder()
+                    .withEndpointConfiguration(
+                            new AwsClientBuilder.EndpointConfiguration(LOCALSTACK_ENDPOINT, REGION))
+                    .withCredentials(
+                            new AWSStaticCredentialsProvider(
+                                    new BasicAWSCredentials("access", "secret")))
+                    .withPathStyleAccessEnabled(true)
+                    .build();
 
     @Override
     public void beforeAll(ExtensionContext context) throws Exception {
-        var mockS3Credentials = new BasicAWSCredentials("access", "secret");
-
-        s3Client =
-                AmazonS3Client.builder()
-                        .withEndpointConfiguration(
-                                new AwsClientBuilder.EndpointConfiguration(S3_ENDPOINT, REGION))
-                        .withCredentials(new AWSStaticCredentialsProvider(mockS3Credentials))
-                        .withPathStyleAccessEnabled(true)
-                        .build();
-
         createBuckets();
     }
 
-    protected abstract void createBuckets();
+    @Override
+    public void afterAll(ExtensionContext context) throws Exception {
+        deleteBuckets();
+    }
+
+    protected abstract void createBuckets() throws URISyntaxException;
 
     protected boolean bucketExists(String bucketName) {
         try {
@@ -45,12 +50,12 @@ public abstract class S3Extension extends BaseAwsResourceExtension implements Be
         }
     }
 
-    protected void deleteS3Bucket(String bucketName) {
+    protected void deleteS3BucketContents(String bucketName) {
         S3Objects.inBucket(s3Client, bucketName)
                 .forEach(
                         (S3ObjectSummary objectSummary) ->
                                 s3Client.deleteObject(bucketName, objectSummary.getKey()));
-
-        s3Client.deleteBucket(bucketName);
     }
+
+    abstract void deleteBuckets();
 }

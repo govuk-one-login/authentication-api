@@ -48,7 +48,7 @@ locals {
   // Using a local rather than the default_tags option on the AWS provider, as the latter has known issues which produce errors on apply.
   default_tags = var.use_localstack ? null : {
     environment = var.environment
-    application = "shared"
+    application = "utils"
   }
 
   request_tracing_allowed = contains(["build", "sandpit"], var.environment)

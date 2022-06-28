@@ -23,7 +23,6 @@ resource "aws_lambda_function" "common_passwords_dynamo_update_lambda" {
   s3_key            = aws_s3_object.utils_release_zip.key
   s3_object_version = aws_s3_object.utils_release_zip.version_id
 
-
   environment {
     variables = merge({
       ENVIRONMENT = var.environment

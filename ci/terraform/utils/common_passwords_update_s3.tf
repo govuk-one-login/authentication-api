@@ -1,10 +1,6 @@
 resource "aws_s3_bucket" "common_passwords" {
   bucket = "${var.environment}-common-passwords-bucket"
   tags   = local.default_tags
-
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
 resource "aws_s3_bucket_acl" "common_passwords" {
@@ -16,6 +12,16 @@ resource "aws_s3_bucket_versioning" "common_passwords" {
   bucket = aws_s3_bucket.common_passwords.id
   versioning_configuration {
     status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "common_passwords" {
+  bucket = aws_s3_bucket.common_passwords.bucket
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
   }
 }
 

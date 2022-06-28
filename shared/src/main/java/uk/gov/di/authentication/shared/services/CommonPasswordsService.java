@@ -38,7 +38,7 @@ public class CommonPasswordsService {
         LOG.info("Add common passwords batch method called with {} items", commonPasswords.size());
 
         var result = commonPasswordsMapper.batchSave(commonPasswords);
-        if (result.size() > 0) {
+        if (!result.isEmpty()) {
             LOG.error(
                     "Dynamo batch write returned failed batch, with {} failed batches",
                     result.size());
@@ -53,7 +53,7 @@ public class CommonPasswordsService {
                                             writeRequest ->
                                                     LOG.error(
                                                             "Error produced by write request: {}",
-                                                            writeRequest.toString())));
+                                                            writeRequest)));
 
             LOG.error("Batch write failed with exception", e);
         }
