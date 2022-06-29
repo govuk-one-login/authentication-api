@@ -32,3 +32,19 @@ variable "utils_release_zip_file" {
   description = "Location of the Utils distribution ZIP file"
   type        = string
 }
+
+variable "shared_state_bucket" {
+  type = string
+}
+
+variable "logging_endpoint_arn" {
+  type        = string
+  default     = ""
+  description = "Amazon Resource Name (ARN) for the endpoint to ship logs to"
+}
+
+variable "logging_endpoint_arns" {
+  type        = list(string)
+  default     = []
+  description = "Amazon Resource Name (ARN) for the CSLS endpoints to ship logs to"
+}
