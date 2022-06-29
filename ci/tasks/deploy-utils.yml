@@ -1,0 +1,43 @@
+platform: linux
+image_resource:
+  type: registry-image
+  source:
+    repository: hashicorp/terraform
+    tag: 1.0.4
+    username: ((docker-hub-username))
+    password: ((docker-hub-password))
+params:
+  DEPLOYER_ROLE_ARN: ((deployer-role-arn-non-prod))
+  DEPLOY_ENVIRONMENT: build
+  STATE_BUCKET: digital-identity-dev-tfstate
+
+
+inputs:
+  - name: shared-terraform-outputs
+  - name: api-terraform-src
+  - name: utils-release
+outputs:
+  - name: terraform-outputs
+run:
+  path: /bin/sh
+  args:
+    - -euc
+    - |
+      cd "api-terraform-src/ci/terraform/utils"
+      terraform init -input=false \
+        -backend-config "role_arn=${DEPLOYER_ROLE_ARN}" \
+        -backend-config "bucket=${STATE_BUCKET}" \
+        -backend-config "key=${DEPLOY_ENVIRONMENT}-utils-terraform.tfstate" \
+        -backend-config "encrypt=true" \
+        -backend-config "region=eu-west-2"
+
+      terraform apply -auto-approve \
+        -var "utils_release_zip_file=$(ls -1 ../../../../utils-release/*.zip)" \
+        -var "deployer_role_arn=${DEPLOYER_ROLE_ARN}" \
+        -var "environment=${DEPLOY_ENVIRONMENT}" \
+        -var "shared_state_bucket=${STATE_BUCKET}" \
+        -var 'logging_endpoint_arn=arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prod' \
+        -var 'logging_endpoint_arns=["arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prod"]' \
+        -var-file "${DEPLOY_ENVIRONMENT}-overrides.tfvars" \
+
+      terraform output --json > ../../../../terraform-outputs/${DEPLOY_ENVIRONMENT}-terraform-outputs.json
