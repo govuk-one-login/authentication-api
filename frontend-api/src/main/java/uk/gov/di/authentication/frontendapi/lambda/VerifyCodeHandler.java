@@ -34,6 +34,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import static java.util.Map.entry;
@@ -196,11 +197,20 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         if (notificationType.equals(VERIFY_PHONE_NUMBER)) {
             codeStorageService.deleteOtpCode(session.getEmailAddress(), notificationType);
             authenticationService.updatePhoneNumberVerifiedStatus(session.getEmailAddress(), true);
+
+            var vectorOfTrust = VectorOfTrust.getDefaults();
+
+            if (Objects.nonNull(userContext.getClientSession().getEffectiveVectorOfTrust())
+                    && userContext
+                            .getClientSession()
+                            .getEffectiveVectorOfTrust()
+                            .containsLevelOfConfidence()) {
+                vectorOfTrust = userContext.getClientSession().getEffectiveVectorOfTrust();
+            }
+
             clientSessionService.saveClientSession(
                     clientSessionId,
-                    userContext
-                            .getClientSession()
-                            .setEffectiveVectorOfTrust(VectorOfTrust.getDefaults()));
+                    userContext.getClientSession().setEffectiveVectorOfTrust(vectorOfTrust));
             sessionService.save(
                     session.setCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL));
 
