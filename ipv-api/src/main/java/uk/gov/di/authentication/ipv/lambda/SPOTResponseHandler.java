@@ -56,7 +56,7 @@ public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
                 attachSessionIdToLogs(spotResponse.getLogIds().getSessionId());
                 attachLogFieldToLogs(
                         PERSISTENT_SESSION_ID, spotResponse.getLogIds().getPersistentSessionId());
-                attachLogFieldToLogs(CLIENT_ID, spotResponse.getLogIds().getSessionId());
+                attachLogFieldToLogs(CLIENT_ID, spotResponse.getLogIds().getClientId());
 
                 if (spotResponse.getStatus().equals(SPOTStatus.ACCEPTED)) {
                     LOG.info(
