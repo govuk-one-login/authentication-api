@@ -344,11 +344,14 @@ public class TokenService {
                         .jwtID(jwtID);
 
         if (Objects.nonNull(claimsRequest)) {
+            LOG.info("Populating identity claims in access token");
             claimSetBuilder.claim(
                     "claims",
                     claimsRequest.getUserInfoClaimsRequest().getEntries().stream()
                             .map(ClaimsSetRequest.Entry::getClaimName)
                             .collect(Collectors.toList()));
+        } else {
+            LOG.info("No identity claims to populate in access token");
         }
 
         SignedJWT signedJWT = generateSignedJWT(claimSetBuilder.build(), Optional.empty());

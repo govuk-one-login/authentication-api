@@ -174,6 +174,7 @@ public class AccessTokenService {
             LOG.warn("Invalid set of Identity claims present in access token: {}", identityClaims);
             throw new AccessTokenException("Invalid Identity claims", OAuth2Error.INVALID_REQUEST);
         }
+        LOG.info("Identity claims present in Access token");
         return identityClaims;
     }
 }

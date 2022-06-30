@@ -205,6 +205,7 @@ public class AuthorizationService {
 
     private boolean areClaimsValid(OIDCClaimsRequest claimsRequest, ClientRegistry clientRegistry) {
         if (claimsRequest == null) {
+            LOG.info("No claims present in auth request");
             return true;
         }
         List<String> claimNames =
@@ -221,7 +222,7 @@ public class AuthorizationService {
             LOG.warn("Claims have been requested which this client is not supported to request");
             return false;
         }
-
+        LOG.info("Claims are present AND valid in auth request");
         return true;
     }
 
