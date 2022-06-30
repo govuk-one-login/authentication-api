@@ -97,6 +97,7 @@ public class UserInfoService {
                                 }
                             });
         }
+        LOG.info("UserInfo populated with Identity claims");
         return userInfo;
     }
 
