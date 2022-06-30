@@ -449,6 +449,31 @@ class AuthorizationServiceTest {
     }
 
     @Test
+    void
+            shouldNotReturnErrorWhenIdentityIsRequiredButNoIPVCapacityIsAvailableAndTheClientIsATestClient() {
+        when(ipvCapacityService.isIPVCapacityAvailable()).thenReturn(false);
+        var responseType = new ResponseType(ResponseType.Value.CODE);
+        var scope = new Scope(OIDCScopeValue.OPENID);
+        when(dynamoClientService.getClient(CLIENT_ID.toString()))
+                .thenReturn(
+                        Optional.of(
+                                generateClientRegistry(
+                                        REDIRECT_URI.toString(),
+                                        CLIENT_ID.toString(),
+                                        singletonList("openid"),
+                                        true)));
+        var authRequest =
+                new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
+                        .state(new State())
+                        .nonce(new Nonce())
+                        .customParameter("vtr", jsonArrayOf("P2.Cl.Cm"))
+                        .build();
+        var errorObject = authorizationService.validateAuthRequest(authRequest);
+
+        assertTrue(errorObject.isEmpty());
+    }
+
+    @Test
     void shouldThrowExceptionWhenRedirectUriIsInvalidInAuthRequest() {
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         String redirectURi = "http://localhost/redirect";
@@ -534,16 +559,22 @@ class AuthorizationServiceTest {
     }
 
     private ClientRegistry generateClientRegistry(String redirectURI, String clientID) {
-        return generateClientRegistry(redirectURI, clientID, singletonList("openid"));
+        return generateClientRegistry(redirectURI, clientID, singletonList("openid"), false);
     }
 
     private ClientRegistry generateClientRegistry(
             String redirectURI, String clientID, List<String> scopes) {
+        return generateClientRegistry(redirectURI, clientID, scopes, false);
+    }
+
+    private ClientRegistry generateClientRegistry(
+            String redirectURI, String clientID, List<String> scopes, boolean testClient) {
         return new ClientRegistry()
                 .setRedirectUrls(singletonList(redirectURI))
                 .setClientID(clientID)
                 .setContacts(singletonList("joe.bloggs@digital.cabinet-office.gov.uk"))
                 .setPublicKey(null)
+                .setTestClient(testClient)
                 .setScopes(scopes);
     }
 
