@@ -1,0 +1,1 @@
+cloudwatch_log_retention = 5

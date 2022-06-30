@@ -48,3 +48,9 @@ variable "logging_endpoint_arns" {
   default     = []
   description = "Amazon Resource Name (ARN) for the CSLS endpoints to ship logs to"
 }
+
+variable "cloudwatch_log_retention" {
+  default     = 1
+  type        = number
+  description = "The number of day to retain Cloudwatch logs for"
+}
