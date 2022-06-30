@@ -151,7 +151,8 @@ public class AuthorizationService {
         try {
             var vectorOfTrust = VectorOfTrust.parseFromAuthRequestAttribute(authRequestVtr);
             if (vectorOfTrust.containsLevelOfConfidence()
-                    && !ipvCapacityService.isIPVCapacityAvailable()) {
+                    && !ipvCapacityService.isIPVCapacityAvailable()
+                    && !client.get().isTestClient()) {
                 return Optional.of(
                         new AuthRequestError(OAuth2Error.TEMPORARILY_UNAVAILABLE, redirectURI));
             }
