@@ -165,7 +165,9 @@ class ProcessingIdentityHandlerTest {
     }
 
     @Test
-    void shouldReturnERRORStatusWhenNoEntryIsFoundInDynamo() throws Json.JsonException {
+    void shouldReturnERRORStatusWhenNoEntryIsFoundInDynamoAfterSecondAttempt()
+            throws Json.JsonException {
+        session.incrementProcessingIdentityAttempts();
         usingValidSession();
         when(dynamoIdentityService.getIdentityCredentials(PAIRWISE_SUBJECT.getValue()))
                 .thenReturn(Optional.empty());
@@ -180,6 +182,26 @@ class ProcessingIdentityHandlerTest {
                 hasBody(
                         objectMapper.writeValueAsString(
                                 new ProcessingIdentityResponse(ProcessingIdentityStatus.ERROR))));
+    }
+
+    @Test
+    void shouldReturnNO_ENTRYStatusWhenNoEntryIsFoundInDynamoOnFirstAttempt()
+            throws Json.JsonException {
+        usingValidSession();
+        when(dynamoIdentityService.getIdentityCredentials(PAIRWISE_SUBJECT.getValue()))
+                .thenReturn(Optional.empty());
+        when(clientSessionService.getClientSessionFromRequestHeaders(any()))
+                .thenReturn(Optional.of(getClientSession()));
+
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+        assertThat(
+                result,
+                hasBody(
+                        objectMapper.writeValueAsString(
+                                new ProcessingIdentityResponse(
+                                        ProcessingIdentityStatus.NO_ENTRY))));
     }
 
     private ClientSession getClientSession() {

@@ -78,11 +78,18 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                             userContext.getUserProfile().orElseThrow(),
                             userContext.getClient().orElseThrow(),
                             authenticationService);
-            LOG.info("Attempting to find identity credentials in dynamo");
+            int processingAttempts = userContext.getSession().incrementProcessingIdentityAttempts();
+            LOG.info(
+                    "Attempting to find identity credentials in dynamo. Attempt: {}",
+                    processingAttempts);
+
             var identityCredentials =
                     dynamoIdentityService.getIdentityCredentials(pairwiseSubject.getValue());
             var processingStatus = ProcessingIdentityStatus.PROCESSING;
-            if (identityCredentials.isEmpty()) {
+            if (identityCredentials.isEmpty()
+                    && userContext.getSession().getProcessingIdentityAttempts() == 1) {
+                processingStatus = ProcessingIdentityStatus.NO_ENTRY;
+            } else if (identityCredentials.isEmpty()) {
                 processingStatus = ProcessingIdentityStatus.ERROR;
             } else if (Objects.nonNull(identityCredentials.get().getCoreIdentityJWT())) {
                 processingStatus = ProcessingIdentityStatus.COMPLETED;
@@ -100,6 +107,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                     IpAddressHelper.extractIpAddress(input),
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
                     AuditService.UNKNOWN);
+            sessionService.save(userContext.getSession());
             LOG.info(
                     "Generating ProcessingIdentityResponse with ProcessingIdentityStatus: {}",
                     processingStatus);

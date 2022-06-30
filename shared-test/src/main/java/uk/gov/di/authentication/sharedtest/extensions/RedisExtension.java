@@ -100,6 +100,14 @@ public class RedisExtension
                 session.getSessionId(), objectMapper.writeValueAsString(session), 3600);
     }
 
+    public void incrementInitialProcessingIdentityAttemptsInSession(String sessionId)
+            throws Json.JsonException {
+        Session session = objectMapper.readValue(redis.getValue(sessionId), Session.class);
+        session.incrementProcessingIdentityAttempts();
+        redis.saveWithExpiry(
+                session.getSessionId(), objectMapper.writeValueAsString(session), 3600);
+    }
+
     public void addAuthRequestToSession(
             String clientSessionId, String sessionId, Map<String, List<String>> authRequest)
             throws Json.JsonException {
