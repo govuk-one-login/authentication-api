@@ -378,7 +378,7 @@ variable "scaling_trigger" {
 }
 
 variable "use_robots_txt" {
-  default = false
+  default = true
   type    = bool
 }
 
