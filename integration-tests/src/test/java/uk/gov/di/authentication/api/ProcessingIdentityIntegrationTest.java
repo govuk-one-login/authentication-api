@@ -33,7 +33,7 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static uk.gov.di.authentication.api.AuthorisationIntegrationTest.configurationService;
 import static uk.gov.di.authentication.shared.helpers.ClientSubjectHelper.calculatePairwiseIdentifier;
-import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -55,7 +55,7 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
     @Test
     void shouldReturnStatusOfCOMPLETEDWhenEntryInDatabaseAndJWTIsPresent()
             throws Json.JsonException {
-        setupSession();
+        setupSession(false);
         setupClient();
         byte[] salt = setupUser();
         var signedCredential = SignedCredentialHelper.generateCredential();
@@ -77,16 +77,13 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
         assertThat(response, hasStatus(200));
         assertThat(
                 response,
-                hasBody(
-                        objectMapper.writeValueAsString(
-                                new ProcessingIdentityResponse(
-                                        ProcessingIdentityStatus.COMPLETED))));
+                hasJsonBody(new ProcessingIdentityResponse(ProcessingIdentityStatus.COMPLETED)));
     }
 
     @Test
     void shouldReturnStatusOfPROCESSINGWhenEntryInDatabaseButNoJWTIsPresent()
             throws Json.JsonException {
-        setupSession();
+        setupSession(false);
         setupClient();
         byte[] salt = setupUser();
         var pairwiseIdentifier =
@@ -107,15 +104,13 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
         assertThat(response, hasStatus(200));
         assertThat(
                 response,
-                hasBody(
-                        objectMapper.writeValueAsString(
-                                new ProcessingIdentityResponse(
-                                        ProcessingIdentityStatus.PROCESSING))));
+                hasJsonBody(new ProcessingIdentityResponse(ProcessingIdentityStatus.PROCESSING)));
     }
 
     @Test
-    void shouldReturnStatusOfERRORWhenEntryIsNotInDatabase() throws Json.JsonException {
-        setupSession();
+    void shouldReturnStatusOfERRORWhenEntryIsNotInDatabaseOnSecondAttempt()
+            throws Json.JsonException {
+        setupSession(true);
         setupClient();
         setupUser();
 
@@ -133,12 +128,34 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
         assertThat(response, hasStatus(200));
         assertThat(
                 response,
-                hasBody(
-                        objectMapper.writeValueAsString(
-                                new ProcessingIdentityResponse(ProcessingIdentityStatus.ERROR))));
+                hasJsonBody(new ProcessingIdentityResponse(ProcessingIdentityStatus.ERROR)));
     }
 
-    private void setupSession() throws Json.JsonException {
+    @Test
+    void shouldReturnStatusOfNO_ENTRYWhenEntryIsNotInDatabaseOnFirstAttempt()
+            throws Json.JsonException {
+        setupSession(false);
+        setupClient();
+        setupUser();
+
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Session-Id", SESSION_ID);
+        headers.put("Client-Session-Id", CLIENT_SESSION_ID);
+        headers.put("X-API-Key", FRONTEND_API_KEY);
+
+        var response =
+                makeRequest(
+                        Optional.of(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS)),
+                        headers,
+                        Map.of());
+
+        assertThat(response, hasStatus(200));
+        assertThat(
+                response,
+                hasJsonBody(new ProcessingIdentityResponse(ProcessingIdentityStatus.NO_ENTRY)));
+    }
+
+    private void setupSession(boolean incrementProcessIdentityAttempts) throws Json.JsonException {
         var authRequestBuilder =
                 new AuthenticationRequest.Builder(
                                 ResponseType.CODE,
@@ -155,6 +172,9 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
                         VectorOfTrust.getDefaults());
         redis.createClientSession(CLIENT_SESSION_ID, clientSession);
         redis.addStateToRedis(STATE, SESSION_ID);
+        if (incrementProcessIdentityAttempts) {
+            redis.incrementInitialProcessingIdentityAttemptsInSession(SESSION_ID);
+        }
     }
 
     private void setupClient() {

@@ -61,6 +61,7 @@ public class SessionService {
         try {
             String oldSessionId = session.getSessionId();
             session.setSessionId(IdGenerator.generate());
+            session.resetProcessingIdentityAttempts();
             save(session);
             redisConnectionService.deleteValue(oldSessionId);
         } catch (Exception e) {

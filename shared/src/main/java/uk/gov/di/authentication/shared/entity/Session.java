@@ -31,10 +31,13 @@ public class Session {
 
     @Expose private boolean authenticated;
 
+    @Expose private int processingIdentityAttempts;
+
     public Session(String sessionId) {
         this.sessionId = sessionId;
         this.clientSessions = new ArrayList<>();
         this.isNewAccount = AccountState.UNKNOWN;
+        this.processingIdentityAttempts = 0;
     }
 
     public Session(String sessionId, List<String> clientSessions, String emailAddress) {
@@ -141,5 +144,18 @@ public class Session {
     public Session setAuthenticated(boolean authenticated) {
         this.authenticated = authenticated;
         return this;
+    }
+
+    public int getProcessingIdentityAttempts() {
+        return processingIdentityAttempts;
+    }
+
+    public void resetProcessingIdentityAttempts() {
+        this.processingIdentityAttempts = 0;
+    }
+
+    public int incrementProcessingIdentityAttempts() {
+        this.processingIdentityAttempts += 1;
+        return processingIdentityAttempts;
     }
 }
