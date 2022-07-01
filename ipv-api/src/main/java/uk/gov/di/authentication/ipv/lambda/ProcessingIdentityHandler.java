@@ -17,6 +17,7 @@ import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoIdentityService;
@@ -24,6 +25,7 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 
@@ -33,6 +35,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
 
     private final DynamoIdentityService dynamoIdentityService;
     private final AuditService auditService;
+    private final CloudwatchMetricsService cloudwatchMetricsService;
 
     private static final Logger LOG = LogManager.getLogger(ProcessingIdentityHandler.class);
 
@@ -40,6 +43,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
         super(ProcessingIdentityRequest.class, configurationService);
         this.dynamoIdentityService = new DynamoIdentityService(configurationService);
         this.auditService = new AuditService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService();
     }
 
     public ProcessingIdentityHandler() {
@@ -53,7 +57,8 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
             DynamoClientService dynamoClientService,
             DynamoService dynamoService,
             ConfigurationService configurationService,
-            AuditService auditService) {
+            AuditService auditService,
+            CloudwatchMetricsService cloudwatchMetricsService) {
         super(
                 ProcessingIdentityRequest.class,
                 configurationService,
@@ -63,6 +68,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                 dynamoService);
         this.dynamoIdentityService = dynamoIdentityService;
         this.auditService = auditService;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
     }
 
     @Override
@@ -94,6 +100,13 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
             } else if (Objects.nonNull(identityCredentials.get().getCoreIdentityJWT())) {
                 processingStatus = ProcessingIdentityStatus.COMPLETED;
             }
+            cloudwatchMetricsService.incrementCounter(
+                    "ProcessingIdentity",
+                    Map.of(
+                            "Environment",
+                            configurationService.getEnvironment(),
+                            "Status",
+                            processingStatus.toString()));
             auditService.submitAuditEvent(
                     IPVAuditableEvent.PROCESSING_IDENTITY_REQUEST,
                     context.getAwsRequestId(),

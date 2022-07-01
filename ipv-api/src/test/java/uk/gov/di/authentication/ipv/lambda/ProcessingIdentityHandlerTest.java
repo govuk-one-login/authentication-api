@@ -23,6 +23,7 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoIdentityService;
@@ -47,6 +48,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
@@ -69,6 +72,7 @@ class ProcessingIdentityHandlerTest {
     private static final ByteBuffer SALT =
             ByteBuffer.wrap("a-test-salt".getBytes(StandardCharsets.UTF_8));
     private static final URI REDIRECT_URI = URI.create("http://localhost/oidc/redirect");
+    private static final String ENVIRONMENT = "test-environment";
 
     private final Context context = mock(Context.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
@@ -78,6 +82,8 @@ class ProcessingIdentityHandlerTest {
     private final DynamoService dynamoService = mock(DynamoService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final CloudwatchMetricsService cloudwatchMetricsService =
+            mock(CloudwatchMetricsService.class);
     private final Session session = new Session(SESSION_ID);
     private final APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
     protected final Json objectMapper = SerializationService.getInstance();
@@ -91,6 +97,7 @@ class ProcessingIdentityHandlerTest {
         when(dynamoService.getUserProfileFromEmail(EMAIL_ADDRESS))
                 .thenReturn(Optional.of(userProfile));
         when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(SALT.array());
+        when(configurationService.getEnvironment()).thenReturn(ENVIRONMENT);
         Map<String, String> headers = new HashMap<>();
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         headers.put(SESSION_ID_HEADER, SESSION_ID);
@@ -105,7 +112,8 @@ class ProcessingIdentityHandlerTest {
                         dynamoClientService,
                         dynamoService,
                         configurationService,
-                        auditService);
+                        auditService,
+                        cloudwatchMetricsService);
     }
 
     @Test
@@ -114,6 +122,7 @@ class ProcessingIdentityHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1000)));
+        verifyNoInteractions(cloudwatchMetricsService);
     }
 
     @Test
@@ -138,6 +147,14 @@ class ProcessingIdentityHandlerTest {
                         objectMapper.writeValueAsString(
                                 new ProcessingIdentityResponse(
                                         ProcessingIdentityStatus.COMPLETED))));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "ProcessingIdentity",
+                        Map.of(
+                                "Environment",
+                                ENVIRONMENT,
+                                "Status",
+                                ProcessingIdentityStatus.COMPLETED.toString()));
     }
 
     @Test
@@ -162,6 +179,14 @@ class ProcessingIdentityHandlerTest {
                         objectMapper.writeValueAsString(
                                 new ProcessingIdentityResponse(
                                         ProcessingIdentityStatus.PROCESSING))));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "ProcessingIdentity",
+                        Map.of(
+                                "Environment",
+                                ENVIRONMENT,
+                                "Status",
+                                ProcessingIdentityStatus.PROCESSING.toString()));
     }
 
     @Test
@@ -182,6 +207,14 @@ class ProcessingIdentityHandlerTest {
                 hasBody(
                         objectMapper.writeValueAsString(
                                 new ProcessingIdentityResponse(ProcessingIdentityStatus.ERROR))));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "ProcessingIdentity",
+                        Map.of(
+                                "Environment",
+                                ENVIRONMENT,
+                                "Status",
+                                ProcessingIdentityStatus.ERROR.toString()));
     }
 
     @Test
@@ -202,6 +235,14 @@ class ProcessingIdentityHandlerTest {
                         objectMapper.writeValueAsString(
                                 new ProcessingIdentityResponse(
                                         ProcessingIdentityStatus.NO_ENTRY))));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "ProcessingIdentity",
+                        Map.of(
+                                "Environment",
+                                ENVIRONMENT,
+                                "Status",
+                                ProcessingIdentityStatus.NO_ENTRY.toString()));
     }
 
     private ClientSession getClientSession() {
