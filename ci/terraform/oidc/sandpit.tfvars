@@ -13,6 +13,7 @@ logging_endpoint_arns          = []
 
 enable_api_gateway_execution_request_tracing = true
 spot_enabled                                 = false
+use_robots_txt                               = true
 
 lambda_max_concurrency = 0
 lambda_min_concurrency = 0
