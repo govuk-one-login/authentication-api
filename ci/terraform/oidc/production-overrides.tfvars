@@ -65,4 +65,3 @@ lambda_min_concurrency = 3
 keep_lambdas_warm      = false
 endpoint_memory_size   = 1024
 scaling_trigger        = 0.6
-use_robots_txt         = false
