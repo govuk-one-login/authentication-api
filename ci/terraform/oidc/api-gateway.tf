@@ -443,8 +443,7 @@ resource "aws_api_gateway_integration" "robots_txt_integration" {
   resource_id = aws_api_gateway_resource.robots_txt_resource[0].id
   http_method = aws_api_gateway_method.robots_txt_method[0].http_method
 
-  integration_http_method = "GET"
-  type                    = "MOCK"
+  type = "MOCK"
 
   request_templates = {
     "application/json" = jsonencode(
