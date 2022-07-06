@@ -19,12 +19,13 @@ module "jwks" {
   environment     = var.environment
 
   handler_environment_variables = {
-    EVENTS_SNS_TOPIC_ARN     = aws_sns_topic.events.arn
-    DOC_APP_API_ENABLED      = var.doc_app_api_enabled
-    AUDIT_SIGNING_KEY_ALIAS  = local.audit_signing_key_alias_name
-    LOCALSTACK_ENDPOINT      = var.use_localstack ? var.localstack_endpoint : null
-    TOKEN_SIGNING_KEY_ALIAS  = local.id_token_signing_key_alias_name
-    HEADERS_CASE_INSENSITIVE = var.use_localstack ? "true" : "false"
+    EVENTS_SNS_TOPIC_ARN            = aws_sns_topic.events.arn
+    DOC_APP_API_ENABLED             = var.doc_app_api_enabled
+    DOC_APP_TOKEN_SIGNING_KEY_ALIAS = local.doc_app_auth_key_alias_name
+    AUDIT_SIGNING_KEY_ALIAS         = local.audit_signing_key_alias_name
+    LOCALSTACK_ENDPOINT             = var.use_localstack ? var.localstack_endpoint : null
+    TOKEN_SIGNING_KEY_ALIAS         = local.id_token_signing_key_alias_name
+    HEADERS_CASE_INSENSITIVE        = var.use_localstack ? "true" : "false"
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.JwksHandler::handleRequest"
 
