@@ -37,13 +37,13 @@ public class JwksService {
     }
 
     public JWK getPublicTokenJwkWithOpaqueId() {
+        return getPublicJWKWithKeyId(configurationService.getTokenSigningKeyAlias());
+    }
+
+    private JWK getPublicJWKWithKeyId(String keyId) {
         var jwk =
                 segmentedFunctionCall(
-                        "createJwk",
-                        () ->
-                                KEY_CACHE.computeIfAbsent(
-                                        configurationService.getTokenSigningKeyAlias(),
-                                        this::createJwk));
+                        "createJwk", () -> KEY_CACHE.computeIfAbsent(keyId, this::createJwk));
 
         return segmentedFunctionCall(
                 "parseJwk",
@@ -51,7 +51,7 @@ public class JwksService {
                     try {
                         return JWK.parse(jwk.toString());
                     } catch (java.text.ParseException e) {
-                        LOG.error("Error parsing the ECKey to JWK", e);
+                        LOG.error("Error parsing the public key to JWK", e);
                         throw new RuntimeException(e);
                     }
                 });
