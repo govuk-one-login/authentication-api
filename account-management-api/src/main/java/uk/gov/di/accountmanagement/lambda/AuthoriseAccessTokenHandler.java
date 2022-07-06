@@ -17,6 +17,7 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.JwksService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
 
@@ -52,7 +53,9 @@ public class AuthoriseAccessTokenHandler
         configurationService = ConfigurationService.getInstance();
         tokenValidationService =
                 new TokenValidationService(
-                        configurationService, new KmsConnectionService(configurationService));
+                        new JwksService(
+                                configurationService,
+                                new KmsConnectionService(configurationService)));
         dynamoService = new DynamoService(configurationService);
         clientService = new DynamoClientService(configurationService);
     }
@@ -61,7 +64,9 @@ public class AuthoriseAccessTokenHandler
         this.configurationService = configurationService;
         tokenValidationService =
                 new TokenValidationService(
-                        configurationService, new KmsConnectionService(configurationService));
+                        new JwksService(
+                                configurationService,
+                                new KmsConnectionService(configurationService)));
         dynamoService = new DynamoService(configurationService);
         clientService = new DynamoClientService(configurationService);
     }

@@ -9,8 +9,7 @@ import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.TokenValidationService;
+import uk.gov.di.authentication.shared.services.JwksService;
 
 import java.util.UUID;
 
@@ -24,21 +23,19 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 class JwksHandlerTest {
 
     private final Context context = mock(Context.class);
-    private final TokenValidationService tokenValidationService =
-            mock(TokenValidationService.class);
-    private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final JwksService jwksService = mock(JwksService.class);
     private JwksHandler handler;
 
     @BeforeEach
     public void setUp() {
-        handler = new JwksHandler(tokenValidationService, configurationService);
+        handler = new JwksHandler(jwksService);
     }
 
     @Test
     public void shouldReturn200WhenRequestIsSuccessful() throws JOSEException {
         JWK opaqueSigningKey =
                 new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
-        when(tokenValidationService.getPublicJwkWithOpaqueId()).thenReturn(opaqueSigningKey);
+        when(jwksService.getPublicTokenJwkWithOpaqueId()).thenReturn(opaqueSigningKey);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -51,7 +48,7 @@ class JwksHandlerTest {
 
     @Test
     public void shouldReturn500WhenSigningKeyIsNotPresent() {
-        when(tokenValidationService.getPublicJwkWithOpaqueId()).thenReturn(null);
+        when(jwksService.getPublicTokenJwkWithOpaqueId()).thenReturn(null);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -64,7 +61,7 @@ class JwksHandlerTest {
     public void shouldSetACacheHeaderOfOneDayOnSuccess() throws JOSEException {
         JWK opaqueSigningKey =
                 new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
-        when(tokenValidationService.getPublicJwkWithOpaqueId()).thenReturn(opaqueSigningKey);
+        when(jwksService.getPublicTokenJwkWithOpaqueId()).thenReturn(opaqueSigningKey);
 
         var response = handler.handleRequest(new APIGatewayProxyRequestEvent(), context);
         assertThat(response, hasHeader("Cache-Control", "max-age=86400"));

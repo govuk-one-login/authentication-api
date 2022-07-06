@@ -22,6 +22,7 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
+import uk.gov.di.authentication.shared.services.JwksService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
@@ -63,7 +64,9 @@ public class LogoutHandler
         this.clientSessionService = new ClientSessionService(configurationService);
         this.tokenValidationService =
                 new TokenValidationService(
-                        configurationService, new KmsConnectionService(configurationService));
+                        new JwksService(
+                                configurationService,
+                                new KmsConnectionService(configurationService)));
         this.auditService = new AuditService(configurationService);
         this.backChannelLogoutService = new BackChannelLogoutService(configurationService);
     }

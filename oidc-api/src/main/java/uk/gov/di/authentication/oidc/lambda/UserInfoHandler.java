@@ -17,6 +17,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoIdentityService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.JwksService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
@@ -62,8 +63,9 @@ public class UserInfoHandler
                         new RedisConnectionService(configurationService),
                         new DynamoClientService(configurationService),
                         new TokenValidationService(
-                                configurationService,
-                                new KmsConnectionService(configurationService)));
+                                new JwksService(
+                                        configurationService,
+                                        new KmsConnectionService(configurationService))));
     }
 
     @Override

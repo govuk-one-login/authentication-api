@@ -8,8 +8,8 @@ import com.nimbusds.jose.jwk.JWKSet;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.JwksService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
-import uk.gov.di.authentication.shared.services.TokenValidationService;
 
 import java.util.Map;
 
@@ -20,21 +20,16 @@ import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 public class JwksHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-    private final TokenValidationService tokenValidationService;
-    private final ConfigurationService configurationService;
+    private final JwksService jwksService;
     private static final Logger LOG = LogManager.getLogger(JwksHandler.class);
 
-    public JwksHandler(
-            TokenValidationService tokenValidationService,
-            ConfigurationService configurationService) {
-        this.tokenValidationService = tokenValidationService;
-        this.configurationService = configurationService;
+    public JwksHandler(JwksService jwksService) {
+        this.jwksService = jwksService;
     }
 
     public JwksHandler(ConfigurationService configurationService) {
-        this.configurationService = configurationService;
-        this.tokenValidationService =
-                new TokenValidationService(
+        this.jwksService =
+                new JwksService(
                         configurationService, new KmsConnectionService(configurationService));
     }
 
@@ -58,9 +53,7 @@ public class JwksHandler
                             try {
                                 LOG.info("JWKs request received");
 
-                                var jwks =
-                                        new JWKSet(
-                                                tokenValidationService.getPublicJwkWithOpaqueId());
+                                var jwks = new JWKSet(jwksService.getPublicTokenJwkWithOpaqueId());
 
                                 LOG.info("Generating JWKs successful response");
 

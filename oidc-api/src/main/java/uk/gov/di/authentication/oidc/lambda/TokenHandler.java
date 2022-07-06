@@ -31,6 +31,7 @@ import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.JwksService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -111,7 +112,8 @@ public class TokenHandler
                         configurationService, redisConnectionService, objectMapper);
         this.clientSessionService =
                 new ClientSessionService(configurationService, redisConnectionService);
-        this.tokenValidationService = new TokenValidationService(configurationService, kms);
+        this.tokenValidationService =
+                new TokenValidationService(new JwksService(configurationService, kms));
     }
 
     public TokenHandler() {
