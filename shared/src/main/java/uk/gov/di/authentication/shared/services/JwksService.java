@@ -40,6 +40,10 @@ public class JwksService {
         return getPublicJWKWithKeyId(configurationService.getTokenSigningKeyAlias());
     }
 
+    public JWK getPublicDocAppSigningJwkWithOpaqueId() {
+        return getPublicJWKWithKeyId(configurationService.getDocAppTokenSigningKeyAlias());
+    }
+
     private JWK getPublicJWKWithKeyId(String keyId) {
         var jwk =
                 segmentedFunctionCall(

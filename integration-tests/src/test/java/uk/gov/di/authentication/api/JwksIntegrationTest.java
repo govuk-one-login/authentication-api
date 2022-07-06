@@ -1,7 +1,6 @@
 package uk.gov.di.authentication.api;
 
 import com.nimbusds.jose.jwk.JWKSet;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.oidc.lambda.JwksHandler;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
@@ -17,19 +16,49 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 
 public class JwksIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
-    @BeforeEach
-    void setup() {
-        handler = new JwksHandler(TEST_CONFIGURATION_SERVICE);
-    }
-
     @Test
     public void shouldReturn200AndClientInfoResponseForValidClient() throws ParseException {
-
+        var configurationService = new JwksTestConfigurationService(false);
+        handler = new JwksHandler(configurationService);
         var response = makeRequest(Optional.empty(), Map.of(), Map.of());
 
         assertThat(response, hasStatus(200));
         assertThat(JWKSet.parse(response.getBody()).getKeys(), hasSize(1));
 
         assertNoAuditEventsReceived(auditTopic);
+    }
+
+    @Test
+    public void shouldReturn200And2KeysWhenDocAppIsEnabled() throws ParseException {
+        var configurationService = new JwksTestConfigurationService(true);
+        handler = new JwksHandler(configurationService);
+        var response = makeRequest(Optional.empty(), Map.of(), Map.of());
+
+        assertThat(response, hasStatus(200));
+        assertThat(JWKSet.parse(response.getBody()).getKeys(), hasSize(2));
+
+        assertNoAuditEventsReceived(auditTopic);
+    }
+
+    private static class JwksTestConfigurationService extends IntegrationTestConfigurationService {
+
+        private final boolean docAppEnabled;
+
+        public JwksTestConfigurationService(boolean docAppEnabled) {
+            super(
+                    auditTopic,
+                    notificationsQueue,
+                    auditSigningKey,
+                    tokenSigner,
+                    ipvPrivateKeyJwtSigner,
+                    spotQueue,
+                    docAppPrivateKeyJwtSigner);
+            this.docAppEnabled = docAppEnabled;
+        }
+
+        @Override
+        public boolean isDocAppApiEnabled() {
+            return docAppEnabled;
+        }
     }
 }

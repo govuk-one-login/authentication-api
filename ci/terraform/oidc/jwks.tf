@@ -6,6 +6,7 @@ module "oidc_jwks_role" {
 
   policies_to_attach = [
     aws_iam_policy.oidc_default_id_token_public_key_kms_policy.arn,
+    aws_iam_policy.doc_app_auth_kms_policy.arn,
   ]
 }
 
@@ -19,6 +20,7 @@ module "jwks" {
 
   handler_environment_variables = {
     EVENTS_SNS_TOPIC_ARN     = aws_sns_topic.events.arn
+    DOC_APP_API_ENABLED      = var.doc_app_api_enabled
     AUDIT_SIGNING_KEY_ALIAS  = local.audit_signing_key_alias_name
     LOCALSTACK_ENDPOINT      = var.use_localstack ? var.localstack_endpoint : null
     TOKEN_SIGNING_KEY_ALIAS  = local.id_token_signing_key_alias_name

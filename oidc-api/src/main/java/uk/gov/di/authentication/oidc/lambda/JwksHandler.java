@@ -11,6 +11,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.JwksService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
+import java.util.List;
 import java.util.Map;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -21,13 +22,16 @@ public class JwksHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private final JwksService jwksService;
+    private final ConfigurationService configurationService;
     private static final Logger LOG = LogManager.getLogger(JwksHandler.class);
 
-    public JwksHandler(JwksService jwksService) {
+    public JwksHandler(ConfigurationService configurationService, JwksService jwksService) {
+        this.configurationService = configurationService;
         this.jwksService = jwksService;
     }
 
     public JwksHandler(ConfigurationService configurationService) {
+        this.configurationService = configurationService;
         this.jwksService =
                 new JwksService(
                         configurationService, new KmsConnectionService(configurationService));
@@ -53,14 +57,26 @@ public class JwksHandler
                             try {
                                 LOG.info("JWKs request received");
 
-                                var jwks = new JWKSet(jwksService.getPublicTokenJwkWithOpaqueId());
+                                JWKSet jwkSet;
+                                if (configurationService.isDocAppApiEnabled()) {
+                                    jwkSet =
+                                            new JWKSet(
+                                                    List.of(
+                                                            jwksService
+                                                                    .getPublicTokenJwkWithOpaqueId(),
+                                                            jwksService
+                                                                    .getPublicDocAppSigningJwkWithOpaqueId()));
+                                } else {
+                                    jwkSet =
+                                            new JWKSet(jwksService.getPublicTokenJwkWithOpaqueId());
+                                }
 
                                 LOG.info("Generating JWKs successful response");
 
                                 return generateApiGatewayProxyResponse(
                                         200,
                                         segmentedFunctionCall(
-                                                "serialiseJWKSet", () -> jwks.toString(true)),
+                                                "serialiseJWKSet", () -> jwkSet.toString(true)),
                                         Map.of("Cache-Control", "max-age=86400"),
                                         null);
                             } catch (Exception e) {
