@@ -63,7 +63,8 @@ class ValidationHelperTest {
 
     @Test
     void shouldAcceptValidBritishPhoneNumbers() {
-        assertThat(ValidationHelper.validatePhoneNumber("07911123456"), equalTo(Optional.empty()));
+        assertThat(
+                ValidationHelper.validatePhoneNumber("+4407911123456"), equalTo(Optional.empty()));
     }
 
     @Test
