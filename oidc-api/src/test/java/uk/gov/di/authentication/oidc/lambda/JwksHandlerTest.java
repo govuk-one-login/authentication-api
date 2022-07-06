@@ -35,7 +35,7 @@ class JwksHandlerTest {
     }
 
     @Test
-    public void shouldReturnMultipleJwksWhenDocAppIsEnabled() throws JOSEException {
+    void shouldReturnMultipleJwksWhenDocAppIsEnabled() throws JOSEException {
         when(configurationService.isDocAppApiEnabled()).thenReturn(true);
         var tokenSigningKey =
                 new ECKeyGenerator(Curve.P_256).keyID(UUID.randomUUID().toString()).generate();
@@ -54,7 +54,7 @@ class JwksHandlerTest {
     }
 
     @Test
-    public void shouldReturn200WhenRequestIsSuccessful() throws JOSEException {
+    void shouldReturn200WhenRequestIsSuccessful() throws JOSEException {
         var opaqueSigningKey =
                 new ECKeyGenerator(Curve.P_256).keyID(UUID.randomUUID().toString()).generate();
         when(jwksService.getPublicTokenJwkWithOpaqueId()).thenReturn(opaqueSigningKey);
@@ -69,7 +69,7 @@ class JwksHandlerTest {
     }
 
     @Test
-    public void shouldReturn500WhenSigningKeyIsNotPresent() {
+    void shouldReturn500WhenSigningKeyIsNotPresent() {
         when(jwksService.getPublicTokenJwkWithOpaqueId()).thenReturn(null);
 
         var event = new APIGatewayProxyRequestEvent();
@@ -80,7 +80,7 @@ class JwksHandlerTest {
     }
 
     @Test
-    public void shouldSetACacheHeaderOfOneDayOnSuccess() throws JOSEException {
+    void shouldSetACacheHeaderOfOneDayOnSuccess() throws JOSEException {
         var opaqueSigningKey =
                 new ECKeyGenerator(Curve.P_256).keyID(UUID.randomUUID().toString()).generate();
         when(jwksService.getPublicTokenJwkWithOpaqueId()).thenReturn(opaqueSigningKey);

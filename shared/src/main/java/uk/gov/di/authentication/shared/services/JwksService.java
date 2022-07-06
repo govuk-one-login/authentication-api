@@ -27,7 +27,7 @@ public class JwksService {
 
     private final ConfigurationService configurationService;
     private final KmsConnectionService kmsConnectionService;
-    private final Map<String, ECKey> KEY_CACHE = new HashMap<>();
+    private static final Map<String, ECKey> KEY_CACHE = new HashMap<>();
     private static final Logger LOG = LogManager.getLogger(JwksService.class);
 
     public JwksService(

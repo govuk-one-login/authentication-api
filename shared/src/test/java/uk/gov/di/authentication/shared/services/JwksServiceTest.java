@@ -16,7 +16,8 @@ import java.nio.ByteBuffer;
 import java.util.Base64;
 
 import static java.util.Collections.singletonList;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -30,11 +31,10 @@ class JwksServiceTest {
             new JwksService(configurationService, kmsConnectionService);
     private static final String KEY_ID = "14342354354353";
     private static final String HASHED_KEY_ID = hashSha256String(KEY_ID);
-    private ECKey ecJWK;
 
     @BeforeEach
     void setUp() throws JOSEException {
-        ecJWK = generateECKeyPair();
+        var ecJWK = generateECKeyPair();
         when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
         GetPublicKeyResult getPublicKeyResult = new GetPublicKeyResult();
         getPublicKeyResult.setKeyUsage("SIGN_VERIFY");
@@ -66,9 +66,9 @@ class JwksServiceTest {
 
         JWK publicKeyJwk = jwksService.getPublicTokenJwkWithOpaqueId();
 
-        assertEquals(publicKeyJwk.getKeyID(), HASHED_KEY_ID);
-        assertEquals(publicKeyJwk.getAlgorithm(), JWSAlgorithm.ES256);
-        assertEquals(publicKeyJwk.getKeyUse(), KeyUse.SIGNATURE);
+        assertThat(publicKeyJwk.getKeyID(), equalTo(HASHED_KEY_ID));
+        assertThat(publicKeyJwk.getAlgorithm(), equalTo(JWSAlgorithm.ES256));
+        assertThat(publicKeyJwk.getKeyUse(), equalTo(KeyUse.SIGNATURE));
     }
 
     private ECKey generateECKeyPair() {

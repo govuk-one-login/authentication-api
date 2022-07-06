@@ -17,7 +17,7 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 public class JwksIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
-    public void shouldReturn200AndClientInfoResponseForValidClient() throws ParseException {
+    void shouldReturn200AndClientInfoResponseForValidClient() throws ParseException {
         var configurationService = new JwksTestConfigurationService(false);
         handler = new JwksHandler(configurationService);
         var response = makeRequest(Optional.empty(), Map.of(), Map.of());
@@ -29,7 +29,7 @@ public class JwksIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
-    public void shouldReturn200And2KeysWhenDocAppIsEnabled() throws ParseException {
+    void shouldReturn200And2KeysWhenDocAppIsEnabled() throws ParseException {
         var configurationService = new JwksTestConfigurationService(true);
         handler = new JwksHandler(configurationService);
         var response = makeRequest(Optional.empty(), Map.of(), Map.of());
