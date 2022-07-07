@@ -9,6 +9,7 @@ import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.crypto.ECDSAVerifier;
 import com.nimbusds.jose.crypto.impl.ECDSA;
+import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.SignedJWT;
@@ -33,7 +34,10 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
+import java.security.interfaces.ECPublicKey;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
 
@@ -47,6 +51,7 @@ public class DocAppCriService {
     private final KmsConnectionService kmsService;
     private static final JWSAlgorithm TOKEN_ALGORITHM = JWSAlgorithm.ES256;
     private static final Long PRIVATE_KEY_JWT_EXPIRY = 5L;
+    private static final String BUILD_ENVIRONMENT = "build";
     private static final Logger LOG = LogManager.getLogger(DocAppCriService.class);
 
     public DocAppCriService(
@@ -130,9 +135,18 @@ public class DocAppCriService {
             JWT jwt = response.getContentAsJWT();
             if (jwt instanceof SignedJWT) {
                 var signed = (SignedJWT) jwt;
-                var signingPublicKey = configurationService.getDocAppCredentialSigningPublicKey();
+                ECPublicKey signingPublicKey;
+                if (configurationService.getEnvironment().equals(BUILD_ENVIRONMENT)) {
+                    signingPublicKey = configurationService.getDocAppCredentialSigningPublicKey();
+                } else {
+                    JWKSet publicJwkSet =
+                            JWKSet.load(configurationService.getDocAppJwksUri().toURL());
+                    var signingJWK =
+                            publicJwkSet.getKeyByKeyId(
+                                    configurationService.getDocAppSigningKeyID());
+                    signingPublicKey = signingJWK.toPublicJWK().toECKey().toECPublicKey();
+                }
                 JWSVerifier verifier = new ECDSAVerifier(signingPublicKey);
-
                 return signed.verify(verifier);
             }
             throw new UnsuccesfulCredentialResponseException("CRI response is not signed");
@@ -141,6 +155,14 @@ public class DocAppCriService {
         } catch (JOSEException e) {
             throw new UnsuccesfulCredentialResponseException(
                     "Error verifying CRI response signature", e);
+        } catch (MalformedURLException e) {
+            throw new RuntimeException(e);
+        } catch (IOException | java.text.ParseException e) {
+            LOG.error("Unable to load JWKSet", e);
+            throw new RuntimeException(e);
+        } catch (URISyntaxException e) {
+            LOG.error("Unable to get the Doc App JWKS URI", e);
+            throw new RuntimeException(e);
         }
     }
 

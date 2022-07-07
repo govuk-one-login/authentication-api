@@ -345,6 +345,11 @@ variable "doc_app_encryption_key_id" {
   default = "undefined"
 }
 
+variable "doc_app_signing_key_id" {
+  type    = string
+  default = "undefined"
+}
+
 variable "doc_app_jwks_endpoint" {
   type    = string
   default = "undefined"

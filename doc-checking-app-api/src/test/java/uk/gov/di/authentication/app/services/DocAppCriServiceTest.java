@@ -51,6 +51,7 @@ class DocAppCriServiceTest {
     void setUp() {
         tokenService = new DocAppCriService(configService, kmsService);
         when(configService.getDocAppBackendURI()).thenReturn(CRI_URI);
+        when(configService.getEnvironment()).thenReturn("build");
         when(configService.getDocAppAuthorisationClientId()).thenReturn(CLIENT_ID.getValue());
         when(configService.getAccessTokenExpiry()).thenReturn(300L);
         when(configService.getDocAppAuthorisationCallbackURI()).thenReturn(REDIRECT_URI);
