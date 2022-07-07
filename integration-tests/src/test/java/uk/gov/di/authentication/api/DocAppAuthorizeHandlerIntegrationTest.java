@@ -1,5 +1,8 @@
 package uk.gov.di.authentication.api;
 
+import com.nimbusds.jose.jwk.JWKSet;
+import com.nimbusds.jose.jwk.KeyUse;
+import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -8,22 +11,28 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
+import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.app.entity.DocAppAuthorisationResponse;
 import uk.gov.di.authentication.app.lambda.DocAppAuthorizeHandler;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.extensions.DocAppJwksExtension;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
+import java.security.interfaces.RSAPublicKey;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.startsWith;
@@ -42,16 +51,26 @@ class DocAppAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegration
     private static final URI AUTHORIZE_URI = URI.create("http://doc-app/authorize");
     private static final String DOC_APP_CLIENT_ID = "doc-app-client-id";
     private final KeyPair keyPair = generateRsaKeyPair();
+    private static final String ENCRYPTION_KEY_ID = UUID.randomUUID().toString();
     private final String publicKey =
             "-----BEGIN PUBLIC KEY-----\n"
                     + Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded())
                     + "\n-----END PUBLIC KEY-----\n";
 
+    @RegisterExtension
+    public static final DocAppJwksExtension jwksExtension = new DocAppJwksExtension();
+
     protected final ConfigurationService configurationService =
-            new DocAppTestConfigurationService();
+            new DocAppTestConfigurationService(jwksExtension);
 
     @BeforeEach
     void setup() throws Json.JsonException {
+        var jwkKey =
+                new RSAKey.Builder((RSAPublicKey) keyPair.getPublic())
+                        .keyUse(KeyUse.ENCRYPTION)
+                        .keyID(ENCRYPTION_KEY_ID)
+                        .build();
+        jwksExtension.init(new JWKSet(jwkKey));
         handler = new DocAppAuthorizeHandler(configurationService);
         redis.createSession(SESSION_ID);
         redis.addAuthRequestToSession(
@@ -117,7 +136,9 @@ class DocAppAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegration
 
     private class DocAppTestConfigurationService extends IntegrationTestConfigurationService {
 
-        public DocAppTestConfigurationService() {
+        private final DocAppJwksExtension jwksExtension;
+
+        public DocAppTestConfigurationService(DocAppJwksExtension jwksExtension) {
             super(
                     auditTopic,
                     notificationsQueue,
@@ -126,6 +147,7 @@ class DocAppAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegration
                     ipvPrivateKeyJwtSigner,
                     spotQueue,
                     docAppPrivateKeyJwtSigner);
+            this.jwksExtension = jwksExtension;
         }
 
         @Override
@@ -146,6 +168,21 @@ class DocAppAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegration
         @Override
         public String getDocAppAuthEncryptionPublicKey() {
             return publicKey;
+        }
+
+        @Override
+        public URI getDocAppJwksUri() throws URISyntaxException {
+            return new URIBuilder()
+                    .setHost("localhost")
+                    .setPort(jwksExtension.getHttpPort())
+                    .setPath("/.well-known/jwks.json")
+                    .setScheme("http")
+                    .build();
+        }
+
+        @Override
+        public String getDocAppEncryptionKeyID() {
+            return ENCRYPTION_KEY_ID;
         }
     }
 }

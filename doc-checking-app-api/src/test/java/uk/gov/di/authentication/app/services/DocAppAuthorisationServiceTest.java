@@ -73,6 +73,7 @@ class DocAppAuthorisationServiceTest {
 
     @BeforeEach
     void setUp() throws Json.JsonException {
+        when(configurationService.getEnvironment()).thenReturn("build");
         when(configurationService.getSessionExpiry()).thenReturn(SESSION_EXPIRY);
         when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + SESSION_ID))
                 .thenReturn(objectMapper.writeValueAsString(STATE));

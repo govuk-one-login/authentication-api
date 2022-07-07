@@ -13,6 +13,7 @@ import com.nimbusds.jose.Payload;
 import com.nimbusds.jose.crypto.RSAEncrypter;
 import com.nimbusds.jose.crypto.impl.ECDSA;
 import com.nimbusds.jose.jwk.JWK;
+import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.EncryptedJWT;
@@ -35,6 +36,8 @@ import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
+import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
@@ -49,6 +52,7 @@ public class DocAppAuthorisationService {
     private final RedisConnectionService redisConnectionService;
     private final KmsConnectionService kmsConnectionService;
     public static final String STATE_STORAGE_PREFIX = "state:";
+    private static final String BUILD_ENVIRONMENT = "build";
     private static final JWSAlgorithm SIGNING_ALGORITHM = JWSAlgorithm.ES256;
 
     private final Json objectMapper = SerializationService.getInstance();
@@ -206,15 +210,26 @@ public class DocAppAuthorisationService {
     private RSAPublicKey getPublicEncryptionKey() {
         try {
             LOG.info("Getting Doc App Auth Encryption Public Key");
-            var docAppAuthEncryptionPublicKey =
-                    configurationService.getDocAppAuthEncryptionPublicKey();
-            return new RSAKey.Builder(
-                            (RSAKey) JWK.parseFromPEMEncodedObjects(docAppAuthEncryptionPublicKey))
-                    .build()
-                    .toRSAPublicKey();
+            JWK encryptionJWK;
+            if (configurationService.getEnvironment().equals(BUILD_ENVIRONMENT)) {
+                var docAppAuthEncryptionPublicKey =
+                        configurationService.getDocAppAuthEncryptionPublicKey();
+                encryptionJWK = JWK.parseFromPEMEncodedObjects(docAppAuthEncryptionPublicKey);
+            } else {
+                JWKSet publicJwkSet = JWKSet.load(configurationService.getDocAppJwksUri().toURL());
+                encryptionJWK =
+                        publicJwkSet.getKeyByKeyId(configurationService.getDocAppEncryptionKeyID());
+            }
+            return new RSAKey.Builder((RSAKey) encryptionJWK).build().toRSAPublicKey();
         } catch (JOSEException e) {
             LOG.error("Error parsing the public key to RSAPublicKey", e);
             throw new RuntimeException();
+        } catch (IOException | ParseException e) {
+            LOG.error("Unable to load JWKSet", e);
+            throw new RuntimeException(e);
+        } catch (URISyntaxException e) {
+            LOG.error("Unable to get the Doc App JWKS URI", e);
+            throw new RuntimeException(e);
         }
     }
 }
