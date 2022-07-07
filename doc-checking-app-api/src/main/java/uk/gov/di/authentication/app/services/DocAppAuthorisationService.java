@@ -52,7 +52,7 @@ public class DocAppAuthorisationService {
     private final RedisConnectionService redisConnectionService;
     private final KmsConnectionService kmsConnectionService;
     public static final String STATE_STORAGE_PREFIX = "state:";
-    private static final String BUILD_ENVIRONMENT = "build";
+    private static final String STAGING_ENVIRONMENT = "staging";
     private static final JWSAlgorithm SIGNING_ALGORITHM = JWSAlgorithm.ES256;
 
     private final Json objectMapper = SerializationService.getInstance();
@@ -211,14 +211,14 @@ public class DocAppAuthorisationService {
         try {
             LOG.info("Getting Doc App Auth Encryption Public Key");
             JWK encryptionJWK;
-            if (configurationService.getEnvironment().equals(BUILD_ENVIRONMENT)) {
-                var docAppAuthEncryptionPublicKey =
-                        configurationService.getDocAppAuthEncryptionPublicKey();
-                encryptionJWK = JWK.parseFromPEMEncodedObjects(docAppAuthEncryptionPublicKey);
-            } else {
+            if (configurationService.getEnvironment().equals(STAGING_ENVIRONMENT)) {
                 JWKSet publicJwkSet = JWKSet.load(configurationService.getDocAppJwksUri().toURL());
                 encryptionJWK =
                         publicJwkSet.getKeyByKeyId(configurationService.getDocAppEncryptionKeyID());
+            } else {
+                var docAppAuthEncryptionPublicKey =
+                        configurationService.getDocAppAuthEncryptionPublicKey();
+                encryptionJWK = JWK.parseFromPEMEncodedObjects(docAppAuthEncryptionPublicKey);
             }
             return new RSAKey.Builder((RSAKey) encryptionJWK).build().toRSAPublicKey();
         } catch (JOSEException e) {
