@@ -214,6 +214,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                         .toString())
                         .claim("client_id", CLIENT_ID)
                         .claim("state", state.getValue())
+                        .claim("nonce", new Nonce().getValue())
                         .issuer(CLIENT_ID)
                         .build();
         var jwsHeader = new JWSHeader(JWSAlgorithm.RS256);

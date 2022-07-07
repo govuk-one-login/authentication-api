@@ -183,7 +183,6 @@ public class AuthorisationHandler
                                 authRequest =
                                         RequestObjectToAuthRequestHelper.transform(authRequest);
                                 return getOrCreateSessionAndRedirect(
-                                        queryStringParameters,
                                         sessionService.getSessionFromSessionCookie(
                                                 input.getHeaders()),
                                         authRequest,
@@ -195,7 +194,6 @@ public class AuthorisationHandler
     }
 
     private APIGatewayProxyResponseEvent getOrCreateSessionAndRedirect(
-            Map<String, List<String>> authRequestParameters,
             Optional<Session> existingSession,
             AuthenticationRequest authenticationRequest,
             Context context,
@@ -241,7 +239,7 @@ public class AuthorisationHandler
         var clientSessionID =
                 clientSessionService.generateClientSession(
                         new ClientSession(
-                                authRequestParameters,
+                                authenticationRequest.toParameters(),
                                 LocalDateTime.now(),
                                 authorizationService.getEffectiveVectorOfTrust(
                                         authenticationRequest)));
