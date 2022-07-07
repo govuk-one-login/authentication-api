@@ -7,7 +7,7 @@ stub_rp_clients = [
     logout_urls = [
       "https://di-auth-stub-relying-party-production.london.cloudapps.digital/signed-out",
     ]
-    test_client                     = "0"
+    test_client                     = "1"
     consent_required                = "0"
     client_type                     = "web"
     identity_verification_supported = "1"
