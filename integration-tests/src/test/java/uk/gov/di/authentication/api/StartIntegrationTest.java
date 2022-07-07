@@ -6,7 +6,6 @@ import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
-import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -140,7 +139,13 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var sessionId = redis.createSession(isAuthenticated);
         var scope = new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP);
         var authRequest =
-                new AuthorizationRequest.Builder(ResponseType.CODE, new ClientID(CLIENT_ID))
+                new AuthenticationRequest.Builder(
+                                new ResponseType(ResponseType.Value.CODE),
+                                new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP),
+                                new ClientID(CLIENT_ID),
+                                REDIRECT_URI)
+                        .state(new State())
+                        .nonce(new Nonce())
                         .requestObject(createSignedJWT(keyPair, state))
                         .build();
         redis.createClientSession(CLIENT_SESSION_ID, authRequest.toParameters());

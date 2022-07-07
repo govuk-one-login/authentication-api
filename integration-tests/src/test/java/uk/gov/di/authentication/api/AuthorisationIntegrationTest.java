@@ -604,8 +604,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 "scope",
                                 new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP)
                                         .toString())
+                        .claim("nonce", new Nonce().getValue())
                         .claim("client_id", CLIENT_ID)
-                        .claim("state", new State())
+                        .claim("state", new State().getValue())
                         .issuer(CLIENT_ID)
                         .build();
         var jwsHeader = new JWSHeader(JWSAlgorithm.RS256);

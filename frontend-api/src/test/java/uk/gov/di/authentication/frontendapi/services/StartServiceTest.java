@@ -6,7 +6,6 @@ import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
-import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
@@ -356,12 +355,17 @@ class StartServiceTest {
             SignedJWT requestObject,
             boolean identityVerificationSupport,
             boolean isAuthenticated) {
-        AuthorizationRequest authRequest;
+        AuthenticationRequest authRequest;
         var clientSessionVTR = VectorOfTrust.getDefaults();
         if (Objects.nonNull(requestObject)) {
             authRequest =
-                    new AuthorizationRequest.Builder(
-                                    new ResponseType(ResponseType.Value.CODE), CLIENT_ID)
+                    new AuthenticationRequest.Builder(
+                                    new ResponseType(ResponseType.Value.CODE),
+                                    DOC_APP_SCOPES,
+                                    CLIENT_ID,
+                                    REDIRECT_URI)
+                            .state(STATE)
+                            .nonce(new Nonce())
                             .requestObject(requestObject)
                             .build();
         } else {

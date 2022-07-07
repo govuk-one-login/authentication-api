@@ -127,7 +127,7 @@ public class TokenHandlerTest {
     private final RedisConnectionService redisConnectionService =
             mock(RedisConnectionService.class);
     private TokenHandler handler;
-    private Json objectMapper = SerializationService.getInstance();
+    private final Json objectMapper = SerializationService.getInstance();
 
     @BeforeEach
     public void setUp() {
@@ -442,8 +442,8 @@ public class TokenHandlerTest {
         when(tokenService.generateTokenResponse(
                         DOC_APP_CLIENT_ID.getValue(),
                         DOC_APP_USER_PUBLIC_SUBJECT,
-                        new Scope(OIDCScopeValue.OPENID, DOC_CHECKING_APP),
-                        Map.of(),
+                        new Scope(DOC_CHECKING_APP, OIDCScopeValue.OPENID),
+                        Map.of("nonce", NONCE),
                         DOC_APP_USER_PUBLIC_SUBJECT,
                         vtr.retrieveVectorOfTrustForToken(),
                         null,
@@ -452,9 +452,10 @@ public class TokenHandlerTest {
                         true))
                 .thenReturn(tokenResponse);
 
-        APIGatewayProxyResponseEvent result =
+        var result =
                 generateApiGatewayRequest(
                         privateKeyJWT, authCode, DOC_APP_CLIENT_ID.getValue(), true);
+
         assertThat(result, hasStatus(200));
         assertTrue(result.getBody().contains(refreshToken.getValue()));
         assertTrue(result.getBody().contains(accessToken.getValue()));
@@ -591,7 +592,7 @@ public class TokenHandlerTest {
         return kpg.generateKeyPair();
     }
 
-    private static AuthorizationRequest generateRequestObjectAuthRequest() throws JOSEException {
+    private static AuthenticationRequest generateRequestObjectAuthRequest() throws JOSEException {
         var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         Scope scope = new Scope(DOC_CHECKING_APP, OIDCScopeValue.OPENID);
         var jwtClaimsSet =
@@ -602,18 +603,20 @@ public class TokenHandlerTest {
                         .claim("scope", scope.toString())
                         .claim("client_id", DOC_APP_CLIENT_ID.getValue())
                         .claim("state", STATE.getValue())
+                        .claim("nonce", NONCE.getValue())
                         .issuer(CLIENT_ID)
                         .build();
         var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
         return generateAuthRequest(signedJWT);
     }
 
-    private static AuthorizationRequest generateAuthRequest(SignedJWT signedJWT) {
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-        AuthorizationRequest.Builder builder =
-                new AuthorizationRequest.Builder(ResponseType.CODE, DOC_APP_CLIENT_ID)
-                        .requestObject(signedJWT);
-        return builder.build();
+    private static AuthenticationRequest generateAuthRequest(SignedJWT signedJWT) {
+        Scope scope = new Scope(DOC_CHECKING_APP, OIDCScopeValue.OPENID);
+        return new AuthenticationRequest.Builder(
+                        ResponseType.CODE, scope, DOC_APP_CLIENT_ID, URI.create(REDIRECT_URI))
+                .state(STATE)
+                .nonce(NONCE)
+                .requestObject(signedJWT)
+                .build();
     }
 }

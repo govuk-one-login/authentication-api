@@ -3,6 +3,7 @@ package uk.gov.di.authentication.oidc.services;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
+import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
@@ -16,6 +17,7 @@ import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 
@@ -27,11 +29,13 @@ import java.security.interfaces.RSAPublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.text.ParseException;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import static java.util.Collections.emptyList;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
@@ -40,17 +44,25 @@ public class RequestObjectService {
 
     private static final Logger LOG = LogManager.getLogger(RequestObjectService.class);
 
+    public static final String VTR_PARAM = "vtr";
     private final DynamoClientService dynamoClientService;
     private final ConfigurationService configurationService;
+    private final IPVCapacityService ipvCapacityService;
 
     public RequestObjectService(
-            DynamoClientService dynamoClientService, ConfigurationService configurationService) {
+            DynamoClientService dynamoClientService,
+            ConfigurationService configurationService,
+            IPVCapacityService ipvCapacityService) {
         this.dynamoClientService = dynamoClientService;
         this.configurationService = configurationService;
+        this.ipvCapacityService = ipvCapacityService;
     }
 
     public RequestObjectService(ConfigurationService configurationService) {
-        this(new DynamoClientService(configurationService), configurationService);
+        this(
+                new DynamoClientService(configurationService),
+                configurationService,
+                new IPVCapacityService(configurationService));
     }
 
     public Optional<AuthRequestError> validateRequestObject(AuthenticationRequest authRequest) {
@@ -152,11 +164,24 @@ public class RequestObjectService {
                                         "Request is missing state parameter"),
                                 redirectURI));
             }
+            if (Objects.isNull(jwtClaimsSet.getClaim("nonce"))) {
+                LOG.warn("Nomce is missing from authRequest");
+                return Optional.of(
+                        new AuthRequestError(
+                                new ErrorObject(
+                                        OAuth2Error.INVALID_REQUEST_CODE,
+                                        "Request is missing nonce parameter"),
+                                redirectURI));
+            }
+            var vtrError = validateVtr(jwtClaimsSet, redirectURI);
+            if (vtrError.isPresent()) {
+                return vtrError;
+            }
+            LOG.info("RequestObject has passed initial validation");
+            return Optional.empty();
         } catch (ParseException e) {
             throw new RuntimeException(e);
         }
-        LOG.info("RequestObject has passed initial validation");
-        return Optional.empty();
     }
 
     private boolean requestContainsInvalidScopes(
@@ -172,7 +197,7 @@ public class RequestObjectService {
         return !clientRegistry.getScopes().containsAll(scopes);
     }
 
-    public static boolean isSignatureValid(SignedJWT signedJWT, String publicKey) {
+    private static boolean isSignatureValid(SignedJWT signedJWT, String publicKey) {
         try {
             byte[] decodedKey = Base64.getMimeDecoder().decode(publicKey);
             X509EncodedKeySpec keySpec = new X509EncodedKeySpec(decodedKey);
@@ -184,5 +209,32 @@ public class RequestObjectService {
             LOG.error("Error when validating JWT signature");
             throw new RuntimeException(e);
         }
+    }
+
+    private Optional<AuthRequestError> validateVtr(JWTClaimsSet jwtClaimsSet, URI redirectURI) {
+        List<String> authRequestVtr = new ArrayList<>();
+        try {
+            authRequestVtr =
+                    Objects.isNull(jwtClaimsSet.getClaim(VTR_PARAM))
+                            ? emptyList()
+                            : List.of(jwtClaimsSet.getClaim(VTR_PARAM).toString());
+            var vectorOfTrust = VectorOfTrust.parseFromAuthRequestAttribute(authRequestVtr);
+            if (vectorOfTrust.containsLevelOfConfidence()
+                    && !ipvCapacityService.isIPVCapacityAvailable()) {
+                return Optional.of(
+                        new AuthRequestError(OAuth2Error.TEMPORARILY_UNAVAILABLE, redirectURI));
+            }
+        } catch (IllegalArgumentException e) {
+            LOG.warn(
+                    "vtr in AuthRequest is not valid. vtr in request: {}. IllegalArgumentException: {}",
+                    authRequestVtr,
+                    e);
+            return Optional.of(
+                    new AuthRequestError(
+                            new ErrorObject(
+                                    OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid"),
+                            redirectURI));
+        }
+        return Optional.empty();
     }
 }

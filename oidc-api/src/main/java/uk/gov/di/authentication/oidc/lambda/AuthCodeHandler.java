@@ -36,7 +36,6 @@ import java.util.Map;
 import java.util.Objects;
 
 import static java.util.Objects.isNull;
-import static uk.gov.di.authentication.shared.conditions.DocAppUserHelper.getRequestObjectClaim;
 import static uk.gov.di.authentication.shared.conditions.DocAppUserHelper.isDocCheckingAppUserWithSubjectId;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.Session.AccountState.EXISTING;
@@ -173,22 +172,6 @@ public class AuthCodeHandler
                             URI redirectUri = authenticationRequest.getRedirectionURI();
                             State state = authenticationRequest.getState();
                             try {
-                                boolean docCheckingUser =
-                                        isDocCheckingAppUserWithSubjectId(clientSession);
-                                if (docCheckingUser) {
-                                    redirectUri =
-                                            URI.create(
-                                                    getRequestObjectClaim(
-                                                            authenticationRequest,
-                                                            "redirect_uri",
-                                                            String.class));
-                                    state =
-                                            new State(
-                                                    getRequestObjectClaim(
-                                                            authenticationRequest,
-                                                            "state",
-                                                            String.class));
-                                }
                                 if (!authorizationService.isClientRedirectUriValid(
                                         authenticationRequest.getClientID(), redirectUri)) {
                                     return generateApiGatewayProxyErrorResponse(
@@ -231,7 +214,7 @@ public class AuthCodeHandler
                                                 "Client",
                                                 authenticationRequest.getClientID().getValue()));
 
-                                if (!docCheckingUser) {
+                                if (!isDocCheckingAppUserWithSubjectId(clientSession)) {
                                     sessionService.save(
                                             session.setAuthenticated(true).setNewAccount(EXISTING));
                                 } else {

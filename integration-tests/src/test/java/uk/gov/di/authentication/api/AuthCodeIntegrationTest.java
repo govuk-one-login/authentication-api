@@ -16,7 +16,6 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 
-import java.io.IOException;
 import java.net.URI;
 import java.security.KeyPair;
 import java.util.Base64;
@@ -44,8 +43,7 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
-    public void shouldReturn302WithSuccessfulAuthorisationResponse()
-            throws IOException, Json.JsonException {
+    void shouldReturn302WithSuccessfulAuthorisationResponse() throws Json.JsonException {
         String sessionId = "some-session-id";
         String clientSessionId = "some-client-session-id";
         KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();

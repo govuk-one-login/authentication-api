@@ -9,7 +9,6 @@ import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.GrantType;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
-import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.RefreshToken;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
@@ -46,8 +45,6 @@ import java.util.Objects;
 import java.util.Optional;
 
 import static java.lang.String.format;
-import static uk.gov.di.authentication.shared.conditions.DocAppUserHelper.getRequestObjectClaim;
-import static uk.gov.di.authentication.shared.conditions.DocAppUserHelper.getRequestObjectScopeClaim;
 import static uk.gov.di.authentication.shared.conditions.DocAppUserHelper.isDocCheckingAppUserWithSubjectId;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
@@ -248,11 +245,7 @@ public class TokenHandler
                                                 clientSession.getAuthRequestParams(), e));
                             }
 
-                            var authRequestRedirectURI =
-                                    isDocCheckingAppUserWithSubjectId(clientSession)
-                                            ? getRequestObjectClaim(
-                                                    authRequest, "redirect_uri", String.class)
-                                            : authRequest.getRedirectionURI().toString();
+                            var authRequestRedirectURI = authRequest.getRedirectionURI().toString();
                             if (!authRequestRedirectURI.equals(requestBody.get("redirect_uri"))) {
                                 LOG.warn(
                                         "Redirect URI for auth request ({}) does not match redirect URI for request body ({})",
@@ -289,7 +282,6 @@ public class TokenHandler
                             OIDCTokenResponse tokenResponse;
                             if (isDocCheckingAppUserWithSubjectId(clientSession)) {
                                 LOG.info("Doc Checking App User with SubjectId: true");
-                                Scope scope = new Scope(getRequestObjectScopeClaim(authRequest));
                                 tokenResponse =
                                         segmentedFunctionCall(
                                                 "generateTokenResponse",
@@ -297,7 +289,7 @@ public class TokenHandler
                                                         tokenService.generateTokenResponse(
                                                                 clientID,
                                                                 clientSession.getDocAppSubjectId(),
-                                                                scope,
+                                                                authRequest.getScope(),
                                                                 additionalTokenClaims,
                                                                 clientSession.getDocAppSubjectId(),
                                                                 vot,
