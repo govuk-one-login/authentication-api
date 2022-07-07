@@ -8,9 +8,11 @@ import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
+import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,6 +50,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.startsWith;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISATION_INITIATED;
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR;
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED;
@@ -492,7 +495,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
-    void shouldCallAuthorizeWithRequestObject() throws JOSEException {
+    void shouldCallAuthorizeAsDocAppClient() throws JOSEException, ParseException {
         registerClient(
                 CLIENT_ID,
                 "test-client",
@@ -523,7 +526,13 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs")
                         .isPresent(),
                 equalTo(true));
-
+        var sessionCookie =
+                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs")
+                        .orElseThrow();
+        var clientSessionID = sessionCookie.getValue().split("\\.")[1];
+        var clientSession = redis.getClientSession(clientSessionID);
+        var authRequest = AuthenticationRequest.parse(clientSession.getAuthRequestParams());
+        assertTrue(authRequest.getScope().contains(CustomScopeValue.DOC_CHECKING_APP));
         assertEventTypesReceived(
                 auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
     }

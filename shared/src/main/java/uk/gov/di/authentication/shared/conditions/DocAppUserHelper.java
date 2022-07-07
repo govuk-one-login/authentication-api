@@ -22,9 +22,11 @@ public class DocAppUserHelper {
     public static boolean isDocCheckingAppUser(UserContext context) {
         var authRequestParams = context.getClientSession().getAuthRequestParams();
         if (!authRequestParams.containsKey("request")) {
+            LOG.info("No request object in auth request");
             return false;
         }
         if (!hasDocCheckingScope(authRequestParams)) {
+            LOG.info("No doc app scope in auth request");
             return false;
         } else {
             return context.getClient()
