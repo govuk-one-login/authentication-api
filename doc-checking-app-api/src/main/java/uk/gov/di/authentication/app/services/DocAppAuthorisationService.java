@@ -38,7 +38,6 @@ import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
@@ -238,9 +237,6 @@ public class DocAppAuthorisationService {
             throw new RuntimeException();
         } catch (IOException | ParseException e) {
             LOG.error("Unable to load JWKSet", e);
-            throw new RuntimeException(e);
-        } catch (URISyntaxException e) {
-            LOG.error("Unable to get the Doc App JWKS URI", e);
             throw new RuntimeException(e);
         }
     }

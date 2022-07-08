@@ -16,7 +16,6 @@ import uk.gov.di.authentication.shared.helpers.CryptoProviderHelper;
 import java.io.IOException;
 import java.io.StringReader;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
 import java.security.interfaces.ECPublicKey;
@@ -133,7 +132,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("DOC_APP_SIGNING_KEY_ID", "");
     }
 
-    public URI getDocAppJwksUri() throws URISyntaxException {
+    public URI getDocAppJwksUri() {
         return URI.create(System.getenv().getOrDefault("DOC_APP_JWKS_URL", ""));
     }
 

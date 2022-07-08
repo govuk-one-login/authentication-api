@@ -327,13 +327,17 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
         }
 
         @Override
-        public URI getDocAppJwksUri() throws URISyntaxException {
-            return new URIBuilder()
-                    .setHost("localhost")
-                    .setPort(jwksExtension.getHttpPort())
-                    .setPath("/.well-known/jwks.json")
-                    .setScheme("http")
-                    .build();
+        public URI getDocAppJwksUri() {
+            try {
+                return new URIBuilder()
+                        .setHost("localhost")
+                        .setPort(jwksExtension.getHttpPort())
+                        .setPath("/.well-known/jwks.json")
+                        .setScheme("http")
+                        .build();
+            } catch (URISyntaxException e) {
+                throw new RuntimeException(e);
+            }
         }
 
         @Override
