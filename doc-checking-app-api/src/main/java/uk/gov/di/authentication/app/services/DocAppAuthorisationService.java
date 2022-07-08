@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.app.services;
 
+import com.amazonaws.services.kms.model.GetPublicKeyRequest;
 import com.amazonaws.services.kms.model.SignRequest;
 import com.amazonaws.services.kms.model.SigningAlgorithmSpec;
 import com.nimbusds.jose.EncryptionMethod;
@@ -13,6 +14,7 @@ import com.nimbusds.jose.Payload;
 import com.nimbusds.jose.crypto.RSAEncrypter;
 import com.nimbusds.jose.crypto.impl.ECDSA;
 import com.nimbusds.jose.jwk.JWK;
+import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.EncryptedJWT;
@@ -35,12 +37,15 @@ import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.Optional;
+
+import static uk.gov.di.authentication.shared.helpers.HashHelper.hashSha256String;
 
 public class DocAppAuthorisationService {
 
@@ -49,6 +54,7 @@ public class DocAppAuthorisationService {
     private final RedisConnectionService redisConnectionService;
     private final KmsConnectionService kmsConnectionService;
     public static final String STATE_STORAGE_PREFIX = "state:";
+    private static final String STAGING_ENVIRONMENT = "staging";
     private static final JWSAlgorithm SIGNING_ALGORITHM = JWSAlgorithm.ES256;
 
     private final Json objectMapper = SerializationService.getInstance();
@@ -134,7 +140,16 @@ public class DocAppAuthorisationService {
 
     public EncryptedJWT constructRequestJWT(State state, Subject subject) {
         LOG.info("Generating request JWT");
-        var jwsHeader = new JWSHeader(SIGNING_ALGORITHM);
+        var docAppTokenSigningKeyAlias = configurationService.getDocAppTokenSigningKeyAlias();
+        var signingKeyId =
+                kmsConnectionService
+                        .getPublicKey(
+                                new GetPublicKeyRequest().withKeyId(docAppTokenSigningKeyAlias))
+                        .getKeyId();
+        var jwsHeader =
+                new JWSHeader.Builder(SIGNING_ALGORITHM)
+                        .keyID(hashSha256String(signingKeyId))
+                        .build();
         var jwtID = IdGenerator.generate();
         var expiryDate = NowHelper.nowPlus(3, ChronoUnit.MINUTES);
         var claimsBuilder =
@@ -158,7 +173,7 @@ public class DocAppAuthorisationService {
         var message = encodedHeader + "." + encodedClaims;
         var signRequest = new SignRequest();
         signRequest.setMessage(ByteBuffer.wrap(message.getBytes()));
-        signRequest.setKeyId(configurationService.getDocAppTokenSigningKeyAlias());
+        signRequest.setKeyId(docAppTokenSigningKeyAlias);
         signRequest.setSigningAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256.toString());
         try {
             LOG.info("Signing request JWT");
@@ -206,15 +221,23 @@ public class DocAppAuthorisationService {
     private RSAPublicKey getPublicEncryptionKey() {
         try {
             LOG.info("Getting Doc App Auth Encryption Public Key");
-            var docAppAuthEncryptionPublicKey =
-                    configurationService.getDocAppAuthEncryptionPublicKey();
-            return new RSAKey.Builder(
-                            (RSAKey) JWK.parseFromPEMEncodedObjects(docAppAuthEncryptionPublicKey))
-                    .build()
-                    .toRSAPublicKey();
+            JWK encryptionJWK;
+            if (configurationService.getEnvironment().equals(STAGING_ENVIRONMENT)) {
+                JWKSet publicJwkSet = JWKSet.load(configurationService.getDocAppJwksUri().toURL());
+                encryptionJWK =
+                        publicJwkSet.getKeyByKeyId(configurationService.getDocAppEncryptionKeyID());
+            } else {
+                var docAppAuthEncryptionPublicKey =
+                        configurationService.getDocAppAuthEncryptionPublicKey();
+                encryptionJWK = JWK.parseFromPEMEncodedObjects(docAppAuthEncryptionPublicKey);
+            }
+            return new RSAKey.Builder((RSAKey) encryptionJWK).build().toRSAPublicKey();
         } catch (JOSEException e) {
             LOG.error("Error parsing the public key to RSAPublicKey", e);
             throw new RuntimeException();
+        } catch (IOException | ParseException e) {
+            LOG.error("Unable to load JWKSet", e);
+            throw new RuntimeException(e);
         }
     }
 }

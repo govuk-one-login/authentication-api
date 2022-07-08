@@ -1,5 +1,7 @@
 package uk.gov.di.authentication.app.services;
 
+import com.amazonaws.services.kms.model.GetPublicKeyRequest;
+import com.amazonaws.services.kms.model.GetPublicKeyResult;
 import com.amazonaws.services.kms.model.SignRequest;
 import com.amazonaws.services.kms.model.SignResult;
 import com.nimbusds.jose.JOSEException;
@@ -47,6 +49,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.app.services.DocAppAuthorisationService.STATE_STORAGE_PREFIX;
+import static uk.gov.di.authentication.shared.helpers.HashHelper.hashSha256String;
 
 class DocAppAuthorisationServiceTest {
 
@@ -73,6 +76,7 @@ class DocAppAuthorisationServiceTest {
 
     @BeforeEach
     void setUp() throws Json.JsonException {
+        when(configurationService.getEnvironment()).thenReturn("build");
         when(configurationService.getSessionExpiry()).thenReturn(SESSION_EXPIRY);
         when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + SESSION_ID))
                 .thenReturn(objectMapper.writeValueAsString(STATE));
@@ -207,6 +211,9 @@ class DocAppAuthorisationServiceTest {
         var state = new State();
         var pairwise = new Subject("pairwise-identifier");
 
+        when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class)))
+                .thenReturn(new GetPublicKeyResult().withKeyId("789789789789789"));
+
         var encryptedJWT = authorisationService.constructRequestJWT(state, pairwise);
 
         var signedJWTResponse = decryptJWT(encryptedJWT);
@@ -222,6 +229,9 @@ class DocAppAuthorisationServiceTest {
                 signedJWTResponse.getJWTClaimsSet().getAudience(),
                 equalTo(singletonList(DOC_APP_AUTHORISATION_URI.toString())));
         assertThat(signedJWTResponse.getJWTClaimsSet().getClaim("response_type"), equalTo("code"));
+        assertThat(
+                signedJWTResponse.getHeader().getKeyID(),
+                equalTo(hashSha256String("789789789789789")));
     }
 
     private SignedJWT decryptJWT(EncryptedJWT encryptedJWT) throws JOSEException {

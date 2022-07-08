@@ -340,6 +340,21 @@ variable "doc_app_cri_public_signing_key" {
   description = "The PEM encoded public key used to sign VCs from the Doc App CRI"
 }
 
+variable "doc_app_encryption_key_id" {
+  type    = string
+  default = "undefined"
+}
+
+variable "doc_app_signing_key_id" {
+  type    = string
+  default = "undefined"
+}
+
+variable "doc_app_jwks_endpoint" {
+  type    = string
+  default = "undefined"
+}
+
 variable "spot_account_number" {
   type        = string
   default     = "undefined"

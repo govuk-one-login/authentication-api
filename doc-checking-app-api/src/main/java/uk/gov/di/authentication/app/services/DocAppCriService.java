@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.app.services;
 
+import com.amazonaws.services.kms.model.GetPublicKeyRequest;
 import com.amazonaws.services.kms.model.SignRequest;
 import com.amazonaws.services.kms.model.SignResult;
 import com.amazonaws.services.kms.model.SigningAlgorithmSpec;
@@ -9,6 +10,7 @@ import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.crypto.ECDSAVerifier;
 import com.nimbusds.jose.crypto.impl.ECDSA;
+import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.SignedJWT;
@@ -33,13 +35,16 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.nio.ByteBuffer;
+import java.security.interfaces.ECPublicKey;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
 
 import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.GET;
 import static java.util.Collections.singletonList;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
+import static uk.gov.di.authentication.shared.helpers.HashHelper.hashSha256String;
 
 public class DocAppCriService {
 
@@ -47,6 +52,7 @@ public class DocAppCriService {
     private final KmsConnectionService kmsService;
     private static final JWSAlgorithm TOKEN_ALGORITHM = JWSAlgorithm.ES256;
     private static final Long PRIVATE_KEY_JWT_EXPIRY = 5L;
+    private static final String STAGING_ENVIRONMENT = "staging";
     private static final Logger LOG = LogManager.getLogger(DocAppCriService.class);
 
     public DocAppCriService(
@@ -130,9 +136,18 @@ public class DocAppCriService {
             JWT jwt = response.getContentAsJWT();
             if (jwt instanceof SignedJWT) {
                 var signed = (SignedJWT) jwt;
-                var signingPublicKey = configurationService.getDocAppCredentialSigningPublicKey();
+                ECPublicKey signingPublicKey;
+                if (configurationService.getEnvironment().equals(STAGING_ENVIRONMENT)) {
+                    JWKSet publicJwkSet =
+                            JWKSet.load(configurationService.getDocAppJwksUri().toURL());
+                    var signingJWK =
+                            publicJwkSet.getKeyByKeyId(
+                                    configurationService.getDocAppSigningKeyID());
+                    signingPublicKey = signingJWK.toPublicJWK().toECKey().toECPublicKey();
+                } else {
+                    signingPublicKey = configurationService.getDocAppCredentialSigningPublicKey();
+                }
                 JWSVerifier verifier = new ECDSAVerifier(signingPublicKey);
-
                 return signed.verify(verifier);
             }
             throw new UnsuccesfulCredentialResponseException("CRI response is not signed");
@@ -141,14 +156,25 @@ public class DocAppCriService {
         } catch (JOSEException e) {
             throw new UnsuccesfulCredentialResponseException(
                     "Error verifying CRI response signature", e);
+        } catch (MalformedURLException e) {
+            throw new RuntimeException(e);
+        } catch (IOException | java.text.ParseException e) {
+            LOG.error("Unable to load JWKSet", e);
+            throw new RuntimeException(e);
         }
     }
 
     private PrivateKeyJWT generatePrivateKeyJwt(JWTAuthenticationClaimsSet claimsSet) {
         try {
+            var docAppTokenSigningKeyAlias = configurationService.getDocAppTokenSigningKeyAlias();
+            var signingKeyId =
+                    kmsService
+                            .getPublicKey(
+                                    new GetPublicKeyRequest().withKeyId(docAppTokenSigningKeyAlias))
+                            .getKeyId();
             var jwsHeader =
                     new JWSHeader.Builder(TOKEN_ALGORITHM)
-                            .keyID(configurationService.getDocAppTokenSigningKeyAlias())
+                            .keyID(hashSha256String(signingKeyId))
                             .build();
             var encodedHeader = jwsHeader.toBase64URL();
             var encodedClaims = Base64URL.encode(claimsSet.toJWTClaimsSet().toString());
@@ -156,7 +182,7 @@ public class DocAppCriService {
             var messageToSign = ByteBuffer.wrap(message.getBytes());
             var signRequest = new SignRequest();
             signRequest.setMessage(messageToSign);
-            signRequest.setKeyId(configurationService.getDocAppTokenSigningKeyAlias());
+            signRequest.setKeyId(docAppTokenSigningKeyAlias);
             signRequest.setSigningAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256.toString());
             SignResult signResult = kmsService.sign(signRequest);
             LOG.info("PrivateKeyJWT has been signed successfully");

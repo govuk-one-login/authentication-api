@@ -32,6 +32,8 @@ module "doc-app-authorize" {
     DOC_APP_AUTHORISATION_URI          = var.doc_app_authorisation_uri
     DOC_APP_AUTHORISATION_CALLBACK_URI = var.doc_app_authorisation_callback_uri
     DOC_APP_AUTHORISATION_CLIENT_ID    = var.doc_app_authorisation_client_id
+    DOC_APP_JWKS_URL                   = var.doc_app_jwks_endpoint
+    DOC_APP_ENCRYPTION_KEY_ID          = var.doc_app_encryption_key_id
     DOC_APP_TOKEN_SIGNING_KEY_ALIAS    = local.doc_app_auth_key_alias_name
   }
   handler_function_name = "uk.gov.di.authentication.app.lambda.DocAppAuthorizeHandler::handleRequest"
@@ -57,6 +59,7 @@ module "doc-app-authorize" {
   security_group_ids = [
     local.authentication_security_group_id,
     local.authentication_oidc_redis_security_group_id,
+    local.authentication_egress_security_group_id,
   ]
   subnet_id                              = local.authentication_subnet_ids
   lambda_role_arn                        = module.doc_app_authorize_role.arn
