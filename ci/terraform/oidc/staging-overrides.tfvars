@@ -4,6 +4,7 @@ ipv_api_enabled                    = true
 doc_app_authorisation_client_id    = "authOrchestratorDocApp"
 doc_app_authorisation_uri          = "https://www.review-b.staging.account.gov.uk/dca/oauth2/authorize"
 doc_app_backend_uri                = "https://api.review-b.staging.account.gov.uk"
+doc_app_domain                     = "https://api.review-b.staging.account.gov.uk"
 doc_app_authorisation_callback_uri = "https://oidc.staging.account.gov.uk/doc-app-callback"
 doc_app_encryption_key_id          = "ca6d5930-77a6-41a4-8192-125df996c084"
 doc_app_signing_key_id             = "991d4f12-0367-4eb6-b166-607565a3e2d8"
