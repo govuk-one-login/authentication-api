@@ -1,5 +1,7 @@
 package uk.gov.di.authentication.app.services;
 
+import com.amazonaws.services.kms.model.GetPublicKeyRequest;
+import com.amazonaws.services.kms.model.GetPublicKeyResult;
 import com.amazonaws.services.kms.model.SignRequest;
 import com.amazonaws.services.kms.model.SignResult;
 import com.nimbusds.jose.JOSEException;
@@ -60,6 +62,8 @@ class DocAppCriServiceTest {
     @Test
     void shouldConstructTokenRequest() throws JOSEException {
         signJWTWithKMS();
+        when(kmsService.getPublicKey(any(GetPublicKeyRequest.class)))
+                .thenReturn(new GetPublicKeyResult().withKeyId("789789789789789"));
         TokenRequest tokenRequest = tokenService.constructTokenRequest(AUTH_CODE.getValue());
         assertThat(tokenRequest.getEndpointURI().toString(), equalTo(CRI_URI + "token"));
         assertThat(

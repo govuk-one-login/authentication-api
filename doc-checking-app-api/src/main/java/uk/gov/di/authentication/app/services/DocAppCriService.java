@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.app.services;
 
+import com.amazonaws.services.kms.model.GetPublicKeyRequest;
 import com.amazonaws.services.kms.model.SignRequest;
 import com.amazonaws.services.kms.model.SignResult;
 import com.amazonaws.services.kms.model.SigningAlgorithmSpec;
@@ -44,6 +45,7 @@ import java.util.Map;
 import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.GET;
 import static java.util.Collections.singletonList;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
+import static uk.gov.di.authentication.shared.helpers.HashHelper.hashSha256String;
 
 public class DocAppCriService {
 
@@ -168,9 +170,15 @@ public class DocAppCriService {
 
     private PrivateKeyJWT generatePrivateKeyJwt(JWTAuthenticationClaimsSet claimsSet) {
         try {
+            var docAppTokenSigningKeyAlias = configurationService.getDocAppTokenSigningKeyAlias();
+            var signingKeyId =
+                    kmsService
+                            .getPublicKey(
+                                    new GetPublicKeyRequest().withKeyId(docAppTokenSigningKeyAlias))
+                            .getKeyId();
             var jwsHeader =
                     new JWSHeader.Builder(TOKEN_ALGORITHM)
-                            .keyID(configurationService.getDocAppTokenSigningKeyAlias())
+                            .keyID(hashSha256String(signingKeyId))
                             .build();
             var encodedHeader = jwsHeader.toBase64URL();
             var encodedClaims = Base64URL.encode(claimsSet.toJWTClaimsSet().toString());
@@ -178,7 +186,7 @@ public class DocAppCriService {
             var messageToSign = ByteBuffer.wrap(message.getBytes());
             var signRequest = new SignRequest();
             signRequest.setMessage(messageToSign);
-            signRequest.setKeyId(configurationService.getDocAppTokenSigningKeyAlias());
+            signRequest.setKeyId(docAppTokenSigningKeyAlias);
             signRequest.setSigningAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256.toString());
             SignResult signResult = kmsService.sign(signRequest);
             LOG.info("PrivateKeyJWT has been signed successfully");

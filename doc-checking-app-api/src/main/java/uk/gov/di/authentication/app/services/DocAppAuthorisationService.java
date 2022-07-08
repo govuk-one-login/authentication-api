@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.app.services;
 
+import com.amazonaws.services.kms.model.GetPublicKeyRequest;
 import com.amazonaws.services.kms.model.SignRequest;
 import com.amazonaws.services.kms.model.SigningAlgorithmSpec;
 import com.nimbusds.jose.EncryptionMethod;
@@ -44,6 +45,8 @@ import java.text.ParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.Optional;
+
+import static uk.gov.di.authentication.shared.helpers.HashHelper.hashSha256String;
 
 public class DocAppAuthorisationService {
 
@@ -138,7 +141,16 @@ public class DocAppAuthorisationService {
 
     public EncryptedJWT constructRequestJWT(State state, Subject subject) {
         LOG.info("Generating request JWT");
-        var jwsHeader = new JWSHeader(SIGNING_ALGORITHM);
+        var docAppTokenSigningKeyAlias = configurationService.getDocAppTokenSigningKeyAlias();
+        var signingKeyId =
+                kmsConnectionService
+                        .getPublicKey(
+                                new GetPublicKeyRequest().withKeyId(docAppTokenSigningKeyAlias))
+                        .getKeyId();
+        var jwsHeader =
+                new JWSHeader.Builder(SIGNING_ALGORITHM)
+                        .keyID(hashSha256String(signingKeyId))
+                        .build();
         var jwtID = IdGenerator.generate();
         var expiryDate = NowHelper.nowPlus(3, ChronoUnit.MINUTES);
         var claimsBuilder =
@@ -162,7 +174,7 @@ public class DocAppAuthorisationService {
         var message = encodedHeader + "." + encodedClaims;
         var signRequest = new SignRequest();
         signRequest.setMessage(ByteBuffer.wrap(message.getBytes()));
-        signRequest.setKeyId(configurationService.getDocAppTokenSigningKeyAlias());
+        signRequest.setKeyId(docAppTokenSigningKeyAlias);
         signRequest.setSigningAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256.toString());
         try {
             LOG.info("Signing request JWT");

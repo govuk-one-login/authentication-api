@@ -133,7 +133,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
     }
 
     @Test
-    void shouldRedirectToLoginWhenSuccessfullyProcessedIpvResponse() throws Json.JsonException {
+    void shouldRedirectToLoginWhenSuccessfullyProcessedDocAppResponse() throws Json.JsonException {
         setupSession();
 
         var response =
