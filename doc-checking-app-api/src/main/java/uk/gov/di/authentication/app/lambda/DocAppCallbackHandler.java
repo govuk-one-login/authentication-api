@@ -26,11 +26,14 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Objects;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class DocAppCallbackHandler
@@ -100,12 +103,21 @@ public class DocAppCallbackHandler
                             try {
                                 var sessionCookiesIds =
                                         CookieHelper.parseSessionCookie(input.getHeaders())
-                                                .orElseThrow();
+                                                .orElse(null);
+                                if (Objects.isNull(sessionCookiesIds)) {
+                                    LOG.error("No session cookie present");
+                                    throw new RuntimeException("No session cookie present");
+                                }
                                 var session =
                                         sessionService
                                                 .readSessionFromRedis(
                                                         sessionCookiesIds.getSessionId())
-                                                .orElseThrow();
+                                                .orElse(null);
+                                if (Objects.isNull(session)) {
+                                    LOG.error("Session not found");
+                                    throw new RuntimeException("Session not found");
+                                }
+                                attachSessionIdToLogs(session);
                                 var clientSession =
                                         clientSessionService
                                                 .getClientSession(
@@ -113,14 +125,16 @@ public class DocAppCallbackHandler
                                                 .orElse(null);
                                 if (Objects.isNull(clientSession)) {
                                     LOG.error("ClientSession not found");
-                                    throw new RuntimeException();
+                                    throw new RuntimeException("ClientSession not found");
                                 }
+                                attachLogFieldToLogs(
+                                        CLIENT_SESSION_ID, sessionCookiesIds.getClientSessionId());
                                 var clientId =
                                         AuthenticationRequest.parse(
                                                         clientSession.getAuthRequestParams())
                                                 .getClientID()
                                                 .getValue();
-
+                                attachLogFieldToLogs(CLIENT_ID, clientId);
                                 var errorObject =
                                         authorisationService.validateResponse(
                                                 input.getQueryStringParameters(),
@@ -151,6 +165,7 @@ public class DocAppCallbackHandler
                                                 input.getQueryStringParameters().get("code"));
                                 var tokenResponse = tokenService.sendTokenRequest(tokenRequest);
                                 if (tokenResponse.indicatesSuccess()) {
+                                    LOG.info("TokenResponse was successful");
                                     auditService.submitAuditEvent(
                                             DocAppAuditableEvent
                                                     .DOC_APP_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
@@ -199,6 +214,7 @@ public class DocAppCallbackHandler
                                             AuditService.UNKNOWN,
                                             AuditService.UNKNOWN,
                                             AuditService.UNKNOWN);
+                                    LOG.info("Adding DocAppCredential to dynamo");
                                     dynamoDocAppService.addDocAppCredential(
                                             clientSession.getDocAppSubjectId().getValue(),
                                             credential);
@@ -207,6 +223,7 @@ public class DocAppCallbackHandler
                                             ConstructUriHelper.buildURI(
                                                     configurationService.getLoginURI().toString(),
                                                     REDIRECT_PATH);
+                                    LOG.info("Redirecting to frontend");
                                     return generateApiGatewayProxyResponse(
                                             302,
                                             "",
@@ -229,9 +246,6 @@ public class DocAppCallbackHandler
                                             AuditService.UNKNOWN);
                                     throw e;
                                 }
-                            } catch (NoSuchElementException e) {
-                                LOG.error("Session not found");
-                                throw new RuntimeException("Session not found", e);
                             } catch (ParseException e) {
                                 LOG.info(
                                         "Cannot retrieve auth request params from client session id");

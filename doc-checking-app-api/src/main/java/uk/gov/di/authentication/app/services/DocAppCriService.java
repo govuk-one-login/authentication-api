@@ -62,6 +62,7 @@ public class DocAppCriService {
     }
 
     public TokenRequest constructTokenRequest(String authCode) {
+        LOG.info("Constructing token request");
         var codeGrant =
                 new AuthorizationCodeGrant(
                         new AuthorizationCode(authCode),
@@ -89,7 +90,7 @@ public class DocAppCriService {
 
     public TokenResponse sendTokenRequest(TokenRequest tokenRequest) {
         try {
-            LOG.info("Doc App Token request: " + tokenRequest.toHTTPRequest());
+            LOG.info("Sending TokenRequest");
             return TokenResponse.parse(tokenRequest.toHTTPRequest().send());
         } catch (IOException e) {
             LOG.error("Error whilst sending TokenRequest", e);
@@ -102,6 +103,7 @@ public class DocAppCriService {
 
     public String sendCriDataRequest(AccessToken accessToken) {
         try {
+            LOG.info("Sending userinfo request");
             var criDataURI =
                     buildURI(
                             configurationService.getDocAppBackendURI().toString(),
@@ -124,6 +126,7 @@ public class DocAppCriService {
                 LOG.error("Invalid CRI response signature");
                 throw new UnsuccesfulCredentialResponseException("Invalid CRI response signature");
             }
+            LOG.info("Received successful userinfo response");
             return response.getContent();
         } catch (IOException e) {
             LOG.error("Error when attempting to call CRI data endpoint", e);
@@ -139,6 +142,7 @@ public class DocAppCriService {
                 var signed = (SignedJWT) jwt;
                 ECPublicKey signingPublicKey;
                 if (configurationService.getEnvironment().equals(STAGING_ENVIRONMENT)) {
+                    LOG.info("Getting public signing key via JWKS endpoint");
                     JWKSet publicJwkSet =
                             JWKSet.load(configurationService.getDocAppJwksUri().toURL());
                     var signingJWK =
@@ -147,6 +151,7 @@ public class DocAppCriService {
                     signingPublicKey = signingJWK.toPublicJWK().toECKey().toECPublicKey();
                 } else {
                     signingPublicKey = configurationService.getDocAppCredentialSigningPublicKey();
+                    LOG.info("Getting public signing key via config");
                 }
                 JWSVerifier verifier = new ECDSAVerifier(signingPublicKey);
                 return signed.verify(verifier);
@@ -167,6 +172,7 @@ public class DocAppCriService {
 
     private PrivateKeyJWT generatePrivateKeyJwt(JWTAuthenticationClaimsSet claimsSet) {
         try {
+            LOG.info("Generating PrivateKeyJWT");
             var docAppTokenSigningKeyAlias = configurationService.getDocAppTokenSigningKeyAlias();
             var signingKeyId =
                     kmsService
