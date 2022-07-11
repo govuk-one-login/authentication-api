@@ -89,6 +89,7 @@ public class DocAppCriService {
 
     public TokenResponse sendTokenRequest(TokenRequest tokenRequest) {
         try {
+            LOG.info("Doc App Token request: " + tokenRequest.toHTTPRequest());
             return TokenResponse.parse(tokenRequest.toHTTPRequest().send());
         } catch (IOException e) {
             LOG.error("Error whilst sending TokenRequest", e);
