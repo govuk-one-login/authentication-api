@@ -26,7 +26,6 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.util.Map;
-import java.util.Objects;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -103,30 +102,33 @@ public class DocAppCallbackHandler
                             try {
                                 var sessionCookiesIds =
                                         CookieHelper.parseSessionCookie(input.getHeaders())
-                                                .orElse(null);
-                                if (Objects.isNull(sessionCookiesIds)) {
-                                    LOG.error("No session cookie present");
-                                    throw new RuntimeException("No session cookie present");
-                                }
+                                                .orElseThrow(
+                                                        () -> {
+                                                            LOG.error("No session cookie present");
+                                                            throw new RuntimeException(
+                                                                    "No session cookie present");
+                                                        });
                                 var session =
                                         sessionService
                                                 .readSessionFromRedis(
                                                         sessionCookiesIds.getSessionId())
-                                                .orElse(null);
-                                if (Objects.isNull(session)) {
-                                    LOG.error("Session not found");
-                                    throw new RuntimeException("Session not found");
-                                }
+                                                .orElseThrow(
+                                                        () -> {
+                                                            LOG.error("Session not found");
+                                                            throw new RuntimeException(
+                                                                    "Session not found");
+                                                        });
                                 attachSessionIdToLogs(session);
                                 var clientSession =
                                         clientSessionService
                                                 .getClientSession(
                                                         sessionCookiesIds.getClientSessionId())
-                                                .orElse(null);
-                                if (Objects.isNull(clientSession)) {
-                                    LOG.error("ClientSession not found");
-                                    throw new RuntimeException("ClientSession not found");
-                                }
+                                                .orElseThrow(
+                                                        () -> {
+                                                            LOG.error("ClientSession not found");
+                                                            throw new RuntimeException(
+                                                                    "ClientSession not found");
+                                                        });
                                 attachLogFieldToLogs(
                                         CLIENT_SESSION_ID, sessionCookiesIds.getClientSessionId());
                                 var clientId =
