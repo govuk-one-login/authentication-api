@@ -69,6 +69,7 @@ public class DocAppAuthorisationService {
     }
 
     public Optional<ErrorObject> validateResponse(Map<String, String> headers, String sessionId) {
+        LOG.info("Validating AuthorisationResponse");
         if (headers == null || headers.isEmpty()) {
             LOG.warn("No Query parameters in Doc Checking App Authorisation response");
             return Optional.of(
@@ -99,7 +100,7 @@ public class DocAppAuthorisationService {
                             OAuth2Error.INVALID_REQUEST_CODE,
                             "No code param present in Authorisation response"));
         }
-
+        LOG.info("AuthorisationResponse passed validation");
         return Optional.empty();
     }
 
