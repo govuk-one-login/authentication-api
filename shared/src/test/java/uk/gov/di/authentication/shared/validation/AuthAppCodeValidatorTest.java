@@ -82,10 +82,14 @@ class AuthAppCodeValidatorTest {
 
     @Test
     void returnsCorrectErrorWhenAuthCodeIsInvalid() {
-        setUpInvalidAuthCode();
+        setUpValidAuthCode();
 
         assertEquals(
                 Optional.of(ErrorResponse.ERROR_1043), authAppCodeValidator.validateCode("111111"));
+        assertEquals(Optional.of(ErrorResponse.ERROR_1043), authAppCodeValidator.validateCode(""));
+        assertEquals(
+                Optional.of(ErrorResponse.ERROR_1043),
+                authAppCodeValidator.validateCode("999999999999"));
     }
 
     private void setUpBlockedUser() {
@@ -128,31 +132,6 @@ class AuthAppCodeValidatorTest {
                 .thenReturn(false);
         when(mockDynamoService.getUserCredentialsFromEmail("email-address"))
                 .thenReturn(mock(UserCredentials.class));
-
-        this.authAppCodeValidator =
-                new AuthAppCodeValidator(
-                        mockUserContext,
-                        mockCodeStorageService,
-                        mockConfigurationService,
-                        mockDynamoService,
-                        MAX_RETRIES);
-    }
-
-    private void setUpInvalidAuthCode() {
-        when(mockSession.getEmailAddress()).thenReturn("email-address");
-        when(mockSession.getRetryCount()).thenReturn(0);
-        when(mockUserContext.getSession()).thenReturn(mockSession);
-        when(mockCodeStorageService.isBlockedForEmail("email-address", CODE_BLOCKED_KEY_PREFIX))
-                .thenReturn(false);
-
-        UserCredentials mockUserCredentials = mock(UserCredentials.class);
-        MFAMethod mockMfaMethod = mock(MFAMethod.class);
-        when(mockMfaMethod.getMfaMethodType()).thenReturn(MFAMethodType.AUTH_APP.getValue());
-        when(mockMfaMethod.getCredentialValue()).thenReturn("test-credential-value");
-        List<MFAMethod> mockMfaMethodList = Collections.singletonList(mockMfaMethod);
-        when(mockUserCredentials.getMfaMethods()).thenReturn(mockMfaMethodList);
-        when(mockDynamoService.getUserCredentialsFromEmail("email-address"))
-                .thenReturn(mockUserCredentials);
 
         this.authAppCodeValidator =
                 new AuthAppCodeValidator(

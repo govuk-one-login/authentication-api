@@ -96,6 +96,10 @@ public class AuthAppCodeValidator extends MfaCodeValidator {
     }
 
     public boolean isCodeValid(String code, String secret) {
+        if (code.isEmpty() || code.length() > 6) {
+            return false;
+        }
+
         int codeToCheck = Integer.parseInt(code);
 
         if (secret == null) {
