@@ -41,7 +41,7 @@ import java.security.interfaces.ECPublicKey;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
 
-import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.GET;
+import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.POST;
 import static java.util.Collections.singletonList;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.shared.helpers.HashHelper.hashSha256String;
@@ -109,7 +109,7 @@ public class DocAppCriService {
                             configurationService.getDocAppBackendURI().toString(),
                             configurationService.getDocAppCriDataEndpoint());
 
-            var request = new HTTPRequest(GET, criDataURI);
+            var request = new HTTPRequest(POST, criDataURI);
             request.setAuthorization(accessToken.toAuthorizationHeader());
 
             var response = request.send();
