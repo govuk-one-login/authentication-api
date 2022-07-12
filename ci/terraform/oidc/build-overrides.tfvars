@@ -5,24 +5,10 @@ doc_app_domain                     = "https://build-doc-app-cri-stub.london.clou
 doc_app_authorisation_client_id    = "authOrchestratorDocApp"
 doc_app_authorisation_callback_uri = "https://oidc.build.account.gov.uk/doc-app-callback"
 doc_app_authorisation_uri          = "https://build-doc-app-cri-stub.london.cloudapps.digital/authorize"
+doc_app_jwks_endpoint              = "https://build-doc-app-cri-stub.london.cloudapps.digital/.well-known/jwks.json"
+doc_app_encryption_key_id          = "7788bc975abd44e8b4fd7646d08ea9428476e37bff3e4365804b41cc29f8ef21"
+doc_app_signing_key_id             = "dbcc71593ef84309afe9413a2567897b0c134828151147509b655c2dbd9f60b2"
 spot_enabled                       = false
-doc_app_auth_public_encryption_key = <<-EOT
------BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvnQV8yrKnVObCMg+ZNLQ
-P37gEe+fGAvaM/kAq05M10GREqk7zcIHD4i3xtKTmeJwLg/TPbPvNCQ5jWv9Zt54
-HnSe0f6xSkkbAiNiqqcsYhP6v8o6p0VvvoiGZDDOw5mVsBDqi/NwOs8a476MN0Wa
-hYUb9c/Wi+dYgtl89oPEYTmghIrDPm+66gAlTtn7PLST09sRQ8HgIoFGlElaJV0E
-mex/gmWg215zlR4wMD+feYi8K9Impskbxa8M2Pyrwh839asByf9ybrp/IiYBWDdj
-ISiWaUZiNN465RphH8VZOa0r06y04tNIoDKar1dNcU/SEkNjpV6WUJJgUmChdUyS
-LwIDAQAB
------END PUBLIC KEY-----
-EOT
-doc_app_cri_public_signing_key     = <<-EOT
------BEGIN PUBLIC KEY-----
-MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEUJAIhznCaDeZDtQEj4SVNSSGF5Pj
-vqyuq8GafzksD3ZzdciYKgl1X4fMxWmpNLU8TaTtAlVHTM+8mtUGPmCCtA==
------END PUBLIC KEY-----
-EOT
 
 blocked_email_duration = 30
 

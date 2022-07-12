@@ -52,7 +52,7 @@ public class DocAppCriService {
     private final KmsConnectionService kmsService;
     private static final JWSAlgorithm TOKEN_ALGORITHM = JWSAlgorithm.ES256;
     private static final Long PRIVATE_KEY_JWT_EXPIRY = 5L;
-    private static final String STAGING_ENVIRONMENT = "staging";
+    private static final String INTEGRATION_ENVIRONMENT = "integration";
     private static final Logger LOG = LogManager.getLogger(DocAppCriService.class);
 
     public DocAppCriService(
@@ -141,7 +141,10 @@ public class DocAppCriService {
             if (jwt instanceof SignedJWT) {
                 var signed = (SignedJWT) jwt;
                 ECPublicKey signingPublicKey;
-                if (configurationService.getEnvironment().equals(STAGING_ENVIRONMENT)) {
+                if (configurationService.getEnvironment().equals(INTEGRATION_ENVIRONMENT)) {
+                    signingPublicKey = configurationService.getDocAppCredentialSigningPublicKey();
+                    LOG.info("Getting public signing key via config");
+                } else {
                     LOG.info("Getting public signing key via JWKS endpoint");
                     JWKSet publicJwkSet =
                             JWKSet.load(configurationService.getDocAppJwksUri().toURL());
@@ -149,9 +152,6 @@ public class DocAppCriService {
                             publicJwkSet.getKeyByKeyId(
                                     configurationService.getDocAppSigningKeyID());
                     signingPublicKey = signingJWK.toPublicJWK().toECKey().toECPublicKey();
-                } else {
-                    signingPublicKey = configurationService.getDocAppCredentialSigningPublicKey();
-                    LOG.info("Getting public signing key via config");
                 }
                 JWSVerifier verifier = new ECDSAVerifier(signingPublicKey);
                 return signed.verify(verifier);
