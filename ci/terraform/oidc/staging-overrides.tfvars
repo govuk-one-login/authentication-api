@@ -29,17 +29,6 @@ RWDJd2Fit4x9bFIqpZKqc1pGLu39UEaHLzRgi0hVDQhG5A7LpErOMjWquS2lmkwa
 3wIDAQAB
 -----END PUBLIC KEY-----
 EOT
-doc_app_auth_public_encryption_key = <<-EOT
------BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAudZq3RAtd6me99lfWd8N
-AfOIo5rfkt0uCOMtTqHlYVLbjIBeLRvSg1Aq55mSFKbdJ+DE4wFN9PyGZVpH266C
-2DVSOVI0ETfmPP2rVyG9FXwJqGsWYEn7XMqznFPlxi9IjeqOjhybLlaZKdm6VCpO
-KEoQViR4Cm73eax1KDztlmOncypB1o8WIEte3SvFK97Ar3KTJgaS1PsmgXttx6AP
-Q3D0/fQcE0Hp/swIgPsO9gYxhEdv3M+dxO07OJ+/X396bg+uZ7/J84hTz/uIXASy
-bJ5G58qyvEL0h3BMEBayDN1cT3/Q7NU3jkaa1ODynLjkvXEtlccgsrAa2he7OQUY
-ZQIDAQAB
------END PUBLIC KEY-----
-EOT
 
 performance_tuning = {
   register = {
