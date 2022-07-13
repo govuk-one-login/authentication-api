@@ -54,7 +54,7 @@ public class DocAppAuthorisationService {
     private final RedisConnectionService redisConnectionService;
     private final KmsConnectionService kmsConnectionService;
     public static final String STATE_STORAGE_PREFIX = "state:";
-    private static final String STAGING_ENVIRONMENT = "staging";
+    private static final String INTEGRATION_ENVIRONMENT = "integration";
     private static final JWSAlgorithm SIGNING_ALGORITHM = JWSAlgorithm.ES256;
 
     private final Json objectMapper = SerializationService.getInstance();
@@ -223,14 +223,16 @@ public class DocAppAuthorisationService {
         try {
             LOG.info("Getting Doc App Auth Encryption Public Key");
             JWK encryptionJWK;
-            if (configurationService.getEnvironment().equals(STAGING_ENVIRONMENT)) {
-                JWKSet publicJwkSet = JWKSet.load(configurationService.getDocAppJwksUri().toURL());
-                encryptionJWK =
-                        publicJwkSet.getKeyByKeyId(configurationService.getDocAppEncryptionKeyID());
-            } else {
+            if (configurationService.getEnvironment().equals(INTEGRATION_ENVIRONMENT)) {
+                LOG.info("Getting public encryption key via config");
                 var docAppAuthEncryptionPublicKey =
                         configurationService.getDocAppAuthEncryptionPublicKey();
                 encryptionJWK = JWK.parseFromPEMEncodedObjects(docAppAuthEncryptionPublicKey);
+            } else {
+                LOG.info("Getting public encryption key via JWKS endpoint");
+                JWKSet publicJwkSet = JWKSet.load(configurationService.getDocAppJwksUri().toURL());
+                encryptionJWK =
+                        publicJwkSet.getKeyByKeyId(configurationService.getDocAppEncryptionKeyID());
             }
             return new RSAKey.Builder((RSAKey) encryptionJWK).build().toRSAPublicKey();
         } catch (JOSEException e) {
