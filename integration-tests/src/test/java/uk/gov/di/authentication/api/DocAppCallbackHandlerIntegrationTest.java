@@ -40,7 +40,6 @@ import uk.gov.di.authentication.sharedtest.extensions.TokenSigningExtension;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.security.interfaces.ECPublicKey;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -99,7 +98,6 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                     ipvPrivateKeyJwtSigner,
                     spotQueue,
                     docAppPrivateKeyJwtSigner,
-                    publicKey,
                     jwksExtension);
 
     private static final String CLIENT_ID = "test-client-id";
@@ -262,7 +260,6 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
     protected static class TestConfigurationService extends IntegrationTestConfigurationService {
 
         private final CriStubExtension criStubExtension;
-        private final ECKey signingPublicKey;
         private final DocAppJwksExtension jwksExtension;
 
         public TestConfigurationService(
@@ -274,7 +271,6 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                 TokenSigningExtension ipvPrivateKeyJwtSigner,
                 SqsQueueExtension spotQueue,
                 TokenSigningExtension docAppPrivateKeyJwtSigner,
-                ECKey signingPublicKey,
                 DocAppJwksExtension jwksExtension) {
             super(
                     auditEventTopic,
@@ -285,7 +281,6 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                     spotQueue,
                     docAppPrivateKeyJwtSigner);
             this.criStubExtension = criStubExtension;
-            this.signingPublicKey = signingPublicKey;
             this.jwksExtension = jwksExtension;
         }
 
@@ -315,15 +310,6 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
         @Override
         public String getDocAppCriDataEndpoint() {
             return "/protected-resource";
-        }
-
-        @Override
-        public ECPublicKey getDocAppCredentialSigningPublicKey() {
-            try {
-                return publicKey.toECPublicKey();
-            } catch (JOSEException e) {
-                throw new RuntimeException(e);
-            }
         }
 
         @Override

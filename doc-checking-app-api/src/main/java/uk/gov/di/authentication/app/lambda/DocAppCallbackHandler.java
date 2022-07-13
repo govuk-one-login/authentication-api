@@ -20,6 +20,7 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.JwksService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -77,8 +78,13 @@ public class DocAppCallbackHandler
                 new DocAppAuthorisationService(
                         configurationService,
                         new RedisConnectionService(configurationService),
-                        kmsConnectionService);
-        this.tokenService = new DocAppCriService(configurationService, kmsConnectionService);
+                        kmsConnectionService,
+                        new JwksService(configurationService, kmsConnectionService));
+        this.tokenService =
+                new DocAppCriService(
+                        configurationService,
+                        kmsConnectionService,
+                        new JwksService(configurationService, kmsConnectionService));
         this.sessionService = new SessionService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
         this.auditService = new AuditService(configurationService);

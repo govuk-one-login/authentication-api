@@ -23,6 +23,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.JwksService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
 import java.net.URI;
@@ -42,18 +43,18 @@ class DocAppCriServiceTest {
 
     private final ConfigurationService configService = mock(ConfigurationService.class);
     private final KmsConnectionService kmsService = mock(KmsConnectionService.class);
+    private final JwksService jwksService = mock(JwksService.class);
     private static final URI CRI_URI = URI.create("http://cri/");
     private static final URI REDIRECT_URI = URI.create("http://redirect");
     private static final ClientID CLIENT_ID = new ClientID("some-client-id");
-    private static final String KEY_ID = "14342354354353";
+    private static final String SIGNING_KID = "14342354354353";
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
     private DocAppCriService tokenService;
 
     @BeforeEach
     void setUp() {
-        tokenService = new DocAppCriService(configService, kmsService);
+        tokenService = new DocAppCriService(configService, kmsService, jwksService);
         when(configService.getDocAppBackendURI()).thenReturn(CRI_URI);
-        when(configService.getEnvironment()).thenReturn("integration");
         when(configService.getDocAppAuthorisationClientId()).thenReturn(CLIENT_ID.getValue());
         when(configService.getAccessTokenExpiry()).thenReturn(300L);
         when(configService.getDocAppAuthorisationCallbackURI()).thenReturn(REDIRECT_URI);
@@ -83,7 +84,7 @@ class DocAppCriServiceTest {
     private void signJWTWithKMS() throws JOSEException {
         var ecSigningKey =
                 new ECKeyGenerator(Curve.P_256)
-                        .keyID(KEY_ID)
+                        .keyID(SIGNING_KID)
                         .algorithm(JWSAlgorithm.ES256)
                         .generate();
         var claimsSet =
@@ -103,7 +104,7 @@ class DocAppCriServiceTest {
         byte[] idTokenSignatureDer =
                 ECDSA.transcodeSignatureToDER(signedJWT.getSignature().decode());
         signResult.setSignature(ByteBuffer.wrap(idTokenSignatureDer));
-        signResult.setKeyId(KEY_ID);
+        signResult.setKeyId(SIGNING_KID);
         signResult.setSigningAlgorithm(JWSAlgorithm.ES256.getName());
         when(kmsService.sign(any(SignRequest.class))).thenReturn(signResult);
     }
