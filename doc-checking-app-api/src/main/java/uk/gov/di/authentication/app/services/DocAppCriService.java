@@ -25,7 +25,6 @@ import com.nimbusds.oauth2.sdk.http.HTTPResponse;
 import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.JWTID;
-import com.nimbusds.oauth2.sdk.token.AccessToken;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.app.exception.UnsuccesfulCredentialResponseException;
@@ -41,7 +40,6 @@ import java.security.interfaces.ECPublicKey;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
 
-import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.POST;
 import static java.util.Collections.singletonList;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.shared.helpers.HashHelper.hashSha256String;
@@ -104,17 +102,9 @@ public class DocAppCriService {
         }
     }
 
-    public String sendCriDataRequest(AccessToken accessToken) {
+    public String sendCriDataRequest(HTTPRequest request) {
         try {
             LOG.info("Sending userinfo request");
-            var criDataURI =
-                    buildURI(
-                            configurationService.getDocAppBackendURI().toString(),
-                            configurationService.getDocAppCriDataEndpoint());
-
-            var request = new HTTPRequest(POST, criDataURI);
-            request.setAuthorization(accessToken.toAuthorizationHeader());
-
             var response = request.send();
             if (!response.indicatesSuccess()) {
                 LOG.error(
@@ -125,7 +115,7 @@ public class DocAppCriService {
                         "Error response received from CRI");
             }
 
-            if (!isValidResponse(response)) {
+            if (isResponseInvalid(response)) {
                 LOG.error("Invalid CRI response signature");
                 throw new UnsuccesfulCredentialResponseException("Invalid CRI response signature");
             }
@@ -138,7 +128,7 @@ public class DocAppCriService {
         }
     }
 
-    private boolean isValidResponse(HTTPResponse response) {
+    private boolean isResponseInvalid(HTTPResponse response) {
         try {
             JWT jwt = response.getContentAsJWT();
             if (jwt instanceof SignedJWT) {
@@ -152,7 +142,7 @@ public class DocAppCriService {
                         publicJwkSet.getKeyByKeyId(configurationService.getDocAppSigningKeyID());
                 signingPublicKey = signingJWK.toPublicJWK().toECKey().toECPublicKey();
                 JWSVerifier verifier = new ECDSAVerifier(signingPublicKey);
-                return signed.verify(verifier);
+                return !signed.verify(verifier);
             }
             throw new UnsuccesfulCredentialResponseException("CRI response is not signed");
         } catch (ParseException e) {

@@ -10,12 +10,18 @@ import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.crypto.ECDSASigner;
 import com.nimbusds.jose.crypto.impl.ECDSA;
 import com.nimbusds.jose.jwk.Curve;
+import com.nimbusds.jose.jwk.ECKey;
+import com.nimbusds.jose.jwk.JWKSet;
+import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
+import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.GrantType;
 import com.nimbusds.oauth2.sdk.TokenRequest;
 import com.nimbusds.oauth2.sdk.auth.JWTAuthenticationClaimsSet;
+import com.nimbusds.oauth2.sdk.http.HTTPRequest;
+import com.nimbusds.oauth2.sdk.http.HTTPResponse;
 import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.JWTID;
@@ -26,10 +32,18 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.JwksService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
+import java.io.IOException;
 import java.net.URI;
 import java.nio.ByteBuffer;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
+import java.security.interfaces.ECPrivateKey;
+import java.security.interfaces.ECPublicKey;
 import java.time.temporal.ChronoUnit;
+import java.util.UUID;
 
+import static com.nimbusds.common.contenttype.ContentType.APPLICATION_JWT;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -43,17 +57,21 @@ class DocAppCriServiceTest {
 
     private final ConfigurationService configService = mock(ConfigurationService.class);
     private final KmsConnectionService kmsService = mock(KmsConnectionService.class);
+    private final HTTPRequest userInfoHTTPRequest = mock(HTTPRequest.class);
     private final JwksService jwksService = mock(JwksService.class);
     private static final URI CRI_URI = URI.create("http://cri/");
     private static final URI REDIRECT_URI = URI.create("http://redirect");
     private static final ClientID CLIENT_ID = new ClientID("some-client-id");
     private static final String SIGNING_KID = "14342354354353";
+    private static final String DOC_APP_SIGNING_KID = UUID.randomUUID().toString();
+    private static final URI DOC_APP_JWKS_URI =
+            URI.create("http://localhost/doc-app/.well-known/jwks.json");
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
-    private DocAppCriService tokenService;
+    private DocAppCriService docAppCriService;
 
     @BeforeEach
     void setUp() {
-        tokenService = new DocAppCriService(configService, kmsService, jwksService);
+        docAppCriService = new DocAppCriService(configService, kmsService, jwksService);
         when(configService.getDocAppBackendURI()).thenReturn(CRI_URI);
         when(configService.getDocAppAuthorisationClientId()).thenReturn(CLIENT_ID.getValue());
         when(configService.getAccessTokenExpiry()).thenReturn(300L);
@@ -65,7 +83,7 @@ class DocAppCriServiceTest {
         signJWTWithKMS();
         when(kmsService.getPublicKey(any(GetPublicKeyRequest.class)))
                 .thenReturn(new GetPublicKeyResult().withKeyId("789789789789789"));
-        TokenRequest tokenRequest = tokenService.constructTokenRequest(AUTH_CODE.getValue());
+        TokenRequest tokenRequest = docAppCriService.constructTokenRequest(AUTH_CODE.getValue());
         assertThat(tokenRequest.getEndpointURI().toString(), equalTo(CRI_URI + "token"));
         assertThat(
                 tokenRequest.getClientAuthentication().getMethod().getValue(),
@@ -79,6 +97,33 @@ class DocAppCriServiceTest {
         assertThat(
                 tokenRequest.toHTTPRequest().getQueryParameters().get("client_id").get(0),
                 equalTo(CLIENT_ID.getValue()));
+    }
+
+    @Test
+    void shouldCallDocAppUserInfoEndpoint()
+            throws IOException, JOSEException, NoSuchAlgorithmException {
+        var keyPair = KeyPairGenerator.getInstance("EC").generateKeyPair();
+        var signedJWT = generateSignedJWT(new JWTClaimsSet.Builder().build(), keyPair);
+        when(configService.getDocAppSigningKeyID()).thenReturn(DOC_APP_SIGNING_KID);
+        when(configService.getDocAppJwksUri()).thenReturn(DOC_APP_JWKS_URI);
+        var ecKey =
+                new ECKey.Builder(Curve.P_256, (ECPublicKey) keyPair.getPublic())
+                        .keyUse(KeyUse.SIGNATURE)
+                        .keyID(DOC_APP_SIGNING_KID)
+                        .build();
+        when(jwksService.retrieveJwkSetFromURL(DOC_APP_JWKS_URI.toURL()))
+                .thenReturn(new JWKSet(ecKey));
+
+        var userInfoHTTPResponseContent = signedJWT.serialize();
+
+        var userInfoHTTPResponse = new HTTPResponse(200);
+        userInfoHTTPResponse.setEntityContentType(APPLICATION_JWT);
+        userInfoHTTPResponse.setContent(userInfoHTTPResponseContent);
+        when(userInfoHTTPRequest.send()).thenReturn(userInfoHTTPResponse);
+
+        var response = docAppCriService.sendCriDataRequest(userInfoHTTPRequest);
+
+        assertThat(response, equalTo(signedJWT.serialize()));
     }
 
     private void signJWTWithKMS() throws JOSEException {
@@ -107,5 +152,14 @@ class DocAppCriServiceTest {
         signResult.setKeyId(SIGNING_KID);
         signResult.setSigningAlgorithm(JWSAlgorithm.ES256.getName());
         when(kmsService.sign(any(SignRequest.class))).thenReturn(signResult);
+    }
+
+    public static SignedJWT generateSignedJWT(JWTClaimsSet jwtClaimsSet, KeyPair keyPair)
+            throws JOSEException {
+        var jwsHeader = new JWSHeader(JWSAlgorithm.ES256);
+        var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSet);
+        var ecdsaSigner = new ECDSASigner((ECPrivateKey) keyPair.getPrivate());
+        signedJWT.sign(ecdsaSigner);
+        return signedJWT;
     }
 }
