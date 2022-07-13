@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.ParseException;
+import com.nimbusds.oauth2.sdk.http.HTTPRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -20,6 +21,7 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.JwksService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -27,7 +29,9 @@ import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.util.Map;
 
+import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.POST;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
@@ -77,8 +81,13 @@ public class DocAppCallbackHandler
                 new DocAppAuthorisationService(
                         configurationService,
                         new RedisConnectionService(configurationService),
-                        kmsConnectionService);
-        this.tokenService = new DocAppCriService(configurationService, kmsConnectionService);
+                        kmsConnectionService,
+                        new JwksService(configurationService, kmsConnectionService));
+        this.tokenService =
+                new DocAppCriService(
+                        configurationService,
+                        kmsConnectionService,
+                        new JwksService(configurationService, kmsConnectionService));
         this.sessionService = new SessionService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
         this.auditService = new AuditService(configurationService);
@@ -199,12 +208,22 @@ public class DocAppCallbackHandler
                                 }
 
                                 try {
-                                    var credential =
-                                            tokenService.sendCriDataRequest(
-                                                    tokenResponse
-                                                            .toSuccessResponse()
-                                                            .getTokens()
-                                                            .getAccessToken());
+                                    var criDataURI =
+                                            buildURI(
+                                                    configurationService
+                                                            .getDocAppBackendURI()
+                                                            .toString(),
+                                                    configurationService
+                                                            .getDocAppCriDataEndpoint());
+
+                                    var request = new HTTPRequest(POST, criDataURI);
+                                    request.setAuthorization(
+                                            tokenResponse
+                                                    .toSuccessResponse()
+                                                    .getTokens()
+                                                    .getAccessToken()
+                                                    .toAuthorizationHeader());
+                                    var credential = tokenService.sendCriDataRequest(request);
                                     auditService.submitAuditEvent(
                                             DocAppAuditableEvent
                                                     .DOC_APP_SUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED,

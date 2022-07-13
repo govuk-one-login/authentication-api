@@ -11,6 +11,9 @@ import com.nimbusds.jose.crypto.ECDSASigner;
 import com.nimbusds.jose.crypto.RSADecrypter;
 import com.nimbusds.jose.crypto.impl.ECDSA;
 import com.nimbusds.jose.jwk.Curve;
+import com.nimbusds.jose.jwk.JWKSet;
+import com.nimbusds.jose.jwk.KeyUse;
+import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
@@ -24,22 +27,25 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.JwksService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
+import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
-import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -63,20 +69,27 @@ class DocAppAuthorisationServiceTest {
             URI.create("http://localhost/oidc/doc-app/callback");
     private static final URI DOC_APP_AUTHORISATION_URI =
             URI.create("http://localhost/doc-app/authorize");
+    private static final URI JWKS_URL =
+            URI.create("http://localhost/doc-app/.well-known/jwks.json");
+    private static final String ENCRYPTION_KID = UUID.randomUUID().toString();
     private static final Json objectMapper = SerializationService.getInstance();
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final RedisConnectionService redisConnectionService =
             mock(RedisConnectionService.class);
     private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
+    private final JwksService jwksService = mock(JwksService.class);
     private final DocAppAuthorisationService authorisationService =
             new DocAppAuthorisationService(
-                    configurationService, redisConnectionService, kmsConnectionService);
+                    configurationService,
+                    redisConnectionService,
+                    kmsConnectionService,
+                    jwksService);
     private PrivateKey privateKey;
 
     @BeforeEach
-    void setUp() throws Json.JsonException {
-        when(configurationService.getEnvironment()).thenReturn("integration");
+    void setUp() throws Json.JsonException, MalformedURLException {
+        when(configurationService.getDocAppJwksUri()).thenReturn(JWKS_URL);
         when(configurationService.getSessionExpiry()).thenReturn(SESSION_EXPIRY);
         when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + SESSION_ID))
                 .thenReturn(objectMapper.writeValueAsString(STATE));
@@ -87,11 +100,13 @@ class DocAppAuthorisationServiceTest {
                 .thenReturn(DOC_APP_AUTHORISATION_URI);
         var keyPair = generateRsaKeyPair();
         privateKey = keyPair.getPrivate();
-        var certpem =
-                "-----BEGIN PUBLIC KEY-----\n"
-                        + Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded())
-                        + "\n-----END PUBLIC KEY-----\n";
-        when(configurationService.getDocAppAuthEncryptionPublicKey()).thenReturn(certpem);
+        var rsaKey =
+                new RSAKey.Builder((RSAPublicKey) keyPair.getPublic())
+                        .keyUse(KeyUse.ENCRYPTION)
+                        .keyID(ENCRYPTION_KID)
+                        .build();
+        when(jwksService.retrieveJwkSetFromURL(JWKS_URL.toURL())).thenReturn(new JWKSet(rsaKey));
+        when(configurationService.getDocAppEncryptionKeyID()).thenReturn(ENCRYPTION_KID);
     }
 
     @Test

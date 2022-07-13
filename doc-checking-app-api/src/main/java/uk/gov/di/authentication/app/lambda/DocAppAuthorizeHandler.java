@@ -20,6 +20,7 @@ import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.JwksService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
@@ -48,6 +49,7 @@ public class DocAppAuthorizeHandler
     }
 
     public DocAppAuthorizeHandler(ConfigurationService configurationService) {
+        var kmsConnectionService = new KmsConnectionService(configurationService);
         this.configurationService = configurationService;
         this.sessionService = new SessionService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
@@ -55,7 +57,8 @@ public class DocAppAuthorizeHandler
                 new DocAppAuthorisationService(
                         configurationService,
                         new RedisConnectionService(configurationService),
-                        new KmsConnectionService(configurationService));
+                        kmsConnectionService,
+                        new JwksService(configurationService, kmsConnectionService));
         this.auditService = new AuditService(configurationService);
     }
 

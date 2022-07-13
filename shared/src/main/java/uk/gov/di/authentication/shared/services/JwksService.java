@@ -7,6 +7,7 @@ import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.JWK;
+import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.KeyUse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -15,8 +16,11 @@ import org.bouncycastle.openssl.PEMException;
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 import uk.gov.di.authentication.shared.helpers.CryptoProviderHelper;
 
+import java.io.IOException;
+import java.net.URL;
 import java.security.PublicKey;
 import java.security.interfaces.ECPublicKey;
+import java.text.ParseException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -42,6 +46,16 @@ public class JwksService {
 
     public JWK getPublicDocAppSigningJwkWithOpaqueId() {
         return getPublicJWKWithKeyId(configurationService.getDocAppTokenSigningKeyAlias());
+    }
+
+    public JWKSet retrieveJwkSetFromURL(URL url) {
+        try {
+            LOG.info("Retrieving JWKSet with URL: {}", url);
+            return JWKSet.load(url);
+        } catch (IOException | ParseException e) {
+            LOG.error("Unable to load JWKSet", e);
+            throw new RuntimeException(e);
+        }
     }
 
     private JWK getPublicJWKWithKeyId(String keyId) {

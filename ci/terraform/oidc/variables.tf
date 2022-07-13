@@ -292,11 +292,6 @@ variable "ipv_auth_public_encryption_key" {
   default = "undefined"
 }
 
-variable "doc_app_auth_public_encryption_key" {
-  type    = string
-  default = "undefined"
-}
-
 variable "doc_app_authorisation_uri" {
   type    = string
   default = "undefined"
@@ -332,12 +327,6 @@ variable "doc_app_cri_data_endpoint" {
   type        = string
   default     = ""
   description = "The endpoint path to the protected resource on the Doc App CRI (this is appended to the doc_app_backend_uri variable)"
-}
-
-variable "doc_app_cri_public_signing_key" {
-  type        = string
-  default     = "undefined"
-  description = "The PEM encoded public key used to sign VCs from the Doc App CRI"
 }
 
 variable "doc_app_encryption_key_id" {

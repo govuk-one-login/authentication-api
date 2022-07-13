@@ -86,66 +86,6 @@ resource "aws_iam_policy" "ipv_public_encryption_key_parameter_policy" {
   name_prefix = "ipv-public-encryption-key-parameter-store-policy"
 }
 
-## Doc app public encryption key parameter
-
-resource "aws_ssm_parameter" "doc_app_public_encryption_key" {
-  name  = "${var.environment}-doc-app-public-encryption-key"
-  type  = "String"
-  value = var.doc_app_auth_public_encryption_key
-}
-
-data "aws_iam_policy_document" "doc_app_public_encryption_key_parameter_policy_document" {
-  statement {
-    sid    = "AllowGetParameters"
-    effect = "Allow"
-
-    actions = [
-      "ssm:GetParameter",
-      "ssm:GetParameters",
-    ]
-
-    resources = [
-      aws_ssm_parameter.doc_app_public_encryption_key.arn
-    ]
-  }
-}
-
-resource "aws_iam_policy" "doc_app_public_encryption_key_parameter_policy" {
-  policy      = data.aws_iam_policy_document.doc_app_public_encryption_key_parameter_policy_document.json
-  path        = "/${var.environment}/lambda-parameters/"
-  name_prefix = "doc-app-public-encryption-key-parameter-store-policy"
-}
-
-## Doc app public signing key parameter
-
-resource "aws_ssm_parameter" "doc_app_public_signing_key" {
-  name  = "${var.environment}-doc-app-public-signing-key"
-  type  = "String"
-  value = var.doc_app_cri_public_signing_key
-}
-
-data "aws_iam_policy_document" "doc_app_public_signing_key_parameter_policy_document" {
-  statement {
-    sid    = "AllowGetParameters"
-    effect = "Allow"
-
-    actions = [
-      "ssm:GetParameter",
-      "ssm:GetParameters",
-    ]
-
-    resources = [
-      aws_ssm_parameter.doc_app_public_signing_key.arn
-    ]
-  }
-}
-
-resource "aws_iam_policy" "doc_app_public_signing_key_parameter_policy" {
-  policy      = data.aws_iam_policy_document.doc_app_public_signing_key_parameter_policy_document.json
-  path        = "/${var.environment}/lambda-parameters/"
-  name_prefix = "doc-app-public-signing-key-parameter-store-policy"
-}
-
 ## SPOT  
 
 resource "aws_ssm_parameter" "spot_account_number" {

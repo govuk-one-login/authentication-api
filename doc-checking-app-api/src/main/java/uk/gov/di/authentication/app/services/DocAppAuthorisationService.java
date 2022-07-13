@@ -13,8 +13,6 @@ import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.Payload;
 import com.nimbusds.jose.crypto.RSAEncrypter;
 import com.nimbusds.jose.crypto.impl.ECDSA;
-import com.nimbusds.jose.jwk.JWK;
-import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.EncryptedJWT;
@@ -33,11 +31,12 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.JwksService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
-import java.io.IOException;
+import java.net.MalformedURLException;
 import java.nio.ByteBuffer;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
@@ -53,8 +52,8 @@ public class DocAppAuthorisationService {
     private final ConfigurationService configurationService;
     private final RedisConnectionService redisConnectionService;
     private final KmsConnectionService kmsConnectionService;
+    private final JwksService jwksService;
     public static final String STATE_STORAGE_PREFIX = "state:";
-    private static final String INTEGRATION_ENVIRONMENT = "integration";
     private static final JWSAlgorithm SIGNING_ALGORITHM = JWSAlgorithm.ES256;
 
     private final Json objectMapper = SerializationService.getInstance();
@@ -62,10 +61,12 @@ public class DocAppAuthorisationService {
     public DocAppAuthorisationService(
             ConfigurationService configurationService,
             RedisConnectionService redisConnectionService,
-            KmsConnectionService kmsConnectionService) {
+            KmsConnectionService kmsConnectionService,
+            JwksService jwksService) {
         this.configurationService = configurationService;
         this.redisConnectionService = redisConnectionService;
         this.kmsConnectionService = kmsConnectionService;
+        this.jwksService = jwksService;
     }
 
     public Optional<ErrorObject> validateResponse(Map<String, String> headers, String sessionId) {
@@ -221,25 +222,18 @@ public class DocAppAuthorisationService {
 
     private RSAPublicKey getPublicEncryptionKey() {
         try {
-            LOG.info("Getting Doc App Auth Encryption Public Key");
-            JWK encryptionJWK;
-            if (configurationService.getEnvironment().equals(INTEGRATION_ENVIRONMENT)) {
-                LOG.info("Getting public encryption key via config");
-                var docAppAuthEncryptionPublicKey =
-                        configurationService.getDocAppAuthEncryptionPublicKey();
-                encryptionJWK = JWK.parseFromPEMEncodedObjects(docAppAuthEncryptionPublicKey);
-            } else {
-                LOG.info("Getting public encryption key via JWKS endpoint");
-                JWKSet publicJwkSet = JWKSet.load(configurationService.getDocAppJwksUri().toURL());
-                encryptionJWK =
-                        publicJwkSet.getKeyByKeyId(configurationService.getDocAppEncryptionKeyID());
-            }
+            LOG.info("Getting Doc App Auth Encryption Public Key via JWKS endpoint");
+            var publicJwkSet =
+                    jwksService.retrieveJwkSetFromURL(
+                            configurationService.getDocAppJwksUri().toURL());
+            var encryptionJWK =
+                    publicJwkSet.getKeyByKeyId(configurationService.getDocAppEncryptionKeyID());
             return new RSAKey.Builder((RSAKey) encryptionJWK).build().toRSAPublicKey();
         } catch (JOSEException e) {
             LOG.error("Error parsing the public key to RSAPublicKey", e);
             throw new RuntimeException();
-        } catch (IOException | ParseException e) {
-            LOG.error("Unable to load JWKSet", e);
+        } catch (MalformedURLException e) {
+            LOG.error("Invalid JWKs URL", e);
             throw new RuntimeException(e);
         }
     }

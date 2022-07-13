@@ -28,7 +28,6 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.interfaces.RSAPublicKey;
-import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -52,10 +51,6 @@ class DocAppAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegration
     private static final String DOC_APP_CLIENT_ID = "doc-app-client-id";
     private final KeyPair keyPair = generateRsaKeyPair();
     private static final String ENCRYPTION_KEY_ID = UUID.randomUUID().toString();
-    private final String publicKey =
-            "-----BEGIN PUBLIC KEY-----\n"
-                    + Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded())
-                    + "\n-----END PUBLIC KEY-----\n";
 
     @RegisterExtension
     public static final DocAppJwksExtension jwksExtension = new DocAppJwksExtension();
@@ -163,11 +158,6 @@ class DocAppAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegration
         @Override
         public URI getDocAppAuthorisationCallbackURI() {
             return CALLBACK_URI;
-        }
-
-        @Override
-        public String getDocAppAuthEncryptionPublicKey() {
-            return publicKey;
         }
 
         @Override

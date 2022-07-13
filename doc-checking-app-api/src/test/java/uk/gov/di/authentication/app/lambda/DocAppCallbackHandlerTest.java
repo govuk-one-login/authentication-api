@@ -10,6 +10,7 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.TokenErrorResponse;
 import com.nimbusds.oauth2.sdk.TokenRequest;
+import com.nimbusds.oauth2.sdk.http.HTTPRequest;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
@@ -44,6 +45,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -66,6 +68,7 @@ class DocAppCallbackHandlerTest {
 
     private static final URI LOGIN_URL = URI.create("https://example.com");
     private static final String OIDC_BASE_URL = "https://base-url.com";
+    private static final URI CRI_URI = URI.create("http://cri/");
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
     private static final String COOKIE = "Cookie";
     private static final String SESSION_ID = "a-session-id";
@@ -96,6 +99,7 @@ class DocAppCallbackHandlerTest {
         when(configService.getLoginURI()).thenReturn(LOGIN_URL);
         when(configService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_BASE_URL));
         when(configService.isSpotEnabled()).thenReturn(true);
+        when(configService.getDocAppBackendURI()).thenReturn(CRI_URI);
         when(context.getAwsRequestId()).thenReturn(REQUEST_ID);
     }
 
@@ -113,7 +117,7 @@ class DocAppCallbackHandlerTest {
                 .thenReturn(Optional.empty());
         when(tokenService.constructTokenRequest(AUTH_CODE.getValue())).thenReturn(tokenRequest);
         when(tokenService.sendTokenRequest(tokenRequest)).thenReturn(successfulTokenResponse);
-        when(tokenService.sendCriDataRequest(successfulTokenResponse.getTokens().getAccessToken()))
+        when(tokenService.sendCriDataRequest(any(HTTPRequest.class)))
                 .thenReturn("a-verifiable-credential");
 
         var event = new APIGatewayProxyRequestEvent();
