@@ -153,7 +153,7 @@ public class DocAppAuthorisationService {
                         .keyID(hashSha256String(signingKeyId))
                         .build();
         var jwtID = IdGenerator.generate();
-        var expiryDate = NowHelper.nowPlus(2880, ChronoUnit.MINUTES);
+        var expiryDate = NowHelper.nowPlus(3, ChronoUnit.MINUTES);
         var claimsBuilder =
                 new JWTClaimsSet.Builder()
                         .issuer(configurationService.getDocAppAuthorisationClientId())
