@@ -95,6 +95,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
             if (identityCredentials.isEmpty()
                     && userContext.getSession().getProcessingIdentityAttempts() == 1) {
                 processingStatus = ProcessingIdentityStatus.NO_ENTRY;
+                userContext.getSession().resetProcessingIdentityAttempts();
             } else if (identityCredentials.isEmpty()) {
                 processingStatus = ProcessingIdentityStatus.ERROR;
             } else if (Objects.nonNull(identityCredentials.get().getCoreIdentityJWT())) {
