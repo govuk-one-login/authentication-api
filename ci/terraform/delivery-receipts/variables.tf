@@ -86,3 +86,18 @@ variable "endpoint_memory_size" {
   default = 4096
   type    = number
 }
+
+variable "notify_template_map" {
+  type = map(string)
+  default = {
+    VERIFY_EMAIL_TEMPLATE_ID                 = "b7dbb02f-941b-4d72-ad64-84cbe5d77c2e"
+    RESET_PASSWORD_TEMPLATE_ID               = "0aaf3ae8-1825-4528-af95-3093eb13fda0"
+    PASSWORD_RESET_CONFIRMATION_TEMPLATE_ID  = "052d4e96-e6ca-4da2-b657-5649f28bd6c0"
+    ACCOUNT_CREATED_CONFIRMATION_TEMPLATE_ID = "a15995f7-94a3-4a1b-9da0-54b1a8b5cc12"
+    RESET_PASSWORD_WITH_CODE_TEMPLATE_ID     = "503a8096-d22e-49dc-9f81-007cad156f01"
+    EMAIL_UPDATED_TEMPLATE_ID                = "0a200a63-97b2-4920-bc40-48e9a9e1121e"
+    DELETE_ACCOUNT_TEMPLATE_ID               = "0706adcc-b593-4d2d-afa6-c3da7149e426"
+    PHONE_NUMBER_UPDATED_TEMPLATE_ID         = "8274a2a3-5121-4630-a27e-e8578f8cba59"
+    PASSWORD_UPDATED_TEMPLATE_ID             = "323ebef4-cfa7-414f-bfba-1db324acdd66"
+  }
+}

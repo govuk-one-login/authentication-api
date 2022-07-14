@@ -8,6 +8,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.deliveryreceiptsapi.entity.NotifyDeliveryReceipt;
+import uk.gov.di.authentication.shared.entity.EmailNotificationType;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
@@ -17,6 +18,7 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -77,7 +79,7 @@ class NotifyCallbackHandlerTest {
     void shouldCallCloudwatchMetricServiceWhenSmsReceiptIsReceived(
             String number, String expectedCountryCode, String status, String counterName)
             throws Json.JsonException {
-        var deliveryReceipt = createDeliveryReceipt(number, status, "sms");
+        var deliveryReceipt = createDeliveryReceipt(number, status, "sms", IdGenerator.generate());
         var event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Authorization", "Bearer " + BEARER_TOKEN));
         event.setBody(objectMapper.writeValueAsString(deliveryReceipt));
@@ -98,12 +100,44 @@ class NotifyCallbackHandlerTest {
     }
 
     @Test
-    void shouldNotCallCloudwatchMetricWithEmailNotificationType() throws Json.JsonException {
-        var deliveryReceipt = createDeliveryReceipt("jim@test.com", "delivered", "email");
+    void shouldCallCloudwatchMetricWithEmailNotificationType() throws Json.JsonException {
+        var templateID = IdGenerator.generate();
+        when(configurationService.getEmailNotificationTypeFromTemplateId(templateID))
+                .thenReturn(Optional.of(EmailNotificationType.VERIFY_EMAIL));
+        var deliveryReceipt =
+                createDeliveryReceipt("jim@test.com", "delivered", "email", templateID);
         var event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Authorization", "Bearer " + BEARER_TOKEN));
         event.setBody(objectMapper.writeValueAsString(deliveryReceipt));
         handler.handleRequest(event, context);
+
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "EmailSent",
+                        Map.of(
+                                "EmailName",
+                                EmailNotificationType.VERIFY_EMAIL.getTemplateAlias(),
+                                "Environment",
+                                ENVIRONMENT,
+                                "NotifyStatus",
+                                "delivered"));
+    }
+
+    @Test
+    void shouldThrowIfInvalidTemplateId() throws Json.JsonException {
+        var templateID = IdGenerator.generate();
+        when(configurationService.getEmailNotificationTypeFromTemplateId(templateID))
+                .thenReturn(Optional.empty());
+        var deliveryReceipt =
+                createDeliveryReceipt("jim@test.com", "delivered", "email", templateID);
+        var event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Authorization", "Bearer " + BEARER_TOKEN));
+        event.setBody(objectMapper.writeValueAsString(deliveryReceipt));
+
+        assertThrows(
+                RuntimeException.class,
+                () -> handler.handleRequest(event, context),
+                "Expected to throw exception");
 
         verifyNoInteractions(cloudwatchMetricsService);
     }
@@ -154,7 +188,7 @@ class NotifyCallbackHandlerTest {
     }
 
     private NotifyDeliveryReceipt createDeliveryReceipt(
-            String destination, String status, String notificationType) {
+            String destination, String status, String notificationType, String templateID) {
         return new NotifyDeliveryReceipt(
                 IdGenerator.generate(),
                 null,
@@ -164,7 +198,7 @@ class NotifyCallbackHandlerTest {
                 new Date().toString(),
                 new Date().toString(),
                 notificationType,
-                IdGenerator.generate(),
+                templateID,
                 1);
     }
 }
