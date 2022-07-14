@@ -27,10 +27,15 @@ import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.util.Objects;
 
+import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class DocAppAuthorizeHandler
@@ -95,26 +100,33 @@ public class DocAppAuthorizeHandler
                                         sessionService
                                                 .getSessionFromRequestHeaders(input.getHeaders())
                                                 .orElse(null);
-                                var clientSession =
-                                        clientSessionService
-                                                .getClientSessionFromRequestHeaders(
-                                                        input.getHeaders())
-                                                .orElse(null);
                                 if (Objects.isNull(session)) {
                                     LOG.warn("Session cannot be found");
                                     return generateApiGatewayProxyErrorResponse(
                                             400, ErrorResponse.ERROR_1000);
                                 }
+                                attachSessionIdToLogs(session);
+                                var clientSession =
+                                        clientSessionService
+                                                .getClientSessionFromRequestHeaders(
+                                                        input.getHeaders())
+                                                .orElse(null);
                                 if (Objects.isNull(clientSession)) {
                                     LOG.warn("ClientSession cannot be found");
                                     return generateApiGatewayProxyErrorResponse(
                                             400, ErrorResponse.ERROR_1018);
                                 }
-                                attachSessionIdToLogs(session);
+                                String clientSessionId =
+                                        getHeaderValueFromHeaders(
+                                                input.getHeaders(),
+                                                CLIENT_SESSION_ID_HEADER,
+                                                configurationService.getHeadersCaseInsensitive());
+                                attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
                                 var clientID =
                                         new ClientID(
                                                 configurationService
                                                         .getDocAppAuthorisationClientId());
+                                attachLogFieldToLogs(CLIENT_ID, clientID.getValue());
                                 var state = new State();
                                 var encryptedJWT =
                                         authorisationService.constructRequestJWT(
