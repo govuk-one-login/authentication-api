@@ -49,6 +49,7 @@ import java.util.UUID;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -153,8 +154,9 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                         DOC_APP_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                         DOC_APP_SUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED));
 
-        assertTrue(
-                documentAppCredentialStore.getCredential(docAppSubjectId.getValue()).isPresent());
+        var docAppCredential = documentAppCredentialStore.getCredential(docAppSubjectId.getValue());
+        assertTrue(docAppCredential.isPresent());
+        assertThat(docAppCredential.get().getCredential().size(), equalTo(1));
     }
 
     @Test

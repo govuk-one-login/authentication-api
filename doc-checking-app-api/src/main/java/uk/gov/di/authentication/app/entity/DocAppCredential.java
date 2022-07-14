@@ -3,10 +3,12 @@ package uk.gov.di.authentication.app.entity;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBAttribute;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
 
+import java.util.List;
+
 public class DocAppCredential {
 
     private String subjectID;
-    private String credential;
+    private List<String> credential;
     private long timeToExist;
 
     public DocAppCredential() {}
@@ -22,11 +24,11 @@ public class DocAppCredential {
     }
 
     @DynamoDBAttribute(attributeName = "Credential")
-    public String getCredential() {
+    public List<String> getCredential() {
         return credential;
     }
 
-    public DocAppCredential setCredential(String credential) {
+    public DocAppCredential setCredential(List<String> credential) {
         this.credential = credential;
         return this;
     }

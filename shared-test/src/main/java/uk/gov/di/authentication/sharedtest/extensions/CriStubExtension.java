@@ -56,7 +56,16 @@ public class CriStubExtension extends HttpStubExtension {
                                 + "}",
                         getHttpPort()));
 
-        register("/protected-resource", 200, "application/jwt", signedResponse(signingKey));
+        register(
+                "/protected-resource",
+                200,
+                "application/json",
+                format(
+                        "{"
+                                + "  \"https://vocab.account.gov.uk/v1/credentialJWT\": [\"%s\"],"
+                                + "  \"sub\": \"urn:fdc:gov.uk:2022:740e58343a2946b49a6f16142fde533a\""
+                                + "}",
+                        signedResponse(signingKey)));
     }
 
     private String signedResponse(ECKey signingKey) throws JOSEException {

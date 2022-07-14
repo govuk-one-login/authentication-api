@@ -7,6 +7,7 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.createDynamoClient;
@@ -28,7 +29,7 @@ public class DynamoDocAppService {
         warmUp(tableName);
     }
 
-    public void addDocAppCredential(String subjectID, String credential) {
+    public void addDocAppCredential(String subjectID, List<String> credential) {
         var docAppCredential =
                 new DocAppCredential()
                         .setSubjectID(subjectID)
