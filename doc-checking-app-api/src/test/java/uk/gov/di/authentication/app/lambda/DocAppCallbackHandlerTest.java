@@ -37,6 +37,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -118,7 +119,7 @@ class DocAppCallbackHandlerTest {
         when(tokenService.constructTokenRequest(AUTH_CODE.getValue())).thenReturn(tokenRequest);
         when(tokenService.sendTokenRequest(tokenRequest)).thenReturn(successfulTokenResponse);
         when(tokenService.sendCriDataRequest(any(HTTPRequest.class)))
-                .thenReturn("a-verifiable-credential");
+                .thenReturn(List.of("a-verifiable-credential"));
 
         var event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(responseHeaders);
@@ -168,7 +169,8 @@ class DocAppCallbackHandlerTest {
         verifyNoMoreInteractions(auditService);
 
         verify(dynamoDocAppService)
-                .addDocAppCredential(PAIRWISE_SUBJECT_ID.getValue(), "a-verifiable-credential");
+                .addDocAppCredential(
+                        PAIRWISE_SUBJECT_ID.getValue(), List.of("a-verifiable-credential"));
     }
 
     @Test

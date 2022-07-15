@@ -107,6 +107,7 @@ public class DocAppAuthorisationService {
 
     public void storeState(String sessionId, State state) {
         try {
+            LOG.info("Storing state");
             redisConnectionService.saveWithExpiry(
                     STATE_STORAGE_PREFIX + sessionId,
                     objectMapper.writeValueAsString(state),

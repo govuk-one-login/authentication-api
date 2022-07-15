@@ -43,10 +43,12 @@ import java.security.interfaces.ECPublicKey;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
-import static com.nimbusds.common.contenttype.ContentType.APPLICATION_JWT;
+import static com.nimbusds.common.contenttype.ContentType.APPLICATION_JSON;
+import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -103,7 +105,20 @@ class DocAppCriServiceTest {
     void shouldCallDocAppUserInfoEndpoint()
             throws IOException, JOSEException, NoSuchAlgorithmException {
         var keyPair = KeyPairGenerator.getInstance("EC").generateKeyPair();
-        var signedJWT = generateSignedJWT(new JWTClaimsSet.Builder().build(), keyPair);
+        var signedJwtOne = generateSignedJWT(new JWTClaimsSet.Builder().build(), keyPair);
+        var signedJwtTwo = generateSignedJWT(new JWTClaimsSet.Builder().build(), keyPair);
+
+        var userInfoHTTPResponseContent =
+                format(
+                        "{"
+                                + " \"sub\": \"urn:fdc:gov.uk:2022:f81d4fae-7dec-11d0-a765-00a0c91e6bf6\","
+                                + " \"https://vocab.account.gov.uk/v1/credentialJWT\": ["
+                                + "     \"%s\","
+                                + "     \"%s\""
+                                + "]"
+                                + "}",
+                        signedJwtOne.serialize(), signedJwtTwo.serialize());
+
         when(configService.getDocAppSigningKeyID()).thenReturn(DOC_APP_SIGNING_KID);
         when(configService.getDocAppJwksUri()).thenReturn(DOC_APP_JWKS_URI);
         var ecKey =
@@ -114,16 +129,16 @@ class DocAppCriServiceTest {
         when(jwksService.retrieveJwkSetFromURL(DOC_APP_JWKS_URI.toURL()))
                 .thenReturn(new JWKSet(ecKey));
 
-        var userInfoHTTPResponseContent = signedJWT.serialize();
-
         var userInfoHTTPResponse = new HTTPResponse(200);
-        userInfoHTTPResponse.setEntityContentType(APPLICATION_JWT);
+        userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
         userInfoHTTPResponse.setContent(userInfoHTTPResponseContent);
         when(userInfoHTTPRequest.send()).thenReturn(userInfoHTTPResponse);
 
         var response = docAppCriService.sendCriDataRequest(userInfoHTTPRequest);
 
-        assertThat(response, equalTo(signedJWT.serialize()));
+        assertThat(response.size(), equalTo(2));
+        assertTrue(response.contains(signedJwtOne.serialize()));
+        assertTrue(response.contains(signedJwtTwo.serialize()));
     }
 
     private void signJWTWithKMS() throws JOSEException {

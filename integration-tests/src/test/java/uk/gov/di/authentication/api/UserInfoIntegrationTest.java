@@ -1,7 +1,12 @@
 package uk.gov.di.authentication.api;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.crypto.ECDSASigner;
 import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.Subject;
@@ -31,6 +36,9 @@ import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 import uk.gov.di.authentication.sharedtest.helper.SignedCredentialHelper;
 
 import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
+import java.security.interfaces.ECPrivateKey;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Date;
@@ -66,7 +74,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final Scope DOC_APP_SCOPES =
             new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP);
     private static final Subject DOC_APP_PUBLIC_SUBJECT = new Subject();
-    private static final String DOC_APP_CREDENTIAL = "doc-app-credential-11223344";
+    private static String DOC_APP_CREDENTIAL;
 
     private static final List<String> SCOPES =
             List.of(
@@ -76,8 +84,11 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final Date EXPIRY_DATE = NowHelper.nowPlus(10, ChronoUnit.MINUTES);
 
     @BeforeEach
-    void setup() {
+    void setup() throws JOSEException, NoSuchAlgorithmException {
         handler = new UserInfoHandler(TEST_CONFIGURATION_SERVICE);
+        var keyPair = KeyPairGenerator.getInstance("EC").generateKeyPair();
+        DOC_APP_CREDENTIAL =
+                generateSignedJWT(new JWTClaimsSet.Builder().build(), keyPair).serialize();
     }
 
     @Test
@@ -229,14 +240,16 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             throws Json.JsonException, ParseException {
         var documentAppCredentialStore = new DocumentAppCredentialStoreExtension(180);
         documentAppCredentialStore.addCredential(
-                DOC_APP_PUBLIC_SUBJECT.getValue(), DOC_APP_CREDENTIAL);
+                DOC_APP_PUBLIC_SUBJECT.getValue(), List.of(DOC_APP_CREDENTIAL));
         setUpAppClientInDynamo();
         var response = makeDocAppUserinfoRequest();
 
         assertThat(response, hasStatus(200));
 
         var userInfoResponse = UserInfo.parse(response.getBody());
-        assertThat(userInfoResponse.getClaim("doc-app-credential"), equalTo(DOC_APP_CREDENTIAL));
+        assertThat(
+                userInfoResponse.getClaim("doc-app-credential"),
+                equalTo(List.of(DOC_APP_CREDENTIAL)));
         assertThat(userInfoResponse.getSubject(), equalTo(DOC_APP_PUBLIC_SUBJECT));
         assertThat(userInfoResponse.toJWTClaimsSet().getClaims().size(), equalTo(2));
 
@@ -247,7 +260,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldNotReturnDocAppCredentialWhenTTLHasExpired() {
         var documentAppCredentialStore = new DocumentAppCredentialStoreExtension(0);
         documentAppCredentialStore.addCredential(
-                DOC_APP_PUBLIC_SUBJECT.getValue(), DOC_APP_CREDENTIAL);
+                DOC_APP_PUBLIC_SUBJECT.getValue(), List.of(DOC_APP_CREDENTIAL));
         setUpAppClientInDynamo();
 
         assertThrows(
@@ -268,6 +281,15 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 "Expected to throw exception");
 
         assertNoAuditEventsReceived(auditTopic);
+    }
+
+    public static SignedJWT generateSignedJWT(JWTClaimsSet jwtClaimsSet, KeyPair keyPair)
+            throws JOSEException {
+        var jwsHeader = new JWSHeader(JWSAlgorithm.ES256);
+        var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSet);
+        var ecdsaSigner = new ECDSASigner((ECPrivateKey) keyPair.getPrivate());
+        signedJWT.sign(ecdsaSigner);
+        return signedJWT;
     }
 
     private APIGatewayProxyResponseEvent makeIdentityUserinfoRequest() throws Json.JsonException {

@@ -11,6 +11,7 @@ import uk.gov.di.authentication.app.services.DynamoDocAppService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.DynamoTestConfiguration;
 
+import java.util.List;
 import java.util.Optional;
 
 import static com.amazonaws.services.dynamodbv2.model.KeyType.HASH;
@@ -66,8 +67,8 @@ public class DocumentAppCredentialStoreExtension extends DynamoExtension
         dynamoDB.createTable(request);
     }
 
-    public void addCredential(String subjectId, String credential) {
-        dynamoDocAppService.addDocAppCredential(subjectId, credential);
+    public void addCredential(String subjectId, List<String> credentials) {
+        dynamoDocAppService.addDocAppCredential(subjectId, credentials);
     }
 
     public Optional<DocAppCredential> getCredential(String subjectId) {

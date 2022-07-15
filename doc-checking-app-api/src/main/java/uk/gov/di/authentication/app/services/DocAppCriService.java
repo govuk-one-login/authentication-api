@@ -7,11 +7,10 @@ import com.amazonaws.services.kms.model.SigningAlgorithmSpec;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
-import com.nimbusds.jose.JWSVerifier;
+import com.nimbusds.jose.JWSObject;
 import com.nimbusds.jose.crypto.ECDSAVerifier;
 import com.nimbusds.jose.crypto.impl.ECDSA;
 import com.nimbusds.jose.util.Base64URL;
-import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.AuthorizationCodeGrant;
@@ -36,11 +35,15 @@ import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.nio.ByteBuffer;
-import java.security.interfaces.ECPublicKey;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 import static java.util.Collections.singletonList;
+import static uk.gov.di.authentication.shared.entity.IdentityClaims.CREDENTIAL_JWT;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.shared.helpers.HashHelper.hashSha256String;
 
@@ -102,7 +105,7 @@ public class DocAppCriService {
         }
     }
 
-    public String sendCriDataRequest(HTTPRequest request) {
+    public List<String> sendCriDataRequest(HTTPRequest request) {
         try {
             LOG.info("Sending userinfo request");
             var response = request.send();
@@ -114,13 +117,13 @@ public class DocAppCriService {
                 throw new UnsuccesfulCredentialResponseException(
                         "Error response received from CRI");
             }
-
-            if (isResponseInvalid(response)) {
+            List<SignedJWT> signedJWTS = parseResponse(response);
+            if (containsInvalidSignature(signedJWTS)) {
                 LOG.error("Invalid CRI response signature");
                 throw new UnsuccesfulCredentialResponseException("Invalid CRI response signature");
             }
             LOG.info("Received successful userinfo response");
-            return response.getContent();
+            return signedJWTS.stream().map(JWSObject::serialize).collect(Collectors.toList());
         } catch (IOException e) {
             LOG.error("Error when attempting to call CRI data endpoint", e);
             throw new UnsuccesfulCredentialResponseException(
@@ -128,25 +131,42 @@ public class DocAppCriService {
         }
     }
 
-    private boolean isResponseInvalid(HTTPResponse response) {
+    private List<SignedJWT> parseResponse(HTTPResponse response) {
         try {
-            JWT jwt = response.getContentAsJWT();
-            if (jwt instanceof SignedJWT) {
-                var signed = (SignedJWT) jwt;
-                ECPublicKey signingPublicKey;
-                LOG.info("Getting public signing key via JWKS endpoint");
-                var publicJwkSet =
-                        jwksService.retrieveJwkSetFromURL(
-                                configurationService.getDocAppJwksUri().toURL());
-                var signingJWK =
-                        publicJwkSet.getKeyByKeyId(configurationService.getDocAppSigningKeyID());
-                signingPublicKey = signingJWK.toPublicJWK().toECKey().toECPublicKey();
-                JWSVerifier verifier = new ECDSAVerifier(signingPublicKey);
-                return !signed.verify(verifier);
+            var contentAsJSONObject = response.getContentAsJSONObject();
+            if (Objects.isNull(contentAsJSONObject.get(CREDENTIAL_JWT.getValue()))) {
+                throw new UnsuccesfulCredentialResponseException("No Credential JWT claim present");
             }
-            throw new UnsuccesfulCredentialResponseException("CRI response is not signed");
+            var serializedSignedJWTs =
+                    (List<String>) contentAsJSONObject.get(CREDENTIAL_JWT.getValue());
+            List<SignedJWT> signedJWTs = new ArrayList<>();
+            for (String jwt : serializedSignedJWTs) {
+                signedJWTs.add(SignedJWT.parse(jwt));
+            }
+            return signedJWTs;
         } catch (ParseException e) {
             throw new UnsuccesfulCredentialResponseException("Error parsing CRI response", e);
+        } catch (java.text.ParseException e) {
+            throw new UnsuccesfulCredentialResponseException("Error parsing JWT", e);
+        }
+    }
+
+    private boolean containsInvalidSignature(List<SignedJWT> signedJWTS) {
+        try {
+            LOG.info("Getting public signing key via JWKS endpoint");
+            var publicJwkSet =
+                    jwksService.retrieveJwkSetFromURL(
+                            configurationService.getDocAppJwksUri().toURL());
+            var signingJWK =
+                    publicJwkSet.getKeyByKeyId(configurationService.getDocAppSigningKeyID());
+            var signingPublicKey = signingJWK.toPublicJWK().toECKey().toECPublicKey();
+            var verifier = new ECDSAVerifier(signingPublicKey);
+            for (SignedJWT signedJWT : signedJWTS) {
+                if (!signedJWT.verify(verifier)) {
+                    return true;
+                }
+            }
+            return false;
         } catch (JOSEException e) {
             throw new UnsuccesfulCredentialResponseException(
                     "Error verifying CRI response signature", e);
