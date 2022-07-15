@@ -1,13 +1,13 @@
 doc_app_api_enabled                = true
-doc_app_cri_data_endpoint          = "credentials/issue"
-doc_app_backend_uri                = "https://integration-doc-app-cri-stub.london.cloudapps.digital"
-doc_app_domain                     = "https://integration-doc-app-cri-stub.london.cloudapps.digital"
+doc_app_cri_data_endpoint          = "userinfo"
+doc_app_backend_uri                = "https://api-backend-api.review-b.integration.account.gov.uk"
+doc_app_domain                     = "https://api.review-b.integration.account.gov.uk"
 doc_app_authorisation_client_id    = "authOrchestratorDocApp"
 doc_app_authorisation_callback_uri = "https://oidc.integration.account.gov.uk/doc-app-callback"
-doc_app_authorisation_uri          = "https://integration-doc-app-cri-stub.london.cloudapps.digital/authorize"
-doc_app_jwks_endpoint              = "https://integration-doc-app-cri-stub.london.cloudapps.digital/.well-known/jwks.json"
-doc_app_encryption_key_id          = "901782c72bc54c00838dadeedead04d1f4af27c689ea445faa4bed608be63781"
-doc_app_signing_key_id             = "024d02ebde444847b9886d09a0836fe14cd1b8046ba84fa3bcc0f4a9bea0ce3f"
+doc_app_authorisation_uri          = "https://www.review-b.integration.account.gov.uk/dca/oauth2/authorize"
+doc_app_jwks_endpoint              = "https://api-backend-api.review-b.integration.account.gov.uk/.well-known/jwks.json"
+doc_app_encryption_key_id          = "0948190d-384c-498d-81e2-a20dd30f147c"
+doc_app_signing_key_id             = "fce55d1c-d099-40e5-8555-30c6938fdc47"
 
 ipv_api_enabled                = true
 ipv_capacity_allowed           = true
