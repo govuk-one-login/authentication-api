@@ -28,7 +28,7 @@ ext {
         gson: "2.9.0",
         nimbusds_oauth_version: "9.38.1",
         nimbusds_jwt_version: "9.23",
-        protobuf_version: "3.21.1",
+        protobuf_version: "3.21.2",
         junit: "5.8.2",
         glassfish_version: "3.0.5",
         xray: "2.11.2"
