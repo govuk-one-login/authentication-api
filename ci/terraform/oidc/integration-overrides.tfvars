@@ -1,4 +1,4 @@
-doc_app_api_enabled                = false
+doc_app_api_enabled                = true
 doc_app_cri_data_endpoint          = "userinfo"
 doc_app_backend_uri                = "https://api-backend-api.review-b.integration.account.gov.uk"
 doc_app_domain                     = "https://api.review-b.integration.account.gov.uk"
