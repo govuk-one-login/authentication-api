@@ -50,7 +50,6 @@ import java.util.Optional;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.startsWith;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
@@ -102,23 +101,7 @@ class DocAppAuthorizeHandlerTest {
                 .thenReturn(DOC_APP_CALLBACK_URI);
         when(configurationService.getDocAppAuthorisationURI())
                 .thenReturn(DOC_APP_AUTHORISATION_URI);
-        when(configurationService.isDocAppApiEnabled()).thenReturn(true);
         when(clientSession.getDocAppSubjectId()).thenReturn(DOC_APP_SUBJECT_ID);
-    }
-
-    @Test
-    void shouldThrowWhenDocAppApiIsNotEnabled() {
-        usingValidSession();
-        usingValidClientSession();
-        when(configurationService.isDocAppApiEnabled()).thenReturn(false);
-
-        var exception =
-                assertThrows(
-                        RuntimeException.class,
-                        this::makeHandlerRequest,
-                        "Expected to throw exception");
-
-        assertThat(exception.getMessage(), equalTo("Doc app api is not enabled"));
     }
 
     @Test

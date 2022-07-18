@@ -11,7 +11,6 @@ notify_template_map = {
 cloudwatch_log_retention       = 5
 client_registry_api_enabled    = false
 spot_enabled                   = true
-doc_app_api_enabled            = false
 ipv_api_enabled                = true
 ipv_capacity_allowed           = true
 ipv_authorisation_uri          = "https://identity.account.gov.uk/oauth2/authorize"

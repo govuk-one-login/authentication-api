@@ -13,6 +13,7 @@ module "doc_app_authorize_role" {
 }
 
 module "doc-app-authorize" {
+  count  = var.doc_app_api_enabled ? 1 : 0
   source = "../modules/endpoint-module"
 
   endpoint_name   = "doc-app-authorize"
@@ -28,7 +29,6 @@ module "doc-app-authorize" {
     REDIS_KEY                          = local.redis_key
     DYNAMO_ENDPOINT                    = var.use_localstack ? var.lambda_dynamo_endpoint : null
     DOC_APP_AUTHORISATION_URI          = var.doc_app_authorisation_uri
-    DOC_APP_API_ENABLED                = var.doc_app_api_enabled
     DOC_APP_AUTHORISATION_CALLBACK_URI = var.doc_app_authorisation_callback_uri
     DOC_APP_AUTHORISATION_CLIENT_ID    = var.doc_app_authorisation_client_id
     DOC_APP_JWKS_URL                   = var.doc_app_jwks_endpoint
