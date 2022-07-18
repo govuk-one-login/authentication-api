@@ -60,8 +60,6 @@ resource "aws_api_gateway_deployment" "frontend_deployment" {
       module.reset-password-request.method_trigger_value,
       module.ipv-authorize.integration_trigger_value,
       module.ipv-authorize.method_trigger_value,
-      var.doc_app_api_enabled ? module.doc-app-authorize[0].integration_trigger_value : null,
-      var.doc_app_api_enabled ? module.doc-app-authorize[0].method_trigger_value : null,
       module.processing-identity.integration_trigger_value,
       module.processing-identity.method_trigger_value,
     ]))
