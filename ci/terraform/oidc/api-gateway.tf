@@ -131,8 +131,8 @@ resource "aws_api_gateway_deployment" "deployment" {
       module.ipv-callback.method_trigger_value,
       module.ipv-capacity.integration_trigger_value,
       module.ipv-capacity.method_trigger_value,
-      var.doc_app_api_enabled ? module.doc-app-callback[0].integration_trigger_value : null,
-      var.doc_app_api_enabled ? module.doc-app-callback[0].method_trigger_value : null,
+      module.doc-app-callback.integration_trigger_value,
+      module.doc-app-callback.method_trigger_value,
       var.use_robots_txt ? aws_api_gateway_integration_response.robots_txt_integration_response[0].response_templates : null,
     ]))
   }
