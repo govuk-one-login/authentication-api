@@ -95,10 +95,7 @@ public class DocAppAuthorizeHandler
                         () -> {
                             try {
                                 LOG.info("DocAppAuthorizeHandler received request");
-                                if (!configurationService.isDocAppApiEnabled()) {
-                                    LOG.error("Doc app api is not enabled");
-                                    throw new RuntimeException("Doc app api is not enabled");
-                                }
+
                                 var session =
                                         sessionService
                                                 .getSessionFromRequestHeaders(input.getHeaders())
