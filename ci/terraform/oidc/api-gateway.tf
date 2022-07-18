@@ -131,6 +131,8 @@ resource "aws_api_gateway_deployment" "deployment" {
       module.ipv-callback.method_trigger_value,
       module.ipv-capacity.integration_trigger_value,
       module.ipv-capacity.method_trigger_value,
+      module.doc-app-callback.integration_trigger_value,
+      module.doc-app-callback.method_trigger_value,
       var.use_robots_txt ? aws_api_gateway_integration_response.robots_txt_integration_response[0].response_templates : null,
     ]))
   }
@@ -151,6 +153,7 @@ resource "aws_api_gateway_deployment" "deployment" {
     module.userinfo,
     module.ipv-callback,
     module.ipv-capacity,
+    module.doc-app-callback,
   ]
 }
 
@@ -245,6 +248,7 @@ resource "aws_api_gateway_stage" "endpoint_stage" {
     module.userinfo,
     module.ipv-callback,
     module.ipv-capacity,
+    module.doc-app-callback,
     aws_api_gateway_deployment.deployment,
   ]
 }
