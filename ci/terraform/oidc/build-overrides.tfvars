@@ -1,4 +1,4 @@
-doc_app_api_enabled                = true
+doc_app_api_enabled                = false
 doc_app_cri_data_endpoint          = "credentials/issue"
 doc_app_backend_uri                = "https://build-doc-app-cri-stub.london.cloudapps.digital"
 doc_app_domain                     = "https://build-doc-app-cri-stub.london.cloudapps.digital"
