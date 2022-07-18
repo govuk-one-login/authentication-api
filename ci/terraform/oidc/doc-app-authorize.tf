@@ -13,7 +13,6 @@ module "doc_app_authorize_role" {
 }
 
 module "doc-app-authorize" {
-  count  = var.doc_app_api_enabled ? 1 : 0
   source = "../modules/endpoint-module"
 
   endpoint_name   = "doc-app-authorize"
