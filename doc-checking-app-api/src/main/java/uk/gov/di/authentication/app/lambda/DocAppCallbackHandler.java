@@ -83,11 +83,7 @@ public class DocAppCallbackHandler
                         new RedisConnectionService(configurationService),
                         kmsConnectionService,
                         new JwksService(configurationService, kmsConnectionService));
-        this.tokenService =
-                new DocAppCriService(
-                        configurationService,
-                        kmsConnectionService,
-                        new JwksService(configurationService, kmsConnectionService));
+        this.tokenService = new DocAppCriService(configurationService, kmsConnectionService);
         this.sessionService = new SessionService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
         this.auditService = new AuditService(configurationService);

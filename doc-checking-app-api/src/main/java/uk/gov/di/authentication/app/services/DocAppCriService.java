@@ -8,7 +8,6 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSObject;
-import com.nimbusds.jose.crypto.ECDSAVerifier;
 import com.nimbusds.jose.crypto.impl.ECDSA;
 import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.SignedJWT;
@@ -29,11 +28,9 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.app.exception.UnsuccesfulCredentialResponseException;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.JwksService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.nio.ByteBuffer;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -51,18 +48,14 @@ public class DocAppCriService {
 
     private final ConfigurationService configurationService;
     private final KmsConnectionService kmsService;
-    private final JwksService jwksService;
     private static final JWSAlgorithm TOKEN_ALGORITHM = JWSAlgorithm.ES256;
     private static final Long PRIVATE_KEY_JWT_EXPIRY = 5L;
     private static final Logger LOG = LogManager.getLogger(DocAppCriService.class);
 
     public DocAppCriService(
-            ConfigurationService configurationService,
-            KmsConnectionService kmsService,
-            JwksService jwksService) {
+            ConfigurationService configurationService, KmsConnectionService kmsService) {
         this.configurationService = configurationService;
         this.kmsService = kmsService;
-        this.jwksService = jwksService;
     }
 
     public TokenRequest constructTokenRequest(String authCode) {
@@ -118,10 +111,6 @@ public class DocAppCriService {
                         "Error response received from CRI");
             }
             List<SignedJWT> signedJWTS = parseResponse(response);
-            if (containsInvalidSignature(signedJWTS)) {
-                LOG.error("Invalid CRI response signature");
-                throw new UnsuccesfulCredentialResponseException("Invalid CRI response signature");
-            }
             LOG.info("Received successful userinfo response");
             return signedJWTS.stream().map(JWSObject::serialize).collect(Collectors.toList());
         } catch (IOException e) {
@@ -148,31 +137,6 @@ public class DocAppCriService {
             throw new UnsuccesfulCredentialResponseException("Error parsing CRI response", e);
         } catch (java.text.ParseException e) {
             throw new UnsuccesfulCredentialResponseException("Error parsing JWT", e);
-        }
-    }
-
-    private boolean containsInvalidSignature(List<SignedJWT> signedJWTS) {
-        try {
-            LOG.info("Getting public signing key via JWKS endpoint");
-            var publicJwkSet =
-                    jwksService.retrieveJwkSetFromURL(
-                            configurationService.getDocAppJwksUri().toURL());
-            var signingJWK =
-                    publicJwkSet.getKeyByKeyId(configurationService.getDocAppSigningKeyID());
-            var signingPublicKey = signingJWK.toPublicJWK().toECKey().toECPublicKey();
-            var verifier = new ECDSAVerifier(signingPublicKey);
-            for (SignedJWT signedJWT : signedJWTS) {
-                if (!signedJWT.verify(verifier)) {
-                    return true;
-                }
-            }
-            return false;
-        } catch (JOSEException e) {
-            throw new UnsuccesfulCredentialResponseException(
-                    "Error verifying CRI response signature", e);
-        } catch (MalformedURLException e) {
-            LOG.error("Invalid JWKs URL", e);
-            throw new RuntimeException(e);
         }
     }
 
