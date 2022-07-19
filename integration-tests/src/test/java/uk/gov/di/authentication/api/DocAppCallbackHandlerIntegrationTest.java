@@ -3,7 +3,6 @@ package uk.gov.di.authentication.api;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
-import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ResponseType;
@@ -31,7 +30,6 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.CriStubExtension;
-import uk.gov.di.authentication.sharedtest.extensions.DocAppJwksExtension;
 import uk.gov.di.authentication.sharedtest.extensions.DocumentAppCredentialStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
 import uk.gov.di.authentication.sharedtest.extensions.SnsTopicExtension;
@@ -69,21 +67,16 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
     private static final String SIGNING_KEY_ID = UUID.randomUUID().toString();
     public static Subject docAppSubjectId;
     private static final ECKey privateKey;
-    private static final ECKey publicKey;
 
     static {
         try {
             privateKey = new ECKeyGenerator(Curve.P_256).keyID(SIGNING_KEY_ID).generate();
-            publicKey = privateKey.toPublicJWK();
         } catch (JOSEException e) {
             throw new RuntimeException(e);
         }
     }
 
     @RegisterExtension public static final CriStubExtension criStub = new CriStubExtension();
-
-    @RegisterExtension
-    public static final DocAppJwksExtension jwksExtension = new DocAppJwksExtension();
 
     @RegisterExtension
     protected static final DocumentAppCredentialStoreExtension credentialExtension =
@@ -98,8 +91,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                     tokenSigner,
                     ipvPrivateKeyJwtSigner,
                     spotQueue,
-                    docAppPrivateKeyJwtSigner,
-                    jwksExtension);
+                    docAppPrivateKeyJwtSigner);
 
     private static final String CLIENT_ID = "test-client-id";
     private static final String REDIRECT_URI = "http://localhost/redirect";
@@ -107,7 +99,6 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
     @BeforeEach
     void setup() throws JOSEException {
         criStub.init(privateKey);
-        jwksExtension.init(new JWKSet(publicKey));
         handler = new DocAppCallbackHandler(configurationService);
         docAppSubjectId =
                 new Subject(
@@ -140,7 +131,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                         Optional.empty(),
                         constructHeaders(
                                 Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
-                        constructQueryStringParameters(STATE));
+                        constructQueryStringParameters());
 
         assertThat(response, hasStatus(302));
         assertThat(
@@ -173,7 +164,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                                 constructHeaders(
                                         Optional.of(
                                                 buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
-                                constructQueryStringParameters(STATE)));
+                                constructQueryStringParameters()));
         assertEventTypesReceived(
                 auditTopic,
                 List.of(
@@ -196,33 +187,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                                 constructHeaders(
                                         Optional.of(
                                                 buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
-                                constructQueryStringParameters(STATE)));
-
-        assertEventTypesReceived(
-                auditTopic,
-                List.of(
-                        DOC_APP_AUTHORISATION_RESPONSE_RECEIVED,
-                        DOC_APP_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
-                        DOC_APP_UNSUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED));
-    }
-
-    @Test
-    void shouldThrowIfErrorBadlySignedCriResponseReceived()
-            throws Json.JsonException, JOSEException {
-        setupSession();
-        var badPrivateKey = new ECKeyGenerator(Curve.P_256).keyID("bad-key-id").generate();
-
-        criStub.init(badPrivateKey);
-
-        assertThrows(
-                UnsuccesfulCredentialResponseException.class,
-                () ->
-                        makeRequest(
-                                Optional.empty(),
-                                constructHeaders(
-                                        Optional.of(
-                                                buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
-                                constructQueryStringParameters(STATE)));
+                                constructQueryStringParameters()));
 
         assertEventTypesReceived(
                 auditTopic,
@@ -252,17 +217,16 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
         redis.addStateToRedis(STATE, SESSION_ID);
     }
 
-    private Map<String, String> constructQueryStringParameters(State state) {
+    private Map<String, String> constructQueryStringParameters() {
         final Map<String, String> queryStringParameters = new HashMap<>();
         queryStringParameters.putAll(
-                Map.of("state", state.getValue(), "code", new AuthorizationCode().getValue()));
+                Map.of("state", STATE.getValue(), "code", new AuthorizationCode().getValue()));
         return queryStringParameters;
     }
 
     protected static class TestConfigurationService extends IntegrationTestConfigurationService {
 
         private final CriStubExtension criStubExtension;
-        private final DocAppJwksExtension jwksExtension;
 
         public TestConfigurationService(
                 CriStubExtension criStubExtension,
@@ -272,8 +236,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                 TokenSigningExtension tokenSigningKey,
                 TokenSigningExtension ipvPrivateKeyJwtSigner,
                 SqsQueueExtension spotQueue,
-                TokenSigningExtension docAppPrivateKeyJwtSigner,
-                DocAppJwksExtension jwksExtension) {
+                TokenSigningExtension docAppPrivateKeyJwtSigner) {
             super(
                     auditEventTopic,
                     notificationQueue,
@@ -283,7 +246,6 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                     spotQueue,
                     docAppPrivateKeyJwtSigner);
             this.criStubExtension = criStubExtension;
-            this.jwksExtension = jwksExtension;
         }
 
         @Override
@@ -312,25 +274,6 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
         @Override
         public String getDocAppCriDataEndpoint() {
             return "/protected-resource";
-        }
-
-        @Override
-        public URI getDocAppJwksUri() {
-            try {
-                return new URIBuilder()
-                        .setHost("localhost")
-                        .setPort(jwksExtension.getHttpPort())
-                        .setPath("/.well-known/jwks.json")
-                        .setScheme("http")
-                        .build();
-            } catch (URISyntaxException e) {
-                throw new RuntimeException(e);
-            }
-        }
-
-        @Override
-        public String getDocAppSigningKeyID() {
-            return SIGNING_KEY_ID;
         }
     }
 }

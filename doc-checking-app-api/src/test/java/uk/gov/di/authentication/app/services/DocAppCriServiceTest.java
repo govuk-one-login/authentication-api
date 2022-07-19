@@ -10,9 +10,6 @@ import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.crypto.ECDSASigner;
 import com.nimbusds.jose.crypto.impl.ECDSA;
 import com.nimbusds.jose.jwk.Curve;
-import com.nimbusds.jose.jwk.ECKey;
-import com.nimbusds.jose.jwk.JWKSet;
-import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
@@ -29,7 +26,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.JwksService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
 import java.io.IOException;
@@ -39,9 +35,7 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.interfaces.ECPrivateKey;
-import java.security.interfaces.ECPublicKey;
 import java.time.temporal.ChronoUnit;
-import java.util.UUID;
 
 import static com.nimbusds.common.contenttype.ContentType.APPLICATION_JSON;
 import static java.lang.String.format;
@@ -60,12 +54,10 @@ class DocAppCriServiceTest {
     private final ConfigurationService configService = mock(ConfigurationService.class);
     private final KmsConnectionService kmsService = mock(KmsConnectionService.class);
     private final HTTPRequest userInfoHTTPRequest = mock(HTTPRequest.class);
-    private final JwksService jwksService = mock(JwksService.class);
     private static final URI CRI_URI = URI.create("http://cri/");
     private static final URI REDIRECT_URI = URI.create("http://redirect");
     private static final ClientID CLIENT_ID = new ClientID("some-client-id");
     private static final String SIGNING_KID = "14342354354353";
-    private static final String DOC_APP_SIGNING_KID = UUID.randomUUID().toString();
     private static final URI DOC_APP_JWKS_URI =
             URI.create("http://localhost/doc-app/.well-known/jwks.json");
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
@@ -73,7 +65,7 @@ class DocAppCriServiceTest {
 
     @BeforeEach
     void setUp() {
-        docAppCriService = new DocAppCriService(configService, kmsService, jwksService);
+        docAppCriService = new DocAppCriService(configService, kmsService);
         when(configService.getDocAppBackendURI()).thenReturn(CRI_URI);
         when(configService.getDocAppAuthorisationClientId()).thenReturn(CLIENT_ID.getValue());
         when(configService.getAccessTokenExpiry()).thenReturn(300L);
@@ -119,15 +111,7 @@ class DocAppCriServiceTest {
                                 + "}",
                         signedJwtOne.serialize(), signedJwtTwo.serialize());
 
-        when(configService.getDocAppSigningKeyID()).thenReturn(DOC_APP_SIGNING_KID);
         when(configService.getDocAppJwksUri()).thenReturn(DOC_APP_JWKS_URI);
-        var ecKey =
-                new ECKey.Builder(Curve.P_256, (ECPublicKey) keyPair.getPublic())
-                        .keyUse(KeyUse.SIGNATURE)
-                        .keyID(DOC_APP_SIGNING_KID)
-                        .build();
-        when(jwksService.retrieveJwkSetFromURL(DOC_APP_JWKS_URI.toURL()))
-                .thenReturn(new JWKSet(ecKey));
 
         var userInfoHTTPResponse = new HTTPResponse(200);
         userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
