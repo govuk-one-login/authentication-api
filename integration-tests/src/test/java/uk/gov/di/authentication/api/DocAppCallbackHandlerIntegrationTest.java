@@ -49,6 +49,7 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.startsWith;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.DOC_APP_AUTHORISATION_RESPONSE_RECEIVED;
@@ -98,7 +99,6 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
 
     @BeforeEach
     void setup() throws JOSEException {
-        criStub.init(privateKey);
         handler = new DocAppCallbackHandler(configurationService);
         docAppSubjectId =
                 new Subject(
@@ -106,6 +106,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                                 new Subject().getValue(),
                                 "https://test.com",
                                 SaltHelper.generateNewSalt()));
+        criStub.init(privateKey, docAppSubjectId.getValue());
         clientStore.registerClient(
                 CLIENT_ID,
                 "test-client",
@@ -148,6 +149,41 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
         var docAppCredential = documentAppCredentialStore.getCredential(docAppSubjectId.getValue());
         assertTrue(docAppCredential.isPresent());
         assertThat(docAppCredential.get().getCredential().size(), equalTo(1));
+    }
+
+    @Test
+    void shouldThrowIfClientSessionAndUserInfoEndpointDocAppIdDoesNotMatch()
+            throws Json.JsonException {
+        setupSession();
+
+        criStub.register(
+                "/protected-resource",
+                200,
+                "application/json",
+                "{\"sub\":\"'mockSubThatIsDifferentFromClientSessionDocAppUserId'\", \"https://vocab.account.gov.uk/v1/credentialJWT\": [\"'mockSignedJwtOne'\", \"'mockSignedJwtTwo'\"]}");
+
+        UnsuccesfulCredentialResponseException thrown =
+                assertThrows(
+                        UnsuccesfulCredentialResponseException.class,
+                        () ->
+                                makeRequest(
+                                        Optional.empty(),
+                                        constructHeaders(
+                                                Optional.of(
+                                                        buildSessionCookie(
+                                                                SESSION_ID, CLIENT_SESSION_ID))),
+                                        constructQueryStringParameters()));
+
+        assertEquals(
+                "Sub in CRI response does not match docAppSubjectId in client session",
+                thrown.getMessage());
+
+        assertEventTypesReceived(
+                auditTopic,
+                List.of(
+                        DOC_APP_AUTHORISATION_RESPONSE_RECEIVED,
+                        DOC_APP_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
+                        DOC_APP_UNSUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED));
     }
 
     @Test

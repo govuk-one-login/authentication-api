@@ -219,7 +219,10 @@ public class DocAppCallbackHandler
                                                     .getTokens()
                                                     .getAccessToken()
                                                     .toAuthorizationHeader());
-                                    var credential = tokenService.sendCriDataRequest(request);
+                                    var credential =
+                                            tokenService.sendCriDataRequest(
+                                                    request,
+                                                    clientSession.getDocAppSubjectId().getValue());
                                     auditService.submitAuditEvent(
                                             DocAppAuditableEvent
                                                     .DOC_APP_SUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED,

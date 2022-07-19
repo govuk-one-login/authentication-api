@@ -118,7 +118,7 @@ class DocAppCallbackHandlerTest {
                 .thenReturn(Optional.empty());
         when(tokenService.constructTokenRequest(AUTH_CODE.getValue())).thenReturn(tokenRequest);
         when(tokenService.sendTokenRequest(tokenRequest)).thenReturn(successfulTokenResponse);
-        when(tokenService.sendCriDataRequest(any(HTTPRequest.class)))
+        when(tokenService.sendCriDataRequest(any(HTTPRequest.class), any(String.class)))
                 .thenReturn(List.of("a-verifiable-credential"));
 
         var event = new APIGatewayProxyRequestEvent();

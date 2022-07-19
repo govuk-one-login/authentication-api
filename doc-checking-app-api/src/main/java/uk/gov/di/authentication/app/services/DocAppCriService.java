@@ -98,7 +98,7 @@ public class DocAppCriService {
         }
     }
 
-    public List<String> sendCriDataRequest(HTTPRequest request) {
+    public List<String> sendCriDataRequest(HTTPRequest request, String docAppSubjectId) {
         try {
             LOG.info("Sending userinfo request");
             var response = request.send();
@@ -110,6 +110,14 @@ public class DocAppCriService {
                 throw new UnsuccesfulCredentialResponseException(
                         "Error response received from CRI");
             }
+
+            if (!response.getContentAsJSONObject().get("sub").equals(docAppSubjectId)
+                    && !configurationService.getEnvironment().equals("build")) {
+                LOG.error("Sub in CRI response does not match docAppSubjectId in client session");
+                throw new UnsuccesfulCredentialResponseException(
+                        "Sub in CRI response does not match docAppSubjectId in client session");
+            }
+
             List<SignedJWT> signedJWTS = parseResponse(response);
             LOG.info("Received successful userinfo response");
             return signedJWTS.stream().map(JWSObject::serialize).collect(Collectors.toList());
@@ -117,6 +125,9 @@ public class DocAppCriService {
             LOG.error("Error when attempting to call CRI data endpoint", e);
             throw new UnsuccesfulCredentialResponseException(
                     "Error when attempting to call CRI data endpoint", e);
+        } catch (ParseException e) {
+            LOG.error("Error parsing HTTP response", e);
+            throw new UnsuccesfulCredentialResponseException("Error parsing HTTP response", e);
         }
     }
 

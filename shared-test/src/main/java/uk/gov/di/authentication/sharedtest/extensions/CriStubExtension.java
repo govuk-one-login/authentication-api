@@ -42,7 +42,7 @@ public class CriStubExtension extends HttpStubExtension {
         super();
     }
 
-    public void init(ECKey signingKey) throws JOSEException {
+    public void init(ECKey signingKey, String docAppSubjectId) throws JOSEException {
         register(
                 "/token",
                 200,
@@ -63,9 +63,9 @@ public class CriStubExtension extends HttpStubExtension {
                 format(
                         "{"
                                 + "  \"https://vocab.account.gov.uk/v1/credentialJWT\": [\"%s\"],"
-                                + "  \"sub\": \"urn:fdc:gov.uk:2022:740e58343a2946b49a6f16142fde533a\""
+                                + "  \"sub\": \"%s\""
                                 + "}",
-                        signedResponse(signingKey)));
+                        signedResponse(signingKey), docAppSubjectId));
     }
 
     private String signedResponse(ECKey signingKey) throws JOSEException {
