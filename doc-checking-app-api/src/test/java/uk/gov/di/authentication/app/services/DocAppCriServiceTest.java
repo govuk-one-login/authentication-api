@@ -24,6 +24,7 @@ import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.JWTID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.app.exception.UnsuccesfulCredentialResponseException;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
@@ -42,6 +43,8 @@ import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -58,6 +61,7 @@ class DocAppCriServiceTest {
     private static final URI REDIRECT_URI = URI.create("http://redirect");
     private static final ClientID CLIENT_ID = new ClientID("some-client-id");
     private static final String SIGNING_KID = "14342354354353";
+    private static final String DOC_APP_SUBJECT_ID = "some-doc-app-subject-id";
     private static final URI DOC_APP_JWKS_URI =
             URI.create("http://localhost/doc-app/.well-known/jwks.json");
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
@@ -70,6 +74,7 @@ class DocAppCriServiceTest {
         when(configService.getDocAppAuthorisationClientId()).thenReturn(CLIENT_ID.getValue());
         when(configService.getAccessTokenExpiry()).thenReturn(300L);
         when(configService.getDocAppAuthorisationCallbackURI()).thenReturn(REDIRECT_URI);
+        when(configService.getEnvironment()).thenReturn("test");
     }
 
     @Test
@@ -103,13 +108,13 @@ class DocAppCriServiceTest {
         var userInfoHTTPResponseContent =
                 format(
                         "{"
-                                + " \"sub\": \"urn:fdc:gov.uk:2022:f81d4fae-7dec-11d0-a765-00a0c91e6bf6\","
+                                + " \"sub\": \"%s\","
                                 + " \"https://vocab.account.gov.uk/v1/credentialJWT\": ["
                                 + "     \"%s\","
                                 + "     \"%s\""
                                 + "]"
                                 + "}",
-                        signedJwtOne.serialize(), signedJwtTwo.serialize());
+                        DOC_APP_SUBJECT_ID, signedJwtOne.serialize(), signedJwtTwo.serialize());
 
         when(configService.getDocAppJwksUri()).thenReturn(DOC_APP_JWKS_URI);
 
@@ -118,11 +123,49 @@ class DocAppCriServiceTest {
         userInfoHTTPResponse.setContent(userInfoHTTPResponseContent);
         when(userInfoHTTPRequest.send()).thenReturn(userInfoHTTPResponse);
 
-        var response = docAppCriService.sendCriDataRequest(userInfoHTTPRequest);
+        var response = docAppCriService.sendCriDataRequest(userInfoHTTPRequest, DOC_APP_SUBJECT_ID);
 
         assertThat(response.size(), equalTo(2));
         assertTrue(response.contains(signedJwtOne.serialize()));
         assertTrue(response.contains(signedJwtTwo.serialize()));
+    }
+
+    @Test
+    void shouldThrowWhenClientSessionAndUserInfoEndpointDocAppIdDoesNotMatch()
+            throws IOException, JOSEException, NoSuchAlgorithmException {
+        var keyPair = KeyPairGenerator.getInstance("EC").generateKeyPair();
+        var signedJwtOne = generateSignedJWT(new JWTClaimsSet.Builder().build(), keyPair);
+        var signedJwtTwo = generateSignedJWT(new JWTClaimsSet.Builder().build(), keyPair);
+
+        var userInfoHTTPResponseContent =
+                format(
+                        "{"
+                                + " \"sub\": \"%s\","
+                                + " \"https://vocab.account.gov.uk/v1/credentialJWT\": ["
+                                + "     \"%s\","
+                                + "     \"%s\""
+                                + "]"
+                                + "}",
+                        DOC_APP_SUBJECT_ID, signedJwtOne.serialize(), signedJwtTwo.serialize());
+
+        when(configService.getDocAppJwksUri()).thenReturn(DOC_APP_JWKS_URI);
+
+        var userInfoHTTPResponse = new HTTPResponse(200);
+        userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
+        userInfoHTTPResponse.setContent(userInfoHTTPResponseContent);
+        when(userInfoHTTPRequest.send()).thenReturn(userInfoHTTPResponse);
+
+        UnsuccesfulCredentialResponseException thrown =
+                assertThrows(
+                        UnsuccesfulCredentialResponseException.class,
+                        () -> {
+                            docAppCriService.sendCriDataRequest(
+                                    userInfoHTTPRequest, "different-id");
+                        });
+
+        assertEquals(
+                "Sub in CRI response does not match docAppSubjectId in client session",
+                thrown.getMessage());
     }
 
     private void signJWTWithKMS() throws JOSEException {
