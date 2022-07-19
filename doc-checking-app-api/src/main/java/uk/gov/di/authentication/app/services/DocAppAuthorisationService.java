@@ -26,6 +26,7 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -141,7 +142,8 @@ public class DocAppAuthorisationService {
         return responseState.equals(storedState.getValue());
     }
 
-    public EncryptedJWT constructRequestJWT(State state, Subject subject) {
+    public EncryptedJWT constructRequestJWT(
+            State state, Subject subject, ClientRegistry clientRegistry) {
         LOG.info("Generating request JWT");
         var docAppTokenSigningKeyAlias = configurationService.getDocAppTokenSigningKeyAlias();
         var signingKeyId =
@@ -154,7 +156,10 @@ public class DocAppAuthorisationService {
                         .keyID(hashSha256String(signingKeyId))
                         .build();
         var jwtID = IdGenerator.generate();
-        var expiryDate = NowHelper.nowPlus(3, ChronoUnit.MINUTES);
+        var expiryDate =
+                clientRegistry.isTestClient()
+                        ? NowHelper.nowPlus(5, ChronoUnit.DAYS)
+                        : NowHelper.nowPlus(3, ChronoUnit.MINUTES);
         var claimsBuilder =
                 new JWTClaimsSet.Builder()
                         .issuer(configurationService.getDocAppAuthorisationClientId())
@@ -171,6 +176,9 @@ public class DocAppAuthorisationService {
                                 configurationService.getDocAppAuthorisationCallbackURI().toString())
                         .claim("client_id", configurationService.getDocAppAuthorisationClientId())
                         .claim("response_type", ResponseType.CODE.toString());
+        if (clientRegistry.isTestClient()) {
+            claimsBuilder.claim("test_client", true);
+        }
         var encodedHeader = jwsHeader.toBase64URL();
         var encodedClaims = Base64URL.encode(claimsBuilder.build().toString());
         var message = encodedHeader + "." + encodedClaims;

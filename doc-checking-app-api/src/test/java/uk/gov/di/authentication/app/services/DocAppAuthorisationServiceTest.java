@@ -25,6 +25,10 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.JwksService;
@@ -41,6 +45,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
+import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -86,6 +91,8 @@ class DocAppAuthorisationServiceTest {
                     kmsConnectionService,
                     jwksService);
     private PrivateKey privateKey;
+
+    private final ClientRegistry clientRegistry = mock(ClientRegistry.class);
 
     @BeforeEach
     void setUp() throws Json.JsonException, MalformedURLException {
@@ -205,8 +212,10 @@ class DocAppAuthorisationServiceTest {
                         SESSION_EXPIRY);
     }
 
-    @Test
-    void shouldConstructASignedRequestJWT() throws JOSEException, ParseException {
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void shouldConstructASignedRequestJWT(boolean isTestClient)
+            throws JOSEException, ParseException {
         var ecSigningKey =
                 new ECKeyGenerator(Curve.P_256)
                         .keyID(KEY_ID)
@@ -228,8 +237,10 @@ class DocAppAuthorisationServiceTest {
 
         when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class)))
                 .thenReturn(new GetPublicKeyResult().withKeyId("789789789789789"));
+        when(clientRegistry.isTestClient()).thenReturn(isTestClient);
 
-        var encryptedJWT = authorisationService.constructRequestJWT(state, pairwise);
+        var encryptedJWT =
+                authorisationService.constructRequestJWT(state, pairwise, clientRegistry);
 
         var signedJWTResponse = decryptJWT(encryptedJWT);
 
@@ -247,6 +258,23 @@ class DocAppAuthorisationServiceTest {
         assertThat(
                 signedJWTResponse.getHeader().getKeyID(),
                 equalTo(hashSha256String("789789789789789")));
+        if (isTestClient) {
+            assertThat(signedJWTResponse.getJWTClaimsSet().getClaim("test_client"), equalTo(true));
+            assertThat(
+                    signedJWTResponse
+                            .getJWTClaimsSet()
+                            .getExpirationTime()
+                            .after(NowHelper.nowPlus(3, ChronoUnit.MINUTES)),
+                    equalTo(true));
+        } else {
+            assertThat(signedJWTResponse.getJWTClaimsSet().getClaim("test_client"), equalTo(null));
+            assertThat(
+                    signedJWTResponse
+                            .getJWTClaimsSet()
+                            .getExpirationTime()
+                            .before(NowHelper.nowPlus(3, ChronoUnit.MINUTES)),
+                    equalTo(true));
+        }
     }
 
     private SignedJWT decryptJWT(EncryptedJWT encryptedJWT) throws JOSEException {

@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.AuthorizationRequest;
+import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
@@ -18,13 +19,16 @@ import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.JwksService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
+import java.util.NoSuchElementException;
 import java.util.Objects;
 
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
@@ -48,6 +52,7 @@ public class DocAppAuthorizeHandler
     private final DocAppAuthorisationService authorisationService;
     private final ConfigurationService configurationService;
     private final AuditService auditService;
+    private final ClientService clientService;
 
     public DocAppAuthorizeHandler() {
         this(ConfigurationService.getInstance());
@@ -65,6 +70,7 @@ public class DocAppAuthorizeHandler
                         kmsConnectionService,
                         new JwksService(configurationService, kmsConnectionService));
         this.auditService = new AuditService(configurationService);
+        this.clientService = new DynamoClientService(configurationService);
     }
 
     public DocAppAuthorizeHandler(
@@ -72,12 +78,14 @@ public class DocAppAuthorizeHandler
             ClientSessionService clientSessionService,
             DocAppAuthorisationService authorisationService,
             ConfigurationService configurationService,
-            AuditService auditService) {
+            AuditService auditService,
+            ClientService clientService) {
         this.sessionService = sessionService;
         this.clientSessionService = clientSessionService;
         this.authorisationService = authorisationService;
         this.configurationService = configurationService;
         this.auditService = auditService;
+        this.clientService = clientService;
     }
 
     @Override
@@ -130,7 +138,11 @@ public class DocAppAuthorizeHandler
                                 var state = new State();
                                 var encryptedJWT =
                                         authorisationService.constructRequestJWT(
-                                                state, clientSession.getDocAppSubjectId());
+                                                state,
+                                                clientSession.getDocAppSubjectId(),
+                                                clientService
+                                                        .getClient(clientID.getValue())
+                                                        .orElseThrow());
                                 var authRequestBuilder =
                                         new AuthorizationRequest.Builder(
                                                         new ResponseType(ResponseType.Value.CODE),
@@ -165,6 +177,11 @@ public class DocAppAuthorizeHandler
                             } catch (JsonException e) {
                                 return generateApiGatewayProxyErrorResponse(
                                         400, ErrorResponse.ERROR_1001);
+                            } catch (NoSuchElementException e) {
+                                LOG.warn("Invalid client or client not found in Client Registry");
+                                return generateApiGatewayProxyResponse(
+                                        400,
+                                        OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString());
                             }
                         });
     }
