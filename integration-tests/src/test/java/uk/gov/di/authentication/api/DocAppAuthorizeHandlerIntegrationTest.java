@@ -17,6 +17,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.app.entity.DocAppAuthorisationResponse;
 import uk.gov.di.authentication.app.lambda.DocAppAuthorizeHandler;
+import uk.gov.di.authentication.shared.entity.ClientType;
+import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
@@ -33,6 +35,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.startsWith;
 import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.DOC_APP_AUTHORISATION_REQUESTED;
@@ -77,6 +80,21 @@ class DocAppAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegration
     @Test
     void shouldReturn200WithValidDocAppAuthRequest() throws Json.JsonException {
         redis.addDocAppSubjectIdToClientSession(new Subject(), CLIENT_SESSION_ID);
+        clientStore.registerClient(
+                DOC_APP_CLIENT_ID,
+                "test-client",
+                singletonList("http://localhost/redirect"),
+                singletonList("contact@example.com"),
+                singletonList("openid"),
+                null,
+                singletonList("http://localhost/post-redirect-logout"),
+                "http://example.com",
+                String.valueOf(ServiceType.MANDATORY),
+                "https://test.com",
+                "pairwise",
+                false,
+                ClientType.APP);
+
         var response =
                 makeRequest(
                         Optional.empty(),

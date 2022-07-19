@@ -27,12 +27,14 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
 import uk.gov.di.authentication.app.entity.DocAppAuthorisationResponse;
 import uk.gov.di.authentication.app.services.DocAppAuthorisationService;
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -84,6 +86,8 @@ class DocAppAuthorizeHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AuditService auditService = mock(AuditService.class);
 
+    private final ClientService clientService = mock(ClientService.class);
+
     private DocAppAuthorizeHandler handler;
     private final Session session = new Session(SESSION_ID);
 
@@ -95,7 +99,8 @@ class DocAppAuthorizeHandlerTest {
                         clientSessionService,
                         authorisationService,
                         configurationService,
-                        auditService);
+                        auditService,
+                        clientService);
         when(configurationService.getDocAppAuthorisationClientId()).thenReturn(DOC_APP_CLIENT_ID);
         when(configurationService.getDocAppAuthorisationCallbackURI())
                 .thenReturn(DOC_APP_CALLBACK_URI);
@@ -108,8 +113,11 @@ class DocAppAuthorizeHandlerTest {
     void shouldReturn200ForSuccessfulRequest()
             throws ParseException, JOSEException, Json.JsonException {
         var encryptedJWT = createEncryptedJWT();
-        when(authorisationService.constructRequestJWT(any(State.class), any(Subject.class)))
+        when(authorisationService.constructRequestJWT(
+                        any(State.class), any(Subject.class), any(ClientRegistry.class)))
                 .thenReturn(encryptedJWT);
+        when(clientService.getClient(DOC_APP_CLIENT_ID))
+                .thenReturn(Optional.of(new ClientRegistry()));
         usingValidSession();
         usingValidClientSession();
 
