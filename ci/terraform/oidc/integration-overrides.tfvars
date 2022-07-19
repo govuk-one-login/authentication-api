@@ -7,7 +7,6 @@ doc_app_authorisation_callback_uri = "https://oidc.integration.account.gov.uk/do
 doc_app_authorisation_uri          = "https://www.review-b.integration.account.gov.uk/dca/oauth2/authorize"
 doc_app_jwks_endpoint              = "https://api-backend-api.review-b.integration.account.gov.uk/.well-known/jwks.json"
 doc_app_encryption_key_id          = "0948190d-384c-498d-81e2-a20dd30f147c"
-doc_app_signing_key_id             = "fce55d1c-d099-40e5-8555-30c6938fdc47"
 
 ipv_api_enabled                = true
 ipv_capacity_allowed           = true

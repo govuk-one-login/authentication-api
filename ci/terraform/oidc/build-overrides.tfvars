@@ -7,7 +7,6 @@ doc_app_authorisation_callback_uri = "https://oidc.build.account.gov.uk/doc-app-
 doc_app_authorisation_uri          = "https://build-doc-app-cri-stub.london.cloudapps.digital/authorize"
 doc_app_jwks_endpoint              = "https://build-doc-app-cri-stub.london.cloudapps.digital/.well-known/jwks.json"
 doc_app_encryption_key_id          = "7788bc975abd44e8b4fd7646d08ea9428476e37bff3e4365804b41cc29f8ef21"
-doc_app_signing_key_id             = "dbcc71593ef84309afe9413a2567897b0c134828151147509b655c2dbd9f60b2"
 spot_enabled                       = false
 
 blocked_email_duration = 30
