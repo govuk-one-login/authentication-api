@@ -13,6 +13,7 @@ import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
 import uk.gov.di.authentication.oidc.services.AccessTokenService;
 import uk.gov.di.authentication.oidc.services.UserInfoService;
 import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoIdentityService;
@@ -57,7 +58,9 @@ public class UserInfoHandler
                 new UserInfoService(
                         new DynamoService(configurationService),
                         new DynamoIdentityService(configurationService),
-                        new DynamoDocAppService(configurationService));
+                        new DynamoDocAppService(configurationService),
+                        new CloudwatchMetricsService(),
+                        configurationService);
         this.accessTokenService =
                 new AccessTokenService(
                         new RedisConnectionService(configurationService),
@@ -104,10 +107,7 @@ public class UserInfoHandler
                                                         configurationService
                                                                 .getHeadersCaseInsensitive()),
                                                 configurationService.isIdentityEnabled());
-                                userInfo =
-                                        userInfoService.populateUserInfo(
-                                                accessTokenInfo,
-                                                configurationService.isIdentityEnabled());
+                                userInfo = userInfoService.populateUserInfo(accessTokenInfo);
                             } catch (AccessTokenException e) {
                                 LOG.warn(
                                         "AccessTokenException. Sending back UserInfoErrorResponse");

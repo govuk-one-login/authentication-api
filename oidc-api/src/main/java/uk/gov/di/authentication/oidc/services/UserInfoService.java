@@ -13,9 +13,12 @@ import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoIdentityService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
+import java.util.Map;
 import java.util.Objects;
 
 public class UserInfoService {
@@ -23,6 +26,8 @@ public class UserInfoService {
     private final AuthenticationService authenticationService;
     private final DynamoIdentityService identityService;
     private final DynamoDocAppService dynamoDocAppService;
+    private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final ConfigurationService configurationService;
     protected final Json objectMapper = SerializationService.getInstance();
 
     private static final Logger LOG = LogManager.getLogger(UserInfoService.class);
@@ -30,13 +35,17 @@ public class UserInfoService {
     public UserInfoService(
             AuthenticationService authenticationService,
             DynamoIdentityService identityService,
-            DynamoDocAppService dynamoDocAppService) {
+            DynamoDocAppService dynamoDocAppService,
+            CloudwatchMetricsService cloudwatchMetricsService,
+            ConfigurationService configurationService) {
         this.authenticationService = authenticationService;
         this.identityService = identityService;
         this.dynamoDocAppService = dynamoDocAppService;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.configurationService = configurationService;
     }
 
-    public UserInfo populateUserInfo(AccessTokenInfo accessTokenInfo, boolean identityEnabled) {
+    public UserInfo populateUserInfo(AccessTokenInfo accessTokenInfo) {
         LOG.info("Populating UserInfo");
         var userInfo = new UserInfo(new Subject(accessTokenInfo.getSubject()));
         if (accessTokenInfo.getScopes().contains(CustomScopeValue.DOC_CHECKING_APP.getValue())) {
@@ -56,7 +65,8 @@ public class UserInfoService {
         if (accessTokenInfo.getScopes().contains(CustomScopeValue.GOVUK_ACCOUNT.getValue())) {
             userInfo.setClaim("legacy_subject_id", userProfile.getLegacySubjectID());
         }
-        if (identityEnabled && Objects.nonNull(accessTokenInfo.getIdentityClaims())) {
+        if (configurationService.isIdentityEnabled()
+                && Objects.nonNull(accessTokenInfo.getIdentityClaims())) {
             return populateIdentityInfo(accessTokenInfo, userInfo);
         } else {
             LOG.info("No identity claims present");
@@ -109,6 +119,8 @@ public class UserInfoService {
                         docAppCredential -> {
                             userInfo.setClaim(
                                     "doc-app-credential", docAppCredential.getCredential());
+                            incrementClaimIssuedCounter(
+                                    "doc-app-credential", accessTokenInfo.getClientID());
                             return userInfo;
                         })
                 .orElseThrow(
@@ -117,5 +129,17 @@ public class UserInfoService {
                             throw new UserInfoException(
                                     "Unable to retrieve docAppCredential for Subject.");
                         });
+    }
+
+    private void incrementClaimIssuedCounter(String claimName, String clientID) {
+        cloudwatchMetricsService.incrementCounter(
+                "ClaimIssued",
+                Map.of(
+                        "Environment",
+                        configurationService.getEnvironment(),
+                        "Client",
+                        clientID,
+                        "Claim",
+                        claimName));
     }
 }

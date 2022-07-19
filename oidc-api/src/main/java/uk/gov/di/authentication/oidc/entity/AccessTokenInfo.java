@@ -1,7 +1,6 @@
 package uk.gov.di.authentication.oidc.entity;
 
 import uk.gov.di.authentication.shared.entity.AccessTokenStore;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 
 import java.util.List;
 
@@ -11,19 +10,19 @@ public class AccessTokenInfo {
     private final String subject;
     private final List<String> scopes;
     private final List<String> identityClaims;
-    private final ClientRegistry clientRegistry;
+    private final String clientID;
 
     public AccessTokenInfo(
             AccessTokenStore accessTokenStore,
             String subject,
             List<String> scopes,
             List<String> identityClaims,
-            ClientRegistry clientRegistry) {
+            String clientID) {
         this.accessTokenStore = accessTokenStore;
         this.subject = subject;
         this.scopes = scopes;
         this.identityClaims = identityClaims;
-        this.clientRegistry = clientRegistry;
+        this.clientID = clientID;
     }
 
     public AccessTokenStore getAccessTokenStore() {
@@ -42,7 +41,7 @@ public class AccessTokenInfo {
         return identityClaims;
     }
 
-    public ClientRegistry getClientRegistry() {
-        return clientRegistry;
+    public String getClientID() {
+        return clientID;
     }
 }
