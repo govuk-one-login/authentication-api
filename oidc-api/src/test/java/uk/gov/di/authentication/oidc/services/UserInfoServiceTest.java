@@ -17,14 +17,19 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import uk.gov.di.authentication.app.entity.DocAppCredential;
 import uk.gov.di.authentication.app.services.DynamoDocAppService;
 import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
 import uk.gov.di.authentication.shared.entity.AccessTokenStore;
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.IdentityCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoIdentityService;
 import uk.gov.di.authentication.sharedtest.helper.SignedCredentialHelper;
 import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
@@ -43,6 +48,7 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.ADDRESS_CLAIM;
 import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.PASSPORT_CLAIM;
@@ -54,6 +60,9 @@ class UserInfoServiceTest {
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final DynamoIdentityService identityService = mock(DynamoIdentityService.class);
     private final DynamoDocAppService dynamoDocAppService = mock(DynamoDocAppService.class);
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final CloudwatchMetricsService cloudwatchMetricsService =
+            mock(CloudwatchMetricsService.class);
     private static final Subject INTERNAL_SUBJECT = new Subject("internal-subject");
     private static final Subject SUBJECT = new Subject("some-subject");
     private static final List<String> SCOPES =
@@ -74,7 +83,10 @@ class UserInfoServiceTest {
     private final OIDCClaimsRequest oidcValidClaimsRequest =
             new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
     private final String coreIdentityJWT = SignedCredentialHelper.generateCredential().serialize();
+    private final String docAppCredentialJWT =
+            SignedCredentialHelper.generateCredential().serialize();
     private AccessToken accessToken;
+    private ClientRegistry clientRegistry;
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
@@ -90,11 +102,19 @@ class UserInfoServiceTest {
     @BeforeEach
     void setUp() {
         userInfoService =
-                new UserInfoService(authenticationService, identityService, dynamoDocAppService);
+                new UserInfoService(
+                        authenticationService,
+                        identityService,
+                        dynamoDocAppService,
+                        cloudwatchMetricsService,
+                        configurationService);
+        clientRegistry = generateClientRegistry();
+        when(configurationService.getEnvironment()).thenReturn("test");
     }
 
     @Test
     void shouldJustPopulateUserInfoWhenIdentityNotEnabled() throws JOSEException {
+        when(configurationService.isIdentityEnabled()).thenReturn(false);
         accessToken = createSignedAccessToken(null);
         when(authenticationService.getUserProfileFromSubject(INTERNAL_SUBJECT.getValue()))
                 .thenReturn(generateUserprofile());
@@ -102,9 +122,9 @@ class UserInfoServiceTest {
         var accessTokenStore =
                 new AccessTokenStore(accessToken.getValue(), INTERNAL_SUBJECT.getValue());
         var accessTokenInfo =
-                new AccessTokenInfo(accessTokenStore, SUBJECT.getValue(), SCOPES, null);
+                new AccessTokenInfo(accessTokenStore, SUBJECT.getValue(), SCOPES, null, CLIENT_ID);
 
-        var userInfo = userInfoService.populateUserInfo(accessTokenInfo, false);
+        var userInfo = userInfoService.populateUserInfo(accessTokenInfo);
         assertThat(userInfo.getEmailAddress(), equalTo(EMAIL));
         assertThat(userInfo.getEmailVerified(), equalTo(true));
         assertThat(userInfo.getPhoneNumber(), equalTo(PHONE_NUMBER));
@@ -117,6 +137,7 @@ class UserInfoServiceTest {
     @Test
     void shouldJustPopulateEmailClaimWhenOnlyEmailScopeIsPresentAndIdentityNotEnabled()
             throws JOSEException {
+        when(configurationService.isIdentityEnabled()).thenReturn(false);
         accessToken = createSignedAccessToken(null);
         var scopes = List.of(OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.EMAIL.getValue());
         when(authenticationService.getUserProfileFromSubject(INTERNAL_SUBJECT.getValue()))
@@ -125,9 +146,9 @@ class UserInfoServiceTest {
         var accessTokenStore =
                 new AccessTokenStore(accessToken.getValue(), INTERNAL_SUBJECT.getValue());
         var accessTokenInfo =
-                new AccessTokenInfo(accessTokenStore, SUBJECT.getValue(), scopes, null);
+                new AccessTokenInfo(accessTokenStore, SUBJECT.getValue(), scopes, null, CLIENT_ID);
 
-        var userInfo = userInfoService.populateUserInfo(accessTokenInfo, false);
+        var userInfo = userInfoService.populateUserInfo(accessTokenInfo);
         assertThat(userInfo.getEmailAddress(), equalTo(EMAIL));
         assertThat(userInfo.getEmailVerified(), equalTo(true));
         assertNull(userInfo.getPhoneNumber());
@@ -140,6 +161,7 @@ class UserInfoServiceTest {
     @Test
     void shouldJustPopulateUserInfoWhenIdentityEnabledButNoIdentityClaimsPresent()
             throws JOSEException {
+        when(configurationService.isIdentityEnabled()).thenReturn(true);
         accessToken = createSignedAccessToken(null);
         when(authenticationService.getUserProfileFromSubject(INTERNAL_SUBJECT.getValue()))
                 .thenReturn(generateUserprofile());
@@ -147,9 +169,9 @@ class UserInfoServiceTest {
         var accessTokenStore =
                 new AccessTokenStore(accessToken.getValue(), INTERNAL_SUBJECT.getValue());
         var accessTokenInfo =
-                new AccessTokenInfo(accessTokenStore, SUBJECT.getValue(), SCOPES, null);
+                new AccessTokenInfo(accessTokenStore, SUBJECT.getValue(), SCOPES, null, CLIENT_ID);
 
-        var userInfo = userInfoService.populateUserInfo(accessTokenInfo, true);
+        var userInfo = userInfoService.populateUserInfo(accessTokenInfo);
         assertThat(userInfo.getEmailAddress(), equalTo(EMAIL));
         assertThat(userInfo.getEmailVerified(), equalTo(true));
         assertThat(userInfo.getPhoneNumber(), equalTo(PHONE_NUMBER));
@@ -162,6 +184,7 @@ class UserInfoServiceTest {
     @Test
     void shouldPopulateIdentityClaimsWhenClaimsArePresentAndIdentityIsEnabled()
             throws JOSEException {
+        when(configurationService.isIdentityEnabled()).thenReturn(true);
         var identityCredentials =
                 new IdentityCredentials()
                         .setSubjectID(SUBJECT.getValue())
@@ -187,9 +210,10 @@ class UserInfoServiceTest {
                         SCOPES,
                         oidcValidClaimsRequest.getUserInfoClaimsRequest().getEntries().stream()
                                 .map(ClaimsSetRequest.Entry::getClaimName)
-                                .collect(Collectors.toList()));
+                                .collect(Collectors.toList()),
+                        CLIENT_ID);
 
-        var userInfo = userInfoService.populateUserInfo(accessTokenInfo, true);
+        var userInfo = userInfoService.populateUserInfo(accessTokenInfo);
         assertThat(userInfo.getEmailAddress(), equalTo(EMAIL));
         assertThat(userInfo.getEmailVerified(), equalTo(true));
         assertThat(userInfo.getPhoneNumber(), equalTo(PHONE_NUMBER));
@@ -206,6 +230,7 @@ class UserInfoServiceTest {
     @Test
     void shouldPopulateIdentityClaimsWhenClaimsArePresentButNoAdditionalClaimsArePresent()
             throws JOSEException {
+        when(configurationService.isIdentityEnabled()).thenReturn(true);
         var identityCredentials =
                 new IdentityCredentials()
                         .setSubjectID(SUBJECT.getValue())
@@ -225,9 +250,10 @@ class UserInfoServiceTest {
                         SCOPES,
                         oidcValidClaimsRequest.getUserInfoClaimsRequest().getEntries().stream()
                                 .map(ClaimsSetRequest.Entry::getClaimName)
-                                .collect(Collectors.toList()));
+                                .collect(Collectors.toList()),
+                        CLIENT_ID);
 
-        var userInfo = userInfoService.populateUserInfo(accessTokenInfo, true);
+        var userInfo = userInfoService.populateUserInfo(accessTokenInfo);
         assertThat(userInfo.getEmailAddress(), equalTo(EMAIL));
         assertThat(userInfo.getEmailVerified(), equalTo(true));
         assertThat(userInfo.getPhoneNumber(), equalTo(PHONE_NUMBER));
@@ -237,8 +263,47 @@ class UserInfoServiceTest {
                 equalTo(coreIdentityJWT));
     }
 
+    @Test
+    void shouldPopulateUserInfoWithDocAppCredentialWhenDocAppScopeIsPresent() throws JOSEException {
+        var docAppScope =
+                List.of(
+                        OIDCScopeValue.OPENID.getValue(),
+                        CustomScopeValue.DOC_CHECKING_APP.getValue());
+        var accessToken = createSignedAccessToken(null, docAppScope);
+        var docAppCredential =
+                new DocAppCredential()
+                        .setSubjectID(SUBJECT.getValue())
+                        .setCredential(List.of(docAppCredentialJWT));
+        when(dynamoDocAppService.getDocAppCredential(SUBJECT.getValue()))
+                .thenReturn(Optional.of(docAppCredential));
+
+        var accessTokenStore =
+                new AccessTokenStore(accessToken.getValue(), INTERNAL_SUBJECT.getValue());
+        var accessTokenInfo =
+                new AccessTokenInfo(
+                        accessTokenStore, SUBJECT.getValue(), docAppScope, null, CLIENT_ID);
+
+        var userInfo = userInfoService.populateUserInfo(accessTokenInfo);
+        assertThat(userInfo.getClaim("doc-app-credential"), equalTo(List.of(docAppCredentialJWT)));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "ClaimIssued",
+                        Map.of(
+                                "Environment",
+                                "test",
+                                "Client",
+                                CLIENT_ID,
+                                "Claim",
+                                "doc-app-credential"));
+    }
+
     private AccessToken createSignedAccessToken(OIDCClaimsRequest identityClaims)
             throws JOSEException {
+        return createSignedAccessToken(identityClaims, SCOPES);
+    }
+
+    private AccessToken createSignedAccessToken(
+            OIDCClaimsRequest identityClaims, List<String> scopes) throws JOSEException {
         var expiryDate = NowHelper.nowPlus(3, ChronoUnit.MINUTES);
         var ecSigningKey =
                 new ECKeyGenerator(Curve.P_256)
@@ -250,7 +315,7 @@ class UserInfoServiceTest {
                 TokenGeneratorHelper.generateSignedToken(
                         CLIENT_ID,
                         BASE_URL,
-                        SCOPES,
+                        scopes,
                         signer,
                         SUBJECT,
                         ecSigningKey.getKeyID(),
@@ -268,5 +333,14 @@ class UserInfoServiceTest {
                 .setSubjectID(SUBJECT.toString())
                 .setCreated(LocalDateTime.now().toString())
                 .setUpdated(LocalDateTime.now().toString());
+    }
+
+    private ClientRegistry generateClientRegistry() {
+        return new ClientRegistry()
+                .setClientID(CLIENT_ID)
+                .setConsentRequired(false)
+                .setClientName("test-client")
+                .setSectorIdentifierUri("https://test.com")
+                .setSubjectType("public");
     }
 }

@@ -10,16 +10,19 @@ public class AccessTokenInfo {
     private final String subject;
     private final List<String> scopes;
     private final List<String> identityClaims;
+    private final String clientID;
 
     public AccessTokenInfo(
             AccessTokenStore accessTokenStore,
             String subject,
             List<String> scopes,
-            List<String> identityClaims) {
+            List<String> identityClaims,
+            String clientID) {
         this.accessTokenStore = accessTokenStore;
         this.subject = subject;
         this.scopes = scopes;
         this.identityClaims = identityClaims;
+        this.clientID = clientID;
     }
 
     public AccessTokenStore getAccessTokenStore() {
@@ -36,5 +39,9 @@ public class AccessTokenInfo {
 
     public List<String> getIdentityClaims() {
         return identityClaims;
+    }
+
+    public String getClientID() {
+        return clientID;
     }
 }
