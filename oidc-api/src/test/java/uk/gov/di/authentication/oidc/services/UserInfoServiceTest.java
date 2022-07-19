@@ -20,6 +20,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.app.services.DynamoDocAppService;
 import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
 import uk.gov.di.authentication.shared.entity.AccessTokenStore;
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.IdentityCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
@@ -75,6 +76,7 @@ class UserInfoServiceTest {
             new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
     private final String coreIdentityJWT = SignedCredentialHelper.generateCredential().serialize();
     private AccessToken accessToken;
+    private ClientRegistry clientRegistry;
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
@@ -91,6 +93,7 @@ class UserInfoServiceTest {
     void setUp() {
         userInfoService =
                 new UserInfoService(authenticationService, identityService, dynamoDocAppService);
+        clientRegistry = generateClientRegistry();
     }
 
     @Test
@@ -102,7 +105,8 @@ class UserInfoServiceTest {
         var accessTokenStore =
                 new AccessTokenStore(accessToken.getValue(), INTERNAL_SUBJECT.getValue());
         var accessTokenInfo =
-                new AccessTokenInfo(accessTokenStore, SUBJECT.getValue(), SCOPES, null);
+                new AccessTokenInfo(
+                        accessTokenStore, SUBJECT.getValue(), SCOPES, null, clientRegistry);
 
         var userInfo = userInfoService.populateUserInfo(accessTokenInfo, false);
         assertThat(userInfo.getEmailAddress(), equalTo(EMAIL));
@@ -125,7 +129,8 @@ class UserInfoServiceTest {
         var accessTokenStore =
                 new AccessTokenStore(accessToken.getValue(), INTERNAL_SUBJECT.getValue());
         var accessTokenInfo =
-                new AccessTokenInfo(accessTokenStore, SUBJECT.getValue(), scopes, null);
+                new AccessTokenInfo(
+                        accessTokenStore, SUBJECT.getValue(), scopes, null, clientRegistry);
 
         var userInfo = userInfoService.populateUserInfo(accessTokenInfo, false);
         assertThat(userInfo.getEmailAddress(), equalTo(EMAIL));
@@ -147,7 +152,8 @@ class UserInfoServiceTest {
         var accessTokenStore =
                 new AccessTokenStore(accessToken.getValue(), INTERNAL_SUBJECT.getValue());
         var accessTokenInfo =
-                new AccessTokenInfo(accessTokenStore, SUBJECT.getValue(), SCOPES, null);
+                new AccessTokenInfo(
+                        accessTokenStore, SUBJECT.getValue(), SCOPES, null, clientRegistry);
 
         var userInfo = userInfoService.populateUserInfo(accessTokenInfo, true);
         assertThat(userInfo.getEmailAddress(), equalTo(EMAIL));
@@ -187,7 +193,8 @@ class UserInfoServiceTest {
                         SCOPES,
                         oidcValidClaimsRequest.getUserInfoClaimsRequest().getEntries().stream()
                                 .map(ClaimsSetRequest.Entry::getClaimName)
-                                .collect(Collectors.toList()));
+                                .collect(Collectors.toList()),
+                        clientRegistry);
 
         var userInfo = userInfoService.populateUserInfo(accessTokenInfo, true);
         assertThat(userInfo.getEmailAddress(), equalTo(EMAIL));
@@ -225,7 +232,8 @@ class UserInfoServiceTest {
                         SCOPES,
                         oidcValidClaimsRequest.getUserInfoClaimsRequest().getEntries().stream()
                                 .map(ClaimsSetRequest.Entry::getClaimName)
-                                .collect(Collectors.toList()));
+                                .collect(Collectors.toList()),
+                        clientRegistry);
 
         var userInfo = userInfoService.populateUserInfo(accessTokenInfo, true);
         assertThat(userInfo.getEmailAddress(), equalTo(EMAIL));
@@ -268,5 +276,14 @@ class UserInfoServiceTest {
                 .setSubjectID(SUBJECT.toString())
                 .setCreated(LocalDateTime.now().toString())
                 .setUpdated(LocalDateTime.now().toString());
+    }
+
+    private ClientRegistry generateClientRegistry() {
+        return new ClientRegistry()
+                .setClientID(CLIENT_ID)
+                .setConsentRequired(false)
+                .setClientName("test-client")
+                .setSectorIdentifierUri("https://test.com")
+                .setSubjectType("public");
     }
 }

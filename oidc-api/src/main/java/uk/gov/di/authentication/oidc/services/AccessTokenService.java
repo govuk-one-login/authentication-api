@@ -128,7 +128,8 @@ public class AccessTokenService {
                 throw new AccessTokenException(
                         INVALID_ACCESS_TOKEN, BearerTokenError.INVALID_TOKEN);
             }
-            return new AccessTokenInfo(accessTokenStore.get(), subject, scopes, identityClaims);
+            return new AccessTokenInfo(
+                    accessTokenStore.get(), subject, scopes, identityClaims, client);
         } catch (ParseException e) {
             LOG.warn("Unable to parse AccessToken to SignedJWT");
             throw new AccessTokenException(
