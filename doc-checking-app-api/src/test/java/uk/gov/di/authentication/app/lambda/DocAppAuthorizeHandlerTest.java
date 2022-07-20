@@ -20,8 +20,13 @@ import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.ResponseType;
+import com.nimbusds.oauth2.sdk.Scope;
+import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.Nonce;
+import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
@@ -77,6 +82,8 @@ class DocAppAuthorizeHandlerTest {
     private static final Subject DOC_APP_SUBJECT_ID = new Subject();
     private static final Json objectMapper = SerializationService.getInstance();
 
+    private static final String CLIENT_ID = "test-client";
+
     private final Context context = mock(Context.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final ClientSession clientSession = mock(ClientSession.class);
@@ -116,8 +123,8 @@ class DocAppAuthorizeHandlerTest {
         when(authorisationService.constructRequestJWT(
                         any(State.class), any(Subject.class), any(ClientRegistry.class)))
                 .thenReturn(encryptedJWT);
-        when(clientService.getClient(DOC_APP_CLIENT_ID))
-                .thenReturn(Optional.of(new ClientRegistry()));
+        when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.of(new ClientRegistry()));
+        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         usingValidSession();
         usingValidClientSession();
 
@@ -228,5 +235,19 @@ class DocAppAuthorizeHandlerTest {
                     URLDecoder.decode(pair.substring(idx + 1), StandardCharsets.UTF_8));
         }
         return query_pairs;
+    }
+
+    private AuthenticationRequest generateAuthRequest() {
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        AuthenticationRequest.Builder builder =
+                new AuthenticationRequest.Builder(
+                                ResponseType.CODE,
+                                scope,
+                                new ClientID(CLIENT_ID),
+                                URI.create("http://localhost/redirect"))
+                        .state(new State())
+                        .nonce(new Nonce());
+        return builder.build();
     }
 }
