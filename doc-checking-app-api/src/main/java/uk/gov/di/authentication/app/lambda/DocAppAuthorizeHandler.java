@@ -135,14 +135,20 @@ public class DocAppAuthorizeHandler
                                                 configurationService
                                                         .getDocAppAuthorisationClientId());
                                 attachLogFieldToLogs(CLIENT_ID, clientID.getValue());
+                                var clientRegistry =
+                                        clientSession
+                                                .getAuthRequestParams()
+                                                .get("client_id")
+                                                .stream()
+                                                .findFirst()
+                                                .flatMap(clientService::getClient)
+                                                .orElseThrow();
                                 var state = new State();
                                 var encryptedJWT =
                                         authorisationService.constructRequestJWT(
                                                 state,
                                                 clientSession.getDocAppSubjectId(),
-                                                clientService
-                                                        .getClient(clientID.getValue())
-                                                        .orElseThrow());
+                                                clientRegistry);
                                 var authRequestBuilder =
                                         new AuthorizationRequest.Builder(
                                                         new ResponseType(ResponseType.Value.CODE),

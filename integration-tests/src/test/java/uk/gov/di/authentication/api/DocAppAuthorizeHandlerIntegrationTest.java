@@ -81,7 +81,7 @@ class DocAppAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegration
     void shouldReturn200WithValidDocAppAuthRequest() throws Json.JsonException {
         redis.addDocAppSubjectIdToClientSession(new Subject(), CLIENT_SESSION_ID);
         clientStore.registerClient(
-                DOC_APP_CLIENT_ID,
+                RP_CLIENT_ID.getValue(),
                 "test-client",
                 singletonList("http://localhost/redirect"),
                 singletonList("contact@example.com"),
