@@ -17,7 +17,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.doesNotHaveObjectMessageProperty;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.hasObjectMessageProperty;
 
 class PerformanceAnalysisAuditLambdaTest {
@@ -31,8 +30,6 @@ class PerformanceAnalysisAuditLambdaTest {
 
     @BeforeEach
     public void setUp() {
-        when(config.getAuditSigningKeyAlias()).thenReturn("key_alias");
-        when(config.getAuditHmacSecret()).thenReturn("i-am-a-fake-hash-key");
         when(kms.validateSignature(any(ByteBuffer.class), any(ByteBuffer.class), eq("key_alias")))
                 .thenReturn(true);
     }
@@ -61,51 +58,5 @@ class PerformanceAnalysisAuditLambdaTest {
         assertThat(logEvent, hasObjectMessageProperty("session-id", "test-session-id"));
         assertThat(logEvent, hasObjectMessageProperty("timestamp", "test-timestamp"));
         assertThat(logEvent, hasObjectMessageProperty("event-name", "test-event-name"));
-    }
-
-    @Test
-    void shouldHashSensitiveFields() {
-        var handler = new PerformanceAnalysisAuditLambda(kms, config);
-
-        var payload =
-                AuditPayload.AuditEvent.newBuilder()
-                        .setUser(
-                                AuditPayload.AuditEvent.User.newBuilder()
-                                        .setId("test-id")
-                                        .setEmail("test-example@digital.cabinet-office.gov.uk")
-                                        .setPhoneNumber("test-phone-number")
-                                        .setIpAddress("test-ip-address")
-                                        .build())
-                        .build();
-
-        handler.handleAuditEvent(payload);
-
-        LogEvent logEvent = logging.events().get(0);
-
-        assertThat(
-                logEvent,
-                hasObjectMessageProperty(
-                        "user-id",
-                        "fe3ad3ffe725ab111628ea3df4b04fb0fda486479fb621c8d4ac325c9e1ce91b"));
-    }
-
-    @Test
-    void shouldNotHashMissingSensitiveFields_Id() {
-        var handler = new PerformanceAnalysisAuditLambda(kms, config);
-
-        var payload =
-                AuditPayload.AuditEvent.newBuilder()
-                        .setUser(
-                                AuditPayload.AuditEvent.User.newBuilder()
-                                        .setEmail("test-email")
-                                        .setPhoneNumber("test-phone")
-                                        .build())
-                        .build();
-
-        handler.handleAuditEvent(payload);
-
-        LogEvent logEvent = logging.events().get(0);
-
-        assertThat(logEvent, doesNotHaveObjectMessageProperty("user.id"));
     }
 }
