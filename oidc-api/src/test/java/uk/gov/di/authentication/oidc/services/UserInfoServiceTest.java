@@ -225,6 +225,10 @@ class UserInfoServiceTest {
         assertThat(((LinkedTreeMap) addressClaim.get(0)).size(), equalTo(7));
         var passportClaim = (JSONArray) userInfo.getClaim(ValidClaims.PASSPORT.getValue());
         assertThat(((LinkedTreeMap) passportClaim.get(0)).size(), equalTo(2));
+
+        assertClaimMetricPublished("https://vocab.account.gov.uk/v1/coreIdentityJWT");
+        assertClaimMetricPublished("https://vocab.account.gov.uk/v1/address");
+        assertClaimMetricPublished("https://vocab.account.gov.uk/v1/passport");
     }
 
     @Test
@@ -261,6 +265,8 @@ class UserInfoServiceTest {
         assertThat(
                 userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()),
                 equalTo(coreIdentityJWT));
+
+        assertClaimMetricPublished("https://vocab.account.gov.uk/v1/coreIdentityJWT");
     }
 
     @Test
@@ -285,16 +291,7 @@ class UserInfoServiceTest {
 
         var userInfo = userInfoService.populateUserInfo(accessTokenInfo);
         assertThat(userInfo.getClaim("doc-app-credential"), equalTo(List.of(docAppCredentialJWT)));
-        verify(cloudwatchMetricsService)
-                .incrementCounter(
-                        "ClaimIssued",
-                        Map.of(
-                                "Environment",
-                                "test",
-                                "Client",
-                                CLIENT_ID,
-                                "Claim",
-                                "doc-app-credential"));
+        assertClaimMetricPublished("doc-app-credential");
     }
 
     private AccessToken createSignedAccessToken(OIDCClaimsRequest identityClaims)
@@ -342,5 +339,12 @@ class UserInfoServiceTest {
                 .setClientName("test-client")
                 .setSectorIdentifierUri("https://test.com")
                 .setSubjectType("public");
+    }
+
+    private void assertClaimMetricPublished(String v3) {
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "ClaimIssued",
+                        Map.of("Environment", "test", "Client", CLIENT_ID, "Claim", v3));
     }
 }

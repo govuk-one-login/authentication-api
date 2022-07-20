@@ -91,6 +91,8 @@ public class UserInfoService {
             userInfo.setClaim(
                     ValidClaims.CORE_IDENTITY_JWT.getValue(),
                     identityCredentials.getCoreIdentityJWT());
+            incrementClaimIssuedCounter(
+                    ValidClaims.CORE_IDENTITY_JWT.getValue(), accessTokenInfo.getClientID());
         }
         if (Objects.nonNull(identityCredentials.getAdditionalClaims())) {
             identityCredentials.getAdditionalClaims().entrySet().stream()
@@ -101,6 +103,8 @@ public class UserInfoService {
                                     userInfo.setClaim(
                                             t.getKey(),
                                             objectMapper.readValue(t.getValue(), JSONArray.class));
+                                    incrementClaimIssuedCounter(
+                                            t.getKey(), accessTokenInfo.getClientID());
                                 } catch (Json.JsonException e) {
                                     LOG.error("Unable to deserialize additional identity claims");
                                     throw new RuntimeException();
