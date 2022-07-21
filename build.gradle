@@ -270,7 +270,6 @@ task sharedTerraform (type: Terraform) {
         dependsOn "composeUp"
     }
     dependsOn ":lambda-warmer:buildZip"
-    dependsOn ":account-migrations:buildZip"
 }
 
 task oidcTerraform (type: Terraform) {
