@@ -42,7 +42,6 @@ class PerformanceAnalysisAuditLambdaTest {
                 AuditPayload.AuditEvent.newBuilder()
                         .setEventId("test-event-id")
                         .setRequestId("test-request-id")
-                        .setSessionId("test-session-id")
                         .setClientId("test-client-id")
                         .setTimestamp("test-timestamp")
                         .setEventName("test-event-name")
@@ -55,7 +54,6 @@ class PerformanceAnalysisAuditLambdaTest {
 
         assertThat(logEvent, hasObjectMessageProperty("event-id", "test-event-id"));
         assertThat(logEvent, hasObjectMessageProperty("request-id", "test-request-id"));
-        assertThat(logEvent, hasObjectMessageProperty("session-id", "test-session-id"));
         assertThat(logEvent, hasObjectMessageProperty("timestamp", "test-timestamp"));
         assertThat(logEvent, hasObjectMessageProperty("event-name", "test-event-name"));
     }
