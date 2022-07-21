@@ -1,6 +1,5 @@
 rootProject.name = 'di-authentication-api'
 include 'account-management-api'
-include 'account-migrations'
 include 'audit-processors'
 include 'lambda-warmer'
 include 'client-registry-api'
