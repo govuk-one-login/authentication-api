@@ -17,10 +17,10 @@ module "notify_callback" {
   endpoint_method = "POST"
   environment     = var.environment
 
-  handler_environment_variables = {
+  handler_environment_variables = merge(var.notify_template_map, {
     ENVIRONMENT         = var.environment
     LOCALSTACK_ENDPOINT = var.use_localstack ? var.localstack_endpoint : null
-  }
+  })
   handler_function_name = "uk.gov.di.authentication.deliveryreceiptsapi.lambda.NotifyCallbackHandler::handleRequest"
 
   rest_api_id      = aws_api_gateway_rest_api.di_authentication_delivery_receipts_api.id
