@@ -15,6 +15,7 @@ import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
 import uk.gov.di.authentication.oidc.services.AccessTokenService;
 import uk.gov.di.authentication.oidc.services.UserInfoService;
 import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.List;
@@ -40,13 +41,17 @@ public class UserInfoHandlerTest {
     private final UserInfoService userInfoService = mock(UserInfoService.class);
     private final AccessTokenInfo accessTokenInfo = mock(AccessTokenInfo.class);
     private final AccessTokenService accessTokenService = mock(AccessTokenService.class);
+    private final AuditService auditService = mock(AuditService.class);
+
     private static final Map<String, List<String>> INVALID_TOKEN_RESPONSE =
             new UserInfoErrorResponse(INVALID_TOKEN).toHTTPResponse().getHeaderMap();
     private UserInfoHandler handler;
 
     @BeforeEach
     void setUp() {
-        handler = new UserInfoHandler(configurationService, userInfoService, accessTokenService);
+        handler =
+                new UserInfoHandler(
+                        configurationService, userInfoService, accessTokenService, auditService);
     }
 
     @Test

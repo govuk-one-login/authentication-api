@@ -13,6 +13,7 @@ import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
 import uk.gov.di.authentication.oidc.services.AccessTokenService;
 import uk.gov.di.authentication.oidc.services.UserInfoService;
 import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
@@ -38,14 +39,17 @@ public class UserInfoHandler
     private final ConfigurationService configurationService;
     private final UserInfoService userInfoService;
     private final AccessTokenService accessTokenService;
+    private final AuditService auditService;
 
     public UserInfoHandler(
             ConfigurationService configurationService,
             UserInfoService userInfoService,
-            AccessTokenService accessTokenService) {
+            AccessTokenService accessTokenService,
+            AuditService auditService) {
         this.configurationService = configurationService;
         this.userInfoService = userInfoService;
         this.accessTokenService = accessTokenService;
+        this.auditService = auditService;
     }
 
     public UserInfoHandler() {
@@ -69,6 +73,7 @@ public class UserInfoHandler
                                 new JwksService(
                                         configurationService,
                                         new KmsConnectionService(configurationService))));
+        this.auditService = new AuditService(configurationService);
     }
 
     @Override
