@@ -9,10 +9,12 @@ import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.app.services.DynamoDocAppService;
+import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
 import uk.gov.di.authentication.oidc.services.AccessTokenService;
 import uk.gov.di.authentication.oidc.services.UserInfoService;
 import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
@@ -38,14 +40,17 @@ public class UserInfoHandler
     private final ConfigurationService configurationService;
     private final UserInfoService userInfoService;
     private final AccessTokenService accessTokenService;
+    private final AuditService auditService;
 
     public UserInfoHandler(
             ConfigurationService configurationService,
             UserInfoService userInfoService,
-            AccessTokenService accessTokenService) {
+            AccessTokenService accessTokenService,
+            AuditService auditService) {
         this.configurationService = configurationService;
         this.userInfoService = userInfoService;
         this.accessTokenService = accessTokenService;
+        this.auditService = auditService;
     }
 
     public UserInfoHandler() {
@@ -69,6 +74,7 @@ public class UserInfoHandler
                                 new JwksService(
                                         configurationService,
                                         new KmsConnectionService(configurationService))));
+        this.auditService = new AuditService(configurationService);
     }
 
     @Override
@@ -98,8 +104,9 @@ public class UserInfoHandler
                                                 .getHeaderMap());
                             }
                             UserInfo userInfo;
+                            AccessTokenInfo accessTokenInfo;
                             try {
-                                AccessTokenInfo accessTokenInfo =
+                                accessTokenInfo =
                                         accessTokenService.parse(
                                                 getHeaderValueFromHeaders(
                                                         input.getHeaders(),
@@ -120,6 +127,18 @@ public class UserInfoHandler
                             }
                             LOG.info(
                                     "Successfully processed UserInfo request. Sending back UserInfo response");
+
+                            auditService.submitAuditEvent(
+                                    OidcAuditableEvent.USER_INFO_RETURNED,
+                                    context.getAwsRequestId(),
+                                    AuditService.UNKNOWN,
+                                    accessTokenInfo.getClientID(),
+                                    accessTokenInfo.getSubject(),
+                                    AuditService.UNKNOWN,
+                                    AuditService.UNKNOWN,
+                                    AuditService.UNKNOWN,
+                                    AuditService.UNKNOWN);
+
                             return generateApiGatewayProxyResponse(200, userInfo.toJSONString());
                         });
     }

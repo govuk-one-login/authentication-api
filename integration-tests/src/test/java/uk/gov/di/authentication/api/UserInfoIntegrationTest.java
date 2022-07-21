@@ -55,6 +55,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.USER_INFO_RETURNED;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.ADDRESS_CLAIM;
 import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.PASSPORT_CLAIM;
@@ -130,7 +132,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(userInfoResponse.getSubject(), equalTo(PUBLIC_SUBJECT));
         assertThat(userInfoResponse.toJWTClaimsSet().getClaims().size(), equalTo(5));
 
-        assertNoAuditEventsReceived(auditTopic);
+        assertEventTypesReceived(auditTopic, singletonList(USER_INFO_RETURNED));
     }
 
     @Test
@@ -182,7 +184,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 equalTo(signedCredential.serialize()));
         assertThat(userInfoResponse.toJWTClaimsSet().getClaims().size(), equalTo(8));
 
-        assertNoAuditEventsReceived(auditTopic);
+        assertEventTypesReceived(auditTopic, singletonList(USER_INFO_RETURNED));
     }
 
     @Test
@@ -211,7 +213,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertNull(userInfoResponse.getClaim(ValidClaims.PASSPORT.getValue()));
         assertNull(userInfoResponse.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
 
-        assertNoAuditEventsReceived(auditTopic);
+        assertEventTypesReceived(auditTopic, singletonList(USER_INFO_RETURNED));
     }
 
     @Test
@@ -232,7 +234,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertNull(userInfoResponse.getClaim(ValidClaims.PASSPORT.getValue()));
         assertNull(userInfoResponse.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
 
-        assertNoAuditEventsReceived(auditTopic);
+        assertEventTypesReceived(auditTopic, singletonList(USER_INFO_RETURNED));
     }
 
     @Test
@@ -253,7 +255,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(userInfoResponse.getSubject(), equalTo(DOC_APP_PUBLIC_SUBJECT));
         assertThat(userInfoResponse.toJWTClaimsSet().getClaims().size(), equalTo(2));
 
-        assertNoAuditEventsReceived(auditTopic);
+        assertEventTypesReceived(auditTopic, singletonList(USER_INFO_RETURNED));
     }
 
     @Test

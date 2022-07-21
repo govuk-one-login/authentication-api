@@ -7,7 +7,8 @@ public enum OidcAuditableEvent implements AuditableEvent {
     AUTHORISATION_INITIATED,
     AUTHORISATION_REQUEST_RECEIVED,
     AUTH_CODE_ISSUED,
-    LOG_OUT_SUCCESS;
+    LOG_OUT_SUCCESS,
+    USER_INFO_RETURNED;
 
     public AuditableEvent parseFromName(String name) {
         return valueOf(name);
