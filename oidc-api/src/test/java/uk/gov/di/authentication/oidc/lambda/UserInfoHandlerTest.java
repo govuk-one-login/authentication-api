@@ -11,6 +11,7 @@ import com.nimbusds.openid.connect.sdk.UserInfoErrorResponse;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
 import uk.gov.di.authentication.oidc.services.AccessTokenService;
 import uk.gov.di.authentication.oidc.services.UserInfoService;
@@ -28,6 +29,7 @@ import static org.hamcrest.core.IsEqual.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -52,6 +54,9 @@ public class UserInfoHandlerTest {
         handler =
                 new UserInfoHandler(
                         configurationService, userInfoService, accessTokenService, auditService);
+        when(context.getAwsRequestId()).thenReturn("aws-request-id");
+        when(accessTokenInfo.getClientID()).thenReturn("client-id");
+        when(accessTokenInfo.getSubject()).thenReturn(SUBJECT.getValue());
     }
 
     @Test
@@ -78,6 +83,18 @@ public class UserInfoHandlerTest {
         assertTrue(parsedResultBody.getEmailVerified());
         assertThat(parsedResultBody.getPhoneNumber(), equalTo(PHONE_NUMBER));
         assertTrue(parsedResultBody.getPhoneNumberVerified());
+
+        verify(auditService)
+                .submitAuditEvent(
+                        OidcAuditableEvent.USER_INFO_RETURNED,
+                        "aws-request-id",
+                        "",
+                        "client-id",
+                        SUBJECT.getValue(),
+                        "",
+                        "",
+                        "",
+                        "");
     }
 
     @Test
