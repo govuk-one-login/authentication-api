@@ -10,7 +10,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.configuration.AuditPublisherConfiguration;
 import uk.gov.di.authentication.shared.configuration.BaseLambdaConfiguration;
-import uk.gov.di.authentication.shared.entity.EmailNotificationType;
+import uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType;
 
 import java.net.URI;
 import java.util.Arrays;
@@ -247,9 +247,9 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 : Arrays.stream(destinations.split(",")).collect(Collectors.toList());
     }
 
-    public Optional<EmailNotificationType> getEmailNotificationTypeFromTemplateId(
+    public Optional<DeliveryReceiptsNotificationType> getNotificationTypeFromTemplateId(
             String templateId) {
-        for (EmailNotificationType type : EmailNotificationType.values()) {
+        for (DeliveryReceiptsNotificationType type : DeliveryReceiptsNotificationType.values()) {
             if (System.getenv(type.getTemplateName()).equals(templateId)) {
                 return Optional.of(type);
             }

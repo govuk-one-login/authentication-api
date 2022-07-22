@@ -8,7 +8,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.deliveryreceiptsapi.entity.NotifyDeliveryReceipt;
-import uk.gov.di.authentication.shared.entity.EmailNotificationType;
+import uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
@@ -28,9 +28,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.deliveryreceiptsapi.entity.DeliveryMetricStatus.SMS_DELIVERED;
-import static uk.gov.di.authentication.deliveryreceiptsapi.entity.DeliveryMetricStatus.SMS_FAILURE;
-import static uk.gov.di.authentication.deliveryreceiptsapi.entity.DeliveryMetricStatus.SMS_UNDETERMINED;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class NotifyCallbackHandlerTest {
@@ -53,33 +50,31 @@ class NotifyCallbackHandlerTest {
 
     private static Stream<Arguments> phoneNumbers() {
         return Stream.of(
-                Arguments.of("+447316763843", "44", "delivered", SMS_DELIVERED.toString()),
-                Arguments.of("+4407316763843", "44", "delivered", SMS_DELIVERED.toString()),
-                Arguments.of("+33645453322", "33", "delivered", SMS_DELIVERED.toString()),
-                Arguments.of("+330645453322", "33", "delivered", SMS_DELIVERED.toString()),
-                Arguments.of("+447316763843", "44", "delivered", SMS_DELIVERED.toString()),
-                Arguments.of("+447316763843", "44", "delivered", SMS_DELIVERED.toString()),
-                Arguments.of("+33645453322", "33", "delivered", SMS_DELIVERED.toString()),
-                Arguments.of("+33645453322", "33", "delivered", SMS_DELIVERED.toString()),
-                Arguments.of("07911123456", "44", "delivered", SMS_DELIVERED.toString()),
-                Arguments.of("+447316763843", "44", "permanent-failure", SMS_FAILURE.toString()),
-                Arguments.of("+4407316763843", "44", "permanent-failure", SMS_FAILURE.toString()),
-                Arguments.of("+330645453322", "33", "technical-failure", SMS_FAILURE.toString()),
-                Arguments.of("+33645453322", "33", "technical-failure", SMS_FAILURE.toString()),
-                Arguments.of("07911123456", "44", "sent", SMS_UNDETERMINED.toString()),
-                Arguments.of("+447316763843", "44", "sent", SMS_UNDETERMINED.toString()),
-                Arguments.of("+4407316763843", "44", "sent", SMS_UNDETERMINED.toString()),
-                Arguments.of("+330645453322", "33", "sent", SMS_UNDETERMINED.toString()),
-                Arguments.of("+33645453322", "33", "sent", SMS_UNDETERMINED.toString()),
-                Arguments.of("07911123456", "44", "sent", SMS_UNDETERMINED.toString()));
+                Arguments.of("+447316763843", "44", "delivered"),
+                Arguments.of("+4407316763843", "44", "delivered"),
+                Arguments.of("+33645453322", "33", "delivered"),
+                Arguments.of("+330645453322", "33", "delivered"),
+                Arguments.of("+447316763843", "44", "delivered"),
+                Arguments.of("+447316763843", "44", "delivered"),
+                Arguments.of("+33645453322", "33", "delivered"),
+                Arguments.of("+33645453322", "33", "delivered"),
+                Arguments.of("07911123456", "44", "delivered"),
+                Arguments.of("+447316763843", "44", "permanent-failure"),
+                Arguments.of("+4407316763843", "44", "permanent-failure"),
+                Arguments.of("+330645453322", "33", "technical-failure"),
+                Arguments.of("+33645453322", "33", "technical-failure"),
+                Arguments.of("07911123456", "44", "temporary-failure"),
+                Arguments.of("+447316763843", "44", "temporary-failure"));
     }
 
     @ParameterizedTest
     @MethodSource("phoneNumbers")
     void shouldCallCloudwatchMetricServiceWhenSmsReceiptIsReceived(
-            String number, String expectedCountryCode, String status, String counterName)
-            throws Json.JsonException {
-        var deliveryReceipt = createDeliveryReceipt(number, status, "sms", IdGenerator.generate());
+            String number, String expectedCountryCode, String status) throws Json.JsonException {
+        var templateID = IdGenerator.generate();
+        when(configurationService.getNotificationTypeFromTemplateId(templateID))
+                .thenReturn(Optional.of(DeliveryReceiptsNotificationType.VERIFY_PHONE_NUMBER));
+        var deliveryReceipt = createDeliveryReceipt(number, status, "sms", templateID);
         var event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Authorization", "Bearer " + BEARER_TOKEN));
         event.setBody(objectMapper.writeValueAsString(deliveryReceipt));
@@ -87,8 +82,11 @@ class NotifyCallbackHandlerTest {
 
         verify(cloudwatchMetricsService)
                 .incrementCounter(
-                        counterName,
+                        "SmsSent",
                         Map.of(
+                                "SmsType",
+                                DeliveryReceiptsNotificationType.VERIFY_PHONE_NUMBER
+                                        .getTemplateAlias(),
                                 "CountryCode",
                                 expectedCountryCode,
                                 "Environment",
@@ -102,8 +100,8 @@ class NotifyCallbackHandlerTest {
     @Test
     void shouldCallCloudwatchMetricWithEmailNotificationType() throws Json.JsonException {
         var templateID = IdGenerator.generate();
-        when(configurationService.getEmailNotificationTypeFromTemplateId(templateID))
-                .thenReturn(Optional.of(EmailNotificationType.VERIFY_EMAIL));
+        when(configurationService.getNotificationTypeFromTemplateId(templateID))
+                .thenReturn(Optional.of(DeliveryReceiptsNotificationType.VERIFY_EMAIL));
         var deliveryReceipt =
                 createDeliveryReceipt("jim@test.com", "delivered", "email", templateID);
         var event = new APIGatewayProxyRequestEvent();
@@ -116,7 +114,7 @@ class NotifyCallbackHandlerTest {
                         "EmailSent",
                         Map.of(
                                 "EmailName",
-                                EmailNotificationType.VERIFY_EMAIL.getTemplateAlias(),
+                                DeliveryReceiptsNotificationType.VERIFY_EMAIL.getTemplateAlias(),
                                 "Environment",
                                 ENVIRONMENT,
                                 "NotifyStatus",
@@ -126,7 +124,7 @@ class NotifyCallbackHandlerTest {
     @Test
     void shouldThrowIfInvalidTemplateId() throws Json.JsonException {
         var templateID = IdGenerator.generate();
-        when(configurationService.getEmailNotificationTypeFromTemplateId(templateID))
+        when(configurationService.getNotificationTypeFromTemplateId(templateID))
                 .thenReturn(Optional.empty());
         var deliveryReceipt =
                 createDeliveryReceipt("jim@test.com", "delivered", "email", templateID);
