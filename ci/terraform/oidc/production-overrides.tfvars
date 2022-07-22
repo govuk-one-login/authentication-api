@@ -8,6 +8,16 @@ notify_template_map = {
   RESET_PASSWORD_WITH_CODE_TEMPLATE_ID     = "59114c22-a2f1-40c8-a530-f337112415ef"
 }
 
+doc_app_api_enabled                = true
+doc_app_cri_data_endpoint          = "userinfo"
+doc_app_backend_uri                = "https://api-backend-api.review-b.account.gov.uk"
+doc_app_domain                     = "https://api.review-b.account.gov.uk"
+doc_app_authorisation_client_id    = "authOrchestratorDocApp"
+doc_app_authorisation_callback_uri = "https://oidc.account.gov.uk/doc-app-callback"
+doc_app_authorisation_uri          = "https://www.review-b.account.gov.uk/dca/oauth2/authorize"
+doc_app_jwks_endpoint              = "https://api-backend-api.review-b.account.gov.uk/.well-known/jwks.json"
+doc_app_encryption_key_id          = "7958938d-eea0-4e6d-9ea1-ec0b9d421f77"
+
 cloudwatch_log_retention       = 5
 client_registry_api_enabled    = false
 spot_enabled                   = true
