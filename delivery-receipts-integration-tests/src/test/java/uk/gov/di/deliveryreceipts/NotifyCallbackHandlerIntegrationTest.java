@@ -26,6 +26,8 @@ public class NotifyCallbackHandlerIntegrationTest {
 
     private static final String BEARER_TOKEN = "notify-test-@bearer-token";
     private static final Json objectMapper = SerializationService.getInstance();
+    private static final String EMAIL_SENT_TEMPLATE_ID = "35454-543543-3435435-12340";
+    private static final String VERIFY_PHONE_NUMBER_TEMPLATE_ID = "35454-543543-3435435-12348";
 
     private final Context context = mock(Context.class);
     private NotifyCallbackHandler handler;
@@ -41,7 +43,7 @@ public class NotifyCallbackHandlerIntegrationTest {
 
     @Test
     void shouldAddToCloudwatchWhenSmsDeliveryReceiptIsReceived() {
-        APIGatewayProxyResponseEvent response =
+        var response =
                 makeRequest(
                         new NotifyDeliveryReceipt(
                                 IdGenerator.generate(),
@@ -52,7 +54,27 @@ public class NotifyCallbackHandlerIntegrationTest {
                                 new Date().toString(),
                                 new Date().toString(),
                                 "sms",
+                                VERIFY_PHONE_NUMBER_TEMPLATE_ID,
+                                1),
+                        Map.of("Authorization", "Bearer " + BEARER_TOKEN));
+
+        assertThat(response, hasStatus(204));
+    }
+
+    @Test
+    void shouldAddToCloudwatchWhenEmailDeliveryReceiptIsReceived() {
+        var response =
+                makeRequest(
+                        new NotifyDeliveryReceipt(
                                 IdGenerator.generate(),
+                                null,
+                                "joe.bloggs@digital.cabinet-office.gov.uk",
+                                "delivered",
+                                new Date().toString(),
+                                new Date().toString(),
+                                new Date().toString(),
+                                "email",
+                                EMAIL_SENT_TEMPLATE_ID,
                                 1),
                         Map.of("Authorization", "Bearer " + BEARER_TOKEN));
 

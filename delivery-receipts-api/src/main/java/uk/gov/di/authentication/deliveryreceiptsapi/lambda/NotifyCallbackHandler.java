@@ -9,7 +9,7 @@ import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.deliveryreceiptsapi.entity.NotifyDeliveryReceipt;
-import uk.gov.di.authentication.shared.entity.EmailNotificationType;
+import uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
@@ -19,9 +19,6 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import java.util.Map;
 import java.util.Objects;
 
-import static uk.gov.di.authentication.deliveryreceiptsapi.entity.DeliveryMetricStatus.SMS_DELIVERED;
-import static uk.gov.di.authentication.deliveryreceiptsapi.entity.DeliveryMetricStatus.SMS_FAILURE;
-import static uk.gov.di.authentication.deliveryreceiptsapi.entity.DeliveryMetricStatus.SMS_UNDETERMINED;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
@@ -69,15 +66,18 @@ public class NotifyCallbackHandler
             if (deliveryReceipt.getNotificationType().equals("sms")) {
                 LOG.info("Sms delivery receipt received");
                 var countryCode = getCountryCodeFromNumber(deliveryReceipt.getTo());
-                var deliveryStatus = getSMSDeliveryStatus(deliveryReceipt.getStatus());
                 LOG.info(
-                        "SmsDeliveryStatus: {}, NotifyStatus: {}, CountryCode: {}",
-                        deliveryStatus,
+                        "SmsSent, NotifyStatus: {}, CountryCode: {}",
                         deliveryReceipt.getStatus(),
                         countryCode);
+                var templateId = deliveryReceipt.getTemplateId();
+                LOG.info("Template ID received in delivery receipt: {}", templateId);
+                var templateName = getTemplateName(templateId);
                 cloudwatchMetricsService.incrementCounter(
-                        deliveryStatus,
+                        "SmsSent",
                         Map.of(
+                                "SmsType",
+                                templateName,
                                 "CountryCode",
                                 String.valueOf(countryCode),
                                 "Environment",
@@ -89,18 +89,7 @@ public class NotifyCallbackHandler
                 LOG.info("Email delivery receipt received");
                 var templateId = deliveryReceipt.getTemplateId();
                 LOG.info("Template ID received in delivery receipt: {}", templateId);
-                var templateName =
-                        configurationService
-                                .getEmailNotificationTypeFromTemplateId(templateId)
-                                .map(EmailNotificationType::getTemplateAlias)
-                                .orElseThrow(
-                                        () -> {
-                                            LOG.error(
-                                                    "No email template found with template ID: {}",
-                                                    templateId);
-                                            throw new RuntimeException(
-                                                    "No email template found with template ID");
-                                        });
+                var templateName = getTemplateName(templateId);
                 cloudwatchMetricsService.incrementCounter(
                         "EmailSent",
                         Map.of(
@@ -143,14 +132,14 @@ public class NotifyCallbackHandler
         }
     }
 
-    private String getSMSDeliveryStatus(String notifyStatus) {
-        var deliveryStatus = SMS_FAILURE.toString();
-        if ("delivered".equals(notifyStatus)) {
-            deliveryStatus = SMS_DELIVERED.toString();
-        }
-        if ("sent".equals(notifyStatus)) {
-            deliveryStatus = SMS_UNDETERMINED.toString();
-        }
-        return deliveryStatus;
+    private String getTemplateName(String templateID) {
+        return configurationService
+                .getNotificationTypeFromTemplateId(templateID)
+                .map(DeliveryReceiptsNotificationType::getTemplateAlias)
+                .orElseThrow(
+                        () -> {
+                            LOG.error("No template found with template ID: {}", templateID);
+                            throw new RuntimeException("No template found with template ID");
+                        });
     }
 }
