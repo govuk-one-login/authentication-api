@@ -109,7 +109,7 @@ public class DocAppCallbackHandler
                                         CookieHelper.parseSessionCookie(input.getHeaders())
                                                 .orElseThrow(
                                                         () -> {
-                                                            LOG.error("No session cookie present");
+                                                            LOG.warn("No session cookie present");
                                                             throw new RuntimeException(
                                                                     "No session cookie present");
                                                         });
@@ -119,7 +119,7 @@ public class DocAppCallbackHandler
                                                         sessionCookiesIds.getSessionId())
                                                 .orElseThrow(
                                                         () -> {
-                                                            LOG.error("Session not found");
+                                                            LOG.warn("Session not found");
                                                             throw new RuntimeException(
                                                                     "Session not found");
                                                         });
@@ -130,7 +130,7 @@ public class DocAppCallbackHandler
                                                         sessionCookiesIds.getClientSessionId())
                                                 .orElseThrow(
                                                         () -> {
-                                                            LOG.error("ClientSession not found");
+                                                            LOG.warn("ClientSession not found");
                                                             throw new RuntimeException(
                                                                     "ClientSession not found");
                                                         });
