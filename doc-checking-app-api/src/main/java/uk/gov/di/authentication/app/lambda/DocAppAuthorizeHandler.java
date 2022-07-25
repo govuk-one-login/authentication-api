@@ -144,7 +144,6 @@ public class DocAppAuthorizeHandler
                                                 .flatMap(clientService::getClient)
                                                 .orElseThrow();
                                 var state = new State();
-                                LOG.info("Generated State: {}", state);
                                 var encryptedJWT =
                                         authorisationService.constructRequestJWT(
                                                 state,
