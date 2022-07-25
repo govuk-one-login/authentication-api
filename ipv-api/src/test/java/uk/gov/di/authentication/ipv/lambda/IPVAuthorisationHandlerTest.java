@@ -165,11 +165,7 @@ public class IPVAuthorisationHandlerTest {
             throws Json.JsonException, JOSEException, ParseException {
         var encryptedJWT = createEncryptedJWT();
         when(authorisationService.constructRequestJWT(
-                        any(State.class),
-                        any(Nonce.class),
-                        any(Scope.class),
-                        any(Subject.class),
-                        any()))
+                        any(State.class), any(Scope.class), any(Subject.class), any()))
                 .thenReturn(encryptedJWT);
         usingValidSession();
         usingValidClientSession();

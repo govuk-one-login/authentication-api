@@ -24,7 +24,6 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import com.nimbusds.openid.connect.sdk.Nonce;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
@@ -134,7 +133,7 @@ public class IPVAuthorisationService {
     }
 
     public EncryptedJWT constructRequestJWT(
-            State state, Nonce nonce, Scope scope, Subject subject, String claims) {
+            State state, Scope scope, Subject subject, String claims) {
         LOG.info("Generating request JWT");
         var jwsHeader = new JWSHeader(SIGNING_ALGORITHM);
         var jwtID = IdGenerator.generate();
@@ -149,7 +148,6 @@ public class IPVAuthorisationService {
                         .jwtID(jwtID)
                         .notBeforeTime(NowHelper.now())
                         .claim("state", state.getValue())
-                        .claim("nonce", nonce.getValue())
                         .claim(
                                 "redirect_uri",
                                 configurationService.getIPVAuthorisationCallbackURI().toString())

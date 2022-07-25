@@ -2,7 +2,6 @@ package uk.gov.di.authentication.ipv.services;
 
 import com.amazonaws.services.kms.model.SignRequest;
 import com.amazonaws.services.kms.model.SignResult;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -20,7 +19,6 @@ import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -75,7 +73,7 @@ class IPVAuthorisationServiceTest {
     private PrivateKey privateKey;
 
     @BeforeEach
-    void setUp() throws JsonProcessingException, Json.JsonException {
+    void setUp() throws Json.JsonException {
         when(configurationService.getSessionExpiry()).thenReturn(SESSION_EXPIRY);
         when(redisConnectionService.getValue(STATE_STORAGE_PREFIX + SESSION_ID))
                 .thenReturn(objectMapper.writeValueAsString(STATE));
@@ -207,13 +205,11 @@ class IPVAuthorisationServiceTest {
         signResult.setSigningAlgorithm(JWSAlgorithm.ES256.getName());
         when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(signResult);
         var state = new State();
-        var nonce = new Nonce();
         var scope = new Scope(OIDCScopeValue.OPENID);
         var pairwise = new Subject("pairwise-identifier");
         var claims = "{\"name\":{\"essential\":true}}";
 
-        var encryptedJWT =
-                authorisationService.constructRequestJWT(state, nonce, scope, pairwise, claims);
+        var encryptedJWT = authorisationService.constructRequestJWT(state, scope, pairwise, claims);
 
         var signedJWTResponse = decryptJWT(encryptedJWT);
 
@@ -221,8 +217,6 @@ class IPVAuthorisationServiceTest {
                 signedJWTResponse.getJWTClaimsSet().getClaim("client_id"), equalTo(IPV_CLIENT_ID));
         assertThat(
                 signedJWTResponse.getJWTClaimsSet().getClaim("state"), equalTo(state.getValue()));
-        assertThat(
-                signedJWTResponse.getJWTClaimsSet().getClaim("nonce"), equalTo(nonce.getValue()));
         assertThat(signedJWTResponse.getJWTClaimsSet().getSubject(), equalTo(pairwise.getValue()));
         assertThat(
                 signedJWTResponse.getJWTClaimsSet().getClaim("scope"), equalTo(scope.toString()));

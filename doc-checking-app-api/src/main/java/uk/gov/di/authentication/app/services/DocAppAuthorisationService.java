@@ -23,7 +23,6 @@ import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import com.nimbusds.openid.connect.sdk.Nonce;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -170,7 +169,6 @@ public class DocAppAuthorisationService {
                         .notBeforeTime(NowHelper.now())
                         .jwtID(jwtID)
                         .claim("state", state.getValue())
-                        .claim("nonce", new Nonce(IdGenerator.generate()).getValue())
                         .claim(
                                 "redirect_uri",
                                 configurationService.getDocAppAuthorisationCallbackURI().toString())

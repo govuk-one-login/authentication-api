@@ -10,7 +10,6 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import org.apache.logging.log4j.LogManager;
@@ -22,7 +21,6 @@ import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
@@ -118,14 +116,9 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
                     buildIpvClaimsRequest(authRequest)
                             .map(ClaimsSetRequest::toJSONString)
                             .orElse(null);
-            var nonce = new Nonce(IdGenerator.generate());
             var encryptedJWT =
                     authorisationService.constructRequestJWT(
-                            state,
-                            nonce,
-                            authRequest.getScope(),
-                            pairwiseSubject,
-                            claimsSetRequest);
+                            state, authRequest.getScope(), pairwiseSubject, claimsSetRequest);
             var authRequestBuilder =
                     new AuthorizationRequest.Builder(
                                     new ResponseType(ResponseType.Value.CODE), clientID)
