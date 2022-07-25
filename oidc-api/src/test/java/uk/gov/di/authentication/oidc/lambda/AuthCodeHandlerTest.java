@@ -191,6 +191,8 @@ class AuthCodeHandlerTest {
                         any(State.class)))
                 .thenReturn(authSuccessResponse);
 
+        when(authorizationService.isTestJourney(CLIENT_ID, EMAIL)).thenReturn(true);
+
         APIGatewayProxyResponseEvent response = generateApiRequest();
 
         assertThat(response, hasStatus(200));
@@ -223,7 +225,9 @@ class AuthCodeHandlerTest {
                                 "Environment",
                                 "unit-test",
                                 "Client",
-                                CLIENT_ID.getValue()));
+                                CLIENT_ID.getValue(),
+                                "IsTest",
+                                "true"));
     }
 
     @Test

@@ -204,6 +204,11 @@ public class AuthCodeHandler
 
                                 LOG.info("Successfully processed request");
 
+                                var isTestJourney =
+                                        authorizationService.isTestJourney(
+                                                authenticationRequest.getClientID(),
+                                                session.getEmailAddress());
+
                                 cloudwatchMetricsService.incrementCounter(
                                         "SignIn",
                                         Map.of(
@@ -212,7 +217,9 @@ public class AuthCodeHandler
                                                 "Environment",
                                                 configurationService.getEnvironment(),
                                                 "Client",
-                                                authenticationRequest.getClientID().getValue()));
+                                                authenticationRequest.getClientID().getValue(),
+                                                "IsTest",
+                                                Boolean.toString(isTestJourney)));
 
                                 if (!isDocCheckingAppUserWithSubjectId(clientSession)) {
                                     sessionService.save(
