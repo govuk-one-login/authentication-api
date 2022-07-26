@@ -57,6 +57,7 @@ import static uk.gov.di.authentication.shared.services.CodeStorageService.PASSWO
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 import static uk.gov.di.authentication.sharedtest.matchers.JsonArgumentMatcher.containsJsonString;
 
 class ResetPasswordRequestHandlerTest {
@@ -200,6 +201,40 @@ class ResetPasswordRequestHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         persistentId);
+    }
+
+    @Test
+    void shouldUseExistingOtpCodeIfOneExists() throws Json.JsonException {
+        String persistentId = "some-persistent-id-value";
+        Map<String, String> headers = new HashMap<>();
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
+        headers.put("Session-Id", session.getSessionId());
+        Subject subject = new Subject("subject_1");
+        when(authenticationService.getSubjectFromEmail(TEST_EMAIL_ADDRESS)).thenReturn(subject);
+        when(codeStorageService.getOtpCode(any(String.class), any(NotificationType.class)))
+                .thenReturn(Optional.of(TEST_SIX_DIGIT_CODE));
+
+        usingValidSession();
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setHeaders(headers);
+        event.setBody(format("{ \"email\": \"%s\", \"useCodeFlow\": true }", TEST_EMAIL_ADDRESS));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        NotifyRequest notifyRequest =
+                new NotifyRequest(
+                        TEST_EMAIL_ADDRESS, RESET_PASSWORD_WITH_CODE, TEST_SIX_DIGIT_CODE);
+        String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
+
+        verify(codeGeneratorService, never()).sixDigitCode();
+        verify(codeStorageService, never())
+                .saveOtpCode(
+                        any(String.class),
+                        any(String.class),
+                        anyLong(),
+                        any(NotificationType.class));
+        verify(awsSqsClient).send(serialisedRequest);
+        assertThat(result, hasStatus(204));
     }
 
     @Test

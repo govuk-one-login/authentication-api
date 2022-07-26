@@ -18,6 +18,7 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -45,6 +46,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -387,6 +390,70 @@ public class MfaHandlerTest {
                         "123.123.123.123",
                         PHONE_NUMBER,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
+    }
+
+    @Test
+    void shouldUseExistingOtpCodeIfOneExists() throws Json.JsonException {
+
+        usingValidSession();
+
+        when(codeStorageService.getOtpCode(any(String.class), any(NotificationType.class)))
+                .thenReturn(Optional.of(CODE));
+        when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
+                .thenReturn(Optional.of(PHONE_NUMBER));
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        NotifyRequest notifyRequest = new NotifyRequest(PHONE_NUMBER, MFA_SMS, CODE);
+        String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
+
+        verify(codeGeneratorService, never()).sixDigitCode();
+        verify(codeStorageService, never())
+                .saveOtpCode(
+                        any(String.class),
+                        any(String.class),
+                        anyLong(),
+                        any(NotificationType.class));
+        verify(sqsClient).send(serialisedRequest);
+        assertThat(result, hasStatus(204));
+    }
+
+    @Test
+    void shouldGenerateAndSaveOtpCodeIfExistingOneNotFound() throws Json.JsonException {
+
+        usingValidSession();
+
+        when(codeStorageService.getOtpCode(any(String.class), any(NotificationType.class)))
+                .thenReturn(Optional.empty());
+        when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
+
+        when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
+                .thenReturn(Optional.of(PHONE_NUMBER));
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        NotifyRequest notifyRequest = new NotifyRequest(PHONE_NUMBER, MFA_SMS, CODE);
+        String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
+
+        verify(codeGeneratorService).sixDigitCode();
+        verify(codeStorageService)
+                .saveOtpCode(
+                        any(String.class),
+                        any(String.class),
+                        anyLong(),
+                        any(NotificationType.class));
+        verify(sqsClient).send(serialisedRequest);
+        assertThat(result, hasStatus(204));
     }
 
     private void usingValidSession() {

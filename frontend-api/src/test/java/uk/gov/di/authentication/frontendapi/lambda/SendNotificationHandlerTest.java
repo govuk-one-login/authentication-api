@@ -63,6 +63,7 @@ import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_B
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class SendNotificationHandlerTest {
 
@@ -166,6 +167,37 @@ class SendNotificationHandlerTest {
                 .saveOtpCode(
                         TEST_EMAIL_ADDRESS, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, VERIFY_EMAIL);
         verify(sessionService).save(argThat(this::isSessionWithEmailSent));
+    }
+
+    @Test
+    void shouldUseExistingOtpCodeIfOneExists() throws Json.JsonException {
+        usingValidSession();
+        usingValidClientSession(CLIENT_ID);
+
+        when(codeStorageService.getOtpCode(any(String.class), any(NotificationType.class)))
+                .thenReturn(Optional.of(TEST_SIX_DIGIT_CODE));
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setBody(
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\" }",
+                        TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        var notifyRequest =
+                new NotifyRequest(TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, TEST_SIX_DIGIT_CODE);
+        verify(awsSqsClient).send(objectMapper.writeValueAsString(notifyRequest));
+        String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
+
+        verify(codeGeneratorService, never()).sixDigitCode();
+        verify(codeStorageService, never())
+                .saveOtpCode(
+                        any(String.class),
+                        any(String.class),
+                        anyLong(),
+                        any(NotificationType.class));
+        verify(awsSqsClient).send(serialisedRequest);
+        assertThat(result, hasStatus(204));
     }
 
     @Test
