@@ -152,14 +152,24 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         String notifyText;
         NotificationType notificationType;
         if (resetPasswordRequest.isUseCodeFlow()) {
-            code = codeGeneratorService.sixDigitCode();
-            notifyText = code;
             notificationType = RESET_PASSWORD_WITH_CODE;
-            codeStorageService.saveOtpCode(
-                    resetPasswordRequest.getEmail(),
-                    code,
-                    configurationService.getCodeExpiry(),
-                    notificationType);
+
+            code =
+                    codeStorageService
+                            .getOtpCode(resetPasswordRequest.getEmail(), notificationType)
+                            .orElseGet(
+                                    () -> {
+                                        String newCode = codeGeneratorService.sixDigitCode();
+                                        codeStorageService.saveOtpCode(
+                                                resetPasswordRequest.getEmail(),
+                                                newCode,
+                                                configurationService.getCodeExpiry(),
+                                                notificationType);
+                                        return newCode;
+                                    });
+
+            notifyText = code;
+
         } else {
             code = codeGeneratorService.twentyByteEncodedRandomCode();
             notifyText =

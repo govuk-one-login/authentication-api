@@ -171,9 +171,21 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                 return generateApiGatewayProxyErrorResponse(400, ERROR_1014);
             }
 
-            String code = codeGeneratorService.sixDigitCode();
-            codeStorageService.saveOtpCode(
-                    email, code, configurationService.getCodeExpiry(), MFA_SMS);
+            String code =
+                    codeStorageService
+                            .getOtpCode(email, MFA_SMS)
+                            .orElseGet(
+                                    () -> {
+                                        LOG.info("No existing OTP found; generating new code");
+                                        String newCode = codeGeneratorService.sixDigitCode();
+                                        codeStorageService.saveOtpCode(
+                                                email,
+                                                newCode,
+                                                configurationService.getCodeExpiry(),
+                                                MFA_SMS);
+                                        return newCode;
+                                    });
+
             sessionService.save(userContext.getSession().incrementCodeRequestCount());
             NotifyRequest notifyRequest = new NotifyRequest(phoneNumber, MFA_SMS, code);
             AuditableEvent auditableEvent;

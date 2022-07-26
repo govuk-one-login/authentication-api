@@ -162,13 +162,22 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             UserContext userContext)
             throws JsonException, ClientNotFoundException {
 
-        String code = codeGeneratorService.sixDigitCode();
-        NotifyRequest notifyRequest = new NotifyRequest(destination, notificationType, code);
-        codeStorageService.saveOtpCode(
-                session.getEmailAddress(),
-                code,
-                configurationService.getCodeExpiry(),
-                notificationType);
+        String code =
+                codeStorageService
+                        .getOtpCode(session.getEmailAddress(), notificationType)
+                        .orElseGet(
+                                () -> {
+                                    String newCode = codeGeneratorService.sixDigitCode();
+                                    codeStorageService.saveOtpCode(
+                                            session.getEmailAddress(),
+                                            newCode,
+                                            configurationService.getCodeExpiry(),
+                                            notificationType);
+                                    return newCode;
+                                });
+
+        var notifyRequest = new NotifyRequest(destination, notificationType, code);
+
         sessionService.save(session.incrementCodeRequestCount());
         if (notTestClientWithValidTestEmail(userContext, notificationType)) {
 
