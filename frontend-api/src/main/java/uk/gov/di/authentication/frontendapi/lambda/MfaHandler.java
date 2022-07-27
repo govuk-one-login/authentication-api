@@ -38,6 +38,7 @@ import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1000;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1001;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1014;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
+import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
@@ -171,9 +172,11 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                 return generateApiGatewayProxyErrorResponse(400, ERROR_1014);
             }
 
+            var notificationType = (request.isResendCodeRequest()) ? VERIFY_PHONE_NUMBER : MFA_SMS;
+
             String code =
                     codeStorageService
-                            .getOtpCode(email, MFA_SMS)
+                            .getOtpCode(email, notificationType)
                             .orElseGet(
                                     () -> {
                                         LOG.info("No existing OTP found; generating new code");
@@ -182,14 +185,14 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                                                 email,
                                                 newCode,
                                                 configurationService.getCodeExpiry(),
-                                                MFA_SMS);
+                                                notificationType);
                                         return newCode;
                                     });
 
             sessionService.save(userContext.getSession().incrementCodeRequestCount());
-            NotifyRequest notifyRequest = new NotifyRequest(phoneNumber, MFA_SMS, code);
+            NotifyRequest notifyRequest = new NotifyRequest(phoneNumber, notificationType, code);
             AuditableEvent auditableEvent;
-            if (!isTestClientAndAllowedEmail(userContext, MFA_SMS)) {
+            if (!isTestClientAndAllowedEmail(userContext, notificationType)) {
                 sqsClient.send(objectMapper.writeValueAsString(notifyRequest));
                 auditableEvent = FrontendAuditableEvent.MFA_CODE_SENT;
             } else {

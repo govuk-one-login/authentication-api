@@ -55,6 +55,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
+import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
@@ -125,7 +126,7 @@ public class MfaHandlerTest {
     }
 
     @Test
-    void shouldReturn204ForSuccessfulMfaRequest() throws Json.JsonException {
+    void shouldReturn204ForSuccessfulMfaRequestWhenNonResendCode() throws Json.JsonException {
         usingValidSession();
         String persistentId = "some-persistent-id-value";
         Map<String, String> headers = new HashMap<>();
@@ -144,6 +145,51 @@ public class MfaHandlerTest {
 
         verify(sqsClient).send(objectMapper.writeValueAsString(notifyRequest));
         verify(codeStorageService).saveOtpCode(TEST_EMAIL_ADDRESS, CODE, CODE_EXPIRY_TIME, MFA_SMS);
+        assertThat(result, hasStatus(204));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.MFA_CODE_SENT,
+                        "aws-session-id",
+                        session.getSessionId(),
+                        "",
+                        AuditService.UNKNOWN,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        PHONE_NUMBER,
+                        persistentId);
+    }
+
+    @Test
+    void shouldReturn204ForSuccessfulMfaRequestWhenResendingCode() throws Json.JsonException {
+        usingValidSession();
+        String persistentId = "some-persistent-id-value";
+        Map<String, String> headers = new HashMap<>();
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
+        headers.put("Session-Id", session.getSessionId());
+        when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
+                .thenReturn(Optional.of(PHONE_NUMBER));
+        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER))
+                .thenReturn(Optional.of(CODE));
+        NotifyRequest notifyRequest = new NotifyRequest(PHONE_NUMBER, VERIFY_PHONE_NUMBER, CODE);
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(headers);
+        event.setBody(
+                format(
+                        "{ \"email\": \"%s\", \"isResendCodeRequest\": \"%s\"}",
+                        TEST_EMAIL_ADDRESS, "true"));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        verify(sqsClient).send(objectMapper.writeValueAsString(notifyRequest));
+        verify(codeGeneratorService, never()).sixDigitCode();
+        verify(codeStorageService, never())
+                .saveOtpCode(
+                        any(String.class),
+                        any(String.class),
+                        anyLong(),
+                        any(NotificationType.class));
         assertThat(result, hasStatus(204));
 
         verify(auditService)
