@@ -10,6 +10,7 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
+import uk.gov.di.authentication.app.exception.DocAppCallbackException;
 import uk.gov.di.authentication.app.exception.UnsuccesfulCredentialResponseException;
 import uk.gov.di.authentication.app.services.DocAppAuthorisationService;
 import uk.gov.di.authentication.app.services.DocAppCriService;
@@ -52,6 +53,8 @@ public class DocAppCallbackHandler
     private final DynamoDocAppService dynamoDocAppService;
     protected final Json objectMapper = SerializationService.getInstance();
     private static final String REDIRECT_PATH = "doc-app-callback";
+
+    private static final String ERROR_PAGE_REDIRECT_PATH = "error";
 
     public DocAppCallbackHandler() {
         this(ConfigurationService.getInstance());
@@ -109,8 +112,7 @@ public class DocAppCallbackHandler
                                         CookieHelper.parseSessionCookie(input.getHeaders())
                                                 .orElseThrow(
                                                         () -> {
-                                                            LOG.warn("No session cookie present");
-                                                            throw new RuntimeException(
+                                                            throw new DocAppCallbackException(
                                                                     "No session cookie present");
                                                         });
                                 var session =
@@ -119,8 +121,7 @@ public class DocAppCallbackHandler
                                                         sessionCookiesIds.getSessionId())
                                                 .orElseThrow(
                                                         () -> {
-                                                            LOG.warn("Session not found");
-                                                            throw new RuntimeException(
+                                                            throw new DocAppCallbackException(
                                                                     "Session not found");
                                                         });
                                 attachSessionIdToLogs(session);
@@ -130,8 +131,7 @@ public class DocAppCallbackHandler
                                                         sessionCookiesIds.getClientSessionId())
                                                 .orElseThrow(
                                                         () -> {
-                                                            LOG.warn("ClientSession not found");
-                                                            throw new RuntimeException(
+                                                            throw new DocAppCallbackException(
                                                                     "ClientSession not found");
                                                         });
                                 attachLogFieldToLogs(
@@ -266,11 +266,28 @@ public class DocAppCallbackHandler
                                             AuditService.UNKNOWN);
                                     throw e;
                                 }
+                            } catch (DocAppCallbackException e) {
+                                LOG.warn(e.getMessage());
+                                return redirectToFrontendErrorPage();
                             } catch (ParseException e) {
                                 LOG.info(
                                         "Cannot retrieve auth request params from client session id");
-                                throw new RuntimeException();
+                                return redirectToFrontendErrorPage();
                             }
                         });
+    }
+
+    private APIGatewayProxyResponseEvent redirectToFrontendErrorPage() {
+        LOG.info("Redirecting to frontend error page");
+        return generateApiGatewayProxyResponse(
+                302,
+                "",
+                Map.of(
+                        ResponseHeaders.LOCATION,
+                        ConstructUriHelper.buildURI(
+                                        configurationService.getLoginURI().toString(),
+                                        ERROR_PAGE_REDIRECT_PATH)
+                                .toString()),
+                null);
     }
 }
