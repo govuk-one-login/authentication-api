@@ -37,12 +37,14 @@ import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Optional;
 
+import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.UNKNOWN;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
+import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
 
 public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisationRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -116,13 +118,20 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
                     buildIpvClaimsRequest(authRequest)
                             .map(ClaimsSetRequest::toJSONString)
                             .orElse(null);
+
+            var clientSessionId =
+                    getHeaderValueFromHeaders(
+                            input.getHeaders(),
+                            CLIENT_SESSION_ID_HEADER,
+                            configurationService.getHeadersCaseInsensitive());
+
             var encryptedJWT =
                     authorisationService.constructRequestJWT(
                             state,
                             authRequest.getScope(),
                             pairwiseSubject,
                             claimsSetRequest,
-                            "unknown");
+                            Optional.ofNullable(clientSessionId).orElse("unknown"));
             var authRequestBuilder =
                     new AuthorizationRequest.Builder(
                                     new ResponseType(ResponseType.Value.CODE), clientID)

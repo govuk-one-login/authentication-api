@@ -70,7 +70,6 @@ import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -166,7 +165,11 @@ public class IPVAuthorisationHandlerTest {
             throws Json.JsonException, JOSEException, ParseException {
         var encryptedJWT = createEncryptedJWT();
         when(authorisationService.constructRequestJWT(
-                        any(State.class), any(Scope.class), any(Subject.class), any(), anyString()))
+                        any(State.class),
+                        any(Scope.class),
+                        any(Subject.class),
+                        any(),
+                        eq(CLIENT_SESSION_ID)))
                 .thenReturn(encryptedJWT);
         usingValidSession();
         usingValidClientSession();
@@ -287,6 +290,7 @@ public class IPVAuthorisationHandlerTest {
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("client_id", CLIENT_ID)
+                        .claim("govuk_signin_journey_id", CLIENT_SESSION_ID)
                         .issuer(CLIENT_ID)
                         .build();
         var jwsHeader = new JWSHeader(JWSAlgorithm.ES256);
