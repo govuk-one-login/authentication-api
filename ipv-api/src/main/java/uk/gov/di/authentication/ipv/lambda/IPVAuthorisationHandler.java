@@ -118,7 +118,11 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
                             .orElse(null);
             var encryptedJWT =
                     authorisationService.constructRequestJWT(
-                            state, authRequest.getScope(), pairwiseSubject, claimsSetRequest);
+                            state,
+                            authRequest.getScope(),
+                            pairwiseSubject,
+                            claimsSetRequest,
+                            "unknown");
             var authRequestBuilder =
                     new AuthorizationRequest.Builder(
                                     new ResponseType(ResponseType.Value.CODE), clientID)

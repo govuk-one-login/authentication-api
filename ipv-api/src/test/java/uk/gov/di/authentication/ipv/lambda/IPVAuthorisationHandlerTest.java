@@ -70,6 +70,7 @@ import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -165,7 +166,7 @@ public class IPVAuthorisationHandlerTest {
             throws Json.JsonException, JOSEException, ParseException {
         var encryptedJWT = createEncryptedJWT();
         when(authorisationService.constructRequestJWT(
-                        any(State.class), any(Scope.class), any(Subject.class), any()))
+                        any(State.class), any(Scope.class), any(Subject.class), any(), anyString()))
                 .thenReturn(encryptedJWT);
         usingValidSession();
         usingValidClientSession();

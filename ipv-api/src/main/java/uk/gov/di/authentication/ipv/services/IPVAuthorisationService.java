@@ -133,7 +133,7 @@ public class IPVAuthorisationService {
     }
 
     public EncryptedJWT constructRequestJWT(
-            State state, Scope scope, Subject subject, String claims) {
+            State state, Scope scope, Subject subject, String claims, String clientSessionId) {
         LOG.info("Generating request JWT");
         var jwsHeader = new JWSHeader(SIGNING_ALGORITHM);
         var jwtID = IdGenerator.generate();
@@ -148,6 +148,7 @@ public class IPVAuthorisationService {
                         .jwtID(jwtID)
                         .notBeforeTime(NowHelper.now())
                         .claim("state", state.getValue())
+                        .claim("govuk_signin_journey_id", clientSessionId)
                         .claim(
                                 "redirect_uri",
                                 configurationService.getIPVAuthorisationCallbackURI().toString())
