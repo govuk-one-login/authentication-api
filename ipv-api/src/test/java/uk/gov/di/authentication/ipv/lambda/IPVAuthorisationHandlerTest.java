@@ -179,7 +179,6 @@ public class IPVAuthorisationHandlerTest {
         assertThat(response, hasStatus(200));
         var body =
                 SerializationService.getInstance()
-                        .getInstance()
                         .readValue(response.getBody(), IPVAuthorisationResponse.class);
         assertThat(body.getRedirectUri(), startsWith(IPV_AUTHORISATION_URI.toString()));
         assertThat(
