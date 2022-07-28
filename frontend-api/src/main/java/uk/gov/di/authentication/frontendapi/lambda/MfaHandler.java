@@ -81,6 +81,19 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
         this.sqsClient = sqsClient;
     }
 
+    public MfaHandler(ConfigurationService configurationService) {
+        super(MfaRequest.class, configurationService);
+        this.codeGeneratorService = new CodeGeneratorService();
+        this.codeStorageService =
+                new CodeStorageService(new RedisConnectionService(configurationService));
+        this.auditService = new AuditService(configurationService);
+        this.sqsClient =
+                new AwsSqsClient(
+                        configurationService.getAwsRegion(),
+                        configurationService.getEmailQueueUri(),
+                        configurationService.getSqsEndpointUri());
+    }
+
     public MfaHandler() {
         super(MfaRequest.class, ConfigurationService.getInstance());
         this.codeGeneratorService = new CodeGeneratorService();
