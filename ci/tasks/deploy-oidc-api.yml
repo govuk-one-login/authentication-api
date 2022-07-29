@@ -20,6 +20,7 @@ params:
   SPOT_ACCOUNT_NUMBER: ((staging-spot-account-number))
   SPOT_RESPONSE_QUEUE_ARN: ((staging-spot-response_queue_arn))
   SPOT_RESPONSE_QUEUE_KMS_ARN: ((staging-spot-response_queue_kms_arn))
+  TXMA_ACCOUNT_ID: ((build-txma-account-id))
   TEST_CLIENTS_ENABLED: false
 inputs:
   - name: api-terraform-src
@@ -68,6 +69,7 @@ run:
         -var "spot_account_number=${SPOT_ACCOUNT_NUMBER}" \
         -var "spot_response_queue_arn=${SPOT_RESPONSE_QUEUE_ARN}" \
         -var "spot_response_queue_kms_arn=${SPOT_RESPONSE_QUEUE_KMS_ARN}" \
+        -var "txma_account_id=${TXMA_ACCOUNT_ID}" \
         -var-file "${DEPLOY_ENVIRONMENT}-overrides.tfvars" \
 
       terraform output --json > ../../../../terraform-outputs/${DEPLOY_ENVIRONMENT}-terraform-outputs.json
