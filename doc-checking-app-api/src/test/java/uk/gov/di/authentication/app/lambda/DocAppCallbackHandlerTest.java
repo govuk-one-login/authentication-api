@@ -24,7 +24,9 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
+import uk.gov.di.authentication.app.exception.UnsuccesfulCredentialResponseException;
 import uk.gov.di.authentication.app.services.DocAppAuthorisationService;
 import uk.gov.di.authentication.app.services.DocAppCriService;
 import uk.gov.di.authentication.app.services.DynamoDocAppService;
@@ -35,6 +37,7 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -46,15 +49,15 @@ import java.util.Optional;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.hamcrest.Matchers.hasItem;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class DocAppCallbackHandlerTest {
@@ -90,6 +93,10 @@ class DocAppCallbackHandlerTest {
 
     private final ClientSession clientSession =
             new ClientSession(generateAuthRequest().toParameters(), null, null);
+
+    @RegisterExtension
+    private final CaptureLoggingExtension logging =
+            new CaptureLoggingExtension(DocAppCallbackHandler.class);
 
     @BeforeEach
     void setUp() {
@@ -135,44 +142,12 @@ class DocAppCallbackHandlerTest {
         var expectedRedirectURI = new URIBuilder(LOGIN_URL).setPath("doc-app-callback").build();
         assertThat(response.getHeaders().get("Location"), equalTo(expectedRedirectURI.toString()));
 
-        verify(auditService)
-                .submitAuditEvent(
-                        DocAppAuditableEvent.DOC_APP_AUTHORISATION_RESPONSE_RECEIVED,
-                        REQUEST_ID,
-                        SESSION_ID,
-                        CLIENT_ID.getValue(),
-                        PAIRWISE_SUBJECT_ID.getValue(),
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN);
-
-        verify(auditService)
-                .submitAuditEvent(
-                        DocAppAuditableEvent.DOC_APP_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
-                        REQUEST_ID,
-                        SESSION_ID,
-                        CLIENT_ID.getValue(),
-                        PAIRWISE_SUBJECT_ID.getValue(),
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN);
-
-        verify(auditService)
-                .submitAuditEvent(
-                        DocAppAuditableEvent.DOC_APP_SUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED,
-                        REQUEST_ID,
-                        SESSION_ID,
-                        CLIENT_ID.getValue(),
-                        PAIRWISE_SUBJECT_ID.getValue(),
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN);
+        verifyAuditServiceEvent(DocAppAuditableEvent.DOC_APP_AUTHORISATION_RESPONSE_RECEIVED);
+        verifyAuditServiceEvent(DocAppAuditableEvent.DOC_APP_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
+        verifyAuditServiceEvent(
+                DocAppAuditableEvent.DOC_APP_SUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED);
 
         verifyNoMoreInteractions(auditService);
-
         verify(dynamoDocAppService)
                 .addDocAppCredential(
                         PAIRWISE_SUBJECT_ID.getValue(), List.of("a-verifiable-credential"));
@@ -189,6 +164,7 @@ class DocAppCallbackHandlerTest {
         assertThat(response.getHeaders().get("Location"), equalTo(expectedRedirectURI.toString()));
 
         verifyNoInteractions(auditService);
+        verifyNoInteractions(dynamoDocAppService);
     }
 
     @Test
@@ -203,10 +179,11 @@ class DocAppCallbackHandlerTest {
         assertThat(response.getHeaders().get("Location"), equalTo(expectedRedirectURI.toString()));
 
         verifyNoInteractions(auditService);
+        verifyNoInteractions(dynamoDocAppService);
     }
 
     @Test
-    void shouldThrowWhenAuthnResponseContainsError() {
+    void shouldRedirectToRPWhenAuthnResponseContainsError() {
         usingValidSession();
         usingValidClientSession();
 
@@ -242,10 +219,12 @@ class DocAppCallbackHandlerTest {
 
         verifyNoInteractions(tokenService);
         verifyNoInteractions(auditService);
+        verifyNoInteractions(dynamoDocAppService);
     }
 
     @Test
-    void shouldThrowWhenTokenResponseIsNotSuccessful() {
+    void shouldRedirectToFrontendErrorPageWhenTokenResponseIsNotSuccessful()
+            throws URISyntaxException {
         usingValidSession();
         usingValidClientSession();
         var unsuccessfulTokenResponse = new TokenErrorResponse(new ErrorObject("Error object"));
@@ -262,41 +241,59 @@ class DocAppCallbackHandlerTest {
         event.setQueryStringParameters(responseHeaders);
         event.setHeaders(Map.of(COOKIE, buildCookieString()));
 
-        var expectedException =
-                assertThrows(
-                        RuntimeException.class,
-                        () -> handler.handleRequest(event, context),
-                        "Expected to throw exception");
+        var response = handler.handleRequest(event, context);
 
+        assertThat(response, hasStatus(302));
+        var expectedRedirectURI = new URIBuilder(LOGIN_URL).setPath("error").build();
+        assertThat(response.getHeaders().get("Location"), equalTo(expectedRedirectURI.toString()));
         assertThat(
-                expectedException.getMessage(),
-                containsString("Doc App TokenResponse was not successful"));
+                logging.events(),
+                hasItem(withMessageContaining("Doc App TokenResponse was not successful: ")));
 
-        verify(auditService)
-                .submitAuditEvent(
-                        DocAppAuditableEvent.DOC_APP_AUTHORISATION_RESPONSE_RECEIVED,
-                        REQUEST_ID,
-                        SESSION_ID,
-                        CLIENT_ID.getValue(),
-                        PAIRWISE_SUBJECT_ID.getValue(),
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN);
-
-        verify(auditService)
-                .submitAuditEvent(
-                        DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
-                        REQUEST_ID,
-                        SESSION_ID,
-                        CLIENT_ID.getValue(),
-                        PAIRWISE_SUBJECT_ID.getValue(),
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN);
+        verifyAuditServiceEvent(DocAppAuditableEvent.DOC_APP_AUTHORISATION_RESPONSE_RECEIVED);
+        verifyAuditServiceEvent(DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
 
         verifyNoMoreInteractions(auditService);
+        verifyNoInteractions(dynamoDocAppService);
+    }
+
+    @Test
+    void shouldRedirectToFrontendErrorPageWhenCRIRequestIsNotSuccessful()
+            throws URISyntaxException {
+        usingValidSession();
+        usingValidClientSession();
+        var successfulTokenResponse =
+                new AccessTokenResponse(new Tokens(new BearerAccessToken(), null));
+        var tokenRequest = mock(TokenRequest.class);
+        Map<String, String> responseHeaders = new HashMap<>();
+        responseHeaders.put("code", AUTH_CODE.getValue());
+        responseHeaders.put("state", STATE.getValue());
+        when(responseService.validateResponse(responseHeaders, SESSION_ID))
+                .thenReturn(Optional.empty());
+        when(tokenService.constructTokenRequest(AUTH_CODE.getValue())).thenReturn(tokenRequest);
+        when(tokenService.sendTokenRequest(tokenRequest)).thenReturn(successfulTokenResponse);
+        when(tokenService.sendCriDataRequest(any(HTTPRequest.class), any(String.class)))
+                .thenThrow(UnsuccesfulCredentialResponseException.class);
+
+        var event = new APIGatewayProxyRequestEvent();
+        event.setQueryStringParameters(responseHeaders);
+        event.setHeaders(Map.of(COOKIE, buildCookieString()));
+        var response = makeHandlerRequest(event);
+
+        assertThat(response, hasStatus(302));
+        var expectedRedirectURI = new URIBuilder(LOGIN_URL).setPath("error").build();
+        assertThat(response.getHeaders().get("Location"), equalTo(expectedRedirectURI.toString()));
+        assertThat(
+                logging.events(),
+                hasItem(withMessageContaining("Doc App sendCriDataRequest was not successful: ")));
+
+        verifyAuditServiceEvent(DocAppAuditableEvent.DOC_APP_AUTHORISATION_RESPONSE_RECEIVED);
+        verifyAuditServiceEvent(DocAppAuditableEvent.DOC_APP_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
+        verifyAuditServiceEvent(
+                DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED);
+
+        verifyNoMoreInteractions(auditService);
+        verifyNoInteractions(dynamoDocAppService);
     }
 
     private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {
@@ -330,5 +327,19 @@ class DocAppCallbackHandlerTest {
                 .state(RP_STATE)
                 .nonce(nonce)
                 .build();
+    }
+
+    private void verifyAuditServiceEvent(DocAppAuditableEvent docAppAuditableEvent) {
+        verify(auditService)
+                .submitAuditEvent(
+                        docAppAuditableEvent,
+                        REQUEST_ID,
+                        SESSION_ID,
+                        CLIENT_ID.getValue(),
+                        PAIRWISE_SUBJECT_ID.getValue(),
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN);
     }
 }

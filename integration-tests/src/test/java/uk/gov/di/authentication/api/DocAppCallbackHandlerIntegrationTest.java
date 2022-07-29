@@ -17,7 +17,6 @@ import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import uk.gov.di.authentication.app.exception.UnsuccesfulCredentialResponseException;
 import uk.gov.di.authentication.app.lambda.DocAppCallbackHandler;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ClientType;
@@ -47,10 +46,9 @@ import java.util.UUID;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.startsWith;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.DOC_APP_AUTHORISATION_RESPONSE_RECEIVED;
 import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.DOC_APP_SUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED;
@@ -162,21 +160,18 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                 "application/json",
                 "{\"sub\":\"'mockSubThatIsDifferentFromClientSessionDocAppUserId'\", \"https://vocab.account.gov.uk/v1/credentialJWT\": [\"'mockSignedJwtOne'\", \"'mockSignedJwtTwo'\"]}");
 
-        UnsuccesfulCredentialResponseException thrown =
-                assertThrows(
-                        UnsuccesfulCredentialResponseException.class,
-                        () ->
-                                makeRequest(
-                                        Optional.empty(),
-                                        constructHeaders(
-                                                Optional.of(
-                                                        buildSessionCookie(
-                                                                SESSION_ID, CLIENT_SESSION_ID))),
-                                        constructQueryStringParameters()));
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(
+                                Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                        constructQueryStringParameters());
 
-        assertEquals(
-                "Sub in CRI response does not match docAppSubjectId in client session",
-                thrown.getMessage());
+        assertThat(response, hasStatus(302));
+        assertThat(
+                response.getHeaders().get(ResponseHeaders.LOCATION),
+                startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+        assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), endsWith("error"));
 
         assertEventTypesReceived(
                 auditTopic,
@@ -192,15 +187,19 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
 
         criStub.register("/protected-resource", 200, "application/jwt", "invalid-response");
 
-        assertThrows(
-                UnsuccesfulCredentialResponseException.class,
-                () ->
-                        makeRequest(
-                                Optional.empty(),
-                                constructHeaders(
-                                        Optional.of(
-                                                buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
-                                constructQueryStringParameters()));
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(
+                                Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                        constructQueryStringParameters());
+
+        assertThat(response, hasStatus(302));
+        assertThat(
+                response.getHeaders().get(ResponseHeaders.LOCATION),
+                startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+        assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), endsWith("error"));
+
         assertEventTypesReceived(
                 auditTopic,
                 List.of(
@@ -215,15 +214,18 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
 
         criStub.register("/protected-resource", 400, "application/jwt", "error");
 
-        assertThrows(
-                UnsuccesfulCredentialResponseException.class,
-                () ->
-                        makeRequest(
-                                Optional.empty(),
-                                constructHeaders(
-                                        Optional.of(
-                                                buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
-                                constructQueryStringParameters()));
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(
+                                Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                        constructQueryStringParameters());
+
+        assertThat(response, hasStatus(302));
+        assertThat(
+                response.getHeaders().get(ResponseHeaders.LOCATION),
+                startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+        assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), endsWith("error"));
 
         assertEventTypesReceived(
                 auditTopic,
