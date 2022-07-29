@@ -4,8 +4,10 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.http.HTTPRequest;
+import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -136,23 +138,22 @@ public class DocAppCallbackHandler
                                                         });
                                 attachLogFieldToLogs(
                                         CLIENT_SESSION_ID, sessionCookiesIds.getClientSessionId());
-                                var clientId =
+
+                                var authenticationRequest =
                                         AuthenticationRequest.parse(
-                                                        clientSession.getAuthRequestParams())
-                                                .getClientID()
-                                                .getValue();
+                                                clientSession.getAuthRequestParams());
+
+                                var clientId = authenticationRequest.getClientID().getValue();
                                 attachLogFieldToLogs(CLIENT_ID, clientId);
+
                                 var errorObject =
                                         authorisationService.validateResponse(
                                                 input.getQueryStringParameters(),
                                                 session.getSessionId());
+
                                 if (errorObject.isPresent()) {
-                                    LOG.error(
-                                            "Error in Doc App AuthorisationResponse. ErrorCode: {}. ErrorDescription: {}",
-                                            errorObject.get().getCode(),
-                                            errorObject.get().getDescription());
-                                    throw new RuntimeException(
-                                            "Error in Doc App AuthorisationResponse");
+                                    return generateAuthenticationErrorResponse(
+                                            authenticationRequest, errorObject.get());
                                 }
 
                                 auditService.submitAuditEvent(
@@ -275,6 +276,22 @@ public class DocAppCallbackHandler
                                 return redirectToFrontendErrorPage();
                             }
                         });
+    }
+
+    private APIGatewayProxyResponseEvent generateAuthenticationErrorResponse(
+            AuthenticationRequest authenticationRequest, ErrorObject errorObject) {
+        LOG.error(
+                "Error in Doc App AuthorisationResponse. ErrorCode: {}. ErrorDescription: {}",
+                errorObject.getCode(),
+                errorObject.getDescription());
+        var errorResponse =
+                new AuthenticationErrorResponse(
+                        authenticationRequest.getRedirectionURI(),
+                        errorObject,
+                        authenticationRequest.getState(),
+                        authenticationRequest.getResponseMode());
+        return generateApiGatewayProxyResponse(
+                302, "", Map.of(ResponseHeaders.LOCATION, errorResponse.toURI().toString()), null);
     }
 
     private APIGatewayProxyResponseEvent redirectToFrontendErrorPage() {
