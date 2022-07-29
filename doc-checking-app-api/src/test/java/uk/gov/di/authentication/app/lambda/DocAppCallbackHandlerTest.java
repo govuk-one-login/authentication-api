@@ -6,6 +6,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.oauth2.sdk.AccessTokenResponse;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ErrorObject;
+import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.TokenErrorResponse;
@@ -16,6 +17,7 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.oauth2.sdk.token.Tokens;
+import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
@@ -27,6 +29,7 @@ import uk.gov.di.authentication.app.services.DocAppAuthorisationService;
 import uk.gov.di.authentication.app.services.DocAppCriService;
 import uk.gov.di.authentication.app.services.DynamoDocAppService;
 import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -80,6 +83,8 @@ class DocAppCallbackHandlerTest {
     private static final ClientID CLIENT_ID = new ClientID();
     private static final Subject PAIRWISE_SUBJECT_ID = new Subject();
     private static final State STATE = new State();
+
+    private static final State RP_STATE = new State();
 
     private final Session session = new Session(SESSION_ID).setEmailAddress(TEST_EMAIL_ADDRESS);
 
@@ -204,28 +209,36 @@ class DocAppCallbackHandlerTest {
     void shouldThrowWhenAuthnResponseContainsError() {
         usingValidSession();
         usingValidClientSession();
+
         ErrorObject errorObject =
                 new ErrorObject(
-                        "invalid_request_redirect_uri", "redirect_uri param must be provided");
+                        OAuth2Error.ACCESS_DENIED.getCode(),
+                        OAuth2Error.ACCESS_DENIED.getDescription());
+
         Map<String, String> responseHeaders = new HashMap<>();
         responseHeaders.put("code", AUTH_CODE.getValue());
         responseHeaders.put("state", STATE.getValue());
         responseHeaders.put("error", errorObject.toString());
         when(responseService.validateResponse(responseHeaders, SESSION_ID))
-                .thenReturn(Optional.of(new ErrorObject(errorObject.getCode())));
+                .thenReturn(Optional.of(errorObject));
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of(COOKIE, buildCookieString()));
         event.setQueryStringParameters(responseHeaders);
 
-        RuntimeException expectedException =
-                assertThrows(
-                        RuntimeException.class,
-                        () -> handler.handleRequest(event, context),
-                        "Expected to throw exception");
+        var expectedURI =
+                new AuthenticationErrorResponse(
+                                URI.create(REDIRECT_URI.toString()),
+                                OAuth2Error.ACCESS_DENIED,
+                                RP_STATE,
+                                null)
+                        .toURI()
+                        .toString();
 
-        assertThat(
-                expectedException.getMessage(), equalTo("Error in Doc App AuthorisationResponse"));
+        var response = handler.handleRequest(event, context);
+
+        assertThat(response, hasStatus(302));
+        assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), equalTo(expectedURI));
 
         verifyNoInteractions(tokenService);
         verifyNoInteractions(auditService);
@@ -306,16 +319,15 @@ class DocAppCallbackHandlerTest {
         clientSession.setDocAppSubjectId(PAIRWISE_SUBJECT_ID);
     }
 
-    public static AuthenticationRequest generateAuthRequest() {
+    private static AuthenticationRequest generateAuthRequest() {
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
-        State state = new State();
         Scope scope = new Scope();
         Nonce nonce = new Nonce();
         scope.add(OIDCScopeValue.OPENID);
         scope.add("phone");
         scope.add("email");
         return new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
-                .state(state)
+                .state(RP_STATE)
                 .nonce(nonce)
                 .build();
     }
