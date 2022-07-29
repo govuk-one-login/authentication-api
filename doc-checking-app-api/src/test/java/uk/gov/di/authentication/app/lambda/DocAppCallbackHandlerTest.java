@@ -174,17 +174,28 @@ class DocAppCallbackHandlerTest {
     }
 
     @Test
-    void shouldThrowWhenSessionIsNotFoundInRedis() {
+    void shouldRedirectToFrontendErrorPageWhenNoSessionCookie() throws URISyntaxException {
+        var event = new APIGatewayProxyRequestEvent();
+        event.setQueryStringParameters(Collections.emptyMap());
+
+        var response = handler.handleRequest(event, context);
+        assertThat(response, hasStatus(302));
+        var expectedRedirectURI = new URIBuilder(LOGIN_URL).setPath("error").build();
+        assertThat(response.getHeaders().get("Location"), equalTo(expectedRedirectURI.toString()));
+
+        verifyNoInteractions(auditService);
+    }
+
+    @Test
+    void shouldRedirectToFrontendErrorPageWhenSessionIsNotFoundInRedis() throws URISyntaxException {
         var event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(Collections.emptyMap());
         event.setHeaders(Map.of(COOKIE, buildCookieString()));
-        var expectedException =
-                assertThrows(
-                        RuntimeException.class,
-                        () -> handler.handleRequest(event, context),
-                        "Expected to throw exception");
 
-        assertThat(expectedException.getMessage(), containsString("Session not found"));
+        var response = handler.handleRequest(event, context);
+        assertThat(response, hasStatus(302));
+        var expectedRedirectURI = new URIBuilder(LOGIN_URL).setPath("error").build();
+        assertThat(response.getHeaders().get("Location"), equalTo(expectedRedirectURI.toString()));
 
         verifyNoInteractions(auditService);
     }
