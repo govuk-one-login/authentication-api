@@ -5,7 +5,7 @@ resource "aws_kms_key" "txma_audit_queue_encryption_key" {
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
   key_usage                = "ENCRYPT_DECRYPT"
 
-  policy = data.aws_iam_policy_document.txma_audit_queue_encryption_key_access_policy
+  policy = data.aws_iam_policy_document.txma_audit_queue_encryption_key_access_policy[0].json
 
   tags = var.default_tags
 }
