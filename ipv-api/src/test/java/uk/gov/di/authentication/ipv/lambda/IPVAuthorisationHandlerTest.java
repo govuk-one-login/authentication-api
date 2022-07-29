@@ -165,7 +165,11 @@ public class IPVAuthorisationHandlerTest {
             throws Json.JsonException, JOSEException, ParseException {
         var encryptedJWT = createEncryptedJWT();
         when(authorisationService.constructRequestJWT(
-                        any(State.class), any(Scope.class), any(Subject.class), any()))
+                        any(State.class),
+                        any(Scope.class),
+                        any(Subject.class),
+                        any(),
+                        eq(CLIENT_SESSION_ID)))
                 .thenReturn(encryptedJWT);
         usingValidSession();
         usingValidClientSession();
@@ -175,7 +179,6 @@ public class IPVAuthorisationHandlerTest {
         assertThat(response, hasStatus(200));
         var body =
                 SerializationService.getInstance()
-                        .getInstance()
                         .readValue(response.getBody(), IPVAuthorisationResponse.class);
         assertThat(body.getRedirectUri(), startsWith(IPV_AUTHORISATION_URI.toString()));
         assertThat(
@@ -286,6 +289,7 @@ public class IPVAuthorisationHandlerTest {
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("client_id", CLIENT_ID)
+                        .claim("govuk_signin_journey_id", CLIENT_SESSION_ID)
                         .issuer(CLIENT_ID)
                         .build();
         var jwsHeader = new JWSHeader(JWSAlgorithm.ES256);

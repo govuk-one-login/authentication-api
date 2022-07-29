@@ -209,7 +209,9 @@ class IPVAuthorisationServiceTest {
         var pairwise = new Subject("pairwise-identifier");
         var claims = "{\"name\":{\"essential\":true}}";
 
-        var encryptedJWT = authorisationService.constructRequestJWT(state, scope, pairwise, claims);
+        var encryptedJWT =
+                authorisationService.constructRequestJWT(
+                        state, scope, pairwise, claims, "journey-id");
 
         var signedJWTResponse = decryptJWT(encryptedJWT);
 
@@ -226,6 +228,9 @@ class IPVAuthorisationServiceTest {
                 equalTo(singletonList(IPV_URI.toString())));
         assertThat(signedJWTResponse.getJWTClaimsSet().getClaim("response_type"), equalTo("code"));
         assertThat(signedJWTResponse.getJWTClaimsSet().getClaim("claims"), equalTo(claims));
+        assertThat(
+                signedJWTResponse.getJWTClaimsSet().getClaim("govuk_signin_journey_id"),
+                equalTo("journey-id"));
     }
 
     private SignedJWT decryptJWT(EncryptedJWT encryptedJWT) throws JOSEException {
