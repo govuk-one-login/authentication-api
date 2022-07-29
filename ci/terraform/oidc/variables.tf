@@ -381,6 +381,11 @@ variable "use_robots_txt" {
   type    = bool
 }
 
+variable "txma_account_id" {
+  default = ""
+  type    = string
+}
+
 locals {
   default_performance_parameters = {
     memory          = var.endpoint_memory_size
