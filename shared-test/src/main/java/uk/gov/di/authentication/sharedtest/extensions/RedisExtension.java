@@ -19,6 +19,7 @@ import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 
 import java.time.LocalDateTime;
@@ -26,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static org.mockito.Mockito.mock;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
@@ -41,6 +43,7 @@ public class RedisExtension
             System.getenv().getOrDefault("REDIS_HOST", "localhost");
     private static final Optional<String> REDIS_PASSWORD =
             Optional.ofNullable(System.getenv("REDIS_PASSWORD"));
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final Json objectMapper;
 
     private RedisConnectionService redis;
@@ -165,33 +168,42 @@ public class RedisExtension
 
     public String generateAndSaveEmailCode(String email, long codeExpiryTime) {
         var code = new CodeGeneratorService().sixDigitCode();
-        new CodeStorageService(redis).saveOtpCode(email, code, codeExpiryTime, VERIFY_EMAIL);
+        new CodeStorageService(configurationService, redis)
+                .saveOtpCode(email, code, codeExpiryTime, VERIFY_EMAIL);
 
         return code;
     }
 
     public void generateAndSavePasswordResetCode(
             String subjectId, String code, long codeExpiryTime) {
-        new CodeStorageService(redis)
+        new CodeStorageService(configurationService, redis)
                 .savePasswordResetCode(subjectId, code, codeExpiryTime, RESET_PASSWORD);
     }
 
     public String generateAndSavePhoneNumberCode(String email, long codeExpiryTime) {
         var code = new CodeGeneratorService().sixDigitCode();
-        new CodeStorageService(redis).saveOtpCode(email, code, codeExpiryTime, VERIFY_PHONE_NUMBER);
+        new CodeStorageService(configurationService, redis)
+                .saveOtpCode(email, code, codeExpiryTime, VERIFY_PHONE_NUMBER);
 
         return code;
     }
 
     public String generateAndSaveMfaCode(String email, long codeExpiryTime) {
         var code = new CodeGeneratorService().sixDigitCode();
-        new CodeStorageService(redis).saveOtpCode(email, code, codeExpiryTime, MFA_SMS);
+        new CodeStorageService(configurationService, redis)
+                .saveOtpCode(email, code, codeExpiryTime, MFA_SMS);
 
         return code;
     }
 
     public void blockMfaCodesForEmail(String email) {
-        new CodeStorageService(redis).saveBlockedForEmail(email, CODE_BLOCKED_KEY_PREFIX, 10);
+        new CodeStorageService(configurationService, redis)
+                .saveBlockedForEmail(email, CODE_BLOCKED_KEY_PREFIX, 10);
+    }
+
+    public int getMfaCodeAttemptsCount(String email) {
+        return new CodeStorageService(configurationService, redis)
+                .getIncorrectMfaCodeAttemptsCount(email);
     }
 
     public void addToRedis(String key, String value, Long expiry) {

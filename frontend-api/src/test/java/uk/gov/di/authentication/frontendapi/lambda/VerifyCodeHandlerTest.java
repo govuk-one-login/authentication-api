@@ -261,9 +261,9 @@ class VerifyCodeHandlerTest {
     void shouldUpdateRedisWhenUserHasReachedMaxPhoneNumberCodeAttempts() {
         when(configurationService.getCodeMaxRetries()).thenReturn(0);
         when(configurationService.getBlockedEmailDuration()).thenReturn(BLOCKED_EMAIL_DURATION);
-
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER))
                 .thenReturn(Optional.of(CODE));
+        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS)).thenReturn(1);
 
         APIGatewayProxyResponseEvent result =
                 makeCallWithCode(INVALID_CODE, VERIFY_PHONE_NUMBER.toString());
@@ -311,6 +311,8 @@ class VerifyCodeHandlerTest {
         when(configurationService.getBlockedEmailDuration()).thenReturn(BLOCKED_EMAIL_DURATION);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
                 .thenReturn(Optional.of(CODE));
+
+        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS)).thenReturn(1);
 
         APIGatewayProxyResponseEvent result =
                 makeCallWithCode(INVALID_CODE, VERIFY_EMAIL.toString());
@@ -389,6 +391,7 @@ class VerifyCodeHandlerTest {
         when(configurationService.getBlockedEmailDuration()).thenReturn(BLOCKED_EMAIL_DURATION);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS))
                 .thenReturn(Optional.of(CODE));
+        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS)).thenReturn(1);
 
         APIGatewayProxyResponseEvent result = makeCallWithCode(INVALID_CODE, MFA_SMS.toString());
 
@@ -472,14 +475,6 @@ class VerifyCodeHandlerTest {
         when(clientSessionService.getClientSessionFromRequestHeaders(event.getHeaders()))
                 .thenReturn(Optional.of(clientSession));
         return handler.handleRequest(event, context);
-    }
-
-    private void maxOutSessionRetryCount() {
-        session.incrementRetryCount();
-        session.incrementRetryCount();
-        session.incrementRetryCount();
-        session.incrementRetryCount();
-        session.incrementRetryCount();
     }
 
     private AuthenticationRequest withAuthenticationRequest(String clientId) {

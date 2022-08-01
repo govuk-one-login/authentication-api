@@ -87,7 +87,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         var session = redis.getSession(sessionId);
 
         assertThat(response, hasStatus(204));
-        assertThat(session.getCodeRequestCount(), equalTo(0));
+        assertThat(redis.getMfaCodeAttemptsCount(EMAIL_ADDRESS), equalTo(0));
         assertEventTypesReceived(auditTopic, List.of(CODE_VERIFIED));
     }
 
@@ -193,7 +193,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         var session = redis.getSession(sessionId);
 
         assertThat(response, hasStatus(204));
-        assertThat(session.getCodeRequestCount(), equalTo(0));
+        assertThat(redis.getMfaCodeAttemptsCount(EMAIL_ADDRESS), equalTo(0));
         assertEventTypesReceived(auditTopic, List.of(CODE_VERIFIED));
     }
 

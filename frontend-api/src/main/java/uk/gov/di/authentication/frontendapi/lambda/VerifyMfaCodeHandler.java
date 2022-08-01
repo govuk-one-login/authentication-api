@@ -23,7 +23,6 @@ import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
-import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
@@ -78,8 +77,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
     public VerifyMfaCodeHandler(ConfigurationService configurationService) {
         super(VerifyMfaCodeRequest.class, configurationService);
-        this.codeStorageService =
-                new CodeStorageService(new RedisConnectionService(configurationService));
+        this.codeStorageService = new CodeStorageService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.dynamoService = new DynamoService(configurationService);
     }
@@ -205,6 +203,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 session.getEmailAddress(),
                 CODE_BLOCKED_KEY_PREFIX,
                 configurationService.getBlockedEmailDuration());
-        session.resetRetryCount();
+        codeStorageService.deleteIncorrectMfaCodeAttemptsCount(session.getEmailAddress());
     }
 }

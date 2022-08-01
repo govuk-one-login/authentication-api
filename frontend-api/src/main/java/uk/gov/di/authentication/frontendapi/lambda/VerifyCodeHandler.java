@@ -28,7 +28,6 @@ import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
@@ -88,8 +87,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
     public VerifyCodeHandler(ConfigurationService configurationService) {
         super(VerifyCodeRequest.class, configurationService);
-        this.codeStorageService =
-                new CodeStorageService(new RedisConnectionService(configurationService));
+        this.codeStorageService = new CodeStorageService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
     }
@@ -130,7 +128,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                             codeRequest.getNotificationType(),
                             code,
                             codeRequest.getCode(),
-                            session,
+                            codeStorageService,
+                            session.getEmailAddress(),
                             configurationService.getCodeMaxRetries());
 
             if (errorResponse.stream().anyMatch(ErrorResponse.ERROR_1002::equals)) {
@@ -184,7 +183,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 session.getEmailAddress(),
                 CODE_BLOCKED_KEY_PREFIX,
                 configurationService.getBlockedEmailDuration());
-        sessionService.save(session.resetRetryCount());
+        codeStorageService.deleteIncorrectMfaCodeAttemptsCount(session.getEmailAddress());
     }
 
     private void processSuccessfulCodeRequest(

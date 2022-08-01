@@ -30,7 +30,6 @@ import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
-import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
@@ -77,8 +76,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
     public LoginHandler(ConfigurationService configurationService) {
         super(LoginRequest.class, configurationService, true);
-        this.codeStorageService =
-                new CodeStorageService(new RedisConnectionService(configurationService));
+        this.codeStorageService = new CodeStorageService(configurationService);
         this.userMigrationService =
                 new UserMigrationService(
                         new DynamoService(configurationService), configurationService);

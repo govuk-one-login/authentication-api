@@ -4,7 +4,7 @@ import com.google.i18n.phonenumbers.NumberParseException;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
-import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.services.CodeStorageService;
 
 import java.util.List;
 import java.util.Objects;
@@ -15,7 +15,6 @@ import java.util.regex.Pattern;
 import static com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType.MOBILE;
 
 public class ValidationHelper {
-
     private static final Pattern PASSWORD_REGEX = Pattern.compile(".*\\d.*");
     private static final Pattern EMAIL_NOTIFY_REGEX =
             Pattern.compile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~\\-]+@([^.@][^@\\s]+)$");
@@ -123,11 +122,12 @@ public class ValidationHelper {
             NotificationType type,
             Optional<String> code,
             String input,
-            Session session,
+            CodeStorageService codeStorageService,
+            String emailAddress,
             int maxRetries) {
 
         if (code.filter(input::equals).isPresent()) {
-            session.resetCodeRequestCount();
+            codeStorageService.deleteIncorrectMfaCodeAttemptsCount(emailAddress);
 
             switch (type) {
                 case MFA_SMS:
@@ -139,9 +139,9 @@ public class ValidationHelper {
             return Optional.of(ErrorResponse.ERROR_1002);
         }
 
-        session.incrementRetryCount();
+        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(emailAddress);
 
-        if (session.getRetryCount() > maxRetries) {
+        if (codeStorageService.getIncorrectMfaCodeAttemptsCount(emailAddress) > maxRetries) {
             switch (type) {
                 case MFA_SMS:
                     return Optional.of(ErrorResponse.ERROR_1027);

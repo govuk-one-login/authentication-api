@@ -31,7 +31,7 @@ class AuthAppCodeValidatorTest {
     ConfigurationService mockConfigurationService;
     DynamoService mockDynamoService;
 
-    int MAX_RETRIES = 5;
+    private final int MAX_RETRIES = 5;
 
     @BeforeEach
     void setUp() {
@@ -110,10 +110,11 @@ class AuthAppCodeValidatorTest {
 
     private void setUpRetryLimitExceededUser() {
         when(mockSession.getEmailAddress()).thenReturn("email-address");
-        when(mockSession.getRetryCount()).thenReturn(6);
         when(mockUserContext.getSession()).thenReturn(mockSession);
         when(mockCodeStorageService.isBlockedForEmail("email-address", CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(false);
+        when(mockCodeStorageService.getIncorrectMfaCodeAttemptsCount("email-address"))
+                .thenReturn(MAX_RETRIES + 1);
 
         this.authAppCodeValidator =
                 new AuthAppCodeValidator(

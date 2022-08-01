@@ -81,16 +81,6 @@ public class Session {
         return retryCount;
     }
 
-    public Session incrementRetryCount() {
-        this.retryCount = retryCount + 1;
-        return this;
-    }
-
-    public Session resetRetryCount() {
-        this.retryCount = 0;
-        return this;
-    }
-
     public int getPasswordResetCount() {
         return passwordResetCount;
     }

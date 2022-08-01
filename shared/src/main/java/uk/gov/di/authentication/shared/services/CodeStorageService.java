@@ -16,17 +16,65 @@ public class CodeStorageService {
     public static final String PASSWORD_RESET_BLOCKED_KEY_PREFIX = "password-reset-blocked:";
 
     private static final Logger LOG = LogManager.getLogger(CodeStorageService.class);
+    private final ConfigurationService configurationService;
     private final RedisConnectionService redisConnectionService;
     private static final String EMAIL_KEY_PREFIX = "email-code:";
     private static final String PHONE_NUMBER_KEY_PREFIX = "phone-number-code:";
     private static final String MFA_KEY_PREFIX = "mfa-code:";
+
+    private static final String MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX =
+            "multiple-incorrect-mfa-codes:";
     private static final String CODE_BLOCKED_VALUE = "blocked";
     private static final String RESET_PASSWORD_KEY_PREFIX = "reset-password-code:";
     private static final String MULTIPLE_INCORRECT_PASSWORDS_PREFIX =
             "multiple-incorrect-passwords:";
+    private static final long MFA_ATTEMPTS_COUNTER_TIME_TO_LIVE_SECONDS = 900;
 
-    public CodeStorageService(RedisConnectionService redisConnectionService) {
+    public CodeStorageService(ConfigurationService configurationService) {
+        this(configurationService, new RedisConnectionService(configurationService));
+    }
+
+    public CodeStorageService(
+            ConfigurationService configurationService,
+            RedisConnectionService redisConnectionService) {
+        this.configurationService = configurationService;
         this.redisConnectionService = redisConnectionService;
+    }
+
+    public int getIncorrectMfaCodeAttemptsCount(String email) {
+        Optional<String> count =
+                Optional.ofNullable(
+                        redisConnectionService.getValue(
+                                MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX
+                                        + HashHelper.hashSha256String(email)));
+        return count.map(Integer::parseInt).orElse(0);
+    }
+
+    public void increaseIncorrectMfaCodeAttemptsCount(String email) {
+        String encodedHash = HashHelper.hashSha256String(email);
+        String key = MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX + encodedHash;
+        Optional<String> count =
+                Optional.ofNullable(
+                        redisConnectionService.getValue(
+                                MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX + encodedHash));
+        int newCount = count.map(t -> Integer.parseInt(t) + 1).orElse(1);
+        try {
+            redisConnectionService.saveWithExpiry(
+                    key, String.valueOf(newCount), MFA_ATTEMPTS_COUNTER_TIME_TO_LIVE_SECONDS);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void deleteIncorrectMfaCodeAttemptsCount(String email) {
+        String encodedHash = HashHelper.hashSha256String(email);
+        String key = MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX + encodedHash;
+
+        try {
+            redisConnectionService.deleteValue(key);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public void increaseIncorrectPasswordCount(String email) {
