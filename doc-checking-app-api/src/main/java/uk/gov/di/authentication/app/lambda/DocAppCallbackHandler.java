@@ -200,8 +200,7 @@ public class DocAppCallbackHandler
                                             AuditService.UNKNOWN,
                                             AuditService.UNKNOWN,
                                             AuditService.UNKNOWN);
-                                    throw new RuntimeException(
-                                            "Doc App TokenResponse was not successful");
+                                    return redirectToFrontendErrorPage();
                                 }
 
                                 try {
@@ -265,7 +264,10 @@ public class DocAppCallbackHandler
                                             AuditService.UNKNOWN,
                                             AuditService.UNKNOWN,
                                             AuditService.UNKNOWN);
-                                    throw e;
+                                    LOG.error(
+                                            "Doc App sendCriDataRequest was not successful: {}",
+                                            e.getMessage());
+                                    return redirectToFrontendErrorPage();
                                 }
                             } catch (DocAppCallbackException e) {
                                 LOG.warn(e.getMessage());
