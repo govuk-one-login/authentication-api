@@ -8,7 +8,7 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import java.util.Date;
 import java.util.function.Supplier;
 
-public class TxmaAuditPayload {
+public class TxmaAuditEvent {
 
     @Expose private final long timestamp;
 
@@ -18,17 +18,17 @@ public class TxmaAuditPayload {
 
     @Expose private String componentName;
 
-    public TxmaAuditPayload(String eventName, long timestamp) {
+    public TxmaAuditEvent(String eventName, long timestamp) {
         this.eventName = eventName;
         this.timestamp = timestamp;
     }
 
-    protected static TxmaAuditPayload auditEventWithTime(
+    protected static TxmaAuditEvent auditEventWithTime(
             AuditableEvent eventName, Supplier<Date> dateSupplier) {
-        return new TxmaAuditPayload("AUTH_" + eventName.toString(), dateSupplier.get().getTime());
+        return new TxmaAuditEvent("AUTH_" + eventName.toString(), dateSupplier.get().getTime());
     }
 
-    public static TxmaAuditPayload auditEvent(AuditableEvent event) {
+    public static TxmaAuditEvent auditEvent(AuditableEvent event) {
         return auditEventWithTime(event, NowHelper::now);
     }
 
@@ -36,12 +36,12 @@ public class TxmaAuditPayload {
         return SerializationService.getInstance().writeValueAsString(this);
     }
 
-    public TxmaAuditPayload withComponentName(String componentName) {
+    public TxmaAuditEvent withComponentName(String componentName) {
         this.componentName = componentName;
         return this;
     }
 
-    public TxmaAuditPayload withClientId(String clientId) {
+    public TxmaAuditEvent withClientId(String clientId) {
         this.clientId = clientId;
         return this;
     }

@@ -6,14 +6,14 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static uk.gov.di.audit.TxmaAuditPayload.auditEvent;
-import static uk.gov.di.audit.TxmaAuditPayload.auditEventWithTime;
-import static uk.gov.di.audit.TxmaAuditPayloadTest.TestAuditableEvent.TEST_EVENT;
+import static uk.gov.di.audit.TxmaAuditEvent.auditEvent;
+import static uk.gov.di.audit.TxmaAuditEvent.auditEventWithTime;
+import static uk.gov.di.audit.TxmaAuditEventTest.TestAuditableEvent.TEST_EVENT;
 import static uk.gov.di.authentication.sharedtest.matchers.JsonMatcher.asJson;
 import static uk.gov.di.authentication.sharedtest.matchers.JsonMatcher.hasFieldWithValue;
 import static uk.gov.di.authentication.sharedtest.matchers.JsonMatcher.hasNumericFieldWithValue;
 
-class TxmaAuditPayloadTest {
+class TxmaAuditEventTest {
 
     enum TestAuditableEvent implements AuditableEvent {
         TEST_EVENT;
