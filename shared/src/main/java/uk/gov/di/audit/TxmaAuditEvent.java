@@ -6,6 +6,8 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Supplier;
 
 public class TxmaAuditEvent {
@@ -19,6 +21,10 @@ public class TxmaAuditEvent {
     @Expose private String componentName;
 
     @Expose private TxmaAuditUser user;
+
+    @Expose private Map<String, Object> platform;
+    @Expose private Map<String, Object> restricted;
+    @Expose private Map<String, Object> extensions;
 
     public TxmaAuditEvent(String eventName, long timestamp) {
         this.eventName = eventName;
@@ -50,6 +56,36 @@ public class TxmaAuditEvent {
 
     public TxmaAuditEvent withUser(TxmaAuditUser user) {
         this.user = user;
+        return this;
+    }
+
+    public TxmaAuditEvent addPlatform(String key, Object value) {
+        if (this.platform == null) {
+            this.platform = new HashMap<>();
+        }
+
+        this.platform.put(key, value);
+
+        return this;
+    }
+
+    public TxmaAuditEvent addRestricted(String key, Object value) {
+        if (this.restricted == null) {
+            this.restricted = new HashMap<>();
+        }
+
+        this.restricted.put(key, value);
+
+        return this;
+    }
+
+    public TxmaAuditEvent addExtension(String key, Object value) {
+        if (this.extensions == null) {
+            this.extensions = new HashMap<>();
+        }
+
+        this.extensions.put(key, value);
+
         return this;
     }
 }
