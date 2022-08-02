@@ -14,6 +14,10 @@ public class TxmaAuditPayload {
 
     @Expose private final String eventName;
 
+    @Expose private String clientId;
+
+    @Expose private String componentName;
+
     public TxmaAuditPayload(String eventName, long timestamp) {
         this.eventName = eventName;
         this.timestamp = timestamp;
@@ -30,5 +34,15 @@ public class TxmaAuditPayload {
 
     public String serialize() {
         return SerializationService.getInstance().writeValueAsString(this);
+    }
+
+    public TxmaAuditPayload withComponentName(String componentName) {
+        this.componentName = componentName;
+        return this;
+    }
+
+    public TxmaAuditPayload withClientId(String clientId) {
+        this.clientId = clientId;
+        return this;
     }
 }
