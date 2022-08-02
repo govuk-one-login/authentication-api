@@ -1,7 +1,6 @@
 package uk.gov.di.authentication.shared.services;
 
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
@@ -27,10 +26,8 @@ class CodeStorageServiceTest {
     private static final String SUBJECT = "some-subject";
     private final RedisConnectionService redisConnectionService =
             mock(RedisConnectionService.class);
-    private static final ConfigurationService configurationService =
-            mock(ConfigurationService.class);
     private final CodeStorageService codeStorageService =
-            new CodeStorageService(configurationService, redisConnectionService);
+            new CodeStorageService(redisConnectionService);
     private static final String REDIS_EMAIL_KEY =
             "email-code:f660ab912ec121d1b1e928a0bb4bc61b15f5ad44d5efdc4e1c92a25e99b8e44a";
     private static final String REDIS_INCORRECT_PASSWORDS_KEY =
@@ -51,11 +48,6 @@ class CodeStorageServiceTest {
     private static final long CODE_EXPIRY_TIME = 900;
     private static final long AUTH_CODE_EXPIRY_TIME = 300;
     private static final String CODE_BLOCKED_VALUE = "blocked";
-
-    @BeforeAll
-    static void init() {
-        when(configurationService.getBlockedEmailDuration()).thenReturn(CODE_EXPIRY_TIME);
-    }
 
     @Test
     void shouldCallRedisWithValidEmailCodeAndHashedEmail() {

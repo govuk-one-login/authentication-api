@@ -16,7 +16,7 @@ public class CodeStorageService {
     public static final String PASSWORD_RESET_BLOCKED_KEY_PREFIX = "password-reset-blocked:";
 
     private static final Logger LOG = LogManager.getLogger(CodeStorageService.class);
-    private final ConfigurationService configurationService;
+
     private final RedisConnectionService redisConnectionService;
     private static final String EMAIL_KEY_PREFIX = "email-code:";
     private static final String PHONE_NUMBER_KEY_PREFIX = "phone-number-code:";
@@ -31,13 +31,10 @@ public class CodeStorageService {
     private static final long MFA_ATTEMPTS_COUNTER_TIME_TO_LIVE_SECONDS = 900;
 
     public CodeStorageService(ConfigurationService configurationService) {
-        this(configurationService, new RedisConnectionService(configurationService));
+        this(new RedisConnectionService(configurationService));
     }
 
-    public CodeStorageService(
-            ConfigurationService configurationService,
-            RedisConnectionService redisConnectionService) {
-        this.configurationService = configurationService;
+    public CodeStorageService(RedisConnectionService redisConnectionService) {
         this.redisConnectionService = redisConnectionService;
     }
 

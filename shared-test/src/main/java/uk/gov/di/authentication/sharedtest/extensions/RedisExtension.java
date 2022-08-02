@@ -37,11 +37,6 @@ import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_B
 
 public class RedisExtension
         implements Extension, BeforeAllCallback, AfterAllCallback, AfterEachCallback {
-
-    private static final String REDIS_HOST =
-            System.getenv().getOrDefault("REDIS_HOST", "localhost");
-    private static final Optional<String> REDIS_PASSWORD =
-            Optional.ofNullable(System.getenv("REDIS_PASSWORD"));
     private final ConfigurationService configurationService;
     private final CodeStorageService codeStorageService;
 
@@ -276,8 +271,9 @@ public class RedisExtension
                         .withHost(configurationService.getRedisHost())
                         .withPort(configurationService.getRedisPort())
                         .withSsl(configurationService.getUseRedisTLS());
-        if (configurationService.getRedisPassword().isPresent())
-            builder.withPassword(configurationService.getRedisPassword().get().toCharArray());
+        configurationService
+                .getRedisPassword()
+                .ifPresent(redisPassword -> builder.withPassword(redisPassword.toCharArray()));
         RedisURI redisURI = builder.build();
         client = RedisClient.create(redisURI);
     }
