@@ -18,6 +18,8 @@ public class TxmaAuditEvent {
 
     @Expose private String componentName;
 
+    @Expose private TxmaAuditUser user;
+
     public TxmaAuditEvent(String eventName, long timestamp) {
         this.eventName = eventName;
         this.timestamp = timestamp;
@@ -43,6 +45,11 @@ public class TxmaAuditEvent {
 
     public TxmaAuditEvent withClientId(String clientId) {
         this.clientId = clientId;
+        return this;
+    }
+
+    public TxmaAuditEvent withUser(TxmaAuditUser user) {
+        this.user = user;
         return this;
     }
 }

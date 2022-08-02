@@ -46,4 +46,31 @@ class TxmaAuditEventTest {
         assertThat(payload, hasFieldWithValue("client_id", is("client-id")));
         assertThat(payload, hasFieldWithValue("component_name", is("component-name")));
     }
+
+    @Test
+    void shouldSerializeUserSubObject() {
+        var user =
+                TxmaAuditUser.user()
+                        .withUserId("user-id")
+                        .withEmail("email")
+                        .withIpAddress("ip-address")
+                        .withPersistentSessionId("persistent-id")
+                        .withPhone("01110")
+                        .withSessionId("session-id")
+                        .withTransactionId("transaction-id")
+                        .withGovukSigninJourneyId("journey-id");
+
+        var event = auditEvent(TEST_EVENT).withUser(user);
+
+        var payload = asJson(event.serialize()).getAsJsonObject().get("user");
+
+        assertThat(payload, hasFieldWithValue("user_id", is("user-id")));
+        assertThat(payload, hasFieldWithValue("email", is("email")));
+        assertThat(payload, hasFieldWithValue("ip_address", is("ip-address")));
+        assertThat(payload, hasFieldWithValue("persistent_session_id", is("persistent-id")));
+        assertThat(payload, hasFieldWithValue("phone", is("01110")));
+        assertThat(payload, hasFieldWithValue("session_id", is("session-id")));
+        assertThat(payload, hasFieldWithValue("transaction_id", is("transaction-id")));
+        assertThat(payload, hasFieldWithValue("govuk_signin_journey_id", is("journey-id")));
+    }
 }
