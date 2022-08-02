@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.sharedtest.matchers;
 
 import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
@@ -45,6 +46,10 @@ public class JsonMatcher<T> extends TypeSafeDiagnosingMatcher<JsonElement> {
         return format("a Json object with %s: %s (%s)", name, value, actualJson);
     }
 
+    public static JsonElement asJson(String payload) {
+        return JsonParser.parseString(payload);
+    }
+
     public static JsonMatcher<JsonElement> hasField(final String fieldName) {
         return new JsonMatcher<>(
                 fieldName,
@@ -60,6 +65,17 @@ public class JsonMatcher<T> extends TypeSafeDiagnosingMatcher<JsonElement> {
                         node.getAsJsonObject().get(fieldName) == null
                                 ? null
                                 : node.getAsJsonObject().get(fieldName).getAsString(),
+                expected);
+    }
+
+    public static JsonMatcher<Long> hasNumericFieldWithValue(
+            final String fieldName, Matcher<Long> expected) {
+        return new JsonMatcher<>(
+                fieldName,
+                node ->
+                        node.getAsJsonObject().get(fieldName) == null
+                                ? null
+                                : node.getAsJsonObject().get(fieldName).getAsLong(),
                 expected);
     }
 }
