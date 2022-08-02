@@ -92,7 +92,7 @@ public abstract class HandlerIntegrationTest<Q, S> {
                             "local-account-management-redis-tls", "false",
                             "local-password-pepper", "pepper"));
 
-    protected final ConfigurationService TEST_CONFIGURATION_SERVICE =
+    protected static final ConfigurationService TEST_CONFIGURATION_SERVICE =
             new IntegrationTestConfigurationService(
                     auditTopic,
                     notificationsQueue,
@@ -108,7 +108,7 @@ public abstract class HandlerIntegrationTest<Q, S> {
 
     @RegisterExtension
     protected static final RedisExtension redis =
-            new RedisExtension(SerializationService.getInstance());
+            new RedisExtension(SerializationService.getInstance(), TEST_CONFIGURATION_SERVICE);
 
     @RegisterExtension
     protected static final UserStoreExtension userStore = new UserStoreExtension();
