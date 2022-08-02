@@ -12,24 +12,21 @@ import java.util.Map;
 import static com.amazonaws.services.simplesystemsmanagement.model.ParameterType.SecureString;
 
 public class ParameterStoreExtension extends BaseAwsResourceExtension implements BeforeAllCallback {
-
-    private final Map<String, String> parameters;
     private final AWSSimpleSystemsManagement ssmClient;
 
     public ParameterStoreExtension(Map<String, String> parameters) {
-        this.parameters = parameters;
         this.ssmClient =
                 AWSSimpleSystemsManagementClient.builder()
                         .withEndpointConfiguration(
                                 new AwsClientBuilder.EndpointConfiguration(
                                         LOCALSTACK_ENDPOINT, REGION))
                         .build();
+
+        parameters.forEach(this::createOrOverwriteParameter);
     }
 
     @Override
-    public void beforeAll(ExtensionContext context) {
-        parameters.forEach(this::createOrOverwriteParameter);
-    }
+    public void beforeAll(ExtensionContext context) {}
 
     private void createOrOverwriteParameter(String key, String value) {
         PutParameterRequest parameterRequest =
@@ -39,5 +36,9 @@ public class ParameterStoreExtension extends BaseAwsResourceExtension implements
                         .withOverwrite(true)
                         .withValue(value);
         ssmClient.putParameter(parameterRequest);
+    }
+
+    public AWSSimpleSystemsManagement getClient() {
+        return ssmClient;
     }
 }

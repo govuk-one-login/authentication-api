@@ -106,7 +106,8 @@ public abstract class HandlerIntegrationTest<Q, S> {
                     tokenSigner,
                     ipvPrivateKeyJwtSigner,
                     spotQueue,
-                    docAppPrivateKeyJwtSigner);
+                    docAppPrivateKeyJwtSigner,
+                    configurationParameters);
 
     protected RequestHandler<Q, S> handler;
     protected final Json objectMapper = SerializationService.getInstance();
@@ -187,7 +188,9 @@ public abstract class HandlerIntegrationTest<Q, S> {
                 TokenSigningExtension tokenSigningKey,
                 TokenSigningExtension ipvPrivateKeyJwtSigner,
                 SqsQueueExtension spotQueue,
-                TokenSigningExtension docAppPrivateKeyJwtSigner) {
+                TokenSigningExtension docAppPrivateKeyJwtSigner,
+                ParameterStoreExtension parameterStoreExtension) {
+            super(parameterStoreExtension.getClient());
             this.auditEventTopic = auditEventTopic;
             this.notificationQueue = notificationQueue;
             this.tokenSigningKey = tokenSigningKey;
@@ -200,26 +203,6 @@ public abstract class HandlerIntegrationTest<Q, S> {
         @Override
         public String getEmailQueueUri() {
             return notificationQueue.getQueueUrl();
-        }
-
-        @Override
-        public String getRedisHost() {
-            return REDIS_HOST;
-        }
-
-        @Override
-        public int getRedisPort() {
-            return REDIS_PORT;
-        }
-
-        @Override
-        public Optional<String> getRedisPassword() {
-            return Optional.ofNullable(REDIS_PASSWORD);
-        }
-
-        @Override
-        public boolean getUseRedisTLS() {
-            return DOES_REDIS_USE_TLS;
         }
 
         @Override

@@ -40,7 +40,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public ConfigurationService() {}
 
-    ConfigurationService(AWSSimpleSystemsManagement ssmClient) {
+    protected ConfigurationService(AWSSimpleSystemsManagement ssmClient) {
         this.ssmClient = ssmClient;
     }
 
