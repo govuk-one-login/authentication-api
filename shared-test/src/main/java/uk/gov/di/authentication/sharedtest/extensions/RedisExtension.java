@@ -19,6 +19,7 @@ import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 
 import java.time.LocalDateTime;
@@ -36,18 +37,18 @@ import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_B
 
 public class RedisExtension
         implements Extension, BeforeAllCallback, AfterAllCallback, AfterEachCallback {
+    private final ConfigurationService configurationService;
+    private final CodeStorageService codeStorageService;
 
-    private static final String REDIS_HOST =
-            System.getenv().getOrDefault("REDIS_HOST", "localhost");
-    private static final Optional<String> REDIS_PASSWORD =
-            Optional.ofNullable(System.getenv("REDIS_PASSWORD"));
     private final Json objectMapper;
 
     private RedisConnectionService redis;
     private RedisClient client;
 
-    public RedisExtension(Json objectMapper) {
+    public RedisExtension(Json objectMapper, ConfigurationService configurationService) {
         this.objectMapper = objectMapper;
+        this.configurationService = configurationService;
+        this.codeStorageService = new CodeStorageService(configurationService);
     }
 
     public String createSession(String sessionId) throws Json.JsonException {
@@ -165,33 +166,36 @@ public class RedisExtension
 
     public String generateAndSaveEmailCode(String email, long codeExpiryTime) {
         var code = new CodeGeneratorService().sixDigitCode();
-        new CodeStorageService(redis).saveOtpCode(email, code, codeExpiryTime, VERIFY_EMAIL);
+        codeStorageService.saveOtpCode(email, code, codeExpiryTime, VERIFY_EMAIL);
 
         return code;
     }
 
     public void generateAndSavePasswordResetCode(
             String subjectId, String code, long codeExpiryTime) {
-        new CodeStorageService(redis)
-                .savePasswordResetCode(subjectId, code, codeExpiryTime, RESET_PASSWORD);
+        codeStorageService.savePasswordResetCode(subjectId, code, codeExpiryTime, RESET_PASSWORD);
     }
 
     public String generateAndSavePhoneNumberCode(String email, long codeExpiryTime) {
         var code = new CodeGeneratorService().sixDigitCode();
-        new CodeStorageService(redis).saveOtpCode(email, code, codeExpiryTime, VERIFY_PHONE_NUMBER);
+        codeStorageService.saveOtpCode(email, code, codeExpiryTime, VERIFY_PHONE_NUMBER);
 
         return code;
     }
 
     public String generateAndSaveMfaCode(String email, long codeExpiryTime) {
         var code = new CodeGeneratorService().sixDigitCode();
-        new CodeStorageService(redis).saveOtpCode(email, code, codeExpiryTime, MFA_SMS);
+        codeStorageService.saveOtpCode(email, code, codeExpiryTime, MFA_SMS);
 
         return code;
     }
 
     public void blockMfaCodesForEmail(String email) {
-        new CodeStorageService(redis).saveBlockedForEmail(email, CODE_BLOCKED_KEY_PREFIX, 10);
+        codeStorageService.saveBlockedForEmail(email, CODE_BLOCKED_KEY_PREFIX, 10);
+    }
+
+    public int getMfaCodeAttemptsCount(String email) {
+        return codeStorageService.getIncorrectMfaCodeAttemptsCount(email);
     }
 
     public void addToRedis(String key, String value, Long expiry) {
@@ -261,10 +265,15 @@ public class RedisExtension
 
     @Override
     public void beforeAll(ExtensionContext context) throws Exception {
-        redis = new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD, false);
+        redis = new RedisConnectionService(configurationService);
         RedisURI.Builder builder =
-                RedisURI.builder().withHost(REDIS_HOST).withPort(6379).withSsl(false);
-        if (REDIS_PASSWORD.isPresent()) builder.withPassword(REDIS_PASSWORD.get().toCharArray());
+                RedisURI.builder()
+                        .withHost(configurationService.getRedisHost())
+                        .withPort(configurationService.getRedisPort())
+                        .withSsl(configurationService.getUseRedisTLS());
+        configurationService
+                .getRedisPassword()
+                .ifPresent(redisPassword -> builder.withPassword(redisPassword.toCharArray()));
         RedisURI redisURI = builder.build();
         client = RedisClient.create(redisURI);
     }

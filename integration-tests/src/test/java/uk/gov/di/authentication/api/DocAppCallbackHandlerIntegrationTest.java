@@ -282,7 +282,8 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                     tokenSigningKey,
                     ipvPrivateKeyJwtSigner,
                     spotQueue,
-                    docAppPrivateKeyJwtSigner);
+                    docAppPrivateKeyJwtSigner,
+                    configurationParameters);
             this.criStubExtension = criStubExtension;
         }
 

@@ -28,6 +28,10 @@ import java.util.Optional;
 import static org.mockito.Mockito.mock;
 
 public abstract class HandlerIntegrationTest<Q, S> {
+    private static final String REDIS_HOST = "localhost";
+    private static final int REDIS_PORT = 6379;
+    private static final String REDIS_PASSWORD = null;
+    private static final boolean DOES_REDIS_USE_TLS = false;
     protected static final String LOCAL_ENDPOINT_FORMAT =
             "http://localhost:45678/restapis/%s/local/_user_request_";
     protected static final String LOCAL_API_GATEWAY_ID =
@@ -82,17 +86,19 @@ public abstract class HandlerIntegrationTest<Q, S> {
     protected static final ParameterStoreExtension configurationParameters =
             new ParameterStoreExtension(
                     Map.of(
-                            "local-session-redis-master-host", "localhost",
-                            "local-session-redis-password", "null",
-                            "local-session-redis-port", "6379",
-                            "local-session-redis-tls", "false",
-                            "local-account-management-redis-master-host", "localhost",
-                            "local-account-management-redis-password", "null",
-                            "local-account-management-redis-port", "6379",
-                            "local-account-management-redis-tls", "false",
+                            "local-session-redis-master-host", REDIS_HOST,
+                            "local-session-redis-password", String.valueOf(REDIS_PASSWORD),
+                            "local-session-redis-port", String.valueOf(REDIS_PORT),
+                            "local-session-redis-tls", String.valueOf(DOES_REDIS_USE_TLS),
+                            "local-account-management-redis-master-host", REDIS_HOST,
+                            "local-account-management-redis-password",
+                                    String.valueOf(REDIS_PASSWORD),
+                            "local-account-management-redis-port", String.valueOf(REDIS_PORT),
+                            "local-account-management-redis-tls",
+                                    String.valueOf(DOES_REDIS_USE_TLS),
                             "local-password-pepper", "pepper"));
 
-    protected final ConfigurationService TEST_CONFIGURATION_SERVICE =
+    protected static final ConfigurationService TEST_CONFIGURATION_SERVICE =
             new IntegrationTestConfigurationService(
                     auditTopic,
                     notificationsQueue,
@@ -100,7 +106,8 @@ public abstract class HandlerIntegrationTest<Q, S> {
                     tokenSigner,
                     ipvPrivateKeyJwtSigner,
                     spotQueue,
-                    docAppPrivateKeyJwtSigner);
+                    docAppPrivateKeyJwtSigner,
+                    configurationParameters);
 
     protected RequestHandler<Q, S> handler;
     protected final Json objectMapper = SerializationService.getInstance();
@@ -108,7 +115,7 @@ public abstract class HandlerIntegrationTest<Q, S> {
 
     @RegisterExtension
     protected static final RedisExtension redis =
-            new RedisExtension(SerializationService.getInstance());
+            new RedisExtension(SerializationService.getInstance(), TEST_CONFIGURATION_SERVICE);
 
     @RegisterExtension
     protected static final UserStoreExtension userStore = new UserStoreExtension();
@@ -181,7 +188,9 @@ public abstract class HandlerIntegrationTest<Q, S> {
                 TokenSigningExtension tokenSigningKey,
                 TokenSigningExtension ipvPrivateKeyJwtSigner,
                 SqsQueueExtension spotQueue,
-                TokenSigningExtension docAppPrivateKeyJwtSigner) {
+                TokenSigningExtension docAppPrivateKeyJwtSigner,
+                ParameterStoreExtension parameterStoreExtension) {
+            super(parameterStoreExtension.getClient());
             this.auditEventTopic = auditEventTopic;
             this.notificationQueue = notificationQueue;
             this.tokenSigningKey = tokenSigningKey;

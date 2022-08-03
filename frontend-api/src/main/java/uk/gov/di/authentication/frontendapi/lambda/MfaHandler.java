@@ -27,7 +27,6 @@ import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
@@ -84,8 +83,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
     public MfaHandler(ConfigurationService configurationService) {
         super(MfaRequest.class, configurationService);
         this.codeGeneratorService = new CodeGeneratorService();
-        this.codeStorageService =
-                new CodeStorageService(new RedisConnectionService(configurationService));
+        this.codeStorageService = new CodeStorageService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.sqsClient =
                 new AwsSqsClient(
@@ -97,8 +95,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
     public MfaHandler() {
         super(MfaRequest.class, ConfigurationService.getInstance());
         this.codeGeneratorService = new CodeGeneratorService();
-        this.codeStorageService =
-                new CodeStorageService(new RedisConnectionService(configurationService));
+        this.codeStorageService = new CodeStorageService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.sqsClient =
                 new AwsSqsClient(

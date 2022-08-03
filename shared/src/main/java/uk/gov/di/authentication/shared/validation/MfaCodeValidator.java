@@ -3,7 +3,6 @@ package uk.gov.di.authentication.shared.validation;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
@@ -14,33 +13,31 @@ import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_B
 public abstract class MfaCodeValidator {
     protected final Logger LOG = LogManager.getLogger(this.getClass());
     private final CodeStorageService codeStorageService;
-    private final Session session;
+    private final String emailAddress;
     private final int maxRetries;
 
     MfaCodeValidator(
             UserContext userContext, CodeStorageService codeStorageService, int maxRetries) {
-        this.session = userContext.getSession();
+        this.emailAddress = userContext.getSession().getEmailAddress();
         this.codeStorageService = codeStorageService;
         this.maxRetries = maxRetries;
     }
 
     boolean isCodeBlockedForSession() {
-        return codeStorageService.isBlockedForEmail(
-                session.getEmailAddress(), CODE_BLOCKED_KEY_PREFIX);
+        return codeStorageService.isBlockedForEmail(emailAddress, CODE_BLOCKED_KEY_PREFIX);
     }
 
     boolean hasExceededRetryLimit() {
-        LOG.info("Session retry count: {}", session.getRetryCount());
         LOG.info("Max retries: {}", maxRetries);
-        return session.getRetryCount() > maxRetries;
+        return codeStorageService.getIncorrectMfaCodeAttemptsCount(emailAddress) > maxRetries;
     }
 
     void incrementRetryCount() {
-        session.incrementRetryCount();
+        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(emailAddress);
     }
 
     void resetCodeRequestCount() {
-        session.resetRetryCount();
+        codeStorageService.deleteIncorrectMfaCodeAttemptsCount(emailAddress);
     }
 
     public abstract Optional<ErrorResponse> validateCode(String code);

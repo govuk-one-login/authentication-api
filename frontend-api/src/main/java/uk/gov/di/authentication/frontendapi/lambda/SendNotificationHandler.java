@@ -25,7 +25,6 @@ import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
@@ -86,8 +85,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                         configurationService.getEmailQueueUri(),
                         configurationService.getSqsEndpointUri());
         this.codeGeneratorService = new CodeGeneratorService();
-        this.codeStorageService =
-                new CodeStorageService(new RedisConnectionService(configurationService));
+        this.codeStorageService = new CodeStorageService(configurationService);
     }
 
     @Override

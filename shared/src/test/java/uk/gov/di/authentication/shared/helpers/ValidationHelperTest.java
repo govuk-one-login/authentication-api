@@ -6,7 +6,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
-import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.services.CodeStorageService;
 
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -29,6 +29,7 @@ class ValidationHelperTest {
     public static final Optional<String> STORED_VALID_CODE = Optional.of(VALID_CODE);
     public static final String INVALID_CODE = "654321";
     private static final Optional<String> NO_CODE_STORED = Optional.empty();
+    private static final String EMAIL_ADDRESS = "test@test.com";
 
     private static Stream<String> invalidPhoneNumbers() {
         return Stream.of(
@@ -322,12 +323,18 @@ class ValidationHelperTest {
             String input,
             int previousAttempts,
             Optional<String> storedCode) {
-        Session session = mock(Session.class);
-        when(session.getRetryCount()).thenReturn(previousAttempts);
+
+        var codeStorageService = mock(CodeStorageService.class);
+
+        // This simulates the Redis increment counter's side effect which isn't captured
+        previousAttempts++;
+
+        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL_ADDRESS))
+                .thenReturn(previousAttempts);
 
         assertEquals(
                 expectedResult,
                 ValidationHelper.validateVerificationCode(
-                        notificationType, storedCode, input, session, 5));
+                        notificationType, storedCode, input, codeStorageService, EMAIL_ADDRESS, 5));
     }
 }

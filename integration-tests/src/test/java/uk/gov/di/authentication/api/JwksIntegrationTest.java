@@ -52,7 +52,8 @@ public class JwksIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     tokenSigner,
                     ipvPrivateKeyJwtSigner,
                     spotQueue,
-                    docAppPrivateKeyJwtSigner);
+                    docAppPrivateKeyJwtSigner,
+                    configurationParameters);
             this.docAppEnabled = docAppEnabled;
         }
 
