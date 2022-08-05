@@ -59,6 +59,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.startsWith;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -121,7 +122,10 @@ class DocAppAuthorizeHandlerTest {
             throws ParseException, JOSEException, Json.JsonException {
         var encryptedJWT = createEncryptedJWT();
         when(authorisationService.constructRequestJWT(
-                        any(State.class), any(Subject.class), any(ClientRegistry.class)))
+                        any(State.class),
+                        any(Subject.class),
+                        any(ClientRegistry.class),
+                        anyString()))
                 .thenReturn(encryptedJWT);
         when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.of(new ClientRegistry()));
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());

@@ -240,7 +240,8 @@ class DocAppAuthorisationServiceTest {
         when(clientRegistry.isTestClient()).thenReturn(isTestClient);
 
         var encryptedJWT =
-                authorisationService.constructRequestJWT(state, pairwise, clientRegistry);
+                authorisationService.constructRequestJWT(
+                        state, pairwise, clientRegistry, "client-session-id");
 
         var signedJWTResponse = decryptJWT(encryptedJWT);
 
@@ -255,6 +256,10 @@ class DocAppAuthorisationServiceTest {
                 signedJWTResponse.getJWTClaimsSet().getAudience(),
                 equalTo(singletonList(DOC_APP_AUTHORISATION_URI.toString())));
         assertThat(signedJWTResponse.getJWTClaimsSet().getClaim("response_type"), equalTo("code"));
+
+        assertThat(
+                signedJWTResponse.getJWTClaimsSet().getStringClaim("govuk_signin_journey_id"),
+                equalTo("client-session-id"));
         assertThat(
                 signedJWTResponse.getHeader().getKeyID(),
                 equalTo(hashSha256String("789789789789789")));

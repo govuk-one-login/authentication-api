@@ -142,7 +142,7 @@ public class DocAppAuthorisationService {
     }
 
     public EncryptedJWT constructRequestJWT(
-            State state, Subject subject, ClientRegistry clientRegistry) {
+            State state, Subject subject, ClientRegistry clientRegistry, String clientSessionId) {
         LOG.info("Generating request JWT");
         var docAppTokenSigningKeyAlias = configurationService.getDocAppTokenSigningKeyAlias();
         var signingKeyId =
@@ -173,7 +173,8 @@ public class DocAppAuthorisationService {
                                 "redirect_uri",
                                 configurationService.getDocAppAuthorisationCallbackURI().toString())
                         .claim("client_id", configurationService.getDocAppAuthorisationClientId())
-                        .claim("response_type", ResponseType.CODE.toString());
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("govuk_signin_journey_id", clientSessionId);
         if (clientRegistry.isTestClient()) {
             claimsBuilder.claim("test_client", true);
         }
