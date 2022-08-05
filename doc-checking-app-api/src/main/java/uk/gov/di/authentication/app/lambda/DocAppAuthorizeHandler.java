@@ -148,7 +148,8 @@ public class DocAppAuthorizeHandler
                                         authorisationService.constructRequestJWT(
                                                 state,
                                                 clientSession.getDocAppSubjectId(),
-                                                clientRegistry);
+                                                clientRegistry,
+                                                clientSessionId);
                                 var authRequestBuilder =
                                         new AuthorizationRequest.Builder(
                                                         new ResponseType(ResponseType.Value.CODE),
