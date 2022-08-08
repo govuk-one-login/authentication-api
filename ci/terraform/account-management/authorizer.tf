@@ -70,6 +70,10 @@ resource "aws_lambda_alias" "authorizer_alias" {
 resource "time_sleep" "wait_for_alias_to_reassign" {
   depends_on = [aws_lambda_alias.authorizer_alias]
 
+  triggers = {
+    function_name    = aws_lambda_function.authorizer.arn
+    function_version = aws_lambda_function.authorizer.version
+  }
   create_duration = "120s"
 }
 
