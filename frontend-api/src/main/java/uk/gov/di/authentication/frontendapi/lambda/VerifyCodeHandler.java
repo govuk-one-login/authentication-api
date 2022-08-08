@@ -25,7 +25,6 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
-import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
@@ -58,7 +57,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
     private final CodeStorageService codeStorageService;
     private final AuditService auditService;
-    private final CloudwatchMetricsService cloudwatchMetricsService;
 
     protected VerifyCodeHandler(
             ConfigurationService configurationService,
@@ -67,8 +65,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             ClientService clientService,
             AuthenticationService authenticationService,
             CodeStorageService codeStorageService,
-            AuditService auditService,
-            CloudwatchMetricsService cloudwatchMetricsService) {
+            AuditService auditService) {
         super(
                 VerifyCodeRequest.class,
                 configurationService,
@@ -78,7 +75,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 authenticationService);
         this.codeStorageService = codeStorageService;
         this.auditService = auditService;
-        this.cloudwatchMetricsService = cloudwatchMetricsService;
     }
 
     public VerifyCodeHandler() {
@@ -89,7 +85,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         super(VerifyCodeRequest.class, configurationService);
         this.codeStorageService = new CodeStorageService(configurationService);
         this.auditService = new AuditService(configurationService);
-        this.cloudwatchMetricsService = new CloudwatchMetricsService();
     }
 
     @Override
@@ -219,13 +214,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                             .map(ClientRegistry::getClientID)
                             .orElse(AuditService.UNKNOWN);
 
-            cloudwatchMetricsService.incrementCounter(
-                    "NewAccount",
-                    Map.of(
-                            "Environment",
-                            configurationService.getEnvironment(),
-                            "Client",
-                            clientName));
         } else {
             codeStorageService.deleteOtpCode(session.getEmailAddress(), notificationType);
         }

@@ -25,7 +25,6 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
-import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
@@ -84,8 +83,6 @@ class VerifyCodeHandlerTest {
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final ClientSession clientSession = mock(ClientSession.class);
     private final AuditService auditService = mock(AuditService.class);
-    private final CloudwatchMetricsService cloudwatchMetricsService =
-            mock(CloudwatchMetricsService.class);
 
     private final ClientRegistry clientRegistry =
             new ClientRegistry().setTestClient(false).setClientID(CLIENT_ID);
@@ -125,8 +122,7 @@ class VerifyCodeHandlerTest {
                         clientService,
                         authenticationService,
                         codeStorageService,
-                        auditService,
-                        cloudwatchMetricsService);
+                        auditService);
 
         when(authenticationService.getUserProfileFromEmail(TEST_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(userProfile));
@@ -193,10 +189,6 @@ class VerifyCodeHandlerTest {
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("notification-type", VERIFY_PHONE_NUMBER.name()));
-
-        verify(cloudwatchMetricsService)
-                .incrementCounter(
-                        "NewAccount", Map.of("Environment", "unit-test", "Client", "client-id"));
     }
 
     @Test
