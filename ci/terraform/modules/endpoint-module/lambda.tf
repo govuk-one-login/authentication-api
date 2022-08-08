@@ -72,7 +72,7 @@ resource "time_sleep" "wait_for_alias_to_reassign" {
     function_name    = aws_lambda_function.endpoint_lambda.arn
     function_version = aws_lambda_function.endpoint_lambda.version
   }
-  create_duration = "120s"
+  create_duration = "60s"
 }
 
 resource "aws_lambda_provisioned_concurrency_config" "endpoint_lambda_concurrency_config" {
