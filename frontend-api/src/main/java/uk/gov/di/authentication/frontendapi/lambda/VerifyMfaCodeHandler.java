@@ -25,22 +25,26 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.shared.validation.MfaCodeValidatorFactory;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import static java.util.Map.entry;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_VERIFIED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.INVALID_CODE_SENT;
+import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
+import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
-import static uk.gov.di.authentication.shared.validation.MfaCodeValidatorFactory.getMfaCodeValidator;
 
 public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -48,7 +52,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     private static final Logger LOG = LogManager.getLogger(VerifyMfaCodeHandler.class);
     private final CodeStorageService codeStorageService;
     private final AuditService auditService;
-    private final DynamoService dynamoService;
+    private final MfaCodeValidatorFactory mfaCodeValidatorFactory;
 
     public VerifyMfaCodeHandler(
             ConfigurationService configurationService,
@@ -58,7 +62,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             AuthenticationService authenticationService,
             CodeStorageService codeStorageService,
             AuditService auditService,
-            DynamoService dynamoService) {
+            MfaCodeValidatorFactory mfaCodeValidatorFactory) {
         super(
                 VerifyMfaCodeRequest.class,
                 configurationService,
@@ -68,7 +72,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 authenticationService);
         this.codeStorageService = codeStorageService;
         this.auditService = auditService;
-        this.dynamoService = dynamoService;
+        this.mfaCodeValidatorFactory = mfaCodeValidatorFactory;
     }
 
     public VerifyMfaCodeHandler() {
@@ -77,9 +81,14 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
     public VerifyMfaCodeHandler(ConfigurationService configurationService) {
         super(VerifyMfaCodeRequest.class, configurationService);
-        this.codeStorageService = new CodeStorageService(configurationService);
+        var codeStorageService = new CodeStorageService(configurationService);
+        this.codeStorageService = codeStorageService;
         this.auditService = new AuditService(configurationService);
-        this.dynamoService = new DynamoService(configurationService);
+        this.mfaCodeValidatorFactory =
+                new MfaCodeValidatorFactory(
+                        configurationService,
+                        codeStorageService,
+                        new DynamoService(configurationService));
     }
 
     @Override
@@ -89,6 +98,12 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             VerifyMfaCodeRequest codeRequest,
             UserContext userContext) {
 
+        var clientSessionId =
+                getHeaderValueFromHeaders(
+                        input.getHeaders(),
+                        CLIENT_SESSION_ID_HEADER,
+                        configurationService.getHeadersCaseInsensitive());
+        attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
         attachLogFieldToLogs(
                 PERSISTENT_SESSION_ID, extractPersistentIdFromHeaders(input.getHeaders()));
         attachLogFieldToLogs(
@@ -99,25 +114,20 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
         try {
             var session = userContext.getSession();
-            String code = codeRequest.getCode();
             var mfaMethodType = codeRequest.getMfaMethodType();
-            boolean isRegistration = codeRequest.isRegistration();
+            var isRegistration = codeRequest.isRegistration();
 
             var mfaCodeValidator =
-                    getMfaCodeValidator(
-                            mfaMethodType,
-                            isRegistration,
-                            userContext,
-                            codeStorageService,
-                            configurationService,
-                            dynamoService);
+                    mfaCodeValidatorFactory
+                            .getMfaCodeValidator(mfaMethodType, isRegistration, userContext)
+                            .orElse(null);
 
-            if (mfaCodeValidator.isEmpty()) {
+            if (Objects.isNull(mfaCodeValidator)) {
                 LOG.info("No MFA code validator found for this MFA method type");
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1002);
             }
 
-            var errorResponse = mfaCodeValidator.get().validateCode(code);
+            var errorResponse = mfaCodeValidator.validateCode(codeRequest.getCode());
 
             processCodeSession(
                     errorResponse,
@@ -132,7 +142,13 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
             return errorResponse
                     .map(response -> generateApiGatewayProxyErrorResponse(400, response))
-                    .orElseGet(ApiGatewayResponseHelper::generateEmptySuccessApiGatewayResponse);
+                    .orElseGet(
+                            () -> {
+                                sessionService.save(
+                                        session.setVerifiedMfaMethodType(MFAMethodType.AUTH_APP));
+                                return ApiGatewayResponseHelper
+                                        .generateEmptySuccessApiGatewayResponse();
+                            });
 
         } catch (Exception e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
@@ -167,8 +183,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             UserContext userContext,
             boolean isRegistration) {
 
-        FrontendAuditableEvent auditableEvent =
-                errorResponseAsFrontendAuditableEvent(errorResponse);
+        var auditableEvent = errorResponseAsFrontendAuditableEvent(errorResponse);
 
         if (isRegistration && errorResponse.isEmpty()) {
             authenticationService.setMFAMethodVerifiedTrue(

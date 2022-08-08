@@ -189,7 +189,6 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
                         Map.of());
 
-
         assertThat(response, hasStatus(204));
         assertThat(redis.getMfaCodeAttemptsCount(EMAIL_ADDRESS), equalTo(0));
         assertEventTypesReceived(auditTopic, List.of(CODE_VERIFIED));

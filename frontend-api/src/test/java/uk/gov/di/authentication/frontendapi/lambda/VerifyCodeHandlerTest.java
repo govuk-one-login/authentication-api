@@ -18,6 +18,7 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -175,6 +176,7 @@ class VerifyCodeHandlerTest {
         verify(authenticationService).updatePhoneNumberVerifiedStatus(TEST_EMAIL_ADDRESS, true);
         assertThat(result, hasStatus(204));
         assertThat(session.getCurrentCredentialStrength(), equalTo(MEDIUM_LEVEL));
+        assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
 
         verify(sessionService, times(2)).save(session);
         verify(auditService)
@@ -350,7 +352,8 @@ class VerifyCodeHandlerTest {
 
         verify(codeStorageService).deleteOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS);
         assertThat(result, hasStatus(204));
-        verify(sessionService).save(session);
+        assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
+        verify(sessionService, times(2)).save(session);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_VERIFIED,
