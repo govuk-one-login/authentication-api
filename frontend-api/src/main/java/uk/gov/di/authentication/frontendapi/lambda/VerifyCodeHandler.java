@@ -194,6 +194,10 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     pair("notification-type", notificationType.name())
                 };
         if (notificationType.equals(VERIFY_PHONE_NUMBER)) {
+            LOG.info(
+                    "MFA code has been successfully verified for MFA type: {}. RegistrationJourney: {}",
+                    MFAMethodType.SMS.getValue(),
+                    true);
             authenticationService.updatePhoneNumberVerifiedStatus(session.getEmailAddress(), true);
 
             var vectorOfTrust = VectorOfTrust.getDefaults();
@@ -219,6 +223,10 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     };
 
         } else if (notificationType.equals(MFA_SMS)) {
+            LOG.info(
+                    "MFA code has been successfully verified for MFA type: {}. RegistrationJourney: {}",
+                    MFAMethodType.SMS.getValue(),
+                    false);
             sessionService.save(session.setVerifiedMfaMethodType(MFAMethodType.SMS));
             metadataPairs =
                     new AuditService.MetadataPair[] {

@@ -81,8 +81,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
     public VerifyMfaCodeHandler(ConfigurationService configurationService) {
         super(VerifyMfaCodeRequest.class, configurationService);
-        var codeStorageService = new CodeStorageService(configurationService);
-        this.codeStorageService = codeStorageService;
+        this.codeStorageService = new CodeStorageService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.mfaCodeValidatorFactory =
                 new MfaCodeValidatorFactory(
@@ -144,6 +143,10 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                     .map(response -> generateApiGatewayProxyErrorResponse(400, response))
                     .orElseGet(
                             () -> {
+                                LOG.info(
+                                        "MFA code has been successfully verified for MFA type: {}. RegistrationJourney: {}",
+                                        MFAMethodType.AUTH_APP.getValue(),
+                                        codeRequest.isRegistration());
                                 sessionService.save(
                                         session.setVerifiedMfaMethodType(MFAMethodType.AUTH_APP));
                                 return ApiGatewayResponseHelper
