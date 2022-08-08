@@ -58,6 +58,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.USER_INFO_RETURNED;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoTxmaAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.ADDRESS_CLAIM;
 import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.PASSPORT_CLAIM;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -87,7 +89,29 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @BeforeEach
     void setup() throws JOSEException, NoSuchAlgorithmException {
-        handler = new UserInfoHandler(TEST_CONFIGURATION_SERVICE);
+        var configuration =
+                new IntegrationTestConfigurationService(
+                        auditTopic,
+                        notificationsQueue,
+                        auditSigningKey,
+                        tokenSigner,
+                        ipvPrivateKeyJwtSigner,
+                        spotQueue,
+                        docAppPrivateKeyJwtSigner,
+                        configurationParameters) {
+
+                    @Override
+                    public boolean isTxmaAuditEnabled() {
+                        return true;
+                    }
+
+                    @Override
+                    public String getTxmaAuditQueueUrl() {
+                        return txmaAuditQueue.getQueueUrl();
+                    }
+                };
+
+        handler = new UserInfoHandler(configuration);
         var keyPair = KeyPairGenerator.getInstance("EC").generateKeyPair();
         DOC_APP_CREDENTIAL =
                 generateSignedJWT(new JWTClaimsSet.Builder().build(), keyPair).serialize();
@@ -133,6 +157,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(userInfoResponse.toJWTClaimsSet().getClaims().size(), equalTo(5));
 
         assertEventTypesReceived(auditTopic, singletonList(USER_INFO_RETURNED));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList("AUTH_USER_INFO_RETURNED"));
     }
 
     @Test
@@ -150,6 +175,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 .get("WWW-Authenticate")));
 
         assertNoAuditEventsReceived(auditTopic);
+        assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
 
     @Test
@@ -185,6 +211,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(userInfoResponse.toJWTClaimsSet().getClaims().size(), equalTo(8));
 
         assertEventTypesReceived(auditTopic, singletonList(USER_INFO_RETURNED));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList("AUTH_USER_INFO_RETURNED"));
     }
 
     @Test
@@ -214,6 +241,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertNull(userInfoResponse.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
 
         assertEventTypesReceived(auditTopic, singletonList(USER_INFO_RETURNED));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList("AUTH_USER_INFO_RETURNED"));
     }
 
     @Test
@@ -235,6 +263,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertNull(userInfoResponse.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
 
         assertEventTypesReceived(auditTopic, singletonList(USER_INFO_RETURNED));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList("AUTH_USER_INFO_RETURNED"));
     }
 
     @Test
@@ -256,6 +285,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(userInfoResponse.toJWTClaimsSet().getClaims().size(), equalTo(2));
 
         assertEventTypesReceived(auditTopic, singletonList(USER_INFO_RETURNED));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList("AUTH_USER_INFO_RETURNED"));
     }
 
     @Test
@@ -271,6 +301,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 "Expected to throw exception");
 
         assertNoAuditEventsReceived(auditTopic);
+        assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
 
     @Test
@@ -283,6 +314,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 "Expected to throw exception");
 
         assertNoAuditEventsReceived(auditTopic);
+        assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
 
     public static SignedJWT generateSignedJWT(JWTClaimsSet jwtClaimsSet, KeyPair keyPair)
@@ -431,6 +463,16 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         @Override
         public boolean isIdentityEnabled() {
             return true;
+        }
+
+        @Override
+        public boolean isTxmaAuditEnabled() {
+            return true;
+        }
+
+        @Override
+        public String getTxmaAuditQueueUrl() {
+            return txmaAuditQueue.getQueueUrl();
         }
     }
 }

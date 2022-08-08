@@ -9,4 +9,12 @@ public interface AuditPublisherConfiguration extends BaseLambdaConfiguration {
     default String getEventsSnsTopicArn() {
         return System.getenv("EVENTS_SNS_TOPIC_ARN");
     }
+
+    default boolean isTxmaAuditEnabled() {
+        return Boolean.parseBoolean(System.getenv("TXMA_AUDIT_ENABLED"));
+    }
+
+    default String getTxmaAuditQueueUrl() {
+        return System.getenv("TXMA_AUDIT_QUEUE_URL");
+    }
 }

@@ -57,6 +57,12 @@ public class SqsQueueExtension extends BaseAwsResourceExtension implements Befor
         return getMessages(messageClass, DEFAULT_NUMBER_OF_MESSAGES);
     }
 
+    public List<String> getRawMessages() {
+        return getMessages(DEFAULT_NUMBER_OF_MESSAGES).stream()
+                .map(Message::getBody)
+                .collect(Collectors.toList());
+    }
+
     public <T> List<T> getMessages(Class<T> messageClass, int numberOfMessages) {
         return getMessages(numberOfMessages).stream()
                 .map(

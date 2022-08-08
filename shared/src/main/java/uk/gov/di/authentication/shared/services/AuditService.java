@@ -11,9 +11,13 @@ import java.nio.ByteBuffer;
 import java.time.Clock;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Date;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Consumer;
+
+import static uk.gov.di.audit.TxmaAuditEvent.auditEventWithTime;
 
 public class AuditService {
 
@@ -23,16 +27,19 @@ public class AuditService {
     private final SnsService snsService;
     private final KmsConnectionService kmsConnectionService;
     private final ConfigurationService configurationService;
+    private final AwsSqsClient txmaQueueClient;
 
     public AuditService(
             Clock clock,
             SnsService snsService,
             KmsConnectionService kmsConnectionService,
-            ConfigurationService configurationService) {
+            ConfigurationService configurationService,
+            AwsSqsClient txmaQueueClient) {
         this.clock = clock;
         this.snsService = snsService;
         this.kmsConnectionService = kmsConnectionService;
         this.configurationService = configurationService;
+        this.txmaQueueClient = txmaQueueClient;
     }
 
     public AuditService(ConfigurationService configurationService) {
@@ -44,6 +51,14 @@ public class AuditService {
                         configurationService.getLocalstackEndpointUri(),
                         configurationService.getAwsRegion(),
                         configurationService.getAuditSigningKeyAlias());
+
+        this.txmaQueueClient =
+                configurationService.isTxmaAuditEnabled()
+                        ? new AwsSqsClient(
+                                configurationService.getAwsRegion(),
+                                configurationService.getTxmaAuditQueueUrl(),
+                                configurationService.getLocalstackEndpointUri())
+                        : new AwsSqsClient.NoOpSqsClient();
     }
 
     public void submitAuditEvent(
@@ -69,6 +84,9 @@ public class AuditService {
                         phoneNumber,
                         persistentSessionId,
                         metadataPairs));
+
+        txmaQueueClient.send(
+                auditEventWithTime(event, () -> Date.from(clock.instant())).serialize());
     }
 
     String generateLogLine(
@@ -167,5 +185,9 @@ public class AuditService {
         public int hashCode() {
             return Objects.hash(key, value);
         }
+    }
+
+    static void addField(String value, Consumer<String> setter) {
+        Optional.ofNullable(value).ifPresent(setter);
     }
 }
