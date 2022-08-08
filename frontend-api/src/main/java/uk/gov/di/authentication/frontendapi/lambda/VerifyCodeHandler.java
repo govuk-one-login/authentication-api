@@ -189,6 +189,10 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             APIGatewayProxyRequestEvent input,
             Context context,
             UserContext userContext) {
+        var metadataPairs =
+                new AuditService.MetadataPair[] {
+                    pair("notification-type", notificationType.name())
+                };
         if (notificationType.equals(VERIFY_PHONE_NUMBER)) {
             authenticationService.updatePhoneNumberVerifiedStatus(session.getEmailAddress(), true);
 
@@ -208,9 +212,19 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             sessionService.save(
                     session.setCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL)
                             .setVerifiedMfaMethodType(MFAMethodType.SMS));
+            metadataPairs =
+                    new AuditService.MetadataPair[] {
+                        pair("notification-type", notificationType.name()),
+                        pair("mfa-type", MFAMethodType.SMS.getValue())
+                    };
 
         } else if (notificationType.equals(MFA_SMS)) {
             sessionService.save(session.setVerifiedMfaMethodType(MFAMethodType.SMS));
+            metadataPairs =
+                    new AuditService.MetadataPair[] {
+                        pair("notification-type", notificationType.name()),
+                        pair("mfa-type", MFAMethodType.SMS.getValue())
+                    };
         }
         codeStorageService.deleteOtpCode(session.getEmailAddress(), notificationType);
         auditService.submitAuditEvent(
@@ -229,7 +243,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 IpAddressHelper.extractIpAddress(input),
                 AuditService.UNKNOWN,
                 extractPersistentIdFromHeaders(input.getHeaders()),
-                pair("notification-type", notificationType.name()));
+                metadataPairs);
     }
 
     private void processBlockedCodeSession(
@@ -239,6 +253,17 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             APIGatewayProxyRequestEvent input,
             Context context,
             UserContext userContext) {
+        var metadataPairs =
+                new AuditService.MetadataPair[] {
+                    pair("notification-type", notificationType.name())
+                };
+        if (notificationType.equals(VERIFY_PHONE_NUMBER) || notificationType.equals(MFA_SMS)) {
+            metadataPairs =
+                    new AuditService.MetadataPair[] {
+                        pair("notification-type", notificationType.name()),
+                        pair("mfa-type", MFAMethodType.SMS.getValue())
+                    };
+        }
         AuditableEvent auditableEvent;
         if (List.of(ErrorResponse.ERROR_1027, ErrorResponse.ERROR_1033, ErrorResponse.ERROR_1034)
                 .contains(errorResponse)) {
@@ -263,7 +288,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 IpAddressHelper.extractIpAddress(input),
                 AuditService.UNKNOWN,
                 extractPersistentIdFromHeaders(input.getHeaders()),
-                pair("notification-type", notificationType.name()));
+                metadataPairs);
     }
 
     private Optional<String> getOtpCodeForTestClient(

@@ -190,7 +190,8 @@ class VerifyCodeHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("notification-type", VERIFY_PHONE_NUMBER.name()));
+                        pair("notification-type", VERIFY_PHONE_NUMBER.name()),
+                        pair("mfa-type", MFAMethodType.SMS.getValue()));
     }
 
     @Test
@@ -281,7 +282,8 @@ class VerifyCodeHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("notification-type", VERIFY_PHONE_NUMBER.name()));
+                        pair("notification-type", VERIFY_PHONE_NUMBER.name()),
+                        pair("mfa-type", MFAMethodType.SMS.getValue()));
     }
 
     @Test
@@ -365,7 +367,8 @@ class VerifyCodeHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("notification-type", MFA_SMS.name()));
+                        pair("notification-type", MFA_SMS.name()),
+                        pair("mfa-type", MFAMethodType.SMS.getValue()));
     }
 
     @Test
@@ -407,7 +410,8 @@ class VerifyCodeHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("notification-type", MFA_SMS.name()));
+                        pair("notification-type", MFA_SMS.name()),
+                        pair("mfa-type", MFAMethodType.SMS.getValue()));
     }
 
     @Test
