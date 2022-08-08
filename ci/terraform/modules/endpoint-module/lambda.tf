@@ -68,6 +68,10 @@ resource "aws_lambda_alias" "endpoint_lambda" {
 resource "time_sleep" "wait_for_alias_to_reassign" {
   depends_on = [aws_lambda_alias.endpoint_lambda]
 
+  triggers = {
+    function_name    = aws_lambda_function.endpoint_lambda.arn
+    function_version = aws_lambda_function.endpoint_lambda.version
+  }
   create_duration = "120s"
 }
 
