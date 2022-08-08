@@ -4,7 +4,7 @@ module "oidc_userinfo_role" {
   role_name   = "oidc-userinfo-role"
   vpc_arn     = local.authentication_vpc_arn
 
-  policies_to_attach = [
+  policies_to_attach = compact([
     aws_iam_policy.dynamo_identity_credentials_read_access_policy.arn,
     aws_iam_policy.oidc_token_kms_signing_policy.arn,
     aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
@@ -12,7 +12,34 @@ module "oidc_userinfo_role" {
     aws_iam_policy.dynamo_user_read_access_policy.arn,
     aws_iam_policy.dynamo_client_registry_read_access_policy.arn,
     aws_iam_policy.redis_parameter_policy.arn,
-  ]
+    contains(["build", "staging"], var.environment) ? aws_iam_policy.userinfo_txma_queue_policy[0].arn : ""
+  ])
+}
+
+resource "aws_iam_policy" "userinfo_txma_queue_policy" {
+  count       = contains(["build", "staging"], var.environment) ? 1 : 0
+  name_prefix = "txma-audit-queue-access-"
+  path        = "/${var.environment}/oidc-userinfo/"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [{
+      Effect = "Allow"
+
+      Principal = {
+        AWS = [module.oidc_userinfo_role.arn]
+      }
+
+      Action = [
+        "sqs:SendMessage",
+      ]
+
+      Resource = [
+        module.oidc_txma_audit[0].queue_arn
+      ]
+    }]
+  })
 }
 
 module "userinfo" {
