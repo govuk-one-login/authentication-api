@@ -20,6 +20,7 @@ import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
+import com.nimbusds.openid.connect.sdk.UserInfoRequest;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
@@ -29,7 +30,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.mockito.ArgumentMatchers;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.entity.LogIds;
 import uk.gov.di.authentication.ipv.entity.SPOTClaims;
@@ -68,9 +68,8 @@ import static java.lang.String.format;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -83,7 +82,6 @@ import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.PASSPO
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class IPVCallbackHandlerTest {
-
     private static final Subject SUBJECT = new Subject();
     private final Context context = mock(Context.class);
     private final ConfigurationService configService = mock(ConfigurationService.class);
@@ -149,18 +147,16 @@ class IPVCallbackHandlerTest {
     }
 
     @Test
-    void shouldThrowWhenIdentityIsNotEnabled() {
+    void shouldRedirectToFrontendErrorPageWhenIdentityIsNotEnabled() throws URISyntaxException {
         when(configService.isIdentityEnabled()).thenReturn(false);
         usingValidSession();
         usingValidClientSession();
 
-        var exception =
-                assertThrows(
-                        RuntimeException.class,
-                        () -> makeHandlerRequest(getApiGatewayProxyRequestEvent(null)),
-                        "Expected to throw exception");
+        var event = getApiGatewayProxyRequestEvent(null);
 
-        assertThat(exception.getMessage(), equalTo("Identity is not enabled"));
+        assertDoesRedirectToFrontendErrorPage(event);
+
+        verifyNoInteractions(auditService);
     }
 
     @Test
@@ -282,7 +278,8 @@ class IPVCallbackHandlerTest {
     }
 
     @Test
-    void shouldNotInvokeSPOTAndThrowWhenVTMMismatch() {
+    void shouldNotInvokeSPOTAndShouldRedirectToFrontendErrorPageWhenVTMMismatch()
+            throws URISyntaxException {
         usingValidSession();
         usingValidClientSession();
         var userIdentityUserInfo =
@@ -292,15 +289,11 @@ class IPVCallbackHandlerTest {
                                         "sub", "sub-val",
                                         "vot", "P2",
                                         "vtm", OIDC_BASE_URL + "/invalid-trustmark")));
-        var runtimeException =
-                assertThrows(
-                        RuntimeException.class,
-                        () ->
-                                makeHandlerRequest(
-                                        getApiGatewayProxyRequestEvent(userIdentityUserInfo)),
-                        "Expected to throw exception");
 
-        assertThat(runtimeException.getMessage(), equalTo("IPV trustmark is invalid"));
+        var event = getApiGatewayProxyRequestEvent(userIdentityUserInfo);
+
+        assertDoesRedirectToFrontendErrorPage(event);
+
         verifyAuditEvent(IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED);
         verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
         verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED);
@@ -310,23 +303,18 @@ class IPVCallbackHandlerTest {
     }
 
     @Test
-    void shouldThrowWhenSessionIsNotFoundInRedis() {
+    void shouldRedirectToFrontendErrorPageWhenSessionIsNotFoundInRedis() throws URISyntaxException {
         var event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(Collections.emptyMap());
         event.setHeaders(Map.of(COOKIE, buildCookieString()));
-        var expectedException =
-                assertThrows(
-                        RuntimeException.class,
-                        () -> handler.handleRequest(event, context),
-                        "Expected to throw exception");
 
-        assertThat(expectedException.getMessage(), containsString("Session not found"));
+        assertDoesRedirectToFrontendErrorPage(event);
 
         verifyNoInteractions(auditService);
     }
 
     @Test
-    void shouldThrowWhenUserProfileNotFound() {
+    void shouldRedirectToFrontendErrorPageWhenUserProfileNotFound() throws URISyntaxException {
         usingValidSession();
         usingValidClientSession();
         Map<String, String> responseHeaders = new HashMap<>();
@@ -343,18 +331,37 @@ class IPVCallbackHandlerTest {
         event.setQueryStringParameters(responseHeaders);
         event.setHeaders(Map.of(COOKIE, buildCookieString()));
 
-        RuntimeException expectedException =
-                assertThrows(
-                        RuntimeException.class,
-                        () -> handler.handleRequest(event, context),
-                        "Expected to throw exception");
-
-        assertThat(
-                expectedException.getMessage(),
-                equalTo("Email from session does not have a user profile"));
+        assertDoesRedirectToFrontendErrorPage(event);
 
         verifyNoInteractions(auditService);
         verifyNoInteractions(dynamoIdentityService);
+    }
+
+    @Test
+    void shouldRedirectToFrontendErrorPageWhenUserIdentityRequestFails() throws URISyntaxException {
+        usingValidSession();
+        usingValidClientSession();
+
+        var claims =
+                new HashMap<String, Object>(
+                        Map.of(
+                                "sub",
+                                "sub-val",
+                                "vot",
+                                "P2",
+                                "vtm",
+                                OIDC_BASE_URL + "/trustmark",
+                                IdentityClaims.CORE_IDENTITY.getValue(),
+                                CORE_IDENTITY_CLAIM,
+                                IdentityClaims.CREDENTIAL_JWT.getValue(),
+                                CREDENTIAL_JWT_CLAIM));
+
+        var event = getApiGatewayProxyRequestEvent(new UserInfo(new JSONObject(claims)));
+
+        when(ipvTokenService.sendIpvUserIdentityRequest(any(UserInfoRequest.class)))
+                .thenReturn(null);
+
+        assertDoesRedirectToFrontendErrorPage(event);
     }
 
     @Test
@@ -397,9 +404,8 @@ class IPVCallbackHandlerTest {
     }
 
     @Test
-    void shouldThrowWhenClientRegistryIsNotFound() {
+    void shouldRedirectToFrontendErrorPageWhenClientSessionIsNotFound() throws URISyntaxException {
         usingValidSession();
-        usingValidClientSession();
         Map<String, String> responseHeaders = new HashMap<>();
         responseHeaders.put("code", AUTH_CODE.getValue());
         responseHeaders.put("state", STATE.getValue());
@@ -409,15 +415,7 @@ class IPVCallbackHandlerTest {
         event.setHeaders(Map.of(COOKIE, buildCookieString()));
         event.setQueryStringParameters(responseHeaders);
 
-        RuntimeException expectedException =
-                assertThrows(
-                        RuntimeException.class,
-                        () -> handler.handleRequest(event, context),
-                        "Expected to throw exception");
-
-        assertThat(
-                expectedException.getMessage(),
-                equalTo("Client registry not found with given clientId"));
+        assertDoesRedirectToFrontendErrorPage(event);
 
         verifyNoInteractions(ipvTokenService);
         verifyNoInteractions(auditService);
@@ -425,13 +423,31 @@ class IPVCallbackHandlerTest {
     }
 
     @Test
-    void shouldThrowWhenTokenResponseIsNotSuccessful() {
+    void shouldRedirectToFrontendErrorPageWhenClientRegistryIsNotFound() throws URISyntaxException {
+        usingValidSession();
+        usingValidClientSession();
+
+        var event = getApiGatewayProxyRequestEvent(null);
+
+        when(dynamoClientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.empty());
+
+        assertDoesRedirectToFrontendErrorPage(event);
+
+        verifyNoInteractions(ipvTokenService);
+        verifyNoInteractions(auditService);
+        verifyNoInteractions(dynamoIdentityService);
+    }
+
+    @Test
+    void shouldRedirectToFrontendErrorPageWhenTokenResponseIsNotSuccessful()
+            throws URISyntaxException {
         var salt = "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw=".getBytes();
         var clientRegistry = generateClientRegistry();
         var userProfile = generateUserProfile();
         usingValidSession();
         usingValidClientSession();
-        var unsuccessfulTokenResponse = new TokenErrorResponse(new ErrorObject("Error object"));
+        var unsuccessfulTokenResponse =
+                new TokenErrorResponse(new ErrorObject("Test error response"));
         var tokenRequest = mock(TokenRequest.class);
         Map<String, String> responseHeaders = new HashMap<>();
         responseHeaders.put("code", AUTH_CODE.getValue());
@@ -450,15 +466,7 @@ class IPVCallbackHandlerTest {
         event.setQueryStringParameters(responseHeaders);
         event.setHeaders(Map.of(COOKIE, buildCookieString()));
 
-        var expectedException =
-                assertThrows(
-                        RuntimeException.class,
-                        () -> handler.handleRequest(event, context),
-                        "Expected to throw exception");
-
-        assertThat(
-                expectedException.getMessage(),
-                containsString("IPV TokenResponse was not successful"));
+        assertDoesRedirectToFrontendErrorPage(event);
 
         verify(auditService)
                 .submitAuditEvent(
@@ -576,12 +584,20 @@ class IPVCallbackHandlerTest {
         when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(salt);
         when(ipvTokenService.constructTokenRequest(AUTH_CODE.getValue())).thenReturn(tokenRequest);
         when(ipvTokenService.sendTokenRequest(tokenRequest)).thenReturn(successfulTokenResponse);
-        when(ipvTokenService.sendIpvUserIdentityRequest(ArgumentMatchers.any()))
-                .thenReturn(userIdentityUserInfo);
+        when(ipvTokenService.sendIpvUserIdentityRequest(any())).thenReturn(userIdentityUserInfo);
 
         var event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(responseHeaders);
         event.setHeaders(Map.of(COOKIE, buildCookieString()));
         return event;
+    }
+
+    private void assertDoesRedirectToFrontendErrorPage(APIGatewayProxyRequestEvent event)
+            throws URISyntaxException {
+        var response = handler.handleRequest(event, context);
+        assertThat(response, hasStatus(302));
+
+        var expectedRedirectURI = new URIBuilder(LOGIN_URL).setPath("error").build();
+        assertThat(response.getHeaders().get("Location"), equalTo(expectedRedirectURI.toString()));
     }
 }
