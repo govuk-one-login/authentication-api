@@ -61,6 +61,7 @@ import java.net.URISyntaxException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -70,6 +71,7 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -122,6 +124,7 @@ class IPVCallbackHandlerTest {
             new ClientSession(generateAuthRequest().toParameters(), null, null);
 
     private final Json objectMapper = SerializationService.getInstance();
+    private static final CookieHelperWrapper cookieHelperWrapper = CookieHelperWrapper.SINGLETON;
 
     @BeforeEach
     void setUp() {
@@ -136,7 +139,8 @@ class IPVCallbackHandlerTest {
                         dynamoClientService,
                         auditService,
                         awsSqsClient,
-                        dynamoIdentityService);
+                        dynamoIdentityService,
+                        cookieHelperWrapper);
         when(configService.getLoginURI()).thenReturn(LOGIN_URL);
         when(configService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_BASE_URL));
         when(configService.isSpotEnabled()).thenReturn(true);
@@ -307,6 +311,33 @@ class IPVCallbackHandlerTest {
         var event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(Collections.emptyMap());
         event.setHeaders(Map.of(COOKIE, buildCookieString()));
+
+        assertDoesRedirectToFrontendErrorPage(event);
+
+        verifyNoInteractions(auditService);
+    }
+
+    @Test
+    void shouldRedirectToFrontendErrorPageWhenSessionCookieNotParsed() throws URISyntaxException {
+        var mockCookieHelperWrapper = mock(CookieHelperWrapper.class);
+        when(mockCookieHelperWrapper.staticParseCookie(anyMap()))
+                .thenThrow(new NoSuchElementException());
+
+        handler =
+                new IPVCallbackHandler(
+                        configService,
+                        responseService,
+                        ipvTokenService,
+                        sessionService,
+                        dynamoService,
+                        clientSessionService,
+                        dynamoClientService,
+                        auditService,
+                        awsSqsClient,
+                        dynamoIdentityService,
+                        mockCookieHelperWrapper);
+
+        var event = new APIGatewayProxyRequestEvent();
 
         assertDoesRedirectToFrontendErrorPage(event);
 

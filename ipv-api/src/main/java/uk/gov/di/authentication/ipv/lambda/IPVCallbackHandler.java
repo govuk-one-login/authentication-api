@@ -78,6 +78,7 @@ public class IPVCallbackHandler
     protected final Json objectMapper = SerializationService.getInstance();
     private static final String REDIRECT_PATH = "ipv-callback";
     private static final String ERROR_PAGE_REDIRECT_PATH = "error";
+    private final CookieHelperWrapper cookieHelperWrapper;
 
     public IPVCallbackHandler() {
         this(ConfigurationService.getInstance());
@@ -93,7 +94,8 @@ public class IPVCallbackHandler
             DynamoClientService dynamoClientService,
             AuditService auditService,
             AwsSqsClient sqsClient,
-            DynamoIdentityService dynamoIdentityService) {
+            DynamoIdentityService dynamoIdentityService,
+            CookieHelperWrapper cookieHelperWrapper) {
         this.configurationService = configurationService;
         this.ipvAuthorisationService = responseService;
         this.ipvTokenService = ipvTokenService;
@@ -104,6 +106,7 @@ public class IPVCallbackHandler
         this.auditService = auditService;
         this.sqsClient = sqsClient;
         this.dynamoIdentityService = dynamoIdentityService;
+        this.cookieHelperWrapper = cookieHelperWrapper;
     }
 
     public IPVCallbackHandler(ConfigurationService configurationService) {
@@ -126,6 +129,7 @@ public class IPVCallbackHandler
                         configurationService.getSpotQueueUri(),
                         configurationService.getSqsEndpointUri());
         this.dynamoIdentityService = new DynamoIdentityService(configurationService);
+        this.cookieHelperWrapper = CookieHelperWrapper.SINGLETON;
     }
 
     @Override
@@ -139,9 +143,10 @@ public class IPVCallbackHandler
                                 if (!configurationService.isIdentityEnabled()) {
                                     throw new IpvCallbackException("Identity is not enabled");
                                 }
-                                var sessionCookiesIds =
-                                        CookieHelper.parseSessionCookie(input.getHeaders())
-                                                .orElseThrow();
+
+                                CookieHelper.SessionCookieIds sessionCookiesIds =
+                                        getSessionCookiesIds(input.getHeaders());
+
                                 var session =
                                         sessionService
                                                 .readSessionFromRedis(
@@ -363,6 +368,15 @@ public class IPVCallbackHandler
                         });
     }
 
+    private CookieHelper.SessionCookieIds getSessionCookiesIds(Map<String, String> input)
+            throws IpvCallbackException {
+        try {
+            return cookieHelperWrapper.staticParseCookie(input).get();
+        } catch (Exception e) {
+            throw new IpvCallbackException("Failed to parse cookie Ids");
+        }
+    }
+
     private void saveAdditionalClaimsToDynamo(
             Subject pairwiseIdentifier, UserInfo userIdentityUserInfo) {
         LOG.info("Checking for additional identity claims to save to dynamo");
@@ -459,5 +473,13 @@ public class IPVCallbackHandler
                                         ERROR_PAGE_REDIRECT_PATH)
                                 .toString()),
                 null);
+    }
+}
+
+class CookieHelperWrapper {
+    public static final CookieHelperWrapper SINGLETON = new CookieHelperWrapper();
+
+    public Optional<CookieHelper.SessionCookieIds> staticParseCookie(Map<String, String> input) {
+        return CookieHelper.parseSessionCookie(input);
     }
 }
