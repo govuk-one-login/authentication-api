@@ -15,32 +15,6 @@ module "oidc_userinfo_role" {
   ]
 }
 
-resource "aws_iam_policy" "userinfo_txma_queue_policy" {
-  count       = contains(["build", "staging"], var.environment) ? 1 : 0
-  name_prefix = "txma-audit-queue-access-"
-  path        = "/${var.environment}/oidc-userinfo/"
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-
-    Statement = [{
-      Effect = "Allow"
-
-      Principal = {
-        AWS = [module.oidc_userinfo_role.arn]
-      }
-
-      Action = [
-        "sqs:SendMessage",
-      ]
-
-      Resource = [
-        module.oidc_txma_audit[0].queue_arn
-      ]
-    }]
-  })
-}
-
 module "userinfo" {
   source = "../modules/endpoint-module"
 
