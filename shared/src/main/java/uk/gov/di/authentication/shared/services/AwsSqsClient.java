@@ -35,6 +35,11 @@ public class AwsSqsClient {
         this.queueUrl = queueUrl;
     }
 
+    protected AwsSqsClient(SqsClient client, String queueUrl) {
+        this.client = client;
+        this.queueUrl = queueUrl;
+    }
+
     public void send(final String event) throws SdkClientException {
         SendMessageRequest messageRequest =
                 SendMessageRequest.builder().queueUrl(queueUrl).messageBody(event).build();
@@ -45,5 +50,22 @@ public class AwsSqsClient {
     public <T> void sendAsync(final T message) throws SdkClientException {
         CompletableFuture.runAsync(
                 () -> send(SerializationService.getInstance().writeValueAsString(message)));
+    }
+
+    static class NoOpSqsClient extends AwsSqsClient {
+
+        public NoOpSqsClient() {
+            super(null, null);
+        }
+
+        @Override
+        public void send(String event) throws SdkClientException {
+            // Do nothing
+        }
+
+        @Override
+        public <T> void sendAsync(T message) throws SdkClientException {
+            // Do nothing
+        }
     }
 }
