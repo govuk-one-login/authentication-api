@@ -47,6 +47,7 @@ class AuditServiceTest {
 
     private final SnsService snsService = mock(SnsService.class);
     private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
+    private final AwsSqsClient awsSqsClient = mock(AwsSqsClient.class);
 
     @Captor private ArgumentCaptor<String> messageCaptor;
 
@@ -77,7 +78,8 @@ class AuditServiceTest {
                         FIXED_CLOCK,
                         snsService,
                         kmsConnectionService,
-                        mock(ConfigurationService.class));
+                        mock(ConfigurationService.class),
+                        awsSqsClient);
 
         auditService.submitAuditEvent(
                 TEST_EVENT_ONE,
@@ -112,7 +114,8 @@ class AuditServiceTest {
                         FIXED_CLOCK,
                         snsService,
                         kmsConnectionService,
-                        mock(ConfigurationService.class));
+                        mock(ConfigurationService.class),
+                        awsSqsClient);
 
         var signingRequestCaptor = ArgumentCaptor.forClass(SignRequest.class);
 
@@ -146,7 +149,8 @@ class AuditServiceTest {
                         FIXED_CLOCK,
                         snsService,
                         kmsConnectionService,
-                        mock(ConfigurationService.class));
+                        mock(ConfigurationService.class),
+                        awsSqsClient);
 
         auditService.submitAuditEvent(
                 TEST_EVENT_ONE,

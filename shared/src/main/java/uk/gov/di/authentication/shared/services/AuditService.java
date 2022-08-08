@@ -23,16 +23,19 @@ public class AuditService {
     private final SnsService snsService;
     private final KmsConnectionService kmsConnectionService;
     private final ConfigurationService configurationService;
+    private final AwsSqsClient txmaQueueClient;
 
     public AuditService(
             Clock clock,
             SnsService snsService,
             KmsConnectionService kmsConnectionService,
-            ConfigurationService configurationService) {
+            ConfigurationService configurationService,
+            AwsSqsClient txmaQueueClient) {
         this.clock = clock;
         this.snsService = snsService;
         this.kmsConnectionService = kmsConnectionService;
         this.configurationService = configurationService;
+        this.txmaQueueClient = txmaQueueClient;
     }
 
     public AuditService(ConfigurationService configurationService) {
@@ -44,6 +47,14 @@ public class AuditService {
                         configurationService.getLocalstackEndpointUri(),
                         configurationService.getAwsRegion(),
                         configurationService.getAuditSigningKeyAlias());
+
+        this.txmaQueueClient =
+                configurationService.isTxmaAuditEnabled()
+                        ? new AwsSqsClient(
+                                configurationService.getAwsRegion(),
+                                configurationService.getTxmaAuditQueueUrl(),
+                                configurationService.getLocalstackEndpointUri())
+                        : new AwsSqsClient.NoOpSqsClient();
     }
 
     public void submitAuditEvent(
