@@ -11,9 +11,13 @@ import java.nio.ByteBuffer;
 import java.time.Clock;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Date;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Consumer;
+
+import static uk.gov.di.audit.TxmaAuditEvent.auditEventWithTime;
 
 public class AuditService {
 
@@ -80,6 +84,9 @@ public class AuditService {
                         phoneNumber,
                         persistentSessionId,
                         metadataPairs));
+
+        txmaQueueClient.send(
+                auditEventWithTime(event, () -> Date.from(clock.instant())).serialize());
     }
 
     String generateLogLine(
@@ -178,5 +185,9 @@ public class AuditService {
         public int hashCode() {
             return Objects.hash(key, value);
         }
+    }
+
+    static void addField(String value, Consumer<String> setter) {
+        Optional.ofNullable(value).ifPresent(setter);
     }
 }

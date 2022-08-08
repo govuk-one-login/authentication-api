@@ -31,7 +31,7 @@ public class TxmaAuditEvent {
         this.timestamp = timestamp;
     }
 
-    protected static TxmaAuditEvent auditEventWithTime(
+    public static TxmaAuditEvent auditEventWithTime(
             AuditableEvent eventName, Supplier<Date> dateSupplier) {
         return new TxmaAuditEvent("AUTH_" + eventName.toString(), dateSupplier.get().getTime());
     }
