@@ -50,7 +50,6 @@ public enum ErrorResponse {
     ERROR_1042(1042, "User entered invalid authenticator app verification code too many times"),
     ERROR_1043(1043, "User entered invalid authenticator app code"),
     ERROR_1044(1044, "New phone number is the same as current phone number");
-    ;
 
     private int code;
 

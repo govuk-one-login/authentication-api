@@ -13,6 +13,7 @@ import uk.gov.di.authentication.shared.domain.RequestHeaders;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -189,7 +190,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             Context context,
             UserContext userContext) {
         if (notificationType.equals(VERIFY_PHONE_NUMBER)) {
-            codeStorageService.deleteOtpCode(session.getEmailAddress(), notificationType);
             authenticationService.updatePhoneNumberVerifiedStatus(session.getEmailAddress(), true);
 
             var vectorOfTrust = VectorOfTrust.getDefaults();
@@ -206,17 +206,13 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     clientSessionId,
                     userContext.getClientSession().setEffectiveVectorOfTrust(vectorOfTrust));
             sessionService.save(
-                    session.setCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL));
+                    session.setCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL)
+                            .setVerifiedMfaMethodType(MFAMethodType.SMS));
 
-            var clientName =
-                    userContext
-                            .getClient()
-                            .map(ClientRegistry::getClientID)
-                            .orElse(AuditService.UNKNOWN);
-
-        } else {
-            codeStorageService.deleteOtpCode(session.getEmailAddress(), notificationType);
+        } else if (notificationType.equals(MFA_SMS)) {
+            sessionService.save(session.setVerifiedMfaMethodType(MFAMethodType.SMS));
         }
+        codeStorageService.deleteOtpCode(session.getEmailAddress(), notificationType);
         auditService.submitAuditEvent(
                 FrontendAuditableEvent.CODE_VERIFIED,
                 context.getAwsRequestId(),
