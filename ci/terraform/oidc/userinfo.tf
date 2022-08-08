@@ -4,16 +4,15 @@ module "oidc_userinfo_role" {
   role_name   = "oidc-userinfo-role"
   vpc_arn     = local.authentication_vpc_arn
 
-  policies_to_attach = compact([
+  policies_to_attach = [
     aws_iam_policy.dynamo_identity_credentials_read_access_policy.arn,
     aws_iam_policy.oidc_token_kms_signing_policy.arn,
     aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
     aws_iam_policy.lambda_sns_policy.arn,
     aws_iam_policy.dynamo_user_read_access_policy.arn,
     aws_iam_policy.dynamo_client_registry_read_access_policy.arn,
-    aws_iam_policy.redis_parameter_policy.arn,
-    contains(["build", "staging"], var.environment) ? aws_iam_policy.userinfo_txma_queue_policy[0].arn : ""
-  ])
+    aws_iam_policy.redis_parameter_policy.arn
+  ]
 }
 
 resource "aws_iam_policy" "userinfo_txma_queue_policy" {
@@ -53,7 +52,7 @@ module "userinfo" {
   handler_environment_variables = {
     ENVIRONMENT             = var.environment
     EVENTS_SNS_TOPIC_ARN    = aws_sns_topic.events.arn
-    TXMA_AUDIT_ENABLED      = contains(["build", "staging"], var.environment)
+    TXMA_AUDIT_ENABLED      = false
     TXMA_AUDIT_QUEUE_URL    = contains(["build", "staging"], var.environment) ? module.oidc_txma_audit[0].queue_url : ""
     AUDIT_SIGNING_KEY_ALIAS = local.audit_signing_key_alias_name
     LOCALSTACK_ENDPOINT     = var.use_localstack ? var.localstack_endpoint : null
