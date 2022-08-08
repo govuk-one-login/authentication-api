@@ -15,6 +15,7 @@ import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
+import uk.gov.di.authentication.ipv.entity.IpvCallbackException;
 import uk.gov.di.authentication.ipv.entity.LogIds;
 import uk.gov.di.authentication.ipv.entity.SPOTClaims;
 import uk.gov.di.authentication.ipv.entity.SPOTRequest;
@@ -45,7 +46,6 @@ import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -77,6 +77,7 @@ public class IPVCallbackHandler
     private final DynamoIdentityService dynamoIdentityService;
     protected final Json objectMapper = SerializationService.getInstance();
     private static final String REDIRECT_PATH = "ipv-callback";
+    private static final String ERROR_PAGE_REDIRECT_PATH = "error";
 
     public IPVCallbackHandler() {
         this(ConfigurationService.getInstance());
@@ -134,11 +135,10 @@ public class IPVCallbackHandler
                 .orElseGet(
                         () -> {
                             LOG.info("Request received to IPVCallbackHandler");
-                            if (!configurationService.isIdentityEnabled()) {
-                                LOG.error("Identity is not enabled");
-                                throw new RuntimeException("Identity is not enabled");
-                            }
                             try {
+                                if (!configurationService.isIdentityEnabled()) {
+                                    throw new IpvCallbackException("Identity is not enabled");
+                                }
                                 var sessionCookiesIds =
                                         CookieHelper.parseSessionCookie(input.getHeaders())
                                                 .orElseThrow();
@@ -146,7 +146,11 @@ public class IPVCallbackHandler
                                         sessionService
                                                 .readSessionFromRedis(
                                                         sessionCookiesIds.getSessionId())
-                                                .orElseThrow();
+                                                .orElseThrow(
+                                                        () -> {
+                                                            throw new IpvCallbackException(
+                                                                    "Session not found");
+                                                        });
                                 attachSessionIdToLogs(session);
                                 var persistentId =
                                         PersistentIdHelper.extractPersistentIdFromCookieHeader(
@@ -158,8 +162,7 @@ public class IPVCallbackHandler
                                                         sessionCookiesIds.getClientSessionId())
                                                 .orElse(null);
                                 if (Objects.isNull(clientSession)) {
-                                    LOG.warn("ClientSession not found");
-                                    throw new RuntimeException();
+                                    throw new IpvCallbackException("ClientSession not found");
                                 }
                                 attachLogFieldToLogs(
                                         CLIENT_SESSION_ID, sessionCookiesIds.getClientSessionId());
@@ -171,8 +174,7 @@ public class IPVCallbackHandler
                                 var clientRegistry =
                                         dynamoClientService.getClient(clientId).orElse(null);
                                 if (Objects.isNull(clientRegistry)) {
-                                    LOG.error("Client registry not found with given clientId");
-                                    throw new RuntimeException(
+                                    throw new IpvCallbackException(
                                             "Client registry not found with given clientId");
                                 }
 
@@ -206,8 +208,7 @@ public class IPVCallbackHandler
                                                 .getUserProfileFromEmail(session.getEmailAddress())
                                                 .orElse(null);
                                 if (Objects.isNull(userProfile)) {
-                                    LOG.error("Email from session does not have a user profile");
-                                    throw new RuntimeException(
+                                    throw new IpvCallbackException(
                                             "Email from session does not have a user profile");
                                 }
 
@@ -253,8 +254,7 @@ public class IPVCallbackHandler
                                             AuditService.UNKNOWN,
                                             userProfile.getPhoneNumber(),
                                             persistentId);
-                                    throw new RuntimeException(
-                                            "IPV TokenResponse was not successful");
+                                    return redirectToFrontendErrorPage();
                                 }
                                 var pairwiseSubject =
                                         ClientSubjectHelper.getSubject(
@@ -271,9 +271,10 @@ public class IPVCallbackHandler
                                                                 .toSuccessResponse()
                                                                 .getTokens()
                                                                 .getBearerAccessToken()));
+                                LOG.info(userIdentityUserInfo);
                                 if (Objects.isNull(userIdentityUserInfo)) {
-                                    LOG.error("IPV UserIdentityRequest failed.");
-                                    throw new RuntimeException("IPV UserIdentityRequest failed.");
+                                    throw new IpvCallbackException(
+                                            "IPV UserIdentityRequest failed");
                                 }
                                 if (configurationService.isIdentityTraceLoggingEnabled()) {
                                     LOG.info(
@@ -348,16 +349,16 @@ public class IPVCallbackHandler
                                         "",
                                         Map.of(ResponseHeaders.LOCATION, redirectURI.toString()),
                                         null);
-                            } catch (NoSuchElementException e) {
-                                LOG.warn("Session not found", e);
-                                throw new RuntimeException("Session not found", e);
+                            } catch (IpvCallbackException e) {
+                                LOG.warn(e.getMessage());
+                                return redirectToFrontendErrorPage();
                             } catch (ParseException e) {
                                 LOG.info(
                                         "Cannot retrieve auth request params from client session id");
-                                throw new RuntimeException();
+                                return redirectToFrontendErrorPage();
                             } catch (JsonException e) {
                                 LOG.error("Unable to serialize SPOTRequest when placing on queue");
-                                throw new RuntimeException(e);
+                                return redirectToFrontendErrorPage();
                             }
                         });
     }
@@ -393,8 +394,7 @@ public class IPVCallbackHandler
                         .toString();
 
         if (!trustmark.equals(userIdentityUserInfo.getClaim(VTM.getValue()))) {
-            LOG.error("IPV trustmark is invalid");
-            throw new RuntimeException("IPV trustmark is invalid");
+            throw new IpvCallbackException("IPV trustmark is invalid");
         }
         return Optional.empty();
     }
@@ -445,5 +445,19 @@ public class IPVCallbackHandler
         } else {
             LOG.info("SPOT request placed on queue");
         }
+    }
+
+    private APIGatewayProxyResponseEvent redirectToFrontendErrorPage() {
+        LOG.info("Redirecting to frontend error page");
+        return generateApiGatewayProxyResponse(
+                302,
+                "",
+                Map.of(
+                        ResponseHeaders.LOCATION,
+                        ConstructUriHelper.buildURI(
+                                        configurationService.getLoginURI().toString(),
+                                        ERROR_PAGE_REDIRECT_PATH)
+                                .toString()),
+                null);
     }
 }
