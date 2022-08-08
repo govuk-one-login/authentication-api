@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.oidc.entity.AuthCodeResponse;
 import uk.gov.di.authentication.oidc.lambda.AuthCodeHandler;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
@@ -48,6 +49,7 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         String clientSessionId = "some-client-session-id";
         KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         redis.createSession(sessionId);
+        redis.setVerifiedMfaMethodType(sessionId, MFAMethodType.AUTH_APP);
         redis.addAuthRequestToSession(
                 clientSessionId, sessionId, generateAuthRequest().toParameters());
         setUpDynamo(keyPair);
