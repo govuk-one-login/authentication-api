@@ -18,7 +18,7 @@ public class TxmaAuditEvent {
 
     @Expose private String clientId;
 
-    @Expose private String componentName;
+    @Expose private String componentId;
 
     @Expose private TxmaAuditUser user;
 
@@ -33,7 +33,8 @@ public class TxmaAuditEvent {
 
     public static TxmaAuditEvent auditEventWithTime(
             AuditableEvent eventName, Supplier<Date> dateSupplier) {
-        return new TxmaAuditEvent("AUTH_" + eventName.toString(), dateSupplier.get().getTime());
+        return new TxmaAuditEvent(
+                "AUTH_" + eventName.toString(), dateSupplier.get().toInstant().getEpochSecond());
     }
 
     public static TxmaAuditEvent auditEvent(AuditableEvent event) {
@@ -44,8 +45,8 @@ public class TxmaAuditEvent {
         return SerializationService.getInstance().writeValueAsString(this);
     }
 
-    public TxmaAuditEvent withComponentName(String componentName) {
-        this.componentName = componentName;
+    public TxmaAuditEvent withComponentId(String componentId) {
+        this.componentId = componentId;
         return this;
     }
 
