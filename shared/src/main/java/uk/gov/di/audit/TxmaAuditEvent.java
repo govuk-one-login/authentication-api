@@ -18,7 +18,7 @@ public class TxmaAuditEvent {
 
     @Expose private String clientId;
 
-    @Expose private String componentName;
+    @Expose private String componentId;
 
     @Expose private TxmaAuditUser user;
 
@@ -44,8 +44,8 @@ public class TxmaAuditEvent {
         return SerializationService.getInstance().writeValueAsString(this);
     }
 
-    public TxmaAuditEvent withComponentName(String componentName) {
-        this.componentName = componentName;
+    public TxmaAuditEvent withComponentId(String componentId) {
+        this.componentId = componentId;
         return this;
     }
 
