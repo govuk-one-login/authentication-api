@@ -9,3 +9,7 @@ output "queue_url" {
 output "kms_key_arn" {
   value = var.use_localstack ? aws_kms_key.txma_audit_queue_encryption_key[0].arn : null
 }
+
+output "access_policy_arn" {
+  value = aws_iam_policy.txma_audit_queue_access_policy.arn
+}
