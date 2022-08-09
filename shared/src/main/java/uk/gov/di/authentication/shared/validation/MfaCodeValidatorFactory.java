@@ -1,23 +1,30 @@
 package uk.gov.di.authentication.shared.validation;
 
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
+import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Optional;
 
 public class MfaCodeValidatorFactory {
-    private MfaCodeValidatorFactory() {}
 
-    public static Optional<MfaCodeValidator> getMfaCodeValidator(
-            MFAMethodType mfaMethodType,
-            boolean isRegistration,
-            UserContext userContext,
-            CodeStorageService codeStorageService,
+    private final ConfigurationService configurationService;
+    private final CodeStorageService codeStorageService;
+    private final AuthenticationService authenticationService;
+
+    public MfaCodeValidatorFactory(
             ConfigurationService configurationService,
-            DynamoService dynamoService) {
+            CodeStorageService codeStorageService,
+            AuthenticationService authenticationService) {
+        this.configurationService = configurationService;
+        this.codeStorageService = codeStorageService;
+        this.authenticationService = authenticationService;
+    }
+
+    public Optional<MfaCodeValidator> getMfaCodeValidator(
+            MFAMethodType mfaMethodType, boolean isRegistration, UserContext userContext) {
 
         switch (mfaMethodType) {
             case AUTH_APP:
@@ -30,7 +37,7 @@ public class MfaCodeValidatorFactory {
                                 userContext,
                                 codeStorageService,
                                 configurationService,
-                                dynamoService,
+                                authenticationService,
                                 codeMaxRetries));
             default:
                 return Optional.empty();

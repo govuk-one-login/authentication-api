@@ -18,6 +18,7 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -25,7 +26,6 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
-import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
@@ -84,8 +84,6 @@ class VerifyCodeHandlerTest {
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final ClientSession clientSession = mock(ClientSession.class);
     private final AuditService auditService = mock(AuditService.class);
-    private final CloudwatchMetricsService cloudwatchMetricsService =
-            mock(CloudwatchMetricsService.class);
 
     private final ClientRegistry clientRegistry =
             new ClientRegistry().setTestClient(false).setClientID(CLIENT_ID);
@@ -125,8 +123,7 @@ class VerifyCodeHandlerTest {
                         clientService,
                         authenticationService,
                         codeStorageService,
-                        auditService,
-                        cloudwatchMetricsService);
+                        auditService);
 
         when(authenticationService.getUserProfileFromEmail(TEST_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(userProfile));
@@ -179,6 +176,7 @@ class VerifyCodeHandlerTest {
         verify(authenticationService).updatePhoneNumberVerifiedStatus(TEST_EMAIL_ADDRESS, true);
         assertThat(result, hasStatus(204));
         assertThat(session.getCurrentCredentialStrength(), equalTo(MEDIUM_LEVEL));
+        assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
 
         verify(sessionService, times(2)).save(session);
         verify(auditService)
@@ -192,11 +190,8 @@ class VerifyCodeHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("notification-type", VERIFY_PHONE_NUMBER.name()));
-
-        verify(cloudwatchMetricsService)
-                .incrementCounter(
-                        "NewAccount", Map.of("Environment", "unit-test", "Client", "client-id"));
+                        pair("notification-type", VERIFY_PHONE_NUMBER.name()),
+                        pair("mfa-type", MFAMethodType.SMS.getValue()));
     }
 
     @Test
@@ -287,7 +282,8 @@ class VerifyCodeHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("notification-type", VERIFY_PHONE_NUMBER.name()));
+                        pair("notification-type", VERIFY_PHONE_NUMBER.name()),
+                        pair("mfa-type", MFAMethodType.SMS.getValue()));
     }
 
     @Test
@@ -358,7 +354,8 @@ class VerifyCodeHandlerTest {
 
         verify(codeStorageService).deleteOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS);
         assertThat(result, hasStatus(204));
-        verify(sessionService).save(session);
+        assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
+        verify(sessionService, times(2)).save(session);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_VERIFIED,
@@ -370,7 +367,8 @@ class VerifyCodeHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("notification-type", MFA_SMS.name()));
+                        pair("notification-type", MFA_SMS.name()),
+                        pair("mfa-type", MFAMethodType.SMS.getValue()));
     }
 
     @Test
@@ -412,7 +410,8 @@ class VerifyCodeHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("notification-type", MFA_SMS.name()));
+                        pair("notification-type", MFA_SMS.name()),
+                        pair("mfa-type", MFAMethodType.SMS.getValue()));
     }
 
     @Test

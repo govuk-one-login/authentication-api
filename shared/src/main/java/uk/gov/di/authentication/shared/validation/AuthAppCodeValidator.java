@@ -5,9 +5,9 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
+import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import javax.crypto.Mac;
@@ -22,14 +22,14 @@ public class AuthAppCodeValidator extends MfaCodeValidator {
 
     private final int windowTime;
     private final int allowedWindows;
-    private final DynamoService dynamoService;
+    private final AuthenticationService dynamoService;
     private final UserContext userContext;
 
     public AuthAppCodeValidator(
             UserContext userContext,
             CodeStorageService codeStorageService,
             ConfigurationService configurationService,
-            DynamoService dynamoService,
+            AuthenticationService dynamoService,
             int maxRetries) {
         super(userContext, codeStorageService, maxRetries);
         this.dynamoService = dynamoService;

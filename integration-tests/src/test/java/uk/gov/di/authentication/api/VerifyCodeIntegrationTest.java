@@ -84,7 +84,6 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         Optional.of(codeRequest),
                         constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
                         Map.of());
-        var session = redis.getSession(sessionId);
 
         assertThat(response, hasStatus(204));
         assertThat(redis.getMfaCodeAttemptsCount(EMAIL_ADDRESS), equalTo(0));
@@ -189,8 +188,6 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         Optional.of(codeRequest),
                         constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
                         Map.of());
-
-        var session = redis.getSession(sessionId);
 
         assertThat(response, hasStatus(204));
         assertThat(redis.getMfaCodeAttemptsCount(EMAIL_ADDRESS), equalTo(0));

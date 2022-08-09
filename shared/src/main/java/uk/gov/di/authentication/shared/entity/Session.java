@@ -33,6 +33,8 @@ public class Session {
 
     @Expose private int processingIdentityAttempts;
 
+    @Expose private MFAMethodType verifiedMfaMethodType;
+
     public Session(String sessionId) {
         this.sessionId = sessionId;
         this.clientSessions = new ArrayList<>();
@@ -147,5 +149,14 @@ public class Session {
     public int incrementProcessingIdentityAttempts() {
         this.processingIdentityAttempts += 1;
         return processingIdentityAttempts;
+    }
+
+    public MFAMethodType getVerifiedMfaMethodType() {
+        return verifiedMfaMethodType;
+    }
+
+    public Session setVerifiedMfaMethodType(MFAMethodType verifiedMfaMethodType) {
+        this.verifiedMfaMethodType = verifiedMfaMethodType;
+        return this;
     }
 }

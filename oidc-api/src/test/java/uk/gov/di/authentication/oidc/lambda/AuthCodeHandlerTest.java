@@ -32,6 +32,7 @@ import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
@@ -147,14 +148,14 @@ class AuthCodeHandlerTest {
 
     private static Stream<Arguments> upliftTestParameters() {
         return Stream.of(
-                arguments(null, LOW_LEVEL, LOW_LEVEL, false),
-                arguments(LOW_LEVEL, LOW_LEVEL, LOW_LEVEL, false),
-                arguments(MEDIUM_LEVEL, MEDIUM_LEVEL, MEDIUM_LEVEL, false),
-                arguments(LOW_LEVEL, MEDIUM_LEVEL, MEDIUM_LEVEL, false),
-                arguments(MEDIUM_LEVEL, LOW_LEVEL, MEDIUM_LEVEL, false),
-                arguments(LOW_LEVEL, LOW_LEVEL, LOW_LEVEL, true),
-                arguments(MEDIUM_LEVEL, MEDIUM_LEVEL, MEDIUM_LEVEL, true),
-                arguments(LOW_LEVEL, MEDIUM_LEVEL, MEDIUM_LEVEL, true));
+                arguments(null, LOW_LEVEL, LOW_LEVEL, false, MFAMethodType.AUTH_APP),
+                arguments(LOW_LEVEL, LOW_LEVEL, LOW_LEVEL, false, MFAMethodType.AUTH_APP),
+                arguments(MEDIUM_LEVEL, MEDIUM_LEVEL, MEDIUM_LEVEL, false, MFAMethodType.SMS),
+                arguments(LOW_LEVEL, MEDIUM_LEVEL, MEDIUM_LEVEL, false, MFAMethodType.SMS),
+                arguments(MEDIUM_LEVEL, LOW_LEVEL, MEDIUM_LEVEL, false, MFAMethodType.AUTH_APP),
+                arguments(LOW_LEVEL, LOW_LEVEL, LOW_LEVEL, true, MFAMethodType.AUTH_APP),
+                arguments(MEDIUM_LEVEL, MEDIUM_LEVEL, MEDIUM_LEVEL, true, MFAMethodType.SMS),
+                arguments(LOW_LEVEL, MEDIUM_LEVEL, MEDIUM_LEVEL, true, MFAMethodType.SMS));
     }
 
     @ParameterizedTest
@@ -163,12 +164,15 @@ class AuthCodeHandlerTest {
             CredentialTrustLevel initialLevel,
             CredentialTrustLevel requestedLevel,
             CredentialTrustLevel finalLevel,
-            boolean docAppJourney)
+            boolean docAppJourney,
+            MFAMethodType mfaMethodType)
             throws ClientNotFoundException, Json.JsonException, JOSEException {
         AuthorizationCode authorizationCode = new AuthorizationCode();
         AuthenticationRequest authRequest =
                 generateValidSessionAndAuthRequest(requestedLevel, docAppJourney);
-        session.setCurrentCredentialStrength(initialLevel).setNewAccount(NEW);
+        session.setCurrentCredentialStrength(initialLevel)
+                .setNewAccount(NEW)
+                .setVerifiedMfaMethodType(mfaMethodType);
         AuthenticationSuccessResponse authSuccessResponse =
                 new AuthenticationSuccessResponse(
                         authRequest.getRedirectionURI(),
@@ -227,7 +231,9 @@ class AuthCodeHandlerTest {
                                 "Client",
                                 CLIENT_ID.getValue(),
                                 "IsTest",
-                                "true"));
+                                "true",
+                                "MfaMethod",
+                                mfaMethodType.getValue()));
     }
 
     @Test

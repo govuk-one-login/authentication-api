@@ -32,6 +32,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.net.URI;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -209,17 +210,30 @@ public class AuthCodeHandler
                                                 authenticationRequest.getClientID(),
                                                 session.getEmailAddress());
 
-                                cloudwatchMetricsService.incrementCounter(
-                                        "SignIn",
-                                        Map.of(
-                                                "Account",
-                                                session.isNewAccount().name(),
-                                                "Environment",
-                                                configurationService.getEnvironment(),
-                                                "Client",
-                                                authenticationRequest.getClientID().getValue(),
-                                                "IsTest",
-                                                Boolean.toString(isTestJourney)));
+                                Map<String, String> dimensions =
+                                        new HashMap<>(
+                                                Map.of(
+                                                        "Account",
+                                                        session.isNewAccount().name(),
+                                                        "Environment",
+                                                        configurationService.getEnvironment(),
+                                                        "Client",
+                                                        authenticationRequest
+                                                                .getClientID()
+                                                                .getValue(),
+                                                        "IsTest",
+                                                        Boolean.toString(isTestJourney)));
+
+                                if (Objects.nonNull(session.getVerifiedMfaMethodType())) {
+                                    dimensions.put(
+                                            "MfaMethod",
+                                            session.getVerifiedMfaMethodType().getValue());
+                                } else {
+                                    LOG.info(
+                                            "No mfa method to set. User is either authenticated or signing in from a low level service");
+                                }
+
+                                cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
 
                                 if (!isDocCheckingAppUserWithSubjectId(clientSession)) {
                                     sessionService.save(
