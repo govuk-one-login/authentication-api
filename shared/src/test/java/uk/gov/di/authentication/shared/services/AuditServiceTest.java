@@ -117,7 +117,7 @@ class AuditServiceTest {
                         hasFields(
                                 ofEntries(
                                         entry("event_name", "AUTH_TEST_EVENT_ONE"),
-                                        entry("timestamp", "1630534200012"))));
+                                        entry("timestamp", "1630534200"))));
     }
 
     @Test

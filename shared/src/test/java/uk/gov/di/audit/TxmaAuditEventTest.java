@@ -33,7 +33,9 @@ class TxmaAuditEventTest {
         var payload = asJson(auditEventWithTime(TEST_EVENT, () -> now).serialize());
 
         assertThat(payload, hasFieldWithValue("event_name", is("AUTH_TEST_EVENT")));
-        assertThat(payload, hasNumericFieldWithValue("timestamp", is(now.getTime())));
+        assertThat(
+                payload,
+                hasNumericFieldWithValue("timestamp", is(now.toInstant().getEpochSecond())));
     }
 
     @Test
