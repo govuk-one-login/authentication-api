@@ -1,11 +1,10 @@
 resource "aws_kms_key" "txma_audit_queue_encryption_key" {
-  count                    = var.use_localstack ? 0 : 1
   description              = "KMS signing key for encrypting TxMA audit queue at rest"
   deletion_window_in_days  = 30
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
   key_usage                = "ENCRYPT_DECRYPT"
 
-  policy = data.aws_iam_policy_document.txma_audit_queue_encryption_key_access_policy[0].json
+  policy = data.aws_iam_policy_document.txma_audit_queue_encryption_key_access_policy.json
 
   tags = var.default_tags
 }
@@ -13,8 +12,6 @@ resource "aws_kms_key" "txma_audit_queue_encryption_key" {
 data "aws_caller_identity" "current" {}
 
 data "aws_iam_policy_document" "txma_audit_queue_encryption_key_access_policy" {
-  count = var.use_localstack ? 0 : 1
-
   statement {
     sid    = "DefaultAccessPolicy"
     effect = "Allow"
