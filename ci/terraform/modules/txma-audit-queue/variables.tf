@@ -12,7 +12,3 @@ variable "txma_account_id" {
   type        = string
   description = "Account id of the corresponding TxMA processor"
 }
-
-variable "use_localstack" {
-  type = bool
-}

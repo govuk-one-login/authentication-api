@@ -2,8 +2,8 @@ resource "aws_sqs_queue" "txma_audit_queue" {
   name                      = "${var.environment}-txma-audit-queue"
   message_retention_seconds = 1209600
 
-  kms_master_key_id                 = var.use_localstack ? null : aws_kms_key.txma_audit_queue_encryption_key[0].arn
-  kms_data_key_reuse_period_seconds = var.use_localstack ? null : 300
+  kms_master_key_id                 = aws_kms_key.txma_audit_queue_encryption_key.arn
+  kms_data_key_reuse_period_seconds = 300
 
   redrive_policy = jsonencode({
     deadLetterTargetArn = aws_sqs_queue.txma_audit_dead_letter_queue.arn
@@ -16,8 +16,8 @@ resource "aws_sqs_queue" "txma_audit_queue" {
 resource "aws_sqs_queue" "txma_audit_dead_letter_queue" {
   name = "${var.environment}-txma-audit-dead-letter-queue"
 
-  kms_master_key_id                 = var.use_localstack ? null : aws_kms_key.txma_audit_queue_encryption_key[0].arn
-  kms_data_key_reuse_period_seconds = var.use_localstack ? null : 300
+  kms_master_key_id                 = aws_kms_key.txma_audit_queue_encryption_key.arn
+  kms_data_key_reuse_period_seconds = 300
 
   message_retention_seconds = 604800
 
