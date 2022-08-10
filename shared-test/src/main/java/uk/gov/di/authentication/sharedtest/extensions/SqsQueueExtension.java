@@ -106,4 +106,8 @@ public class SqsQueueExtension extends BaseAwsResourceExtension implements Befor
                         .withMaxNumberOfMessages(numberOfMessages);
         return sqsClient.receiveMessage(request).getMessages();
     }
+
+    public void clear() {
+        sqsClient.purgeQueue(new PurgeQueueRequest().withQueueUrl(this.queueUrl));
+    }
 }
