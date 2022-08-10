@@ -60,7 +60,7 @@ variable "notify_template_map" {
   default = {
     VERIFY_EMAIL_TEMPLATE_ID                 = "b7dbb02f-941b-4d72-ad64-84cbe5d77c2e"
     VERIFY_PHONE_NUMBER_TEMPLATE_ID          = "7dd388f1-e029-4fe7-92ff-18496dcb53e9"
-    MFA_SMS_TEMPLATE_ID                      = "7dd388f1-e029-4fe7-92ff-18496dcb53e9"
+    MFA_SMS_TEMPLATE_ID                      = "97b956c8-9a12-451a-994b-5d51741b63d4"
     RESET_PASSWORD_TEMPLATE_ID               = "0aaf3ae8-1825-4528-af95-3093eb13fda0"
     PASSWORD_RESET_CONFIRMATION_TEMPLATE_ID  = "052d4e96-e6ca-4da2-b657-5649f28bd6c0"
     ACCOUNT_CREATED_CONFIRMATION_TEMPLATE_ID = "a15995f7-94a3-4a1b-9da0-54b1a8b5cc12"
