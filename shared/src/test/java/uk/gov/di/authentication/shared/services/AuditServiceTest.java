@@ -11,22 +11,18 @@ import org.mockito.Captor;
 import org.mockito.MockitoAnnotations;
 import uk.gov.di.audit.AuditPayload.SignedAuditEvent;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
-import uk.gov.di.authentication.sharedtest.matchers.JsonMatcher;
 
 import java.nio.ByteBuffer;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Base64;
-import java.util.Map;
-import java.util.function.Predicate;
+import java.util.Optional;
 
-import static java.util.Map.entry;
-import static java.util.Map.ofEntries;
+import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -44,6 +40,9 @@ import static uk.gov.di.authentication.sharedtest.matchers.AuditMessageMatcher.h
 import static uk.gov.di.authentication.sharedtest.matchers.AuditMessageMatcher.hasSessionId;
 import static uk.gov.di.authentication.sharedtest.matchers.AuditMessageMatcher.hasSubjectId;
 import static uk.gov.di.authentication.sharedtest.matchers.AuditMessageMatcher.hasTimestamp;
+import static uk.gov.di.authentication.sharedtest.matchers.JsonMatcher.asJson;
+import static uk.gov.di.authentication.sharedtest.matchers.JsonMatcher.hasFieldWithValue;
+import static uk.gov.di.authentication.sharedtest.matchers.JsonMatcher.hasNumericFieldWithValue;
 
 class AuditServiceTest {
 
@@ -54,8 +53,10 @@ class AuditServiceTest {
     private final SnsService snsService = mock(SnsService.class);
     private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
     private final AwsSqsClient awsSqsClient = mock(AwsSqsClient.class);
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
 
     @Captor private ArgumentCaptor<String> messageCaptor;
+    @Captor private ArgumentCaptor<String> txmaMessageCaptor;
 
     enum TestEvents implements AuditableEvent {
         TEST_EVENT_ONE;
@@ -69,6 +70,7 @@ class AuditServiceTest {
     void beforeEach() {
         var stubSignature = new SignResult().withSignature(ByteBuffer.wrap("signature".getBytes()));
         when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(stubSignature);
+        when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of("oidc-base-url"));
         MockitoAnnotations.openMocks(this);
     }
 
@@ -84,7 +86,7 @@ class AuditServiceTest {
                         FIXED_CLOCK,
                         snsService,
                         kmsConnectionService,
-                        mock(ConfigurationService.class),
+                        configurationService,
                         awsSqsClient);
 
         auditService.submitAuditEvent(
@@ -112,12 +114,25 @@ class AuditServiceTest {
         assertThat(serialisedAuditMessage, hasIpAddress("ip-address"));
         assertThat(serialisedAuditMessage, hasPhoneNumber("phone-number"));
 
-        verify(awsSqsClient)
-                .send(
-                        hasFields(
-                                ofEntries(
-                                        entry("event_name", "AUTH_TEST_EVENT_ONE"),
-                                        entry("timestamp", "1630534200"))));
+        verify(awsSqsClient).send(txmaMessageCaptor.capture());
+
+        var txmaMessage = asJson(txmaMessageCaptor.getValue());
+
+        assertThat(txmaMessage, hasFieldWithValue("event_name", equalTo("AUTH_TEST_EVENT_ONE")));
+        assertThat(txmaMessage, hasNumericFieldWithValue("timestamp", equalTo(1630534200L)));
+        assertThat(txmaMessage, hasFieldWithValue("client_id", equalTo("client-id")));
+        assertThat(txmaMessage, hasFieldWithValue("component_id", equalTo("oidc-base-url")));
+
+        var userObject = txmaMessage.getAsJsonObject().get("user").getAsJsonObject();
+
+        assertThat(userObject, hasFieldWithValue("session_id", equalTo("session-id")));
+        assertThat(
+                userObject,
+                hasFieldWithValue("persistent_session_id", equalTo("persistent-session-id")));
+        assertThat(userObject, hasFieldWithValue("user_id", equalTo("subject-id")));
+        assertThat(userObject, hasFieldWithValue("email", equalTo("email")));
+        assertThat(userObject, hasFieldWithValue("phone", equalTo("phone-number")));
+        assertThat(userObject, hasFieldWithValue("ip_address", equalTo("ip-address")));
     }
 
     @Test
@@ -127,7 +142,7 @@ class AuditServiceTest {
                         FIXED_CLOCK,
                         snsService,
                         kmsConnectionService,
-                        mock(ConfigurationService.class),
+                        configurationService,
                         awsSqsClient);
 
         var signingRequestCaptor = ArgumentCaptor.forClass(SignRequest.class);
@@ -162,7 +177,7 @@ class AuditServiceTest {
                         FIXED_CLOCK,
                         snsService,
                         kmsConnectionService,
-                        mock(ConfigurationService.class),
+                        configurationService,
                         awsSqsClient);
 
         auditService.submitAuditEvent(
@@ -185,25 +200,16 @@ class AuditServiceTest {
         assertThat(serialisedAuditMessage, hasEventName(TEST_EVENT_ONE.toString()));
         assertThat(serialisedAuditMessage, hasMetadataPair(pair("key", "value")));
         assertThat(serialisedAuditMessage, hasMetadataPair(pair("key2", "value2")));
-    }
 
-    private String hasFields(Map<String, String> fields) {
-        return argThat(
-                argument -> {
-                    var payload = JsonMatcher.asJson(argument).getAsJsonObject();
+        verify(awsSqsClient).send(txmaMessageCaptor.capture());
+        var txmaMessage = asJson(txmaMessageCaptor.getValue());
 
-                    Predicate<Map.Entry<String, String>> matchEntry =
-                            (entry) -> {
-                                var value = payload.get(entry.getKey());
+        assertThat(txmaMessage, hasFieldWithValue("event_name", equalTo("AUTH_TEST_EVENT_ONE")));
+        assertThat(txmaMessage, hasNumericFieldWithValue("timestamp", equalTo(1630534200L)));
 
-                                if ("timestamp".equals(entry.getKey())) {
-                                    return Long.parseLong(entry.getValue()) == value.getAsLong();
-                                } else {
-                                    return entry.getValue().equals(value.getAsString());
-                                }
-                            };
+        var extensions = txmaMessage.getAsJsonObject().get("extensions").getAsJsonObject();
 
-                    return fields.entrySet().stream().allMatch(matchEntry);
-                });
+        assertThat(extensions, hasFieldWithValue("key", equalTo("value")));
+        assertThat(extensions, hasFieldWithValue("key2", equalTo("value2")));
     }
 }
