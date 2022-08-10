@@ -22,7 +22,7 @@ dependencies {
             configurations.xray,
             configurations.cloudwatch,
             configurations.gson,
-            "com.amazonaws:aws-java-sdk-lambda:1.12.261",
+            "com.amazonaws:aws-java-sdk-lambda:1.12.278",
             "com.google.protobuf:protobuf-java:3.21.1"
 
     testImplementation configurations.tests,
