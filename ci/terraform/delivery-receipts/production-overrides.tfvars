@@ -12,5 +12,5 @@ notify_template_map = {
   PHONE_NUMBER_UPDATED_TEMPLATE_ID         = "beaf3eb2-135c-4517-800b-ca6b5ed85804"
   PASSWORD_UPDATED_TEMPLATE_ID             = "8d4c4948-000a-4de0-a8ba-76c259c1f983"
   VERIFY_PHONE_NUMBER_TEMPLATE_ID          = "16608047-106e-4fe9-bf3a-b1676e29eca9"
-  MFA_SMS_TEMPLATE_ID                      = "16608047-106e-4fe9-bf3a-b1676e29eca9"
+  MFA_SMS_TEMPLATE_ID                      = "6b9b6c82-a8c0-4b39-990b-a10130467f1e"
 }
