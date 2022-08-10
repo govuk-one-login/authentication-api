@@ -113,6 +113,27 @@ public abstract class HandlerIntegrationTest<Q, S> {
                     docAppPrivateKeyJwtSigner,
                     configurationParameters);
 
+    protected static final ConfigurationService TXMA_ENABLED_CONFIGURATION_SERVICE =
+            new IntegrationTestConfigurationService(
+                    auditTopic,
+                    notificationsQueue,
+                    auditSigningKey,
+                    tokenSigner,
+                    ipvPrivateKeyJwtSigner,
+                    spotQueue,
+                    docAppPrivateKeyJwtSigner,
+                    configurationParameters) {
+                @Override
+                public boolean isTxmaAuditEnabled() {
+                    return true;
+                }
+
+                @Override
+                public String getTxmaAuditQueueUrl() {
+                    return txmaAuditQueue.getQueueUrl();
+                }
+            };
+
     protected RequestHandler<Q, S> handler;
     protected final Json objectMapper = SerializationService.getInstance();
     protected final Context context = mock(Context.class);
