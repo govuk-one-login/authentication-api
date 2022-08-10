@@ -101,6 +101,9 @@ public class AuditService {
                         .withComponentId(configurationService.getOidcApiBaseURL().orElse("UNKNOWN"))
                         .withUser(user);
 
+        Arrays.stream(metadataPairs)
+                .forEach(pair -> txmaAuditEvent.addExtension(pair.getKey(), pair.getValue()));
+
         txmaQueueClient.send(txmaAuditEvent.serialize());
     }
 

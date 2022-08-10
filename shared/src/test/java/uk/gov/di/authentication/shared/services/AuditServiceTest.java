@@ -206,5 +206,10 @@ class AuditServiceTest {
 
         assertThat(txmaMessage, hasFieldWithValue("event_name", equalTo("AUTH_TEST_EVENT_ONE")));
         assertThat(txmaMessage, hasNumericFieldWithValue("timestamp", equalTo(1630534200L)));
+
+        var extensions = txmaMessage.getAsJsonObject().get("extensions").getAsJsonObject();
+
+        assertThat(extensions, hasFieldWithValue("key", equalTo("value")));
+        assertThat(extensions, hasFieldWithValue("key2", equalTo("value2")));
     }
 }
