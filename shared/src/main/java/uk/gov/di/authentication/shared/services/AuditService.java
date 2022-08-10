@@ -85,8 +85,13 @@ public class AuditService {
                         persistentSessionId,
                         metadataPairs));
 
-        txmaQueueClient.send(
-                auditEventWithTime(event, () -> Date.from(clock.instant())).serialize());
+        var txmaAuditEvent =
+                auditEventWithTime(event, () -> Date.from(clock.instant()))
+                        .withClientId(clientId)
+                        .withComponentId(
+                                configurationService.getOidcApiBaseURL().orElse("UNKNOWN"));
+
+        txmaQueueClient.send(txmaAuditEvent.serialize());
     }
 
     String generateLogLine(

@@ -17,6 +17,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Base64;
+import java.util.Optional;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -52,6 +53,7 @@ class AuditServiceTest {
     private final SnsService snsService = mock(SnsService.class);
     private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
     private final AwsSqsClient awsSqsClient = mock(AwsSqsClient.class);
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
 
     @Captor private ArgumentCaptor<String> messageCaptor;
     @Captor private ArgumentCaptor<String> txmaMessageCaptor;
@@ -68,6 +70,7 @@ class AuditServiceTest {
     void beforeEach() {
         var stubSignature = new SignResult().withSignature(ByteBuffer.wrap("signature".getBytes()));
         when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(stubSignature);
+        when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of("oidc-base-url"));
         MockitoAnnotations.openMocks(this);
     }
 
@@ -83,7 +86,7 @@ class AuditServiceTest {
                         FIXED_CLOCK,
                         snsService,
                         kmsConnectionService,
-                        mock(ConfigurationService.class),
+                        configurationService,
                         awsSqsClient);
 
         auditService.submitAuditEvent(
@@ -117,6 +120,8 @@ class AuditServiceTest {
 
         assertThat(txmaMessage, hasFieldWithValue("event_name", equalTo("AUTH_TEST_EVENT_ONE")));
         assertThat(txmaMessage, hasNumericFieldWithValue("timestamp", equalTo(1630534200L)));
+        assertThat(txmaMessage, hasFieldWithValue("client_id", equalTo("client-id")));
+        assertThat(txmaMessage, hasFieldWithValue("component_id", equalTo("oidc-base-url")));
     }
 
     @Test
@@ -126,7 +131,7 @@ class AuditServiceTest {
                         FIXED_CLOCK,
                         snsService,
                         kmsConnectionService,
-                        mock(ConfigurationService.class),
+                        configurationService,
                         awsSqsClient);
 
         var signingRequestCaptor = ArgumentCaptor.forClass(SignRequest.class);
@@ -161,7 +166,7 @@ class AuditServiceTest {
                         FIXED_CLOCK,
                         snsService,
                         kmsConnectionService,
-                        mock(ConfigurationService.class),
+                        configurationService,
                         awsSqsClient);
 
         auditService.submitAuditEvent(
