@@ -122,6 +122,17 @@ class AuditServiceTest {
         assertThat(txmaMessage, hasNumericFieldWithValue("timestamp", equalTo(1630534200L)));
         assertThat(txmaMessage, hasFieldWithValue("client_id", equalTo("client-id")));
         assertThat(txmaMessage, hasFieldWithValue("component_id", equalTo("oidc-base-url")));
+
+        var userObject = txmaMessage.getAsJsonObject().get("user").getAsJsonObject();
+
+        assertThat(userObject, hasFieldWithValue("session_id", equalTo("session-id")));
+        assertThat(
+                userObject,
+                hasFieldWithValue("persistent_session_id", equalTo("persistent-session-id")));
+        assertThat(userObject, hasFieldWithValue("user_id", equalTo("subject-id")));
+        assertThat(userObject, hasFieldWithValue("email", equalTo("email")));
+        assertThat(userObject, hasFieldWithValue("phone", equalTo("phone-number")));
+        assertThat(userObject, hasFieldWithValue("ip_address", equalTo("ip-address")));
     }
 
     @Test

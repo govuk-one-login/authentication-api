@@ -5,6 +5,7 @@ import com.amazonaws.services.kms.model.SigningAlgorithmSpec;
 import com.google.protobuf.ByteString;
 import uk.gov.di.audit.AuditPayload.AuditEvent;
 import uk.gov.di.audit.AuditPayload.SignedAuditEvent;
+import uk.gov.di.audit.TxmaAuditUser;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 
 import java.nio.ByteBuffer;
@@ -85,11 +86,20 @@ public class AuditService {
                         persistentSessionId,
                         metadataPairs));
 
+        var user =
+                TxmaAuditUser.user()
+                        .withUserId(subjectId)
+                        .withPhone(phoneNumber)
+                        .withEmail(email)
+                        .withIpAddress(ipAddress)
+                        .withSessionId(sessionId)
+                        .withPersistentSessionId(persistentSessionId);
+
         var txmaAuditEvent =
                 auditEventWithTime(event, () -> Date.from(clock.instant()))
                         .withClientId(clientId)
-                        .withComponentId(
-                                configurationService.getOidcApiBaseURL().orElse("UNKNOWN"));
+                        .withComponentId(configurationService.getOidcApiBaseURL().orElse("UNKNOWN"))
+                        .withUser(user);
 
         txmaQueueClient.send(txmaAuditEvent.serialize());
     }
