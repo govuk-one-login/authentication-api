@@ -100,6 +100,6 @@ variable "notify_template_map" {
     PHONE_NUMBER_UPDATED_TEMPLATE_ID         = "8274a2a3-5121-4630-a27e-e8578f8cba59"
     PASSWORD_UPDATED_TEMPLATE_ID             = "323ebef4-cfa7-414f-bfba-1db324acdd66"
     VERIFY_PHONE_NUMBER_TEMPLATE_ID          = "7dd388f1-e029-4fe7-92ff-18496dcb53e9"
-    MFA_SMS_TEMPLATE_ID                      = "7dd388f1-e029-4fe7-92ff-18496dcb53e9"
+    MFA_SMS_TEMPLATE_ID                      = "97b956c8-9a12-451a-994b-5d51741b63d4"
   }
 }
