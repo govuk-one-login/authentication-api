@@ -38,7 +38,7 @@ import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.ADD_
 import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.CAPTURE_CONSENT;
 import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.REGISTER_AUTH_APP;
 import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.UPDATE_TERMS_CONDS;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceivedByBothServices;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -48,7 +48,8 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
     @BeforeEach
     void setup() {
-        handler = new UpdateProfileHandler(TEST_CONFIGURATION_SERVICE);
+        handler = new UpdateProfileHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
+        txmaAuditQueue.clear();
     }
 
     private static Stream<String> phoneNumbers() {
@@ -81,8 +82,9 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
         assertThat(response, hasStatus(204));
 
-        assertEventTypesReceived(
+        assertEventTypesReceivedByBothServices(
                 auditTopic,
+                txmaAuditQueue,
                 List.of(UPDATE_PROFILE_REQUEST_RECEIVED, UPDATE_PROFILE_REQUEST_RECEIVED));
     }
 
@@ -113,8 +115,9 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
         assertTrue(consent.get().getClaims().containsAll(OIDCScopeValue.OPENID.getClaimNames()));
         assertTrue(consent.get().getClaims().containsAll(OIDCScopeValue.EMAIL.getClaimNames()));
 
-        assertEventTypesReceived(
+        assertEventTypesReceivedByBothServices(
                 auditTopic,
+                txmaAuditQueue,
                 List.of(UPDATE_PROFILE_REQUEST_RECEIVED, UPDATE_PROFILE_REQUEST_RECEIVED));
     }
 
@@ -135,8 +138,9 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
                         Map.of());
 
         assertThat(response, hasStatus(204));
-        assertEventTypesReceived(
+        assertEventTypesReceivedByBothServices(
                 auditTopic,
+                txmaAuditQueue,
                 List.of(UPDATE_PROFILE_REQUEST_RECEIVED, UPDATE_PROFILE_REQUEST_RECEIVED));
     }
 
@@ -162,8 +166,9 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
         assertThat(mfaMethod.get(0).getCredentialValue(), equalTo(authAppSecret));
         assertThat(mfaMethod.get(0).isMethodVerified(), equalTo(false));
         assertThat(mfaMethod.get(0).isEnabled(), equalTo(true));
-        assertEventTypesReceived(
+        assertEventTypesReceivedByBothServices(
                 auditTopic,
+                txmaAuditQueue,
                 List.of(UPDATE_PROFILE_REQUEST_RECEIVED, UPDATE_PROFILE_REQUEST_RECEIVED));
     }
 
