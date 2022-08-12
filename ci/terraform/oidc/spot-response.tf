@@ -11,6 +11,7 @@ module "ipv_spot_response_role" {
     aws_iam_policy.spot_response_sqs_read_policy.arn,
     aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
     aws_iam_policy.lambda_sns_policy.arn,
+    module.oidc_txma_audit.access_policy_arn
   ]
 
   depends_on = [
@@ -94,6 +95,8 @@ resource "aws_lambda_function" "spot_response_lambda" {
       DYNAMO_ENDPOINT         = var.use_localstack ? var.lambda_dynamo_endpoint : null
       ENVIRONMENT             = var.environment
       EVENTS_SNS_TOPIC_ARN    = aws_sns_topic.events.arn
+      TXMA_AUDIT_ENABLED      = contains(["staging"], var.environment)
+      TXMA_AUDIT_QUEUE_URL    = module.oidc_txma_audit.queue_url
       FRONTEND_BASE_URL       = module.dns.frontend_url
     })
   }
