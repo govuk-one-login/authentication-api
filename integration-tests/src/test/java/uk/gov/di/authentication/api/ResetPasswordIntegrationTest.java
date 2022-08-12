@@ -21,7 +21,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceivedByBothServices;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -32,7 +32,8 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
     @BeforeEach
     public void setUp() {
-        handler = new ResetPasswordHandler(TEST_CONFIGURATION_SERVICE);
+        handler = new ResetPasswordHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
+        txmaAuditQueue.clear();
     }
 
     @Test
@@ -56,7 +57,8 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
         assertThat(requests.get(0).getDestination(), equalTo(EMAIL_ADDRESS));
         assertThat(requests.get(0).getNotificationType(), equalTo(PASSWORD_RESET_CONFIRMATION));
 
-        assertEventTypesReceived(auditTopic, List.of(PASSWORD_RESET_SUCCESSFUL));
+        assertEventTypesReceivedByBothServices(
+                auditTopic, txmaAuditQueue, List.of(PASSWORD_RESET_SUCCESSFUL));
     }
 
     @Test
@@ -80,7 +82,8 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
         assertThat(requests.get(0).getDestination(), equalTo(EMAIL_ADDRESS));
         assertThat(requests.get(0).getNotificationType(), equalTo(PASSWORD_RESET_CONFIRMATION));
 
-        assertEventTypesReceived(auditTopic, List.of(PASSWORD_RESET_SUCCESSFUL));
+        assertEventTypesReceivedByBothServices(
+                auditTopic, txmaAuditQueue, List.of(PASSWORD_RESET_SUCCESSFUL));
     }
 
     @Test
