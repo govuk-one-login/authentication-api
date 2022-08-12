@@ -7,6 +7,7 @@ import uk.gov.di.authentication.sharedtest.extensions.SqsQueueExtension;
 import uk.gov.di.authentication.sharedtest.matchers.JsonMatcher;
 
 import java.util.Collection;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -20,6 +21,12 @@ public class AuditAssertionsHelper {
 
     private static final int SNS_TIMEOUT = 1;
     public static final int SNS_TIMEOUT_MILLIS = SNS_TIMEOUT * 1000;
+
+    public static void assertNoAuditEventsReceivedByEitherService(
+            AuditSnsTopicExtension auditTopic, SqsQueueExtension txmaAuditQueue) {
+        assertNoAuditEventsReceived(auditTopic);
+        assertNoTxmaAuditEventsReceived(txmaAuditQueue);
+    }
 
     public static void assertNoAuditEventsReceived(AuditSnsTopicExtension auditTopic) {
         try {
@@ -38,6 +45,22 @@ public class AuditAssertionsHelper {
             throw new RuntimeException(ex);
         }
         assertThat(txmaAuditQueue.getApproximateMessageCount(), equalTo(0));
+    }
+
+    public static void assertEventTypesReceivedByBothServices(
+            AuditSnsTopicExtension auditTopic,
+            SqsQueueExtension txmaAuditQueue,
+            Collection<AuditableEvent> eventTypes) {
+
+        assertEventTypesReceived(auditTopic, eventTypes);
+
+        var txmaEvents =
+                eventTypes.stream()
+                        .map(Objects::toString)
+                        .map("AUTH_"::concat)
+                        .collect(Collectors.toList());
+
+        assertTxmaAuditEventsReceived(txmaAuditQueue, txmaEvents);
     }
 
     public static void assertEventTypesReceived(

@@ -34,8 +34,8 @@ import static org.hamcrest.Matchers.equalTo;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_VERIFIED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.INVALID_CODE_SENT;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceivedByBothServices;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoAuditEventsReceivedByEitherService;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -48,7 +48,8 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
     @BeforeEach
     void setup() {
-        handler = new VerifyCodeHandler(TEST_CONFIGURATION_SERVICE);
+        handler = new VerifyCodeHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
+        txmaAuditQueue.clear();
     }
 
     @Test
@@ -65,7 +66,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         Map.of());
         assertThat(response, hasStatus(204));
 
-        assertEventTypesReceived(auditTopic, List.of(CODE_VERIFIED));
+        assertEventTypesReceivedByBothServices(auditTopic, txmaAuditQueue, List.of(CODE_VERIFIED));
     }
 
     @Test
@@ -87,7 +88,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
         assertThat(response, hasStatus(204));
         assertThat(redis.getMfaCodeAttemptsCount(EMAIL_ADDRESS), equalTo(0));
-        assertEventTypesReceived(auditTopic, List.of(CODE_VERIFIED));
+        assertEventTypesReceivedByBothServices(auditTopic, txmaAuditQueue, List.of(CODE_VERIFIED));
     }
 
     @Test
@@ -110,7 +111,8 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1036));
 
-        assertEventTypesReceived(auditTopic, List.of(INVALID_CODE_SENT));
+        assertEventTypesReceivedByBothServices(
+                auditTopic, txmaAuditQueue, List.of(INVALID_CODE_SENT));
     }
 
     @Test
@@ -138,7 +140,8 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertThat(response2, hasStatus(400));
         assertThat(response2, hasJsonBody(ErrorResponse.ERROR_1036));
 
-        assertEventTypesReceived(auditTopic, List.of(CODE_VERIFIED, INVALID_CODE_SENT));
+        assertEventTypesReceivedByBothServices(
+                auditTopic, txmaAuditQueue, List.of(CODE_VERIFIED, INVALID_CODE_SENT));
     }
 
     @Test
@@ -162,7 +165,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         Map.of());
 
         assertThat(response, hasStatus(204));
-        assertEventTypesReceived(auditTopic, List.of(CODE_VERIFIED));
+        assertEventTypesReceivedByBothServices(auditTopic, txmaAuditQueue, List.of(CODE_VERIFIED));
     }
 
     @Test
@@ -191,7 +194,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
         assertThat(response, hasStatus(204));
         assertThat(redis.getMfaCodeAttemptsCount(EMAIL_ADDRESS), equalTo(0));
-        assertEventTypesReceived(auditTopic, List.of(CODE_VERIFIED));
+        assertEventTypesReceivedByBothServices(auditTopic, txmaAuditQueue, List.of(CODE_VERIFIED));
     }
 
     @Test
@@ -215,7 +218,8 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1037));
 
-        assertEventTypesReceived(auditTopic, List.of(INVALID_CODE_SENT));
+        assertEventTypesReceivedByBothServices(
+                auditTopic, txmaAuditQueue, List.of(INVALID_CODE_SENT));
     }
 
     @Test
@@ -234,7 +238,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1034));
 
-        assertNoAuditEventsReceived(auditTopic);
+        assertNoAuditEventsReceivedByEitherService(auditTopic, txmaAuditQueue);
     }
 
     @Test
@@ -252,7 +256,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1033));
 
-        assertNoAuditEventsReceived(auditTopic);
+        assertNoAuditEventsReceivedByEitherService(auditTopic, txmaAuditQueue);
     }
 
     @Test
@@ -281,7 +285,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         Map.of());
 
         assertThat(response, hasStatus(204));
-        assertEventTypesReceived(auditTopic, List.of(CODE_VERIFIED));
+        assertEventTypesReceivedByBothServices(auditTopic, txmaAuditQueue, List.of(CODE_VERIFIED));
     }
 
     private void setUpTestWithoutSignUp(String sessionId, Scope scope) throws Json.JsonException {
