@@ -198,6 +198,11 @@ variable "scaling_trigger" {
   default = 0.7
 }
 
+variable "txma_account_id" {
+  default = ""
+  type    = string
+}
+
 locals {
   default_performance_parameters = {
     memory          = var.endpoint_memory_size

@@ -14,6 +14,7 @@ params:
   DNS_STATE_KEY: ((dns-state-key))
   NOTIFY_API_KEY: ((build-notify-api-key))
   STATE_BUCKET: digital-identity-dev-tfstate
+  TXMA_ACCOUNT_ID: ((build-txma-account-id))
 inputs:
   - name: api-terraform-src
   - name: api-release

@@ -1,5 +1,5 @@
 resource "aws_kms_key" "txma_audit_queue_encryption_key" {
-  description              = "KMS signing key for encrypting TxMA audit queue at rest"
+  description              = "KMS signing key for encrypting ${var.service_name} TxMA audit queue at rest"
   deletion_window_in_days  = 30
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
   key_usage                = "ENCRYPT_DECRYPT"
