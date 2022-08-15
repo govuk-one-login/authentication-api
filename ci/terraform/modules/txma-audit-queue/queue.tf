@@ -1,5 +1,5 @@
 resource "aws_sqs_queue" "txma_audit_queue" {
-  name                      = "${var.environment}-txma-audit-queue"
+  name                      = "${var.environment}-${var.service_name}-txma-audit-queue"
   message_retention_seconds = 1209600
 
   kms_master_key_id                 = aws_kms_key.txma_audit_queue_encryption_key.arn
@@ -14,7 +14,7 @@ resource "aws_sqs_queue" "txma_audit_queue" {
 }
 
 resource "aws_sqs_queue" "txma_audit_dead_letter_queue" {
-  name = "${var.environment}-txma-audit-dead-letter-queue"
+  name = "${var.environment}-${var.service_name}-txma-audit-dlq"
 
   kms_master_key_id                 = aws_kms_key.txma_audit_queue_encryption_key.arn
   kms_data_key_reuse_period_seconds = 300
