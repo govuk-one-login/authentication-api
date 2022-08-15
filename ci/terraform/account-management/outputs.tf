@@ -9,3 +9,11 @@ output "api_gateway_root_id" {
 output "email_queue" {
   value = aws_sqs_queue.email_queue.id
 }
+
+output "txma_audit_queue_arn" {
+  value = module.oidc_txma_audit.queue_arn
+}
+
+output "txma_audit_key_arn" {
+  value = module.oidc_txma_audit.kms_key_arn
+}
