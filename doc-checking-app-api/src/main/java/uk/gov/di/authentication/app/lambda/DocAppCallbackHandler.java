@@ -282,7 +282,7 @@ public class DocAppCallbackHandler
 
     private APIGatewayProxyResponseEvent generateAuthenticationErrorResponse(
             AuthenticationRequest authenticationRequest, ErrorObject errorObject) {
-        LOG.error(
+        LOG.warn(
                 "Error in Doc App AuthorisationResponse. ErrorCode: {}. ErrorDescription: {}",
                 errorObject.getCode(),
                 errorObject.getDescription());
