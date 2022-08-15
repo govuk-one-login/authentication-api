@@ -42,7 +42,6 @@ run:
         -var "audit_storage_expiry_days=${AUDIT_STORE_EXPIRY_DAYS}" \
         -var "txma_obfuscation_secret_arn=${TXMA_OBFUSCATION_SECRET_ARN}" \
         -var "txma_obfuscation_secret_kms_key_arn=${TXMA_OBFUSCATION_SECRET_KMS_KEY_ARN}" \
-        -var "txma_account_id=${TXMA_ACCOUNT_ID}" \
         -var-file "${DEPLOY_ENVIRONMENT}-overrides.tfvars" \
 
       terraform output --json > ../../../../terraform-outputs/${DEPLOY_ENVIRONMENT}-terraform-outputs.json
