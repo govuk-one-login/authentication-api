@@ -8,6 +8,7 @@ import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -17,15 +18,17 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasLength;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.*;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceivedByBothServices;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @BeforeEach
     public void setUp() {
-        handler = new ResetPasswordRequestHandler(TEST_CONFIGURATION_SERVICE);
+        handler = new ResetPasswordRequestHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
     }
 
     @Test
@@ -60,6 +63,9 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
         assertThat(resetLinkSplit.length, equalTo(4));
         assertThat(resetLinkSplit[2], equalTo(sessionId));
         assertThat(resetLinkSplit[3], equalTo(persistentSessionId));
+
+        assertEventTypesReceivedByBothServices(
+                auditTopic, txmaAuditQueue, Collections.singletonList(PASSWORD_RESET_REQUESTED));
     }
 
     @Test
@@ -88,5 +94,8 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
         assertThat(requests.get(0).getDestination(), equalTo(email));
         assertThat(requests.get(0).getNotificationType(), equalTo(RESET_PASSWORD_WITH_CODE));
         assertThat(requests.get(0).getCode(), hasLength(6));
+
+        assertEventTypesReceivedByBothServices(
+                auditTopic, txmaAuditQueue, Collections.singletonList(PASSWORD_RESET_REQUESTED));
     }
 }

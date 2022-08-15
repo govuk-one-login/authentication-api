@@ -9,7 +9,8 @@ module "frontend_api_send_notification_role" {
     aws_iam_policy.dynamo_user_read_access_policy.arn,
     aws_iam_policy.dynamo_client_registry_read_access_policy.arn,
     aws_iam_policy.lambda_sns_policy.arn,
-    aws_iam_policy.redis_parameter_policy.arn
+    aws_iam_policy.redis_parameter_policy.arn,
+    module.oidc_txma_audit.access_policy_arn
   ]
 }
 
@@ -26,6 +27,8 @@ module "send_notification" {
     BLOCKED_EMAIL_DURATION  = var.blocked_email_duration
     EMAIL_QUEUE_URL         = aws_sqs_queue.email_queue.id
     EVENTS_SNS_TOPIC_ARN    = aws_sns_topic.events.arn
+    TXMA_AUDIT_ENABLED      = contains(["staging"], var.environment)
+    TXMA_AUDIT_QUEUE_URL    = module.oidc_txma_audit.queue_url
     AUDIT_SIGNING_KEY_ALIAS = local.audit_signing_key_alias_name
     LOCALSTACK_ENDPOINT     = var.use_localstack ? var.localstack_endpoint : null
     REDIS_KEY               = local.redis_key

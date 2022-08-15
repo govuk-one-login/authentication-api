@@ -7,10 +7,12 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.lambda.SPOTResponseHandler;
 import uk.gov.di.authentication.sharedtest.basetest.HandlerIntegrationTest;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Locale;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -22,6 +24,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceivedByBothServices;
 
 public class SpotResponseIntegrationTest extends HandlerIntegrationTest<SQSEvent, Object> {
 
@@ -32,7 +35,8 @@ public class SpotResponseIntegrationTest extends HandlerIntegrationTest<SQSEvent
 
     @BeforeEach
     void setup() {
-        handler = new SPOTResponseHandler(TEST_CONFIGURATION_SERVICE);
+        handler = new SPOTResponseHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
+        txmaAuditQueue.clear();
     }
 
     @Test
@@ -59,6 +63,11 @@ public class SpotResponseIntegrationTest extends HandlerIntegrationTest<SQSEvent
                         .get()
                         .getCoreIdentityJWT(),
                 equalTo(signedCredential));
+
+        assertEventTypesReceivedByBothServices(
+                auditTopic,
+                txmaAuditQueue,
+                Collections.singletonList(IPVAuditableEvent.IPV_SUCCESSFUL_SPOT_RESPONSE_RECEIVED));
     }
 
     @Test
@@ -78,6 +87,12 @@ public class SpotResponseIntegrationTest extends HandlerIntegrationTest<SQSEvent
 
         assertFalse(
                 identityStore.getIdentityCredentials(pairwiseIdentifier.getValue()).isPresent());
+
+        assertEventTypesReceivedByBothServices(
+                auditTopic,
+                txmaAuditQueue,
+                Collections.singletonList(
+                        IPVAuditableEvent.IPV_UNSUCCESSFUL_SPOT_RESPONSE_RECEIVED));
     }
 
     private <T> SQSEvent createSqsEvent(T... request) {

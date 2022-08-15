@@ -19,7 +19,6 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.CommonPasswordsExtension;
 
-import java.io.IOException;
 import java.net.URI;
 import java.util.Base64;
 import java.util.HashMap;
@@ -33,7 +32,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CREATE_ACCOUNT;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceivedByBothServices;
 import static uk.gov.di.authentication.sharedtest.helper.KeyPairHelper.GENERATE_RSA_KEY_PAIR;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -45,7 +44,8 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @BeforeEach
     void setup() {
-        handler = new SignUpHandler(TEST_CONFIGURATION_SERVICE);
+        handler = new SignUpHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
+        txmaAuditQueue.clear();
     }
 
     private static Stream<Boolean> consentValues() {
@@ -54,8 +54,7 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @ParameterizedTest
     @MethodSource("consentValues")
-    void shouldReturn200WhenValidSignUpRequest(boolean consentRequired)
-            throws IOException, Json.JsonException {
+    void shouldReturn200WhenValidSignUpRequest(boolean consentRequired) throws Json.JsonException {
         String sessionId = redis.createSession();
 
         Map<String, String> headers = new HashMap<>();
@@ -108,11 +107,11 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertTrue(userStore.userExists("joe.bloggs+5@digital.cabinet-office.gov.uk"));
 
-        assertEventTypesReceived(auditTopic, List.of(CREATE_ACCOUNT));
+        assertEventTypesReceivedByBothServices(auditTopic, txmaAuditQueue, List.of(CREATE_ACCOUNT));
     }
 
     @Test
-    void shouldReturn400WhenCommonPassword() throws IOException, Json.JsonException {
+    void shouldReturn400WhenCommonPassword() throws Json.JsonException {
 
         String sessionId = redis.createSession();
 
