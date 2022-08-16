@@ -27,8 +27,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.UPDATE_PHONE_NUMBER;
 import static uk.gov.di.accountmanagement.entity.NotificationType.PHONE_NUMBER_UPDATED;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNoNotificationsReceived;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceivedByBothServices;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoAuditEventsReceivedByEitherService;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -44,7 +44,8 @@ class UpdatePhoneNumberIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
     @BeforeEach
     void setup() {
-        handler = new UpdatePhoneNumberHandler(TEST_CONFIGURATION_SERVICE);
+        handler = new UpdatePhoneNumberHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
+        txmaAuditQueue.clear();
     }
 
     private static Stream<String> phoneNumbers() {
@@ -90,7 +91,8 @@ class UpdatePhoneNumberIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         NotificationAssertionHelper.assertNotificationsReceived(
                 notificationsQueue, List.of(new NotifyRequest(TEST_EMAIL, PHONE_NUMBER_UPDATED)));
 
-        assertEventTypesReceived(auditTopic, List.of(UPDATE_PHONE_NUMBER));
+        assertEventTypesReceivedByBothServices(
+                auditTopic, txmaAuditQueue, List.of(UPDATE_PHONE_NUMBER));
     }
 
     @Test
@@ -113,7 +115,7 @@ class UpdatePhoneNumberIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
         assertNoNotificationsReceived(notificationsQueue);
 
-        assertNoAuditEventsReceived(auditTopic);
+        assertNoAuditEventsReceivedByEitherService(auditTopic, txmaAuditQueue);
     }
 
     @Test
