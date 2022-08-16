@@ -53,7 +53,7 @@ import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_SUCCESSF
 import static uk.gov.di.authentication.shared.entity.IdentityClaims.VOT;
 import static uk.gov.di.authentication.shared.entity.IdentityClaims.VTM;
 import static uk.gov.di.authentication.shared.helpers.ClientSubjectHelper.calculatePairwiseIdentifier;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceivedByBothServices;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -80,6 +80,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
     void setup() {
         ipvStub.init();
         handler = new IPVCallbackHandler(configurationService);
+        txmaAuditQueue.clear();
     }
 
     @Test
@@ -119,8 +120,9 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                 response.getHeaders().get(ResponseHeaders.LOCATION),
                 startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
 
-        assertEventTypesReceived(
+        assertEventTypesReceivedByBothServices(
                 auditTopic,
+                txmaAuditQueue,
                 List.of(
                         IPV_AUTHORISATION_RESPONSE_RECEIVED,
                         IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
@@ -273,6 +275,16 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         @Override
         public boolean isIdentityEnabled() {
             return true;
+        }
+
+        @Override
+        public boolean isTxmaAuditEnabled() {
+            return true;
+        }
+
+        @Override
+        public String getTxmaAuditQueueUrl() {
+            return txmaAuditQueue.getQueueUrl();
         }
     }
 }
