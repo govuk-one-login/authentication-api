@@ -37,7 +37,7 @@ import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LE
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.authentication.shared.entity.MFAMethodType.AUTH_APP;
 import static uk.gov.di.authentication.shared.entity.MFAMethodType.SMS;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceivedByBothServices;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.authentication.sharedtest.helper.KeyPairHelper.GENERATE_RSA_KEY_PAIR;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -52,7 +52,8 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @BeforeEach
     void setup() {
-        handler = new LoginHandler(TEST_CONFIGURATION_SERVICE);
+        handler = new LoginHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
+        txmaAuditQueue.clear();
     }
 
     @ParameterizedTest
@@ -127,7 +128,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(loginResponse.getMfaMethodType(), equalTo(mfaMethodType));
         assertThat(loginResponse.isMfaMethodVerified(), equalTo(mfaMethodVerified));
 
-        assertEventTypesReceived(auditTopic, List.of(LOG_IN_SUCCESS));
+        assertEventTypesReceivedByBothServices(auditTopic, txmaAuditQueue, List.of(LOG_IN_SUCCESS));
     }
 
     private static Stream<Arguments> vectorOfTrust() {
@@ -173,6 +174,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 makeRequest(Optional.of(new LoginRequest(email, password)), headers, Map.of());
         assertThat(response, hasStatus(401));
 
-        assertEventTypesReceived(auditTopic, List.of(INVALID_CREDENTIALS));
+        assertEventTypesReceivedByBothServices(
+                auditTopic, txmaAuditQueue, List.of(INVALID_CREDENTIALS));
     }
 }
