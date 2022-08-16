@@ -21,8 +21,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.SEND_OTP;
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_PHONE_NUMBER;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceivedByBothServices;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoAuditEventsReceivedByEitherService;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -37,7 +37,8 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
     @BeforeEach
     void setup() {
-        handler = new SendOtpNotificationHandler(TEST_CONFIGURATION_SERVICE);
+        handler = new SendOtpNotificationHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
+        txmaAuditQueue.clear();
     }
 
     @Test
@@ -55,7 +56,7 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
         NotificationAssertionHelper.assertNotificationsReceived(
                 notificationsQueue, List.of(new NotifyRequest(TEST_EMAIL, VERIFY_EMAIL)));
 
-        assertEventTypesReceived(auditTopic, List.of(SEND_OTP));
+        assertEventTypesReceivedByBothServices(auditTopic, txmaAuditQueue, List.of(SEND_OTP));
     }
 
     @Test
@@ -76,7 +77,7 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
         NotificationAssertionHelper.assertNoNotificationsReceived(notificationsQueue);
 
-        assertNoAuditEventsReceived(auditTopic);
+        assertNoAuditEventsReceivedByEitherService(auditTopic, txmaAuditQueue);
     }
 
     @Test
@@ -95,7 +96,7 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                 notificationsQueue,
                 List.of(new NotifyRequest(TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER)));
 
-        assertEventTypesReceived(auditTopic, List.of(SEND_OTP));
+        assertEventTypesReceivedByBothServices(auditTopic, txmaAuditQueue, List.of(SEND_OTP));
     }
 
     @Test
@@ -118,7 +119,7 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                 notificationsQueue,
                 List.of(new NotifyRequest(TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER)));
 
-        assertEventTypesReceived(auditTopic, List.of(SEND_OTP));
+        assertEventTypesReceivedByBothServices(auditTopic, txmaAuditQueue, List.of(SEND_OTP));
     }
 
     @Test
@@ -139,7 +140,7 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
         NotificationAssertionHelper.assertNoNotificationsReceived(notificationsQueue);
 
-        assertNoAuditEventsReceived(auditTopic);
+        assertNoAuditEventsReceivedByEitherService(auditTopic, txmaAuditQueue);
     }
 
     @Test
@@ -161,6 +162,6 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
         NotificationAssertionHelper.assertNoNotificationsReceived(notificationsQueue);
 
-        assertNoAuditEventsReceived(auditTopic);
+        assertNoAuditEventsReceivedByEitherService(auditTopic, txmaAuditQueue);
     }
 }
