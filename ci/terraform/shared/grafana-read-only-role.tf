@@ -17,7 +17,7 @@ data "aws_iam_policy_document" "tools_account_assume_role_policy" {
 }
 
 resource "aws_iam_role" "grafana_metrics_read_only_role" {
-  count = contains(["integration", "production"], var.environment) ? 1 : 0
+  count = contains(["integration", "production", "staging"], var.environment) ? 1 : 0
   name  = "grafana-metrics-read-only"
 
   assume_role_policy = data.aws_iam_policy_document.tools_account_assume_role_policy.json
