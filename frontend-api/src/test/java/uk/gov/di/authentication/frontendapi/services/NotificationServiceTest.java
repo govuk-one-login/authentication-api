@@ -29,6 +29,10 @@ class NotificationServiceTest {
         public String getTemplateId() {
             return name();
         }
+
+        public String getTemplateId(String language) {
+            return name();
+        }
     }
 
     @Test

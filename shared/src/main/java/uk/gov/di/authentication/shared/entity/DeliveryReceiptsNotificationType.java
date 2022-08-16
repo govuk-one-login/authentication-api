@@ -32,6 +32,11 @@ public enum DeliveryReceiptsNotificationType implements TemplateAware {
         return System.getenv(templateName);
     }
 
+    @Override
+    public String getTemplateId(String language) {
+        return null;
+    }
+
     public String getTemplateAlias() {
         return templateAlias;
     }

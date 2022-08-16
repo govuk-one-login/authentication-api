@@ -19,6 +19,12 @@ public class NotificationService {
         notifyClient.sendEmail(type.getTemplateId(), email, personalisation, "");
     }
 
+    public void sendEmail(
+            String email, Map<String, Object> personalisation, TemplateAware type, String language)
+            throws NotificationClientException {
+        notifyClient.sendEmail(type.getTemplateId(language), email, personalisation, "");
+    }
+
     public void sendText(
             String phoneNumber, Map<String, Object> personalisation, TemplateAware type)
             throws NotificationClientException {

@@ -15,6 +15,8 @@ public class NotifyRequest {
 
     @Expose private String code;
 
+    @Expose private String language;
+
     public NotifyRequest() {}
 
     public NotifyRequest(String destination, NotificationType notificationType, String code) {
@@ -27,6 +29,12 @@ public class NotifyRequest {
         this(destination, notificationType, null);
     }
 
+    public NotifyRequest(
+            NotificationType notificationType, String destination, String code, String language) {
+        this(destination, notificationType, code);
+        this.language = language;
+    }
+
     public NotificationType getNotificationType() {
         return notificationType;
     }
@@ -37,5 +45,9 @@ public class NotifyRequest {
 
     public String getCode() {
         return code;
+    }
+
+    public String getLanguage() {
+        return language;
     }
 }

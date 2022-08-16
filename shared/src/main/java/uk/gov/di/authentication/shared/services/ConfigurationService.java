@@ -461,4 +461,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     public String getBackChannelLogoutQueueUri() {
         return System.getenv("BACK_CHANNEL_LOGOUT_QUEUE_URI");
     }
+
+    public String getNotifyTemplateId(String templateName) {
+        return System.getenv(templateName);
+    }
 }
