@@ -62,6 +62,11 @@ resource "aws_dynamodb_table" "user_profile_table" {
     type = "S"
   }
 
+  attribute {
+    name = "accountVerified"
+    type = "N"
+  }
+
   global_secondary_index {
     name            = "SubjectIDIndex"
     hash_key        = "SubjectID"
@@ -74,6 +79,15 @@ resource "aws_dynamodb_table" "user_profile_table" {
     name            = "PublicSubjectIDIndex"
     hash_key        = "PublicSubjectID"
     projection_type = "ALL"
+    read_capacity   = var.provision_dynamo ? var.dynamo_default_read_capacity : null
+    write_capacity  = var.provision_dynamo ? var.dynamo_default_write_capacity : null
+  }
+
+  global_secondary_index {
+    name            = "VerifiedAccountIndex"
+    hash_key        = "SubjectID"
+    range_key       = "accountVerified"
+    projection_type = "KEYS_ONLY"
     read_capacity   = var.provision_dynamo ? var.dynamo_default_read_capacity : null
     write_capacity  = var.provision_dynamo ? var.dynamo_default_write_capacity : null
   }
