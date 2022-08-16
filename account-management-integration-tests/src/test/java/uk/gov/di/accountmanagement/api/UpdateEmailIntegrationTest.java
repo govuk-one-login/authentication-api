@@ -22,8 +22,8 @@ import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent
 import static uk.gov.di.accountmanagement.entity.NotificationType.EMAIL_UPDATED;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNoNotificationsReceived;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNotificationsReceived;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceivedByBothServices;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoAuditEventsReceivedByEitherService;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -35,7 +35,8 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @BeforeEach
     void setup() {
-        handler = new UpdateEmailHandler(TEST_CONFIGURATION_SERVICE);
+        handler = new UpdateEmailHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
+        txmaAuditQueue.clear();
     }
 
     @Test
@@ -58,7 +59,7 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertNotificationsReceived(
                 notificationsQueue, List.of(new NotifyRequest(NEW_EMAIL_ADDRESS, EMAIL_UPDATED)));
 
-        assertEventTypesReceived(auditTopic, List.of(UPDATE_EMAIL));
+        assertEventTypesReceivedByBothServices(auditTopic, txmaAuditQueue, List.of(UPDATE_EMAIL));
     }
 
     @Test
@@ -82,7 +83,7 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertNoNotificationsReceived(notificationsQueue);
 
-        assertNoAuditEventsReceived(auditTopic);
+        assertNoAuditEventsReceivedByEitherService(auditTopic, txmaAuditQueue);
     }
 
     @Test
@@ -105,7 +106,7 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertNoNotificationsReceived(notificationsQueue);
 
-        assertNoAuditEventsReceived(auditTopic);
+        assertNoAuditEventsReceivedByEitherService(auditTopic, txmaAuditQueue);
     }
 
     @Test
@@ -129,12 +130,12 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertNoNotificationsReceived(notificationsQueue);
 
-        assertNoAuditEventsReceived(auditTopic);
+        assertNoAuditEventsReceivedByEitherService(auditTopic, txmaAuditQueue);
     }
 
     @Test
     void shouldThrowExceptionWhenUserAttemptsToUpdateDifferentAccount() {
-        String correctSubjectID = userStore.signUp(EXISTING_EMAIL_ADDRESS, "password-1", SUBJECT);
+        userStore.signUp(EXISTING_EMAIL_ADDRESS, "password-1", SUBJECT);
         String otherSubjectID =
                 userStore.signUp(
                         "other.user@digital.cabinet-office.gov.uk", "password-2", new Subject());
