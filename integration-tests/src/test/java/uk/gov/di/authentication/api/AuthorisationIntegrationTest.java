@@ -57,7 +57,7 @@ import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISAT
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.authentication.shared.helpers.CookieHelper.getHttpCookieFromMultiValueResponseHeaders;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceivedByBothServices;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -78,6 +78,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void setup() {
         registerClient(CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB);
         handler = new AuthorisationHandler(configurationService);
+        txmaAuditQueue.clear();
     }
 
     @Test
@@ -96,8 +97,10 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .isPresent(),
                 equalTo(true));
 
-        assertEventTypesReceived(
-                auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+        assertEventTypesReceivedByBothServices(
+                auditTopic,
+                txmaAuditQueue,
+                List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
     }
 
     @Test
@@ -117,8 +120,10 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 equalTo(true));
         assertThat(URI.create(redirectUri).getQuery(), equalTo(null));
 
-        assertEventTypesReceived(
-                auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+        assertEventTypesReceivedByBothServices(
+                auditTopic,
+                txmaAuditQueue,
+                List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
     }
 
     @Test
@@ -149,8 +154,10 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(persistentCookie.isPresent(), equalTo(true));
         assertThat(persistentCookie.get().getValue(), equalTo("persistent-id-value"));
 
-        assertEventTypesReceived(
-                auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+        assertEventTypesReceivedByBothServices(
+                auditTopic,
+                txmaAuditQueue,
+                List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
     }
 
     @Test
@@ -176,8 +183,10 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .isPresent(),
                 equalTo(true));
 
-        assertEventTypesReceived(
-                auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+        assertEventTypesReceivedByBothServices(
+                auditTopic,
+                txmaAuditQueue,
+                List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
     }
 
     @Test
@@ -193,8 +202,10 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(redirectUri, containsString(OAuth2Error.INVALID_SCOPE.getCode()));
         assertThat(redirectUri, startsWith(RP_REDIRECT_URI));
 
-        assertEventTypesReceived(
-                auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_REQUEST_ERROR));
+        assertEventTypesReceivedByBothServices(
+                auditTopic,
+                txmaAuditQueue,
+                List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_REQUEST_ERROR));
     }
 
     @Test
@@ -219,8 +230,10 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .isPresent(),
                 equalTo(true));
 
-        assertEventTypesReceived(
-                auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+        assertEventTypesReceivedByBothServices(
+                auditTopic,
+                txmaAuditQueue,
+                List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
     }
 
     @Test
@@ -246,8 +259,10 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .isPresent(),
                 equalTo(true));
 
-        assertEventTypesReceived(
-                auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+        assertEventTypesReceivedByBothServices(
+                auditTopic,
+                txmaAuditQueue,
+                List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
     }
 
     @Test
@@ -277,8 +292,10 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(cookie.isPresent(), equalTo(true));
         assertThat(cookie.get().getValue(), not(startsWith(sessionId)));
 
-        assertEventTypesReceived(
-                auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+        assertEventTypesReceivedByBothServices(
+                auditTopic,
+                txmaAuditQueue,
+                List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
     }
 
     @Test
@@ -307,8 +324,10 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(cookie.isPresent(), equalTo(true));
         assertThat(cookie.get().getValue(), not(startsWith(sessionId)));
 
-        assertEventTypesReceived(
-                auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+        assertEventTypesReceivedByBothServices(
+                auditTopic,
+                txmaAuditQueue,
+                List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
     }
 
     @Test
@@ -337,8 +356,10 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(cookie.isPresent(), equalTo(true));
         assertThat(cookie.get().getValue(), not(startsWith(sessionId)));
 
-        assertEventTypesReceived(
-                auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+        assertEventTypesReceivedByBothServices(
+                auditTopic,
+                txmaAuditQueue,
+                List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
     }
 
     @Test
@@ -354,8 +375,10 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(redirectUri, startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
         assertThat(URI.create(redirectUri).getQuery(), equalTo(null));
 
-        assertEventTypesReceived(
-                auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+        assertEventTypesReceivedByBothServices(
+                auditTopic,
+                txmaAuditQueue,
+                List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
     }
 
     @Test
@@ -388,8 +411,10 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 getLocationResponseHeader(response),
                 startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
 
-        assertEventTypesReceived(
-                auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+        assertEventTypesReceivedByBothServices(
+                auditTopic,
+                txmaAuditQueue,
+                List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
     }
 
     @Test
@@ -422,8 +447,10 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(redirectUri, startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
         assertThat(URI.create(redirectUri).getQuery(), equalTo("prompt=login"));
 
-        assertEventTypesReceived(
-                auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+        assertEventTypesReceivedByBothServices(
+                auditTopic,
+                txmaAuditQueue,
+                List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
     }
 
     @Test
@@ -456,8 +483,10 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         String redirectUri = getLocationResponseHeader(response);
         assertThat(redirectUri, startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
 
-        assertEventTypesReceived(
-                auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+        assertEventTypesReceivedByBothServices(
+                auditTopic,
+                txmaAuditQueue,
+                List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
     }
 
     @Test
@@ -490,8 +519,10 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         String redirectUri = getLocationResponseHeader(response);
         assertThat(redirectUri, startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
 
-        assertEventTypesReceived(
-                auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+        assertEventTypesReceivedByBothServices(
+                auditTopic,
+                txmaAuditQueue,
+                List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
     }
 
     @Test
@@ -533,8 +564,10 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var clientSession = redis.getClientSession(clientSessionID);
         var authRequest = AuthenticationRequest.parse(clientSession.getAuthRequestParams());
         assertTrue(authRequest.getScope().contains(CustomScopeValue.DOC_CHECKING_APP));
-        assertEventTypesReceived(
-                auditTopic, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+        assertEventTypesReceivedByBothServices(
+                auditTopic,
+                txmaAuditQueue,
+                List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
     }
 
     private String givenAnExistingSession(CredentialTrustLevel credentialTrustLevel)
@@ -637,6 +670,16 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     spotQueue,
                     docAppPrivateKeyJwtSigner,
                     configurationParameters);
+        }
+
+        @Override
+        public boolean isTxmaAuditEnabled() {
+            return true;
+        }
+
+        @Override
+        public String getTxmaAuditQueueUrl() {
+            return txmaAuditQueue.getQueueUrl();
         }
     }
 }

@@ -11,6 +11,7 @@ module "oidc_authorize_role" {
     aws_iam_policy.lambda_sns_policy.arn,
     aws_iam_policy.ipv_capacity_parameter_policy.arn,
     aws_iam_policy.redis_parameter_policy.arn,
+    module.oidc_txma_audit.access_policy_arn
   ]
 }
 
@@ -28,6 +29,8 @@ module "authorize" {
     DOC_APP_API_ENABLED      = var.doc_app_api_enabled
     DYNAMO_ENDPOINT          = var.use_localstack ? var.lambda_dynamo_endpoint : null
     EVENTS_SNS_TOPIC_ARN     = aws_sns_topic.events.arn
+    TXMA_AUDIT_ENABLED       = contains(["staging"], var.environment)
+    TXMA_AUDIT_QUEUE_URL     = module.oidc_txma_audit.queue_url
     ENVIRONMENT              = var.environment
     HEADERS_CASE_INSENSITIVE = var.use_localstack ? "true" : "false"
     LOCALSTACK_ENDPOINT      = var.use_localstack ? var.localstack_endpoint : null
