@@ -12,6 +12,7 @@ module "ipv_processing_identity_role" {
     aws_iam_policy.lambda_sns_policy.arn,
     aws_iam_policy.pepper_parameter_policy.arn,
     aws_iam_policy.redis_parameter_policy.arn,
+    module.oidc_txma_audit.access_policy_arn
   ]
 }
 
@@ -27,6 +28,8 @@ module "processing-identity" {
     AUDIT_SIGNING_KEY_ALIAS  = local.audit_signing_key_alias_name
     DYNAMO_ENDPOINT          = var.use_localstack ? var.lambda_dynamo_endpoint : null
     EVENTS_SNS_TOPIC_ARN     = aws_sns_topic.events.arn
+    TXMA_AUDIT_ENABLED       = contains(["staging"], var.environment)
+    TXMA_AUDIT_QUEUE_URL     = module.oidc_txma_audit.queue_url
     ENVIRONMENT              = var.environment
     HEADERS_CASE_INSENSITIVE = var.use_localstack ? "true" : "false"
     LOCALSTACK_ENDPOINT      = var.use_localstack ? var.localstack_endpoint : null

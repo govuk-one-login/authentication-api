@@ -35,8 +35,8 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.startsWith;
 import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_AUTHORISATION_REQUESTED;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceivedByBothServices;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoAuditEventsReceivedByEitherService;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -71,6 +71,7 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                 CLIENT_SESSION_ID,
                 SESSION_ID,
                 withAuthenticationRequest(CLIENT_ID.getValue()).toParameters());
+        txmaAuditQueue.clear();
     }
 
     @Test
@@ -107,7 +108,8 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                 body.getRedirectUri(),
                 startsWith(configurationService.getIPVAuthorisationURI().toString()));
 
-        assertEventTypesReceived(auditTopic, List.of(IPV_AUTHORISATION_REQUESTED));
+        assertEventTypesReceivedByBothServices(
+                auditTopic, txmaAuditQueue, List.of(IPV_AUTHORISATION_REQUESTED));
     }
 
     @Test
@@ -121,7 +123,7 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
         assertThat(response, hasStatus(400));
 
-        assertNoAuditEventsReceived(auditTopic);
+        assertNoAuditEventsReceivedByEitherService(auditTopic, txmaAuditQueue);
     }
 
     private AuthenticationRequest withAuthenticationRequest(String clientId) {
@@ -201,6 +203,16 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
         @Override
         public boolean isIdentityEnabled() {
             return true;
+        }
+
+        @Override
+        public boolean isTxmaAuditEnabled() {
+            return true;
+        }
+
+        @Override
+        public String getTxmaAuditQueueUrl() {
+            return txmaAuditQueue.getQueueUrl();
         }
     }
 }

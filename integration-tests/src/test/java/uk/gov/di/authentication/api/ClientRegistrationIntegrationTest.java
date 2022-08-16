@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_RECEIVED;
 import static uk.gov.di.authentication.shared.entity.ServiceType.MANDATORY;
 import static uk.gov.di.authentication.shared.entity.ServiceType.OPTIONAL;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceivedByBothServices;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class ClientRegistrationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -35,7 +35,8 @@ public class ClientRegistrationIntegrationTest extends ApiGatewayHandlerIntegrat
 
     @BeforeEach
     void setup() {
-        handler = new ClientRegistrationHandler(TEST_CONFIGURATION_SERVICE);
+        handler = new ClientRegistrationHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
+        txmaAuditQueue.clear();
     }
 
     private static Stream<Arguments> registrationRequestParams() {
@@ -93,6 +94,7 @@ public class ClientRegistrationIntegrationTest extends ApiGatewayHandlerIntegrat
         assertThat(clientResponse.getBackChannelLogoutUri(), equalTo(backChannelLogoutUri));
         assertThat(clientResponse.getClientType(), equalTo(ClientType.WEB.getValue()));
 
-        assertEventTypesReceived(auditTopic, List.of(REGISTER_CLIENT_REQUEST_RECEIVED));
+        assertEventTypesReceivedByBothServices(
+                auditTopic, txmaAuditQueue, List.of(REGISTER_CLIENT_REQUEST_RECEIVED));
     }
 }
