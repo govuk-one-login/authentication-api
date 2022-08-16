@@ -12,15 +12,16 @@ import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceivedByBothServices;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoAuditEventsReceivedByEitherService;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class AuthenticateIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @BeforeEach
     void setup() {
-        handler = new AuthenticateHandler(TEST_CONFIGURATION_SERVICE);
+        handler = new AuthenticateHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
+        txmaAuditQueue.clear();
     }
 
     @Test
@@ -35,7 +36,8 @@ public class AuthenticateIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
         assertThat(response, hasStatus(204));
 
-        assertEventTypesReceived(auditTopic, List.of(ACCOUNT_MANAGEMENT_AUTHENTICATE));
+        assertEventTypesReceivedByBothServices(
+                auditTopic, txmaAuditQueue, List.of(ACCOUNT_MANAGEMENT_AUTHENTICATE));
     }
 
     @Test
@@ -50,6 +52,6 @@ public class AuthenticateIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
         assertThat(response, hasStatus(401));
 
-        assertNoAuditEventsReceived(auditTopic);
+        assertNoAuditEventsReceivedByEitherService(auditTopic, txmaAuditQueue);
     }
 }
