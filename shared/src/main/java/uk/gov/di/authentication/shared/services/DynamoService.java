@@ -288,7 +288,8 @@ public class DynamoService implements AuthenticationService {
         userProfileMapper.save(
                 userProfileMapper
                         .load(UserProfile.class, email.toLowerCase(Locale.ROOT))
-                        .setPhoneNumberVerified(verifiedStatus));
+                        .setPhoneNumberVerified(verifiedStatus)
+                        .setAccountVerified(true));
     }
 
     @Override
@@ -366,6 +367,14 @@ public class DynamoService implements AuthenticationService {
                         .withConsistentRead(false);
 
         return getUserProfile(queryExpression);
+    }
+
+    @Override
+    public void setAccountVerified(String email) {
+        userProfileMapper.save(
+                userProfileMapper
+                        .load(UserProfile.class, email.toLowerCase(Locale.ROOT))
+                        .setAccountVerified(true));
     }
 
     private UserProfile getUserProfile(DynamoDBQueryExpression<UserProfile> queryExpression) {

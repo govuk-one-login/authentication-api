@@ -191,6 +191,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         if (isRegistration && errorResponse.isEmpty()) {
             authenticationService.setMFAMethodVerifiedTrue(
                     session.getEmailAddress(), mfaMethodType);
+            authenticationService.setAccountVerified(session.getEmailAddress());
         }
 
         if (ErrorResponse.ERROR_1042.equals(errorResponse.orElse(null))) {

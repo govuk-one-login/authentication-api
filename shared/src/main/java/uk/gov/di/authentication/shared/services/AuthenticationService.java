@@ -39,6 +39,8 @@ public interface AuthenticationService {
 
     void updatePhoneNumberVerifiedStatus(String email, boolean verifiedStatus);
 
+    void setAccountVerified(String email);
+
     Optional<String> getPhoneNumber(String email);
 
     UserProfile getUserProfileFromSubject(String subject);
