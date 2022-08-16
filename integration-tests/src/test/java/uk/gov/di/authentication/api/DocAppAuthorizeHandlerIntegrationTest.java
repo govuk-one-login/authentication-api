@@ -39,8 +39,8 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.startsWith;
 import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.DOC_APP_AUTHORISATION_REQUESTED;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceivedByBothServices;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoAuditEventsReceivedByEitherService;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class DocAppAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -75,6 +75,7 @@ class DocAppAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegration
                 CLIENT_SESSION_ID,
                 SESSION_ID,
                 withAuthenticationRequest(RP_CLIENT_ID.getValue()).toParameters());
+        txmaAuditQueue.clear();
     }
 
     @Test
@@ -109,7 +110,8 @@ class DocAppAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegration
         assertThat(
                 body.getRedirectUri(),
                 startsWith(configurationService.getDocAppAuthorisationURI().toString()));
-        assertEventTypesReceived(auditTopic, List.of(DOC_APP_AUTHORISATION_REQUESTED));
+        assertEventTypesReceivedByBothServices(
+                auditTopic, txmaAuditQueue, List.of(DOC_APP_AUTHORISATION_REQUESTED));
     }
 
     @Test
@@ -123,7 +125,7 @@ class DocAppAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegration
 
         assertThat(response, hasStatus(400));
 
-        assertNoAuditEventsReceived(auditTopic);
+        assertNoAuditEventsReceivedByEitherService(auditTopic, txmaAuditQueue);
     }
 
     private AuthenticationRequest withAuthenticationRequest(String clientId) {
@@ -196,6 +198,16 @@ class DocAppAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegration
         @Override
         public String getDocAppEncryptionKeyID() {
             return ENCRYPTION_KEY_ID;
+        }
+
+        @Override
+        public boolean isTxmaAuditEnabled() {
+            return true;
+        }
+
+        @Override
+        public String getTxmaAuditQueueUrl() {
+            return txmaAuditQueue.getQueueUrl();
         }
     }
 }
