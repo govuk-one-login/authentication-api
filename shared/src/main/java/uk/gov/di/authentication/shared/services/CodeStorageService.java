@@ -206,4 +206,16 @@ public class CodeStorageService {
         throw new RuntimeException(
                 String.format("No redis prefix key configured for %s", notificationType));
     }
+
+    public boolean isValidOtpCode(
+            String emailAddress, String code, NotificationType notificationType) {
+        String prefix = getPrefixForNotificationType(notificationType);
+        String codeFromRedis =
+                redisConnectionService.getValue(prefix + HashHelper.hashSha256String(emailAddress));
+        if (code.equals(codeFromRedis)) {
+            deleteOtpCode(emailAddress, notificationType);
+            return true;
+        }
+        return false;
+    }
 }
