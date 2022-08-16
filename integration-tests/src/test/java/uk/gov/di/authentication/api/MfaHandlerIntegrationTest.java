@@ -19,7 +19,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.MFA_CODE_SENT;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceivedByBothServices;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -30,7 +30,8 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @BeforeEach
     void setup() throws Json.JsonException {
-        handler = new MfaHandler(TEST_CONFIGURATION_SERVICE);
+        handler = new MfaHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
+        txmaAuditQueue.clear();
         String subjectId = "new-subject";
         SESSION_ID = redis.createUnauthenticatedSessionWithEmail(USER_EMAIL);
         userStore.signUp(USER_EMAIL, USER_PASSWORD, new Subject(subjectId));
@@ -41,7 +42,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void
             shouldReturn204WithExistingRedisCachedCodeAndTriggerVerifyPhoneNotificationTypeWhenResendingVerifyPhoneCode() {
         String mockPreviouslyIssuedPhoneCode =
-                redis.generateAndSavePhoneNumberCode(USER_EMAIL, 900l);
+                redis.generateAndSavePhoneNumberCode(USER_EMAIL, 900L);
 
         var response =
                 makeRequest(
@@ -50,7 +51,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of());
 
         assertThat(response, hasStatus(204));
-        assertEventTypesReceived(auditTopic, List.of(MFA_CODE_SENT));
+        assertEventTypesReceivedByBothServices(auditTopic, txmaAuditQueue, List.of(MFA_CODE_SENT));
 
         List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
         assertThat(requests, hasSize(1));
@@ -68,7 +69,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of());
 
         assertThat(response, hasStatus(204));
-        assertEventTypesReceived(auditTopic, List.of(MFA_CODE_SENT));
+        assertEventTypesReceivedByBothServices(auditTopic, txmaAuditQueue, List.of(MFA_CODE_SENT));
 
         List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
         assertThat(requests, hasSize(1));
