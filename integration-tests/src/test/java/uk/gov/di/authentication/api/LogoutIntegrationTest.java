@@ -33,7 +33,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.hasEntry;
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.LOG_OUT_SUCCESS;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceived;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceivedByBothServices;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.isRedirect;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.isRedirectTo;
 import static uk.gov.di.authentication.sharedtest.matchers.UriMatcher.baseUri;
@@ -50,7 +50,8 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @BeforeEach
     void setup() {
-        handler = new LogoutHandler(TEST_CONFIGURATION_SERVICE);
+        handler = new LogoutHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
+        txmaAuditQueue.clear();
     }
 
     @Test
@@ -78,7 +79,8 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 baseUri(URI.create(REDIRECT_URL)),
                                 redirectQueryParameters(hasEntry("state", STATE)))));
 
-        assertEventTypesReceived(auditTopic, List.of(LOG_OUT_SUCCESS));
+        assertEventTypesReceivedByBothServices(
+                auditTopic, txmaAuditQueue, List.of(LOG_OUT_SUCCESS));
     }
 
     @Test
@@ -107,7 +109,8 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 baseUri(URI.create(REDIRECT_URL)),
                                 redirectQueryParameters(hasEntry("state", STATE)))));
 
-        assertEventTypesReceived(auditTopic, List.of(LOG_OUT_SUCCESS));
+        assertEventTypesReceivedByBothServices(
+                auditTopic, txmaAuditQueue, List.of(LOG_OUT_SUCCESS));
     }
 
     @Test
@@ -129,7 +132,8 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 baseUri(TEST_CONFIGURATION_SERVICE.getDefaultLogoutURI()),
                                 redirectQueryParameters(hasEntry("state", STATE)))));
 
-        assertEventTypesReceived(auditTopic, List.of(LOG_OUT_SUCCESS));
+        assertEventTypesReceivedByBothServices(
+                auditTopic, txmaAuditQueue, List.of(LOG_OUT_SUCCESS));
     }
 
     @Test
@@ -159,7 +163,8 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 redirectQueryParameters(
                                         hasEntry("error_code", "invalid_request")))));
 
-        assertEventTypesReceived(auditTopic, List.of(LOG_OUT_SUCCESS));
+        assertEventTypesReceivedByBothServices(
+                auditTopic, txmaAuditQueue, List.of(LOG_OUT_SUCCESS));
     }
 
     private SignedJWT setupClientAndSession(String sessionId, String clientSessionId)
