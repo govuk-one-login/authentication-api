@@ -27,6 +27,7 @@ public class UserProfile implements DynamoDBItem {
     public static final String ATTRIBUTE_PUBLIC_SUBJECT_ID = "PublicSubjectID";
     public static final String ATTRIBUTE_LEGACY_SUBJECT_ID = "LegacySubjectID";
     public static final String ATTRIBUTE_SALT = "salt";
+    public static final String ATTRIBUTE_ACCOUNT_VERIFIED = "accountVerified";
 
     private String email;
     private String subjectID;
@@ -40,6 +41,7 @@ public class UserProfile implements DynamoDBItem {
     private String publicSubjectID;
     private String legacySubjectID;
     private ByteBuffer salt;
+    private Boolean accountVerified = null;
 
     public UserProfile() {}
 
@@ -182,6 +184,16 @@ public class UserProfile implements DynamoDBItem {
         return this;
     }
 
+    @DynamoDBAttribute(attributeName = ATTRIBUTE_ACCOUNT_VERIFIED)
+    public Boolean getAccountVerified() {
+        return accountVerified;
+    }
+
+    public UserProfile setAccountVerified(Boolean accountVerified) {
+        this.accountVerified = accountVerified;
+        return this;
+    }
+
     @Override
     public Map<String, AttributeValue> toItem() {
         Map<String, AttributeValue> attributes = new HashMap<>();
@@ -214,6 +226,11 @@ public class UserProfile implements DynamoDBItem {
             attributes.put(ATTRIBUTE_LEGACY_SUBJECT_ID, new AttributeValue(getLegacySubjectID()));
         if (getSalt() != null)
             attributes.put(ATTRIBUTE_SALT, new AttributeValue().withB(getSalt()));
+        if (getAccountVerified() != null) {
+            attributes.put(
+                    ATTRIBUTE_ACCOUNT_VERIFIED,
+                    new AttributeValue().withBOOL(getAccountVerified()));
+        }
         return attributes;
     }
 }
