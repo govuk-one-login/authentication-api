@@ -14,7 +14,6 @@ import uk.gov.di.accountmanagement.entity.UpdatePhoneNumberRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
-import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -122,7 +121,6 @@ public class UpdatePhoneNumberHandler
                                     return generateApiGatewayProxyErrorResponse(
                                             400, ErrorResponse.ERROR_1035);
                                 }
-
                                 UserProfile userProfile =
                                         dynamoService.getUserProfileByEmail(
                                                 updatePhoneNumberRequest.getEmail());
