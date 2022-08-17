@@ -8,7 +8,6 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.state.UserContext;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -23,17 +22,17 @@ public class AuthAppCodeValidator extends MfaCodeValidator {
     private final int windowTime;
     private final int allowedWindows;
     private final AuthenticationService dynamoService;
-    private final UserContext userContext;
+    private final String emailAddress;
 
     public AuthAppCodeValidator(
-            UserContext userContext,
+            String emailAddress,
             CodeStorageService codeStorageService,
             ConfigurationService configurationService,
             AuthenticationService dynamoService,
             int maxRetries) {
-        super(userContext, codeStorageService, maxRetries);
+        super(emailAddress, codeStorageService, maxRetries);
         this.dynamoService = dynamoService;
-        this.userContext = userContext;
+        this.emailAddress = emailAddress;
         this.windowTime = configurationService.getAuthAppCodeWindowLength();
         this.allowedWindows = configurationService.getAuthAppCodeAllowedWindows();
     }
@@ -71,9 +70,7 @@ public class AuthAppCodeValidator extends MfaCodeValidator {
     }
 
     public Optional<String> getMfaCredentialValue() {
-        var userCredentials =
-                dynamoService.getUserCredentialsFromEmail(
-                        userContext.getSession().getEmailAddress());
+        var userCredentials = dynamoService.getUserCredentialsFromEmail(emailAddress);
 
         if (userCredentials == null) {
             LOG.info("User credentials not found");
