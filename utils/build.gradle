@@ -16,7 +16,8 @@ dependencies {
 
     testImplementation configurations.tests,
             configurations.s3,
-            configurations.lambda
+            configurations.lambda,
+            configurations.dynamodb
 
     testRuntimeOnly configurations.test_runtime
 }
