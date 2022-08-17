@@ -9,14 +9,17 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
-import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.shared.validation.SMSCodeValidator;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -29,7 +32,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.entity.NotificationType.PHONE_NUMBER_UPDATED;
-import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -51,12 +53,19 @@ class UpdatePhoneNumberHandlerTest {
 
     private final Json objectMapper = SerializationService.getInstance();
     private final AuditService auditService = mock(AuditService.class);
+    private final SMSCodeValidator smsCodeValidator = mock(SMSCodeValidator.class);
+    private final UserContext userContext = mock(UserContext.class);
 
     @BeforeEach
     public void setUp() {
         handler =
                 new UpdatePhoneNumberHandler(
-                        dynamoService, sqsClient, codeStorageService, auditService);
+                        dynamoService,
+                        sqsClient,
+                        codeStorageService,
+                        auditService,
+                        smsCodeValidator,
+                        userContext);
     }
 
     @Test
@@ -80,7 +89,8 @@ class UpdatePhoneNumberHandlerTest {
         proxyRequestContext.setIdentity(identityWithSourceIp("123.123.123.123"));
         proxyRequestContext.setAuthorizer(authorizerParams);
         event.setRequestContext(proxyRequestContext);
-        when(codeStorageService.isValidOtpCode(EMAIL_ADDRESS, OTP, VERIFY_PHONE_NUMBER))
+        when(codeStorageService.isValidOtpCode(
+                        EMAIL_ADDRESS, OTP, NotificationType.VERIFY_PHONE_NUMBER))
                 .thenReturn(true);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -135,7 +145,8 @@ class UpdatePhoneNumberHandlerTest {
         authorizerParams.put("principalId", SUBJECT.getValue());
         proxyRequestContext.setAuthorizer(authorizerParams);
         event.setRequestContext(proxyRequestContext);
-        when(codeStorageService.isValidOtpCode(EMAIL_ADDRESS, OTP, VERIFY_PHONE_NUMBER))
+        when(codeStorageService.isValidOtpCode(
+                        EMAIL_ADDRESS, OTP, NotificationType.VERIFY_PHONE_NUMBER))
                 .thenReturn(false);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
