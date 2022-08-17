@@ -173,7 +173,8 @@ class VerifyCodeHandlerTest {
                 makeCallWithCode(CODE, VERIFY_PHONE_NUMBER.toString());
 
         verify(codeStorageService).deleteOtpCode(TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER);
-        verify(authenticationService).updatePhoneNumberVerifiedStatus(TEST_EMAIL_ADDRESS, true);
+        verify(authenticationService)
+                .updatePhoneNumberAndAccountVerifiedStatus(TEST_EMAIL_ADDRESS, true);
         assertThat(result, hasStatus(204));
         assertThat(session.getCurrentCredentialStrength(), equalTo(MEDIUM_LEVEL));
         assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
@@ -219,7 +220,7 @@ class VerifyCodeHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1037));
         verify(authenticationService, never())
-                .updatePhoneNumberVerifiedStatus(TEST_EMAIL_ADDRESS, true);
+                .updatePhoneNumberAndAccountVerifiedStatus(TEST_EMAIL_ADDRESS, true);
     }
 
     @Test
@@ -267,7 +268,7 @@ class VerifyCodeHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1034));
         assertThat(session.getRetryCount(), equalTo(0));
         verify(authenticationService, never())
-                .updatePhoneNumberVerifiedStatus(TEST_EMAIL_ADDRESS, true);
+                .updatePhoneNumberAndAccountVerifiedStatus(TEST_EMAIL_ADDRESS, true);
         verify(codeStorageService)
                 .saveBlockedForEmail(
                         TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, BLOCKED_EMAIL_DURATION);

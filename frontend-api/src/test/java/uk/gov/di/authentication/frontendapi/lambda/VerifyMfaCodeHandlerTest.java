@@ -143,6 +143,7 @@ class VerifyMfaCodeHandlerTest {
         assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.AUTH_APP));
         verify(authenticationService)
                 .setMFAMethodVerifiedTrue(TEST_EMAIL_ADDRESS, MFAMethodType.AUTH_APP);
+        verify(authenticationService).setAccountVerified(TEST_EMAIL_ADDRESS);
         verify(codeStorageService, never())
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
@@ -205,6 +206,7 @@ class VerifyMfaCodeHandlerTest {
         assertThat(session.getVerifiedMfaMethodType(), equalTo(null));
         verify(authenticationService, never())
                 .setMFAMethodVerifiedTrue(TEST_EMAIL_ADDRESS, MFAMethodType.AUTH_APP);
+        verify(authenticationService, never()).setAccountVerified(TEST_EMAIL_ADDRESS);
         verifyNoInteractions(auditService);
         verifyNoInteractions(authAppCodeValidator);
         verifyNoInteractions(codeStorageService);
@@ -233,6 +235,7 @@ class VerifyMfaCodeHandlerTest {
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(authenticationService, never())
                 .setMFAMethodVerifiedTrue(TEST_EMAIL_ADDRESS, MFAMethodType.AUTH_APP);
+        verify(authenticationService, never()).setAccountVerified(TEST_EMAIL_ADDRESS);
         verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
         verify(auditService)
                 .submitAuditEvent(
@@ -267,6 +270,7 @@ class VerifyMfaCodeHandlerTest {
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(authenticationService, never())
                 .setMFAMethodVerifiedTrue(TEST_EMAIL_ADDRESS, MFAMethodType.AUTH_APP);
+        verify(authenticationService, never()).setAccountVerified(TEST_EMAIL_ADDRESS);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
         verify(auditService)
                 .submitAuditEvent(

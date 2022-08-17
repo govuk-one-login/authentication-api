@@ -198,7 +198,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     "MFA code has been successfully verified for MFA type: {}. RegistrationJourney: {}",
                     MFAMethodType.SMS.getValue(),
                     true);
-            authenticationService.updatePhoneNumberVerifiedStatus(session.getEmailAddress(), true);
+            authenticationService.updatePhoneNumberAndAccountVerifiedStatus(
+                    session.getEmailAddress(), true);
 
             var vectorOfTrust = VectorOfTrust.getDefaults();
 

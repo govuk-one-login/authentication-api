@@ -284,11 +284,12 @@ public class DynamoService implements AuthenticationService {
     }
 
     @Override
-    public void updatePhoneNumberVerifiedStatus(String email, boolean verifiedStatus) {
+    public void updatePhoneNumberAndAccountVerifiedStatus(String email, boolean verifiedStatus) {
         userProfileMapper.save(
                 userProfileMapper
                         .load(UserProfile.class, email.toLowerCase(Locale.ROOT))
-                        .setPhoneNumberVerified(verifiedStatus));
+                        .setPhoneNumberVerified(verifiedStatus)
+                        .setAccountVerified(verifiedStatus ? true : null));
     }
 
     @Override
@@ -366,6 +367,14 @@ public class DynamoService implements AuthenticationService {
                         .withConsistentRead(false);
 
         return getUserProfile(queryExpression);
+    }
+
+    @Override
+    public void setAccountVerified(String email) {
+        userProfileMapper.save(
+                userProfileMapper
+                        .load(UserProfile.class, email.toLowerCase(Locale.ROOT))
+                        .setAccountVerified(true));
     }
 
     private UserProfile getUserProfile(DynamoDBQueryExpression<UserProfile> queryExpression) {
