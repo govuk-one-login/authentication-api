@@ -8,24 +8,19 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
-import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.UpdatePhoneNumberRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
-import uk.gov.di.accountmanagement.services.CodeStorageService;
-import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.*;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.RequestBodyHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
-import uk.gov.di.authentication.shared.services.AuditService;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoService;
-import uk.gov.di.authentication.shared.services.RedisConnectionService;
-import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.authentication.shared.services.*;
+import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.shared.validation.SMSCodeValidator;
 
 import java.util.Map;
 
@@ -35,6 +30,7 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
+import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 
 public class UpdatePhoneNumberHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -45,6 +41,8 @@ public class UpdatePhoneNumberHandler
     private final CodeStorageService codeStorageService;
     private static final Logger LOG = LogManager.getLogger(UpdatePhoneNumberHandler.class);
     private final AuditService auditService;
+    private SMSCodeValidator smsCodeValidator;
+    private UserContext userContext;
 
     public UpdatePhoneNumberHandler() {
         this(ConfigurationService.getInstance());
@@ -54,11 +52,15 @@ public class UpdatePhoneNumberHandler
             DynamoService dynamoService,
             AwsSqsClient sqsClient,
             CodeStorageService codeStorageService,
-            AuditService auditService) {
+            AuditService auditService,
+            SMSCodeValidator smsCodeValidator,
+            UserContext userContext) {
         this.dynamoService = dynamoService;
         this.sqsClient = sqsClient;
         this.codeStorageService = codeStorageService;
         this.auditService = auditService;
+        this.smsCodeValidator = smsCodeValidator;
+        this.userContext = userContext;
     }
 
     public UpdatePhoneNumberHandler(ConfigurationService configurationService) {
@@ -71,6 +73,8 @@ public class UpdatePhoneNumberHandler
         this.codeStorageService =
                 new CodeStorageService(new RedisConnectionService(configurationService));
         this.auditService = new AuditService(configurationService);
+        this.smsCodeValidator =
+                new SMSCodeValidator(userContext, codeStorageService, dynamoService, 5);
     }
 
     @Override
@@ -95,15 +99,21 @@ public class UpdatePhoneNumberHandler
                                 UpdatePhoneNumberRequest updatePhoneNumberRequest =
                                         objectMapper.readValue(
                                                 input.getBody(), UpdatePhoneNumberRequest.class);
-                                boolean isValidOtpCode =
-                                        codeStorageService.isValidOtpCode(
-                                                updatePhoneNumberRequest.getEmail(),
-                                                updatePhoneNumberRequest.getOtp(),
-                                                NotificationType.VERIFY_PHONE_NUMBER);
-                                if (!isValidOtpCode) {
+
+                                var errorResponse =
+                                        smsCodeValidator.validateCode(
+                                                updatePhoneNumberRequest.getOtp());
+
+                                if (ErrorResponse.ERROR_1027.equals(errorResponse.orElse(null))) {
+                                    var session = userContext.getSession();
+                                    blockCodeForSessionAndResetCount(session);
+                                }
+
+                                if (ErrorResponse.ERROR_1035.equals(errorResponse.orElse(null))) {
                                     return generateApiGatewayProxyErrorResponse(
                                             400, ErrorResponse.ERROR_1020);
                                 }
+
                                 UserProfile userProfile =
                                         dynamoService.getUserProfileByEmail(
                                                 updatePhoneNumberRequest.getEmail());
@@ -143,5 +153,13 @@ public class UpdatePhoneNumberHandler
                                         400, ErrorResponse.ERROR_1001);
                             }
                         });
+    }
+
+    private void blockCodeForSessionAndResetCount(Session session) {
+        codeStorageService.saveBlockedForEmail(
+                session.getEmailAddress(),
+                CODE_BLOCKED_KEY_PREFIX,
+                ConfigurationService.getInstance().getBlockedEmailDuration());
+        codeStorageService.deleteIncorrectMfaCodeAttemptsCount(session.getEmailAddress());
     }
 }
