@@ -284,12 +284,12 @@ public class DynamoService implements AuthenticationService {
     }
 
     @Override
-    public void updatePhoneNumberVerifiedStatus(String email, boolean verifiedStatus) {
+    public void updatePhoneNumberAndAccountVerifiedStatus(String email, boolean verifiedStatus) {
         userProfileMapper.save(
                 userProfileMapper
                         .load(UserProfile.class, email.toLowerCase(Locale.ROOT))
                         .setPhoneNumberVerified(verifiedStatus)
-                        .setAccountVerified(true));
+                        .setAccountVerified(verifiedStatus ? true : null));
     }
 
     @Override

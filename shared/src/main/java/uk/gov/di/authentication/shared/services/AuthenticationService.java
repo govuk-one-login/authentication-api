@@ -37,7 +37,7 @@ public interface AuthenticationService {
 
     Optional<List<ClientConsent>> getUserConsents(String email);
 
-    void updatePhoneNumberVerifiedStatus(String email, boolean verifiedStatus);
+    void updatePhoneNumberAndAccountVerifiedStatus(String email, boolean verifiedStatus);
 
     void setAccountVerified(String email);
 

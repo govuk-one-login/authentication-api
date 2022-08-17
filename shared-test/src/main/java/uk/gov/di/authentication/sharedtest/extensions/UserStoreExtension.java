@@ -80,11 +80,11 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
 
     public void addPhoneNumber(String email, String phoneNumber) {
         dynamoService.updatePhoneNumber(email, phoneNumber);
-        dynamoService.updatePhoneNumberVerifiedStatus(email, true);
+        dynamoService.updatePhoneNumberAndAccountVerifiedStatus(email, true);
     }
 
     public void setPhoneNumberVerified(String email, boolean isVerified) {
-        dynamoService.updatePhoneNumberVerifiedStatus(email, isVerified);
+        dynamoService.updatePhoneNumberAndAccountVerifiedStatus(email, isVerified);
     }
 
     public List<MFAMethod> getMfaMethod(String email) {
