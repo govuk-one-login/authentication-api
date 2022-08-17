@@ -268,8 +268,11 @@ class IPVCallbackHandlerTest {
                                                 CLIENT_SESSION_ID),
                                         CLIENT_ID.getValue())));
 
-        verify(dynamoIdentityService)
-                .addAdditionalClaims(expectedPairwiseSub.getValue(), additionalClaims);
+        verify(dynamoIdentityService).saveIdentityClaims(
+                expectedPairwiseSub.getValue(),
+                additionalClaims,
+                LevelOfConfidence.MEDIUM_LEVEL.getValue(),
+                CORE_IDENTITY_CLAIM);
         verifyAuditEvent(IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED);
         verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
         verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED);

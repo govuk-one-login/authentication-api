@@ -397,7 +397,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             boolean identitySupported) {
         IdentityStoreExtension identityStore = new IdentityStoreExtension(ttl);
         if (Objects.nonNull(additionalClaims)) {
-            identityStore.addAdditionalClaims(PUBLIC_SUBJECT.getValue(), additionalClaims);
+            identityStore.saveIdentityClaims(PUBLIC_SUBJECT.getValue(), additionalClaims, null, null);
         }
         if (Objects.nonNull(coreIdentityJWT)) {
             identityStore.addCoreIdentityJWT(PUBLIC_SUBJECT.getValue(), coreIdentityJWT);

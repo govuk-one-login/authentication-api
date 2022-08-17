@@ -50,6 +50,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import static com.nimbusds.oauth2.sdk.OAuth2Error.ACCESS_DENIED_CODE;
+import static uk.gov.di.authentication.shared.entity.IdentityClaims.CORE_IDENTITY;
 import static uk.gov.di.authentication.shared.entity.IdentityClaims.VOT;
 import static uk.gov.di.authentication.shared.entity.IdentityClaims.VTM;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -339,7 +340,7 @@ public class IPVCallbackHandler
                                                 null);
                                     }
                                 }
-                                saveAdditionalClaimsToDynamo(pairwiseSubject, userIdentityUserInfo);
+                                saveIdentityClaimsToDynamo(pairwiseSubject, userIdentityUserInfo);
                                 var redirectURI =
                                         ConstructUriHelper.buildURI(
                                                 configurationService.getLoginURI().toString(),
@@ -363,7 +364,7 @@ public class IPVCallbackHandler
                         });
     }
 
-    private void saveAdditionalClaimsToDynamo(
+    private void saveIdentityClaimsToDynamo(
             Subject pairwiseIdentifier, UserInfo userIdentityUserInfo) {
         LOG.info("Checking for additional identity claims to save to dynamo");
         var additionalClaims = new HashMap<String, String>();
@@ -379,7 +380,13 @@ public class IPVCallbackHandler
                                                 .get(finalClaim)
                                                 .toString()));
         LOG.info("Additional identity claims present: {}", !additionalClaims.isEmpty());
-        dynamoIdentityService.addAdditionalClaims(pairwiseIdentifier.getValue(), additionalClaims);
+        dynamoIdentityService.saveIdentityClaims(
+                pairwiseIdentifier.getValue(),
+                additionalClaims,
+                (String)userIdentityUserInfo.getClaim(VOT.getValue()),
+                userIdentityUserInfo.getClaim(CORE_IDENTITY.getValue()));
+        // TODO: Consider behaviour if VOT/CI are null - DB update behaviour will retain existing values 
+        // and potentially cause issues during comparison with SPOT Response
     }
 
     private Optional<ErrorObject> validateUserIdentityResponse(UserInfo userIdentityUserInfo) {
@@ -417,10 +424,10 @@ public class IPVCallbackHandler
                                         .toJSONObject()
                                         .get(IdentityClaims.CREDENTIAL_JWT.getValue()))
                         .withClaim(
-                                IdentityClaims.CORE_IDENTITY.getValue(),
+                                CORE_IDENTITY.getValue(),
                                 userIdentityUserInfo
                                         .toJSONObject()
-                                        .get(IdentityClaims.CORE_IDENTITY.getValue()))
+                                        .get(CORE_IDENTITY.getValue()))
                         .withVtm(
                                 buildURI(
                                                 configurationService

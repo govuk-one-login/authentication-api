@@ -94,7 +94,7 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
         byte[] salt = setupUser();
         var pairwiseIdentifier =
                 calculatePairwiseIdentifier(INTERNAL_SUBJECT.getValue(), "test.com", salt);
-        identityStore.addAdditionalClaims(pairwiseIdentifier, emptyMap());
+        identityStore.saveIdentityClaims(pairwiseIdentifier, emptyMap(), null, null);
 
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", SESSION_ID);

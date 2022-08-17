@@ -67,11 +67,13 @@ public class DynamoIdentityService {
         }
     }
 
-    public void addAdditionalClaims(String subjectID, Map<String, String> additionalClaims) {
+    public void saveIdentityClaims(String subjectID, Map<String, String> additionalClaims, String ipvVot, Object ipvCoreIdentity) {
         var identityCredentials =
                 new IdentityCredentials()
                         .setSubjectID(subjectID)
                         .setAdditionalClaims(additionalClaims)
+                        .setIpvVot(ipvVot)
+                        .setIpvCoreIdentity(ipvCoreIdentity)
                         .setTimeToExist(
                                 NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS)
                                         .toInstant()
