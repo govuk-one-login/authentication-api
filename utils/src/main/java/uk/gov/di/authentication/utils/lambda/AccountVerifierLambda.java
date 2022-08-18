@@ -49,7 +49,6 @@ public class AccountVerifierLambda implements RequestHandler<Integer, Void> {
 
         LOG.info("Found {} matching records", result.getItems().size());
 
-        TransactWriteItemsRequest updateRequest = new TransactWriteItemsRequest();
         List<TransactWriteItem> updates = new ArrayList<>();
         if (result.getItems().isEmpty()) {
             LOG.info("No items found to update");
@@ -74,12 +73,22 @@ public class AccountVerifierLambda implements RequestHandler<Integer, Void> {
                                                                             ":accountVerified",
                                                                             new AttributeValue()
                                                                                     .withN("1")))));
+                            if (updates.size() == 25) {
+                                submit(client, updates);
+                                updates.clear();
+                            }
                         });
+
+        if (!updates.isEmpty()) submit(client, updates);
+        return null;
+    }
+
+    private void submit(AmazonDynamoDB client, List<TransactWriteItem> updates) {
+        TransactWriteItemsRequest updateRequest = new TransactWriteItemsRequest();
 
         updateRequest.withTransactItems(updates);
         var updateResult = client.transactWriteItems(updateRequest);
 
         LOG.info("Update status code = {}", updateResult.getSdkHttpMetadata().getHttpStatusCode());
-        return null;
     }
 }
