@@ -56,5 +56,6 @@ class PerformanceAnalysisAuditLambdaTest {
         assertThat(logEvent, hasObjectMessageProperty("request-id", "test-request-id"));
         assertThat(logEvent, hasObjectMessageProperty("timestamp", "test-timestamp"));
         assertThat(logEvent, hasObjectMessageProperty("event-name", "test-event-name"));
+        assertThat(logEvent, hasObjectMessageProperty("client-id", "test-client-id"));
     }
 }
