@@ -13,6 +13,7 @@ import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.UpdatePhoneNumberRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
@@ -22,8 +23,7 @@ import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.*;
-import uk.gov.di.authentication.shared.state.UserContext;
-import uk.gov.di.authentication.shared.validation.SMSCodeValidator;
+import uk.gov.di.authentication.shared.validation.MfaCodeValidatorFactory;
 
 import java.util.Map;
 
@@ -44,8 +44,7 @@ public class UpdatePhoneNumberHandler
     private final CodeStorageService codeStorageService;
     private static final Logger LOG = LogManager.getLogger(UpdatePhoneNumberHandler.class);
     private final AuditService auditService;
-    private SMSCodeValidator smsCodeValidator;
-    private UserContext userContext;
+    private MfaCodeValidatorFactory mfaCodeValidatorFactory;
 
     public UpdatePhoneNumberHandler() {
         this(ConfigurationService.getInstance());
@@ -56,14 +55,12 @@ public class UpdatePhoneNumberHandler
             AwsSqsClient sqsClient,
             CodeStorageService codeStorageService,
             AuditService auditService,
-            SMSCodeValidator smsCodeValidator,
-            UserContext userContext) {
+            MfaCodeValidatorFactory mfaCodeValidatorFactory) {
         this.dynamoService = dynamoService;
         this.sqsClient = sqsClient;
         this.codeStorageService = codeStorageService;
         this.auditService = auditService;
-        this.smsCodeValidator = smsCodeValidator;
-        this.userContext = userContext;
+        this.mfaCodeValidatorFactory = mfaCodeValidatorFactory;
     }
 
     public UpdatePhoneNumberHandler(ConfigurationService configurationService) {
@@ -76,8 +73,8 @@ public class UpdatePhoneNumberHandler
         this.codeStorageService =
                 new CodeStorageService(new RedisConnectionService(configurationService));
         this.auditService = new AuditService(configurationService);
-        this.smsCodeValidator =
-                new SMSCodeValidator(userContext, codeStorageService, dynamoService, 5);
+        this.mfaCodeValidatorFactory =
+                new MfaCodeValidatorFactory(configurationService, codeStorageService, dynamoService);
     }
 
     @Override
@@ -103,18 +100,27 @@ public class UpdatePhoneNumberHandler
                                         objectMapper.readValue(
                                                 input.getBody(), UpdatePhoneNumberRequest.class);
 
+                                var validator = mfaCodeValidatorFactory
+                                        .getMfaCodeValidator(MFAMethodType.SMS, false, updatePhoneNumberRequest.getEmail());
+
+                                if (validator.isEmpty()) {
+                                    return generateApiGatewayProxyErrorResponse(
+                                            400, ErrorResponse.ERROR_1002);
+                                }
+
                                 var errorResponse =
-                                        smsCodeValidator.validateCode(
+                                        validator.get().validateCode(
                                                 updatePhoneNumberRequest.getOtp());
 
                                 if (ErrorResponse.ERROR_1027.equals(errorResponse.orElse(null))) {
-                                    var session = userContext.getSession();
-                                    blockCodeForSessionAndResetCount(session);
+                                    blockCodeForSessionAndResetCount(updatePhoneNumberRequest.getEmail());
+                                    return generateApiGatewayProxyErrorResponse(
+                                            400, ErrorResponse.ERROR_1027);
                                 }
 
                                 if (ErrorResponse.ERROR_1035.equals(errorResponse.orElse(null))) {
                                     return generateApiGatewayProxyErrorResponse(
-                                            400, ErrorResponse.ERROR_1020);
+                                            400, ErrorResponse.ERROR_1035);
                                 }
 
                                 UserProfile userProfile =
@@ -158,11 +164,11 @@ public class UpdatePhoneNumberHandler
                         });
     }
 
-    private void blockCodeForSessionAndResetCount(Session session) {
+    private void blockCodeForSessionAndResetCount(String email) {
         codeStorageService.saveBlockedForEmail(
-                session.getEmailAddress(),
+                email,
                 CODE_BLOCKED_KEY_PREFIX,
                 ConfigurationService.getInstance().getBlockedEmailDuration());
-        codeStorageService.deleteIncorrectMfaCodeAttemptsCount(session.getEmailAddress());
+        codeStorageService.deleteIncorrectMfaCodeAttemptsCount(email);
     }
 }
