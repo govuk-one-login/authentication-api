@@ -14,6 +14,7 @@ import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.conditions.ConsentHelper;
 import uk.gov.di.authentication.shared.conditions.MfaHelper;
 import uk.gov.di.authentication.shared.conditions.TermsAndConditionsHelper;
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
@@ -100,6 +101,11 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         try {
             var persistentSessionId =
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
+            var clientId =
+                    userContext
+                            .getClient()
+                            .map(ClientRegistry::getClientID)
+                            .orElse(AuditService.UNKNOWN);
             Optional<UserProfile> userProfileMaybe =
                     authenticationService.getUserProfileByEmailMaybe(request.getEmail());
             if (userProfileMaybe.isEmpty() || userContext.getUserCredentials().isEmpty()) {
@@ -108,7 +114,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         FrontendAuditableEvent.NO_ACCOUNT_WITH_EMAIL,
                         context.getAwsRequestId(),
                         userContext.getSession().getSessionId(),
-                        AuditService.UNKNOWN,
+                        clientId,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         IpAddressHelper.extractIpAddress(input),
@@ -131,7 +137,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
                         context.getAwsRequestId(),
                         userContext.getSession().getSessionId(),
-                        AuditService.UNKNOWN,
+                        clientId,
                         userProfile.getSubjectID(),
                         userProfile.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
@@ -148,7 +154,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         FrontendAuditableEvent.INVALID_CREDENTIALS,
                         context.getAwsRequestId(),
                         userContext.getSession().getSessionId(),
-                        AuditService.UNKNOWN,
+                        clientId,
                         AuditService.UNKNOWN,
                         request.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
@@ -194,7 +200,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     LOG_IN_SUCCESS,
                     context.getAwsRequestId(),
                     userContext.getSession().getSessionId(),
-                    AuditService.UNKNOWN,
+                    clientId,
                     userProfile.getSubjectID(),
                     userProfile.getEmail(),
                     IpAddressHelper.extractIpAddress(input),

@@ -150,7 +150,8 @@ public class AuthorisationHandler
                                         e.getErrorObject(),
                                         context,
                                         ipAddress,
-                                        persistentSessionId);
+                                        persistentSessionId,
+                                        AuditService.UNKNOWN);
                             } catch (NullPointerException e) {
                                 LOG.warn(
                                         "No query string parameters are present in the Authentication request",
@@ -178,7 +179,8 @@ public class AuthorisationHandler
                                         authRequestError.get().getErrorObject(),
                                         context,
                                         ipAddress,
-                                        persistentSessionId);
+                                        persistentSessionId,
+                                        authRequest.getClientID().getValue());
                             } else {
                                 authRequest =
                                         RequestObjectToAuthRequestHelper.transform(authRequest);
@@ -211,7 +213,8 @@ public class AuthorisationHandler
                     OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS,
                     context,
                     ipAddress,
-                    persistentSessionId);
+                    persistentSessionId,
+                    authenticationRequest.getClientID().getValue());
         }
         var session = existingSession.orElseGet(sessionService::createSession);
         attachSessionIdToLogs(session);
@@ -298,13 +301,14 @@ public class AuthorisationHandler
             ErrorObject errorObject,
             Context context,
             String ipAddress,
-            String persistentSessionId) {
+            String persistentSessionId,
+            String clientId) {
 
         auditService.submitAuditEvent(
                 OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR,
                 context.getAwsRequestId(),
                 AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
+                clientId,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 ipAddress,

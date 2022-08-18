@@ -26,6 +26,7 @@ public class PerformanceAnalysisAuditLambda extends BaseAuditHandler {
         eventData.put("request-id", auditEvent.getRequestId());
         eventData.put("timestamp", auditEvent.getTimestamp());
         eventData.put("event-name", auditEvent.getEventName());
+        eventData.put("client-id", auditEvent.getClientId());
 
         LOG.info(new ObjectMessage(eventData));
     }
