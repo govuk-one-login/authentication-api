@@ -15,9 +15,7 @@ public class NotifyRequest {
 
     @Expose private String code;
 
-    public NotifyRequest(
-            String email,
-            uk.gov.di.authentication.shared.entity.NotificationType phoneNumberUpdated) {}
+    public NotifyRequest() {}
 
     public NotifyRequest(String destination, NotificationType notificationType, String code) {
         this.destination = destination;
