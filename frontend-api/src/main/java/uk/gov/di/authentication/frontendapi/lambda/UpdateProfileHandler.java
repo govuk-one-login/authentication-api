@@ -135,7 +135,13 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
 
         if (!session.validateSession(request.getEmail())) {
             LOG.info("Invalid session");
-            return generateErrorResponse(ErrorResponse.ERROR_1000, context);
+            return generateErrorResponse(
+                    ErrorResponse.ERROR_1000,
+                    context,
+                    AuditService.UNKNOWN,
+                    AuditService.UNKNOWN,
+                    AuditService.UNKNOWN,
+                    persistentSessionId);
         }
 
         AuditableEvent auditableEvent;
@@ -158,7 +164,13 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                     Optional<ErrorResponse> errorResponse =
                             ValidationHelper.validatePhoneNumber(phoneNumber);
                     if (errorResponse.isPresent()) {
-                        return generateErrorResponse(errorResponse.get(), context);
+                        return generateErrorResponse(
+                                errorResponse.get(),
+                                context,
+                                session.getSessionId(),
+                                auditableClientId,
+                                request.getEmail(),
+                                persistentSessionId);
                     }
                     authenticationService.updatePhoneNumber(
                             request.getEmail(), request.getProfileInformation());
@@ -173,14 +185,26 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                     ClientSession clientSession = userContext.getClientSession();
 
                     if (clientSession == null) {
-                        return generateErrorResponse(ErrorResponse.ERROR_1018, context);
+                        return generateErrorResponse(
+                                ErrorResponse.ERROR_1018,
+                                context,
+                                session.getSessionId(),
+                                auditableClientId,
+                                request.getEmail(),
+                                persistentSessionId);
                     }
                     AuthenticationRequest authorizationRequest;
                     try {
                         authorizationRequest =
                                 AuthenticationRequest.parse(clientSession.getAuthRequestParams());
                     } catch (ParseException e) {
-                        return generateErrorResponse(ErrorResponse.ERROR_1038, context);
+                        return generateErrorResponse(
+                                ErrorResponse.ERROR_1038,
+                                context,
+                                session.getSessionId(),
+                                auditableClientId,
+                                request.getEmail(),
+                                persistentSessionId);
                     }
                     String clientId = authorizationRequest.getClientID().getValue();
 
@@ -218,7 +242,13 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                 {
                     var base32 = new Base32(0, null, false, PAD_DEFAULT, CodecPolicy.STRICT);
                     if (!base32.isInAlphabet(request.getProfileInformation())) {
-                        return generateErrorResponse(ErrorResponse.ERROR_1041, context);
+                        return generateErrorResponse(
+                                ErrorResponse.ERROR_1041,
+                                context,
+                                session.getSessionId(),
+                                auditableClientId,
+                                request.getEmail(),
+                                persistentSessionId);
                     }
                     authenticationService.updateMFAMethod(
                             userContext.getSession().getEmailAddress(),
@@ -234,7 +264,13 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                 LOG.error(
                         "Encountered unexpected error while processing session: {}",
                         session.getSessionId());
-                return generateErrorResponse(ErrorResponse.ERROR_1013, context);
+                return generateErrorResponse(
+                        ErrorResponse.ERROR_1013,
+                        context,
+                        session.getSessionId(),
+                        auditableClientId,
+                        request.getEmail(),
+                        persistentSessionId);
         }
         auditService.submitAuditEvent(
                 auditableEvent,
@@ -289,8 +325,22 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
     }
 
     private APIGatewayProxyResponseEvent generateErrorResponse(
-            ErrorResponse errorResponse, Context context) {
-        onRequestValidationError(context);
+            ErrorResponse errorResponse,
+            Context context,
+            String sessionId,
+            String clientId,
+            String email,
+            String persistentSessionId) {
+        auditService.submitAuditEvent(
+                UPDATE_PROFILE_REQUEST_ERROR,
+                context.getAwsRequestId(),
+                sessionId,
+                clientId,
+                AuditService.UNKNOWN,
+                email,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                persistentSessionId);
         return generateApiGatewayProxyErrorResponse(400, errorResponse);
     }
 }
