@@ -38,6 +38,7 @@ import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.ipv.services.IPVTokenService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.entity.CoreIdentity;
 import uk.gov.di.authentication.shared.entity.IdentityClaims;
 import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
@@ -268,11 +269,12 @@ class IPVCallbackHandlerTest {
                                                 CLIENT_SESSION_ID),
                                         CLIENT_ID.getValue())));
 
-        verify(dynamoIdentityService).saveIdentityClaims(
-                expectedPairwiseSub.getValue(),
-                additionalClaims,
-                LevelOfConfidence.MEDIUM_LEVEL.getValue(),
-                CORE_IDENTITY_CLAIM);
+        verify(dynamoIdentityService)
+                .saveIdentityClaims(
+                        expectedPairwiseSub.getValue(),
+                        additionalClaims,
+                        LevelOfConfidence.MEDIUM_LEVEL.getValue(),
+                        objectMapper.readValue(CORE_IDENTITY_CLAIM, CoreIdentity.class));
         verifyAuditEvent(IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED);
         verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
         verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED);

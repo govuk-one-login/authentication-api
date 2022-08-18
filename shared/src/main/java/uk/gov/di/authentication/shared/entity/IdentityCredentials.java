@@ -12,7 +12,7 @@ public class IdentityCredentials {
     private long timeToExist;
     private Map<String, String> additionalClaims;
     private String ipvVot;
-    private Object ipvCoreIdentity;
+    private CoreIdentity ipvCoreIdentity;
 
     public IdentityCredentials() {}
 
@@ -67,11 +67,11 @@ public class IdentityCredentials {
     }
 
     @DynamoDBAttribute(attributeName = "IpvCoreIdentity")
-    public Object getIpvCoreIdentity() {
+    public CoreIdentity getIpvCoreIdentity() {
         return ipvCoreIdentity;
     }
 
-    public IdentityCredentials setIpvCoreIdentity(Object ipvCoreIdentity) {
+    public IdentityCredentials setIpvCoreIdentity(CoreIdentity ipvCoreIdentity) {
         this.ipvCoreIdentity = ipvCoreIdentity;
         return this;
     }
