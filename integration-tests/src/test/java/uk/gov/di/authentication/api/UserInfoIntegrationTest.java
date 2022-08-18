@@ -86,7 +86,6 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     OIDCScopeValue.EMAIL.getValue(),
                     OIDCScopeValue.PHONE.getValue());
     private static final Date EXPIRY_DATE = NowHelper.nowPlus(10, ChronoUnit.MINUTES);
-private static final String CORE_IDENTITY_CLAIM = null;
 
     @BeforeEach
     void setup() throws JOSEException, NoSuchAlgorithmException {

@@ -33,6 +33,7 @@ import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.PROCESSING_IDENTITY_REQUEST;
+import static uk.gov.di.authentication.shared.entity.IdentityClaims.VOT;
 import static uk.gov.di.authentication.shared.helpers.ClientSubjectHelper.calculatePairwiseIdentifier;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceivedByBothServices;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -94,7 +95,7 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
         byte[] salt = setupUser();
         var pairwiseIdentifier =
                 calculatePairwiseIdentifier(INTERNAL_SUBJECT.getValue(), "test.com", salt);
-        identityStore.saveIdentityClaims(pairwiseIdentifier, emptyMap(), null, null);
+        identityStore.saveIdentityClaims(pairwiseIdentifier, emptyMap(), VOT.getValue(), null);
 
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", SESSION_ID);

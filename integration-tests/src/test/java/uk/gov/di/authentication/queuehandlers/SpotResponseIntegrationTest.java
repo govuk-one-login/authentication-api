@@ -24,6 +24,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static uk.gov.di.authentication.shared.entity.IdentityClaims.VOT;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceivedByBothServices;
 
 public class SpotResponseIntegrationTest extends HandlerIntegrationTest<SQSEvent, Object> {
@@ -82,7 +83,7 @@ public class SpotResponseIntegrationTest extends HandlerIntegrationTest<SQSEvent
                         PERSISTENT_SESSION_ID,
                         REQUEST_ID,
                         CLIENT_ID);
-        identityStore.saveIdentityClaims(pairwiseIdentifier.getValue(), emptyMap(), null, null);
+        identityStore.saveIdentityClaims(pairwiseIdentifier.getValue(), emptyMap(), VOT.getValue(), null);
         handler.handleRequest(createSqsEvent(spotResponse), mock(Context.class));
 
         assertFalse(
