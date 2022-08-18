@@ -3,6 +3,7 @@ package uk.gov.di.authentication.utils.lambda;
 import com.amazonaws.http.SdkHttpMetadata;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+import com.amazonaws.services.dynamodbv2.model.ScanRequest;
 import com.amazonaws.services.dynamodbv2.model.ScanResult;
 import com.amazonaws.services.dynamodbv2.model.TransactWriteItemsRequest;
 import com.amazonaws.services.dynamodbv2.model.TransactWriteItemsResult;
@@ -11,7 +12,9 @@ import org.hamcrest.Description;
 import org.hamcrest.TypeSafeMatcher;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -22,8 +25,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasEntry;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyMap;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -35,69 +36,62 @@ class AccountVerifierLambdaTest {
     public static final String EMAIL_ATTRIBUTE = "Email";
     public static final String EMAIL_TEMPLATE = "test{0}@example.com";
     private final AmazonDynamoDB client = mock(AmazonDynamoDB.class);
-    private final AccountVerifierLambda handler = new AccountVerifierLambda(client);
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final AccountVerifierLambda handler = new AccountVerifierLambda(client, configurationService);
 
     @Test
     void shouldDoNoUpdatesWhenNothingFound() {
-        when(client.scan(anyString(), anyMap())).thenReturn(new ScanResult().withItems(List.of()));
+        when(client.scan(any(ScanRequest.class))).thenReturn(new ScanResult().withItems(List.of()));
 
-        handler.handleRequest(0, mock(Context.class));
+        handler.handleRequest(10, mock(Context.class));
 
         verify(client, never()).transactWriteItems(any());
     }
 
     @Test
     void shouldWriteNewFieldWhenRecordsFoundToUpdate() {
-        when(client.scan(anyString(), anyMap()))
+        when(client.scan(any(ScanRequest.class)))
                 .thenReturn(
                         new ScanResult()
                                 .withItems(
                                         List.of(
-                                                Map.of(
-                                                        EMAIL_ATTRIBUTE,
-                                                        new AttributeValue()
-                                                                .withS(getEmailAddress(1))),
-                                                Map.of(
-                                                        EMAIL_ATTRIBUTE,
-                                                        new AttributeValue()
-                                                                .withS(getEmailAddress(2))))));
+                                                validRecord(getEmailAddress(1), true, true),
+                                                validRecord(getEmailAddress(2), false, true))));
 
         var mockResult = generateTransactionResult(200);
         when(client.transactWriteItems(any())).thenReturn(mockResult);
 
-        handler.handleRequest(0, mock(Context.class));
+        handler.handleRequest(10, mock(Context.class));
 
         ArgumentCaptor<TransactWriteItemsRequest> request =
                 ArgumentCaptor.forClass(TransactWriteItemsRequest.class);
         verify(client).transactWriteItems(request.capture());
 
-        assertThat(request.getValue().getTransactItems(), hasSize(2));
+        assertThat(request.getValue().getTransactItems(), hasSize(1));
         assertThat(
                 request.getValue().getTransactItems().get(0).getUpdate().getKey(),
-                hasEntry(EMAIL_ATTRIBUTE, new AttributeValue(getEmailAddress(1))));
-        assertThat(
-                request.getValue().getTransactItems().get(1).getUpdate().getKey(),
                 hasEntry(EMAIL_ATTRIBUTE, new AttributeValue(getEmailAddress(2))));
     }
 
     @Test
-    void shouldBatchWriteRequestsWhenMore() {
+    void shouldPerformWriteRequestsInBatchesOf25() {
 
         var items =
                 IntStream.rangeClosed(1, 110)
                         .mapToObj(
-                                i ->
-                                        Map.of(
-                                                EMAIL_ATTRIBUTE,
-                                                new AttributeValue().withS(getEmailAddress(i))))
+                                i -> validRecord(getEmailAddress(i), false, true))
                         .collect(Collectors.toList());
 
-        when(client.scan(anyString(), anyMap())).thenReturn(new ScanResult().withItems(items));
+        when(client.scan(any(ScanRequest.class))).thenReturn(
+                new ScanResult().withItems(items.subList(0, 30)).withLastEvaluatedKey(keyFor(getEmailAddress(30))),
+                new ScanResult().withItems(items.subList(30, 60)).withLastEvaluatedKey(keyFor(getEmailAddress(60))),
+                new ScanResult().withItems(items.subList(60, 90)).withLastEvaluatedKey(keyFor(getEmailAddress(90))),
+                new ScanResult().withItems(items.subList(90, 110)));
 
         var mockResult = generateTransactionResult(200);
         when(client.transactWriteItems(any())).thenReturn(mockResult);
 
-        handler.handleRequest(0, mock(Context.class));
+        handler.handleRequest(30, mock(Context.class));
 
         ArgumentCaptor<TransactWriteItemsRequest> request =
                 ArgumentCaptor.forClass(TransactWriteItemsRequest.class);
@@ -144,6 +138,10 @@ class AccountVerifierLambdaTest {
                                 .collect(Collectors.toList())));
     }
 
+    private Map<String, AttributeValue> keyFor(String emailAddress) {
+        return Map.of(EMAIL_ATTRIBUTE, new AttributeValue(emailAddress));
+    }
+
     private TypeSafeMatcher<TransactWriteItemsRequest> hasUpdatesFor(List<String> addresses) {
         return new TypeSafeMatcher<TransactWriteItemsRequest>() {
             @Override
@@ -158,7 +156,7 @@ class AccountVerifierLambdaTest {
             @Override
             public void describeTo(Description description) {
                 description.appendText(
-                        format("updates for addresses [{}]", String.join(", ", addresses)));
+                        format("updates for addresses [{0}]", String.join(", ", addresses)));
             }
         };
     }
@@ -173,5 +171,17 @@ class AccountVerifierLambdaTest {
         when(metadata.getHttpStatusCode()).thenReturn(status);
         when(result.getSdkHttpMetadata()).thenReturn(metadata);
         return result;
+    }
+
+    private Map<String, AttributeValue> validRecord(String emailAddress, boolean accountVerified, boolean phoneVerified) {
+        var record = new HashMap<String, AttributeValue>();
+        record.put(EMAIL_ATTRIBUTE,
+                new AttributeValue()
+                        .withS(emailAddress));
+        record.put("PhoneNumberVerified", new AttributeValue().withN(phoneVerified ? "1" : "0"));
+        if (accountVerified) {
+            record.put("accountVerified", new AttributeValue().withN("1"));
+        }
+        return record;
     }
 }
