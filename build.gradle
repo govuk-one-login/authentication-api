@@ -28,7 +28,7 @@ ext {
         gson: "2.9.0",
         nimbusds_oauth_version: "9.38.1",
         nimbusds_jwt_version: "9.23",
-        protobuf_version: "3.21.1",
+        protobuf_version: "3.21.5",
         junit: "5.8.2",
         glassfish_version: "3.0.5",
         xray: "2.11.2"
@@ -141,7 +141,7 @@ subprojects {
 
         tests "org.junit.jupiter:junit-jupiter-api:${dependencyVersions.junit}",
                 "org.junit.jupiter:junit-jupiter-params:${dependencyVersions.junit}",
-                "org.mockito:mockito-core:4.6.1",
+                "org.mockito:mockito-core:4.7.0",
                 "org.awaitility:awaitility:4.2.0",
                 configurations.hamcrest
 
