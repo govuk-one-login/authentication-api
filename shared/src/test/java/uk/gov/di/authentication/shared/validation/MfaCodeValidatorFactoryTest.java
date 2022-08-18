@@ -27,7 +27,6 @@ class MfaCodeValidatorFactoryTest {
     void setUp() {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(configurationService.getCodeMaxRetriesRegistration()).thenReturn(999999);
-        when(session.getEmailAddress()).thenReturn("test@test.com");
 
         when(userContext.getSession()).thenReturn(session);
     }
@@ -36,7 +35,7 @@ class MfaCodeValidatorFactoryTest {
     void whenMfaMethodGeneratesAuthAppCodeValidator() {
         var mfaCodeValidator =
                 mfaCodeValidatorFactory.getMfaCodeValidator(
-                        MFAMethodType.AUTH_APP, true, userContext);
+                        MFAMethodType.AUTH_APP, true, "test@test.com");
 
         assertInstanceOf(AuthAppCodeValidator.class, mfaCodeValidator.get());
     }

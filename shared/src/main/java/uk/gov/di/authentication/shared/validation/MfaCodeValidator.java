@@ -4,7 +4,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
-import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Optional;
 
@@ -13,12 +12,11 @@ import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_B
 public abstract class MfaCodeValidator {
     protected final Logger LOG = LogManager.getLogger(this.getClass());
     private final CodeStorageService codeStorageService;
-    private final String emailAddress;
     private final int maxRetries;
+    private final String emailAddress;
 
-    MfaCodeValidator(
-            UserContext userContext, CodeStorageService codeStorageService, int maxRetries) {
-        this.emailAddress = userContext.getSession().getEmailAddress();
+    MfaCodeValidator(String emailAddress, CodeStorageService codeStorageService, int maxRetries) {
+        this.emailAddress = emailAddress;
         this.codeStorageService = codeStorageService;
         this.maxRetries = maxRetries;
     }

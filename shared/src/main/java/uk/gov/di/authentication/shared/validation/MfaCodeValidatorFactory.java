@@ -4,7 +4,6 @@ import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Optional;
 
@@ -24,7 +23,7 @@ public class MfaCodeValidatorFactory {
     }
 
     public Optional<MfaCodeValidator> getMfaCodeValidator(
-            MFAMethodType mfaMethodType, boolean isRegistration, UserContext userContext) {
+            MFAMethodType mfaMethodType, boolean isRegistration, String emailAddress) {
 
         switch (mfaMethodType) {
             case AUTH_APP:
@@ -34,7 +33,7 @@ public class MfaCodeValidatorFactory {
                                 : configurationService.getCodeMaxRetries();
                 return Optional.of(
                         new AuthAppCodeValidator(
-                                userContext,
+                                emailAddress,
                                 codeStorageService,
                                 configurationService,
                                 authenticationService,

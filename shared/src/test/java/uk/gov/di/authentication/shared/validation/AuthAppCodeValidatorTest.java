@@ -11,7 +11,6 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
-import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.sharedtest.helper.AuthAppStub;
 
 import java.util.Collections;
@@ -25,7 +24,6 @@ import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_B
 
 class AuthAppCodeValidatorTest {
     AuthAppCodeValidator authAppCodeValidator;
-    UserContext mockUserContext;
     Session mockSession;
     CodeStorageService mockCodeStorageService;
     ConfigurationService mockConfigurationService;
@@ -35,7 +33,6 @@ class AuthAppCodeValidatorTest {
 
     @BeforeEach
     void setUp() {
-        this.mockUserContext = mock(UserContext.class);
         this.mockSession = mock(Session.class);
         this.mockCodeStorageService = mock(CodeStorageService.class);
         this.mockConfigurationService = mock(ConfigurationService.class);
@@ -93,15 +90,13 @@ class AuthAppCodeValidatorTest {
     }
 
     private void setUpBlockedUser() {
-        when(mockSession.getEmailAddress()).thenReturn("blocked-email-address");
-        when(mockUserContext.getSession()).thenReturn(mockSession);
         when(mockCodeStorageService.isBlockedForEmail(
                         "blocked-email-address", CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
 
         this.authAppCodeValidator =
                 new AuthAppCodeValidator(
-                        mockUserContext,
+                        "blocked-email-address",
                         mockCodeStorageService,
                         mockConfigurationService,
                         mockDynamoService,
@@ -109,8 +104,6 @@ class AuthAppCodeValidatorTest {
     }
 
     private void setUpRetryLimitExceededUser() {
-        when(mockSession.getEmailAddress()).thenReturn("email-address");
-        when(mockUserContext.getSession()).thenReturn(mockSession);
         when(mockCodeStorageService.isBlockedForEmail("email-address", CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(false);
         when(mockCodeStorageService.getIncorrectMfaCodeAttemptsCount("email-address"))
@@ -118,7 +111,7 @@ class AuthAppCodeValidatorTest {
 
         this.authAppCodeValidator =
                 new AuthAppCodeValidator(
-                        mockUserContext,
+                        "email-address",
                         mockCodeStorageService,
                         mockConfigurationService,
                         mockDynamoService,
@@ -126,9 +119,6 @@ class AuthAppCodeValidatorTest {
     }
 
     private void setUpNoAuthCodeForUser() {
-        when(mockSession.getEmailAddress()).thenReturn("email-address");
-        when(mockSession.getRetryCount()).thenReturn(0);
-        when(mockUserContext.getSession()).thenReturn(mockSession);
         when(mockCodeStorageService.isBlockedForEmail("email-address", CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(false);
         when(mockDynamoService.getUserCredentialsFromEmail("email-address"))
@@ -136,7 +126,7 @@ class AuthAppCodeValidatorTest {
 
         this.authAppCodeValidator =
                 new AuthAppCodeValidator(
-                        mockUserContext,
+                        "email-address",
                         mockCodeStorageService,
                         mockConfigurationService,
                         mockDynamoService,
@@ -146,7 +136,6 @@ class AuthAppCodeValidatorTest {
     private void setUpValidAuthCode() {
         when(mockSession.getEmailAddress()).thenReturn("email-address");
         when(mockSession.getRetryCount()).thenReturn(0);
-        when(mockUserContext.getSession()).thenReturn(mockSession);
         when(mockCodeStorageService.isBlockedForEmail("email-address", CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(false);
         when(mockConfigurationService.getAuthAppCodeAllowedWindows()).thenReturn(9);
@@ -164,7 +153,7 @@ class AuthAppCodeValidatorTest {
 
         this.authAppCodeValidator =
                 new AuthAppCodeValidator(
-                        mockUserContext,
+                        "email-address",
                         mockCodeStorageService,
                         mockConfigurationService,
                         mockDynamoService,

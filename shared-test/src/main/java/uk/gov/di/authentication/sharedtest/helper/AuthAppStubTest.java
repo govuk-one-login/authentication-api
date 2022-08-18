@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
-import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.shared.validation.AuthAppCodeValidator;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -20,7 +19,7 @@ class AuthAppStubTest {
         this.authAppStub = new AuthAppStub();
         this.authAppCodeValidator =
                 new AuthAppCodeValidator(
-                        mock(UserContext.class),
+                        mock(String.class),
                         mock(CodeStorageService.class),
                         mock(ConfigurationService.class),
                         mock(DynamoService.class),
