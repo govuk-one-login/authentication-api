@@ -65,7 +65,7 @@ data "aws_iam_policy_document" "metrics_access_policy_document" {
 }
 
 resource "aws_iam_policy" "metrics_access_policy" {
-  count = contains(["integration", "production"], var.environment) ? 1 : 0
+  count = contains(["integration", "production", "staging"], var.environment) ? 1 : 0
 
   name        = "grafana-metrics-read-only-policy"
   description = "IAM policy for read-only access to Cloudwatch metrics"
@@ -74,7 +74,7 @@ resource "aws_iam_policy" "metrics_access_policy" {
 }
 
 resource "aws_iam_role_policy_attachment" "metrics_access" {
-  count      = contains(["integration", "production"], var.environment) ? 1 : 0
+  count      = contains(["integration", "production", "staging"], var.environment) ? 1 : 0
   role       = aws_iam_role.grafana_metrics_read_only_role[0].name
   policy_arn = aws_iam_policy.metrics_access_policy[0].arn
 }
