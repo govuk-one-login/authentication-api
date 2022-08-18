@@ -4,23 +4,20 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
-import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Optional;
 
 public class SMSCodeValidator extends MfaCodeValidator {
 
     private final AuthenticationService dynamoService;
-    private final UserContext userContext;
 
     public SMSCodeValidator(
-            UserContext userContext,
+            String email,
             CodeStorageService codeStorageService,
             AuthenticationService dynamoService,
             int maxRetries) {
-        super(userContext, codeStorageService, maxRetries);
+        super(email, codeStorageService, maxRetries);
         this.dynamoService = dynamoService;
-        this.userContext = userContext;
     }
 
     @Override

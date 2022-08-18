@@ -26,6 +26,7 @@ public class SMSCodeValidatorTest {
     DynamoService mockDynamoService;
 
     private final int MAX_RETRIES = 5;
+    private final String EMAIL_ADDRESS = "email-address";
 
     @BeforeEach
     void setUp() {
@@ -61,41 +62,42 @@ public class SMSCodeValidatorTest {
     }
 
     private void setUpBlockedUser() {
-        when(mockSession.getEmailAddress()).thenReturn("blocked-email-address");
+        String BLOCKED_EMAIL_ADDRESS = "blocked-email-address";
+        when(mockSession.getEmailAddress()).thenReturn(BLOCKED_EMAIL_ADDRESS);
         when(mockUserContext.getSession()).thenReturn(mockSession);
         when(mockCodeStorageService.isBlockedForEmail(
-                        "blocked-email-address", CODE_BLOCKED_KEY_PREFIX))
+                BLOCKED_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
 
         this.smsCodeValidator =
                 new SMSCodeValidator(
-                        mockUserContext, mockCodeStorageService, mockDynamoService, MAX_RETRIES);
+                        BLOCKED_EMAIL_ADDRESS, mockCodeStorageService, mockDynamoService, MAX_RETRIES);
     }
 
     private void setUpRetryLimitExceededUser() {
-        when(mockSession.getEmailAddress()).thenReturn("email-address");
+        when(mockSession.getEmailAddress()).thenReturn(EMAIL_ADDRESS);
         when(mockUserContext.getSession()).thenReturn(mockSession);
-        when(mockCodeStorageService.isBlockedForEmail("email-address", CODE_BLOCKED_KEY_PREFIX))
+        when(mockCodeStorageService.isBlockedForEmail(EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(false);
-        when(mockCodeStorageService.getIncorrectMfaCodeAttemptsCount("email-address"))
+        when(mockCodeStorageService.getIncorrectMfaCodeAttemptsCount(EMAIL_ADDRESS))
                 .thenReturn(MAX_RETRIES + 1);
 
         this.smsCodeValidator =
                 new SMSCodeValidator(
-                        mockUserContext, mockCodeStorageService, mockDynamoService, MAX_RETRIES);
+                        EMAIL_ADDRESS, mockCodeStorageService, mockDynamoService, MAX_RETRIES);
     }
 
     private void setUpInvalidOtp() {
-        when(mockSession.getEmailAddress()).thenReturn("email-address");
+        when(mockSession.getEmailAddress()).thenReturn(EMAIL_ADDRESS);
         when(mockUserContext.getSession()).thenReturn(mockSession);
         when(mockCodeStorageService.isValidOtpCode(
-                        "email-address",
+                EMAIL_ADDRESS,
                         CODE_BLOCKED_KEY_PREFIX,
                         NotificationType.VERIFY_PHONE_NUMBER))
                 .thenReturn(false);
 
         this.smsCodeValidator =
                 new SMSCodeValidator(
-                        mockUserContext, mockCodeStorageService, mockDynamoService, MAX_RETRIES);
+                        EMAIL_ADDRESS, mockCodeStorageService, mockDynamoService, MAX_RETRIES);
     }
 }
