@@ -60,8 +60,7 @@ class UpdatePhoneNumberHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final SMSCodeValidator smsCodeValidator = mock(SMSCodeValidator.class);
     private final MfaCodeValidatorFactory mfaCodeValidatorFactory =
-            new MfaCodeValidatorFactory(
-                    configurationService, codeStorageService, dynamoService);
+            new MfaCodeValidatorFactory(configurationService, codeStorageService, dynamoService);
 
     @BeforeEach
     public void setUp() {
@@ -168,10 +167,13 @@ class UpdatePhoneNumberHandlerTest {
     }
 
     @Test
-    public void shouldReturn400AndBlockCodeWhenUserEnteredInvalidOtpCodeTooManyTimes() throws Json.JsonException {
+    public void shouldReturn400AndBlockCodeWhenUserEnteredInvalidOtpCodeTooManyTimes()
+            throws Json.JsonException {
         var mfaCodeValidatorFactory = mock(MfaCodeValidatorFactory.class);
-        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any())).thenReturn(Optional.of(smsCodeValidator));
-        when(smsCodeValidator.validateCode(any())).thenReturn(Optional.of(ErrorResponse.ERROR_1027));
+        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
+                .thenReturn(Optional.of(smsCodeValidator));
+        when(smsCodeValidator.validateCode(any()))
+                .thenReturn(Optional.of(ErrorResponse.ERROR_1027));
 
         when(dynamoService.getSubjectFromEmail(EMAIL_ADDRESS)).thenReturn(SUBJECT);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -186,7 +188,7 @@ class UpdatePhoneNumberHandlerTest {
         proxyRequestContext.setAuthorizer(authorizerParams);
         event.setRequestContext(proxyRequestContext);
         when(codeStorageService.isValidOtpCode(
-                EMAIL_ADDRESS, OTP, NotificationType.VERIFY_PHONE_NUMBER))
+                        EMAIL_ADDRESS, OTP, NotificationType.VERIFY_PHONE_NUMBER))
                 .thenReturn(false);
         when(codeStorageService.isBlockedForEmail(any(), any())).thenReturn(true);
 
@@ -200,5 +202,4 @@ class UpdatePhoneNumberHandlerTest {
         assertThat(result, hasBody(expectedResponse));
         verifyNoInteractions(auditService);
     }
-
 }
