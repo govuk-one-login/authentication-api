@@ -66,12 +66,15 @@ public class SMSCodeValidatorTest {
         when(mockSession.getEmailAddress()).thenReturn(BLOCKED_EMAIL_ADDRESS);
         when(mockUserContext.getSession()).thenReturn(mockSession);
         when(mockCodeStorageService.isBlockedForEmail(
-                BLOCKED_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
+                        BLOCKED_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
 
         this.smsCodeValidator =
                 new SMSCodeValidator(
-                        BLOCKED_EMAIL_ADDRESS, mockCodeStorageService, mockDynamoService, MAX_RETRIES);
+                        BLOCKED_EMAIL_ADDRESS,
+                        mockCodeStorageService,
+                        mockDynamoService,
+                        MAX_RETRIES);
     }
 
     private void setUpRetryLimitExceededUser() {
@@ -91,7 +94,7 @@ public class SMSCodeValidatorTest {
         when(mockSession.getEmailAddress()).thenReturn(EMAIL_ADDRESS);
         when(mockUserContext.getSession()).thenReturn(mockSession);
         when(mockCodeStorageService.isValidOtpCode(
-                EMAIL_ADDRESS,
+                        EMAIL_ADDRESS,
                         CODE_BLOCKED_KEY_PREFIX,
                         NotificationType.VERIFY_PHONE_NUMBER))
                 .thenReturn(false);

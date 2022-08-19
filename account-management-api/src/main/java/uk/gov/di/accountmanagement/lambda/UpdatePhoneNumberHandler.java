@@ -73,7 +73,8 @@ public class UpdatePhoneNumberHandler
                 new CodeStorageService(new RedisConnectionService(configurationService));
         this.auditService = new AuditService(configurationService);
         this.mfaCodeValidatorFactory =
-                new MfaCodeValidatorFactory(configurationService, codeStorageService, dynamoService);
+                new MfaCodeValidatorFactory(
+                        configurationService, codeStorageService, dynamoService);
     }
 
     @Override
@@ -99,8 +100,11 @@ public class UpdatePhoneNumberHandler
                                         objectMapper.readValue(
                                                 input.getBody(), UpdatePhoneNumberRequest.class);
 
-                                var validator = mfaCodeValidatorFactory
-                                        .getMfaCodeValidator(MFAMethodType.SMS, false, updatePhoneNumberRequest.getEmail());
+                                var validator =
+                                        mfaCodeValidatorFactory.getMfaCodeValidator(
+                                                MFAMethodType.SMS,
+                                                false,
+                                                updatePhoneNumberRequest.getEmail());
 
                                 if (validator.isEmpty()) {
                                     return generateApiGatewayProxyErrorResponse(
@@ -108,11 +112,13 @@ public class UpdatePhoneNumberHandler
                                 }
 
                                 var errorResponse =
-                                        validator.get().validateCode(
-                                                updatePhoneNumberRequest.getOtp());
+                                        validator
+                                                .get()
+                                                .validateCode(updatePhoneNumberRequest.getOtp());
 
                                 if (ErrorResponse.ERROR_1027.equals(errorResponse.orElse(null))) {
-                                    blockCodeForSessionAndResetCount(updatePhoneNumberRequest.getEmail());
+                                    blockCodeForSessionAndResetCount(
+                                            updatePhoneNumberRequest.getEmail());
                                     return generateApiGatewayProxyErrorResponse(
                                             400, ErrorResponse.ERROR_1027);
                                 }
