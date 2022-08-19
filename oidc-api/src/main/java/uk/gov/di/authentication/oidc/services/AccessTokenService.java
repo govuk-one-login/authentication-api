@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.oidc.services;
 
+import com.google.gson.Gson;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.jwt.util.DateUtils;
@@ -90,7 +91,9 @@ public class AccessTokenService {
                 throw new AccessTokenException("Client not found", BearerTokenError.INVALID_TOKEN);
             }
             var scopes =
-                    JSONArrayUtils.parse(signedJWT.getJWTClaimsSet().getClaim("scope").toString())
+                    JSONArrayUtils.parse(
+                                    new Gson()
+                                            .toJson(signedJWT.getJWTClaimsSet().getClaim("scope")))
                             .stream()
                             .map(Objects::toString)
                             .collect(Collectors.toList());
@@ -168,7 +171,7 @@ public class AccessTokenService {
             return null;
         }
         var identityClaims =
-                JSONArrayUtils.parse(claimsSet.getClaim("claims").toString()).stream()
+                JSONArrayUtils.parse(new Gson().toJson(claimsSet.getClaim("claims"))).stream()
                         .map(Objects::toString)
                         .collect(Collectors.toList());
         if (!ValidClaims.getAllValidClaims().containsAll(identityClaims)) {

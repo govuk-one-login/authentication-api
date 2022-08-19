@@ -4,6 +4,7 @@ import com.amazonaws.services.kms.model.GetPublicKeyRequest;
 import com.amazonaws.services.kms.model.GetPublicKeyResult;
 import com.amazonaws.services.kms.model.SignRequest;
 import com.amazonaws.services.kms.model.SignResult;
+import com.google.gson.Gson;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -280,10 +281,15 @@ public class TokenServiceTest {
                         .getClaim("claims"));
         JSONArray jsonarray =
                 JSONArrayUtils.parse(
-                        SignedJWT.parse(tokenResponse.getOIDCTokens().getAccessToken().getValue())
-                                .getJWTClaimsSet()
-                                .getClaim("claims")
-                                .toString());
+                        new Gson()
+                                .toJson(
+                                        SignedJWT.parse(
+                                                        tokenResponse
+                                                                .getOIDCTokens()
+                                                                .getAccessToken()
+                                                                .getValue())
+                                                .getJWTClaimsSet()
+                                                .getClaim("claims")));
 
         assertTrue(jsonarray.contains("nickname"));
         assertTrue(jsonarray.contains("birthdate"));
