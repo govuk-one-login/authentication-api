@@ -8,7 +8,7 @@ module "account_management_api_send_notification_role" {
     aws_iam_policy.dynamo_am_user_read_access_policy.arn,
     aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
     aws_iam_policy.parameter_policy.arn,
-    module.acct_mgmt_txma_audit.access_policy_arn
+    module.account_management_txma_audit.access_policy_arn
   ]
 }
 
@@ -28,7 +28,7 @@ module "send_otp_notification" {
     REDIS_KEY               = local.redis_key
     EVENTS_SNS_TOPIC_ARN    = data.aws_sns_topic.events.arn
     TXMA_AUDIT_ENABLED      = contains(["staging"], var.environment)
-    TXMA_AUDIT_QUEUE_URL    = module.acct_mgmt_txma_audit.queue_url
+    TXMA_AUDIT_QUEUE_URL    = module.account_management_txma_audit.queue_url
     AUDIT_SIGNING_KEY_ALIAS = local.audit_signing_key_alias_name
   }
   handler_function_name = "uk.gov.di.accountmanagement.lambda.SendOtpNotificationHandler::handleRequest"
