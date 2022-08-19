@@ -9,27 +9,33 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
-import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.CodeStorageService;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.authentication.shared.validation.MfaCodeValidatorFactory;
+import uk.gov.di.authentication.shared.validation.SMSCodeValidator;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.accountmanagement.entity.NotificationType.PHONE_NUMBER_UPDATED;
-import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.identityWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -51,12 +57,22 @@ class UpdatePhoneNumberHandlerTest {
 
     private final Json objectMapper = SerializationService.getInstance();
     private final AuditService auditService = mock(AuditService.class);
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final SMSCodeValidator smsCodeValidator = mock(SMSCodeValidator.class);
+    private final MfaCodeValidatorFactory mfaCodeValidatorFactory =
+            new MfaCodeValidatorFactory(configurationService, codeStorageService, dynamoService);
 
     @BeforeEach
     public void setUp() {
+        when(configurationService.getCodeMaxRetries()).thenReturn(5);
+        when(configurationService.getCodeMaxRetriesRegistration()).thenReturn(999999);
         handler =
                 new UpdatePhoneNumberHandler(
-                        dynamoService, sqsClient, codeStorageService, auditService);
+                        dynamoService,
+                        sqsClient,
+                        codeStorageService,
+                        auditService,
+                        mfaCodeValidatorFactory);
     }
 
     @Test
@@ -80,7 +96,8 @@ class UpdatePhoneNumberHandlerTest {
         proxyRequestContext.setIdentity(identityWithSourceIp("123.123.123.123"));
         proxyRequestContext.setAuthorizer(authorizerParams);
         event.setRequestContext(proxyRequestContext);
-        when(codeStorageService.isValidOtpCode(EMAIL_ADDRESS, OTP, VERIFY_PHONE_NUMBER))
+        when(codeStorageService.isValidOtpCode(
+                        EMAIL_ADDRESS, OTP, NotificationType.VERIFY_PHONE_NUMBER))
                 .thenReturn(true);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -135,7 +152,8 @@ class UpdatePhoneNumberHandlerTest {
         authorizerParams.put("principalId", SUBJECT.getValue());
         proxyRequestContext.setAuthorizer(authorizerParams);
         event.setRequestContext(proxyRequestContext);
-        when(codeStorageService.isValidOtpCode(EMAIL_ADDRESS, OTP, VERIFY_PHONE_NUMBER))
+        when(codeStorageService.isValidOtpCode(
+                        EMAIL_ADDRESS, OTP, NotificationType.VERIFY_PHONE_NUMBER))
                 .thenReturn(false);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -143,7 +161,43 @@ class UpdatePhoneNumberHandlerTest {
         verify(dynamoService, times(0)).updatePhoneNumber(EMAIL_ADDRESS, INVALID_PHONE_NUMBER);
         NotifyRequest notifyRequest = new NotifyRequest(INVALID_PHONE_NUMBER, PHONE_NUMBER_UPDATED);
         verify(sqsClient, times(0)).send(objectMapper.writeValueAsString(notifyRequest));
-        String expectedResponse = objectMapper.writeValueAsString(ErrorResponse.ERROR_1020);
+        String expectedResponse = objectMapper.writeValueAsString(ErrorResponse.ERROR_1035);
+        assertThat(result, hasBody(expectedResponse));
+        verifyNoInteractions(auditService);
+    }
+
+    @Test
+    public void shouldReturn400WhenOtpCodeEnteredTooManyTimes() throws Json.JsonException {
+        var mfaCodeValidatorFactory = mock(MfaCodeValidatorFactory.class);
+        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
+                .thenReturn(Optional.of(smsCodeValidator));
+        when(smsCodeValidator.validateCode(any()))
+                .thenReturn(Optional.of(ErrorResponse.ERROR_1027));
+
+        when(dynamoService.getSubjectFromEmail(EMAIL_ADDRESS)).thenReturn(SUBJECT);
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setBody(
+                format(
+                        "{\"email\": \"%s\", \"phoneNumber\": \"%s\", \"otp\": \"%s\"  }",
+                        EMAIL_ADDRESS, INVALID_PHONE_NUMBER, OTP));
+        APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =
+                new APIGatewayProxyRequestEvent.ProxyRequestContext();
+        Map<String, Object> authorizerParams = new HashMap<>();
+        authorizerParams.put("principalId", SUBJECT.getValue());
+        proxyRequestContext.setAuthorizer(authorizerParams);
+        event.setRequestContext(proxyRequestContext);
+        when(codeStorageService.isValidOtpCode(
+                        EMAIL_ADDRESS, OTP, NotificationType.VERIFY_PHONE_NUMBER))
+                .thenReturn(false);
+        when(codeStorageService.isBlockedForEmail(any(), any())).thenReturn(true);
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+        verify(dynamoService, times(0)).updatePhoneNumber(EMAIL_ADDRESS, INVALID_PHONE_NUMBER);
+        NotifyRequest notifyRequest = new NotifyRequest(INVALID_PHONE_NUMBER, PHONE_NUMBER_UPDATED);
+        verify(sqsClient, times(0)).send(objectMapper.writeValueAsString(notifyRequest));
+        String expectedResponse = objectMapper.writeValueAsString(ErrorResponse.ERROR_1027);
         assertThat(result, hasBody(expectedResponse));
         verifyNoInteractions(auditService);
     }

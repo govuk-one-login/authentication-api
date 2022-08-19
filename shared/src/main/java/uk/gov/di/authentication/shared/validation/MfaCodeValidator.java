@@ -3,6 +3,7 @@ package uk.gov.di.authentication.shared.validation;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 
 import java.util.Optional;
@@ -39,4 +40,8 @@ public abstract class MfaCodeValidator {
     }
 
     public abstract Optional<ErrorResponse> validateCode(String code);
+
+    boolean isCodeValid(String code, NotificationType notificationType) {
+        return codeStorageService.isValidOtpCode(emailAddress, code, notificationType);
+    }
 }
