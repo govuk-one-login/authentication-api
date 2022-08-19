@@ -30,7 +30,7 @@ module "reset_password" {
     EMAIL_QUEUE_URL          = aws_sqs_queue.email_queue.id
     ENVIRONMENT              = var.environment
     EVENTS_SNS_TOPIC_ARN     = aws_sns_topic.events.arn
-    TXMA_AUDIT_ENABLED       = contains(["staging"], var.environment)
+    TXMA_AUDIT_ENABLED       = true
     TXMA_AUDIT_QUEUE_URL     = module.oidc_txma_audit.queue_url
     AUDIT_SIGNING_KEY_ALIAS  = local.audit_signing_key_alias_name
     REDIS_KEY                = local.redis_key

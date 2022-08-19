@@ -95,7 +95,7 @@ resource "aws_lambda_function" "spot_response_lambda" {
       DYNAMO_ENDPOINT         = var.use_localstack ? var.lambda_dynamo_endpoint : null
       ENVIRONMENT             = var.environment
       EVENTS_SNS_TOPIC_ARN    = aws_sns_topic.events.arn
-      TXMA_AUDIT_ENABLED      = contains(["staging"], var.environment)
+      TXMA_AUDIT_ENABLED      = true
       TXMA_AUDIT_QUEUE_URL    = module.oidc_txma_audit.queue_url
       FRONTEND_BASE_URL       = module.dns.frontend_url
     })
