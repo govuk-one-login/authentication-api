@@ -127,6 +127,7 @@ public class UpdatePhoneNumberHandler
                                     return generateApiGatewayProxyErrorResponse(
                                             400, ErrorResponse.ERROR_1035);
                                 }
+
                                 UserProfile userProfile =
                                         dynamoService.getUserProfileByEmail(
                                                 updatePhoneNumberRequest.getEmail());
