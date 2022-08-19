@@ -11,9 +11,9 @@ output "email_queue" {
 }
 
 output "txma_audit_queue_arn" {
-  value = module.acct_mgmt_txma_audit.queue_arn
+  value = module.account_management_txma_audit.queue_arn
 }
 
 output "txma_audit_key_arn" {
-  value = module.acct_mgmt_txma_audit.kms_key_arn
+  value = module.account_management_txma_audit.kms_key_arn
 }
