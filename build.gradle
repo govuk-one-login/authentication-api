@@ -22,7 +22,7 @@ apply plugin: "idea"
 ext {
     dependencyVersions = [
         aws_sdk_version: "1.12.284",
-        aws_sdk_v2_version: "2.17.244",
+        aws_sdk_v2_version: "2.17.256",
         aws_lambda_core_version: "1.2.1",
         aws_lambda_events_version: "3.11.0",
         gson: "2.9.0",
@@ -97,7 +97,7 @@ subprojects {
     dependencies {
         bouncycastle "org.bouncycastle:bcpkix-jdk15on:1.70"
 
-        cloudwatch "software.amazon.cloudwatchlogs:aws-embedded-metrics:1.0.6"
+        cloudwatch "software.amazon.cloudwatchlogs:aws-embedded-metrics:2.0.0"
 
         dynamodb "com.amazonaws:aws-java-sdk-dynamodb:${dependencyVersions.aws_sdk_version}"
 
