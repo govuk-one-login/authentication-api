@@ -76,6 +76,7 @@ class UpdateProfileHandlerTest {
     private static final boolean CONSENT_VALUE = true;
     private static final String SESSION_ID = "a-session-id";
     private static final String CLIENT_SESSION_ID = "client-session-id";
+    private static final String PERSISTENT_SESSION_ID = "psid";
     private static final ClientID CLIENT_ID = new ClientID("client-one");
     private static final String INTERNAL_SUBJECT = new Subject().getValue();
     private static final Scope SCOPES =
@@ -165,10 +166,13 @@ class UpdateProfileHandlerTest {
     void shouldReturn400WhenPhoneNumberFailsValidation() {
         usingValidSession();
         usingValidClientSession();
+        when(authenticationService.getUserProfileFromEmail(TEST_EMAIL_ADDRESS))
+                .thenReturn(Optional.of(generateUserProfileWithConsent()));
+        when(clientRegistry.getClientID()).thenReturn(CLIENT_ID.getValue());
+        when(clientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.of(clientRegistry));
 
-        String persistentId = "some-persistent-id-value";
         Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_SESSION_ID);
         headers.put("Session-Id", session.getSessionId());
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(headers);
@@ -186,7 +190,15 @@ class UpdateProfileHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        UPDATE_PROFILE_REQUEST_ERROR, "request-id", "", "", "", "", "", "", "");
+                        UPDATE_PROFILE_REQUEST_ERROR,
+                        "request-id",
+                        SESSION_ID,
+                        CLIENT_ID.getValue(),
+                        "",
+                        TEST_EMAIL_ADDRESS,
+                        "",
+                        "",
+                        PERSISTENT_SESSION_ID);
     }
 
     @Test
@@ -329,7 +341,12 @@ class UpdateProfileHandlerTest {
 
         var authAppSecret = "not-base-32-encoded-secret";
         var event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setHeaders(
+                Map.of(
+                        "Session-Id",
+                        session.getSessionId(),
+                        PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
+                        PERSISTENT_SESSION_ID));
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"updateProfileType\": \"%s\", \"profileInformation\": \"%s\" }",
@@ -342,7 +359,15 @@ class UpdateProfileHandlerTest {
                 .updateMFAMethod(TEST_EMAIL_ADDRESS, AUTH_APP, false, true, authAppSecret);
         verify(auditService)
                 .submitAuditEvent(
-                        UPDATE_PROFILE_REQUEST_ERROR, "request-id", "", "", "", "", "", "", "");
+                        UPDATE_PROFILE_REQUEST_ERROR,
+                        "request-id",
+                        SESSION_ID,
+                        CLIENT_ID.getValue(),
+                        "",
+                        TEST_EMAIL_ADDRESS,
+                        "",
+                        "",
+                        PERSISTENT_SESSION_ID);
     }
 
     private void usingValidSession() {
