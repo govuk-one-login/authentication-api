@@ -1,13 +1,15 @@
 package uk.gov.di.authentication.shared.services;
 
-import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagement;
-import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagementClient;
-import com.amazonaws.services.simplesystemsmanagement.model.GetParameterRequest;
-import com.amazonaws.services.simplesystemsmanagement.model.GetParametersRequest;
-import com.amazonaws.services.simplesystemsmanagement.model.ParameterNotFoundException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.ssm.SsmClient;
+import software.amazon.awssdk.services.ssm.model.GetParameterRequest;
+import software.amazon.awssdk.services.ssm.model.GetParametersRequest;
+import software.amazon.awssdk.services.ssm.model.Parameter;
+import software.amazon.awssdk.services.ssm.model.ParameterNotFoundException;
 import uk.gov.di.authentication.shared.configuration.AuditPublisherConfiguration;
 import uk.gov.di.authentication.shared.configuration.BaseLambdaConfiguration;
 import uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType;
@@ -34,13 +36,13 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return configurationService;
     }
 
-    private AWSSimpleSystemsManagement ssmClient;
+    private SsmClient ssmClient;
     private Map<String, String> ssmRedisParameters;
     private Optional<String> passwordPepper;
 
     public ConfigurationService() {}
 
-    protected ConfigurationService(AWSSimpleSystemsManagement ssmClient) {
+    protected ConfigurationService(SsmClient ssmClient) {
         this.ssmClient = ssmClient;
     }
 
@@ -207,8 +209,9 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     public String getIPVAuthEncryptionPublicKey() {
         var paramName = format("{0}-ipv-public-encryption-key", getEnvironment());
         try {
-            var request = new GetParameterRequest().withWithDecryption(true).withName(paramName);
-            return getSsmClient().getParameter(request).getParameter().getValue();
+            var request =
+                    GetParameterRequest.builder().withDecryption(true).name(paramName).build();
+            return getSsmClient().getParameter(request).parameter().value();
         } catch (ParameterNotFoundException e) {
             LOG.error("No parameter exists with name: {}", paramName);
             throw new RuntimeException(e);
@@ -233,11 +236,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public String getNotifyCallbackBearerToken() {
         var request =
-                new GetParameterRequest()
-                        .withWithDecryption(true)
-                        .withName(format("{0}-notify-callback-bearer-token", getEnvironment()));
+                GetParameterRequest.builder()
+                        .withDecryption(true)
+                        .name(format("{0}-notify-callback-bearer-token", getEnvironment()))
+                        .build();
 
-        return getSsmClient().getParameter(request).getParameter().getValue();
+        return getSsmClient().getParameter(request).parameter().value();
     }
 
     public List<String> getNotifyTestDestinations() {
@@ -265,11 +269,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         if (passwordPepper == null) {
             try {
                 var request =
-                        new GetParameterRequest()
-                                .withWithDecryption(true)
-                                .withName(format("{0}-password-pepper", getEnvironment()));
+                        GetParameterRequest.builder()
+                                .withDecryption(true)
+                                .name(format("{0}-password-pepper", getEnvironment()))
+                                .build();
                 passwordPepper =
-                        Optional.of(getSsmClient().getParameter(request).getParameter().getValue());
+                        Optional.of(getSsmClient().getParameter(request).parameter().value());
             } catch (ParameterNotFoundException e) {
                 passwordPepper = Optional.empty();
             }
@@ -374,10 +379,11 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     public Optional<String> getIPVCapacity() {
         try {
             var request =
-                    new GetParameterRequest()
-                            .withWithDecryption(true)
-                            .withName(format("{0}-ipv-capacity", getEnvironment()));
-            return Optional.of(getSsmClient().getParameter(request).getParameter().getValue());
+                    GetParameterRequest.builder()
+                            .withDecryption(true)
+                            .name(format("{0}-ipv-capacity", getEnvironment()))
+                            .build();
+            return Optional.of(getSsmClient().getParameter(request).parameter().value());
         } catch (ParameterNotFoundException e) {
             return Optional.empty();
         }
@@ -386,8 +392,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     private Map<String, String> getSsmRedisParameters() {
         if (ssmRedisParameters == null) {
             var getParametersRequest =
-                    new GetParametersRequest()
-                            .withNames(
+                    GetParametersRequest.builder()
+                            .names(
                                     format(
                                             "{0}-{1}-redis-master-host",
                                             getEnvironment(), getRedisKey()),
@@ -396,34 +402,38 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                                             getEnvironment(), getRedisKey()),
                                     format("{0}-{1}-redis-port", getEnvironment(), getRedisKey()),
                                     format("{0}-{1}-redis-tls", getEnvironment(), getRedisKey()))
-                            .withWithDecryption(true);
+                            .withDecryption(true)
+                            .build();
             var result = getSsmClient().getParameters(getParametersRequest);
             ssmRedisParameters =
-                    result.getParameters().stream()
-                            .collect(Collectors.toMap(p -> p.getName(), p -> p.getValue()));
+                    result.parameters().stream()
+                            .collect(Collectors.toMap(Parameter::name, Parameter::value));
         }
         return ssmRedisParameters;
     }
 
-    private AWSSimpleSystemsManagement getSsmClient() {
+    private SsmClient getSsmClient() {
         if (ssmClient == null) {
             ssmClient =
                     getLocalstackEndpointUri()
                             .map(
                                     l -> {
                                         LOG.info("Localstack endpoint URI is present: " + l);
-                                        return AWSSimpleSystemsManagementClient.builder()
-                                                .withEndpointConfiguration(
-                                                        new AwsClientBuilder.EndpointConfiguration(
-                                                                l, getAwsRegion()))
+                                        return SsmClient.builder()
+                                                .region(Region.of(getAwsRegion()))
+                                                .endpointOverride(URI.create(l))
+                                                .credentialsProvider(
+                                                        StaticCredentialsProvider.create(
+                                                                AwsBasicCredentials.create(
+                                                                        "FAKEACCESSKEY",
+                                                                        "FAKESECRETKEY")))
                                                 .build();
                                     })
                             .orElseGet(
-                                    () -> {
-                                        return AWSSimpleSystemsManagementClient.builder()
-                                                .withRegion(getAwsRegion())
-                                                .build();
-                                    });
+                                    () ->
+                                            SsmClient.builder()
+                                                    .region(Region.of(getAwsRegion()))
+                                                    .build());
         }
         return ssmClient;
     }

@@ -135,7 +135,7 @@ subprojects {
 
         sqs "software.amazon.awssdk:sqs:${dependencyVersions.aws_sdk_v2_version}"
 
-        ssm "com.amazonaws:aws-java-sdk-ssm:${dependencyVersions.aws_sdk_version}"
+        ssm "software.amazon.awssdk:ssm:${dependencyVersions.aws_sdk_v2_version}"
 
         s3 "com.amazonaws:aws-java-sdk-s3:${dependencyVersions.aws_sdk_version}"
 

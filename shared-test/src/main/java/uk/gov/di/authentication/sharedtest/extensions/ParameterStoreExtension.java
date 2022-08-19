@@ -1,25 +1,29 @@
 package uk.gov.di.authentication.sharedtest.extensions;
 
-import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagement;
-import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagementClient;
-import com.amazonaws.services.simplesystemsmanagement.model.PutParameterRequest;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.ssm.SsmClient;
+import software.amazon.awssdk.services.ssm.model.ParameterType;
+import software.amazon.awssdk.services.ssm.model.PutParameterRequest;
 
+import java.net.URI;
 import java.util.Map;
 
-import static com.amazonaws.services.simplesystemsmanagement.model.ParameterType.SecureString;
-
 public class ParameterStoreExtension extends BaseAwsResourceExtension implements BeforeAllCallback {
-    private final AWSSimpleSystemsManagement ssmClient;
+    private final SsmClient ssmClient;
 
     public ParameterStoreExtension(Map<String, String> parameters) {
         this.ssmClient =
-                AWSSimpleSystemsManagementClient.builder()
-                        .withEndpointConfiguration(
-                                new AwsClientBuilder.EndpointConfiguration(
-                                        LOCALSTACK_ENDPOINT, REGION))
+                SsmClient.builder()
+                        .endpointOverride(URI.create(LOCALSTACK_ENDPOINT))
+                        .region(Region.of(REGION))
+                        .credentialsProvider(
+                                StaticCredentialsProvider.create(
+                                        AwsBasicCredentials.create(
+                                                "FAKEACCESSKEY", "FAKESECRETKEY")))
                         .build();
 
         parameters.forEach(this::createOrOverwriteParameter);
@@ -29,16 +33,17 @@ public class ParameterStoreExtension extends BaseAwsResourceExtension implements
     public void beforeAll(ExtensionContext context) {}
 
     private void createOrOverwriteParameter(String key, String value) {
-        PutParameterRequest parameterRequest =
-                new PutParameterRequest()
-                        .withName(key)
-                        .withType(SecureString)
-                        .withOverwrite(true)
-                        .withValue(value);
+        var parameterRequest =
+                PutParameterRequest.builder()
+                        .name(key)
+                        .type(ParameterType.SECURE_STRING)
+                        .overwrite(true)
+                        .value(value)
+                        .build();
         ssmClient.putParameter(parameterRequest);
     }
 
-    public AWSSimpleSystemsManagement getClient() {
+    public SsmClient getClient() {
         return ssmClient;
     }
 }
