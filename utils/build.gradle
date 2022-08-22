@@ -1,5 +1,6 @@
 plugins {
     id 'java'
+    id "jacoco"
 }
 
 group 'uk.gov.di.authentication.utils'
@@ -41,3 +42,10 @@ task buildZip(type: Zip) {
 }
 
 build.dependsOn buildZip
+
+jacocoTestReport {
+    reports {
+        xml.enabled true
+    }
+    dependsOn "test"
+}
