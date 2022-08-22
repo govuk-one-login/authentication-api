@@ -1,14 +1,13 @@
 package uk.gov.di.authentication.utils.lambda;
 
-import com.amazonaws.regions.Regions;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.S3Event;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.model.S3Object;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
@@ -21,14 +20,14 @@ import java.util.List;
 public class S3ToDynamoDbHandler implements RequestHandler<S3Event, Void> {
     private static final Logger LOG = LogManager.getLogger(S3ToDynamoDbHandler.class);
     private final CommonPasswordsService commonPasswordsService;
-    private final AmazonS3 client;
+    private final S3Client client;
 
-    public S3ToDynamoDbHandler(CommonPasswordsService commonPasswordsService, AmazonS3 client) {
+    public S3ToDynamoDbHandler(CommonPasswordsService commonPasswordsService, S3Client client) {
         this.commonPasswordsService = commonPasswordsService;
         this.client = client;
     }
 
-    public S3ToDynamoDbHandler(ConfigurationService configurationService, AmazonS3 client) {
+    public S3ToDynamoDbHandler(ConfigurationService configurationService, S3Client client) {
         this.commonPasswordsService = new CommonPasswordsService(configurationService);
         this.client = client;
     }
@@ -36,7 +35,7 @@ public class S3ToDynamoDbHandler implements RequestHandler<S3Event, Void> {
     public S3ToDynamoDbHandler() {
         this(
                 ConfigurationService.getInstance(),
-                AmazonS3Client.builder().withRegion(Regions.EU_WEST_2).build());
+                S3Client.builder().region((Region.EU_WEST_2)).build());
     }
 
     @Override
@@ -46,14 +45,13 @@ public class S3ToDynamoDbHandler implements RequestHandler<S3Event, Void> {
         var fileKey = input.getRecords().get(0).getS3().getObject().getKey();
 
         LOG.info("Using bucket:{} and fileKey:{}", bucket, fileKey);
-
-        S3Object fileContent = client.getObject(bucket, fileKey);
+        var getObjectRequest = GetObjectRequest.builder().bucket(bucket).key(fileKey).build();
+        var fileContent = client.getObject(getObjectRequest);
 
         List<String> batch = new ArrayList<>();
         String line;
 
-        try (var bufferedReader =
-                new BufferedReader(new InputStreamReader(fileContent.getObjectContent()))) {
+        try (var bufferedReader = new BufferedReader(new InputStreamReader(fileContent))) {
             while ((line = bufferedReader.readLine()) != null) {
                 if (!line.isBlank()) {
                     batch.add(line.strip());
