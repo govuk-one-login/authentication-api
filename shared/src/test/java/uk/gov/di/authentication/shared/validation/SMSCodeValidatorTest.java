@@ -7,7 +7,6 @@ import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Optional;
@@ -23,7 +22,6 @@ public class SMSCodeValidatorTest {
     Session mockSession;
     CodeStorageService mockCodeStorageService;
     ConfigurationService mockConfigurationService;
-    DynamoService mockDynamoService;
 
     private final int MAX_RETRIES = 5;
     private final String EMAIL_ADDRESS = "email-address";
@@ -34,7 +32,6 @@ public class SMSCodeValidatorTest {
         this.mockSession = mock(Session.class);
         this.mockCodeStorageService = mock(CodeStorageService.class);
         this.mockConfigurationService = mock(ConfigurationService.class);
-        this.mockDynamoService = mock(DynamoService.class);
     }
 
     @Test
@@ -70,11 +67,7 @@ public class SMSCodeValidatorTest {
                 .thenReturn(true);
 
         this.smsCodeValidator =
-                new SMSCodeValidator(
-                        BLOCKED_EMAIL_ADDRESS,
-                        mockCodeStorageService,
-                        mockDynamoService,
-                        MAX_RETRIES);
+                new SMSCodeValidator(BLOCKED_EMAIL_ADDRESS, mockCodeStorageService, MAX_RETRIES);
     }
 
     private void setUpRetryLimitExceededUser() {
@@ -86,8 +79,7 @@ public class SMSCodeValidatorTest {
                 .thenReturn(MAX_RETRIES + 1);
 
         this.smsCodeValidator =
-                new SMSCodeValidator(
-                        EMAIL_ADDRESS, mockCodeStorageService, mockDynamoService, MAX_RETRIES);
+                new SMSCodeValidator(EMAIL_ADDRESS, mockCodeStorageService, MAX_RETRIES);
     }
 
     private void setUpInvalidOtp() {
@@ -100,7 +92,6 @@ public class SMSCodeValidatorTest {
                 .thenReturn(false);
 
         this.smsCodeValidator =
-                new SMSCodeValidator(
-                        EMAIL_ADDRESS, mockCodeStorageService, mockDynamoService, MAX_RETRIES);
+                new SMSCodeValidator(EMAIL_ADDRESS, mockCodeStorageService, MAX_RETRIES);
     }
 }

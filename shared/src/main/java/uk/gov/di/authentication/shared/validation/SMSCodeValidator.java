@@ -2,22 +2,14 @@ package uk.gov.di.authentication.shared.validation;
 
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
-import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 
 import java.util.Optional;
 
 public class SMSCodeValidator extends MfaCodeValidator {
 
-    private final AuthenticationService dynamoService;
-
-    public SMSCodeValidator(
-            String email,
-            CodeStorageService codeStorageService,
-            AuthenticationService dynamoService,
-            int maxRetries) {
+    public SMSCodeValidator(String email, CodeStorageService codeStorageService, int maxRetries) {
         super(email, codeStorageService, maxRetries);
-        this.dynamoService = dynamoService;
     }
 
     @Override
@@ -38,7 +30,7 @@ public class SMSCodeValidator extends MfaCodeValidator {
         boolean isValidOtp = isCodeValid(code, NotificationType.VERIFY_PHONE_NUMBER);
 
         if (!isValidOtp) {
-            LOG.info("In");
+            LOG.info("Invalid OTP code");
             return Optional.of(ErrorResponse.ERROR_1035);
         }
 

@@ -63,7 +63,7 @@ class UpdatePhoneNumberHandlerTest {
             new MfaCodeValidatorFactory(configurationService, codeStorageService, dynamoService);
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(configurationService.getCodeMaxRetriesRegistration()).thenReturn(999999);
         handler =
@@ -76,7 +76,7 @@ class UpdatePhoneNumberHandlerTest {
     }
 
     @Test
-    public void shouldReturn204ForValidUpdatePhoneNumberRequest() throws Json.JsonException {
+    void shouldReturn204ForValidUpdatePhoneNumberRequest() throws Json.JsonException {
         String persistentIdValue = "some-persistent-session-id";
         UserProfile userProfile =
                 new UserProfile()
@@ -121,7 +121,7 @@ class UpdatePhoneNumberHandlerTest {
     }
 
     @Test
-    public void shouldReturn400WhenRequestIsMissingParameters() {
+    void shouldReturn400WhenRequestIsMissingParameters() {
         APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =
                 new APIGatewayProxyRequestEvent.ProxyRequestContext();
         Map<String, Object> authorizerParams = new HashMap<>();
@@ -139,7 +139,7 @@ class UpdatePhoneNumberHandlerTest {
     }
 
     @Test
-    public void shouldReturnErrorWhenOtpCodeIsNotValid() throws Json.JsonException {
+    void shouldReturnErrorWhenOtpCodeIsNotValid() throws Json.JsonException {
         when(dynamoService.getSubjectFromEmail(EMAIL_ADDRESS)).thenReturn(SUBJECT);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(
@@ -167,7 +167,7 @@ class UpdatePhoneNumberHandlerTest {
     }
 
     @Test
-    public void shouldReturn400WhenOtpCodeEnteredTooManyTimes() throws Json.JsonException {
+    void shouldReturn400WhenOtpCodeEnteredTooManyTimes() throws Json.JsonException {
         var mfaCodeValidatorFactory = mock(MfaCodeValidatorFactory.class);
         when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
                 .thenReturn(Optional.of(smsCodeValidator));
@@ -197,8 +197,7 @@ class UpdatePhoneNumberHandlerTest {
         verify(dynamoService, times(0)).updatePhoneNumber(EMAIL_ADDRESS, INVALID_PHONE_NUMBER);
         NotifyRequest notifyRequest = new NotifyRequest(INVALID_PHONE_NUMBER, PHONE_NUMBER_UPDATED);
         verify(sqsClient, times(0)).send(objectMapper.writeValueAsString(notifyRequest));
-        String expectedResponse = objectMapper.writeValueAsString(ErrorResponse.ERROR_1027);
-        assertThat(result, hasBody(expectedResponse));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1027));
         verifyNoInteractions(auditService);
     }
 }

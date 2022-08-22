@@ -41,11 +41,7 @@ public class MfaCodeValidatorFactory {
                                 codeMaxRetries));
             case SMS:
                 return Optional.of(
-                        new SMSCodeValidator(
-                                emailAddress,
-                                codeStorageService,
-                                authenticationService,
-                                codeMaxRetries));
+                        new SMSCodeValidator(emailAddress, codeStorageService, codeMaxRetries));
             default:
                 return Optional.empty();
         }
