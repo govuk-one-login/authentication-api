@@ -53,6 +53,7 @@ public class DocAppCallbackHandler
     private final ClientSessionService clientSessionService;
     private final AuditService auditService;
     private final DynamoDocAppService dynamoDocAppService;
+    private final CookieHelper cookieHelper;
     protected final Json objectMapper = SerializationService.getInstance();
     private static final String REDIRECT_PATH = "doc-app-callback";
 
@@ -69,7 +70,8 @@ public class DocAppCallbackHandler
             SessionService sessionService,
             ClientSessionService clientSessionService,
             AuditService auditService,
-            DynamoDocAppService dynamoDocAppService) {
+            DynamoDocAppService dynamoDocAppService,
+            CookieHelper cookieHelper) {
         this.configurationService = configurationService;
         this.authorisationService = responseService;
         this.tokenService = tokenService;
@@ -77,6 +79,7 @@ public class DocAppCallbackHandler
         this.clientSessionService = clientSessionService;
         this.auditService = auditService;
         this.dynamoDocAppService = dynamoDocAppService;
+        this.cookieHelper = cookieHelper;
     }
 
     public DocAppCallbackHandler(ConfigurationService configurationService) {
@@ -93,6 +96,7 @@ public class DocAppCallbackHandler
         this.clientSessionService = new ClientSessionService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.dynamoDocAppService = new DynamoDocAppService(configurationService);
+        this.cookieHelper = new CookieHelper();
     }
 
     @Override
@@ -111,7 +115,8 @@ public class DocAppCallbackHandler
                             LOG.info("Request received to DocAppCallbackHandler");
                             try {
                                 var sessionCookiesIds =
-                                        CookieHelper.parseSessionCookie(input.getHeaders())
+                                        cookieHelper
+                                                .parseSessionCookie(input.getHeaders())
                                                 .orElseThrow(
                                                         () -> {
                                                             throw new DocAppCallbackException(

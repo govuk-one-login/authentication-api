@@ -24,12 +24,14 @@ public class SessionService {
 
     private final ConfigurationService configurationService;
     private final RedisConnectionService redisConnectionService;
+    private final CookieHelper cookieHelper;
 
     public SessionService(
             ConfigurationService configurationService,
             RedisConnectionService redisConnectionService) {
         this.configurationService = configurationService;
         this.redisConnectionService = redisConnectionService;
+        this.cookieHelper = new CookieHelper();
     }
 
     public SessionService(ConfigurationService configurationService) {
@@ -98,7 +100,7 @@ public class SessionService {
 
     public Optional<Session> getSessionFromSessionCookie(Map<String, String> headers) {
         try {
-            Optional<CookieHelper.SessionCookieIds> ids = CookieHelper.parseSessionCookie(headers);
+            Optional<CookieHelper.SessionCookieIds> ids = cookieHelper.parseSessionCookie(headers);
             return ids.flatMap(s -> readSessionFromRedis(s.getSessionId()));
         } catch (Exception e) {
             throw new RuntimeException(e);
