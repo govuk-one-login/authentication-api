@@ -8,19 +8,62 @@ data "aws_dynamodb_table" "user_credential" {
 
 data "aws_iam_policy_document" "verified_account_dynamo_access" {
   statement {
-    sid    = "AllowAccessToUserProfileTable"
+    sid    = "AllowAccessToDescribeUserProfileTable"
     effect = "Allow"
 
     actions = [
-      "dynamodb:Scan",
-      "dynamodb:UpdateItem",
-      "dynamodb:TransactWriteItem",
       "dynamodb:DescribeTable",
     ]
 
     resources = [
       data.aws_dynamodb_table.user_profile.arn,
     ]
+  }
+
+  statement {
+    sid    = "AllowAccessToReadUserProfileTable"
+    effect = "Allow"
+
+    actions = [
+      "dynamodb:Scan",
+    ]
+
+    resources = [
+      data.aws_dynamodb_table.user_profile.arn,
+    ]
+
+    condition {
+      test = "ForAllValues:StringEquals"
+      values = [
+        "Email",
+        "accountVerified",
+        "PhoneNumberVerified"
+      ]
+      variable = "dynamodb:Attributes"
+    }
+  }
+
+  statement {
+    sid    = "AllowAccessToWriteUserProfileTable"
+    effect = "Allow"
+
+    actions = [
+      "dynamodb:UpdateItem",
+      "dynamodb:TransactWriteItem",
+    ]
+
+    resources = [
+      data.aws_dynamodb_table.user_profile.arn,
+    ]
+
+    condition {
+      test = "ForAllValues:StringEquals"
+      values = [
+        "Email",
+        "accountVerified",
+      ]
+      variable = "dynamodb:Attributes"
+    }
   }
 
   statement {
@@ -34,12 +77,21 @@ data "aws_iam_policy_document" "verified_account_dynamo_access" {
     resources = [
       data.aws_dynamodb_table.user_credential.arn,
     ]
+
+    condition {
+      test = "ForAllValues:StringEquals"
+      values = [
+        "Email",
+        "MfaMethods",
+      ]
+      variable = "dynamodb:Attributes"
+    }
   }
 }
 
-resource "aws_iam_policy" "verified_account_dynamo_full_access" {
+resource "aws_iam_policy" "verified_account_dynamo_access" {
   name_prefix = "dynamo-access-policy"
-  description = "IAM policy for managing permissions to the Dynamo User Profile table"
+  description = "IAM policy for managing permissions to the Dynamo User Profile & Credential tables"
 
   policy = data.aws_iam_policy_document.verified_account_dynamo_access.json
 }
@@ -51,7 +103,7 @@ module "verified_account_update_lambda_role" {
   role_name   = "verified_account_update_lambda_role"
 
   policies_to_attach = [
-    aws_iam_policy.verified_account_dynamo_full_access.arn,
+    aws_iam_policy.verified_account_dynamo_access.arn,
   ]
 }
 
