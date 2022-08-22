@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import static java.text.MessageFormat.format;
 import static java.util.Objects.nonNull;
 import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.createDynamoClient;
 
@@ -63,13 +64,12 @@ public class AccountVerifierLambda implements RequestHandler<Integer, Void> {
             result.getItems()
                     .forEach(
                             itemMap -> {
-                                if (!itemMap.containsKey(ACCOUNT_VERIFIED)) {
-                                    if (accountIsVerified(itemMap)) {
-                                        updates.add(updateForItem(itemMap));
-                                        if (updates.size() == 25) {
-                                            submit(updates);
-                                            updates.clear();
-                                        }
+                                if (!itemMap.containsKey(ACCOUNT_VERIFIED)
+                                        && accountIsVerified(itemMap)) {
+                                    updates.add(updateForItem(itemMap));
+                                    if (updates.size() == 25) {
+                                        submit(updates);
+                                        updates.clear();
                                     }
                                 }
                             });
@@ -83,7 +83,10 @@ public class AccountVerifierLambda implements RequestHandler<Integer, Void> {
         return new TransactWriteItem()
                 .withUpdate(
                         new Update()
-                                .withTableName("sandpit-user-profile")
+                                .withTableName(
+                                        format(
+                                                "{0}-user-profile",
+                                                configurationService.getEnvironment()))
                                 .withKey(Map.of(EMAIL, item.get(EMAIL)))
                                 .withUpdateExpression("SET accountVerified = :accountVerified")
                                 .withExpressionAttributeValues(
@@ -95,7 +98,8 @@ public class AccountVerifierLambda implements RequestHandler<Integer, Void> {
     private ScanResult getRecords(int batchSize, Map<String, AttributeValue> lastEvaluatedKey) {
         var request =
                 new ScanRequest()
-                        .withTableName("sandpit-user-profile")
+                        .withTableName(
+                                format("{0}-user-profile", configurationService.getEnvironment()))
                         .withConsistentRead(true)
                         .withAttributesToGet(EMAIL, ACCOUNT_VERIFIED, PHONE_NUMBER_VERIFIED)
                         .withLimit(batchSize)
