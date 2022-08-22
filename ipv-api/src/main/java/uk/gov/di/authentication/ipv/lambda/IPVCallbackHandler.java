@@ -78,6 +78,7 @@ public class IPVCallbackHandler
     protected final Json objectMapper = SerializationService.getInstance();
     private static final String REDIRECT_PATH = "ipv-callback";
     private static final String ERROR_PAGE_REDIRECT_PATH = "error";
+    private final CookieHelper cookieHelper;
 
     public IPVCallbackHandler() {
         this(ConfigurationService.getInstance());
@@ -93,7 +94,8 @@ public class IPVCallbackHandler
             DynamoClientService dynamoClientService,
             AuditService auditService,
             AwsSqsClient sqsClient,
-            DynamoIdentityService dynamoIdentityService) {
+            DynamoIdentityService dynamoIdentityService,
+            CookieHelper cookieHelper) {
         this.configurationService = configurationService;
         this.ipvAuthorisationService = responseService;
         this.ipvTokenService = ipvTokenService;
@@ -104,6 +106,7 @@ public class IPVCallbackHandler
         this.auditService = auditService;
         this.sqsClient = sqsClient;
         this.dynamoIdentityService = dynamoIdentityService;
+        this.cookieHelper = cookieHelper;
     }
 
     public IPVCallbackHandler(ConfigurationService configurationService) {
@@ -126,6 +129,7 @@ public class IPVCallbackHandler
                         configurationService.getSpotQueueUri(),
                         configurationService.getSqsEndpointUri());
         this.dynamoIdentityService = new DynamoIdentityService(configurationService);
+        this.cookieHelper = new CookieHelper();
     }
 
     @Override
@@ -140,8 +144,13 @@ public class IPVCallbackHandler
                                     throw new IpvCallbackException("Identity is not enabled");
                                 }
                                 var sessionCookiesIds =
-                                        CookieHelper.parseSessionCookie(input.getHeaders())
-                                                .orElseThrow();
+                                        cookieHelper
+                                                .parseSessionCookie(input.getHeaders())
+                                                .orElseThrow(
+                                                        () -> {
+                                                            throw new IpvCallbackException(
+                                                                    "No session cookie present");
+                                                        });
                                 var session =
                                         sessionService
                                                 .readSessionFromRedis(

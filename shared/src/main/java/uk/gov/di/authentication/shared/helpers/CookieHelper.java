@@ -77,7 +77,7 @@ public class CookieHelper {
         return parseStringToHttpCookie(cookie);
     }
 
-    public static Optional<SessionCookieIds> parseSessionCookie(Map<String, String> headers) {
+    public Optional<SessionCookieIds> parseSessionCookie(Map<String, String> headers) {
         Optional<HttpCookie> httpCookie =
                 getHttpCookieFromRequestHeaders(headers, SESSION_COOKIE_NAME);
         if (httpCookie.isEmpty()) {

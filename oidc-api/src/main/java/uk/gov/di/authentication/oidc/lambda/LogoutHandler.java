@@ -52,6 +52,7 @@ public class LogoutHandler
     private final TokenValidationService tokenValidationService;
     private final AuditService auditService;
     private final BackChannelLogoutService backChannelLogoutService;
+    private final CookieHelper cookieHelper;
 
     public LogoutHandler() {
         this(ConfigurationService.getInstance());
@@ -69,6 +70,7 @@ public class LogoutHandler
                                 new KmsConnectionService(configurationService)));
         this.auditService = new AuditService(configurationService);
         this.backChannelLogoutService = new BackChannelLogoutService(configurationService);
+        this.cookieHelper = new CookieHelper();
     }
 
     public LogoutHandler(
@@ -86,6 +88,7 @@ public class LogoutHandler
         this.tokenValidationService = tokenValidationService;
         this.auditService = auditService;
         this.backChannelLogoutService = backChannelLogoutService;
+        this.cookieHelper = new CookieHelper();
     }
 
     @Override
@@ -148,7 +151,7 @@ public class LogoutHandler
             Context context) {
 
         CookieHelper.SessionCookieIds sessionCookieIds =
-                CookieHelper.parseSessionCookie(input.getHeaders()).get();
+                cookieHelper.parseSessionCookie(input.getHeaders()).orElseThrow();
 
         attachSessionIdToLogs(session);
         attachLogFieldToLogs(CLIENT_SESSION_ID, sessionCookieIds.getClientSessionId());

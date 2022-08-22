@@ -33,6 +33,7 @@ import uk.gov.di.authentication.app.services.DynamoDocAppService;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -52,6 +53,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -72,6 +74,7 @@ class DocAppCallbackHandlerTest {
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final DynamoDocAppService dynamoDocAppService = mock(DynamoDocAppService.class);
+    private final CookieHelper cookieHelper = mock(CookieHelper.class);
 
     private static final URI LOGIN_URL = URI.create("https://example.com");
     private static final String OIDC_BASE_URL = "https://base-url.com";
@@ -108,12 +111,14 @@ class DocAppCallbackHandlerTest {
                         sessionService,
                         clientSessionService,
                         auditService,
-                        dynamoDocAppService);
+                        dynamoDocAppService,
+                        cookieHelper);
         when(configService.getLoginURI()).thenReturn(LOGIN_URL);
         when(configService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_BASE_URL));
         when(configService.isSpotEnabled()).thenReturn(true);
         when(configService.getDocAppBackendURI()).thenReturn(CRI_URI);
         when(context.getAwsRequestId()).thenReturn(REQUEST_ID);
+        when(cookieHelper.parseSessionCookie(anyMap())).thenCallRealMethod();
     }
 
     @Test

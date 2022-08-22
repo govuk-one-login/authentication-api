@@ -45,6 +45,7 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
@@ -70,6 +71,7 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -89,6 +91,7 @@ class IPVCallbackHandlerTest {
     private final IPVTokenService ipvTokenService = mock(IPVTokenService.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
+    private final CookieHelper cookieHelper = mock(CookieHelper.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final DynamoIdentityService dynamoIdentityService = mock(DynamoIdentityService.class);
@@ -136,7 +139,8 @@ class IPVCallbackHandlerTest {
                         dynamoClientService,
                         auditService,
                         awsSqsClient,
-                        dynamoIdentityService);
+                        dynamoIdentityService,
+                        cookieHelper);
         when(configService.getLoginURI()).thenReturn(LOGIN_URL);
         when(configService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_BASE_URL));
         when(configService.isSpotEnabled()).thenReturn(true);
@@ -144,11 +148,25 @@ class IPVCallbackHandlerTest {
         when(configService.getIPVSector()).thenReturn(OIDC_BASE_URL + "/trustmark");
         when(configService.isIdentityEnabled()).thenReturn(true);
         when(context.getAwsRequestId()).thenReturn(REQUEST_ID);
+        when(cookieHelper.parseSessionCookie(anyMap())).thenCallRealMethod();
     }
 
     @Test
     void shouldRedirectToFrontendErrorPageWhenIdentityIsNotEnabled() throws URISyntaxException {
         when(configService.isIdentityEnabled()).thenReturn(false);
+        usingValidSession();
+        usingValidClientSession();
+
+        var event = getApiGatewayProxyRequestEvent(null);
+
+        assertDoesRedirectToFrontendErrorPage(event);
+
+        verifyNoInteractions(auditService);
+    }
+
+    @Test
+    void shouldRedirectToFrontendErrorPageWhenNoSessionCookie() throws URISyntaxException {
+        when(cookieHelper.parseSessionCookie(anyMap())).thenReturn(Optional.empty());
         usingValidSession();
         usingValidClientSession();
 
