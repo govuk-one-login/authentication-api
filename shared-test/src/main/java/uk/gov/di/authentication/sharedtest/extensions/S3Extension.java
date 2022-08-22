@@ -1,31 +1,33 @@
 package uk.gov.di.authentication.sharedtest.extensions;
 
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.iterable.S3Objects;
-import com.amazonaws.services.s3.model.AmazonS3Exception;
-import com.amazonaws.services.s3.model.HeadBucketRequest;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3Configuration;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 
+import java.net.URI;
 import java.net.URISyntaxException;
 
 public abstract class S3Extension extends BaseAwsResourceExtension
         implements BeforeAllCallback, AfterAllCallback {
 
-    protected static final AmazonS3 s3Client =
-            AmazonS3Client.builder()
-                    .withEndpointConfiguration(
-                            new AwsClientBuilder.EndpointConfiguration(LOCALSTACK_ENDPOINT, REGION))
-                    .withCredentials(
-                            new AWSStaticCredentialsProvider(
-                                    new BasicAWSCredentials("access", "secret")))
-                    .withPathStyleAccessEnabled(true)
+    protected static final S3Client s3Client =
+            S3Client.builder()
+                    .endpointOverride(URI.create(LOCALSTACK_ENDPOINT))
+                    .region(Region.of(REGION))
+                    .credentialsProvider(
+                            StaticCredentialsProvider.create(
+                                    AwsBasicCredentials.create("access", "secret")))
+                    .serviceConfiguration(
+                            S3Configuration.builder().pathStyleAccessEnabled(true).build())
                     .build();
 
     @Override
@@ -42,19 +44,27 @@ public abstract class S3Extension extends BaseAwsResourceExtension
 
     protected boolean bucketExists(String bucketName) {
         try {
-            final HeadBucketRequest request = new HeadBucketRequest(bucketName);
+            final HeadBucketRequest request =
+                    HeadBucketRequest.builder().bucket(bucketName).build();
             s3Client.headBucket(request);
             return true;
-        } catch (AmazonS3Exception ignored) {
+        } catch (S3Exception ignored) {
             return false;
         }
     }
 
     protected void deleteS3BucketContents(String bucketName) {
-        S3Objects.inBucket(s3Client, bucketName)
+        var listObjectsResponse =
+                s3Client.listObjects(ListObjectsRequest.builder().bucket(bucketName).build());
+        listObjectsResponse
+                .contents()
                 .forEach(
-                        (S3ObjectSummary objectSummary) ->
-                                s3Client.deleteObject(bucketName, objectSummary.getKey()));
+                        t ->
+                                s3Client.deleteObject(
+                                        DeleteObjectRequest.builder()
+                                                .bucket(bucketName)
+                                                .key(t.key())
+                                                .build()));
     }
 
     abstract void deleteBuckets();

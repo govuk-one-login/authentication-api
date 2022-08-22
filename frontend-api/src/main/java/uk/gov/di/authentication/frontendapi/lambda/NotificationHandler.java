@@ -4,10 +4,12 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3Client;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
@@ -36,13 +38,13 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
 
     private final NotificationService notificationService;
     private final Json objectMapper = SerializationService.getInstance();
-    private final AmazonS3 s3Client;
+    private final S3Client s3Client;
     private final ConfigurationService configurationService;
 
     public NotificationHandler(
             NotificationService notificationService,
             ConfigurationService configurationService,
-            AmazonS3 s3Client) {
+            S3Client s3Client) {
         this.notificationService = notificationService;
         this.configurationService = configurationService;
         this.s3Client = s3Client;
@@ -64,7 +66,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                         .orElse(new NotificationClient(configurationService.getNotifyApiKey()));
         this.notificationService = new NotificationService(client);
         this.s3Client =
-                AmazonS3Client.builder().withRegion(configurationService.getAwsRegion()).build();
+                S3Client.builder().region(Region.of(configurationService.getAwsRegion())).build();
     }
 
     @Override
@@ -190,7 +192,9 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
             LOG.info("Notify Test Destination used in request. Writing to S3 bucket");
             String bucketName = configurationService.getSmoketestBucketName();
             try {
-                s3Client.putObject(bucketName, destination, otp);
+                var putObjectRequest =
+                        PutObjectRequest.builder().bucket(bucketName).key(destination).build();
+                s3Client.putObject(putObjectRequest, RequestBody.fromString(otp));
             } catch (Exception e) {
                 LOG.error("Exception thrown when writing to S3 bucket");
             }

@@ -1,20 +1,20 @@
 package uk.gov.di.authentication.utils;
 
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.S3Event;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3Client;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
 import uk.gov.di.authentication.sharedtest.basetest.HandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.CommonPasswordsS3Extension;
 import uk.gov.di.authentication.sharedtest.helper.S3TestEventHelper;
 import uk.gov.di.authentication.utils.lambda.S3ToDynamoDbHandler;
 
+import java.net.URI;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -47,14 +47,13 @@ class CommonPasswordsS3ToDynamoIntegrationTest extends HandlerIntegrationTest<S3
 
     @BeforeEach
     void setup() {
-        var mockS3Credentials = new BasicAWSCredentials("access", "secret");
+        var mockS3Credentials = AwsBasicCredentials.create("access", "secret");
 
-        AmazonS3 testS3Client =
-                AmazonS3Client.builder()
-                        .withEndpointConfiguration(
-                                new AwsClientBuilder.EndpointConfiguration(S3_ENDPOINT, REGION))
-                        .withCredentials(new AWSStaticCredentialsProvider(mockS3Credentials))
-                        .withPathStyleAccessEnabled(true)
+        var testS3Client =
+                S3Client.builder()
+                        .endpointOverride(URI.create(S3_ENDPOINT))
+                        .region(Region.of(REGION))
+                        .credentialsProvider(StaticCredentialsProvider.create(mockS3Credentials))
                         .build();
         handler = new S3ToDynamoDbHandler(TEST_CONFIGURATION_SERVICE, testS3Client);
     }

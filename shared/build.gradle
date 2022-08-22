@@ -17,6 +17,7 @@ dependencies {
             configurations.libphonenumber,
             configurations.hamcrest,
             configurations.sns,
+            configurations.s3,
             configurations.sqs,
             configurations.ssm,
             configurations.xray,

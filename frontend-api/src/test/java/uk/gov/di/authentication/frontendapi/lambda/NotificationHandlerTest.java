@@ -3,10 +3,12 @@ package uk.gov.di.authentication.frontendapi.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage;
-import com.amazonaws.services.s3.AmazonS3;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -22,6 +24,8 @@ import java.util.Map;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -46,7 +50,7 @@ public class NotificationHandlerTest {
     private final Context context = mock(Context.class);
     private final NotificationService notificationService = mock(NotificationService.class);
     private final ConfigurationService configService = mock(ConfigurationService.class);
-    private final AmazonS3 s3Client = mock(AmazonS3.class);
+    private final S3Client s3Client = mock(S3Client.class);
     private NotificationHandler handler;
     private static final Json objectMapper = SerializationService.getInstance();
 
@@ -241,7 +245,9 @@ public class NotificationHandlerTest {
 
         verify(notificationService)
                 .sendText(notifyRequest.getDestination(), personalisation, VERIFY_PHONE_NUMBER);
-        verify(s3Client).putObject(BUCKET_NAME, NOTIFY_PHONE_NUMBER, "654321");
+        var putObjectRequest =
+                PutObjectRequest.builder().bucket(BUCKET_NAME).key(NOTIFY_PHONE_NUMBER).build();
+        verify(s3Client).putObject(eq(putObjectRequest), any(RequestBody.class));
     }
 
     @Test
@@ -274,7 +280,9 @@ public class NotificationHandlerTest {
 
         verify(notificationService)
                 .sendText(notifyRequest.getDestination(), personalisation, MFA_SMS);
-        verify(s3Client).putObject(BUCKET_NAME, NOTIFY_PHONE_NUMBER, "654321");
+        var putObjectRequest =
+                PutObjectRequest.builder().bucket(BUCKET_NAME).key(NOTIFY_PHONE_NUMBER).build();
+        verify(s3Client).putObject(eq(putObjectRequest), any(RequestBody.class));
     }
 
     @Test
