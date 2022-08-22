@@ -11,7 +11,9 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,15 +32,21 @@ public class AccountVerifierLambda implements RequestHandler<Integer, Void> {
 
     private final AmazonDynamoDB client;
     private final ConfigurationService configurationService;
+    private final AuthenticationService authenticationService;
 
     public AccountVerifierLambda() {
         configurationService = ConfigurationService.getInstance();
         client = createDynamoClient(configurationService);
+        authenticationService = new DynamoService(configurationService);
     }
 
-    public AccountVerifierLambda(AmazonDynamoDB client, ConfigurationService configurationService) {
+    public AccountVerifierLambda(
+            AmazonDynamoDB client,
+            ConfigurationService configurationService,
+            AuthenticationService authenticationService) {
         this.client = client;
         this.configurationService = configurationService;
+        this.authenticationService = authenticationService;
     }
 
     @Override
@@ -50,7 +58,7 @@ public class AccountVerifierLambda implements RequestHandler<Integer, Void> {
         do {
             var result = getRecords(batchSize, lastKeyEvaluated);
             lastKeyEvaluated = result.getLastEvaluatedKey();
-            LOG.info("Found {} matching records", result.getItems().size());
+            LOG.info("Fetched {} records", result.getItems().size());
 
             result.getItems()
                     .forEach(
@@ -59,14 +67,14 @@ public class AccountVerifierLambda implements RequestHandler<Integer, Void> {
                                     if (accountIsVerified(itemMap)) {
                                         updates.add(updateForItem(itemMap));
                                         if (updates.size() == 25) {
-                                            submit(client, updates);
+                                            submit(updates);
                                             updates.clear();
                                         }
                                     }
                                 }
                             });
         } while (nonNull(lastKeyEvaluated));
-        if (!updates.isEmpty()) submit(client, updates);
+        if (!updates.isEmpty()) submit(updates);
 
         return null;
     }
@@ -76,26 +84,22 @@ public class AccountVerifierLambda implements RequestHandler<Integer, Void> {
                 .withUpdate(
                         new Update()
                                 .withTableName("sandpit-user-profile")
-                                .withKey(
-                                        Map.of(
-                                                EMAIL,
-                                                item.get(EMAIL)))
-                                .withUpdateExpression(
-                                        "SET accountVerified = :accountVerified")
+                                .withKey(Map.of(EMAIL, item.get(EMAIL)))
+                                .withUpdateExpression("SET accountVerified = :accountVerified")
                                 .withExpressionAttributeValues(
                                         Map.of(
                                                 ":accountVerified",
-                                                new AttributeValue()
-                                                        .withN(TRUE_N))));
+                                                new AttributeValue().withN(TRUE_N))));
     }
 
     private ScanResult getRecords(int batchSize, Map<String, AttributeValue> lastEvaluatedKey) {
-        var request = new ScanRequest()
-                .withTableName("sandpit-user-profile")
-                .withConsistentRead(true)
-                .withAttributesToGet(EMAIL, ACCOUNT_VERIFIED, PHONE_NUMBER_VERIFIED)
-                .withLimit(batchSize)
-                .withExclusiveStartKey(lastEvaluatedKey);
+        var request =
+                new ScanRequest()
+                        .withTableName("sandpit-user-profile")
+                        .withConsistentRead(true)
+                        .withAttributesToGet(EMAIL, ACCOUNT_VERIFIED, PHONE_NUMBER_VERIFIED)
+                        .withLimit(batchSize)
+                        .withExclusiveStartKey(lastEvaluatedKey);
 
         return client.scan(request);
     }
@@ -106,10 +110,14 @@ public class AccountVerifierLambda implements RequestHandler<Integer, Void> {
     }
 
     private boolean hasVerifiedAuthenticationApp(String email) {
-        return false;
+        var credentials = authenticationService.getUserCredentialsFromEmail(email);
+        return nonNull(credentials.getMfaMethods())
+                && credentials.getMfaMethods().stream()
+                        .anyMatch(
+                                mfaMethod -> mfaMethod.isMethodVerified() && mfaMethod.isEnabled());
     }
 
-    private void submit(AmazonDynamoDB client, List<TransactWriteItem> updates) {
+    private void submit(List<TransactWriteItem> updates) {
         TransactWriteItemsRequest updateRequest = new TransactWriteItemsRequest();
 
         updateRequest.withTransactItems(updates);

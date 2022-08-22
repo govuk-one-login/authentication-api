@@ -12,11 +12,10 @@ data "aws_iam_policy_document" "verified_account_dynamo_access" {
     effect = "Allow"
 
     actions = [
-#      "dynamodb:Get*",
-#      "dynamodb:Query",
       "dynamodb:Scan",
       "dynamodb:UpdateItem",
       "dynamodb:TransactWriteItem",
+      "dynamodb:DescribeTable",
     ]
 
     resources = [

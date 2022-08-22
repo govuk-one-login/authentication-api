@@ -12,6 +12,9 @@ import org.hamcrest.Description;
 import org.hamcrest.TypeSafeMatcher;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import uk.gov.di.authentication.shared.entity.MFAMethod;
+import uk.gov.di.authentication.shared.entity.UserCredentials;
+import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.HashMap;
@@ -37,7 +40,9 @@ class AccountVerifierLambdaTest {
     public static final String EMAIL_TEMPLATE = "test{0}@example.com";
     private final AmazonDynamoDB client = mock(AmazonDynamoDB.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final AccountVerifierLambda handler = new AccountVerifierLambda(client, configurationService);
+    private final AuthenticationService authenticationService = mock(AuthenticationService.class);
+    private final AccountVerifierLambda handler =
+            new AccountVerifierLambda(client, configurationService, authenticationService);
 
     @Test
     void shouldDoNoUpdatesWhenNothingFound() {
@@ -50,13 +55,23 @@ class AccountVerifierLambdaTest {
 
     @Test
     void shouldWriteNewFieldWhenRecordsFoundToUpdate() {
-        when(client.scan(any(ScanRequest.class)))
-                .thenReturn(
-                        new ScanResult()
-                                .withItems(
-                                        List.of(
-                                                validRecord(getEmailAddress(1), true, true),
-                                                validRecord(getEmailAddress(2), false, true))));
+        var email1 = getEmailAddress(1);
+        var email2 = getEmailAddress(2);
+        var email3 = getEmailAddress(3);
+        var email4 = getEmailAddress(4);
+        var profiles =
+                List.of(
+                        validRecord(email1, true, true),
+                        validRecord(email2, false, true),
+                        validRecord(email3, false, false),
+                        validRecord(email4, false, false));
+
+        when(client.scan(any(ScanRequest.class))).thenReturn(new ScanResult().withItems(profiles));
+
+        when(authenticationService.getUserCredentialsFromEmail(email3))
+                .thenReturn(userCredential(email3, true));
+        when(authenticationService.getUserCredentialsFromEmail(email4))
+                .thenReturn(userCredential(email4, false));
 
         var mockResult = generateTransactionResult(200);
         when(client.transactWriteItems(any())).thenReturn(mockResult);
@@ -67,10 +82,13 @@ class AccountVerifierLambdaTest {
                 ArgumentCaptor.forClass(TransactWriteItemsRequest.class);
         verify(client).transactWriteItems(request.capture());
 
-        assertThat(request.getValue().getTransactItems(), hasSize(1));
+        assertThat(request.getValue().getTransactItems(), hasSize(2));
         assertThat(
                 request.getValue().getTransactItems().get(0).getUpdate().getKey(),
-                hasEntry(EMAIL_ATTRIBUTE, new AttributeValue(getEmailAddress(2))));
+                hasEntry(EMAIL_ATTRIBUTE, new AttributeValue(email2)));
+        assertThat(
+                request.getValue().getTransactItems().get(1).getUpdate().getKey(),
+                hasEntry(EMAIL_ATTRIBUTE, new AttributeValue(email3)));
     }
 
     @Test
@@ -78,15 +96,21 @@ class AccountVerifierLambdaTest {
 
         var items =
                 IntStream.rangeClosed(1, 110)
-                        .mapToObj(
-                                i -> validRecord(getEmailAddress(i), false, true))
+                        .mapToObj(i -> validRecord(getEmailAddress(i), false, true))
                         .collect(Collectors.toList());
 
-        when(client.scan(any(ScanRequest.class))).thenReturn(
-                new ScanResult().withItems(items.subList(0, 30)).withLastEvaluatedKey(keyFor(getEmailAddress(30))),
-                new ScanResult().withItems(items.subList(30, 60)).withLastEvaluatedKey(keyFor(getEmailAddress(60))),
-                new ScanResult().withItems(items.subList(60, 90)).withLastEvaluatedKey(keyFor(getEmailAddress(90))),
-                new ScanResult().withItems(items.subList(90, 110)));
+        when(client.scan(any(ScanRequest.class)))
+                .thenReturn(
+                        new ScanResult()
+                                .withItems(items.subList(0, 30))
+                                .withLastEvaluatedKey(keyFor(getEmailAddress(30))),
+                        new ScanResult()
+                                .withItems(items.subList(30, 60))
+                                .withLastEvaluatedKey(keyFor(getEmailAddress(60))),
+                        new ScanResult()
+                                .withItems(items.subList(60, 90))
+                                .withLastEvaluatedKey(keyFor(getEmailAddress(90))),
+                        new ScanResult().withItems(items.subList(90, 110)));
 
         var mockResult = generateTransactionResult(200);
         when(client.transactWriteItems(any())).thenReturn(mockResult);
@@ -142,6 +166,20 @@ class AccountVerifierLambdaTest {
         return Map.of(EMAIL_ATTRIBUTE, new AttributeValue(emailAddress));
     }
 
+    private UserCredentials userCredential(String email, boolean hasVerifiedAuthApp) {
+        var credential = new UserCredentials().setEmail(email);
+        if (hasVerifiedAuthApp) {
+            credential.setMfaMethods(
+                    List.of(
+                            new MFAMethod()
+                                    .setMethodVerified(true)
+                                    .setEnabled(true)
+                                    .setCredentialValue("a-secret-value")
+                                    .setMfaMethodType("AUTH_APP")));
+        }
+        return credential;
+    }
+
     private TypeSafeMatcher<TransactWriteItemsRequest> hasUpdatesFor(List<String> addresses) {
         return new TypeSafeMatcher<TransactWriteItemsRequest>() {
             @Override
@@ -173,11 +211,10 @@ class AccountVerifierLambdaTest {
         return result;
     }
 
-    private Map<String, AttributeValue> validRecord(String emailAddress, boolean accountVerified, boolean phoneVerified) {
+    private Map<String, AttributeValue> validRecord(
+            String emailAddress, boolean accountVerified, boolean phoneVerified) {
         var record = new HashMap<String, AttributeValue>();
-        record.put(EMAIL_ATTRIBUTE,
-                new AttributeValue()
-                        .withS(emailAddress));
+        record.put(EMAIL_ATTRIBUTE, new AttributeValue().withS(emailAddress));
         record.put("PhoneNumberVerified", new AttributeValue().withN(phoneVerified ? "1" : "0"));
         if (accountVerified) {
             record.put("accountVerified", new AttributeValue().withN("1"));
