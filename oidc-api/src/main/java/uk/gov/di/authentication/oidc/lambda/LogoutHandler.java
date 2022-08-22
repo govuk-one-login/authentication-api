@@ -151,7 +151,7 @@ public class LogoutHandler
             Context context) {
 
         CookieHelper.SessionCookieIds sessionCookieIds =
-                cookieHelper.parseSessionCookie(input.getHeaders()).get();
+                cookieHelper.parseSessionCookie(input.getHeaders()).orElseThrow();
 
         attachSessionIdToLogs(session);
         attachLogFieldToLogs(CLIENT_SESSION_ID, sessionCookieIds.getClientSessionId());
