@@ -131,7 +131,7 @@ subprojects {
 
         secretsmanager "software.amazon.awssdk:secretsmanager:${dependencyVersions.aws_sdk_v2_version}"
 
-        sns "com.amazonaws:aws-java-sdk-sns:${dependencyVersions.aws_sdk_version}"
+        sns "software.amazon.awssdk:sns:${dependencyVersions.aws_sdk_v2_version}"
 
         sqs "software.amazon.awssdk:sqs:${dependencyVersions.aws_sdk_v2_version}"
 

@@ -1,12 +1,15 @@
 package uk.gov.di.authentication.sharedtest.extensions;
 
-import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.services.sns.AmazonSNS;
-import com.amazonaws.services.sns.AmazonSNSClientBuilder;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
+import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.sns.SnsClient;
+import software.amazon.awssdk.services.sns.model.CreateTopicRequest;
+import software.amazon.awssdk.services.sns.model.SubscribeRequest;
 import uk.gov.di.authentication.sharedtest.httpstub.HttpStubExtension;
 
+import java.net.URI;
 import java.util.Random;
 
 import static java.text.MessageFormat.format;
@@ -22,7 +25,7 @@ public class SnsTopicExtension extends HttpStubExtension implements BeforeEachCa
             System.getenv().getOrDefault("LOCALSTACK_ENDPOINT", "http://localhost:45678");
 
     private final String topicNameSuffix;
-    private final AmazonSNS snsClient;
+    private final SnsClient snsClient;
 
     private String topicArn;
 
@@ -30,16 +33,16 @@ public class SnsTopicExtension extends HttpStubExtension implements BeforeEachCa
         super();
         this.topicNameSuffix = topicNameSuffix;
         this.snsClient =
-                AmazonSNSClientBuilder.standard()
-                        .withEndpointConfiguration(
-                                new AwsClientBuilder.EndpointConfiguration(
-                                        LOCALSTACK_ENDPOINT, REGION))
+                SnsClient.builder()
+                        .endpointOverride(URI.create(LOCALSTACK_ENDPOINT))
+                        .credentialsProvider(EnvironmentVariableCredentialsProvider.create())
+                        .region(Region.of(REGION))
                         .build();
     }
 
     @Override
     @java.lang.SuppressWarnings("java:S2245")
-    public void beforeEach(ExtensionContext context) throws Exception {
+    public void beforeEach(ExtensionContext context) {
         startStub();
         var topicName =
                 format(
@@ -63,14 +66,19 @@ public class SnsTopicExtension extends HttpStubExtension implements BeforeEachCa
     }
 
     private String createTopic(String topicName) {
-        var result = snsClient.createTopic(topicName);
-        return result.getTopicArn();
+        var result = snsClient.createTopic(CreateTopicRequest.builder().name(topicName).build());
+        return result.topicArn();
     }
 
     private void subscribeToTopic(String topicArn) {
         String url = format("http://subscriber.internal:{0,number,#}/subscriber", getHttpPort());
-
-        snsClient.subscribe(topicArn, "http", url);
+        var subscribeRequest =
+                SubscribeRequest.builder()
+                        .topicArn(topicArn)
+                        .protocol("http")
+                        .endpoint(url)
+                        .build();
+        snsClient.subscribe(subscribeRequest);
     }
 
     private void initSubscriber() {
