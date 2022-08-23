@@ -1,7 +1,5 @@
 package uk.gov.di.authentication.ipv.services;
 
-import com.amazonaws.services.kms.model.SignRequest;
-import com.amazonaws.services.kms.model.SignResult;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -22,6 +20,10 @@ import com.nimbusds.oauth2.sdk.id.JWTID;
 import com.nimbusds.openid.connect.sdk.UserInfoRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.services.kms.model.SignRequest;
+import software.amazon.awssdk.services.kms.model.SignResponse;
+import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.authentication.shared.entity.IdentityClaims;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -29,7 +31,6 @@ import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
 import java.io.IOException;
 import java.net.URI;
-import java.nio.ByteBuffer;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -160,12 +161,15 @@ class IPVTokenServiceTest {
                 new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(ecSigningKey.getKeyID()).build();
         var signedJWT = new SignedJWT(jwsHeader, claimsSet.toJWTClaimsSet());
         unchecked(signedJWT::sign).accept(ecdsaSigner);
-        var signResult = new SignResult();
         byte[] idTokenSignatureDer =
                 ECDSA.transcodeSignatureToDER(signedJWT.getSignature().decode());
-        signResult.setSignature(ByteBuffer.wrap(idTokenSignatureDer));
-        signResult.setKeyId(KEY_ID);
-        signResult.setSigningAlgorithm(JWSAlgorithm.ES256.getName());
+        var signResult =
+                SignResponse.builder()
+                        .signature(SdkBytes.fromByteArray(idTokenSignatureDer))
+                        .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
+                        .keyId(KEY_ID)
+                        .build();
+
         when(kmsService.sign(any(SignRequest.class))).thenReturn(signResult);
     }
 }

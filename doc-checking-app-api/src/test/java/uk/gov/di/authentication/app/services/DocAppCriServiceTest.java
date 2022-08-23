@@ -1,9 +1,5 @@
 package uk.gov.di.authentication.app.services;
 
-import com.amazonaws.services.kms.model.GetPublicKeyRequest;
-import com.amazonaws.services.kms.model.GetPublicKeyResult;
-import com.amazonaws.services.kms.model.SignRequest;
-import com.amazonaws.services.kms.model.SignResult;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -24,6 +20,12 @@ import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.JWTID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
+import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
+import software.amazon.awssdk.services.kms.model.SignRequest;
+import software.amazon.awssdk.services.kms.model.SignResponse;
+import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.authentication.app.exception.UnsuccesfulCredentialResponseException;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -31,7 +33,6 @@ import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
 import java.io.IOException;
 import java.net.URI;
-import java.nio.ByteBuffer;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
@@ -81,7 +82,7 @@ class DocAppCriServiceTest {
     void shouldConstructTokenRequest() throws JOSEException {
         signJWTWithKMS();
         when(kmsService.getPublicKey(any(GetPublicKeyRequest.class)))
-                .thenReturn(new GetPublicKeyResult().withKeyId("789789789789789"));
+                .thenReturn(GetPublicKeyResponse.builder().keyId("789789789789789").build());
         TokenRequest tokenRequest = docAppCriService.constructTokenRequest(AUTH_CODE.getValue());
         assertThat(tokenRequest.getEndpointURI().toString(), equalTo(CRI_URI + "token"));
         assertThat(
@@ -187,12 +188,15 @@ class DocAppCriServiceTest {
                 new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(ecSigningKey.getKeyID()).build();
         var signedJWT = new SignedJWT(jwsHeader, claimsSet.toJWTClaimsSet());
         unchecked(signedJWT::sign).accept(ecdsaSigner);
-        var signResult = new SignResult();
         byte[] idTokenSignatureDer =
                 ECDSA.transcodeSignatureToDER(signedJWT.getSignature().decode());
-        signResult.setSignature(ByteBuffer.wrap(idTokenSignatureDer));
-        signResult.setKeyId(SIGNING_KID);
-        signResult.setSigningAlgorithm(JWSAlgorithm.ES256.getName());
+        var signResult =
+                SignResponse.builder()
+                        .signature(SdkBytes.fromByteArray(idTokenSignatureDer))
+                        .keyId(SIGNING_KID)
+                        .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
+                        .build();
+
         when(kmsService.sign(any(SignRequest.class))).thenReturn(signResult);
     }
 

@@ -12,6 +12,7 @@ dependencies {
             configurations.nimbus,
             configurations.lettuce,
             configurations.dynamodb,
+            configurations.kms,
             configurations.sns,
             configurations.s3,
             configurations.sqs,

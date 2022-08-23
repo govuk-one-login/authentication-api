@@ -11,6 +11,7 @@ dependencies {
             configurations.sqs,
             configurations.ssm,
             configurations.sns,
+            configurations.kms,
             configurations.dynamodb
 
     implementation configurations.gson,
@@ -25,6 +26,7 @@ dependencies {
             project(":shared-test"),
             configurations.lambda,
             configurations.sqs,
+            configurations.kms,
             configurations.dynamodb
 
     testRuntimeOnly configurations.test_runtime

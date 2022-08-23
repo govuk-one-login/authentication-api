@@ -1,9 +1,5 @@
 package uk.gov.di.authentication.app.services;
 
-import com.amazonaws.services.kms.model.GetPublicKeyRequest;
-import com.amazonaws.services.kms.model.SignRequest;
-import com.amazonaws.services.kms.model.SignResult;
-import com.amazonaws.services.kms.model.SigningAlgorithmSpec;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -25,6 +21,10 @@ import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.JWTID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
+import software.amazon.awssdk.services.kms.model.SignRequest;
+import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.authentication.app.exception.UnsuccesfulCredentialResponseException;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -158,8 +158,10 @@ public class DocAppCriService {
             var signingKeyId =
                     kmsService
                             .getPublicKey(
-                                    new GetPublicKeyRequest().withKeyId(docAppTokenSigningKeyAlias))
-                            .getKeyId();
+                                    GetPublicKeyRequest.builder()
+                                            .keyId(docAppTokenSigningKeyAlias)
+                                            .build())
+                            .keyId();
             var jwsHeader =
                     new JWSHeader.Builder(TOKEN_ALGORITHM)
                             .keyID(hashSha256String(signingKeyId))
@@ -168,16 +170,18 @@ public class DocAppCriService {
             var encodedClaims = Base64URL.encode(claimsSet.toJWTClaimsSet().toString());
             var message = encodedHeader + "." + encodedClaims;
             var messageToSign = ByteBuffer.wrap(message.getBytes());
-            var signRequest = new SignRequest();
-            signRequest.setMessage(messageToSign);
-            signRequest.setKeyId(docAppTokenSigningKeyAlias);
-            signRequest.setSigningAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256.toString());
-            SignResult signResult = kmsService.sign(signRequest);
+            var signRequest =
+                    SignRequest.builder()
+                            .message(SdkBytes.fromByteBuffer(messageToSign))
+                            .keyId(docAppTokenSigningKeyAlias)
+                            .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
+                            .build();
+            var signResponse = kmsService.sign(signRequest);
             LOG.info("PrivateKeyJWT has been signed successfully");
             var signature =
                     Base64URL.encode(
                                     ECDSA.transcodeSignatureToConcat(
-                                            signResult.getSignature().array(),
+                                            signResponse.signature().asByteArray(),
                                             ECDSA.getSignatureByteArrayLength(TOKEN_ALGORITHM)))
                             .toString();
             return new PrivateKeyJWT(SignedJWT.parse(message + "." + signature));

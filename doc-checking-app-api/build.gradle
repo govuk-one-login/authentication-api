@@ -9,7 +9,8 @@ version "unspecified"
 dependencies {
     compileOnly configurations.lambda,
             configurations.dynamodb,
-            configurations.sns
+            configurations.sns,
+            configurations.kms
 
     implementation configurations.gson,
             configurations.nimbus,
@@ -24,6 +25,7 @@ dependencies {
             project(":shared-test"),
             configurations.lambda,
             configurations.sqs,
+            configurations.kms,
             configurations.dynamodb
 
     testRuntimeOnly configurations.test_runtime

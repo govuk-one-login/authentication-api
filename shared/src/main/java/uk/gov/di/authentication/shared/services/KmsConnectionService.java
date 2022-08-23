@@ -1,23 +1,25 @@
 package uk.gov.di.authentication.shared.services;
 
-import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.services.kms.AWSKMS;
-import com.amazonaws.services.kms.AWSKMSClientBuilder;
-import com.amazonaws.services.kms.model.GetPublicKeyRequest;
-import com.amazonaws.services.kms.model.GetPublicKeyResult;
-import com.amazonaws.services.kms.model.SignRequest;
-import com.amazonaws.services.kms.model.SignResult;
-import com.amazonaws.services.kms.model.SigningAlgorithmSpec;
-import com.amazonaws.services.kms.model.VerifyRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
+import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.kms.KmsClient;
+import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
+import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
+import software.amazon.awssdk.services.kms.model.SignRequest;
+import software.amazon.awssdk.services.kms.model.SignResponse;
+import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
+import software.amazon.awssdk.services.kms.model.VerifyRequest;
 
+import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.Optional;
 
 public class KmsConnectionService {
 
-    private final AWSKMS kmsClient;
+    private final KmsClient kmsClient;
     private static final Logger LOG = LogManager.getLogger(KmsConnectionService.class);
 
     public KmsConnectionService(ConfigurationService configurationService) {
@@ -32,42 +34,46 @@ public class KmsConnectionService {
         if (localstackEndpointUri.isPresent()) {
             LOG.info("Localstack endpoint URI is present: " + localstackEndpointUri.get());
             this.kmsClient =
-                    AWSKMSClientBuilder.standard()
-                            .withEndpointConfiguration(
-                                    new AwsClientBuilder.EndpointConfiguration(
-                                            localstackEndpointUri.get(), awsRegion))
+                    KmsClient.builder()
+                            .endpointOverride(URI.create(localstackEndpointUri.get()))
+                            .credentialsProvider(DefaultCredentialsProvider.create())
+                            .region(Region.of(awsRegion))
                             .build();
         } else {
-            this.kmsClient = AWSKMSClientBuilder.standard().withRegion(awsRegion).build();
+            this.kmsClient =
+                    KmsClient.builder()
+                            .region(Region.of(awsRegion))
+                            .credentialsProvider(DefaultCredentialsProvider.create())
+                            .build();
         }
         warmUp(tokenSigningKeyId);
     }
 
-    public GetPublicKeyResult getPublicKey(GetPublicKeyRequest getPublicKeyRequest) {
-        LOG.info("Retrieving public key from KMS with KeyID {}", getPublicKeyRequest.getKeyId());
+    public GetPublicKeyResponse getPublicKey(GetPublicKeyRequest getPublicKeyRequest) {
+        LOG.info("Retrieving public key from KMS with KeyID {}", getPublicKeyRequest.keyId());
         return kmsClient.getPublicKey(getPublicKeyRequest);
     }
 
     public boolean validateSignature(
             ByteBuffer signature, ByteBuffer content, String signingKeyId) {
         var verifyRequest =
-                new VerifyRequest()
-                        .withMessage(content)
-                        .withSignature(signature)
-                        .withSigningAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
-                        .withKeyId(signingKeyId);
+                VerifyRequest.builder()
+                        .message(SdkBytes.fromByteBuffer(content))
+                        .signature(SdkBytes.fromByteBuffer(signature))
+                        .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
+                        .keyId(signingKeyId)
+                        .build();
 
-        return kmsClient.verify(verifyRequest).isSignatureValid();
+        return kmsClient.verify(verifyRequest).signatureValid();
     }
 
-    public SignResult sign(SignRequest signRequest) {
-        LOG.info("Calling KMS with SignRequest and KeyId {}", signRequest.getKeyId());
+    public SignResponse sign(SignRequest signRequest) {
+        LOG.info("Calling KMS with SignRequest and KeyId {}", signRequest.keyId());
         return kmsClient.sign(signRequest);
     }
 
     private void warmUp(String keyId) {
-        GetPublicKeyRequest request = new GetPublicKeyRequest();
-        request.setKeyId(keyId);
+        GetPublicKeyRequest request = GetPublicKeyRequest.builder().keyId(keyId).build();
         try {
             kmsClient.getPublicKey(request);
         } catch (Exception e) {

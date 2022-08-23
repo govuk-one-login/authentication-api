@@ -13,6 +13,7 @@ dependencies {
             configurations.nimbus,
             configurations.bouncycastle,
             configurations.sqs,
+            configurations.kms,
             configurations.s3,
             configurations.cloudwatch,
             configurations.dynamodb,

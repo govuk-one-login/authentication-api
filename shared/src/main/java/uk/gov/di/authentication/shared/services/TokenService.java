@@ -1,9 +1,5 @@
 package uk.gov.di.authentication.shared.services;
 
-import com.amazonaws.services.kms.model.GetPublicKeyRequest;
-import com.amazonaws.services.kms.model.SignRequest;
-import com.amazonaws.services.kms.model.SignResult;
-import com.amazonaws.services.kms.model.SigningAlgorithmSpec;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JOSEObjectType;
 import com.nimbusds.jose.JWSAlgorithm;
@@ -40,6 +36,11 @@ import com.nimbusds.openid.connect.sdk.claims.IDTokenClaimsSet;
 import com.nimbusds.openid.connect.sdk.token.OIDCTokens;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
+import software.amazon.awssdk.services.kms.model.SignRequest;
+import software.amazon.awssdk.services.kms.model.SignResponse;
+import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.authentication.shared.entity.AccessTokenStore;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
@@ -52,7 +53,6 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 
 import java.net.URI;
-import java.nio.ByteBuffer;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
@@ -408,9 +408,10 @@ public class TokenService {
         var signingKeyId =
                 kmsConnectionService
                         .getPublicKey(
-                                new GetPublicKeyRequest()
-                                        .withKeyId(configService.getTokenSigningKeyAlias()))
-                        .getKeyId();
+                                GetPublicKeyRequest.builder()
+                                        .keyId(configService.getTokenSigningKeyAlias())
+                                        .build())
+                        .keyId();
 
         try {
             var jwsHeader =
@@ -421,17 +422,18 @@ public class TokenService {
             Base64URL encodedHeader = jwsHeader.build().toBase64URL();
             Base64URL encodedClaims = Base64URL.encode(claimsSet.toString());
             String message = encodedHeader + "." + encodedClaims;
-            ByteBuffer messageToSign = ByteBuffer.wrap(message.getBytes());
-            SignRequest signRequest = new SignRequest();
-            signRequest.setMessage(messageToSign);
-            signRequest.setKeyId(configService.getTokenSigningKeyAlias());
-            signRequest.setSigningAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256.toString());
-            SignResult signResult = kmsConnectionService.sign(signRequest);
+            SignRequest signRequest =
+                    SignRequest.builder()
+                            .message(SdkBytes.fromByteArray(message.getBytes()))
+                            .keyId(configService.getTokenSigningKeyAlias())
+                            .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
+                            .build();
+            SignResponse signResult = kmsConnectionService.sign(signRequest);
             LOG.info("Token has been signed successfully");
             String signature =
                     Base64URL.encode(
                                     ECDSA.transcodeSignatureToConcat(
-                                            signResult.getSignature().array(),
+                                            signResult.signature().asByteArray(),
                                             ECDSA.getSignatureByteArrayLength(TOKEN_ALGORITHM)))
                             .toString();
             return SignedJWT.parse(message + "." + signature);
