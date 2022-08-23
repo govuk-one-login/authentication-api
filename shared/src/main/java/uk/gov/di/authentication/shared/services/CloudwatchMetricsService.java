@@ -12,7 +12,7 @@ public class CloudwatchMetricsService {
 
     public CloudwatchMetricsService() {}
 
-    public static void putEmbeddedValue(String name, double value, Map<String, String> dimensions) {
+    public void putEmbeddedValue(String name, double value, Map<String, String> dimensions) {
         segmentedFunctionCall(
                 "Metrics::EMF",
                 () -> {
