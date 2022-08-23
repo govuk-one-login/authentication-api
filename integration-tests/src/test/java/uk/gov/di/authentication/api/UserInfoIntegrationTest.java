@@ -24,7 +24,6 @@ import uk.gov.di.authentication.oidc.exceptions.UserInfoException;
 import uk.gov.di.authentication.oidc.lambda.UserInfoHandler;
 import uk.gov.di.authentication.shared.entity.AccessTokenStore;
 import uk.gov.di.authentication.shared.entity.ClientType;
-import uk.gov.di.authentication.shared.entity.CoreIdentity;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.ValidClaims;

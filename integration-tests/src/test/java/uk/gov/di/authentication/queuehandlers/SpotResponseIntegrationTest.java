@@ -83,7 +83,8 @@ public class SpotResponseIntegrationTest extends HandlerIntegrationTest<SQSEvent
                         PERSISTENT_SESSION_ID,
                         REQUEST_ID,
                         CLIENT_ID);
-        identityStore.saveIdentityClaims(pairwiseIdentifier.getValue(), emptyMap(), VOT.getValue(), null);
+        identityStore.saveIdentityClaims(
+                pairwiseIdentifier.getValue(), emptyMap(), VOT.getValue(), null);
         handler.handleRequest(createSqsEvent(spotResponse), mock(Context.class));
 
         assertFalse(

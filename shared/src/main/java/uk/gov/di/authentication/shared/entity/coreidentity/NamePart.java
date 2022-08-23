@@ -3,10 +3,8 @@ package uk.gov.di.authentication.shared.entity.coreidentity;
 import com.google.gson.annotations.Expose;
 
 public class NamePart {
-    @Expose
-    private String type;
-    @Expose
-    private String value;
+    @Expose private String type;
+    @Expose private String value;
 
     public String getType() {
         return type;
@@ -34,8 +32,8 @@ public class NamePart {
             return false;
         }
 
-        return this.type.equals(((NamePart)o).getType())
-            && this.value.equals(((NamePart)o).getValue());
+        return this.type.equals(((NamePart) o).getType())
+                && this.value.equals(((NamePart) o).getValue());
     }
 
     @Override

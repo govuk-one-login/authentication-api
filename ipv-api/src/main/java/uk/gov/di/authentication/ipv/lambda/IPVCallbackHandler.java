@@ -21,7 +21,6 @@ import uk.gov.di.authentication.ipv.entity.SPOTClaims;
 import uk.gov.di.authentication.ipv.entity.SPOTRequest;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.ipv.services.IPVTokenService;
-import uk.gov.di.authentication.shared.entity.CoreIdentity;
 import uk.gov.di.authentication.shared.entity.IdentityClaims;
 import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
@@ -385,7 +384,10 @@ public class IPVCallbackHandler
                 pairwiseIdentifier.getValue(),
                 additionalClaims,
                 (String) userIdentityUserInfo.getClaim(VOT.getValue()),
-                objectMapper.readValue((String)userIdentityUserInfo.getClaim(IdentityClaims.CORE_IDENTITY.getValue()), CoreIdentity.class));
+                (String)
+                        userIdentityUserInfo
+                                .getClaim(IdentityClaims.CORE_IDENTITY.getValue())
+                                .toString());
         // TODO: Consider behaviour if VOT/CI are null - DB update behaviour will retain existing
         // values and potentially cause issues during comparison with SPOT Response
     }

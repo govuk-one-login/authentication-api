@@ -3,7 +3,6 @@ package uk.gov.di.authentication.shared.services;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
 import uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper;
-import uk.gov.di.authentication.shared.entity.CoreIdentity;
 import uk.gov.di.authentication.shared.entity.IdentityCredentials;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 
@@ -72,7 +71,7 @@ public class DynamoIdentityService {
             String subjectID,
             Map<String, String> additionalClaims,
             String ipvVot,
-            CoreIdentity ipvCoreIdentity) {
+            String ipvCoreIdentity) {
         var identityCredentials =
                 new IdentityCredentials()
                         .setSubjectID(subjectID)

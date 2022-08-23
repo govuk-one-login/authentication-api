@@ -1,17 +1,14 @@
 package uk.gov.di.authentication.shared.entity;
 
-import java.util.List;
-import java.util.Map;
-
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-
 import uk.gov.di.authentication.shared.entity.coreidentity.BirthDate;
 import uk.gov.di.authentication.shared.entity.coreidentity.NameParts;
 
+import java.util.List;
+
 public class CoreIdentity {
-    @Expose
-    private List<NameParts> name;
+    @Expose private List<NameParts> name;
 
     @Expose
     @SerializedName("birthDate")
@@ -43,8 +40,8 @@ public class CoreIdentity {
             return false;
         }
 
-        return this.birthDate.equals(((CoreIdentity)o).getBirthDate())
-            && this.name.equals(((CoreIdentity)o).getName());
+        return this.birthDate.equals(((CoreIdentity) o).getBirthDate())
+                && this.name.equals(((CoreIdentity) o).getName());
     }
 
     @Override

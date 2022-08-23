@@ -6,8 +6,6 @@ import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
 import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
-
-import uk.gov.di.authentication.shared.entity.CoreIdentity;
 import uk.gov.di.authentication.shared.entity.IdentityCredentials;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoIdentityService;
@@ -66,7 +64,7 @@ public class IdentityStoreExtension extends DynamoExtension implements AfterEach
             String subjectID,
             Map<String, String> additionalClaims,
             String ipvVot,
-            CoreIdentity ipvCoreIdentity) {
+            String ipvCoreIdentity) {
         dynamoService.saveIdentityClaims(subjectID, additionalClaims, ipvVot, ipvCoreIdentity);
     }
 

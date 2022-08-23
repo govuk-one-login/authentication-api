@@ -3,8 +3,7 @@ package uk.gov.di.authentication.shared.entity.coreidentity;
 import com.google.gson.annotations.Expose;
 
 public class BirthDate {
-    @Expose
-    private String value;
+    @Expose private String value;
 
     public String getValue() {
         return value;
@@ -24,7 +23,7 @@ public class BirthDate {
             return false;
         }
 
-        return this.value.equals(((BirthDate)o).getValue());
+        return this.value.equals(((BirthDate) o).getValue());
     }
 
     @Override

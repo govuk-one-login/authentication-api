@@ -1,9 +1,9 @@
 package uk.gov.di.authentication.shared.entity.coreidentity;
 
-import java.util.List;
-
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
+
+import java.util.List;
 
 public class NameParts {
     @Expose
@@ -28,7 +28,7 @@ public class NameParts {
             return false;
         }
 
-        return this.nameParts.equals(((NameParts)o).getNameParts());
+        return this.nameParts.equals(((NameParts) o).getNameParts());
     }
 
     @Override
