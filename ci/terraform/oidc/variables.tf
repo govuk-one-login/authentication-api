@@ -386,6 +386,11 @@ variable "txma_account_id" {
   type    = string
 }
 
+variable "language_cy_enabled" {
+  default = false
+  type    = bool
+}
+
 locals {
   default_performance_parameters = {
     memory          = var.endpoint_memory_size

@@ -13,6 +13,7 @@ import software.amazon.awssdk.services.ssm.model.ParameterNotFoundException;
 import uk.gov.di.authentication.shared.configuration.AuditPublisherConfiguration;
 import uk.gov.di.authentication.shared.configuration.BaseLambdaConfiguration;
 import uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 
 import java.net.URI;
 import java.util.Arrays;
@@ -178,6 +179,16 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 .equals("true");
     }
 
+    public boolean isLanguageEnabled(SupportedLanguage supportedLanguage) {
+        if (supportedLanguage.equals(SupportedLanguage.EN)) {
+            return true;
+        } else if (supportedLanguage.equals(SupportedLanguage.CY)) {
+            return System.getenv().getOrDefault("SUPPORT_LANGUAGE_CY", "false").equals("true");
+        } else {
+            return false;
+        }
+    }
+
     public long getIDTokenExpiry() {
         return Long.parseLong(System.getenv().getOrDefault("ID_TOKEN_EXPIRY", "120"));
     }
@@ -321,6 +332,11 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     public int getPersistentCookieMaxAge() {
         return Integer.parseInt(
                 System.getenv().getOrDefault("PERSISTENT_COOKIE_MAX_AGE", "34190000"));
+    }
+
+    public int getLanguageCookieMaxAge() {
+        return Integer.parseInt(
+                System.getenv().getOrDefault("LANGUAGE_COOKIE_MAX_AGE", "31536000"));
     }
 
     public long getSessionExpiry() {

@@ -21,6 +21,8 @@ public class CookieHelper {
     public static final String PERSISTENT_COOKIE_NAME = "di-persistent-session-id";
     public static final String SESSION_COOKIE_NAME = "gs";
 
+    public static final String LANGUAGE_COOKIE_NAME = "lng";
+
     public static Optional<HttpCookie> getHttpCookieFromRequestHeaders(
             Map<String, String> headers, String cookieName) {
         return getHttpCookieFromHeaders(headers, cookieName, REQUEST_COOKIE_HEADER);

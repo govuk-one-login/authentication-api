@@ -33,6 +33,7 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -41,6 +42,7 @@ import java.util.stream.Collectors;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getPrimaryLanguageFromUILocales;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
@@ -273,20 +275,33 @@ public class AuthorisationHandler
         } catch (URISyntaxException e) {
             throw new RuntimeException("Error constructing redirect URI", e);
         }
-        var cookies =
-                List.of(
-                        CookieHelper.buildCookieString(
-                                CookieHelper.SESSION_COOKIE_NAME,
-                                session.getSessionId() + "." + clientSessionID,
-                                configurationService.getSessionCookieMaxAge(),
-                                configurationService.getSessionCookieAttributes(),
-                                configurationService.getDomainName()),
-                        CookieHelper.buildCookieString(
-                                CookieHelper.PERSISTENT_COOKIE_NAME,
-                                persistentSessionId,
-                                configurationService.getPersistentCookieMaxAge(),
-                                configurationService.getSessionCookieAttributes(),
-                                configurationService.getDomainName()));
+        List<String> cookies = new ArrayList<>();
+        cookies.add(
+                CookieHelper.buildCookieString(
+                        CookieHelper.SESSION_COOKIE_NAME,
+                        session.getSessionId() + "." + clientSessionID,
+                        configurationService.getSessionCookieMaxAge(),
+                        configurationService.getSessionCookieAttributes(),
+                        configurationService.getDomainName()));
+        cookies.add(
+                CookieHelper.buildCookieString(
+                        CookieHelper.PERSISTENT_COOKIE_NAME,
+                        persistentSessionId,
+                        configurationService.getPersistentCookieMaxAge(),
+                        configurationService.getSessionCookieAttributes(),
+                        configurationService.getDomainName()));
+
+        getPrimaryLanguageFromUILocales(authenticationRequest, configurationService)
+                .ifPresent(
+                        primaryLanguage ->
+                                cookies.add(
+                                        CookieHelper.buildCookieString(
+                                                CookieHelper.LANGUAGE_COOKIE_NAME,
+                                                primaryLanguage.getLanguage(),
+                                                configurationService.getLanguageCookieMaxAge(),
+                                                configurationService.getSessionCookieAttributes(),
+                                                configurationService.getDomainName())));
+
         return generateApiGatewayProxyResponse(
                 302,
                 "",
