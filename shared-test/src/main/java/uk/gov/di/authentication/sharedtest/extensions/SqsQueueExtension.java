@@ -1,18 +1,22 @@
 package uk.gov.di.authentication.sharedtest.extensions;
 
-import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.services.sqs.AmazonSQS;
-import com.amazonaws.services.sqs.AmazonSQSClient;
-import com.amazonaws.services.sqs.model.Message;
-import com.amazonaws.services.sqs.model.PurgeQueueRequest;
-import com.amazonaws.services.sqs.model.QueueAttributeName;
-import com.amazonaws.services.sqs.model.QueueDoesNotExistException;
-import com.amazonaws.services.sqs.model.ReceiveMessageRequest;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
+import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.sqs.SqsClient;
+import software.amazon.awssdk.services.sqs.model.CreateQueueRequest;
+import software.amazon.awssdk.services.sqs.model.GetQueueAttributesRequest;
+import software.amazon.awssdk.services.sqs.model.GetQueueUrlRequest;
+import software.amazon.awssdk.services.sqs.model.Message;
+import software.amazon.awssdk.services.sqs.model.PurgeQueueRequest;
+import software.amazon.awssdk.services.sqs.model.QueueAttributeName;
+import software.amazon.awssdk.services.sqs.model.QueueDoesNotExistException;
+import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -24,7 +28,7 @@ public class SqsQueueExtension extends BaseAwsResourceExtension implements Befor
     public static final int DEFAULT_NUMBER_OF_MESSAGES = 10;
 
     private final String queueNameSuffix;
-    private final AmazonSQS sqsClient;
+    private final SqsClient sqsClient;
     private final Json objectMapper = SerializationService.getInstance();
 
     private String queueUrl;
@@ -32,10 +36,10 @@ public class SqsQueueExtension extends BaseAwsResourceExtension implements Befor
     public SqsQueueExtension(String queueNameSuffix) {
         this.queueNameSuffix = queueNameSuffix;
         this.sqsClient =
-                AmazonSQSClient.builder()
-                        .withEndpointConfiguration(
-                                new AwsClientBuilder.EndpointConfiguration(
-                                        LOCALSTACK_ENDPOINT, REGION))
+                SqsClient.builder()
+                        .endpointOverride(URI.create(LOCALSTACK_ENDPOINT))
+                        .credentialsProvider(EnvironmentVariableCredentialsProvider.create())
+                        .region(Region.of(REGION))
                         .build();
     }
 
@@ -44,11 +48,14 @@ public class SqsQueueExtension extends BaseAwsResourceExtension implements Befor
     }
 
     public int getApproximateMessageCount() {
-        var result =
-                sqsClient.getQueueAttributes(
-                        queueUrl, List.of(QueueAttributeName.ApproximateNumberOfMessages.name()));
+        var getQueueAttributesRequest =
+                GetQueueAttributesRequest.builder()
+                        .queueUrl(queueUrl)
+                        .attributeNames(QueueAttributeName.APPROXIMATE_NUMBER_OF_MESSAGES)
+                        .build();
+        var result = sqsClient.getQueueAttributes(getQueueAttributesRequest);
         var countString =
-                result.getAttributes().get(QueueAttributeName.ApproximateNumberOfMessages.name());
+                result.attributes().get(QueueAttributeName.APPROXIMATE_NUMBER_OF_MESSAGES);
 
         return Integer.parseInt(countString);
     }
@@ -59,7 +66,7 @@ public class SqsQueueExtension extends BaseAwsResourceExtension implements Befor
 
     public List<String> getRawMessages() {
         return getMessages(DEFAULT_NUMBER_OF_MESSAGES).stream()
-                .map(Message::getBody)
+                .map(Message::body)
                 .collect(Collectors.toList());
     }
 
@@ -68,7 +75,7 @@ public class SqsQueueExtension extends BaseAwsResourceExtension implements Befor
                 .map(
                         m -> {
                             try {
-                                return objectMapper.readValue(m.getBody(), messageClass);
+                                return objectMapper.readValue(m.body(), messageClass);
                             } catch (Json.JsonException e) {
                                 throw new RuntimeException(e);
                             }
@@ -84,30 +91,36 @@ public class SqsQueueExtension extends BaseAwsResourceExtension implements Befor
                         context.getTestClass().map(Class::getSimpleName).orElse("unknown"),
                         queueNameSuffix);
         queueUrl = getQueueUrlFor(queueName).orElseGet(() -> createQueue(queueName));
-        sqsClient.purgeQueue(new PurgeQueueRequest().withQueueUrl(queueUrl));
+        sqsClient.purgeQueue(PurgeQueueRequest.builder().queueUrl(queueUrl).build());
     }
 
     private Optional<String> getQueueUrlFor(String queueName) {
         try {
-            return Optional.of(sqsClient.getQueueUrl(queueName).getQueueUrl());
+            return Optional.of(
+                    sqsClient
+                            .getQueueUrl(GetQueueUrlRequest.builder().queueName(queueName).build())
+                            .toString());
         } catch (QueueDoesNotExistException ignored) {
             return Optional.empty();
         }
     }
 
     private String createQueue(String queueName) {
-        return sqsClient.createQueue(queueName).getQueueUrl();
+        return sqsClient
+                .createQueue(CreateQueueRequest.builder().queueName(queueName).build())
+                .queueUrl();
     }
 
     private List<Message> getMessages(int numberOfMessages) {
         var request =
-                new ReceiveMessageRequest()
-                        .withQueueUrl(queueUrl)
-                        .withMaxNumberOfMessages(numberOfMessages);
-        return sqsClient.receiveMessage(request).getMessages();
+                ReceiveMessageRequest.builder()
+                        .queueUrl(queueUrl)
+                        .maxNumberOfMessages(numberOfMessages)
+                        .build();
+        return sqsClient.receiveMessage(request).messages();
     }
 
     public void clear() {
-        sqsClient.purgeQueue(new PurgeQueueRequest().withQueueUrl(this.queueUrl));
+        sqsClient.purgeQueue(PurgeQueueRequest.builder().queueUrl(queueUrl).build());
     }
 }
