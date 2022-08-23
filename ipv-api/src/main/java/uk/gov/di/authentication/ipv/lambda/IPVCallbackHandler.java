@@ -364,7 +364,7 @@ public class IPVCallbackHandler
     }
 
     private void saveIdentityClaimsToDynamo(
-            Subject pairwiseIdentifier, UserInfo userIdentityUserInfo) throws JsonException {
+            Subject pairwiseIdentifier, UserInfo userIdentityUserInfo) {
         LOG.info("Checking for additional identity claims to save to dynamo");
         var additionalClaims = new HashMap<String, String>();
         ValidClaims.getAllValidClaims().stream()
@@ -384,10 +384,7 @@ public class IPVCallbackHandler
                 pairwiseIdentifier.getValue(),
                 additionalClaims,
                 (String) userIdentityUserInfo.getClaim(VOT.getValue()),
-                (String)
-                        userIdentityUserInfo
-                                .getClaim(IdentityClaims.CORE_IDENTITY.getValue())
-                                .toString());
+                userIdentityUserInfo.getClaim(IdentityClaims.CORE_IDENTITY.getValue()).toString());
         // TODO: Consider behaviour if VOT/CI are null - DB update behaviour will retain existing
         // values and potentially cause issues during comparison with SPOT Response
     }
