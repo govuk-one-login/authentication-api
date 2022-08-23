@@ -51,6 +51,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOG = LogManager.getLogger(SendNotificationHandler.class);
+    private static final CloudwatchMetricsService METRICS = new CloudwatchMetricsService();
 
     private final AwsSqsClient sqsClient;
     private final CodeGeneratorService codeGeneratorService;
@@ -180,7 +181,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         if (notTestClientWithValidTestEmail(userContext, notificationType)) {
 
             if (notificationType == VERIFY_PHONE_NUMBER) {
-                CloudwatchMetricsService.putEmbeddedValue(
+                METRICS.putEmbeddedValue(
                         "SendingSms",
                         1,
                         Map.of(
