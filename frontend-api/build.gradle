@@ -31,6 +31,7 @@ dependencies {
             configurations.lambda,
             configurations.sqs,
             configurations.s3,
+            configurations.kms,
             configurations.dynamodb
 
     testRuntimeOnly configurations.test_runtime

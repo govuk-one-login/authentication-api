@@ -72,6 +72,7 @@ subprojects {
         govuk_notify
         gson
         hamcrest
+        kms
         lambda
         lambda_tests
         lettuce
@@ -111,6 +112,8 @@ subprojects {
         gson "com.google.code.gson:gson:${dependencyVersions.gson}"
 
         hamcrest "org.hamcrest:hamcrest:2.2"
+
+        kms "software.amazon.awssdk:kms:${dependencyVersions.aws_sdk_v2_version}"
 
         lambda "com.amazonaws:aws-lambda-java-core:${dependencyVersions.aws_lambda_core_version}",
                 "com.amazonaws:aws-lambda-java-events:${dependencyVersions.aws_lambda_events_version}",

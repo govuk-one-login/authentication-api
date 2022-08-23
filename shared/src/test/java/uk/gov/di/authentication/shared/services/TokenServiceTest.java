@@ -1,9 +1,5 @@
 package uk.gov.di.authentication.shared.services;
 
-import com.amazonaws.services.kms.model.GetPublicKeyRequest;
-import com.amazonaws.services.kms.model.GetPublicKeyResult;
-import com.amazonaws.services.kms.model.SignRequest;
-import com.amazonaws.services.kms.model.SignResult;
 import com.google.gson.Gson;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
@@ -41,6 +37,12 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
+import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
+import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
+import software.amazon.awssdk.services.kms.model.SignRequest;
+import software.amazon.awssdk.services.kms.model.SignResponse;
+import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.authentication.shared.entity.AccessTokenStore;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
@@ -53,7 +55,6 @@ import uk.gov.di.authentication.sharedtest.helper.SubjectHelper;
 import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
-import java.nio.ByteBuffer;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
@@ -132,7 +133,7 @@ public class TokenServiceTest {
         when(configurationService.getIDTokenExpiry()).thenReturn(120L);
         when(configurationService.getSessionExpiry()).thenReturn(300L);
         when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class)))
-                .thenReturn(new GetPublicKeyResult().withKeyId("789789789789789"));
+                .thenReturn(GetPublicKeyResponse.builder().keyId("789789789789789").build());
 
         nonce = new Nonce();
     }
@@ -564,12 +565,15 @@ public class TokenServiceTest {
                         .algorithm(JWSAlgorithm.ES256)
                         .generate();
         SignedJWT signedIdToken = createSignedIdToken(ecSigningKey);
-        SignResult idTokenSignedResult = new SignResult();
         byte[] idTokenSignatureDer =
                 ECDSA.transcodeSignatureToDER(signedIdToken.getSignature().decode());
-        idTokenSignedResult.setSignature(ByteBuffer.wrap(idTokenSignatureDer));
-        idTokenSignedResult.setKeyId(KEY_ID);
-        idTokenSignedResult.setSigningAlgorithm(JWSAlgorithm.ES256.getName());
+        SignResponse idTokenSignedResult =
+                SignResponse.builder()
+                        .signature(SdkBytes.fromByteArray(idTokenSignatureDer))
+                        .keyId(KEY_ID)
+                        .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
+                        .build();
+
         when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(idTokenSignedResult);
     }
 
@@ -594,12 +598,15 @@ public class TokenServiceTest {
                         signer,
                         PUBLIC_SUBJECT,
                         ecSigningKey.getKeyID());
-        SignResult accessTokenResult = new SignResult();
         byte[] accessTokenSignatureDer =
                 ECDSA.transcodeSignatureToDER(signedJWT.getSignature().decode());
-        accessTokenResult.setSignature(ByteBuffer.wrap(accessTokenSignatureDer));
-        accessTokenResult.setKeyId(KEY_ID);
-        accessTokenResult.setSigningAlgorithm(JWSAlgorithm.ES256.getName());
+        SignResponse accessTokenResult =
+                SignResponse.builder()
+                        .signature(SdkBytes.fromByteArray(accessTokenSignatureDer))
+                        .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
+                        .keyId(KEY_ID)
+                        .build();
+
         when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(accessTokenResult);
     }
 

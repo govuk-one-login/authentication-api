@@ -13,6 +13,7 @@ dependencies {
             configurations.bouncycastle,
             configurations.govuk_notify,
             configurations.dynamodb,
+            configurations.kms,
             configurations.lettuce,
             configurations.libphonenumber,
             configurations.hamcrest,

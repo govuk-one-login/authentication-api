@@ -1,9 +1,5 @@
 package uk.gov.di.authentication.app.services;
 
-import com.amazonaws.services.kms.model.GetPublicKeyRequest;
-import com.amazonaws.services.kms.model.GetPublicKeyResult;
-import com.amazonaws.services.kms.model.SignRequest;
-import com.amazonaws.services.kms.model.SignResult;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -27,6 +23,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
+import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
+import software.amazon.awssdk.services.kms.model.SignRequest;
+import software.amazon.awssdk.services.kms.model.SignResponse;
+import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -38,7 +40,6 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.net.MalformedURLException;
 import java.net.URI;
-import java.nio.ByteBuffer;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
@@ -226,17 +227,20 @@ class DocAppAuthorisationServiceTest {
         var jwsHeader = new JWSHeader(JWSAlgorithm.ES256);
         var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSet);
         signedJWT.sign(ecdsaSigner);
-        var signResult = new SignResult();
         byte[] signatureToDER = ECDSA.transcodeSignatureToDER(signedJWT.getSignature().decode());
-        signResult.setSignature(ByteBuffer.wrap(signatureToDER));
-        signResult.setKeyId(KEY_ID);
-        signResult.setSigningAlgorithm(JWSAlgorithm.ES256.getName());
+
+        var signResult =
+                SignResponse.builder()
+                        .signature(SdkBytes.fromByteArray(signatureToDER))
+                        .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
+                        .keyId(KEY_ID)
+                        .build();
         when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(signResult);
         var state = new State();
         var pairwise = new Subject("pairwise-identifier");
 
         when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class)))
-                .thenReturn(new GetPublicKeyResult().withKeyId("789789789789789"));
+                .thenReturn(GetPublicKeyResponse.builder().keyId("789789789789789").build());
         when(clientRegistry.isTestClient()).thenReturn(isTestClient);
 
         var encryptedJWT =

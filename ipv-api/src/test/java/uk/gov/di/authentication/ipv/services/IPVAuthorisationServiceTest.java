@@ -1,7 +1,5 @@
 package uk.gov.di.authentication.ipv.services;
 
-import com.amazonaws.services.kms.model.SignRequest;
-import com.amazonaws.services.kms.model.SignResult;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -22,6 +20,10 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.services.kms.model.SignRequest;
+import software.amazon.awssdk.services.kms.model.SignResponse;
+import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
@@ -29,7 +31,6 @@ import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.net.URI;
-import java.nio.ByteBuffer;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
@@ -198,11 +199,13 @@ class IPVAuthorisationServiceTest {
         var jwsHeader = new JWSHeader(JWSAlgorithm.ES256);
         var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSet);
         signedJWT.sign(ecdsaSigner);
-        var signResult = new SignResult();
         byte[] signatureToDER = ECDSA.transcodeSignatureToDER(signedJWT.getSignature().decode());
-        signResult.setSignature(ByteBuffer.wrap(signatureToDER));
-        signResult.setKeyId(KEY_ID);
-        signResult.setSigningAlgorithm(JWSAlgorithm.ES256.getName());
+        var signResult =
+                SignResponse.builder()
+                        .signature(SdkBytes.fromByteArray(signatureToDER))
+                        .keyId(KEY_ID)
+                        .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
+                        .build();
         when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(signResult);
         var state = new State();
         var scope = new Scope(OIDCScopeValue.OPENID);

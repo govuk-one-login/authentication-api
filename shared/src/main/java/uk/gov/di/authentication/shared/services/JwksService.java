@@ -1,7 +1,5 @@
 package uk.gov.di.authentication.shared.services;
 
-import com.amazonaws.services.kms.model.GetPublicKeyRequest;
-import com.amazonaws.services.kms.model.GetPublicKeyResult;
 import com.nimbusds.jose.Algorithm;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.jwk.Curve;
@@ -14,6 +12,8 @@ import org.apache.logging.log4j.Logger;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.openssl.PEMException;
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
+import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
+import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
 import uk.gov.di.authentication.shared.helpers.CryptoProviderHelper;
 
 import java.io.IOException;
@@ -76,22 +76,21 @@ public class JwksService {
     }
 
     private ECKey createJwk(String keyId) {
-        GetPublicKeyRequest getPublicKeyRequest = new GetPublicKeyRequest();
-        getPublicKeyRequest.setKeyId(keyId);
-        GetPublicKeyResult publicKeyResult = kmsConnectionService.getPublicKey(getPublicKeyRequest);
+        var getPublicKeyRequest = GetPublicKeyRequest.builder().keyId(keyId).build();
+        var publicKeyResponse = kmsConnectionService.getPublicKey(getPublicKeyRequest);
 
-        PublicKey publicKey = createPublicKey(publicKeyResult);
+        PublicKey publicKey = createPublicKey(publicKeyResponse);
 
         return new ECKey.Builder(Curve.P_256, (ECPublicKey) publicKey)
-                .keyID(hashSha256String(publicKeyResult.getKeyId()))
+                .keyID(hashSha256String(publicKeyResponse.keyId()))
                 .keyUse(KeyUse.SIGNATURE)
                 .algorithm(new Algorithm(JWSAlgorithm.ES256.getName()))
                 .build();
     }
 
-    private PublicKey createPublicKey(GetPublicKeyResult publicKeyResult) {
+    private PublicKey createPublicKey(GetPublicKeyResponse publicKeyResponse) {
         SubjectPublicKeyInfo subjectKeyInfo =
-                SubjectPublicKeyInfo.getInstance(publicKeyResult.getPublicKey().array());
+                SubjectPublicKeyInfo.getInstance(publicKeyResponse.publicKey().asByteArray());
 
         try {
             return new JcaPEMKeyConverter()

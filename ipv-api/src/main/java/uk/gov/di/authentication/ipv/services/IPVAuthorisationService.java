@@ -1,7 +1,5 @@
 package uk.gov.di.authentication.ipv.services;
 
-import com.amazonaws.services.kms.model.SignRequest;
-import com.amazonaws.services.kms.model.SigningAlgorithmSpec;
 import com.nimbusds.jose.EncryptionMethod;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWEAlgorithm;
@@ -26,6 +24,9 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.services.kms.model.SignRequest;
+import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -35,7 +36,6 @@ import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
-import java.nio.ByteBuffer;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 import java.time.temporal.ChronoUnit;
@@ -161,10 +161,12 @@ public class IPVAuthorisationService {
         var encodedHeader = jwsHeader.toBase64URL();
         var encodedClaims = Base64URL.encode(claimsBuilder.build().toString());
         var message = encodedHeader + "." + encodedClaims;
-        var signRequest = new SignRequest();
-        signRequest.setMessage(ByteBuffer.wrap(message.getBytes()));
-        signRequest.setKeyId(configurationService.getIPVTokenSigningKeyAlias());
-        signRequest.setSigningAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256.toString());
+        var signRequest =
+                SignRequest.builder()
+                        .message(SdkBytes.fromByteArray(message.getBytes()))
+                        .keyId(configurationService.getIPVTokenSigningKeyAlias())
+                        .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
+                        .build();
         try {
             LOG.info("Signing request JWT");
             var signResult = kmsConnectionService.sign(signRequest);
@@ -172,7 +174,7 @@ public class IPVAuthorisationService {
             var signature =
                     Base64URL.encode(
                                     ECDSA.transcodeSignatureToConcat(
-                                            signResult.getSignature().array(),
+                                            signResult.signature().asByteArray(),
                                             ECDSA.getSignatureByteArrayLength(SIGNING_ALGORITHM)))
                             .toString();
             var signedJWT = SignedJWT.parse(message + "." + signature);

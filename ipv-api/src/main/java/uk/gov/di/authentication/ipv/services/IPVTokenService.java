@@ -1,8 +1,5 @@
 package uk.gov.di.authentication.ipv.services;
 
-import com.amazonaws.services.kms.model.SignRequest;
-import com.amazonaws.services.kms.model.SignResult;
-import com.amazonaws.services.kms.model.SigningAlgorithmSpec;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -24,13 +21,15 @@ import com.nimbusds.openid.connect.sdk.UserInfoResponse;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.services.kms.model.SignRequest;
+import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.authentication.shared.helpers.ConstructUriHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
 
@@ -113,17 +112,19 @@ public class IPVTokenService {
             var encodedHeader = jwsHeader.toBase64URL();
             var encodedClaims = Base64URL.encode(claimsSet.toJWTClaimsSet().toString());
             var message = encodedHeader + "." + encodedClaims;
-            var messageToSign = ByteBuffer.wrap(message.getBytes());
-            var signRequest = new SignRequest();
-            signRequest.setMessage(messageToSign);
-            signRequest.setKeyId(configurationService.getIPVTokenSigningKeyAlias());
-            signRequest.setSigningAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256.toString());
-            SignResult signResult = kmsService.sign(signRequest);
+            var signRequest =
+                    SignRequest.builder()
+                            .message(SdkBytes.fromByteArray(message.getBytes()))
+                            .keyId(configurationService.getIPVTokenSigningKeyAlias())
+                            .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
+                            .build();
+
+            var signResponse = kmsService.sign(signRequest);
             LOG.info("PrivateKeyJWT has been signed successfully");
             var signature =
                     Base64URL.encode(
                                     ECDSA.transcodeSignatureToConcat(
-                                            signResult.getSignature().array(),
+                                            signResponse.signature().asByteArray(),
                                             ECDSA.getSignatureByteArrayLength(TOKEN_ALGORITHM)))
                             .toString();
             return new PrivateKeyJWT(SignedJWT.parse(message + "." + signature));

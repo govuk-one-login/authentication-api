@@ -1,8 +1,5 @@
 package uk.gov.di.authentication.sharedtest.extensions;
 
-import com.amazonaws.services.kms.model.SignRequest;
-import com.amazonaws.services.kms.model.SignResult;
-import com.amazonaws.services.kms.model.SigningAlgorithmSpec;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -11,6 +8,9 @@ import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import org.junit.jupiter.api.extension.ExtensionContext;
+import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.services.kms.model.SignRequest;
+import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
 import java.nio.ByteBuffer;
@@ -43,15 +43,17 @@ public class TokenSigningExtension extends KmsKeyExtension {
             Base64URL encodedClaims = Base64URL.encode(claimsSet.toString());
             String message = encodedHeader + "." + encodedClaims;
             ByteBuffer messageToSign = ByteBuffer.wrap(message.getBytes());
-            SignRequest signRequest = new SignRequest();
-            signRequest.setMessage(messageToSign);
-            signRequest.setKeyId(getKeyAlias());
-            signRequest.setSigningAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256.toString());
-            SignResult signResult = kmsConnectionService.sign(signRequest);
+            SignRequest signRequest =
+                    SignRequest.builder()
+                            .message(SdkBytes.fromByteBuffer(messageToSign))
+                            .keyId(getKeyAlias())
+                            .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
+                            .build();
+            var signResult = kmsConnectionService.sign(signRequest);
             String signature =
                     Base64URL.encode(
                                     ECDSA.transcodeSignatureToConcat(
-                                            signResult.getSignature().array(),
+                                            signResult.signature().asByteArray(),
                                             ECDSA.getSignatureByteArrayLength(JWSAlgorithm.ES256)))
                             .toString();
             return SignedJWT.parse(message + "." + signature);

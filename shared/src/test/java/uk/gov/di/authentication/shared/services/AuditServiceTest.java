@@ -1,7 +1,5 @@
 package uk.gov.di.authentication.shared.services;
 
-import com.amazonaws.services.kms.model.SignRequest;
-import com.amazonaws.services.kms.model.SignResult;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -9,10 +7,12 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.MockitoAnnotations;
+import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.services.kms.model.SignRequest;
+import software.amazon.awssdk.services.kms.model.SignResponse;
 import uk.gov.di.audit.AuditPayload.SignedAuditEvent;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 
-import java.nio.ByteBuffer;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -68,8 +68,11 @@ class AuditServiceTest {
 
     @BeforeEach
     void beforeEach() {
-        var stubSignature = new SignResult().withSignature(ByteBuffer.wrap("signature".getBytes()));
-        when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(stubSignature);
+        var signResponse =
+                SignResponse.builder()
+                        .signature(SdkBytes.fromByteArray("signature".getBytes()))
+                        .build();
+        when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(signResponse);
         when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of("oidc-base-url"));
         MockitoAnnotations.openMocks(this);
     }
@@ -166,7 +169,7 @@ class AuditServiceTest {
 
         assertThat(
                 event.getPayload().toByteArray(),
-                is(signingRequestCaptor.getValue().getMessage().array()));
+                is(signingRequestCaptor.getValue().message().asByteArray()));
         assertThat(event.getSignature().toByteArray(), is("signature".getBytes()));
     }
 

@@ -1,14 +1,14 @@
 package uk.gov.di.authentication.shared.services;
 
-import com.amazonaws.services.kms.model.SignRequest;
-import com.amazonaws.services.kms.model.SigningAlgorithmSpec;
 import com.google.protobuf.ByteString;
+import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.services.kms.model.SignRequest;
+import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.audit.AuditPayload.AuditEvent;
 import uk.gov.di.audit.AuditPayload.SignedAuditEvent;
 import uk.gov.di.audit.TxmaAuditUser;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 
-import java.nio.ByteBuffer;
 import java.time.Clock;
 import java.util.Arrays;
 import java.util.Base64;
@@ -157,12 +157,14 @@ public class AuditService {
     }
 
     private byte[] signPayload(byte[] payload) {
-        SignRequest signRequest = new SignRequest();
-        signRequest.setKeyId(configurationService.getAuditSigningKeyAlias());
-        signRequest.setMessage(ByteBuffer.wrap(payload));
-        signRequest.setSigningAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256.toString());
+        SignRequest signRequest =
+                SignRequest.builder()
+                        .keyId(configurationService.getAuditSigningKeyAlias())
+                        .message(SdkBytes.fromByteArray(payload))
+                        .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
+                        .build();
 
-        return kmsConnectionService.sign(signRequest).getSignature().array();
+        return kmsConnectionService.sign(signRequest).signature().asByteArray();
     }
 
     public static class MetadataPair {

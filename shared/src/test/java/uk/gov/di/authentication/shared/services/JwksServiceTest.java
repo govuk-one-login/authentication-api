@@ -1,7 +1,5 @@
 package uk.gov.di.authentication.shared.services;
 
-import com.amazonaws.services.kms.model.GetPublicKeyRequest;
-import com.amazonaws.services.kms.model.GetPublicKeyResult;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.jwk.Curve;
@@ -11,11 +9,14 @@ import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
+import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
+import software.amazon.awssdk.services.kms.model.KeyUsageType;
+import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 
-import java.nio.ByteBuffer;
 import java.util.Base64;
 
-import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
@@ -36,14 +37,17 @@ class JwksServiceTest {
     void setUp() throws JOSEException {
         var ecJWK = generateECKeyPair();
         when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
-        GetPublicKeyResult getPublicKeyResult = new GetPublicKeyResult();
-        getPublicKeyResult.setKeyUsage("SIGN_VERIFY");
-        getPublicKeyResult.setKeyId(KEY_ID);
-        getPublicKeyResult.setSigningAlgorithms(singletonList(JWSAlgorithm.ES256.getName()));
-        getPublicKeyResult.setPublicKey(
-                ByteBuffer.wrap(ecJWK.toPublicJWK().toECPublicKey().getEncoded()));
+        var getPublicKeyResponse =
+                GetPublicKeyResponse.builder()
+                        .keyUsage(KeyUsageType.SIGN_VERIFY)
+                        .keyId(KEY_ID)
+                        .signingAlgorithms(SigningAlgorithmSpec.ECDSA_SHA_256)
+                        .publicKey(
+                                SdkBytes.fromByteArray(
+                                        ecJWK.toPublicJWK().toECPublicKey().getEncoded()))
+                        .build();
         when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class)))
-                .thenReturn(getPublicKeyResult);
+                .thenReturn(getPublicKeyResponse);
     }
 
     @Test
@@ -56,11 +60,12 @@ class JwksServiceTest {
         when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
 
         var result =
-                new GetPublicKeyResult()
-                        .withKeyUsage("SIGN_VERIFY")
-                        .withKeyId(KEY_ID)
-                        .withSigningAlgorithms(singletonList(JWSAlgorithm.ES256.getName()))
-                        .withPublicKey(ByteBuffer.wrap(publicKey));
+                GetPublicKeyResponse.builder()
+                        .keyUsage(KeyUsageType.SIGN_VERIFY)
+                        .keyId(KEY_ID)
+                        .signingAlgorithms(SigningAlgorithmSpec.ECDSA_SHA_256)
+                        .publicKey(SdkBytes.fromByteArray(publicKey))
+                        .build();
 
         when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class))).thenReturn(result);
 
