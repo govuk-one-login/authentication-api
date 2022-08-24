@@ -233,7 +233,9 @@ class AuthCodeHandlerTest {
                                 "IsTest",
                                 "true",
                                 "MfaMethod",
-                                mfaMethodType.getValue()));
+                                mfaMethodType.getValue(),
+                                "MfaRequired",
+                                requestedLevel.equals(LOW_LEVEL) ? "No" : "Yes"));
     }
 
     @Test
