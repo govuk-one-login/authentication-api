@@ -9,6 +9,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.lambda.SPOTResponseHandler;
+import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.sharedtest.basetest.HandlerIntegrationTest;
 
 import java.util.Arrays;
@@ -24,8 +25,8 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
-import static uk.gov.di.authentication.shared.entity.IdentityClaims.VOT;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceivedByBothServices;
+import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.CORE_IDENTITY_CLAIM;
 
 public class SpotResponseIntegrationTest extends HandlerIntegrationTest<SQSEvent, Object> {
 
@@ -84,7 +85,10 @@ public class SpotResponseIntegrationTest extends HandlerIntegrationTest<SQSEvent
                         REQUEST_ID,
                         CLIENT_ID);
         identityStore.saveIdentityClaims(
-                pairwiseIdentifier.getValue(), emptyMap(), VOT.getValue(), null);
+                pairwiseIdentifier.getValue(),
+                emptyMap(),
+                LevelOfConfidence.MEDIUM_LEVEL.getValue(),
+                CORE_IDENTITY_CLAIM);
         handler.handleRequest(createSqsEvent(spotResponse), mock(Context.class));
 
         assertFalse(
