@@ -31,7 +31,7 @@ module "ipv-callback" {
     AUDIT_SIGNING_KEY_ALIAS        = local.audit_signing_key_alias_name
     DYNAMO_ENDPOINT                = var.use_localstack ? var.lambda_dynamo_endpoint : null
     EVENTS_SNS_TOPIC_ARN           = aws_sns_topic.events.arn
-    TXMA_AUDIT_ENABLED             = contains(["staging"], var.environment)
+    TXMA_AUDIT_ENABLED             = true
     TXMA_AUDIT_QUEUE_URL           = module.oidc_txma_audit.queue_url
     ENVIRONMENT                    = var.environment
     IDENTITY_ENABLED               = var.ipv_api_enabled
