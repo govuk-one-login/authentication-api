@@ -73,9 +73,13 @@ public class AuditService {
             String phoneNumber,
             String persistentSessionId,
             MetadataPair... metadataPairs) {
+
+        var now = clock.instant();
+
         snsService.publishAuditMessage(
                 generateLogLine(
                         event,
+                        now.toString(),
                         requestId,
                         sessionId,
                         clientId,
@@ -96,7 +100,7 @@ public class AuditService {
                         .withPersistentSessionId(persistentSessionId);
 
         var txmaAuditEvent =
-                auditEventWithTime(event, () -> Date.from(clock.instant()))
+                auditEventWithTime(event, () -> Date.from(now))
                         .withClientId(clientId)
                         .withComponentId(configurationService.getOidcApiBaseURL().orElse("UNKNOWN"))
                         .withUser(user);
@@ -109,6 +113,7 @@ public class AuditService {
 
     String generateLogLine(
             AuditableEvent eventEnum,
+            String timestamp,
             String requestId,
             String sessionId,
             String clientId,
@@ -119,7 +124,6 @@ public class AuditService {
             String persistentSessionId,
             MetadataPair... metadataPairs) {
         var uniqueId = UUID.randomUUID();
-        var timestamp = clock.instant().toString();
 
         var auditEventBuilder =
                 AuditEvent.newBuilder()
