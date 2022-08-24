@@ -45,7 +45,11 @@ public class CoreIdentity {
     }
 
     @Override
-    public String toString() {
-        return "CoreIdentity(nameParts=" + name + ";birthDate=" + birthDate + ")";
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((birthDate == null) ? 0 : birthDate.hashCode());
+        result = prime * result + ((name == null) ? 0 : name.hashCode());
+        return result;
     }
 }

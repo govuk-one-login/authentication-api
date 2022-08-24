@@ -32,7 +32,10 @@ public class NameParts {
     }
 
     @Override
-    public String toString() {
-        return "NameParts(" + nameParts.toString() + ")";
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((nameParts == null) ? 0 : nameParts.hashCode());
+        return result;
     }
 }
