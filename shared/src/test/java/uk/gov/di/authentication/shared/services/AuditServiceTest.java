@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.shared.services;
 
 import com.google.protobuf.InvalidProtocolBufferException;
+import org.hamcrest.CustomTypeSafeMatcher;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,6 +19,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Base64;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -214,5 +216,21 @@ class AuditServiceTest {
 
         assertThat(extensions, hasFieldWithValue("key", equalTo("value")));
         assertThat(extensions, hasFieldWithValue("key2", equalTo("value2")));
+        assertThat(extensions, hasFieldWithValue("legacy_audit_event_id", isUuid()));
+    }
+
+    private static CustomTypeSafeMatcher<String> isUuid() {
+        return new CustomTypeSafeMatcher<>("Should be a UUID") {
+            @Override
+            @SuppressWarnings("all")
+            protected boolean matchesSafely(String item) {
+                try {
+                    UUID.fromString(item);
+                    return true;
+                } catch (IllegalArgumentException e) {
+                    return false;
+                }
+            }
+        };
     }
 }
