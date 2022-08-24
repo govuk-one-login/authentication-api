@@ -17,6 +17,7 @@ import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AuthCodeResponse;
 import uk.gov.di.authentication.oidc.services.AuthorizationService;
 import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
@@ -231,6 +232,15 @@ public class AuthCodeHandler
                                 } else {
                                     LOG.info(
                                             "No mfa method to set. User is either authenticated or signing in from a low level service");
+                                }
+
+                                if (clientSession
+                                        .getEffectiveVectorOfTrust()
+                                        .getCredentialTrustLevel()
+                                        .equals(CredentialTrustLevel.LOW_LEVEL)) {
+                                    dimensions.put("MfaRequired", "No");
+                                } else {
+                                    dimensions.put("MfaRequired", "Yes");
                                 }
 
                                 cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
