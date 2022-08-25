@@ -26,6 +26,7 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
@@ -37,6 +38,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import static java.util.Map.entry;
+import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.NONE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
@@ -58,6 +60,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
     private final CodeStorageService codeStorageService;
     private final AuditService auditService;
+    private final CloudwatchMetricsService cloudwatchMetricsService;
 
     protected VerifyCodeHandler(
             ConfigurationService configurationService,
@@ -66,7 +69,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             ClientService clientService,
             AuthenticationService authenticationService,
             CodeStorageService codeStorageService,
-            AuditService auditService) {
+            AuditService auditService,
+            CloudwatchMetricsService cloudwatchMetricsService) {
         super(
                 VerifyCodeRequest.class,
                 configurationService,
@@ -76,6 +80,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 authenticationService);
         this.codeStorageService = codeStorageService;
         this.auditService = auditService;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
     }
 
     public VerifyCodeHandler() {
@@ -86,6 +91,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         super(VerifyCodeRequest.class, configurationService);
         this.codeStorageService = new CodeStorageService(configurationService);
         this.auditService = new AuditService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService();
     }
 
     @Override
@@ -193,6 +199,13 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 new AuditService.MetadataPair[] {
                     pair("notification-type", notificationType.name())
                 };
+        var clientSession = userContext.getClientSession();
+        var clientId = userContext.getClient().get().getClientID();
+        var levelOfConfidence =
+                clientSession.getEffectiveVectorOfTrust().containsLevelOfConfidence()
+                        ? clientSession.getEffectiveVectorOfTrust().getLevelOfConfidence()
+                        : NONE;
+
         if (notificationType.equals(VERIFY_PHONE_NUMBER)) {
             LOG.info(
                     "MFA code has been successfully verified for MFA type: {}. RegistrationJourney: {}",
@@ -222,7 +235,15 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                         pair("notification-type", notificationType.name()),
                         pair("mfa-type", MFAMethodType.SMS.getValue())
                     };
-
+            cloudwatchMetricsService.incrementAuthenticationSuccess(
+                    session.isNewAccount(),
+                    clientId,
+                    levelOfConfidence.getValue(),
+                    clientService.isTestJourney(clientId, session.getEmailAddress()),
+                    clientSession
+                            .getEffectiveVectorOfTrust()
+                            .getCredentialTrustLevel()
+                            .equals(CredentialTrustLevel.LOW_LEVEL));
         } else if (notificationType.equals(MFA_SMS)) {
             LOG.info(
                     "MFA code has been successfully verified for MFA type: {}. RegistrationJourney: {}",
@@ -234,6 +255,12 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                         pair("notification-type", notificationType.name()),
                         pair("mfa-type", MFAMethodType.SMS.getValue())
                     };
+            cloudwatchMetricsService.incrementAuthenticationSuccess(
+                    session.isNewAccount(),
+                    clientId,
+                    levelOfConfidence.getValue(),
+                    clientService.isTestJourney(clientId, session.getEmailAddress()),
+                    true);
         }
         codeStorageService.deleteOtpCode(session.getEmailAddress(), notificationType);
         auditService.submitAuditEvent(
