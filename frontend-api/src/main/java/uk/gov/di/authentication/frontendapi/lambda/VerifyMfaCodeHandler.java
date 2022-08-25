@@ -20,6 +20,7 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -36,6 +37,7 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_VERIFIED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.INVALID_CODE_SENT;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
+import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.NONE;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
@@ -53,6 +55,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     private final CodeStorageService codeStorageService;
     private final AuditService auditService;
     private final MfaCodeValidatorFactory mfaCodeValidatorFactory;
+    private final CloudwatchMetricsService cloudwatchMetricsService;
 
     public VerifyMfaCodeHandler(
             ConfigurationService configurationService,
@@ -62,7 +65,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             AuthenticationService authenticationService,
             CodeStorageService codeStorageService,
             AuditService auditService,
-            MfaCodeValidatorFactory mfaCodeValidatorFactory) {
+            MfaCodeValidatorFactory mfaCodeValidatorFactory,
+            CloudwatchMetricsService cloudwatchMetricsService) {
         super(
                 VerifyMfaCodeRequest.class,
                 configurationService,
@@ -73,6 +77,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         this.codeStorageService = codeStorageService;
         this.auditService = auditService;
         this.mfaCodeValidatorFactory = mfaCodeValidatorFactory;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
     }
 
     public VerifyMfaCodeHandler() {
@@ -88,6 +93,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         configurationService,
                         codeStorageService,
                         new DynamoService(configurationService));
+        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
     }
 
     @Override
@@ -110,7 +116,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 userContext.getClient().map(ClientRegistry::getClientID).orElse("unknown"));
 
         LOG.info("Invoking verify MFA code handler");
-
         try {
             var session = userContext.getSession();
             var mfaMethodType = codeRequest.getMfaMethodType();
@@ -146,12 +151,30 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                     .map(response -> generateApiGatewayProxyErrorResponse(400, response))
                     .orElseGet(
                             () -> {
+                                var clientSession = userContext.getClientSession();
+                                var clientId = userContext.getClient().get().getClientID();
+                                var levelOfConfidence =
+                                        clientSession
+                                                        .getEffectiveVectorOfTrust()
+                                                        .containsLevelOfConfidence()
+                                                ? clientSession
+                                                        .getEffectiveVectorOfTrust()
+                                                        .getLevelOfConfidence()
+                                                : NONE;
+
                                 LOG.info(
                                         "MFA code has been successfully verified for MFA type: {}. RegistrationJourney: {}",
                                         MFAMethodType.AUTH_APP.getValue(),
                                         codeRequest.isRegistration());
                                 sessionService.save(
                                         session.setVerifiedMfaMethodType(MFAMethodType.AUTH_APP));
+                                cloudwatchMetricsService.incrementAuthenticationSuccess(
+                                        session.isNewAccount(),
+                                        clientId,
+                                        levelOfConfidence.getValue(),
+                                        clientService.isTestJourney(
+                                                clientId, session.getEmailAddress()),
+                                        true);
                                 return ApiGatewayResponseHelper
                                         .generateEmptySuccessApiGatewayResponse();
                             });

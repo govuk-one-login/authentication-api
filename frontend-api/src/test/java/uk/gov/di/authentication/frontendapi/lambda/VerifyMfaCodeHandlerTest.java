@@ -24,12 +24,14 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -88,6 +90,8 @@ class VerifyMfaCodeHandlerTest {
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final ClientSession clientSession = mock(ClientSession.class);
     private final AuditService auditService = mock(AuditService.class);
+    private final CloudwatchMetricsService cloudwatchMetricsService =
+            mock(CloudwatchMetricsService.class);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging =
@@ -105,6 +109,9 @@ class VerifyMfaCodeHandlerTest {
         when(userProfile.getSubjectID()).thenReturn(SUBJECT_ID);
         when(configurationService.getBlockedEmailDuration()).thenReturn(900L);
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
+        when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
+                .thenReturn(Optional.of(clientSession));
+
         handler =
                 new VerifyMfaCodeHandler(
                         configurationService,
@@ -114,7 +121,8 @@ class VerifyMfaCodeHandlerTest {
                         authenticationService,
                         codeStorageService,
                         auditService,
-                        mfaCodeValidatorFactory);
+                        mfaCodeValidatorFactory,
+                        cloudwatchMetricsService);
     }
 
     @AfterEach
@@ -137,6 +145,7 @@ class VerifyMfaCodeHandlerTest {
         when(authAppCodeValidator.validateCode(CODE)).thenReturn(Optional.empty());
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
                 .thenReturn(Optional.of(CODE));
+        session.setNewAccount(Session.AccountState.NEW);
         var result = makeCallWithCode(true);
 
         assertThat(result, hasStatus(204));
@@ -160,6 +169,9 @@ class VerifyMfaCodeHandlerTest {
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("mfa-type", MFAMethodType.AUTH_APP.getValue()));
+        verify(cloudwatchMetricsService)
+                .incrementAuthenticationSuccess(
+                        Session.AccountState.NEW, CLIENT_ID, "P0", false, true);
     }
 
     @Test
@@ -169,6 +181,7 @@ class VerifyMfaCodeHandlerTest {
         when(authAppCodeValidator.validateCode(CODE)).thenReturn(Optional.empty());
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
                 .thenReturn(Optional.of(CODE));
+        session.setNewAccount(Session.AccountState.EXISTING);
         var result = makeCallWithCode(false);
 
         assertThat(result, hasStatus(204));
@@ -191,6 +204,9 @@ class VerifyMfaCodeHandlerTest {
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("mfa-type", MFAMethodType.AUTH_APP.getValue()));
+        verify(cloudwatchMetricsService)
+                .incrementAuthenticationSuccess(
+                        Session.AccountState.EXISTING, CLIENT_ID, "P0", false, true);
     }
 
     @Test
@@ -304,6 +320,7 @@ class VerifyMfaCodeHandlerTest {
                 .thenReturn(Optional.of(clientSession));
         when(clientSessionService.getClientSessionFromRequestHeaders(event.getHeaders()))
                 .thenReturn(Optional.of(clientSession));
+        when(clientSession.getEffectiveVectorOfTrust()).thenReturn(VectorOfTrust.getDefaults());
         return handler.handleRequest(event, context);
     }
 
