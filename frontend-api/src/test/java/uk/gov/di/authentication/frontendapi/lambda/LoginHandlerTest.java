@@ -23,6 +23,7 @@ import uk.gov.di.authentication.frontendapi.helpers.RedactPhoneNumberHelper;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
@@ -38,6 +39,7 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -54,16 +56,20 @@ import java.util.Map;
 import java.util.Optional;
 
 import static java.lang.String.format;
+import static java.util.Objects.nonNull;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.MFAMethodType.SMS;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
@@ -102,6 +108,8 @@ class LoginHandlerTest {
     private final ClientService clientService = mock(ClientService.class);
     private final UserMigrationService userMigrationService = mock(UserMigrationService.class);
     private final AuditService auditService = mock(AuditService.class);
+    private final CloudwatchMetricsService cloudwatchMetricsService =
+            mock(CloudwatchMetricsService.class);
 
     private final Session session = new Session(IdGenerator.generate()).setEmailAddress(EMAIL);
 
@@ -120,10 +128,6 @@ class LoginHandlerTest {
                 .thenReturn(Optional.of(clientSession));
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
 
-        VectorOfTrust vectorOfTrust =
-                VectorOfTrust.parseFromAuthRequestAttribute(
-                        Collections.singletonList(jsonArrayOf("Cl.Cm")));
-        when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vectorOfTrust);
         when(clientService.getClient(CLIENT_ID.getValue()))
                 .thenReturn(Optional.of(generateClientRegistry()));
 
@@ -136,12 +140,12 @@ class LoginHandlerTest {
                         clientService,
                         codeStorageService,
                         userMigrationService,
-                        auditService);
+                        auditService,
+                        cloudwatchMetricsService);
     }
 
-    @ParameterizedTest
-    @EnumSource(MFAMethodType.class)
-    void shouldReturn200IfLoginIsSuccessful(MFAMethodType mfaMethodType) throws Json.JsonException {
+    @Test
+    void shouldReturn200IfLoginIsSuccessfulAndMfaNotRequired() throws Json.JsonException {
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("1.0");
         String persistentId = "some-persistent-id-value";
         Map<String, String> headers = new HashMap<>();
@@ -150,9 +154,15 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
+        when(clientSession.getAuthRequestParams())
+                .thenReturn(generateAuthRequest(LOW_LEVEL).toParameters());
+        var vot =
+                VectorOfTrust.parseFromAuthRequestAttribute(
+                        Collections.singletonList(jsonArrayOf("P0.Cl")));
+        when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vot);
+
         usingValidSession();
-        usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
+        usingApplicableUserCredentialsWithLogin(SMS, true);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
@@ -183,6 +193,58 @@ class LoginHandlerTest {
                         "123.123.123.123",
                         userProfile.getPhoneNumber(),
                         persistentId);
+        verify(cloudwatchMetricsService)
+                .incrementAuthenticationSuccess(
+                        Session.AccountState.EXISTING, CLIENT_ID.getValue(), "P0", false, false);
+    }
+
+    @ParameterizedTest
+    @EnumSource(MFAMethodType.class)
+    void shouldReturn200IfLoginIsSuccessful(MFAMethodType mfaMethodType) throws Json.JsonException {
+        when(configurationService.getTermsAndConditionsVersion()).thenReturn("1.0");
+        String persistentId = "some-persistent-id-value";
+        Map<String, String> headers = new HashMap<>();
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
+        headers.put("Session-Id", session.getSessionId());
+        UserProfile userProfile = generateUserProfile(null);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
+        usingValidSession();
+        usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
+        usingDefaultVectorOfTrust();
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setHeaders(headers);
+        event.setBody(
+                format(
+                        "{ \"password\": \"%s\", \"email\": \"%s\" }",
+                        PASSWORD, EMAIL.toUpperCase()));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+
+        LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
+        assertThat(
+                response.getRedactedPhoneNumber(),
+                equalTo(RedactPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
+        assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
+        verify(authenticationService).getUserProfileByEmailMaybe(EMAIL);
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.LOG_IN_SUCCESS,
+                        "aws-session-id",
+                        session.getSessionId(),
+                        CLIENT_ID.getValue(),
+                        userProfile.getSubjectID(),
+                        userProfile.getEmail(),
+                        "123.123.123.123",
+                        userProfile.getPhoneNumber(),
+                        persistentId);
+        verify(cloudwatchMetricsService, never())
+                .incrementAuthenticationSuccess(any(), any(), any(), anyBoolean(), anyBoolean());
     }
 
     @ParameterizedTest
@@ -200,6 +262,7 @@ class LoginHandlerTest {
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
+        usingDefaultVectorOfTrust();
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
@@ -233,6 +296,8 @@ class LoginHandlerTest {
 
         verify(sessionService)
                 .save(argThat(session -> session.isNewAccount() == Session.AccountState.EXISTING));
+        verify(cloudwatchMetricsService, never())
+                .incrementAuthenticationSuccess(any(), any(), any(), anyBoolean(), anyBoolean());
     }
 
     @ParameterizedTest
@@ -251,6 +316,7 @@ class LoginHandlerTest {
                 .thenReturn(true);
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         usingValidSession();
+        usingDefaultVectorOfTrust();
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
@@ -280,6 +346,7 @@ class LoginHandlerTest {
 
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
+        usingDefaultVectorOfTrust();
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
@@ -307,6 +374,7 @@ class LoginHandlerTest {
         when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(5);
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
+        usingDefaultVectorOfTrust();
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
@@ -328,6 +396,7 @@ class LoginHandlerTest {
         when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(5);
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
+        usingDefaultVectorOfTrust();
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
@@ -361,6 +430,7 @@ class LoginHandlerTest {
         UserCredentials applicableUserCredentials = usingApplicableUserCredentials(mfaMethodType);
         when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(4);
         usingValidSession();
+        usingDefaultVectorOfTrust();
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
@@ -391,6 +461,7 @@ class LoginHandlerTest {
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
 
         usingValidSession();
+        usingDefaultVectorOfTrust();
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -426,6 +497,7 @@ class LoginHandlerTest {
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
         usingValidSession();
+        usingDefaultVectorOfTrust();
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -440,6 +512,7 @@ class LoginHandlerTest {
         event.setBody(format("{ \"password\": \"%s\"}", PASSWORD));
 
         usingValidSession();
+        usingDefaultVectorOfTrust();
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -469,6 +542,7 @@ class LoginHandlerTest {
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
         usingValidSession();
+        usingDefaultVectorOfTrust();
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -489,6 +563,10 @@ class LoginHandlerTest {
     }
 
     private AuthenticationRequest generateAuthRequest() {
+        return generateAuthRequest(null);
+    }
+
+    private AuthenticationRequest generateAuthRequest(CredentialTrustLevel credentialTrustLevel) {
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
         AuthenticationRequest.Builder builder =
@@ -499,6 +577,9 @@ class LoginHandlerTest {
                                 URI.create("http://localhost/redirect"))
                         .state(new State())
                         .nonce(new Nonce());
+        if (nonNull(credentialTrustLevel)) {
+            builder.customParameter("vtr", jsonArrayOf(credentialTrustLevel.getValue()));
+        }
         return builder.build();
     }
 
@@ -544,5 +625,12 @@ class LoginHandlerTest {
                 .setClientName("test-client")
                 .setSectorIdentifierUri("https://test.com")
                 .setSubjectType("public");
+    }
+
+    private void usingDefaultVectorOfTrust() {
+        VectorOfTrust vectorOfTrust =
+                VectorOfTrust.parseFromAuthRequestAttribute(
+                        Collections.singletonList(jsonArrayOf("Cl.Cm")));
+        when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vectorOfTrust);
     }
 }
