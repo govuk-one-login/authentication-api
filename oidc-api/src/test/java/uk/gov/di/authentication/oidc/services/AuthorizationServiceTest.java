@@ -20,6 +20,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
@@ -558,48 +560,15 @@ class AuthorizationServiceTest {
                 equalTo(OAuth2Error.REQUEST_NOT_SUPPORTED));
     }
 
-    @Test
-    void shouldIdentifyATestUserJourney() throws ClientNotFoundException {
-        var client =
-                generateClientRegistry(REDIRECT_URI.toString(), CLIENT_ID.toString())
-                        .setTestClient(true)
-                        .setTestClientEmailAllowlist(List.of("test@test.com"));
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void shouldIdentifyATestUserJourney(boolean dynamoClientServiceReturns) {
+        when(dynamoClientService.isTestJourney(CLIENT_ID.toString(), "test@test.com"))
+                .thenReturn(dynamoClientServiceReturns);
 
-        when(dynamoClientService.getClient(CLIENT_ID.toString())).thenReturn(Optional.of(client));
-
-        assertTrue(authorizationService.isTestJourney(CLIENT_ID, "test@test.com"));
-    }
-
-    @Test
-    void shouldIdentifyATestUserJourney_UserNotOnAllowList() throws ClientNotFoundException {
-        var client =
-                generateClientRegistry(REDIRECT_URI.toString(), CLIENT_ID.toString())
-                        .setTestClient(true)
-                        .setTestClientEmailAllowlist(List.of("different-test@test.com"));
-
-        when(dynamoClientService.getClient(CLIENT_ID.toString())).thenReturn(Optional.of(client));
-
-        assertFalse(authorizationService.isTestJourney(CLIENT_ID, "test@test.com"));
-    }
-
-    @Test
-    void shouldIdentifyATestUserJourney_NoAllowlist() throws ClientNotFoundException {
-        var client =
-                generateClientRegistry(REDIRECT_URI.toString(), CLIENT_ID.toString())
-                        .setTestClient(true);
-
-        when(dynamoClientService.getClient(CLIENT_ID.toString())).thenReturn(Optional.of(client));
-
-        assertFalse(authorizationService.isTestJourney(CLIENT_ID, "test@test.com"));
-    }
-
-    @Test
-    void shouldIdentifyATestUserJourney_MissingClient() {
-        when(dynamoClientService.getClient(CLIENT_ID.toString())).thenReturn(Optional.empty());
-
-        assertThrows(
-                ClientNotFoundException.class,
-                () -> authorizationService.isTestJourney(CLIENT_ID, "test@test.com"));
+        assertThat(
+                authorizationService.isTestJourney(CLIENT_ID, "test@test.com"),
+                equalTo(dynamoClientServiceReturns));
     }
 
     private ClientRegistry generateClientRegistry(String redirectURI, String clientID) {

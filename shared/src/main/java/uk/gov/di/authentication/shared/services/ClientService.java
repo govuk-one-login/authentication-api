@@ -33,4 +33,6 @@ public interface ClientService {
     ClientID generateClientID();
 
     ClientRegistry updateClient(String clientId, UpdateClientConfigRequest updateRequest);
+
+    boolean isTestJourney(String clientID, String emailAddress);
 }

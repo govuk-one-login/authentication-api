@@ -9,6 +9,7 @@ import uk.gov.di.authentication.shared.helpers.IdGenerator;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Predicate;
 
 import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.createDynamoClient;
 import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.tableConfig;
@@ -24,6 +25,12 @@ public class DynamoClientService implements ClientService {
         this.dynamoDB = createDynamoClient(configurationService);
         this.clientRegistryMapper = new DynamoDBMapper(dynamoDB, tableConfig(tableName));
         warmUp(tableName);
+    }
+
+    public DynamoClientService(ConfigurationService configurationService, AmazonDynamoDB dynamoDB) {
+        String tableName = configurationService.getEnvironment() + "-" + CLIENT_REGISTRY_TABLE;
+        this.dynamoDB = dynamoDB;
+        this.clientRegistryMapper = new DynamoDBMapper(dynamoDB, tableConfig(tableName));
     }
 
     @Override
@@ -95,6 +102,16 @@ public class DynamoClientService implements ClientService {
     @Override
     public ClientID generateClientID() {
         return new ClientID(IdGenerator.generate());
+    }
+
+    @Override
+    public boolean isTestJourney(String clientID, String emailAddress) {
+        var client = getClient(clientID);
+
+        return client.map(ClientRegistry::getTestClientEmailAllowlist)
+                .filter(Predicate.not(List::isEmpty))
+                .map(list -> list.contains(emailAddress))
+                .orElse(false);
     }
 
     private void warmUp(String tableName) {

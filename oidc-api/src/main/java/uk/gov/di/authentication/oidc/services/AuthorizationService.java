@@ -28,7 +28,6 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
@@ -232,17 +231,7 @@ public class AuthorizationService {
         return PersistentIdHelper.getExistingOrCreateNewPersistentSessionId(headers);
     }
 
-    public boolean isTestJourney(ClientID clientID, String emailAddress)
-            throws ClientNotFoundException {
-        var client =
-                dynamoClientService
-                        .getClient(clientID.toString())
-                        .orElseThrow(() -> new ClientNotFoundException(clientID.toString()));
-
-        return Optional.ofNullable(client)
-                .map(ClientRegistry::getTestClientEmailAllowlist)
-                .filter(Predicate.not(List::isEmpty))
-                .map(list -> list.contains(emailAddress))
-                .orElse(false);
+    public boolean isTestJourney(ClientID clientID, String emailAddress) {
+        return dynamoClientService.isTestJourney(clientID.toString(), emailAddress);
     }
 }
