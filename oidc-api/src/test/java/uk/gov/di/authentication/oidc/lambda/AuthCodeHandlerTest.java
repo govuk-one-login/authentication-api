@@ -220,22 +220,26 @@ class AuthCodeHandlerTest {
                         AuditService.UNKNOWN,
                         PERSISTENT_SESSION_ID);
 
-        verify(cloudwatchMetricsService)
-                .incrementCounter(
-                        "SignIn",
-                        Map.of(
-                                "Account",
-                                "NEW",
-                                "Environment",
-                                "unit-test",
-                                "Client",
-                                CLIENT_ID.getValue(),
-                                "IsTest",
-                                "true",
-                                "MfaMethod",
-                                mfaMethodType.getValue(),
-                                "MfaRequired",
-                                requestedLevel.equals(LOW_LEVEL) ? "No" : "Yes"));
+        var dimensions = new HashMap<String, String>();
+        dimensions.putAll(
+                Map.of(
+                        "Account",
+                        "NEW",
+                        "Environment",
+                        "unit-test",
+                        "Client",
+                        CLIENT_ID.getValue(),
+                        "IsTest",
+                        "true",
+                        "IsDocApp",
+                        Boolean.toString(docAppJourney),
+                        "MfaMethod",
+                        mfaMethodType.getValue()));
+        if (!docAppJourney) {
+            dimensions.put("MfaRequired", requestedLevel.equals(LOW_LEVEL) ? "No" : "Yes");
+            dimensions.put("RequestedLevelOfConfidence", "P0");
+        }
+        verify(cloudwatchMetricsService).incrementCounter("SignIn", dimensions);
     }
 
     @Test

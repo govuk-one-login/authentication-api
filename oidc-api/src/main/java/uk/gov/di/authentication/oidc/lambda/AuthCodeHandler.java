@@ -19,6 +19,7 @@ import uk.gov.di.authentication.oidc.services.AuthorizationService;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
@@ -210,6 +211,8 @@ public class AuthCodeHandler
                                         authorizationService.isTestJourney(
                                                 authenticationRequest.getClientID(),
                                                 session.getEmailAddress());
+                                boolean docAppJourney =
+                                        isDocCheckingAppUserWithSubjectId(clientSession);
 
                                 Map<String, String> dimensions =
                                         new HashMap<>(
@@ -223,7 +226,9 @@ public class AuthCodeHandler
                                                                 .getClientID()
                                                                 .getValue(),
                                                         "IsTest",
-                                                        Boolean.toString(isTestJourney)));
+                                                        Boolean.toString(isTestJourney),
+                                                        "IsDocApp",
+                                                        Boolean.toString(docAppJourney)));
 
                                 if (Objects.nonNull(session.getVerifiedMfaMethodType())) {
                                     dimensions.put(
@@ -234,18 +239,33 @@ public class AuthCodeHandler
                                             "No mfa method to set. User is either authenticated or signing in from a low level service");
                                 }
 
-                                if (clientSession
-                                        .getEffectiveVectorOfTrust()
-                                        .getCredentialTrustLevel()
-                                        .equals(CredentialTrustLevel.LOW_LEVEL)) {
-                                    dimensions.put("MfaRequired", "No");
-                                } else {
-                                    dimensions.put("MfaRequired", "Yes");
+                                if (!docAppJourney) {
+                                    var mfaRequired = "Yes";
+                                    if (clientSession
+                                            .getEffectiveVectorOfTrust()
+                                            .getCredentialTrustLevel()
+                                            .equals(CredentialTrustLevel.LOW_LEVEL)) {
+                                        mfaRequired = "No";
+                                    }
+
+                                    var levelOfConfidence = LevelOfConfidence.NONE.getValue();
+                                    if (clientSession
+                                            .getEffectiveVectorOfTrust()
+                                            .containsLevelOfConfidence()) {
+                                        levelOfConfidence =
+                                                clientSession
+                                                        .getEffectiveVectorOfTrust()
+                                                        .getLevelOfConfidence()
+                                                        .getValue();
+                                    }
+
+                                    dimensions.put("MfaRequired", mfaRequired);
+                                    dimensions.put("RequestedLevelOfConfidence", levelOfConfidence);
                                 }
 
                                 cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
 
-                                if (!isDocCheckingAppUserWithSubjectId(clientSession)) {
+                                if (!docAppJourney) {
                                     sessionService.save(
                                             session.setAuthenticated(true).setNewAccount(EXISTING));
                                 } else {
