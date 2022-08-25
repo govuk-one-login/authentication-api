@@ -162,7 +162,8 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                             PhoneNumberHelper.removeWhitespaceFromPhoneNumber(
                                     request.getProfileInformation());
                     Optional<ErrorResponse> errorResponse =
-                            ValidationHelper.validatePhoneNumber(phoneNumber);
+                            ValidationHelper.validatePhoneNumber(
+                                    phoneNumber, configurationService.getEnvironment());
                     if (errorResponse.isPresent()) {
                         return generateErrorResponse(
                                 errorResponse.get(),

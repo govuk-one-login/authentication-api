@@ -139,7 +139,8 @@ public class SendOtpNotificationHandler
                                         var phoneNumberValidationError =
                                                 ValidationHelper.validatePhoneNumber(
                                                         existingPhoneNumber,
-                                                        sendNotificationRequest.getPhoneNumber());
+                                                        sendNotificationRequest.getPhoneNumber(),
+                                                        configurationService.getEnvironment());
                                         if (phoneNumberValidationError.isPresent()) {
                                             return generateApiGatewayProxyErrorResponse(
                                                     400, phoneNumberValidationError.get());

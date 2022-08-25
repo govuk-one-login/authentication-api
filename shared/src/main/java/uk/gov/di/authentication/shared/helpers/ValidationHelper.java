@@ -22,21 +22,30 @@ public class ValidationHelper {
             Pattern.compile("^(xn|[a-z0-9]+)(-?-[a-z0-9]+)*$", Pattern.CASE_INSENSITIVE);
     private static final Pattern TLD_PART_REGEX =
             Pattern.compile("^([a-z]{2,63}|xn--([a-z0-9]+-)*[a-z0-9]+)$", Pattern.CASE_INSENSITIVE);
-    private static final List<String> ALLOWED_TEST_NUMBERS = List.of("07700900222");
+    private static final List<String> ALLOWED_TEST_NUMBERS =
+            List.of(
+                    "07700900222",
+                    "07700900000",
+                    "07700900111",
+                    "+447700900000",
+                    "+447700900111",
+                    "+447700900222");
 
     private ValidationHelper() {}
 
     public static Optional<ErrorResponse> validatePhoneNumber(
-            String currentPhoneNumber, String newPhoneNumber) {
+            String currentPhoneNumber, String newPhoneNumber, String environment) {
         if (Objects.nonNull(currentPhoneNumber)
                 && currentPhoneNumber.equals(PhoneNumberHelper.formatPhoneNumber(newPhoneNumber))) {
             return Optional.of(ErrorResponse.ERROR_1044);
         }
-        return validatePhoneNumber(newPhoneNumber);
+        return validatePhoneNumber(newPhoneNumber, environment);
     }
 
-    public static Optional<ErrorResponse> validatePhoneNumber(String phoneNumberInput) {
-        if (ALLOWED_TEST_NUMBERS.contains(phoneNumberInput)) return Optional.empty();
+    public static Optional<ErrorResponse> validatePhoneNumber(
+            String phoneNumberInput, String environment) {
+        if (ALLOWED_TEST_NUMBERS.contains(phoneNumberInput)
+                && !Objects.equals(environment, "production")) return Optional.empty();
         if ((!phoneNumberInput.startsWith("+"))
                 && ((!phoneNumberInput.matches("[0-9]+")) || (phoneNumberInput.length() < 10))) {
             return Optional.of(ErrorResponse.ERROR_1012);
