@@ -348,7 +348,7 @@ public class IPVCallbackHandler
                                                 null);
                                     }
                                 }
-                                saveAdditionalClaimsToDynamo(pairwiseSubject, userIdentityUserInfo);
+                                saveIdentityClaimsToDynamo(pairwiseSubject, userIdentityUserInfo);
                                 var redirectURI =
                                         ConstructUriHelper.buildURI(
                                                 configurationService.getLoginURI().toString(),
@@ -372,7 +372,7 @@ public class IPVCallbackHandler
                         });
     }
 
-    private void saveAdditionalClaimsToDynamo(
+    private void saveIdentityClaimsToDynamo(
             Subject pairwiseIdentifier, UserInfo userIdentityUserInfo) {
         LOG.info("Checking for additional identity claims to save to dynamo");
         var additionalClaims = new HashMap<String, String>();
@@ -388,7 +388,14 @@ public class IPVCallbackHandler
                                                 .get(finalClaim)
                                                 .toString()));
         LOG.info("Additional identity claims present: {}", !additionalClaims.isEmpty());
-        dynamoIdentityService.addAdditionalClaims(pairwiseIdentifier.getValue(), additionalClaims);
+
+        dynamoIdentityService.saveIdentityClaims(
+                pairwiseIdentifier.getValue(),
+                additionalClaims,
+                (String) userIdentityUserInfo.getClaim(VOT.getValue()),
+                userIdentityUserInfo.getClaim(IdentityClaims.CORE_IDENTITY.getValue()).toString());
+        // TODO: Consider behaviour if VOT/CI are null - DB update behaviour will retain existing
+        // values and potentially cause issues during comparison with SPOT Response
     }
 
     private Optional<ErrorObject> validateUserIdentityResponse(UserInfo userIdentityUserInfo) {

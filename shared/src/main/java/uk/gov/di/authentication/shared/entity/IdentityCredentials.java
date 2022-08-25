@@ -9,8 +9,10 @@ public class IdentityCredentials {
 
     private String subjectID;
     private String coreIdentityJWT;
-    private Map<String, String> additionalClaims;
     private long timeToExist;
+    private Map<String, String> additionalClaims;
+    private String ipvVot;
+    private String ipvCoreIdentity;
 
     public IdentityCredentials() {}
 
@@ -51,6 +53,26 @@ public class IdentityCredentials {
 
     public IdentityCredentials setAdditionalClaims(Map<String, String> additionalClaims) {
         this.additionalClaims = additionalClaims;
+        return this;
+    }
+
+    @DynamoDBAttribute(attributeName = "IpvVot")
+    public String getIpvVot() {
+        return ipvVot;
+    }
+
+    public IdentityCredentials setIpvVot(String ipvVot) {
+        this.ipvVot = ipvVot;
+        return this;
+    }
+
+    @DynamoDBAttribute(attributeName = "IpvCoreIdentity")
+    public String getIpvCoreIdentity() {
+        return ipvCoreIdentity;
+    }
+
+    public IdentityCredentials setIpvCoreIdentity(String ipvCoreIdentity) {
+        this.ipvCoreIdentity = ipvCoreIdentity;
         return this;
     }
 }

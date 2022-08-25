@@ -60,8 +60,12 @@ public class IdentityStoreExtension extends DynamoExtension implements AfterEach
         dynamoService.addCoreIdentityJWT(subjectID, coreIdentityJWT);
     }
 
-    public void addAdditionalClaims(String subjectID, Map<String, String> additionalClaims) {
-        dynamoService.addAdditionalClaims(subjectID, additionalClaims);
+    public void saveIdentityClaims(
+            String subjectID,
+            Map<String, String> additionalClaims,
+            String ipvVot,
+            String ipvCoreIdentity) {
+        dynamoService.saveIdentityClaims(subjectID, additionalClaims, ipvVot, ipvCoreIdentity);
     }
 
     public Optional<IdentityCredentials> getIdentityCredentials(String subjectID) {

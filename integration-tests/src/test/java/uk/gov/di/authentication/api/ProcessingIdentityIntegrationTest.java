@@ -15,6 +15,7 @@ import uk.gov.di.authentication.ipv.entity.ProcessingIdentityStatus;
 import uk.gov.di.authentication.ipv.lambda.ProcessingIdentityHandler;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ClientType;
+import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -35,6 +36,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.PROCESSING_IDENTITY_REQUEST;
 import static uk.gov.di.authentication.shared.helpers.ClientSubjectHelper.calculatePairwiseIdentifier;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceivedByBothServices;
+import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.CORE_IDENTITY_CLAIM;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -94,7 +96,11 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
         byte[] salt = setupUser();
         var pairwiseIdentifier =
                 calculatePairwiseIdentifier(INTERNAL_SUBJECT.getValue(), "test.com", salt);
-        identityStore.addAdditionalClaims(pairwiseIdentifier, emptyMap());
+        identityStore.saveIdentityClaims(
+                pairwiseIdentifier,
+                emptyMap(),
+                LevelOfConfidence.MEDIUM_LEVEL.getValue(),
+                CORE_IDENTITY_CLAIM);
 
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", SESSION_ID);

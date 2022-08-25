@@ -25,6 +25,7 @@ import uk.gov.di.authentication.oidc.lambda.UserInfoHandler;
 import uk.gov.di.authentication.shared.entity.AccessTokenStore;
 import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
+import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -59,6 +60,7 @@ import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.USER_INFO_
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceivedByBothServices;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoAuditEventsReceivedByEitherService;
 import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.ADDRESS_CLAIM;
+import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.CORE_IDENTITY_CLAIM;
 import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.PASSPORT_CLAIM;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -397,7 +399,11 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             boolean identitySupported) {
         IdentityStoreExtension identityStore = new IdentityStoreExtension(ttl);
         if (Objects.nonNull(additionalClaims)) {
-            identityStore.addAdditionalClaims(PUBLIC_SUBJECT.getValue(), additionalClaims);
+            identityStore.saveIdentityClaims(
+                    PUBLIC_SUBJECT.getValue(),
+                    additionalClaims,
+                    LevelOfConfidence.MEDIUM_LEVEL.getValue(),
+                    CORE_IDENTITY_CLAIM);
         }
         if (Objects.nonNull(coreIdentityJWT)) {
             identityStore.addCoreIdentityJWT(PUBLIC_SUBJECT.getValue(), coreIdentityJWT);
