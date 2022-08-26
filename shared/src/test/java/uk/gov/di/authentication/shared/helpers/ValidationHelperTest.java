@@ -366,4 +366,20 @@ class ValidationHelperTest {
                 ValidationHelper.validateVerificationCode(
                         notificationType, storedCode, input, codeStorageService, EMAIL_ADDRESS, 5));
     }
+
+    private static Stream<Arguments> testPasswords() {
+        return Stream.of(
+                arguments("12345896", false),
+                arguments("12a458Z6", true),
+                arguments("a12458Z6", true),
+                arguments("aZZZZkdfndsf!!@", false));
+    }
+
+    @ParameterizedTest
+    @MethodSource("testPasswords")
+    void shouldReturnFalseIfNoDigitOrOnlyDigits(String testPhoneNumber, boolean expectedResponse) {
+        assertEquals(
+                expectedResponse,
+                ValidationHelper.hasAtLeastOneDigitAndOneNonDigit(testPhoneNumber));
+    }
 }

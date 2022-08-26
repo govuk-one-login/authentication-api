@@ -30,6 +30,9 @@ class PasswordValidatorTest {
                 Arguments.of(null, ErrorResponse.ERROR_1005),
                 Arguments.of("passw0r", ErrorResponse.ERROR_1006),
                 Arguments.of("passwordpasswordpassword", ErrorResponse.ERROR_1007),
+                Arguments.of("1234598765", ErrorResponse.ERROR_1007),
+                Arguments.of(
+                        new String(new char[300]).replace("\0", "a1"), ErrorResponse.ERROR_1006),
                 Arguments.of("TestCommonPassword1", ErrorResponse.ERROR_1040));
     }
 

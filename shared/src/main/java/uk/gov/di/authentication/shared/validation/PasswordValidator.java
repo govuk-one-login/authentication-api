@@ -19,10 +19,10 @@ public class PasswordValidator {
         if (password == null || password.isBlank()) {
             return Optional.of(ErrorResponse.ERROR_1005);
         }
-        if (password.length() < 8) {
+        if (password.length() < 8 || password.length() > 256) {
             return Optional.of(ErrorResponse.ERROR_1006);
         }
-        if (!ValidationHelper.hasAtLeastOneDigit(password)) {
+        if (!ValidationHelper.hasAtLeastOneDigitAndOneNonDigit(password)) {
             return Optional.of(ErrorResponse.ERROR_1007);
         }
 
