@@ -28,6 +28,7 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -52,6 +53,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
     private final CodeStorageService codeStorageService;
     private final UserMigrationService userMigrationService;
     private final AuditService auditService;
+    private final CloudwatchMetricsService cloudwatchMetricsService;
 
     public LoginHandler(
             ConfigurationService configurationService,
@@ -61,7 +63,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             ClientService clientService,
             CodeStorageService codeStorageService,
             UserMigrationService userMigrationService,
-            AuditService auditService) {
+            AuditService auditService,
+            CloudwatchMetricsService cloudwatchMetricsService) {
         super(
                 LoginRequest.class,
                 configurationService,
@@ -73,6 +76,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.codeStorageService = codeStorageService;
         this.userMigrationService = userMigrationService;
         this.auditService = auditService;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
     }
 
     public LoginHandler(ConfigurationService configurationService) {
@@ -82,6 +86,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 new UserMigrationService(
                         new DynamoService(configurationService), configurationService);
         this.auditService = new AuditService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService();
     }
 
     public LoginHandler() {
@@ -207,6 +212,14 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     userProfile.getPhoneNumber(),
                     persistentSessionId);
 
+            if (!isMfaRequired) {
+                cloudwatchMetricsService.incrementAuthenticationSuccess(
+                        EXISTING,
+                        clientId,
+                        "P0",
+                        clientService.isTestJourney(clientId, userProfile.getEmail()),
+                        false);
+            }
             return generateApiGatewayProxyResponse(
                     200,
                     new LoginResponse(

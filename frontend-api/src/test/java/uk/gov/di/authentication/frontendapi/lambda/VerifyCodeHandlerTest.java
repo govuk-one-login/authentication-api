@@ -21,11 +21,13 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
@@ -84,6 +86,8 @@ class VerifyCodeHandlerTest {
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final ClientSession clientSession = mock(ClientSession.class);
     private final AuditService auditService = mock(AuditService.class);
+    private final CloudwatchMetricsService cloudwatchMetricsService =
+            mock(CloudwatchMetricsService.class);
 
     private final ClientRegistry clientRegistry =
             new ClientRegistry().setTestClient(false).setClientID(CLIENT_ID);
@@ -123,7 +127,8 @@ class VerifyCodeHandlerTest {
                         clientService,
                         authenticationService,
                         codeStorageService,
-                        auditService);
+                        auditService,
+                        cloudwatchMetricsService);
 
         when(authenticationService.getUserProfileFromEmail(TEST_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(userProfile));
@@ -168,6 +173,7 @@ class VerifyCodeHandlerTest {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER))
                 .thenReturn(Optional.of(CODE));
+        session.setNewAccount(Session.AccountState.NEW);
 
         APIGatewayProxyResponseEvent result =
                 makeCallWithCode(CODE, VERIFY_PHONE_NUMBER.toString());
@@ -193,6 +199,9 @@ class VerifyCodeHandlerTest {
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("notification-type", VERIFY_PHONE_NUMBER.name()),
                         pair("mfa-type", MFAMethodType.SMS.getValue()));
+        verify(cloudwatchMetricsService)
+                .incrementAuthenticationSuccess(
+                        Session.AccountState.NEW, CLIENT_ID, "P0", false, false);
     }
 
     @Test
@@ -350,6 +359,7 @@ class VerifyCodeHandlerTest {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS))
                 .thenReturn(Optional.of(CODE));
+        session.setNewAccount(Session.AccountState.EXISTING);
 
         APIGatewayProxyResponseEvent result = makeCallWithCode(CODE, MFA_SMS.toString());
 
@@ -370,6 +380,9 @@ class VerifyCodeHandlerTest {
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("notification-type", MFA_SMS.name()),
                         pair("mfa-type", MFAMethodType.SMS.getValue()));
+        verify(cloudwatchMetricsService)
+                .incrementAuthenticationSuccess(
+                        Session.AccountState.EXISTING, CLIENT_ID, "P0", false, true);
     }
 
     @Test
@@ -474,6 +487,10 @@ class VerifyCodeHandlerTest {
         when(clientService.getClient(TEST_CLIENT_ID)).thenReturn(Optional.of(testClientRegistry));
         when(clientSessionService.getClientSessionFromRequestHeaders(event.getHeaders()))
                 .thenReturn(Optional.of(clientSession));
+        when(clientSessionService.getClientSession("client-session-id"))
+                .thenReturn(Optional.of(clientSession));
+        when(clientSession.getEffectiveVectorOfTrust()).thenReturn(VectorOfTrust.getDefaults());
+
         return handler.handleRequest(event, context);
     }
 
