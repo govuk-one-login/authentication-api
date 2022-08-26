@@ -78,14 +78,21 @@ public class ValidationHelper {
         return Optional.empty();
     }
 
-    public static boolean hasAtLeastOneDigit(String string) {
+    public static boolean hasAtLeastOneDigitAndOneNonDigit(String string) {
         char[] charArray = string.toCharArray();
+        boolean hasDigit = false;
+        boolean hasNonDigit = false;
         for (char c : charArray) {
-            if (Character.isDigit(c)) {
-                return true;
+            if (hasDigit && hasNonDigit) {
+                break;
             }
+            if (Character.isDigit(c)) {
+                hasDigit = true;
+                continue;
+            }
+            hasNonDigit = true;
         }
-        return false;
+        return hasDigit && hasNonDigit;
     }
 
     public static Optional<ErrorResponse> validateEmailAddressUpdate(
