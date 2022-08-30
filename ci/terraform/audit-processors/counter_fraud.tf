@@ -166,12 +166,6 @@ resource "aws_lambda_function" "fraud_realtime_logging_lambda" {
   tags = local.default_tags
 }
 
-resource "aws_sns_topic_subscription" "fraud_realtime_logging_lambda_subscription" {
-  topic_arn = data.aws_sns_topic.event_stream.arn
-  protocol  = "lambda"
-  endpoint  = aws_lambda_function.fraud_realtime_logging_lambda.arn
-}
-
 resource "aws_lambda_permission" "sns_can_execute_subscriber_fraud_realtime_logging_lambda" {
   statement_id  = "AllowExecutionFromSNS"
   action        = "lambda:InvokeFunction"
