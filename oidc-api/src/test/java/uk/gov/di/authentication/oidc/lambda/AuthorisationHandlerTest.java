@@ -27,6 +27,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.InOrder;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
@@ -88,6 +89,8 @@ class AuthorisationHandlerTest {
             "gs=a-session-id.client-session-id; Max-Age=3600; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;";
     private static final String EXPECTED_PERSISTENT_COOKIE_STRING =
             "di-persistent-session-id=a-persistent-session-id; Max-Age=34190000; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;";
+    private static final String EXPECTED_LANGUAGE_COOKIE_STRING =
+            "lng=en; Max-Age=31536000; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;";
     private static final URI LOGIN_URL = URI.create("https://example.com");
     private static final String PERSISTENT_SESSION_ID = "a-persistent-session-id";
     private static final String AWS_REQUEST_ID = "aws-request-id";
@@ -161,6 +164,74 @@ class AuthorisationHandlerTest {
                         .get(ResponseHeaders.SET_COOKIE)
                         .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
         verify(sessionService).save(eq(session));
+
+        inOrder.verify(auditService)
+                .submitAuditEvent(
+                        OidcAuditableEvent.AUTHORISATION_INITIATED,
+                        context.getAwsRequestId(),
+                        session.getSessionId(),
+                        CLIENT_ID.getValue(),
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_SESSION_ID);
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "",
+                "en",
+                "cy",
+                "en cy",
+                "es fr ja",
+                "es en de",
+                "cy-AR",
+                "en cy cy-AR",
+                "zh-cmn-Hans-CN de-DE fr"
+            })
+    void shouldRedirectToLoginWhenUserHasNoExistingSessionAndHaveCorrectLangCookie(
+            String uiLocales) {
+        when(clientSessionService.generateClientSession(any(ClientSession.class)))
+                .thenReturn(CLIENT_SESSION_ID);
+        when(configService.getLanguageCookieMaxAge()).thenReturn(Integer.parseInt("31536000"));
+
+        Map<String, String> requestParams = buildRequestParams(null);
+        if (!uiLocales.isBlank()) {
+            requestParams.put("ui_locales", uiLocales);
+        }
+        APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+        event.setRequestContext(
+                new ProxyRequestContext()
+                        .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+        APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
+        URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
+
+        assertThat(response, hasStatus(302));
+        assertThat(uri.getQuery(), not(containsString("cookie_consent")));
+        assertEquals(LOGIN_URL.getAuthority(), uri.getAuthority());
+        assertTrue(
+                response.getMultiValueHeaders()
+                        .get(ResponseHeaders.SET_COOKIE)
+                        .contains(EXPECTED_SESSION_COOKIE_STRING));
+        assertTrue(
+                response.getMultiValueHeaders()
+                        .get(ResponseHeaders.SET_COOKIE)
+                        .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
+        if (uiLocales.contains("en")) {
+            assertTrue(
+                    response.getMultiValueHeaders()
+                            .get(ResponseHeaders.SET_COOKIE)
+                            .contains(EXPECTED_LANGUAGE_COOKIE_STRING));
+        } else {
+            assertTrue(
+                    !response.getMultiValueHeaders()
+                            .get(ResponseHeaders.SET_COOKIE)
+                            .contains("lng="));
+        }
+
+        verify(sessionService).save(session);
 
         inOrder.verify(auditService)
                 .submitAuditEvent(

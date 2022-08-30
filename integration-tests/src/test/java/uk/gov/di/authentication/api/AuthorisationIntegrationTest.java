@@ -161,6 +161,44 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
+    void shouldRedirectToLoginWithLanguageCookieSetWhenUILocalesPopulated() {
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(
+                                Optional.of(
+                                        new HttpCookie(
+                                                "di-persistent-session-id",
+                                                "persistent-id-value"))),
+                        constructQueryStringParameters(CLIENT_ID, null, "openid", "Cl.Cm", "en"));
+
+        assertThat(response, hasStatus(302));
+        String redirectUri = getLocationResponseHeader(response);
+        assertThat(redirectUri, startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+        assertThat(URI.create(redirectUri).getQuery(), equalTo(null));
+        assertThat(
+                response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).size(), equalTo(3));
+        assertThat(
+                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs")
+                        .isPresent(),
+                equalTo(true));
+        var persistentCookie =
+                getHttpCookieFromMultiValueResponseHeaders(
+                        response.getMultiValueHeaders(), "di-persistent-session-id");
+        assertThat(persistentCookie.isPresent(), equalTo(true));
+        assertThat(persistentCookie.get().getValue(), equalTo("persistent-id-value"));
+        var languageCookie =
+                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "lng");
+        assertThat(languageCookie.isPresent(), equalTo(true));
+        assertThat(languageCookie.get().getValue(), equalTo("en"));
+
+        assertEventTypesReceivedByBothServices(
+                auditTopic,
+                txmaAuditQueue,
+                List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+    }
+
+    @Test
     void shouldRedirectToLoginUriForAccountManagementClient() {
         registerClient(AM_CLIENT_ID, "am-client-name", List.of("openid", "am"), ClientType.WEB);
         var response =
@@ -579,6 +617,11 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private Map<String, String> constructQueryStringParameters(
             String clientId, String prompt, String scopes, String vtr) {
+        return constructQueryStringParameters(clientId, prompt, scopes, vtr, null);
+    }
+
+    private Map<String, String> constructQueryStringParameters(
+            String clientId, String prompt, String scopes, String vtr, String uiLocales) {
         final Map<String, String> queryStringParameters =
                 new HashMap<>(
                         Map.of(
@@ -597,6 +640,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         Optional.ofNullable(prompt).ifPresent(s -> queryStringParameters.put("prompt", s));
         Optional.ofNullable(vtr).ifPresent(s -> queryStringParameters.put("vtr", jsonArrayOf(vtr)));
+        Optional.ofNullable(uiLocales).ifPresent(s -> queryStringParameters.put("ui_locales", s));
 
         return queryStringParameters;
     }
