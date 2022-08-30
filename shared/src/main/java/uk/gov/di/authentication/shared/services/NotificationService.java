@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.shared.services;
 
 import uk.gov.di.authentication.shared.entity.TemplateAware;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.service.notify.NotificationClient;
 import uk.gov.service.notify.NotificationClientException;
 
@@ -20,7 +21,10 @@ public class NotificationService {
     }
 
     public void sendEmail(
-            String email, Map<String, Object> personalisation, TemplateAware type, String language)
+            String email,
+            Map<String, Object> personalisation,
+            TemplateAware type,
+            SupportedLanguage language)
             throws NotificationClientException {
         notifyClient.sendEmail(type.getTemplateId(language), email, personalisation, "");
     }
