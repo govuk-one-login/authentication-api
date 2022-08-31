@@ -21,6 +21,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -135,7 +136,8 @@ public class MfaHandlerTest {
         when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(PHONE_NUMBER));
         when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
-        NotifyRequest notifyRequest = new NotifyRequest(PHONE_NUMBER, MFA_SMS, CODE);
+        NotifyRequest notifyRequest =
+                new NotifyRequest(PHONE_NUMBER, MFA_SMS, CODE, SupportedLanguage.EN);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(headers);
         event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
@@ -171,7 +173,8 @@ public class MfaHandlerTest {
                 .thenReturn(Optional.of(PHONE_NUMBER));
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER))
                 .thenReturn(Optional.of(CODE));
-        NotifyRequest notifyRequest = new NotifyRequest(PHONE_NUMBER, VERIFY_PHONE_NUMBER, CODE);
+        NotifyRequest notifyRequest =
+                new NotifyRequest(PHONE_NUMBER, VERIFY_PHONE_NUMBER, CODE, SupportedLanguage.EN);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(headers);
         event.setBody(
@@ -212,7 +215,8 @@ public class MfaHandlerTest {
         when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(PHONE_NUMBER));
         when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
-        NotifyRequest notifyRequest = new NotifyRequest(PHONE_NUMBER, MFA_SMS, CODE);
+        NotifyRequest notifyRequest =
+                new NotifyRequest(PHONE_NUMBER, MFA_SMS, CODE, SupportedLanguage.EN);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
@@ -413,7 +417,8 @@ public class MfaHandlerTest {
         when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(PHONE_NUMBER));
         when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
-        NotifyRequest notifyRequest = new NotifyRequest(PHONE_NUMBER, MFA_SMS, CODE);
+        NotifyRequest notifyRequest =
+                new NotifyRequest(PHONE_NUMBER, MFA_SMS, CODE, SupportedLanguage.EN);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
@@ -455,7 +460,8 @@ public class MfaHandlerTest {
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        NotifyRequest notifyRequest = new NotifyRequest(PHONE_NUMBER, MFA_SMS, CODE);
+        NotifyRequest notifyRequest =
+                new NotifyRequest(PHONE_NUMBER, MFA_SMS, CODE, SupportedLanguage.EN);
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
 
         verify(codeGeneratorService, never()).sixDigitCode();
@@ -488,7 +494,8 @@ public class MfaHandlerTest {
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        NotifyRequest notifyRequest = new NotifyRequest(PHONE_NUMBER, MFA_SMS, CODE);
+        NotifyRequest notifyRequest =
+                new NotifyRequest(PHONE_NUMBER, MFA_SMS, CODE, SupportedLanguage.EN);
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
 
         verify(codeGeneratorService).sixDigitCode();

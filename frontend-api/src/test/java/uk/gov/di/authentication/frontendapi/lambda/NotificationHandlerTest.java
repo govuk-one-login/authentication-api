@@ -10,6 +10,7 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.NotificationService;
@@ -67,7 +68,8 @@ public class NotificationHandlerTest {
     void shouldSuccessfullyProcessEmailMessageFromSQSQueue()
             throws Json.JsonException, NotificationClientException {
 
-        NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, "654321");
+        NotifyRequest notifyRequest =
+                new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, "654321", SupportedLanguage.EN);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
         var contactUsLinkUrl =
@@ -80,14 +82,16 @@ public class NotificationHandlerTest {
         personalisation.put("email-address", notifyRequest.getDestination());
         personalisation.put("contact-us-link", contactUsLinkUrl);
 
-        verify(notificationService).sendEmail(TEST_EMAIL_ADDRESS, personalisation, VERIFY_EMAIL);
+        verify(notificationService)
+                .sendEmail(TEST_EMAIL_ADDRESS, personalisation, VERIFY_EMAIL, SupportedLanguage.EN);
     }
 
     @Test
     void shouldSuccessfullyProcessResetPasswordConfirmationFromSQSQueue()
             throws Json.JsonException, NotificationClientException {
         NotifyRequest notifyRequest =
-                new NotifyRequest(TEST_EMAIL_ADDRESS, PASSWORD_RESET_CONFIRMATION);
+                new NotifyRequest(
+                        TEST_EMAIL_ADDRESS, PASSWORD_RESET_CONFIRMATION, SupportedLanguage.EN);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
         var contactUsLinkUrl =
@@ -99,14 +103,22 @@ public class NotificationHandlerTest {
         personalisation.put("contact-us-link", contactUsLinkUrl);
 
         verify(notificationService)
-                .sendEmail(TEST_EMAIL_ADDRESS, personalisation, PASSWORD_RESET_CONFIRMATION);
+                .sendEmail(
+                        TEST_EMAIL_ADDRESS,
+                        personalisation,
+                        PASSWORD_RESET_CONFIRMATION,
+                        SupportedLanguage.EN);
     }
 
     @Test
     void shouldSuccessfullyProcessResetPasswordEmailFromSQSQueue()
             throws Json.JsonException, NotificationClientException {
         NotifyRequest notifyRequest =
-                new NotifyRequest(TEST_EMAIL_ADDRESS, RESET_PASSWORD, TEST_RESET_PASSWORD_LINK);
+                new NotifyRequest(
+                        TEST_EMAIL_ADDRESS,
+                        RESET_PASSWORD,
+                        TEST_RESET_PASSWORD_LINK,
+                        SupportedLanguage.EN);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
         var contactUsLinkUrl =
@@ -118,7 +130,9 @@ public class NotificationHandlerTest {
         personalisation.put("reset-password-link", TEST_RESET_PASSWORD_LINK);
         personalisation.put("contact-us-link", contactUsLinkUrl);
 
-        verify(notificationService).sendEmail(TEST_EMAIL_ADDRESS, personalisation, RESET_PASSWORD);
+        verify(notificationService)
+                .sendEmail(
+                        TEST_EMAIL_ADDRESS, personalisation, RESET_PASSWORD, SupportedLanguage.EN);
     }
 
     @Test
@@ -132,7 +146,8 @@ public class NotificationHandlerTest {
         when(configService.getGovUKAccountsURL()).thenReturn(govUKAccountsUrl);
 
         NotifyRequest notifyRequest =
-                new NotifyRequest(TEST_EMAIL_ADDRESS, ACCOUNT_CREATED_CONFIRMATION);
+                new NotifyRequest(
+                        TEST_EMAIL_ADDRESS, ACCOUNT_CREATED_CONFIRMATION, SupportedLanguage.EN);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
 
@@ -143,14 +158,19 @@ public class NotificationHandlerTest {
         personalisation.put("gov-uk-accounts-url", govUKAccountsUrl.toString());
 
         verify(notificationService)
-                .sendEmail(TEST_EMAIL_ADDRESS, personalisation, ACCOUNT_CREATED_CONFIRMATION);
+                .sendEmail(
+                        TEST_EMAIL_ADDRESS,
+                        personalisation,
+                        ACCOUNT_CREATED_CONFIRMATION,
+                        SupportedLanguage.EN);
     }
 
     @Test
     void shouldSuccessfullyProcessPhoneMessageFromSQSQueue()
             throws Json.JsonException, NotificationClientException {
         NotifyRequest notifyRequest =
-                new NotifyRequest(TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, "654321");
+                new NotifyRequest(
+                        TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, "654321", SupportedLanguage.EN);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
 
@@ -160,7 +180,11 @@ public class NotificationHandlerTest {
         personalisation.put("validation-code", "654321");
 
         verify(notificationService)
-                .sendText(notifyRequest.getDestination(), personalisation, VERIFY_PHONE_NUMBER);
+                .sendText(
+                        notifyRequest.getDestination(),
+                        personalisation,
+                        VERIFY_PHONE_NUMBER,
+                        SupportedLanguage.EN);
     }
 
     @Test
@@ -180,7 +204,8 @@ public class NotificationHandlerTest {
     @Test
     void shouldThrowExceptionIfNotifyIsUnableToSendEmail()
             throws Json.JsonException, NotificationClientException {
-        NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, "654321");
+        NotifyRequest notifyRequest =
+                new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, "654321", SupportedLanguage.EN);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
         var contactUsLinkUrl =
@@ -192,7 +217,7 @@ public class NotificationHandlerTest {
         personalisation.put("contact-us-link", contactUsLinkUrl);
         Mockito.doThrow(NotificationClientException.class)
                 .when(notificationService)
-                .sendEmail(TEST_EMAIL_ADDRESS, personalisation, VERIFY_EMAIL);
+                .sendEmail(TEST_EMAIL_ADDRESS, personalisation, VERIFY_EMAIL, SupportedLanguage.EN);
 
         RuntimeException exception =
                 assertThrows(
@@ -209,7 +234,8 @@ public class NotificationHandlerTest {
     void shouldThrowExceptionIfNotifyIsUnableToSendText()
             throws Json.JsonException, NotificationClientException {
         NotifyRequest notifyRequest =
-                new NotifyRequest(TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, "654321");
+                new NotifyRequest(
+                        TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, "654321", SupportedLanguage.EN);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
 
@@ -217,7 +243,11 @@ public class NotificationHandlerTest {
         personalisation.put("validation-code", "654321");
         Mockito.doThrow(NotificationClientException.class)
                 .when(notificationService)
-                .sendText(TEST_PHONE_NUMBER, personalisation, VERIFY_PHONE_NUMBER);
+                .sendText(
+                        TEST_PHONE_NUMBER,
+                        personalisation,
+                        VERIFY_PHONE_NUMBER,
+                        SupportedLanguage.EN);
 
         RuntimeException exception =
                 assertThrows(
@@ -234,7 +264,8 @@ public class NotificationHandlerTest {
     void shouldSuccessfullyProcessPhoneMessageFromSQSQueueAndWriteToS3WhenTestClient()
             throws Json.JsonException, NotificationClientException {
         NotifyRequest notifyRequest =
-                new NotifyRequest(NOTIFY_PHONE_NUMBER, VERIFY_PHONE_NUMBER, "654321");
+                new NotifyRequest(
+                        NOTIFY_PHONE_NUMBER, VERIFY_PHONE_NUMBER, "654321", SupportedLanguage.EN);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
 
@@ -244,7 +275,11 @@ public class NotificationHandlerTest {
         personalisation.put("validation-code", "654321");
 
         verify(notificationService)
-                .sendText(notifyRequest.getDestination(), personalisation, VERIFY_PHONE_NUMBER);
+                .sendText(
+                        notifyRequest.getDestination(),
+                        personalisation,
+                        VERIFY_PHONE_NUMBER,
+                        SupportedLanguage.EN);
         var putObjectRequest =
                 PutObjectRequest.builder().bucket(BUCKET_NAME).key(NOTIFY_PHONE_NUMBER).build();
         verify(s3Client).putObject(eq(putObjectRequest), any(RequestBody.class));
@@ -253,7 +288,8 @@ public class NotificationHandlerTest {
     @Test
     void shouldSuccessfullyProcessMfaMessageFromSQSQueue()
             throws Json.JsonException, NotificationClientException {
-        NotifyRequest notifyRequest = new NotifyRequest(TEST_PHONE_NUMBER, MFA_SMS, "654321");
+        NotifyRequest notifyRequest =
+                new NotifyRequest(TEST_PHONE_NUMBER, MFA_SMS, "654321", SupportedLanguage.EN);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
 
@@ -263,13 +299,18 @@ public class NotificationHandlerTest {
         personalisation.put("validation-code", "654321");
 
         verify(notificationService)
-                .sendText(notifyRequest.getDestination(), personalisation, MFA_SMS);
+                .sendText(
+                        notifyRequest.getDestination(),
+                        personalisation,
+                        MFA_SMS,
+                        SupportedLanguage.EN);
     }
 
     @Test
     void shouldSuccessfullyProcessMfaMessageFromSQSQueueAndWriteToS3WhenTestClient()
             throws Json.JsonException, NotificationClientException {
-        NotifyRequest notifyRequest = new NotifyRequest(NOTIFY_PHONE_NUMBER, MFA_SMS, "654321");
+        NotifyRequest notifyRequest =
+                new NotifyRequest(NOTIFY_PHONE_NUMBER, MFA_SMS, "654321", SupportedLanguage.EN);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
 
@@ -279,7 +320,11 @@ public class NotificationHandlerTest {
         personalisation.put("validation-code", "654321");
 
         verify(notificationService)
-                .sendText(notifyRequest.getDestination(), personalisation, MFA_SMS);
+                .sendText(
+                        notifyRequest.getDestination(),
+                        personalisation,
+                        MFA_SMS,
+                        SupportedLanguage.EN);
         var putObjectRequest =
                 PutObjectRequest.builder().bucket(BUCKET_NAME).key(NOTIFY_PHONE_NUMBER).build();
         verify(s3Client).putObject(eq(putObjectRequest), any(RequestBody.class));
@@ -289,7 +334,11 @@ public class NotificationHandlerTest {
     void shouldSuccessfullyProcessPasswordResetWithCodeMessageFromSQSQueue()
             throws Json.JsonException, NotificationClientException {
         NotifyRequest notifyRequest =
-                new NotifyRequest(TEST_EMAIL_ADDRESS, RESET_PASSWORD_WITH_CODE, "654321");
+                new NotifyRequest(
+                        TEST_EMAIL_ADDRESS,
+                        RESET_PASSWORD_WITH_CODE,
+                        "654321",
+                        SupportedLanguage.EN);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
         var contactUsLinkUrl =
@@ -303,7 +352,11 @@ public class NotificationHandlerTest {
         personalisation.put("contact-us-link", contactUsLinkUrl);
 
         verify(notificationService)
-                .sendEmail(TEST_EMAIL_ADDRESS, personalisation, RESET_PASSWORD_WITH_CODE);
+                .sendEmail(
+                        TEST_EMAIL_ADDRESS,
+                        personalisation,
+                        RESET_PASSWORD_WITH_CODE,
+                        SupportedLanguage.EN);
     }
 
     private SQSEvent generateSQSEvent(String messageBody) {

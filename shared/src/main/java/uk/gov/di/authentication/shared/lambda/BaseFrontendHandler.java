@@ -27,6 +27,8 @@ import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
+import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
@@ -124,6 +126,8 @@ public abstract class BaseFrontendHandler<T>
         } else {
             attachSessionIdToLogs(session.get());
         }
+        Optional<String> userLanguage =
+                getUserLanguageFromRequestHeaders(input.getHeaders(), configurationService);
         final T request;
         try {
             request = objectMapper.readValue(input.getBody(), clazz);
@@ -169,6 +173,8 @@ public abstract class BaseFrontendHandler<T>
                                     userContextBuilder.withUserCredentials(
                                             Optional.of(userCredentials)));
         }
+
+        userContextBuilder.withUserLanguage(matchSupportedLanguage(userLanguage));
 
         return handleRequestWithUserContext(input, context, request, userContextBuilder.build());
     }

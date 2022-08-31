@@ -42,7 +42,8 @@ class NotificationServiceTest {
         emailPersonalisation.put("validation-code", "some-code");
         emailPersonalisation.put("email-address", TEST_EMAIL);
 
-        notificationService.sendEmail(TEST_EMAIL, emailPersonalisation, FAKE_EMAIL);
+        notificationService.sendEmail(
+                TEST_EMAIL, emailPersonalisation, FAKE_EMAIL, SupportedLanguage.EN);
 
         verify(notificationClient).sendEmail("FAKE_EMAIL", TEST_EMAIL, emailPersonalisation, "");
     }
@@ -51,7 +52,8 @@ class NotificationServiceTest {
     public void shouldCallNotifyClientToSendText() throws NotificationClientException {
         Map<String, Object> phonePersonalisation = new HashMap<>();
         phonePersonalisation.put("validation-code", "some-code");
-        notificationService.sendText(TEST_PHONE_NUMBER, phonePersonalisation, FAKE_SMS);
+        notificationService.sendText(
+                TEST_PHONE_NUMBER, phonePersonalisation, FAKE_SMS, SupportedLanguage.EN);
 
         verify(notificationClient).sendSms("FAKE_SMS", TEST_PHONE_NUMBER, phonePersonalisation, "");
     }

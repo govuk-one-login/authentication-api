@@ -200,7 +200,9 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                                     });
 
             sessionService.save(userContext.getSession().incrementCodeRequestCount());
-            NotifyRequest notifyRequest = new NotifyRequest(phoneNumber, notificationType, code);
+            NotifyRequest notifyRequest =
+                    new NotifyRequest(
+                            phoneNumber, notificationType, code, userContext.getUserLanguage());
             AuditableEvent auditableEvent;
             if (!isTestClientAndAllowedEmail(userContext, notificationType)) {
                 sqsClient.send(objectMapper.writeValueAsString(notifyRequest));

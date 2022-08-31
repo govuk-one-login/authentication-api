@@ -2,6 +2,7 @@ package uk.gov.di.authentication.shared.entity;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.validation.Required;
 
 public class NotifyRequest {
@@ -15,24 +16,24 @@ public class NotifyRequest {
 
     @Expose private String code;
 
-    @Expose private String language;
+    @Expose private SupportedLanguage language;
 
     public NotifyRequest() {}
 
-    public NotifyRequest(String destination, NotificationType notificationType, String code) {
+    public NotifyRequest(
+            String destination,
+            NotificationType notificationType,
+            String code,
+            SupportedLanguage language) {
         this.destination = destination;
         this.notificationType = notificationType;
         this.code = code;
-    }
-
-    public NotifyRequest(String destination, NotificationType notificationType) {
-        this(destination, notificationType, null);
+        this.language = language;
     }
 
     public NotifyRequest(
-            NotificationType notificationType, String destination, String code, String language) {
-        this(destination, notificationType, code);
-        this.language = language;
+            String destination, NotificationType notificationType, SupportedLanguage language) {
+        this(destination, notificationType, null, language);
     }
 
     public NotificationType getNotificationType() {
@@ -47,7 +48,7 @@ public class NotifyRequest {
         return code;
     }
 
-    public String getLanguage() {
+    public SupportedLanguage getLanguage() {
         return language;
     }
 }

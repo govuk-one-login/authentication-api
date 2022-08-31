@@ -178,7 +178,11 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                     subjectId, code, configurationService.getCodeExpiry(), notificationType);
         }
         NotifyRequest notifyRequest =
-                new NotifyRequest(resetPasswordRequest.getEmail(), notificationType, notifyText);
+                new NotifyRequest(
+                        resetPasswordRequest.getEmail(),
+                        notificationType,
+                        notifyText,
+                        userContext.getUserLanguage());
         sessionService.save(userContext.getSession().incrementPasswordResetCount());
         sqsClient.send(serialiseRequest(notifyRequest));
         LOG.info("Successfully processed request");

@@ -13,6 +13,7 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.helpers.Argon2EncoderHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -97,7 +98,8 @@ class ResetPasswordHandlerTest {
                 .thenReturn(generateUserCredentials());
         usingValidSession();
         NotifyRequest notifyRequest =
-                new NotifyRequest(EMAIL, NotificationType.PASSWORD_RESET_CONFIRMATION);
+                new NotifyRequest(
+                        EMAIL, NotificationType.PASSWORD_RESET_CONFIRMATION, SupportedLanguage.EN);
         Map<String, String> headers = new HashMap<>();
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
         headers.put("Session-Id", session.getSessionId());
@@ -132,7 +134,8 @@ class ResetPasswordHandlerTest {
                 .thenReturn(generateUserCredentials());
         usingValidSession();
         NotifyRequest notifyRequest =
-                new NotifyRequest(EMAIL, NotificationType.PASSWORD_RESET_CONFIRMATION);
+                new NotifyRequest(
+                        EMAIL, NotificationType.PASSWORD_RESET_CONFIRMATION, SupportedLanguage.EN);
         Map<String, String> headers = new HashMap<>();
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
         headers.put("Session-Id", session.getSessionId());
@@ -167,7 +170,8 @@ class ResetPasswordHandlerTest {
                 .thenReturn(generateMigratedUserCredentials());
         usingValidSession();
         NotifyRequest notifyRequest =
-                new NotifyRequest(EMAIL, NotificationType.PASSWORD_RESET_CONFIRMATION);
+                new NotifyRequest(
+                        EMAIL, NotificationType.PASSWORD_RESET_CONFIRMATION, SupportedLanguage.EN);
         Map<String, String> headers = new HashMap<>();
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
         headers.put("Session-Id", session.getSessionId());
@@ -231,7 +235,8 @@ class ResetPasswordHandlerTest {
         when(authenticationService.getUserCredentialsFromSubject(SUBJECT))
                 .thenReturn(generateUserCredentials(Argon2EncoderHelper.argon2Hash(NEW_PASSWORD)));
         NotifyRequest notifyRequest =
-                new NotifyRequest(EMAIL, NotificationType.PASSWORD_RESET_CONFIRMATION);
+                new NotifyRequest(
+                        EMAIL, NotificationType.PASSWORD_RESET_CONFIRMATION, SupportedLanguage.EN);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(format("{ \"code\": \"%s\", \"password\": \"%s\"}", CODE, NEW_PASSWORD));
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));

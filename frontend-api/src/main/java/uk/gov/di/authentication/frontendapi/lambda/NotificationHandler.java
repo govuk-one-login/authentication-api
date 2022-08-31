@@ -95,7 +95,8 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     notifyPersonalisation,
-                                    ACCOUNT_CREATED_CONFIRMATION);
+                                    ACCOUNT_CREATED_CONFIRMATION,
+                                    notifyRequest.getLanguage());
                             break;
                         case VERIFY_EMAIL:
                             notifyPersonalisation.put("validation-code", notifyRequest.getCode());
@@ -107,19 +108,24 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     notifyPersonalisation,
-                                    VERIFY_EMAIL);
+                                    VERIFY_EMAIL,
+                                    notifyRequest.getLanguage());
                             break;
                         case VERIFY_PHONE_NUMBER:
                             notifyPersonalisation.put("validation-code", notifyRequest.getCode());
                             notificationService.sendText(
                                     notifyRequest.getDestination(),
                                     notifyPersonalisation,
-                                    VERIFY_PHONE_NUMBER);
+                                    VERIFY_PHONE_NUMBER,
+                                    notifyRequest.getLanguage());
                             break;
                         case MFA_SMS:
                             notifyPersonalisation.put("validation-code", notifyRequest.getCode());
                             notificationService.sendText(
-                                    notifyRequest.getDestination(), notifyPersonalisation, MFA_SMS);
+                                    notifyRequest.getDestination(),
+                                    notifyPersonalisation,
+                                    MFA_SMS,
+                                    notifyRequest.getLanguage());
                             break;
                         case RESET_PASSWORD:
                             notifyPersonalisation.put(
@@ -130,7 +136,8 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     notifyPersonalisation,
-                                    RESET_PASSWORD);
+                                    RESET_PASSWORD,
+                                    notifyRequest.getLanguage());
                             break;
                         case PASSWORD_RESET_CONFIRMATION:
                             Map<String, Object> passwordResetConfirmationPersonalisation =
@@ -141,7 +148,8 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     passwordResetConfirmationPersonalisation,
-                                    PASSWORD_RESET_CONFIRMATION);
+                                    PASSWORD_RESET_CONFIRMATION,
+                                    notifyRequest.getLanguage());
                             break;
                         case RESET_PASSWORD_WITH_CODE:
                             notifyPersonalisation.put("validation-code", notifyRequest.getCode());
@@ -153,7 +161,8 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     notifyPersonalisation,
-                                    RESET_PASSWORD_WITH_CODE);
+                                    RESET_PASSWORD_WITH_CODE,
+                                    notifyRequest.getLanguage());
                             break;
                     }
                     writeTestClientOtpToS3(notifyRequest.getCode(), notifyRequest.getDestination());

@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.accountmanagement.lambda.NotificationHandler;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.NotifyIntegrationTest;
 
@@ -29,7 +30,8 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
 
     @Test
     void shouldCallNotifyWhenValidEmailRequestIsAddedToQueue() throws Json.JsonException {
-        NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, CODE);
+        NotifyRequest notifyRequest =
+                new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, CODE, SupportedLanguage.EN);
 
         handler.handleRequest(createSqsEvent(notifyRequest), mock(Context.class));
 
@@ -52,7 +54,8 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
     @Test
     void shouldCallNotifyWhenValidPhoneNumberRequestIsAddedToQueue() throws Json.JsonException {
         NotifyRequest notifyRequest =
-                new NotifyRequest(TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, CODE);
+                new NotifyRequest(
+                        TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, CODE, SupportedLanguage.EN);
 
         handler.handleRequest(createSqsEvent(notifyRequest), mock(Context.class));
 
