@@ -40,7 +40,7 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.startsWith;
 import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.DOC_APP_AUTHORISATION_REQUESTED;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceivedByBothServices;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class DocAppAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -110,8 +110,7 @@ class DocAppAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegration
         assertThat(
                 body.getRedirectUri(),
                 startsWith(configurationService.getDocAppAuthorisationURI().toString()));
-        assertEventTypesReceivedByBothServices(
-                auditTopic, txmaAuditQueue, List.of(DOC_APP_AUTHORISATION_REQUESTED));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(DOC_APP_AUTHORISATION_REQUESTED));
     }
 
     @Test

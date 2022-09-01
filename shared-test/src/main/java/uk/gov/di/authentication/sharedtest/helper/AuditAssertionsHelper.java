@@ -2,7 +2,6 @@ package uk.gov.di.authentication.sharedtest.helper;
 
 import com.google.gson.JsonElement;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
-import uk.gov.di.authentication.sharedtest.extensions.AuditSnsTopicExtension;
 import uk.gov.di.authentication.sharedtest.extensions.SqsQueueExtension;
 import uk.gov.di.authentication.sharedtest.matchers.JsonMatcher;
 
@@ -15,7 +14,6 @@ import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
-import static uk.gov.di.authentication.sharedtest.matchers.AuditEventMatcher.hasEventType;
 
 public class AuditAssertionsHelper {
 
@@ -31,52 +29,16 @@ public class AuditAssertionsHelper {
         assertThat(txmaAuditQueue.getApproximateMessageCount(), equalTo(0));
     }
 
-    public static void assertEventTypesReceivedByBothServices(
-            AuditSnsTopicExtension auditTopic,
-            SqsQueueExtension txmaAuditQueue,
-            Collection<AuditableEvent> eventTypes) {
-
-        assertEventTypesReceived(auditTopic, eventTypes);
+    public static void assertTxmaAuditEventsReceived(
+            SqsQueueExtension queue, Collection<AuditableEvent> events) {
 
         var txmaEvents =
-                eventTypes.stream()
+                events.stream()
                         .map(Objects::toString)
                         .map("AUTH_"::concat)
                         .collect(Collectors.toList());
 
-        assertTxmaAuditEventsReceived(txmaAuditQueue, txmaEvents);
-    }
-
-    public static void assertEventTypesReceived(
-            AuditSnsTopicExtension auditTopic, Collection<AuditableEvent> eventTypes) {
-        if (eventTypes.isEmpty()) {
-            throw new RuntimeException(
-                    "Do not call assertEventTypesReceived() with an empty collection of event types; it won't wait to see if anything unexpected was received.  Instead, call Thread.sleep and then check the count of requests.");
-        }
-
-        await().atMost(SNS_TIMEOUT, SECONDS)
-                .untilAsserted(
-                        () ->
-                                assertThat(
-                                        auditTopic.getCountOfRequests(),
-                                        equalTo(eventTypes.size())));
-
-        eventTypes.forEach(
-                eventType ->
-                        await().atMost(SNS_TIMEOUT, SECONDS)
-                                .untilAsserted(
-                                        () ->
-                                                assertThat(
-                                                        auditTopic.getAuditEvents(),
-                                                        hasItem(hasEventType(eventType)))));
-
-        // Check that no more events came through while we were looking for the ones we expected.
-        assertThat(auditTopic.getCountOfRequests(), equalTo(eventTypes.size()));
-    }
-
-    public static void assertTxmaAuditEventsReceived(
-            SqsQueueExtension tmxaAuditQueue, Collection<String> eventTypes) {
-        if (eventTypes.isEmpty()) {
+        if (txmaEvents.isEmpty()) {
             throw new RuntimeException(
                     "Do not call assertTxmaAuditEventsReceived() with an empty collection of event types; it won't wait to see if anything unexpected was received.  Instead, call Thread.sleep and then check the count of requests.");
         }
@@ -85,19 +47,18 @@ public class AuditAssertionsHelper {
                 .untilAsserted(
                         () ->
                                 assertThat(
-                                        tmxaAuditQueue.getApproximateMessageCount(),
-                                        equalTo(eventTypes.size())));
+                                        queue.getApproximateMessageCount(),
+                                        equalTo(txmaEvents.size())));
 
         var receivedEvents =
-                tmxaAuditQueue.getRawMessages().stream()
-                        .peek(System.out::println)
+                queue.getRawMessages().stream()
                         .map(JsonMatcher::asJson)
                         .map(JsonElement::getAsJsonObject)
                         .map(json -> json.get("event_name"))
                         .map(JsonElement::getAsString)
                         .collect(Collectors.toSet());
 
-        eventTypes.stream()
+        txmaEvents.stream()
                 .map(Object::toString)
                 .forEach(expected -> assertThat(receivedEvents, hasItem(expected)));
     }

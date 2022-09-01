@@ -25,7 +25,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceivedByBothServices;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.CORE_IDENTITY_CLAIM;
 
 public class SpotResponseIntegrationTest extends HandlerIntegrationTest<SQSEvent, Object> {
@@ -66,8 +66,7 @@ public class SpotResponseIntegrationTest extends HandlerIntegrationTest<SQSEvent
                         .getCoreIdentityJWT(),
                 equalTo(signedCredential));
 
-        assertEventTypesReceivedByBothServices(
-                auditTopic,
+        assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
                 Collections.singletonList(IPVAuditableEvent.IPV_SUCCESSFUL_SPOT_RESPONSE_RECEIVED));
     }
@@ -94,8 +93,7 @@ public class SpotResponseIntegrationTest extends HandlerIntegrationTest<SQSEvent
         assertFalse(
                 identityStore.getIdentityCredentials(pairwiseIdentifier.getValue()).isPresent());
 
-        assertEventTypesReceivedByBothServices(
-                auditTopic,
+        assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
                 Collections.singletonList(
                         IPVAuditableEvent.IPV_UNSUCCESSFUL_SPOT_RESPONSE_RECEIVED));

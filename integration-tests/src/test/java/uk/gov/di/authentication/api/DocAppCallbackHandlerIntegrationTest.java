@@ -54,7 +54,7 @@ import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.DOC_APP_A
 import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.DOC_APP_SUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED;
 import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.DOC_APP_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED;
 import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceivedByBothServices;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -138,8 +138,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                 response.getHeaders().get(ResponseHeaders.LOCATION),
                 startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
 
-        assertEventTypesReceivedByBothServices(
-                auditTopic,
+        assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
                 List.of(
                         DOC_APP_AUTHORISATION_RESPONSE_RECEIVED,
@@ -175,8 +174,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                 startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
         assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), endsWith("error"));
 
-        assertEventTypesReceivedByBothServices(
-                auditTopic,
+        assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
                 List.of(
                         DOC_APP_AUTHORISATION_RESPONSE_RECEIVED,
@@ -203,8 +201,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                 startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
         assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), endsWith("error"));
 
-        assertEventTypesReceivedByBothServices(
-                auditTopic,
+        assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
                 List.of(
                         DOC_APP_AUTHORISATION_RESPONSE_RECEIVED,
@@ -231,8 +228,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                 startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
         assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), endsWith("error"));
 
-        assertEventTypesReceivedByBothServices(
-                auditTopic,
+        assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
                 List.of(
                         DOC_APP_AUTHORISATION_RESPONSE_RECEIVED,

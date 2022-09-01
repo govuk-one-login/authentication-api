@@ -35,7 +35,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_VERIFIED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.INVALID_CODE_SENT;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceivedByBothServices;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -66,7 +66,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         Map.of());
         assertThat(response, hasStatus(204));
 
-        assertEventTypesReceivedByBothServices(auditTopic, txmaAuditQueue, List.of(CODE_VERIFIED));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_VERIFIED));
     }
 
     @Test
@@ -88,7 +88,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
         assertThat(response, hasStatus(204));
         assertThat(redis.getMfaCodeAttemptsCount(EMAIL_ADDRESS), equalTo(0));
-        assertEventTypesReceivedByBothServices(auditTopic, txmaAuditQueue, List.of(CODE_VERIFIED));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_VERIFIED));
     }
 
     @Test
@@ -111,8 +111,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1036));
 
-        assertEventTypesReceivedByBothServices(
-                auditTopic, txmaAuditQueue, List.of(INVALID_CODE_SENT));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(INVALID_CODE_SENT));
     }
 
     @Test
@@ -140,8 +139,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertThat(response2, hasStatus(400));
         assertThat(response2, hasJsonBody(ErrorResponse.ERROR_1036));
 
-        assertEventTypesReceivedByBothServices(
-                auditTopic, txmaAuditQueue, List.of(CODE_VERIFIED, INVALID_CODE_SENT));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_VERIFIED, INVALID_CODE_SENT));
     }
 
     @Test
@@ -165,7 +163,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         Map.of());
 
         assertThat(response, hasStatus(204));
-        assertEventTypesReceivedByBothServices(auditTopic, txmaAuditQueue, List.of(CODE_VERIFIED));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_VERIFIED));
     }
 
     @Test
@@ -194,7 +192,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
         assertThat(response, hasStatus(204));
         assertThat(redis.getMfaCodeAttemptsCount(EMAIL_ADDRESS), equalTo(0));
-        assertEventTypesReceivedByBothServices(auditTopic, txmaAuditQueue, List.of(CODE_VERIFIED));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_VERIFIED));
     }
 
     @Test
@@ -218,8 +216,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1037));
 
-        assertEventTypesReceivedByBothServices(
-                auditTopic, txmaAuditQueue, List.of(INVALID_CODE_SENT));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(INVALID_CODE_SENT));
     }
 
     @Test
@@ -285,7 +282,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         Map.of());
 
         assertThat(response, hasStatus(204));
-        assertEventTypesReceivedByBothServices(auditTopic, txmaAuditQueue, List.of(CODE_VERIFIED));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_VERIFIED));
     }
 
     private void setUpTestWithoutSignUp(String sessionId, Scope scope) throws Json.JsonException {

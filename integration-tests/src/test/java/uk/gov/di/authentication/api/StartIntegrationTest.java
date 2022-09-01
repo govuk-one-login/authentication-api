@@ -46,7 +46,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.START_INFO_FOUND;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceivedByBothServices;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -118,8 +118,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(startResponse.getUser().getGaCrossDomainTrackingId(), equalTo(null));
         assertThat(startResponse.getUser().isAuthenticated(), equalTo(isAuthenticated));
 
-        assertEventTypesReceivedByBothServices(
-                auditTopic, txmaAuditQueue, List.of(START_INFO_FOUND));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(START_INFO_FOUND));
     }
 
     @Test
@@ -183,8 +182,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertNotNull(clientSession.getDocAppSubjectId());
 
-        assertEventTypesReceivedByBothServices(
-                auditTopic, txmaAuditQueue, List.of(START_INFO_FOUND));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(START_INFO_FOUND));
     }
 
     private void registerClient(KeyPair keyPair, ClientType clientType) {
