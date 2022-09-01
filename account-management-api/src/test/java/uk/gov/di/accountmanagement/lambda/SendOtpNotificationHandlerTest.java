@@ -214,9 +214,9 @@ class SendOtpNotificationHandlerTest {
                 .thenReturn(
                         Optional.of(
                                 new UserProfile()
-                                        .setEmail(TEST_EMAIL_ADDRESS)
-                                        .setPhoneNumber("+447755551084")
-                                        .setPhoneNumberVerified(true)));
+                                        .withEmail(TEST_EMAIL_ADDRESS)
+                                        .withPhoneNumber("+447755551084")
+                                        .withPhoneNumberVerified(true)));
         var event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of());
         event.setBody(

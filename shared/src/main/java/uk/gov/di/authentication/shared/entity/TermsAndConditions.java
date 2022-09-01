@@ -1,12 +1,12 @@
 package uk.gov.di.authentication.shared.entity;
 
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBDocument;
-import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
 import java.util.Map;
 import java.util.Objects;
 
-@DynamoDBDocument
+@DynamoDbBean
 public class TermsAndConditions {
 
     private String version;
@@ -36,11 +36,12 @@ public class TermsAndConditions {
     }
 
     AttributeValue toAttributeValue() {
-        return new AttributeValue()
-                .withM(
+        return AttributeValue.builder()
+                .m(
                         Map.ofEntries(
-                                Map.entry("version", new AttributeValue(getVersion())),
-                                Map.entry("timestamp", new AttributeValue(getTimestamp()))));
+                                Map.entry("version", AttributeValue.fromS(getVersion())),
+                                Map.entry("timestamp", AttributeValue.fromS(getTimestamp()))))
+                .build();
     }
 
     @Override

@@ -329,14 +329,14 @@ class ResetPasswordHandlerTest {
     }
 
     private UserCredentials generateUserCredentials(String password) {
-        return new UserCredentials().setEmail(EMAIL).setPassword(password).setSubjectID(SUBJECT);
+        return new UserCredentials().withEmail(EMAIL).withPassword(password).withSubjectID(SUBJECT);
     }
 
     private UserCredentials generateMigratedUserCredentials() {
         return new UserCredentials()
-                .setEmail(EMAIL)
-                .setMigratedPassword("old-password1")
-                .setSubjectID(SUBJECT);
+                .withEmail(EMAIL)
+                .withMigratedPassword("old-password1")
+                .withSubjectID(SUBJECT);
     }
 
     private void usingValidSession() {

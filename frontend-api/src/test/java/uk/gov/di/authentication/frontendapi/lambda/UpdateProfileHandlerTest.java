@@ -442,23 +442,23 @@ class UpdateProfileHandlerTest {
 
     private UserProfile generateUserProfileWithoutConsent() {
         return new UserProfile()
-                .setEmail(TEST_EMAIL_ADDRESS)
-                .setEmailVerified(true)
-                .setPhoneNumber(PHONE_NUMBER)
-                .setEmailVerified(true)
-                .setPublicSubjectID(new Subject().getValue())
-                .setSubjectID(INTERNAL_SUBJECT);
+                .withEmail(TEST_EMAIL_ADDRESS)
+                .withEmailVerified(true)
+                .withPhoneNumber(PHONE_NUMBER)
+                .withEmailVerified(true)
+                .withPublicSubjectID(new Subject().getValue())
+                .withSubjectID(INTERNAL_SUBJECT);
     }
 
     private UserProfile generateUserProfileWithConsent() {
         Set<String> claims = ValidScopes.getClaimsForListOfScopes(SCOPES.toStringList());
         return new UserProfile()
-                .setEmail(TEST_EMAIL_ADDRESS)
-                .setEmailVerified(true)
-                .setPhoneNumber(PHONE_NUMBER)
-                .setEmailVerified(true)
-                .setPublicSubjectID(new Subject().getValue())
-                .setSubjectID(INTERNAL_SUBJECT)
+                .withEmail(TEST_EMAIL_ADDRESS)
+                .withEmailVerified(true)
+                .withPhoneNumber(PHONE_NUMBER)
+                .withEmailVerified(true)
+                .withPublicSubjectID(new Subject().getValue())
+                .withSubjectID(INTERNAL_SUBJECT)
                 .setClientConsent(
                         new ClientConsent(
                                 CLIENT_ID.getValue(),

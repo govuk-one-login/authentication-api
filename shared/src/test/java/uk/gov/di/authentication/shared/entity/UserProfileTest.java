@@ -1,10 +1,10 @@
 package uk.gov.di.authentication.shared.entity;
 
-import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 
 import java.nio.ByteBuffer;
@@ -63,37 +63,37 @@ class UserProfileTest {
         Map<String, AttributeValue> userProfileItem = userProfile.toItem();
 
         assertThat(
-                userProfileItem.get(UserProfile.ATTRIBUTE_EMAIL).getS(),
+                userProfileItem.get(UserProfile.ATTRIBUTE_EMAIL).s(),
                 equalTo(userProfile.getEmail()));
         assertThat(
-                userProfileItem.get(UserProfile.ATTRIBUTE_SUBJECT_ID).getS(),
+                userProfileItem.get(UserProfile.ATTRIBUTE_SUBJECT_ID).s(),
                 equalTo(userProfile.getSubjectID()));
         assertThat(
-                userProfileItem.get(UserProfile.ATTRIBUTE_EMAIL_VERIFIED).getN(),
+                userProfileItem.get(UserProfile.ATTRIBUTE_EMAIL_VERIFIED).n(),
                 equalTo(userProfile.isEmailVerified() ? "1" : "0"));
         assertThat(
-                userProfileItem.get(UserProfile.ATTRIBUTE_PHONE_NUMBER).getS(),
+                userProfileItem.get(UserProfile.ATTRIBUTE_PHONE_NUMBER).s(),
                 equalTo(userProfile.getPhoneNumber()));
         assertThat(
-                userProfileItem.get(UserProfile.ATTRIBUTE_PHONE_NUMBER_VERIFIED).getN(),
+                userProfileItem.get(UserProfile.ATTRIBUTE_PHONE_NUMBER_VERIFIED).n(),
                 equalTo(userProfile.isPhoneNumberVerified() ? "1" : "0"));
         assertThat(
-                userProfileItem.get(UserProfile.ATTRIBUTE_CREATED).getS(),
+                userProfileItem.get(UserProfile.ATTRIBUTE_CREATED).s(),
                 equalTo(userProfile.getCreated()));
         assertThat(
-                userProfileItem.get(UserProfile.ATTRIBUTE_UPDATED).getS(),
+                userProfileItem.get(UserProfile.ATTRIBUTE_UPDATED).s(),
                 equalTo(userProfile.getUpdated()));
         assertThat(
                 userProfileItem.get(UserProfile.ATTRIBUTE_TERMS_AND_CONDITIONS),
                 equalTo(userProfile.getTermsAndConditions().toAttributeValue()));
         compareClientConsentList(
-                userProfileItem.get(UserProfile.ATTRIBUTE_CLIENT_CONSENT).getL(),
+                userProfileItem.get(UserProfile.ATTRIBUTE_CLIENT_CONSENT).l(),
                 userProfile.getClientConsent());
         assertThat(
-                userProfileItem.get(UserProfile.ATTRIBUTE_LEGACY_SUBJECT_ID).getS(),
+                userProfileItem.get(UserProfile.ATTRIBUTE_LEGACY_SUBJECT_ID).s(),
                 equalTo(userProfile.getLegacySubjectID()));
         assertThat(
-                userProfileItem.get(UserProfile.ATTRIBUTE_SALT).getB(),
+                userProfileItem.get(UserProfile.ATTRIBUTE_SALT).b().asByteBuffer(),
                 equalTo(userProfile.getSalt()));
     }
 
@@ -108,17 +108,17 @@ class UserProfileTest {
 
     private UserProfile generateUserProfile() {
         return new UserProfile()
-                .setEmail(EMAIL)
-                .setEmailVerified(true)
-                .setPhoneNumber(PHONE_NUMBER)
-                .setPhoneNumberVerified(true)
-                .setPublicSubjectID(PUBLIC_SUBJECT_ID)
-                .setSubjectID(SUBJECT_ID)
-                .setLegacySubjectID(LEGACY_SUBJECT_ID)
+                .withEmail(EMAIL)
+                .withEmailVerified(true)
+                .withPhoneNumber(PHONE_NUMBER)
+                .withPhoneNumberVerified(true)
+                .withPublicSubjectID(PUBLIC_SUBJECT_ID)
+                .withSubjectID(SUBJECT_ID)
+                .withLegacySubjectID(LEGACY_SUBJECT_ID)
                 .setClientConsent(CLIENT_CONSENT)
-                .setTermsAndConditions(TERMS_AND_CONDITIONS)
-                .setSalt(SALT)
-                .setCreated(CREATED_DATE_TIME.toString())
-                .setUpdated(UPDATED_DATE_TIME.toString());
+                .withTermsAndConditions(TERMS_AND_CONDITIONS)
+                .withSalt(SALT)
+                .withCreated(CREATED_DATE_TIME.toString())
+                .withUpdated(UPDATED_DATE_TIME.toString());
     }
 }

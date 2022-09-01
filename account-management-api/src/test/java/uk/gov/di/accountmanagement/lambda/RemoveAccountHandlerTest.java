@@ -55,7 +55,7 @@ class RemoveAccountHandlerTest {
     @Test
     public void shouldReturn204IfAccountRemovalIsSuccessful() throws Json.JsonException {
         String persistentIdValue = "some-persistent-session-id";
-        UserProfile userProfile = new UserProfile().setPublicSubjectID(SUBJECT.getValue());
+        UserProfile userProfile = new UserProfile().withPublicSubjectID(SUBJECT.getValue());
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
         APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =

@@ -69,7 +69,7 @@ class UpdateEmailHandlerTest {
     @Test
     void shouldReturn204ForValidUpdateEmailRequest() throws Json.JsonException {
         String persistentIdValue = "some-persistent-session-id";
-        UserProfile userProfile = new UserProfile().setPublicSubjectID(SUBJECT.getValue());
+        UserProfile userProfile = new UserProfile().withPublicSubjectID(SUBJECT.getValue());
         when(dynamoService.getUserProfileByEmail(EXISTING_EMAIL_ADDRESS)).thenReturn(userProfile);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(

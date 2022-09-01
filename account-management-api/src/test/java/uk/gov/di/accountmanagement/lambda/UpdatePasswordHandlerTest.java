@@ -74,8 +74,8 @@ class UpdatePasswordHandlerTest {
     @Test
     public void shouldReturn204ForValidRequest() throws Json.JsonException {
         String persistentIdValue = "some-persistent-session-id";
-        UserProfile userProfile = new UserProfile().setPublicSubjectID(SUBJECT.getValue());
-        UserCredentials userCredentials = new UserCredentials().setPassword(CURRENT_PASSWORD);
+        UserProfile userProfile = new UserProfile().withPublicSubjectID(SUBJECT.getValue());
+        UserCredentials userCredentials = new UserCredentials().withPassword(CURRENT_PASSWORD);
         when(dynamoService.getUserProfileByEmail(EXISTING_EMAIL_ADDRESS)).thenReturn(userProfile);
         when(dynamoService.getUserCredentialsFromEmail(EXISTING_EMAIL_ADDRESS))
                 .thenReturn(userCredentials);
@@ -138,9 +138,9 @@ class UpdatePasswordHandlerTest {
 
     @Test
     public void shouldReturn400WhenNewPasswordEqualsExistingPassword() throws Json.JsonException {
-        UserProfile userProfile = new UserProfile().setPublicSubjectID(SUBJECT.getValue());
+        UserProfile userProfile = new UserProfile().withPublicSubjectID(SUBJECT.getValue());
         UserCredentials userCredentials =
-                new UserCredentials().setPassword(Argon2EncoderHelper.argon2Hash(NEW_PASSWORD));
+                new UserCredentials().withPassword(Argon2EncoderHelper.argon2Hash(NEW_PASSWORD));
         when(dynamoService.getUserProfileByEmail(EXISTING_EMAIL_ADDRESS)).thenReturn(userProfile);
         when(dynamoService.getUserCredentialsFromEmail(EXISTING_EMAIL_ADDRESS))
                 .thenReturn(userCredentials);

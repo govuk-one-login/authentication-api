@@ -1,17 +1,18 @@
 package uk.gov.di.authentication.shared.entity;
 
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBAttribute;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBIndexHashKey;
-import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import uk.gov.di.authentication.shared.dynamodb.DynamoDBItem;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@DynamoDbBean
 public class UserCredentials implements DynamoDBItem {
 
     public static final String ATTRIBUTE_EMAIL = "Email";
@@ -32,74 +33,102 @@ public class UserCredentials implements DynamoDBItem {
 
     public UserCredentials() {}
 
-    @DynamoDBHashKey(attributeName = ATTRIBUTE_EMAIL)
+    @DynamoDbPartitionKey
+    @DynamoDbAttribute(ATTRIBUTE_EMAIL)
     public String getEmail() {
         return email;
     }
 
-    public UserCredentials setEmail(String email) {
+    public UserCredentials withEmail(String email) {
         this.email = email;
         return this;
     }
 
-    @DynamoDBIndexHashKey(
-            globalSecondaryIndexName = "SubjectIDIndex",
-            attributeName = ATTRIBUTE_SUBJECT_ID)
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public void setSubjectID(String subjectID) {
+        this.subjectID = subjectID;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public void setCreated(String created) {
+        this.created = created;
+    }
+
+    public void setUpdated(String updated) {
+        this.updated = updated;
+    }
+
+    public void setMigratedPassword(String migratedPassword) {
+        this.migratedPassword = migratedPassword;
+    }
+
+    public void setMfaMethods(List<MFAMethod> mfaMethods) {
+        this.mfaMethods = mfaMethods;
+    }
+
+    @DynamoDbSecondaryPartitionKey(indexNames = {"SubjectIDIndex"})
+    @DynamoDbAttribute(ATTRIBUTE_SUBJECT_ID)
     public String getSubjectID() {
         return subjectID;
     }
 
-    public UserCredentials setSubjectID(String subjectID) {
+    public UserCredentials withSubjectID(String subjectID) {
         this.subjectID = subjectID;
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = ATTRIBUTE_PASSWORD)
+    @DynamoDbAttribute(ATTRIBUTE_PASSWORD)
     public String getPassword() {
         return password;
     }
 
-    public UserCredentials setPassword(String password) {
+    public UserCredentials withPassword(String password) {
         this.password = password;
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = ATTRIBUTE_CREATED)
+    @DynamoDbAttribute(ATTRIBUTE_CREATED)
     public String getCreated() {
         return created;
     }
 
-    public UserCredentials setCreated(String created) {
+    public UserCredentials withCreated(String created) {
         this.created = created;
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = ATTRIBUTE_UPDATED)
+    @DynamoDbAttribute(ATTRIBUTE_UPDATED)
     public String getUpdated() {
         return updated;
     }
 
-    public UserCredentials setUpdated(String updated) {
+    public UserCredentials withUpdated(String updated) {
         this.updated = updated;
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = ATTRIBUTE_MIGRATED_PASSWORD)
+    @DynamoDbAttribute(ATTRIBUTE_MIGRATED_PASSWORD)
     public String getMigratedPassword() {
         return migratedPassword;
     }
 
-    public UserCredentials setMigratedPassword(String migratedPassword) {
+    public UserCredentials withMigratedPassword(String migratedPassword) {
         this.migratedPassword = migratedPassword;
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = ATTRIBUTE_MFA_METHODS)
+    @DynamoDbAttribute(ATTRIBUTE_MFA_METHODS)
     public List<MFAMethod> getMfaMethods() {
         return mfaMethods;
     }
 
-    public void setMfaMethods(List<MFAMethod> mfaMethods) {
+    public void withMfaMethods(List<MFAMethod> mfaMethods) {
         this.mfaMethods = mfaMethods;
     }
 
@@ -117,21 +146,22 @@ public class UserCredentials implements DynamoDBItem {
     @Override
     public Map<String, AttributeValue> toItem() {
         Map<String, AttributeValue> attributes = new HashMap<>();
-        if (getEmail() != null) attributes.put(ATTRIBUTE_EMAIL, new AttributeValue(getEmail()));
+        if (getEmail() != null) attributes.put(ATTRIBUTE_EMAIL, AttributeValue.fromS(getEmail()));
         if (getSubjectID() != null)
-            attributes.put(ATTRIBUTE_SUBJECT_ID, new AttributeValue(getSubjectID()));
+            attributes.put(ATTRIBUTE_SUBJECT_ID, AttributeValue.fromS(getSubjectID()));
         if (getPassword() != null)
-            attributes.put(ATTRIBUTE_PASSWORD, new AttributeValue(getPassword()));
+            attributes.put(ATTRIBUTE_PASSWORD, AttributeValue.fromS(getPassword()));
         if (getCreated() != null)
-            attributes.put(ATTRIBUTE_CREATED, new AttributeValue(getCreated()));
+            attributes.put(ATTRIBUTE_CREATED, AttributeValue.fromS(getCreated()));
         if (getUpdated() != null)
-            attributes.put(ATTRIBUTE_UPDATED, new AttributeValue(getUpdated()));
+            attributes.put(ATTRIBUTE_UPDATED, AttributeValue.fromS(getUpdated()));
         if (getMigratedPassword() != null)
-            attributes.put(ATTRIBUTE_MIGRATED_PASSWORD, new AttributeValue(getMigratedPassword()));
+            attributes.put(
+                    ATTRIBUTE_MIGRATED_PASSWORD, AttributeValue.fromS(getMigratedPassword()));
         if (getMfaMethods() != null) {
-            Collection<AttributeValue> methods = new ArrayList<>();
+            List<AttributeValue> methods = new ArrayList<>();
             getMfaMethods().forEach(m -> methods.add(m.toAttributeValue()));
-            attributes.put(ATTRIBUTE_MFA_METHODS, new AttributeValue().withL(methods));
+            attributes.put(ATTRIBUTE_MFA_METHODS, AttributeValue.fromL(methods));
         }
         return attributes;
     }

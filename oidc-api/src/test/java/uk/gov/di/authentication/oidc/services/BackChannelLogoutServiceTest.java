@@ -28,7 +28,7 @@ class BackChannelLogoutServiceTest {
 
     @Test
     void shouldPostBackChannelLogoutMessageToSqsForPairwiseClients() {
-        var user = new UserProfile().setPublicSubjectID("public").setSubjectID("subject");
+        var user = new UserProfile().withPublicSubjectID("public").withSubjectID("subject");
 
         when(authenticationService.getUserProfileByEmailMaybe("test@test.com"))
                 .thenReturn(Optional.of(user));

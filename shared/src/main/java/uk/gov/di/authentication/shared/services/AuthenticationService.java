@@ -65,8 +65,6 @@ public interface AuthenticationService {
 
     void migrateLegacyPassword(String email, String password);
 
-    void bulkAdd(List<UserCredentials> userCredentialsList, List<UserProfile> userProfileList);
-
     byte[] getOrGenerateSalt(UserProfile userProfile);
 
     void updateMFAMethod(

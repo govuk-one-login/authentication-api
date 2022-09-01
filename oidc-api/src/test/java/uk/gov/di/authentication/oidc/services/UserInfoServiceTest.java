@@ -323,13 +323,13 @@ class UserInfoServiceTest {
 
     private UserProfile generateUserprofile() {
         return new UserProfile()
-                .setEmail("joe.bloggs@digital.cabinet-office.gov.uk")
-                .setEmailVerified(true)
-                .setPhoneNumber(PHONE_NUMBER)
-                .setPhoneNumberVerified(true)
-                .setSubjectID(SUBJECT.toString())
-                .setCreated(LocalDateTime.now().toString())
-                .setUpdated(LocalDateTime.now().toString());
+                .withEmail("joe.bloggs@digital.cabinet-office.gov.uk")
+                .withEmailVerified(true)
+                .withPhoneNumber(PHONE_NUMBER)
+                .withPhoneNumberVerified(true)
+                .withSubjectID(SUBJECT.toString())
+                .withCreated(LocalDateTime.now().toString())
+                .withUpdated(LocalDateTime.now().toString());
     }
 
     private ClientRegistry generateClientRegistry() {
