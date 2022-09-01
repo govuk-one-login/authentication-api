@@ -1,7 +1,8 @@
 package uk.gov.di.authentication.app.services;
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.enhanced.dynamodb.Key;
+import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import uk.gov.di.authentication.app.entity.DocAppCredential;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -10,49 +11,50 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 
-import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.createDynamoClient;
-import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.tableConfig;
+import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.createDynamoEnhancedClient;
 
 public class DynamoDocAppService {
 
     private static final String DOC_APP_CREDENTIAL_TABLE = "doc-app-credential";
-    private final DynamoDBMapper docAppCredentialMapper;
     private final long timeToExist;
-    private final AmazonDynamoDB dynamoDB;
+    private final DynamoDbTable<DocAppCredential> dynamoDocAppCredentialTable;
 
     public DynamoDocAppService(ConfigurationService configurationService) {
         var tableName = configurationService.getEnvironment() + "-" + DOC_APP_CREDENTIAL_TABLE;
 
         this.timeToExist = configurationService.getAccessTokenExpiry();
-        this.dynamoDB = createDynamoClient(configurationService);
-        this.docAppCredentialMapper = new DynamoDBMapper(dynamoDB, tableConfig(tableName));
-        warmUp(tableName);
+        var dynamoDbEnhancedClient = createDynamoEnhancedClient(configurationService);
+        dynamoDocAppCredentialTable =
+                dynamoDbEnhancedClient.table(
+                        tableName, TableSchema.fromBean(DocAppCredential.class));
+        warmUp();
     }
 
     public void addDocAppCredential(String subjectID, List<String> credential) {
         var docAppCredential =
                 new DocAppCredential()
-                        .setSubjectID(subjectID)
-                        .setCredential(credential)
-                        .setTimeToExist(
+                        .withSubjectID(subjectID)
+                        .withCredential(credential)
+                        .withTimeToExist(
                                 NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS)
                                         .toInstant()
                                         .getEpochSecond());
 
-        docAppCredentialMapper.save(docAppCredential);
+        dynamoDocAppCredentialTable.putItem(docAppCredential);
     }
 
     public Optional<DocAppCredential> getDocAppCredential(String subjectID) {
-        return Optional.ofNullable(docAppCredentialMapper.load(DocAppCredential.class, subjectID))
+        return Optional.ofNullable(
+                        dynamoDocAppCredentialTable.getItem(
+                                Key.builder().partitionValue(subjectID).build()))
                 .filter(t -> t.getTimeToExist() > NowHelper.now().toInstant().getEpochSecond());
     }
 
     public void deleteDocAppCredential(String subjectID) {
-        docAppCredentialMapper.delete(
-                docAppCredentialMapper.load(DocAppCredential.class, subjectID));
+        dynamoDocAppCredentialTable.deleteItem(Key.builder().partitionValue(subjectID).build());
     }
 
-    private void warmUp(String tableName) {
-        dynamoDB.describeTable(tableName);
+    private void warmUp() {
+        dynamoDocAppCredentialTable.describeTable();
     }
 }
