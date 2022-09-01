@@ -1,65 +1,86 @@
 package uk.gov.di.authentication.shared.services;
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.enhanced.dynamodb.Key;
+import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
+import software.amazon.awssdk.enhanced.dynamodb.model.BatchWriteItemEnhancedRequest;
+import software.amazon.awssdk.enhanced.dynamodb.model.WriteBatch;
 import uk.gov.di.authentication.shared.entity.CommonPassword;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
-import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.tableConfig;
+import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.createDynamoEnhancedClient;
 
 public class CommonPasswordsService {
     private static final Logger LOG = LogManager.getLogger(CommonPasswordsService.class);
     private static final String COMMON_PASSWORDS_TABLE = "common-passwords";
-    private final DynamoDBMapper commonPasswordsMapper;
-    private final AmazonDynamoDB dynamoDB;
+    private final DynamoDbTable<CommonPassword> dynamoCommonPasswordTable;
+    private final DynamoDbEnhancedClient dynamoDbEnhancedClient;
 
     public CommonPasswordsService(ConfigurationService configurationService) {
         String tableName = configurationService.getEnvironment() + "-" + COMMON_PASSWORDS_TABLE;
-        this.dynamoDB = DynamoClientHelper.createDynamoClient(configurationService);
-        this.commonPasswordsMapper = new DynamoDBMapper(dynamoDB, tableConfig(tableName));
-        warmUp(tableName);
+        dynamoDbEnhancedClient = createDynamoEnhancedClient(configurationService);
+        this.dynamoCommonPasswordTable =
+                dynamoDbEnhancedClient.table(tableName, TableSchema.fromBean(CommonPassword.class));
+        warmUp();
     }
 
     public boolean isCommonPassword(String password) {
-        return commonPasswordsMapper.load(CommonPassword.class, password) != null;
+        return dynamoCommonPasswordTable.getItem(Key.builder().partitionValue(password).build())
+                != null;
     }
 
     public void addBatchCommonPasswords(List<String> passwords) {
-        List<CommonPassword> commonPasswords =
+        var commonPasswords =
                 passwords.stream()
-                        .map(password -> new CommonPassword().setPassword(password))
+                        .map(password -> new CommonPassword().withPassword(password))
                         .collect(Collectors.toList());
-
         LOG.info("Add common passwords batch method called with {} items", commonPasswords.size());
 
-        var result = commonPasswordsMapper.batchSave(commonPasswords);
-        if (!result.isEmpty()) {
-            LOG.error(
-                    "Dynamo batch write returned failed batch, with {} failed batches",
-                    result.size());
+        int maxBatchWriteItems = 25;
+        List<List<CommonPassword>> partitions = new ArrayList<>();
 
-            Exception e = result.get(0).getException();
+        for (int i = 0; i < commonPasswords.size(); i += maxBatchWriteItems) {
+            partitions.add(
+                    commonPasswords.subList(
+                            i, Math.min(i + maxBatchWriteItems, commonPasswords.size())));
+        }
 
-            result.get(0)
-                    .getUnprocessedItems()
-                    .forEach(
-                            (key, value) ->
-                                    value.forEach(
-                                            writeRequest ->
-                                                    LOG.error(
-                                                            "Error produced by write request: {}",
-                                                            writeRequest)));
+        for (List<CommonPassword> commonPasswordsBatch : partitions) {
 
-            LOG.error("Batch write failed with exception", e);
+            var writeBatchBuilder =
+                    WriteBatch.builder(CommonPassword.class)
+                            .mappedTableResource(dynamoCommonPasswordTable);
+            commonPasswordsBatch.forEach(t -> writeBatchBuilder.addPutItem(e -> e.item(t)));
+            WriteBatch writeBatch = writeBatchBuilder.build();
+            var result =
+                    dynamoDbEnhancedClient.batchWriteItem(
+                            BatchWriteItemEnhancedRequest.builder()
+                                    .writeBatches(writeBatch)
+                                    .build());
+
+            List<CommonPassword> unprocessedCommonPasswordPutItems =
+                    result.unprocessedPutItemsForTable(dynamoCommonPasswordTable);
+            if (Objects.nonNull(unprocessedCommonPasswordPutItems)) {
+                LOG.error(
+                        "Dynamo batch write returned failed batch, with {} failed batches",
+                        unprocessedCommonPasswordPutItems.size());
+
+                unprocessedCommonPasswordPutItems.forEach(
+                        t -> LOG.error("Error produced by write request: {}", t.getPassword()));
+
+                LOG.error("Batch write failed");
+            }
         }
     }
 
-    private void warmUp(String tableName) {
-        dynamoDB.describeTable(tableName);
+    private void warmUp() {
+        dynamoCommonPasswordTable.describeTable();
     }
 }
