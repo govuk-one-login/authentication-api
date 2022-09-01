@@ -5,17 +5,18 @@ import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 
 import java.util.Optional;
 
 public class UserContext {
     private final Session session;
     private final Optional<UserProfile> userProfile;
-
     private final Optional<UserCredentials> userCredentials;
     private final boolean userAuthenticated;
     private final Optional<ClientRegistry> client;
     private final ClientSession clientSession;
+    private final SupportedLanguage userLanguage;
 
     protected UserContext(
             Session session,
@@ -23,13 +24,15 @@ public class UserContext {
             Optional<UserCredentials> userCredentials,
             boolean userAuthenticated,
             Optional<ClientRegistry> client,
-            ClientSession clientSession) {
+            ClientSession clientSession,
+            SupportedLanguage userLanguage) {
         this.session = session;
         this.userProfile = userProfile;
         this.userCredentials = userCredentials;
         this.userAuthenticated = userAuthenticated;
         this.client = client;
         this.clientSession = clientSession;
+        this.userLanguage = userLanguage;
     }
 
     public Session getSession() {
@@ -56,6 +59,10 @@ public class UserContext {
         return clientSession;
     }
 
+    public SupportedLanguage getUserLanguage() {
+        return userLanguage;
+    }
+
     public static Builder builder(Session session) {
         return new Builder(session);
     }
@@ -67,6 +74,7 @@ public class UserContext {
         private boolean userAuthenticated = false;
         private Optional<ClientRegistry> client = Optional.empty();
         private ClientSession clientSession = null;
+        private SupportedLanguage userLanguage;
 
         protected Builder(Session session) {
             this.session = session;
@@ -105,6 +113,11 @@ public class UserContext {
             return this;
         }
 
+        public Builder withUserLanguage(SupportedLanguage userLanguage) {
+            this.userLanguage = userLanguage;
+            return this;
+        }
+
         public UserContext build() {
             return new UserContext(
                     session,
@@ -112,7 +125,8 @@ public class UserContext {
                     userCredentials,
                     userAuthenticated,
                     client,
-                    clientSession);
+                    clientSession,
+                    userLanguage);
         }
     }
 }

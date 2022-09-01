@@ -23,6 +23,7 @@ import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
@@ -147,7 +148,11 @@ class SendNotificationHandlerTest {
     void shouldReturn204AndPutMessageOnQueueForAValidVerifyEmailRequest()
             throws Json.JsonException {
         NotifyRequest notifyRequest =
-                new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, TEST_SIX_DIGIT_CODE);
+                new NotifyRequest(
+                        TEST_EMAIL_ADDRESS,
+                        VERIFY_EMAIL,
+                        TEST_SIX_DIGIT_CODE,
+                        SupportedLanguage.EN);
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
 
         usingValidSession();
@@ -185,7 +190,11 @@ class SendNotificationHandlerTest {
                         TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
         var notifyRequest =
-                new NotifyRequest(TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, TEST_SIX_DIGIT_CODE);
+                new NotifyRequest(
+                        TEST_PHONE_NUMBER,
+                        VERIFY_PHONE_NUMBER,
+                        TEST_SIX_DIGIT_CODE,
+                        SupportedLanguage.EN);
         verify(awsSqsClient).send(objectMapper.writeValueAsString(notifyRequest));
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
 
@@ -205,7 +214,11 @@ class SendNotificationHandlerTest {
             throws Json.JsonException {
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
         NotifyRequest notifyRequest =
-                new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, TEST_SIX_DIGIT_CODE);
+                new NotifyRequest(
+                        TEST_EMAIL_ADDRESS,
+                        VERIFY_EMAIL,
+                        TEST_SIX_DIGIT_CODE,
+                        SupportedLanguage.EN);
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
 
         usingValidSession();
@@ -259,7 +272,11 @@ class SendNotificationHandlerTest {
     @Test
     void shouldReturn500IfMessageCannotBeSentToQueue() throws Json.JsonException {
         NotifyRequest notifyRequest =
-                new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, TEST_SIX_DIGIT_CODE);
+                new NotifyRequest(
+                        TEST_EMAIL_ADDRESS,
+                        VERIFY_EMAIL,
+                        TEST_SIX_DIGIT_CODE,
+                        SupportedLanguage.EN);
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
         Mockito.doThrow(SdkClientException.class).when(awsSqsClient).send(eq(serialisedRequest));
 
@@ -451,7 +468,8 @@ class SendNotificationHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         NotifyRequest notifyRequest =
-                new NotifyRequest(TEST_EMAIL_ADDRESS, ACCOUNT_CREATED_CONFIRMATION);
+                new NotifyRequest(
+                        TEST_EMAIL_ADDRESS, ACCOUNT_CREATED_CONFIRMATION, SupportedLanguage.EN);
         verify(awsSqsClient).send(objectMapper.writeValueAsString(notifyRequest));
 
         assertEquals(204, result.getStatusCode());
@@ -472,7 +490,8 @@ class SendNotificationHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         NotifyRequest notifyRequest =
-                new NotifyRequest(TEST_EMAIL_ADDRESS, ACCOUNT_CREATED_CONFIRMATION);
+                new NotifyRequest(
+                        TEST_EMAIL_ADDRESS, ACCOUNT_CREATED_CONFIRMATION, SupportedLanguage.EN);
         verify(awsSqsClient, never()).send(objectMapper.writeValueAsString(notifyRequest));
 
         assertEquals(204, result.getStatusCode());

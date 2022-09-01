@@ -110,7 +110,10 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             if (request.getNotificationType().equals(ACCOUNT_CREATED_CONFIRMATION)) {
                 LOG.info("Placing message on queue for AccountCreatedConfirmation");
                 NotifyRequest notifyRequest =
-                        new NotifyRequest(request.getEmail(), ACCOUNT_CREATED_CONFIRMATION);
+                        new NotifyRequest(
+                                request.getEmail(),
+                                ACCOUNT_CREATED_CONFIRMATION,
+                                userContext.getUserLanguage());
                 if (notTestClientWithValidTestEmail(userContext, ACCOUNT_CREATED_CONFIRMATION)) {
                     sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
                     LOG.info("AccountCreatedConfirmation email placed on queue");
@@ -175,7 +178,9 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                                     return newCode;
                                 });
 
-        var notifyRequest = new NotifyRequest(destination, notificationType, code);
+        var notifyRequest =
+                new NotifyRequest(
+                        destination, notificationType, code, userContext.getUserLanguage());
 
         sessionService.save(session.incrementCodeRequestCount());
         if (notTestClientWithValidTestEmail(userContext, notificationType)) {

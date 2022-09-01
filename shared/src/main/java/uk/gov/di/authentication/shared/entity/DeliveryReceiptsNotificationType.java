@@ -1,5 +1,8 @@
 package uk.gov.di.authentication.shared.entity;
 
+import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
+
 public enum DeliveryReceiptsNotificationType implements TemplateAware {
     VERIFY_EMAIL("VERIFY_EMAIL", "VERIFY_EMAIL_TEMPLATE_ID"),
     RESET_PASSWORD("RESET_PASSWORD_EMAIL", "RESET_PASSWORD_TEMPLATE_ID"),
@@ -30,6 +33,12 @@ public enum DeliveryReceiptsNotificationType implements TemplateAware {
 
     public String getTemplateId() {
         return System.getenv(templateName);
+    }
+
+    @Override
+    public String getTemplateId(
+            SupportedLanguage language, ConfigurationService configurationService) {
+        return null;
     }
 
     public String getTemplateAlias() {

@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.lambda.NotificationHandler;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.sharedtest.basetest.NotifyIntegrationTest;
@@ -38,7 +39,9 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
     void shouldCallNotifyWhenValidEmailRequestIsAddedToQueue() throws Json.JsonException {
 
         handler.handleRequest(
-                createSqsEvent(new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, CODE)),
+                createSqsEvent(
+                        new NotifyRequest(
+                                TEST_EMAIL_ADDRESS, VERIFY_EMAIL, CODE, SupportedLanguage.EN)),
                 mock(Context.class));
 
         var request = notifyStub.waitForRequest(60);
@@ -59,7 +62,12 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
     @Test
     void shouldCallNotifyWhenValidPhoneNumberRequestIsAddedToQueue() throws Json.JsonException {
         handler.handleRequest(
-                createSqsEvent(new NotifyRequest(TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, CODE)),
+                createSqsEvent(
+                        new NotifyRequest(
+                                TEST_PHONE_NUMBER,
+                                VERIFY_PHONE_NUMBER,
+                                CODE,
+                                SupportedLanguage.EN)),
                 mock(Context.class));
 
         var request = notifyStub.waitForRequest(60);
@@ -77,7 +85,8 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
     @Test
     void shouldCallNotifyWhenValidMfaRequestIsAddedToQueue() throws Json.JsonException {
         handler.handleRequest(
-                createSqsEvent(new NotifyRequest(TEST_PHONE_NUMBER, MFA_SMS, CODE)),
+                createSqsEvent(
+                        new NotifyRequest(TEST_PHONE_NUMBER, MFA_SMS, CODE, SupportedLanguage.EN)),
                 mock(Context.class));
 
         var request = notifyStub.waitForRequest(60);
@@ -99,7 +108,11 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
 
         handler.handleRequest(
                 createSqsEvent(
-                        new NotifyRequest(TEST_EMAIL_ADDRESS, RESET_PASSWORD, resetPasswordLink)),
+                        new NotifyRequest(
+                                TEST_EMAIL_ADDRESS,
+                                RESET_PASSWORD,
+                                resetPasswordLink,
+                                SupportedLanguage.EN)),
                 mock(Context.class));
 
         var request = notifyStub.waitForRequest(60);
@@ -117,7 +130,11 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
     @Test
     void shouldCallNotifyWhenValidAccountCreatedRequestIsAddedToQueue() throws Json.JsonException {
         handler.handleRequest(
-                createSqsEvent(new NotifyRequest(TEST_EMAIL_ADDRESS, ACCOUNT_CREATED_CONFIRMATION)),
+                createSqsEvent(
+                        new NotifyRequest(
+                                TEST_EMAIL_ADDRESS,
+                                ACCOUNT_CREATED_CONFIRMATION,
+                                SupportedLanguage.EN)),
                 mock(Context.class));
 
         var request = notifyStub.waitForRequest(60);

@@ -17,6 +17,7 @@ import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -128,7 +129,11 @@ class ResetPasswordRequestHandlerTest {
                         TEST_SIX_DIGIT_CODE, session.getSessionId(), persistentId))
                 .thenReturn(TEST_RESET_PASSWORD_LINK);
         NotifyRequest notifyRequest =
-                new NotifyRequest(TEST_EMAIL_ADDRESS, RESET_PASSWORD, TEST_RESET_PASSWORD_LINK);
+                new NotifyRequest(
+                        TEST_EMAIL_ADDRESS,
+                        RESET_PASSWORD,
+                        TEST_RESET_PASSWORD_LINK,
+                        SupportedLanguage.EN);
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
 
         usingValidSession();
@@ -169,7 +174,10 @@ class ResetPasswordRequestHandlerTest {
         when(authenticationService.getSubjectFromEmail(TEST_EMAIL_ADDRESS)).thenReturn(subject);
         NotifyRequest notifyRequest =
                 new NotifyRequest(
-                        TEST_EMAIL_ADDRESS, RESET_PASSWORD_WITH_CODE, TEST_SIX_DIGIT_CODE);
+                        TEST_EMAIL_ADDRESS,
+                        RESET_PASSWORD_WITH_CODE,
+                        TEST_SIX_DIGIT_CODE,
+                        SupportedLanguage.EN);
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
 
         usingValidSession();
@@ -223,7 +231,10 @@ class ResetPasswordRequestHandlerTest {
 
         NotifyRequest notifyRequest =
                 new NotifyRequest(
-                        TEST_EMAIL_ADDRESS, RESET_PASSWORD_WITH_CODE, TEST_SIX_DIGIT_CODE);
+                        TEST_EMAIL_ADDRESS,
+                        RESET_PASSWORD_WITH_CODE,
+                        TEST_SIX_DIGIT_CODE,
+                        SupportedLanguage.EN);
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
 
         verify(codeGeneratorService, never()).sixDigitCode();
@@ -272,7 +283,11 @@ class ResetPasswordRequestHandlerTest {
                         TEST_SIX_DIGIT_CODE, session.getSessionId(), persistentId))
                 .thenReturn(TEST_RESET_PASSWORD_LINK);
         NotifyRequest notifyRequest =
-                new NotifyRequest(TEST_EMAIL_ADDRESS, RESET_PASSWORD, TEST_RESET_PASSWORD_LINK);
+                new NotifyRequest(
+                        TEST_EMAIL_ADDRESS,
+                        RESET_PASSWORD,
+                        TEST_RESET_PASSWORD_LINK,
+                        SupportedLanguage.EN);
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
         Mockito.doThrow(SdkClientException.class).when(awsSqsClient).send(eq(serialisedRequest));
 

@@ -144,7 +144,8 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             NotifyRequest notifyRequest =
                     new NotifyRequest(
                             userCredentials.getEmail(),
-                            NotificationType.PASSWORD_RESET_CONFIRMATION);
+                            NotificationType.PASSWORD_RESET_CONFIRMATION,
+                            userContext.getUserLanguage());
             LOG.info("Placing message on queue");
             sqsClient.send(serialiseRequest(notifyRequest));
             auditService.submitAuditEvent(
