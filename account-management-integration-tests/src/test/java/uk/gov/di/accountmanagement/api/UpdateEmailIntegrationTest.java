@@ -9,6 +9,7 @@ import uk.gov.di.accountmanagement.entity.UpdateEmailRequest;
 import uk.gov.di.accountmanagement.lambda.UpdateEmailHandler;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 
 import java.util.Collections;
 import java.util.List;
@@ -23,7 +24,6 @@ import static uk.gov.di.accountmanagement.entity.NotificationType.EMAIL_UPDATED;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNoNotificationsReceived;
 import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNotificationsReceived;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceivedByBothServices;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoAuditEventsReceivedByEitherService;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -83,7 +83,7 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertNoNotificationsReceived(notificationsQueue);
 
-        assertNoAuditEventsReceivedByEitherService(auditTopic, txmaAuditQueue);
+        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
 
     @Test
@@ -106,7 +106,7 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertNoNotificationsReceived(notificationsQueue);
 
-        assertNoAuditEventsReceivedByEitherService(auditTopic, txmaAuditQueue);
+        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
 
     @Test
@@ -130,7 +130,7 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertNoNotificationsReceived(notificationsQueue);
 
-        assertNoAuditEventsReceivedByEitherService(auditTopic, txmaAuditQueue);
+        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
 
     @Test

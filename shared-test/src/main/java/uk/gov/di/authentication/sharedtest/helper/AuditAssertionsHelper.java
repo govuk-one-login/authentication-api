@@ -22,22 +22,6 @@ public class AuditAssertionsHelper {
     private static final int SNS_TIMEOUT = 1;
     public static final int SNS_TIMEOUT_MILLIS = SNS_TIMEOUT * 1000;
 
-    public static void assertNoAuditEventsReceivedByEitherService(
-            AuditSnsTopicExtension auditTopic, SqsQueueExtension txmaAuditQueue) {
-        assertNoAuditEventsReceived(auditTopic);
-        assertNoTxmaAuditEventsReceived(txmaAuditQueue);
-    }
-
-    public static void assertNoAuditEventsReceived(AuditSnsTopicExtension auditTopic) {
-        try {
-            Thread.sleep(SNS_TIMEOUT_MILLIS);
-        } catch (InterruptedException ex) {
-            throw new RuntimeException(ex);
-        }
-
-        assertThat(auditTopic.getCountOfRequests(), equalTo(0));
-    }
-
     public static void assertNoTxmaAuditEventsReceived(SqsQueueExtension txmaAuditQueue) {
         try {
             Thread.sleep(SNS_TIMEOUT_MILLIS);

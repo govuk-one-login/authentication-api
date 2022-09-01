@@ -11,6 +11,7 @@ import uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelp
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 
 import java.util.Collections;
 import java.util.List;
@@ -22,7 +23,6 @@ import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceivedByBothServices;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoAuditEventsReceivedByEitherService;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -77,7 +77,7 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
         NotificationAssertionHelper.assertNoNotificationsReceived(notificationsQueue);
 
-        assertNoAuditEventsReceivedByEitherService(auditTopic, txmaAuditQueue);
+        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
 
     @Test
@@ -140,7 +140,7 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
         NotificationAssertionHelper.assertNoNotificationsReceived(notificationsQueue);
 
-        assertNoAuditEventsReceivedByEitherService(auditTopic, txmaAuditQueue);
+        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
 
     @Test
@@ -162,6 +162,6 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
         NotificationAssertionHelper.assertNoNotificationsReceived(notificationsQueue);
 
-        assertNoAuditEventsReceivedByEitherService(auditTopic, txmaAuditQueue);
+        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
 }

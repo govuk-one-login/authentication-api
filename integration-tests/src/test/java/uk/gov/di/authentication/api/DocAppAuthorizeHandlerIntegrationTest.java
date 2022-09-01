@@ -23,6 +23,7 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.DocAppJwksExtension;
+import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -40,7 +41,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.startsWith;
 import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.DOC_APP_AUTHORISATION_REQUESTED;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceivedByBothServices;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoAuditEventsReceivedByEitherService;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class DocAppAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -125,7 +125,7 @@ class DocAppAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegration
 
         assertThat(response, hasStatus(400));
 
-        assertNoAuditEventsReceivedByEitherService(auditTopic, txmaAuditQueue);
+        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
 
     private AuthenticationRequest withAuthenticationRequest(String clientId) {
