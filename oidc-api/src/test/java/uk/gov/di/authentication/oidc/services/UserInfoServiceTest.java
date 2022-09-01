@@ -278,8 +278,8 @@ class UserInfoServiceTest {
         var accessToken = createSignedAccessToken(null, docAppScope);
         var docAppCredential =
                 new DocAppCredential()
-                        .setSubjectID(SUBJECT.getValue())
-                        .setCredential(List.of(docAppCredentialJWT));
+                        .withSubjectID(SUBJECT.getValue())
+                        .withCredential(List.of(docAppCredentialJWT));
         when(dynamoDocAppService.getDocAppCredential(SUBJECT.getValue()))
                 .thenReturn(Optional.of(docAppCredential));
 

@@ -1,10 +1,12 @@
 package uk.gov.di.authentication.app.entity;
 
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBAttribute;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 
 import java.util.List;
 
+@DynamoDbBean
 public class DocAppCredential {
 
     private String subjectID;
@@ -13,32 +15,45 @@ public class DocAppCredential {
 
     public DocAppCredential() {}
 
-    @DynamoDBHashKey(attributeName = "SubjectID")
+    @DynamoDbPartitionKey
+    @DynamoDbAttribute("SubjectID")
     public String getSubjectID() {
         return subjectID;
     }
 
-    public DocAppCredential setSubjectID(String subjectID) {
+    public void setSubjectID(String subjectID) {
+        this.subjectID = subjectID;
+    }
+
+    public DocAppCredential withSubjectID(String subjectID) {
         this.subjectID = subjectID;
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = "Credential")
+    @DynamoDbAttribute("Credential")
     public List<String> getCredential() {
         return credential;
     }
 
-    public DocAppCredential setCredential(List<String> credential) {
+    public void setCredential(List<String> credential) {
+        this.credential = credential;
+    }
+
+    public DocAppCredential withCredential(List<String> credential) {
         this.credential = credential;
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = "TimeToExist")
+    @DynamoDbAttribute("TimeToExist")
     public long getTimeToExist() {
         return timeToExist;
     }
 
-    public DocAppCredential setTimeToExist(long timeToExist) {
+    public void setTimeToExist(long timeToExist) {
+        this.timeToExist = timeToExist;
+    }
+
+    public DocAppCredential withTimeToExist(long timeToExist) {
         this.timeToExist = timeToExist;
         return this;
     }
