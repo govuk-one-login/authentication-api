@@ -100,7 +100,9 @@ subprojects {
 
         cloudwatch "software.amazon.cloudwatchlogs:aws-embedded-metrics:2.0.0"
 
-        dynamodb "com.amazonaws:aws-java-sdk-dynamodb:${dependencyVersions.aws_sdk_version}"
+        dynamodb "com.amazonaws:aws-java-sdk-dynamodb:${dependencyVersions.aws_sdk_version}",
+                "software.amazon.awssdk:dynamodb:${dependencyVersions.aws_sdk_v2_version}",
+                "software.amazon.awssdk:dynamodb-enhanced:${dependencyVersions.aws_sdk_v2_version}"
 
         glassfish "org.glassfish.jersey.core:jersey-client:${dependencyVersions.glassfish_version}",
                 "org.glassfish.jersey.inject:jersey-hk2:${dependencyVersions.glassfish_version}",
