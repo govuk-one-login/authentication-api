@@ -394,8 +394,6 @@ public class IPVCallbackHandler
                 additionalClaims,
                 (String) userIdentityUserInfo.getClaim(VOT.getValue()),
                 userIdentityUserInfo.getClaim(IdentityClaims.CORE_IDENTITY.getValue()).toString());
-        // TODO: Consider behaviour if VOT/CI are null - DB update behaviour will retain existing
-        // values and potentially cause issues during comparison with SPOT Response
     }
 
     private Optional<ErrorObject> validateUserIdentityResponse(UserInfo userIdentityUserInfo) {

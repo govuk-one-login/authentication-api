@@ -187,9 +187,9 @@ class UserInfoServiceTest {
         when(configurationService.isIdentityEnabled()).thenReturn(true);
         var identityCredentials =
                 new IdentityCredentials()
-                        .setSubjectID(SUBJECT.getValue())
-                        .setCoreIdentityJWT(coreIdentityJWT)
-                        .setAdditionalClaims(
+                        .withSubjectID(SUBJECT.getValue())
+                        .withCoreIdentityJWT(coreIdentityJWT)
+                        .withAdditionalClaims(
                                 Map.of(
                                         ValidClaims.ADDRESS.getValue(),
                                         ADDRESS_CLAIM,
@@ -237,8 +237,8 @@ class UserInfoServiceTest {
         when(configurationService.isIdentityEnabled()).thenReturn(true);
         var identityCredentials =
                 new IdentityCredentials()
-                        .setSubjectID(SUBJECT.getValue())
-                        .setCoreIdentityJWT(coreIdentityJWT);
+                        .withSubjectID(SUBJECT.getValue())
+                        .withCoreIdentityJWT(coreIdentityJWT);
         accessToken = createSignedAccessToken(oidcValidClaimsRequest);
         when(authenticationService.getUserProfileFromSubject(INTERNAL_SUBJECT.getValue()))
                 .thenReturn(generateUserprofile());

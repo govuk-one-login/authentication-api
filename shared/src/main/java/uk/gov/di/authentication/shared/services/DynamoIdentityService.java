@@ -1,8 +1,8 @@
 package uk.gov.di.authentication.shared.services;
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
-import uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.enhanced.dynamodb.Key;
+import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import uk.gov.di.authentication.shared.entity.IdentityCredentials;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 
@@ -11,59 +11,55 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
-import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.tableConfig;
+import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.createDynamoEnhancedClient;
 
 public class DynamoIdentityService {
 
     private static final String IDENTITY_CREDENTIALS_TABLE = "identity-credentials";
-    private final DynamoDBMapper identityCredentialsMapper;
     private final long timeToExist;
-    private final AmazonDynamoDB dynamoDB;
+    private final DynamoDbTable<IdentityCredentials> dynamoIdentityCredentialsTable;
 
     public DynamoIdentityService(ConfigurationService configurationService) {
         var tableName = configurationService.getEnvironment() + "-" + IDENTITY_CREDENTIALS_TABLE;
 
         this.timeToExist = configurationService.getAccessTokenExpiry();
-        this.dynamoDB = DynamoClientHelper.createDynamoClient(configurationService);
-        this.identityCredentialsMapper = new DynamoDBMapper(dynamoDB, tableConfig(tableName));
+        var dynamoDbEnhancedClient = createDynamoEnhancedClient(configurationService);
+        dynamoIdentityCredentialsTable =
+                dynamoDbEnhancedClient.table(
+                        tableName, TableSchema.fromBean(IdentityCredentials.class));
 
-        warmUp(tableName);
+        warmUp();
     }
 
     public void addCoreIdentityJWT(String subjectID, String coreIdentityJWT) {
         var identityCredentials =
-                identityCredentialsMapper.load(IdentityCredentials.class, subjectID);
-        if (Objects.isNull(identityCredentials)) {
-            identityCredentialsMapper.save(
-                    new IdentityCredentials()
-                            .setSubjectID(subjectID)
-                            .setCoreIdentityJWT(coreIdentityJWT)
-                            .setTimeToExist(
-                                    NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS)
-                                            .toInstant()
-                                            .getEpochSecond()));
-        } else {
-            identityCredentialsMapper.save(
-                    identityCredentials
-                            .setCoreIdentityJWT(coreIdentityJWT)
-                            .setTimeToExist(
-                                    NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS)
-                                            .toInstant()
-                                            .getEpochSecond()));
-        }
+                Optional.ofNullable(
+                                dynamoIdentityCredentialsTable.getItem(
+                                        Key.builder().partitionValue(subjectID).build()))
+                        .orElse(new IdentityCredentials());
+        dynamoIdentityCredentialsTable.updateItem(
+                identityCredentials
+                        .withSubjectID(subjectID)
+                        .withCoreIdentityJWT(coreIdentityJWT)
+                        .withTimeToExist(
+                                NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS)
+                                        .toInstant()
+                                        .getEpochSecond()));
     }
 
     public Optional<IdentityCredentials> getIdentityCredentials(String subjectID) {
         return Optional.ofNullable(
-                        identityCredentialsMapper.load(IdentityCredentials.class, subjectID))
+                        dynamoIdentityCredentialsTable.getItem(
+                                Key.builder().partitionValue(subjectID).build()))
                 .filter(t -> t.getTimeToExist() > NowHelper.now().toInstant().getEpochSecond());
     }
 
     public void deleteIdentityCredentials(String subjectID) {
         var identityCredentials =
-                identityCredentialsMapper.load(IdentityCredentials.class, subjectID);
+                dynamoIdentityCredentialsTable.getItem(
+                        Key.builder().partitionValue(subjectID).build());
         if (Objects.nonNull(identityCredentials)) {
-            identityCredentialsMapper.delete(identityCredentials);
+            dynamoIdentityCredentialsTable.deleteItem(identityCredentials);
         }
     }
 
@@ -74,19 +70,19 @@ public class DynamoIdentityService {
             String ipvCoreIdentity) {
         var identityCredentials =
                 new IdentityCredentials()
-                        .setSubjectID(subjectID)
-                        .setAdditionalClaims(additionalClaims)
-                        .setIpvVot(ipvVot)
-                        .setIpvCoreIdentity(ipvCoreIdentity)
-                        .setTimeToExist(
+                        .withSubjectID(subjectID)
+                        .withAdditionalClaims(additionalClaims)
+                        .withIpvVot(ipvVot)
+                        .withIpvCoreIdentity(ipvCoreIdentity)
+                        .withTimeToExist(
                                 NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS)
                                         .toInstant()
                                         .getEpochSecond());
 
-        identityCredentialsMapper.save(identityCredentials);
+        dynamoIdentityCredentialsTable.putItem(identityCredentials);
     }
 
-    private void warmUp(String tableName) {
-        dynamoDB.describeTable(tableName);
+    private void warmUp() {
+        dynamoIdentityCredentialsTable.describeTable();
     }
 }
