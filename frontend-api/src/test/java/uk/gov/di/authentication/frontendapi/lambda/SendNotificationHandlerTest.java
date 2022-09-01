@@ -86,12 +86,12 @@ class SendNotificationHandlerTest {
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final ClientSession clientSession = mock(ClientSession.class);
     private final ClientRegistry clientRegistry =
-            new ClientRegistry().setTestClient(false).setClientID(CLIENT_ID);
+            new ClientRegistry().withTestClient(false).withClientID(CLIENT_ID);
     private final ClientRegistry testClientRegistry =
             new ClientRegistry()
-                    .setTestClient(true)
-                    .setClientID(TEST_CLIENT_ID)
-                    .setTestClientEmailAllowlist(
+                    .withTestClient(true)
+                    .withClientID(TEST_CLIENT_ID)
+                    .withTestClientEmailAllowlist(
                             List.of(
                                     "joe.bloggs@digital.cabinet-office.gov.uk",
                                     "jb2@digital.cabinet-office.gov.uk"));

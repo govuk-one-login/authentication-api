@@ -180,11 +180,11 @@ class DocAppUserHelperTest {
         subject.ifPresent(clientSession::setDocAppSubjectId);
         var clientRegistry =
                 new ClientRegistry()
-                        .setClientID(CLIENT_ID.getValue())
-                        .setClientName(CLIENT_NAME)
-                        .setConsentRequired(false)
-                        .setCookieConsentShared(false)
-                        .setClientType(clientType.getValue());
+                        .withClientID(CLIENT_ID.getValue())
+                        .withClientName(CLIENT_NAME)
+                        .withConsentRequired(false)
+                        .withCookieConsentShared(false)
+                        .withClientType(clientType.getValue());
         return UserContext.builder(SESSION)
                 .withClientSession(clientSession)
                 .withClient(clientRegistry)

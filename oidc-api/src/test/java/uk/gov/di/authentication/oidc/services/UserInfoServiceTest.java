@@ -334,11 +334,11 @@ class UserInfoServiceTest {
 
     private ClientRegistry generateClientRegistry() {
         return new ClientRegistry()
-                .setClientID(CLIENT_ID)
-                .setConsentRequired(false)
-                .setClientName("test-client")
-                .setSectorIdentifierUri("https://test.com")
-                .setSubjectType("public");
+                .withClientID(CLIENT_ID)
+                .withConsentRequired(false)
+                .withClientName("test-client")
+                .withSectorIdentifierUri("https://test.com")
+                .withSubjectType("public");
     }
 
     private void assertClaimMetricPublished(String v3) {

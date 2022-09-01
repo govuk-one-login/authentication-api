@@ -64,6 +64,7 @@ public class UpdateClientConfigIntegrationTest extends ApiGatewayHandlerIntegrat
                 objectMapper.readValue(response.getBody(), ClientRegistrationResponse.class);
         assertThat(clientResponse.getClientName(), equalTo("new-client-name"));
         assertThat(clientResponse.getClientId(), equalTo(CLIENT_ID));
+        assertThat(clientResponse.getScopes(), equalTo(singletonList("openid")));
 
         assertEventTypesReceivedByBothServices(
                 auditTopic, txmaAuditQueue, List.of(UPDATE_CLIENT_REQUEST_RECEIVED));

@@ -200,10 +200,10 @@ class AuthorizationServiceTest {
         var scope = new Scope(OIDCScopeValue.OPENID);
         var clientRegistry =
                 new ClientRegistry()
-                        .setRedirectUrls(singletonList(REDIRECT_URI.toString()))
-                        .setClientID(CLIENT_ID.toString())
-                        .setScopes(scope.toStringList())
-                        .setClaims(
+                        .withRedirectUrls(singletonList(REDIRECT_URI.toString()))
+                        .withClientID(CLIENT_ID.toString())
+                        .withScopes(scope.toStringList())
+                        .withClaims(
                                 List.of(
                                         ValidClaims.ADDRESS.getValue(),
                                         ValidClaims.CORE_IDENTITY_JWT.getValue()));
@@ -569,6 +569,9 @@ class AuthorizationServiceTest {
         assertThat(
                 authorizationService.isTestJourney(CLIENT_ID, "test@test.com"),
                 equalTo(dynamoClientServiceReturns));
+        assertThat(
+                authorizationService.isTestJourney(CLIENT_ID, "test@test.com"),
+                equalTo(dynamoClientServiceReturns));
     }
 
     private ClientRegistry generateClientRegistry(String redirectURI, String clientID) {
@@ -583,12 +586,12 @@ class AuthorizationServiceTest {
     private ClientRegistry generateClientRegistry(
             String redirectURI, String clientID, List<String> scopes, boolean testClient) {
         return new ClientRegistry()
-                .setRedirectUrls(singletonList(redirectURI))
-                .setClientID(clientID)
-                .setContacts(singletonList("joe.bloggs@digital.cabinet-office.gov.uk"))
-                .setPublicKey(null)
-                .setTestClient(testClient)
-                .setScopes(scopes);
+                .withRedirectUrls(singletonList(redirectURI))
+                .withClientID(clientID)
+                .withContacts(singletonList("joe.bloggs@digital.cabinet-office.gov.uk"))
+                .withPublicKey(null)
+                .withTestClient(testClient)
+                .withScopes(scopes);
     }
 
     private AuthenticationRequest generateAuthRequest(

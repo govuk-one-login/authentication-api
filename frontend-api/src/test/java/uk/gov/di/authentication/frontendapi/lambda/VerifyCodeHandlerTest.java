@@ -90,12 +90,12 @@ class VerifyCodeHandlerTest {
             mock(CloudwatchMetricsService.class);
 
     private final ClientRegistry clientRegistry =
-            new ClientRegistry().setTestClient(false).setClientID(CLIENT_ID);
+            new ClientRegistry().withTestClient(false).withClientID(CLIENT_ID);
     private final ClientRegistry testClientRegistry =
             new ClientRegistry()
-                    .setTestClient(true)
-                    .setClientID(TEST_CLIENT_ID)
-                    .setTestClientEmailAllowlist(
+                    .withTestClient(true)
+                    .withClientID(TEST_CLIENT_ID)
+                    .withTestClientEmailAllowlist(
                             List.of("testclient.user1@digital.cabinet-office.gov.uk"));
 
     private VerifyCodeHandler handler;

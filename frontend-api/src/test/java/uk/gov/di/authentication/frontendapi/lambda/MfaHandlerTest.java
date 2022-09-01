@@ -89,9 +89,9 @@ public class MfaHandlerTest {
     private final Session session = new Session("a-session-id").setEmailAddress(TEST_EMAIL_ADDRESS);
     private final ClientRegistry testClientRegistry =
             new ClientRegistry()
-                    .setTestClient(true)
-                    .setClientID(TEST_CLIENT_ID)
-                    .setTestClientEmailAllowlist(
+                    .withTestClient(true)
+                    .withClientID(TEST_CLIENT_ID)
+                    .withTestClientEmailAllowlist(
                             List.of(
                                     "joe.bloggs@digital.cabinet-office.gov.uk",
                                     TEST_EMAIL_ADDRESS,

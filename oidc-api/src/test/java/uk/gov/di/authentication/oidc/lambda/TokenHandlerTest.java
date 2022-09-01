@@ -500,16 +500,16 @@ public class TokenHandlerTest {
 
     private ClientRegistry generateClientRegistry(KeyPair keyPair, boolean consentRequired) {
         return new ClientRegistry()
-                .setClientID(CLIENT_ID)
-                .setConsentRequired(consentRequired)
-                .setClientName("test-client")
-                .setRedirectUrls(singletonList(REDIRECT_URI))
-                .setScopes(SCOPES.toStringList())
-                .setContacts(singletonList(TEST_EMAIL))
-                .setPublicKey(
+                .withClientID(CLIENT_ID)
+                .withConsentRequired(consentRequired)
+                .withClientName("test-client")
+                .withRedirectUrls(singletonList(REDIRECT_URI))
+                .withScopes(SCOPES.toStringList())
+                .withContacts(singletonList(TEST_EMAIL))
+                .withPublicKey(
                         Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()))
-                .setSectorIdentifierUri("https://test.com")
-                .setSubjectType("public");
+                .withSectorIdentifierUri("https://test.com")
+                .withSubjectType("public");
     }
 
     private APIGatewayProxyResponseEvent generateApiGatewayRequest(

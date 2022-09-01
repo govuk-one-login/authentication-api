@@ -620,11 +620,11 @@ class LoginHandlerTest {
 
     private ClientRegistry generateClientRegistry() {
         return new ClientRegistry()
-                .setClientID(CLIENT_ID.getValue())
-                .setConsentRequired(false)
-                .setClientName("test-client")
-                .setSectorIdentifierUri("https://test.com")
-                .setSubjectType("public");
+                .withClientID(CLIENT_ID.getValue())
+                .withConsentRequired(false)
+                .withClientName("test-client")
+                .withSectorIdentifierUri("https://test.com")
+                .withSubjectType("public");
     }
 
     private void usingDefaultVectorOfTrust() {

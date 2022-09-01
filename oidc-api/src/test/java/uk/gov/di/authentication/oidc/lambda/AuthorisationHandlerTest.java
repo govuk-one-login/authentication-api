@@ -712,10 +712,10 @@ class AuthorisationHandlerTest {
 
     private ClientRegistry generateClientRegistry() {
         return new ClientRegistry()
-                .setClientID(new ClientID().getValue())
-                .setConsentRequired(false)
-                .setClientName("test-client")
-                .setSectorIdentifierUri("https://test.com")
-                .setSubjectType("public");
+                .withClientID(new ClientID().getValue())
+                .withConsentRequired(false)
+                .withClientName("test-client")
+                .withSectorIdentifierUri("https://test.com")
+                .withSubjectType("public");
     }
 }

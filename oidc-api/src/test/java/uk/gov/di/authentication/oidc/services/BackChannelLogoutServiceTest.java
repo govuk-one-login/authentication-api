@@ -36,10 +36,10 @@ class BackChannelLogoutServiceTest {
 
         service.sendLogoutMessage(
                 new ClientRegistry()
-                        .setClientID("client-id")
-                        .setSubjectType("pairwise")
-                        .setSectorIdentifierUri("https://example.sign-in.service.gov.uk")
-                        .setBackChannelLogoutUri("http://localhost:8080/back-channel-logout"),
+                        .withClientID("client-id")
+                        .withSubjectType("pairwise")
+                        .withSectorIdentifierUri("https://example.sign-in.service.gov.uk")
+                        .withBackChannelLogoutUri("http://localhost:8080/back-channel-logout"),
                 "test@test.com");
 
         var captor = ArgumentCaptor.forClass(BackChannelLogoutMessage.class);
@@ -57,8 +57,8 @@ class BackChannelLogoutServiceTest {
 
     @Test
     void shouldNotPostMessageToSqsWhenRequiredFieldsAreNotPresent() {
-        var noLogoutUri = new ClientRegistry().setClientID("client-id");
-        var noClientId = new ClientRegistry().setBackChannelLogoutUri("http://localhost:8080/");
+        var noLogoutUri = new ClientRegistry().withClientID("client-id");
+        var noClientId = new ClientRegistry().withBackChannelLogoutUri("http://localhost:8080/");
         var neitherField = new ClientRegistry();
 
         Stream.of(noLogoutUri, noClientId, neitherField)
@@ -74,8 +74,8 @@ class BackChannelLogoutServiceTest {
 
         service.sendLogoutMessage(
                 new ClientRegistry()
-                        .setClientID("client-id")
-                        .setBackChannelLogoutUri("http://localhost:8080/back-channel-logout"),
+                        .withClientID("client-id")
+                        .withBackChannelLogoutUri("http://localhost:8080/back-channel-logout"),
                 "test@test.com");
 
         verify(sqs, never()).send(anyString());

@@ -1,9 +1,9 @@
 package uk.gov.di.authentication.shared.services;
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 
 import java.util.List;
@@ -20,21 +20,23 @@ class DynamoClientServiceTest {
     private static final ClientID CLIENT_ID = new ClientID();
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final AmazonDynamoDB dynamoDB = mock(AmazonDynamoDB.class);
+    private final DynamoDbEnhancedClient dynamoDbEnhancedClient =
+            mock(DynamoDbEnhancedClient.class);
     private DynamoClientService dynamoClientService;
 
     @BeforeEach
     void setup() {
         when(configurationService.getAwsRegion()).thenReturn("eu-west-2");
-        dynamoClientService = spy(new DynamoClientService(configurationService, dynamoDB));
+        dynamoClientService =
+                spy(new DynamoClientService(configurationService, dynamoDbEnhancedClient));
     }
 
     @Test
     void shouldIdentifyATestUserJourney() {
         var client =
                 generateClientRegistry(CLIENT_ID.toString())
-                        .setTestClient(true)
-                        .setTestClientEmailAllowlist(List.of("test@test.com"));
+                        .withTestClient(true)
+                        .withTestClientEmailAllowlist(List.of("test@test.com"));
 
         doReturn(Optional.of(client)).when(dynamoClientService).getClient(CLIENT_ID.toString());
 
@@ -45,8 +47,8 @@ class DynamoClientServiceTest {
     void shouldIdentifyATestUserJourney_UserNotOnAllowList() {
         var client =
                 generateClientRegistry(CLIENT_ID.toString())
-                        .setTestClient(true)
-                        .setTestClientEmailAllowlist(List.of("different-test@test.com"));
+                        .withTestClient(true)
+                        .withTestClientEmailAllowlist(List.of("different-test@test.com"));
 
         doReturn(Optional.of(client)).when(dynamoClientService).getClient(CLIENT_ID.toString());
 
@@ -55,7 +57,7 @@ class DynamoClientServiceTest {
 
     @Test
     void shouldIdentifyATestUserJourney_NoAllowlist() {
-        var client = generateClientRegistry(CLIENT_ID.toString()).setTestClient(true);
+        var client = generateClientRegistry(CLIENT_ID.toString()).withTestClient(true);
 
         doReturn(Optional.of(client)).when(dynamoClientService).getClient(CLIENT_ID.toString());
 
@@ -70,6 +72,6 @@ class DynamoClientServiceTest {
     }
 
     private ClientRegistry generateClientRegistry(String clientId) {
-        return new ClientRegistry().setClientID(clientId);
+        return new ClientRegistry().withClientID(clientId);
     }
 }
