@@ -3,6 +3,7 @@ package uk.gov.di.authentication.frontendapi.services;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.entity.TemplateAware;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.NotificationService;
 import uk.gov.service.notify.NotificationClient;
 import uk.gov.service.notify.NotificationClientException;
@@ -31,7 +32,8 @@ class NotificationServiceTest {
             return name();
         }
 
-        public String getTemplateId(SupportedLanguage language) {
+        public String getTemplateId(
+                SupportedLanguage language, ConfigurationService configurationService) {
             return name();
         }
     }

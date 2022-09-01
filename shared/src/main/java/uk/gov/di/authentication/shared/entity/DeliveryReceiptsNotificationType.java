@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.shared.entity;
 
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 public enum DeliveryReceiptsNotificationType implements TemplateAware {
     VERIFY_EMAIL("VERIFY_EMAIL", "VERIFY_EMAIL_TEMPLATE_ID"),
@@ -35,7 +36,8 @@ public enum DeliveryReceiptsNotificationType implements TemplateAware {
     }
 
     @Override
-    public String getTemplateId(SupportedLanguage language) {
+    public String getTemplateId(
+            SupportedLanguage language, ConfigurationService configurationService) {
         return null;
     }
 
