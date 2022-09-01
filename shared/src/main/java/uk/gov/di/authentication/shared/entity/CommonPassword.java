@@ -1,17 +1,27 @@
 package uk.gov.di.authentication.shared.entity;
 
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 
+@DynamoDbBean
 public class CommonPassword {
 
     private String password;
 
-    @DynamoDBHashKey(attributeName = "Password")
+    public CommonPassword() {}
+
+    @DynamoDbPartitionKey
+    @DynamoDbAttribute("Password")
     public String getPassword() {
         return password;
     }
 
-    public CommonPassword setPassword(String password) {
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public CommonPassword withPassword(String password) {
         this.password = password;
         return this;
     }
