@@ -162,12 +162,6 @@ resource "aws_sqs_queue" "storage_batch_dead_letter_queue" {
   tags = local.default_tags
 }
 
-resource "aws_sns_topic_subscription" "event_stream_subscription" {
-  topic_arn = data.aws_sns_topic.event_stream.arn
-  protocol  = "sqs"
-  endpoint  = aws_sqs_queue.storage_batch.arn
-}
-
 resource "aws_lambda_event_source_mapping" "audit_storage_batch_queue_subscription" {
   event_source_arn = aws_sqs_queue.storage_batch.arn
   function_name    = aws_lambda_function.audit_processor_lambda.arn
