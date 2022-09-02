@@ -277,11 +277,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         }
 
         @Override
-        public boolean isTxmaAuditEnabled() {
-            return true;
-        }
-
-        @Override
         public String getTxmaAuditQueueUrl() {
             return txmaAuditQueue.getQueueUrl();
         }

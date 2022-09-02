@@ -200,11 +200,6 @@ class DocAppAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegration
         }
 
         @Override
-        public boolean isTxmaAuditEnabled() {
-            return true;
-        }
-
-        @Override
         public String getTxmaAuditQueueUrl() {
             return txmaAuditQueue.getQueueUrl();
         }

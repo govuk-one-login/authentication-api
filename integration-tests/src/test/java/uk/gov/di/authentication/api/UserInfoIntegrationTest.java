@@ -101,11 +101,6 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         configurationParameters) {
 
                     @Override
-                    public boolean isTxmaAuditEnabled() {
-                        return true;
-                    }
-
-                    @Override
                     public String getTxmaAuditQueueUrl() {
                         return txmaAuditQueue.getQueueUrl();
                     }
@@ -458,11 +453,6 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         @Override
         public boolean isIdentityEnabled() {
-            return true;
-        }
-
-        @Override
-        public boolean isTxmaAuditEnabled() {
             return true;
         }
 
