@@ -64,7 +64,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                                         new NotificationClient(
                                                 configurationService.getNotifyApiKey(), url))
                         .orElse(new NotificationClient(configurationService.getNotifyApiKey()));
-        this.notificationService = new NotificationService(client);
+        this.notificationService = new NotificationService(client, configurationService);
         this.s3Client =
                 S3Client.builder().region(Region.of(configurationService.getAwsRegion())).build();
     }
