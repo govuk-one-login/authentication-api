@@ -9,12 +9,16 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.lambda.SPOTResponseHandler;
+import uk.gov.di.authentication.shared.entity.IdentityCredentials;
 import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
+import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.sharedtest.basetest.HandlerIntegrationTest;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -23,10 +27,13 @@ import static java.util.Collections.emptyMap;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.ADDRESS_CLAIM;
 import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.CORE_IDENTITY_CLAIM;
+import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.PASSPORT_CLAIM;
 
 public class SpotResponseIntegrationTest extends HandlerIntegrationTest<SQSEvent, Object> {
 
@@ -42,9 +49,18 @@ public class SpotResponseIntegrationTest extends HandlerIntegrationTest<SQSEvent
     }
 
     @Test
-    void shouldAddSpotCredentialToDBForValidResponse() {
-        var signedCredential = "some-signed-credential";
+    void shouldAddSpotCredentialToDBForValidResponseWhenEntryAlreadyExists() {
         var pairwiseIdentifier = new Subject();
+        identityStore.saveIdentityClaims(
+                pairwiseIdentifier.getValue(),
+                Map.of(
+                        ValidClaims.ADDRESS.getValue(),
+                        ADDRESS_CLAIM,
+                        ValidClaims.PASSPORT.getValue(),
+                        PASSPORT_CLAIM),
+                LevelOfConfidence.MEDIUM_LEVEL.getValue(),
+                CORE_IDENTITY_CLAIM);
+        var signedCredential = "some-signed-credential";
         var spotResponse =
                 format(
                         "{\"sub\":\"%s\",\"status\":\"ACCEPTED\","
@@ -57,15 +73,45 @@ public class SpotResponseIntegrationTest extends HandlerIntegrationTest<SQSEvent
                         CLIENT_ID);
         handler.handleRequest(createSqsEvent(spotResponse), mock(Context.class));
 
-        assertTrue(identityStore.getIdentityCredentials(pairwiseIdentifier.getValue()).isPresent());
-
+        Optional<IdentityCredentials> identityCredentials =
+                identityStore.getIdentityCredentials(pairwiseIdentifier.getValue());
+        assertTrue(identityCredentials.isPresent());
         assertThat(
-                identityStore
-                        .getIdentityCredentials(pairwiseIdentifier.getValue())
-                        .get()
-                        .getCoreIdentityJWT(),
-                equalTo(signedCredential));
+                identityCredentials.get().getIpvVot(),
+                equalTo(LevelOfConfidence.MEDIUM_LEVEL.getValue()));
+        assertThat(identityCredentials.get().getAdditionalClaims().size(), equalTo(2));
+        assertThat(identityCredentials.get().getIpvCoreIdentity(), equalTo(CORE_IDENTITY_CLAIM));
+        assertThat(identityCredentials.get().getCoreIdentityJWT(), equalTo(signedCredential));
 
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue,
+                Collections.singletonList(IPVAuditableEvent.IPV_SUCCESSFUL_SPOT_RESPONSE_RECEIVED));
+    }
+
+    @Test
+    void shouldAddSpotCredentialToDBForValidResponseWhenNoEntryCurrentlyExists() {
+        var pairwiseIdentifier = new Subject();
+        var signedCredential = "some-signed-credential";
+        var spotResponse =
+                format(
+                        "{\"sub\":\"%s\",\"status\":\"ACCEPTED\","
+                                + "\"claims\":{\"http://something/v1/verifiableIdentityJWT\":\"%s\"}, \"log_ids\":{\"session_id\":\"%s\",\"persistent_session_id\":\"%s\",\"request_id\":\"%s\",\"client_id\":\"%s\"}}",
+                        pairwiseIdentifier,
+                        signedCredential,
+                        SESSION_ID,
+                        PERSISTENT_SESSION_ID,
+                        REQUEST_ID,
+                        CLIENT_ID);
+        handler.handleRequest(createSqsEvent(spotResponse), mock(Context.class));
+
+        Optional<IdentityCredentials> identityCredentials =
+                identityStore.getIdentityCredentials(pairwiseIdentifier.getValue());
+        assertTrue(identityCredentials.isPresent());
+        assertNull(identityCredentials.get().getAdditionalClaims());
+        assertNull(identityCredentials.get().getIpvVot());
+        assertNull(identityCredentials.get().getIpvCoreIdentity());
+
+        assertThat(identityCredentials.get().getCoreIdentityJWT(), equalTo(signedCredential));
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
                 Collections.singletonList(IPVAuditableEvent.IPV_SUCCESSFUL_SPOT_RESPONSE_RECEIVED));
@@ -92,7 +138,6 @@ public class SpotResponseIntegrationTest extends HandlerIntegrationTest<SQSEvent
 
         assertFalse(
                 identityStore.getIdentityCredentials(pairwiseIdentifier.getValue()).isPresent());
-
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
                 Collections.singletonList(

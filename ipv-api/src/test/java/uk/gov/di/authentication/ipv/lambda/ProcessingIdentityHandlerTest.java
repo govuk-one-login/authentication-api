@@ -131,9 +131,9 @@ class ProcessingIdentityHandlerTest {
         usingValidSession();
         var identityCredentials =
                 new IdentityCredentials()
-                        .setSubjectID(PAIRWISE_SUBJECT.getValue())
-                        .setAdditionalClaims(Collections.emptyMap())
-                        .setCoreIdentityJWT("a-core-identity");
+                        .withSubjectID(PAIRWISE_SUBJECT.getValue())
+                        .withAdditionalClaims(Collections.emptyMap())
+                        .withCoreIdentityJWT("a-core-identity");
         when(dynamoIdentityService.getIdentityCredentials(anyString()))
                 .thenReturn(Optional.of(identityCredentials));
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
@@ -164,8 +164,8 @@ class ProcessingIdentityHandlerTest {
         usingValidSession();
         var identityCredentials =
                 new IdentityCredentials()
-                        .setSubjectID(PAIRWISE_SUBJECT.getValue())
-                        .setAdditionalClaims(Collections.emptyMap());
+                        .withSubjectID(PAIRWISE_SUBJECT.getValue())
+                        .withAdditionalClaims(Collections.emptyMap());
         when(dynamoIdentityService.getIdentityCredentials(anyString()))
                 .thenReturn(Optional.of(identityCredentials));
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
