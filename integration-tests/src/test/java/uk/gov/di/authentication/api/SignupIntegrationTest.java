@@ -32,7 +32,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CREATE_ACCOUNT;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceivedByBothServices;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.helper.KeyPairHelper.GENERATE_RSA_KEY_PAIR;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -107,7 +107,7 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertTrue(userStore.userExists("joe.bloggs+5@digital.cabinet-office.gov.uk"));
 
-        assertEventTypesReceivedByBothServices(auditTopic, txmaAuditQueue, List.of(CREATE_ACCOUNT));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CREATE_ACCOUNT));
     }
 
     @Test

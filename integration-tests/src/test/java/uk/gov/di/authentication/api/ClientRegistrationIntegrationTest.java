@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_RECEIVED;
 import static uk.gov.di.authentication.shared.entity.ServiceType.MANDATORY;
 import static uk.gov.di.authentication.shared.entity.ServiceType.OPTIONAL;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceivedByBothServices;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class ClientRegistrationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -94,7 +94,6 @@ public class ClientRegistrationIntegrationTest extends ApiGatewayHandlerIntegrat
         assertThat(clientResponse.getBackChannelLogoutUri(), equalTo(backChannelLogoutUri));
         assertThat(clientResponse.getClientType(), equalTo(ClientType.WEB.getValue()));
 
-        assertEventTypesReceivedByBothServices(
-                auditTopic, txmaAuditQueue, List.of(REGISTER_CLIENT_REQUEST_RECEIVED));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(REGISTER_CLIENT_REQUEST_RECEIVED));
     }
 }

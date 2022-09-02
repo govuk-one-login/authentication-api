@@ -29,7 +29,7 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.startsWith;
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTH_CODE_ISSUED;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceivedByBothServices;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -71,8 +71,7 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 startsWith(
                         "https://di-auth-stub-relying-party-build.london.cloudapps.digital/?code="));
 
-        assertEventTypesReceivedByBothServices(
-                auditTopic, txmaAuditQueue, List.of(AUTH_CODE_ISSUED));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CODE_ISSUED));
     }
 
     private AuthenticationRequest generateAuthRequest() {

@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.*;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceivedByBothServices;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -64,8 +64,8 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
         assertThat(resetLinkSplit[2], equalTo(sessionId));
         assertThat(resetLinkSplit[3], equalTo(persistentSessionId));
 
-        assertEventTypesReceivedByBothServices(
-                auditTopic, txmaAuditQueue, Collections.singletonList(PASSWORD_RESET_REQUESTED));
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue, Collections.singletonList(PASSWORD_RESET_REQUESTED));
     }
 
     @Test
@@ -95,7 +95,7 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
         assertThat(requests.get(0).getNotificationType(), equalTo(RESET_PASSWORD_WITH_CODE));
         assertThat(requests.get(0).getCode(), hasLength(6));
 
-        assertEventTypesReceivedByBothServices(
-                auditTopic, txmaAuditQueue, Collections.singletonList(PASSWORD_RESET_REQUESTED));
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue, Collections.singletonList(PASSWORD_RESET_REQUESTED));
     }
 }

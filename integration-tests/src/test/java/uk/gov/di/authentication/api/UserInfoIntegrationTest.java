@@ -33,6 +33,7 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.DocumentAppCredentialStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.IdentityStoreExtension;
+import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 import uk.gov.di.authentication.sharedtest.helper.SignedCredentialHelper;
 
@@ -57,8 +58,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.USER_INFO_RETURNED;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceivedByBothServices;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoAuditEventsReceivedByEitherService;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.ADDRESS_CLAIM;
 import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.CORE_IDENTITY_CLAIM;
 import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.PASSPORT_CLAIM;
@@ -156,8 +156,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(userInfoResponse.getSubject(), equalTo(PUBLIC_SUBJECT));
         assertThat(userInfoResponse.toJWTClaimsSet().getClaims().size(), equalTo(5));
 
-        assertEventTypesReceivedByBothServices(
-                auditTopic, txmaAuditQueue, singletonList(USER_INFO_RETURNED));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList(USER_INFO_RETURNED));
     }
 
     @Test
@@ -174,7 +173,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 .getHeaderMap()
                                 .get("WWW-Authenticate")));
 
-        assertNoAuditEventsReceivedByEitherService(auditTopic, txmaAuditQueue);
+        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
 
     @Test
@@ -209,8 +208,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 equalTo(signedCredential.serialize()));
         assertThat(userInfoResponse.toJWTClaimsSet().getClaims().size(), equalTo(8));
 
-        assertEventTypesReceivedByBothServices(
-                auditTopic, txmaAuditQueue, singletonList(USER_INFO_RETURNED));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList(USER_INFO_RETURNED));
     }
 
     @Test
@@ -239,8 +237,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertNull(userInfoResponse.getClaim(ValidClaims.PASSPORT.getValue()));
         assertNull(userInfoResponse.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
 
-        assertEventTypesReceivedByBothServices(
-                auditTopic, txmaAuditQueue, singletonList(USER_INFO_RETURNED));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList(USER_INFO_RETURNED));
     }
 
     @Test
@@ -261,8 +258,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertNull(userInfoResponse.getClaim(ValidClaims.PASSPORT.getValue()));
         assertNull(userInfoResponse.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
 
-        assertEventTypesReceivedByBothServices(
-                auditTopic, txmaAuditQueue, singletonList(USER_INFO_RETURNED));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList(USER_INFO_RETURNED));
     }
 
     @Test
@@ -283,8 +279,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(userInfoResponse.getSubject(), equalTo(DOC_APP_PUBLIC_SUBJECT));
         assertThat(userInfoResponse.toJWTClaimsSet().getClaims().size(), equalTo(2));
 
-        assertEventTypesReceivedByBothServices(
-                auditTopic, txmaAuditQueue, singletonList(USER_INFO_RETURNED));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList(USER_INFO_RETURNED));
     }
 
     @Test
@@ -299,7 +294,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 this::makeDocAppUserinfoRequest,
                 "Expected to throw exception");
 
-        assertNoAuditEventsReceivedByEitherService(auditTopic, txmaAuditQueue);
+        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
 
     @Test
@@ -311,7 +306,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 this::makeDocAppUserinfoRequest,
                 "Expected to throw exception");
 
-        assertNoAuditEventsReceivedByEitherService(auditTopic, txmaAuditQueue);
+        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
 
     public static SignedJWT generateSignedJWT(JWTClaimsSet jwtClaimsSet, KeyPair keyPair)

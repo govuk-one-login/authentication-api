@@ -35,7 +35,7 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.PROCESSING_IDENTITY_REQUEST;
 import static uk.gov.di.authentication.shared.helpers.ClientSubjectHelper.calculatePairwiseIdentifier;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceivedByBothServices;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.CORE_IDENTITY_CLAIM;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -84,8 +84,7 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
                 response,
                 hasJsonBody(new ProcessingIdentityResponse(ProcessingIdentityStatus.COMPLETED)));
 
-        assertEventTypesReceivedByBothServices(
-                auditTopic, txmaAuditQueue, List.of(PROCESSING_IDENTITY_REQUEST));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(PROCESSING_IDENTITY_REQUEST));
     }
 
     @Test
@@ -118,8 +117,7 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
                 response,
                 hasJsonBody(new ProcessingIdentityResponse(ProcessingIdentityStatus.PROCESSING)));
 
-        assertEventTypesReceivedByBothServices(
-                auditTopic, txmaAuditQueue, List.of(PROCESSING_IDENTITY_REQUEST));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(PROCESSING_IDENTITY_REQUEST));
     }
 
     @Test
@@ -145,8 +143,7 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
                 response,
                 hasJsonBody(new ProcessingIdentityResponse(ProcessingIdentityStatus.ERROR)));
 
-        assertEventTypesReceivedByBothServices(
-                auditTopic, txmaAuditQueue, List.of(PROCESSING_IDENTITY_REQUEST));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(PROCESSING_IDENTITY_REQUEST));
     }
 
     @Test
@@ -172,8 +169,7 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
                 response,
                 hasJsonBody(new ProcessingIdentityResponse(ProcessingIdentityStatus.NO_ENTRY)));
 
-        assertEventTypesReceivedByBothServices(
-                auditTopic, txmaAuditQueue, List.of(PROCESSING_IDENTITY_REQUEST));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(PROCESSING_IDENTITY_REQUEST));
     }
 
     private void setupSession(boolean incrementProcessIdentityAttempts) throws Json.JsonException {

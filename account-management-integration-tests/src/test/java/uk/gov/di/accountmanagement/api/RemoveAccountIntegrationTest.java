@@ -18,7 +18,7 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.DELETE_ACCOUNT;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceivedByBothServices;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class RemoveAccountIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -48,7 +48,7 @@ public class RemoveAccountIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
         assertFalse(userStore.userExists(email));
 
-        assertEventTypesReceivedByBothServices(auditTopic, txmaAuditQueue, List.of(DELETE_ACCOUNT));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(DELETE_ACCOUNT));
     }
 
     @Test

@@ -46,6 +46,7 @@ import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 import uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 
@@ -73,7 +74,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.shared.entity.IdentityClaims.VOT;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoAuditEventsReceivedByEitherService;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -139,7 +139,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .getClaim(VOT.getValue()),
                 equalTo(expectedVotClaim));
 
-        assertNoAuditEventsReceivedByEitherService(auditTopic, txmaAuditQueue);
+        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
 
     @Test
@@ -192,7 +192,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .getSubject(),
                 equalTo(userStore.getPublicSubjectIdForEmail(TEST_EMAIL)));
 
-        assertNoAuditEventsReceivedByEitherService(auditTopic, txmaAuditQueue);
+        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
 
     @Test
@@ -226,7 +226,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .getSubject(),
                 not(equalTo(userStore.getPublicSubjectIdForEmail(TEST_EMAIL))));
 
-        assertNoAuditEventsReceivedByEitherService(auditTopic, txmaAuditQueue);
+        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
 
     @Test
@@ -271,7 +271,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertTrue(jsonarray.contains("nickname"));
         assertTrue(jsonarray.contains("birthdate"));
-        assertNoAuditEventsReceivedByEitherService(auditTopic, txmaAuditQueue);
+        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
 
     @Test
@@ -297,7 +297,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .getTokens()
                         .getBearerAccessToken());
 
-        assertNoAuditEventsReceivedByEitherService(auditTopic, txmaAuditQueue);
+        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
 
     @Test
@@ -349,7 +349,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .getTokens()
                         .getBearerAccessToken());
 
-        assertNoAuditEventsReceivedByEitherService(auditTopic, txmaAuditQueue);
+        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
 
     private SignedJWT generateSignedRefreshToken(Scope scope, Subject publicSubject) {

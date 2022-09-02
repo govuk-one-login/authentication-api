@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CHECK_USER_KNOWN_EMAIL;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CHECK_USER_NO_ACCOUNT_WITH_EMAIL;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceivedByBothServices;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class UserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -48,8 +48,7 @@ public class UserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertThat(checkUserExistsResponse.getEmail(), equalTo(emailAddress));
         assertTrue(checkUserExistsResponse.doesUserExist());
 
-        assertEventTypesReceivedByBothServices(
-                auditTopic, txmaAuditQueue, List.of(CHECK_USER_KNOWN_EMAIL));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CHECK_USER_KNOWN_EMAIL));
     }
 
     @Test
@@ -69,7 +68,6 @@ public class UserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertThat(checkUserExistsResponse.getEmail(), equalTo(emailAddress));
         assertFalse(checkUserExistsResponse.doesUserExist());
 
-        assertEventTypesReceivedByBothServices(
-                auditTopic, txmaAuditQueue, List.of(CHECK_USER_NO_ACCOUNT_WITH_EMAIL));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CHECK_USER_NO_ACCOUNT_WITH_EMAIL));
     }
 }

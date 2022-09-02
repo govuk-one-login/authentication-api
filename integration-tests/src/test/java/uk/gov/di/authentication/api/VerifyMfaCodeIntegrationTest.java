@@ -31,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_VERIFIED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.INVALID_CODE_SENT;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceivedByBothServices;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -76,8 +76,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of());
         assertThat(response, hasStatus(204));
 
-        assertEventTypesReceivedByBothServices(
-                auditTopic, txmaAuditQueue, singletonList(CODE_VERIFIED));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList(CODE_VERIFIED));
     }
 
     @Test
@@ -96,8 +95,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of());
 
         assertThat(response, hasStatus(204));
-        assertEventTypesReceivedByBothServices(
-                auditTopic, txmaAuditQueue, singletonList(CODE_VERIFIED));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList(CODE_VERIFIED));
     }
 
     @Test
@@ -116,8 +114,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of());
 
         assertThat(response, hasStatus(400));
-        assertEventTypesReceivedByBothServices(
-                auditTopic, txmaAuditQueue, singletonList(INVALID_CODE_SENT));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList(INVALID_CODE_SENT));
     }
 
     @Test
@@ -136,8 +133,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1043));
-        assertEventTypesReceivedByBothServices(
-                auditTopic, txmaAuditQueue, singletonList(INVALID_CODE_SENT));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList(INVALID_CODE_SENT));
     }
 
     @Test
@@ -156,8 +152,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1043));
-        assertEventTypesReceivedByBothServices(
-                auditTopic, txmaAuditQueue, singletonList(INVALID_CODE_SENT));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList(INVALID_CODE_SENT));
     }
 
     @Test
@@ -195,8 +190,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1042));
-        assertEventTypesReceivedByBothServices(
-                auditTopic, txmaAuditQueue, singletonList(CODE_MAX_RETRIES_REACHED));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList(CODE_MAX_RETRIES_REACHED));
     }
 
     @Test

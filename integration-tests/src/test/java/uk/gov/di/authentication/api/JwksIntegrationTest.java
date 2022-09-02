@@ -11,7 +11,7 @@ import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasSize;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertNoTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class JwksIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -25,7 +25,7 @@ public class JwksIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(200));
         assertThat(JWKSet.parse(response.getBody()).getKeys(), hasSize(1));
 
-        assertNoAuditEventsReceived(auditTopic);
+        assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
 
     @Test
@@ -37,7 +37,7 @@ public class JwksIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(200));
         assertThat(JWKSet.parse(response.getBody()).getKeys(), hasSize(2));
 
-        assertNoAuditEventsReceived(auditTopic);
+        assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
 
     private static class JwksTestConfigurationService extends IntegrationTestConfigurationService {

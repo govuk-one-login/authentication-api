@@ -1,21 +1,13 @@
 package uk.gov.di.authentication.shared.services;
 
-import com.google.protobuf.ByteString;
-import software.amazon.awssdk.core.SdkBytes;
-import software.amazon.awssdk.services.kms.model.SignRequest;
-import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
-import uk.gov.di.audit.AuditPayload.AuditEvent;
-import uk.gov.di.audit.AuditPayload.SignedAuditEvent;
 import uk.gov.di.audit.TxmaAuditUser;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 
 import java.time.Clock;
 import java.util.Arrays;
-import java.util.Base64;
 import java.util.Date;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.function.Consumer;
 
 import static uk.gov.di.audit.TxmaAuditEvent.auditEventWithTime;
@@ -74,24 +66,6 @@ public class AuditService {
             String persistentSessionId,
             MetadataPair... metadataPairs) {
 
-        var now = clock.instant();
-        var uniqueId = UUID.randomUUID();
-
-        snsService.publishAuditMessage(
-                generateLogLine(
-                        event,
-                        uniqueId,
-                        now.toString(),
-                        requestId,
-                        sessionId,
-                        clientId,
-                        subjectId,
-                        email,
-                        ipAddress,
-                        phoneNumber,
-                        persistentSessionId,
-                        metadataPairs));
-
         var user =
                 TxmaAuditUser.user()
                         .withUserId(subjectId)
@@ -102,7 +76,7 @@ public class AuditService {
                         .withPersistentSessionId(persistentSessionId);
 
         var txmaAuditEvent =
-                auditEventWithTime(event, () -> Date.from(now))
+                auditEventWithTime(event, () -> Date.from(clock.instant()))
                         .withClientId(clientId)
                         .withComponentId(configurationService.getOidcApiBaseURL().orElse("UNKNOWN"))
                         .withUser(user);
@@ -110,69 +84,7 @@ public class AuditService {
         Arrays.stream(metadataPairs)
                 .forEach(pair -> txmaAuditEvent.addExtension(pair.getKey(), pair.getValue()));
 
-        txmaAuditEvent.addExtension("legacy_audit_event_id", uniqueId.toString());
-
         txmaQueueClient.send(txmaAuditEvent.serialize());
-    }
-
-    String generateLogLine(
-            AuditableEvent eventEnum,
-            UUID uniqueId,
-            String timestamp,
-            String requestId,
-            String sessionId,
-            String clientId,
-            String subjectId,
-            String email,
-            String ipAddress,
-            String phoneNumber,
-            String persistentSessionId,
-            MetadataPair... metadataPairs) {
-
-        var auditEventBuilder =
-                AuditEvent.newBuilder()
-                        .setEventName(eventEnum.toString())
-                        .setEventId(uniqueId.toString())
-                        .setTimestamp(timestamp)
-                        .setRequestId(Optional.ofNullable(requestId).orElse(UNKNOWN))
-                        .setSessionId(Optional.ofNullable(sessionId).orElse(UNKNOWN))
-                        .setClientId(Optional.ofNullable(clientId).orElse(UNKNOWN))
-                        .setPersistentSessionId(persistentSessionId)
-                        .setUser(
-                                AuditEvent.User.newBuilder()
-                                        .setId(Optional.ofNullable(subjectId).orElse(UNKNOWN))
-                                        .setEmail(Optional.ofNullable(email).orElse(UNKNOWN))
-                                        .setIpAddress(
-                                                Optional.ofNullable(ipAddress).orElse(UNKNOWN))
-                                        .setPhoneNumber(
-                                                Optional.ofNullable(phoneNumber).orElse(UNKNOWN))
-                                        .build());
-
-        Arrays.stream(metadataPairs)
-                .forEach(
-                        pair ->
-                                auditEventBuilder.putExtensions(
-                                        pair.getKey(), pair.getValue().toString()));
-
-        var auditEvent = auditEventBuilder.build();
-
-        var signedEventBuilder =
-                SignedAuditEvent.newBuilder()
-                        .setSignature(ByteString.copyFrom(signPayload(auditEvent.toByteArray())))
-                        .setPayload(auditEvent.toByteString());
-
-        return Base64.getEncoder().encodeToString(signedEventBuilder.build().toByteArray());
-    }
-
-    private byte[] signPayload(byte[] payload) {
-        SignRequest signRequest =
-                SignRequest.builder()
-                        .keyId(configurationService.getAuditSigningKeyAlias())
-                        .message(SdkBytes.fromByteArray(payload))
-                        .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
-                        .build();
-
-        return kmsConnectionService.sign(signRequest).signature().asByteArray();
     }
 
     public static class MetadataPair {

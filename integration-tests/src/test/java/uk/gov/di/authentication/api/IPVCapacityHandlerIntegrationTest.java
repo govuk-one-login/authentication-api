@@ -11,7 +11,7 @@ import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_CAPACITY_REQUESTED;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertEventTypesReceivedByBothServices;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class IPVCapacityHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -25,8 +25,7 @@ class IPVCapacityHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
 
         assertThat(response, hasStatus(503));
 
-        assertEventTypesReceivedByBothServices(
-                auditTopic, txmaAuditQueue, List.of(IPV_CAPACITY_REQUESTED));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(IPV_CAPACITY_REQUESTED));
     }
 
     @Test
@@ -38,8 +37,7 @@ class IPVCapacityHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
 
         assertThat(response, hasStatus(200));
 
-        assertEventTypesReceivedByBothServices(
-                auditTopic, txmaAuditQueue, List.of(IPV_CAPACITY_REQUESTED));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(IPV_CAPACITY_REQUESTED));
     }
 
     public ConfigurationService capacityAwareConfiguration(String value) {
