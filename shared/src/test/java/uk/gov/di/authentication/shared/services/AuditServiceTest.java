@@ -1,11 +1,8 @@
 package uk.gov.di.authentication.shared.services;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
-import org.mockito.MockitoAnnotations;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 
 import java.time.Clock;
@@ -17,7 +14,6 @@ import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.AuditServiceTest.TestEvents.TEST_EVENT_ONE;
@@ -31,12 +27,10 @@ class AuditServiceTest {
     private static final Clock FIXED_CLOCK =
             Clock.fixed(Instant.parse(FIXED_TIMESTAMP), ZoneId.of("UTC"));
 
-    private final SnsService snsService = mock(SnsService.class);
-    private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
     private final AwsSqsClient awsSqsClient = mock(AwsSqsClient.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
 
-    @Captor private ArgumentCaptor<String> txmaMessageCaptor;
+    private final ArgumentCaptor<String> txmaMessageCaptor = ArgumentCaptor.forClass(String.class);
 
     enum TestEvents implements AuditableEvent {
         TEST_EVENT_ONE;
@@ -49,23 +43,11 @@ class AuditServiceTest {
     @BeforeEach
     void beforeEach() {
         when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of("oidc-base-url"));
-        MockitoAnnotations.openMocks(this);
-    }
-
-    @AfterEach
-    void afterEach() {
-        verifyNoInteractions(snsService, kmsConnectionService);
     }
 
     @Test
     void shouldLogAuditEvent() {
-        var auditService =
-                new AuditService(
-                        FIXED_CLOCK,
-                        snsService,
-                        kmsConnectionService,
-                        configurationService,
-                        awsSqsClient);
+        var auditService = new AuditService(FIXED_CLOCK, configurationService, awsSqsClient);
 
         auditService.submitAuditEvent(
                 TEST_EVENT_ONE,
@@ -101,13 +83,7 @@ class AuditServiceTest {
 
     @Test
     void shouldLogAuditEventWithMetadataPairsAttached() {
-        var auditService =
-                new AuditService(
-                        FIXED_CLOCK,
-                        snsService,
-                        kmsConnectionService,
-                        configurationService,
-                        awsSqsClient);
+        var auditService = new AuditService(FIXED_CLOCK, configurationService, awsSqsClient);
 
         auditService.submitAuditEvent(
                 TEST_EVENT_ONE,
