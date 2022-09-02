@@ -227,16 +227,6 @@ public abstract class HandlerIntegrationTest<Q, S> {
         }
 
         @Override
-        public String getEventsSnsTopicArn() {
-            return auditEventTopic.getTopicArn();
-        }
-
-        @Override
-        public String getAuditSigningKeyAlias() {
-            return auditSigningKey.getKeyAlias();
-        }
-
-        @Override
         public String getTokenSigningKeyAlias() {
             return tokenSigningKey.getKeyAlias();
         }
