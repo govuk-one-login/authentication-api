@@ -1,12 +1,14 @@
 package uk.gov.di.authentication.shared.entity;
 
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBAttribute;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBIndexHashKey;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey;
 
 import java.util.ArrayList;
 import java.util.List;
 
+@DynamoDbBean
 public class ClientRegistry {
 
     private String clientID;
@@ -28,184 +30,258 @@ public class ClientRegistry {
     private String clientType;
     private boolean identityVerificationSupported = false;
 
-    @DynamoDBHashKey(attributeName = "ClientID")
+    public ClientRegistry() {}
+
+    @DynamoDbPartitionKey
+    @DynamoDbAttribute("ClientID")
     public String getClientID() {
         return clientID;
     }
 
-    public ClientRegistry setClientID(String clientID) {
+    public void setClientID(String clientID) {
+        this.clientID = clientID;
+    }
+
+    public ClientRegistry withClientID(String clientID) {
         this.clientID = clientID;
         return this;
     }
 
-    @DynamoDBIndexHashKey(
-            globalSecondaryIndexName = "ClientNameIndex",
-            attributeName = "ClientName")
+    @DynamoDbSecondaryPartitionKey(indexNames = {"ClientNameIndex"})
+    @DynamoDbAttribute("ClientName")
     public String getClientName() {
         return clientName;
     }
 
-    public ClientRegistry setClientName(String clientName) {
+    public void setClientName(String clientName) {
+        this.clientName = clientName;
+    }
+
+    public ClientRegistry withClientName(String clientName) {
         this.clientName = clientName;
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = "PublicKey")
+    @DynamoDbAttribute("PublicKey")
     public String getPublicKey() {
         return publicKey;
     }
 
-    public ClientRegistry setPublicKey(String publicKey) {
+    public void setPublicKey(String publicKey) {
+        this.publicKey = publicKey;
+    }
+
+    public ClientRegistry withPublicKey(String publicKey) {
         this.publicKey = publicKey;
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = "Scopes")
+    @DynamoDbAttribute("Scopes")
     public List<String> getScopes() {
         return scopes;
     }
 
-    public ClientRegistry setScopes(List<String> scopes) {
+    public void setScopes(List<String> scopes) {
+        this.scopes = scopes;
+    }
+
+    public ClientRegistry withScopes(List<String> scopes) {
         this.scopes = scopes;
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = "RedirectUrls")
+    @DynamoDbAttribute("RedirectUrls")
     public List<String> getRedirectUrls() {
         return redirectUrls;
     }
 
-    public ClientRegistry setRedirectUrls(List<String> redirectUrls) {
+    public void setRedirectUrls(List<String> redirectUrls) {
+        this.redirectUrls = redirectUrls;
+    }
+
+    public ClientRegistry withRedirectUrls(List<String> redirectUrls) {
         this.redirectUrls = redirectUrls;
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = "Contacts")
+    @DynamoDbAttribute("Contacts")
     public List<String> getContacts() {
         return contacts;
     }
 
-    public ClientRegistry setContacts(List<String> contacts) {
+    public void setContacts(List<String> contacts) {
+        this.contacts = contacts;
+    }
+
+    public ClientRegistry withContacts(List<String> contacts) {
         this.contacts = contacts;
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = "PostLogoutRedirectUrls")
+    @DynamoDbAttribute("PostLogoutRedirectUrls")
     public List<String> getPostLogoutRedirectUrls() {
         return postLogoutRedirectUrls;
     }
 
-    public ClientRegistry setPostLogoutRedirectUrls(List<String> postLogoutRedirectUrls) {
+    public void setPostLogoutRedirectUrls(List<String> postLogoutRedirectUrls) {
+        this.postLogoutRedirectUrls = postLogoutRedirectUrls;
+    }
+
+    public ClientRegistry withPostLogoutRedirectUrls(List<String> postLogoutRedirectUrls) {
         this.postLogoutRedirectUrls = postLogoutRedirectUrls;
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = "BackChannelLogoutUri")
+    @DynamoDbAttribute("BackChannelLogoutUri")
     public String getBackChannelLogoutUri() {
         return backChannelLogoutUri;
     }
 
-    public ClientRegistry setBackChannelLogoutUri(String backChannelLogoutUri) {
+    public void setBackChannelLogoutUri(String backChannelLogoutUri) {
+        this.backChannelLogoutUri = backChannelLogoutUri;
+    }
+
+    public ClientRegistry withBackChannelLogoutUri(String backChannelLogoutUri) {
         this.backChannelLogoutUri = backChannelLogoutUri;
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = "ServiceType")
+    @DynamoDbAttribute("ServiceType")
     public String getServiceType() {
         return serviceType;
     }
 
-    public ClientRegistry setServiceType(String serviceType) {
+    public void setServiceType(String serviceType) {
+        this.serviceType = serviceType;
+    }
+
+    public ClientRegistry withServiceType(String serviceType) {
         this.serviceType = serviceType;
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = "SectorIdentifierUri")
+    @DynamoDbAttribute("SectorIdentifierUri")
     public String getSectorIdentifierUri() {
         return sectorIdentifierUri;
     }
 
-    public ClientRegistry setSectorIdentifierUri(String sectorIdentifierUri) {
+    public void setSectorIdentifierUri(String sectorIdentifierUri) {
+        this.sectorIdentifierUri = sectorIdentifierUri;
+    }
+
+    public ClientRegistry withSectorIdentifierUri(String sectorIdentifierUri) {
         this.sectorIdentifierUri = sectorIdentifierUri;
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = "SubjectType")
+    @DynamoDbAttribute("SubjectType")
     public String getSubjectType() {
         return subjectType;
     }
 
-    public ClientRegistry setSubjectType(String subjectType) {
+    public void setSubjectType(String subjectType) {
+        this.subjectType = subjectType;
+    }
+
+    public ClientRegistry withSubjectType(String subjectType) {
         this.subjectType = subjectType;
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = "CookieConsentShared")
+    @DynamoDbAttribute("CookieConsentShared")
     public boolean isCookieConsentShared() {
         return cookieConsentShared;
     }
 
-    public ClientRegistry setCookieConsentShared(boolean cookieConsent) {
+    public void setCookieConsentShared(boolean cookieConsentShared) {
+        this.cookieConsentShared = cookieConsentShared;
+    }
+
+    public ClientRegistry withCookieConsentShared(boolean cookieConsent) {
         this.cookieConsentShared = cookieConsent;
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = "TestClient")
+    @DynamoDbAttribute("TestClient")
     public boolean isTestClient() {
         return testClient;
     }
 
-    public ClientRegistry setTestClient(boolean testClient) {
+    public void setTestClient(boolean testClient) {
+        this.testClient = testClient;
+    }
+
+    public ClientRegistry withTestClient(boolean testClient) {
         this.testClient = testClient;
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = "TestClientEmailAllowlist")
+    @DynamoDbAttribute("TestClientEmailAllowlist")
     public List<String> getTestClientEmailAllowlist() {
         return testClientEmailAllowlist;
     }
 
-    public ClientRegistry setTestClientEmailAllowlist(List<String> testClientEmailAllowlist) {
+    public void setTestClientEmailAllowlist(List<String> testClientEmailAllowlist) {
+        this.testClientEmailAllowlist = testClientEmailAllowlist;
+    }
+
+    public ClientRegistry withTestClientEmailAllowlist(List<String> testClientEmailAllowlist) {
         this.testClientEmailAllowlist = testClientEmailAllowlist;
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = "ConsentRequired")
+    @DynamoDbAttribute("ConsentRequired")
     public boolean isConsentRequired() {
         return consentRequired;
     }
 
-    public ClientRegistry setConsentRequired(boolean consentRequired) {
+    public void setConsentRequired(boolean consentRequired) {
+        this.consentRequired = consentRequired;
+    }
+
+    public ClientRegistry withConsentRequired(boolean consentRequired) {
         this.consentRequired = consentRequired;
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = "Claims")
+    @DynamoDbAttribute("Claims")
     public List<String> getClaims() {
         return claims;
     }
 
-    public ClientRegistry setClaims(List<String> claims) {
+    public void setClaims(List<String> claims) {
+        this.claims = claims;
+    }
+
+    public ClientRegistry withClaims(List<String> claims) {
         this.claims = claims;
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = "ClientType")
+    @DynamoDbAttribute("ClientType")
     public String getClientType() {
         return clientType;
     }
 
-    public ClientRegistry setClientType(String clientType) {
+    public void setClientType(String clientType) {
+        this.clientType = clientType;
+    }
+
+    public ClientRegistry withClientType(String clientType) {
         this.clientType = clientType;
         return this;
     }
 
-    @DynamoDBAttribute(attributeName = "IdentityVerificationSupported")
+    @DynamoDbAttribute("IdentityVerificationSupported")
     public boolean isIdentityVerificationSupported() {
         return identityVerificationSupported;
     }
 
-    public ClientRegistry setIdentityVerificationSupported(boolean identityVerificationSupported) {
+    public void setIdentityVerificationSupported(boolean identityVerificationSupported) {
+        this.identityVerificationSupported = identityVerificationSupported;
+    }
+
+    public ClientRegistry withIdentityVerificationSupported(boolean identityVerificationSupported) {
         this.identityVerificationSupported = identityVerificationSupported;
         return this;
     }

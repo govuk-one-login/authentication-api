@@ -213,18 +213,17 @@ class UpdateClientConfigHandlerTest {
     }
 
     private ClientRegistry createClientRegistry() {
-        ClientRegistry clientRegistry = new ClientRegistry();
-        clientRegistry.setClientName(CLIENT_NAME);
-        clientRegistry.setClientID(CLIENT_ID);
-        clientRegistry.setPublicKey("public-key");
-        clientRegistry.setScopes(SCOPES);
-        clientRegistry.setSubjectType("Public");
-        clientRegistry.setRedirectUrls(singletonList("http://localhost/redirect"));
-        clientRegistry.setContacts(singletonList("contant-name"));
-        clientRegistry.setPostLogoutRedirectUrls(singletonList("localhost/logout"));
-        clientRegistry.setServiceType(SERVICE_TYPE);
-        clientRegistry.setClientType(ClientType.WEB.getValue());
-        return clientRegistry;
+        return new ClientRegistry()
+                .withClientName(CLIENT_NAME)
+                .withClientID(CLIENT_ID)
+                .withPublicKey("public-key")
+                .withScopes(SCOPES)
+                .withSubjectType("Public")
+                .withRedirectUrls(singletonList("http://localhost/redirect"))
+                .withContacts(singletonList("contant-name"))
+                .withPostLogoutRedirectUrls(singletonList("localhost/logout"))
+                .withServiceType(SERVICE_TYPE)
+                .withClientType(ClientType.WEB.getValue());
     }
 
     private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {

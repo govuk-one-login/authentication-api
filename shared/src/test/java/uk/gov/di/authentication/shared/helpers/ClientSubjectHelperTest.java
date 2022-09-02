@@ -302,15 +302,15 @@ class ClientSubjectHelperTest {
             String sector,
             List<String> redirectUrls) {
         return new ClientRegistry()
-                .setClientID(clientID)
-                .setClientName("test-client")
-                .setRedirectUrls(redirectUrls)
-                .setScopes(SCOPES.toStringList())
-                .setContacts(singletonList(TEST_EMAIL))
-                .setPublicKey(
+                .withClientID(clientID)
+                .withClientName("test-client")
+                .withRedirectUrls(redirectUrls)
+                .withScopes(SCOPES.toStringList())
+                .withContacts(singletonList(TEST_EMAIL))
+                .withPublicKey(
                         Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()))
-                .setSectorIdentifierUri(sector)
-                .setSubjectType(subjectType);
+                .withSectorIdentifierUri(sector)
+                .withSubjectType(subjectType);
     }
 
     private UserProfile generateUserProfile() {

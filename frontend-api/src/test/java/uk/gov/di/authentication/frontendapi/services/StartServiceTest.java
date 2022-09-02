@@ -339,12 +339,12 @@ class StartServiceTest {
     private ClientRegistry generateClientRegistry(
             String redirectURI, String clientID, boolean cookieConsentShared) {
         return new ClientRegistry()
-                .setRedirectUrls(singletonList(redirectURI))
-                .setClientID(clientID)
-                .setContacts(singletonList("joe.bloggs@digital.cabinet-office.gov.uk"))
-                .setPublicKey(null)
-                .setScopes(singletonList("openid"))
-                .setCookieConsentShared(cookieConsentShared);
+                .withRedirectUrls(singletonList(redirectURI))
+                .withClientID(clientID)
+                .withContacts(singletonList("joe.bloggs@digital.cabinet-office.gov.uk"))
+                .withPublicKey(null)
+                .withScopes(singletonList("openid"))
+                .withCookieConsentShared(cookieConsentShared);
     }
 
     private UserContext buildUserContext(
@@ -388,12 +388,12 @@ class StartServiceTest {
                         authRequest.toParameters(), LocalDateTime.now(), clientSessionVTR);
         var clientRegistry =
                 new ClientRegistry()
-                        .setClientID(CLIENT_ID.getValue())
-                        .setClientName(CLIENT_NAME)
-                        .setConsentRequired(consentRequired)
-                        .setCookieConsentShared(cookieConsentShared)
-                        .setClientType(clientType.getValue())
-                        .setIdentityVerificationSupported(identityVerificationSupport);
+                        .withClientID(CLIENT_ID.getValue())
+                        .withClientName(CLIENT_NAME)
+                        .withConsentRequired(consentRequired)
+                        .withCookieConsentShared(cookieConsentShared)
+                        .withClientType(clientType.getValue())
+                        .withIdentityVerificationSupported(identityVerificationSupport);
         return UserContext.builder(SESSION.setAuthenticated(isAuthenticated))
                 .withClientSession(clientSession)
                 .withClient(clientRegistry)

@@ -1,8 +1,10 @@
 package uk.gov.di.authentication.shared.services;
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
 import com.nimbusds.oauth2.sdk.id.ClientID;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.enhanced.dynamodb.Key;
+import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.UpdateClientConfigRequest;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
@@ -11,31 +13,33 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
 
-import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.createDynamoClient;
-import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.tableConfig;
+import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.createDynamoEnhancedClient;
 
 public class DynamoClientService implements ClientService {
 
     private static final String CLIENT_REGISTRY_TABLE = "client-registry";
-    private final DynamoDBMapper clientRegistryMapper;
-    private final AmazonDynamoDB dynamoDB;
+    private final DynamoDbTable<ClientRegistry> dynamoClientRegistryTable;
 
     public DynamoClientService(ConfigurationService configurationService) {
         String tableName = configurationService.getEnvironment() + "-" + CLIENT_REGISTRY_TABLE;
-        this.dynamoDB = createDynamoClient(configurationService);
-        this.clientRegistryMapper = new DynamoDBMapper(dynamoDB, tableConfig(tableName));
-        warmUp(tableName);
+        var dynamoDBEnhanced = createDynamoEnhancedClient(configurationService);
+        this.dynamoClientRegistryTable =
+                dynamoDBEnhanced.table(tableName, TableSchema.fromBean(ClientRegistry.class));
+        warmUp();
     }
 
-    public DynamoClientService(ConfigurationService configurationService, AmazonDynamoDB dynamoDB) {
+    public DynamoClientService(
+            ConfigurationService configurationService,
+            DynamoDbEnhancedClient dynamoDbEnhancedClient) {
         String tableName = configurationService.getEnvironment() + "-" + CLIENT_REGISTRY_TABLE;
-        this.dynamoDB = dynamoDB;
-        this.clientRegistryMapper = new DynamoDBMapper(dynamoDB, tableConfig(tableName));
+        this.dynamoClientRegistryTable =
+                dynamoDbEnhancedClient.table(tableName, TableSchema.fromBean(ClientRegistry.class));
     }
 
     @Override
     public boolean isValidClient(String clientId) {
-        return clientRegistryMapper.load(ClientRegistry.class, clientId) != null;
+        return dynamoClientRegistryTable.getItem(Key.builder().partitionValue(clientId).build())
+                != null;
     }
 
     @Override
@@ -57,46 +61,49 @@ public class DynamoClientService implements ClientService {
             boolean identityVerificationSupported) {
         var clientRegistry =
                 new ClientRegistry()
-                        .setClientID(clientID)
-                        .setClientName(clientName)
-                        .setRedirectUrls(redirectUris)
-                        .setContacts(contacts)
-                        .setScopes(scopes)
-                        .setPublicKey(publicKey)
-                        .setPostLogoutRedirectUrls(postLogoutRedirectUris)
-                        .setBackChannelLogoutUri(backChannelLogoutUri)
-                        .setServiceType(serviceType)
-                        .setSectorIdentifierUri(sectorIdentifierUri)
-                        .setSubjectType(subjectType)
-                        .setConsentRequired(consentRequired)
-                        .setClaims(claims)
-                        .setClientType(clientType)
-                        .setIdentityVerificationSupported(identityVerificationSupported);
-        clientRegistryMapper.save(clientRegistry);
+                        .withClientID(clientID)
+                        .withClientName(clientName)
+                        .withRedirectUrls(redirectUris)
+                        .withContacts(contacts)
+                        .withScopes(scopes)
+                        .withPublicKey(publicKey)
+                        .withPostLogoutRedirectUrls(postLogoutRedirectUris)
+                        .withBackChannelLogoutUri(backChannelLogoutUri)
+                        .withServiceType(serviceType)
+                        .withSectorIdentifierUri(sectorIdentifierUri)
+                        .withSubjectType(subjectType)
+                        .withConsentRequired(consentRequired)
+                        .withClaims(claims)
+                        .withClientType(clientType)
+                        .withIdentityVerificationSupported(identityVerificationSupported);
+        dynamoClientRegistryTable.putItem(clientRegistry);
     }
 
     @Override
     public ClientRegistry updateClient(String clientId, UpdateClientConfigRequest updateRequest) {
-        ClientRegistry clientRegistry = clientRegistryMapper.load(ClientRegistry.class, clientId);
+        ClientRegistry clientRegistry =
+                dynamoClientRegistryTable.getItem(Key.builder().partitionValue(clientId).build());
         Optional.ofNullable(updateRequest.getRedirectUris())
-                .ifPresent(clientRegistry::setRedirectUrls);
-        Optional.ofNullable(updateRequest.getClientName()).ifPresent(clientRegistry::setClientName);
-        Optional.ofNullable(updateRequest.getContacts()).ifPresent(clientRegistry::setContacts);
-        Optional.ofNullable(updateRequest.getScopes()).ifPresent(clientRegistry::setScopes);
+                .ifPresent(clientRegistry::withRedirectUrls);
+        Optional.ofNullable(updateRequest.getClientName())
+                .ifPresent(clientRegistry::withClientName);
+        Optional.ofNullable(updateRequest.getContacts()).ifPresent(clientRegistry::withContacts);
+        Optional.ofNullable(updateRequest.getScopes()).ifPresent(clientRegistry::withScopes);
         Optional.ofNullable(updateRequest.getPostLogoutRedirectUris())
-                .ifPresent(clientRegistry::setPostLogoutRedirectUrls);
-        Optional.ofNullable(updateRequest.getPublicKey()).ifPresent(clientRegistry::setPublicKey);
+                .ifPresent(clientRegistry::withPostLogoutRedirectUrls);
+        Optional.ofNullable(updateRequest.getPublicKey()).ifPresent(clientRegistry::withPublicKey);
         Optional.ofNullable(updateRequest.getServiceType())
-                .ifPresent(clientRegistry::setServiceType);
+                .ifPresent(clientRegistry::withServiceType);
         Optional.ofNullable(updateRequest.getSectorIdentifierUri())
-                .ifPresent(clientRegistry::setSectorIdentifierUri);
-        clientRegistryMapper.save(clientRegistry);
+                .ifPresent(clientRegistry::withSectorIdentifierUri);
+        dynamoClientRegistryTable.putItem(clientRegistry);
         return clientRegistry;
     }
 
     @Override
     public Optional<ClientRegistry> getClient(String clientId) {
-        return Optional.ofNullable(clientRegistryMapper.load(ClientRegistry.class, clientId));
+        return Optional.ofNullable(
+                dynamoClientRegistryTable.getItem(Key.builder().partitionValue(clientId).build()));
     }
 
     @Override
@@ -114,7 +121,7 @@ public class DynamoClientService implements ClientService {
                 .orElse(false);
     }
 
-    private void warmUp(String tableName) {
-        dynamoDB.describeTable(tableName);
+    private void warmUp() {
+        dynamoClientRegistryTable.describeTable();
     }
 }

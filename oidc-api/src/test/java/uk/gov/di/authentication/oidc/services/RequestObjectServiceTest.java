@@ -520,16 +520,16 @@ class RequestObjectServiceTest {
 
     private ClientRegistry generateClientRegistry(String clientType, Scope scope) {
         return new ClientRegistry()
-                .setClientID(CLIENT_ID.getValue())
-                .setPublicKey(
+                .withClientID(CLIENT_ID.getValue())
+                .withPublicKey(
                         Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()))
-                .setConsentRequired(false)
-                .setClientName("test-client")
-                .setScopes(scope.toStringList())
-                .setRedirectUrls(singletonList(REDIRECT_URI))
-                .setSectorIdentifierUri("https://test.com")
-                .setSubjectType("pairwise")
-                .setClientType(clientType);
+                .withConsentRequired(false)
+                .withClientName("test-client")
+                .withScopes(scope.toStringList())
+                .withRedirectUrls(singletonList(REDIRECT_URI))
+                .withSectorIdentifierUri("https://test.com")
+                .withSubjectType("pairwise")
+                .withClientType(clientType);
     }
 
     private AuthenticationRequest generateAuthRequest(SignedJWT signedJWT) {

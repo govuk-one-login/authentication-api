@@ -326,12 +326,12 @@ class AccessTokenServiceTest {
 
     private ClientRegistry generateClientRegistry(List<String> scopes, boolean identitySupported) {
         return new ClientRegistry()
-                .setRedirectUrls(singletonList("http://localhost/redirect"))
-                .setClientID(CLIENT_ID)
-                .setContacts(singletonList("joe.bloggs@digital.cabinet-office.gov.uk"))
-                .setPublicKey(null)
-                .setIdentityVerificationSupported(identitySupported)
-                .setScopes(scopes);
+                .withRedirectUrls(singletonList("http://localhost/redirect"))
+                .withClientID(CLIENT_ID)
+                .withContacts(singletonList("joe.bloggs@digital.cabinet-office.gov.uk"))
+                .withPublicKey(null)
+                .withIdentityVerificationSupported(identitySupported)
+                .withScopes(scopes);
     }
 
     private AccessToken createSignedAccessToken(OIDCClaimsRequest identityClaims, boolean expired) {

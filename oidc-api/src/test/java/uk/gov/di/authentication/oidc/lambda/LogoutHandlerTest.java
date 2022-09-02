@@ -609,13 +609,13 @@ class LogoutHandlerTest {
 
     private ClientRegistry createClientRegistry() {
         return new ClientRegistry()
-                .setClientID("client-id")
-                .setClientName("client-one")
-                .setPublicKey("public-key")
-                .setContacts(singletonList("contact-1"))
-                .setPostLogoutRedirectUrls(singletonList(CLIENT_LOGOUT_URI.toString()))
-                .setScopes(singletonList("openid"))
-                .setRedirectUrls(singletonList("http://localhost/redirect"));
+                .withClientID("client-id")
+                .withClientName("client-one")
+                .withPublicKey("public-key")
+                .withContacts(singletonList("contact-1"))
+                .withPostLogoutRedirectUrls(singletonList(CLIENT_LOGOUT_URI.toString()))
+                .withScopes(singletonList("openid"))
+                .withRedirectUrls(singletonList("http://localhost/redirect"));
     }
 
     private static String buildCookieString(String clientSessionId) {
@@ -657,7 +657,7 @@ class LogoutHandlerTest {
                                         LocalDateTime.now(),
                                         VectorOfTrust.getDefaults())));
         when(dynamoClientService.getClient(clientId))
-                .thenReturn(Optional.of(new ClientRegistry().setClientID(clientId)));
+                .thenReturn(Optional.of(new ClientRegistry().withClientID(clientId)));
     }
 
     private void verifySessions() {

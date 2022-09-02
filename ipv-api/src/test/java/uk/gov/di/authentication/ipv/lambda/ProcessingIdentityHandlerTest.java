@@ -269,14 +269,14 @@ class ProcessingIdentityHandlerTest {
 
     private ClientRegistry generateClientRegistry() {
         return new ClientRegistry()
-                .setRedirectUrls(singletonList(REDIRECT_URI.toString()))
-                .setClientID(CLIENT_ID)
-                .setContacts(singletonList("joe.bloggs@digital.cabinet-office.gov.uk"))
-                .setPublicKey(null)
-                .setSectorIdentifierUri("http://sector-identifier")
-                .setScopes(singletonList("openid"))
-                .setCookieConsentShared(true)
-                .setSubjectType("pairwise");
+                .withRedirectUrls(singletonList(REDIRECT_URI.toString()))
+                .withClientID(CLIENT_ID)
+                .withContacts(singletonList("joe.bloggs@digital.cabinet-office.gov.uk"))
+                .withPublicKey(null)
+                .withSectorIdentifierUri("http://sector-identifier")
+                .withScopes(singletonList("openid"))
+                .withCookieConsentShared(true)
+                .withSubjectType("pairwise");
     }
 
     private UserProfile generateUserProfile() {

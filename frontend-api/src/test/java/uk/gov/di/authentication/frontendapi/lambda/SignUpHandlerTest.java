@@ -274,10 +274,10 @@ class SignUpHandlerTest {
 
     private ClientRegistry generateClientRegistry(boolean consentRequired) {
         return new ClientRegistry()
-                .setClientID(CLIENT_ID.getValue())
-                .setConsentRequired(consentRequired)
-                .setClientName("test-client")
-                .setSectorIdentifierUri("https://test.com")
-                .setSubjectType("public");
+                .withClientID(CLIENT_ID.getValue())
+                .withConsentRequired(consentRequired)
+                .withClientName("test-client")
+                .withSectorIdentifierUri("https://test.com")
+                .withSubjectType("public");
     }
 }
