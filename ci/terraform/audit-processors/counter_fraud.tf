@@ -154,7 +154,6 @@ resource "aws_lambda_function" "fraud_realtime_logging_lambda" {
   }
   environment {
     variables = {
-      AUDIT_SIGNING_KEY_ALIAS     = local.audit_signing_key_alias_name
       LOCALSTACK_ENDPOINT         = var.use_localstack ? var.localstack_endpoint : null
       TXMA_OBFUSCATION_SECRET_ARN = var.txma_obfuscation_secret_arn == "" ? aws_secretsmanager_secret.hmac_secret[0].arn : var.txma_obfuscation_secret_arn
     }

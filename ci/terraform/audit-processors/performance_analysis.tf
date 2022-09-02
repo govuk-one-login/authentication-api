@@ -67,9 +67,8 @@ resource "aws_lambda_function" "performance_analysis_logging_lambda" {
   }
   environment {
     variables = {
-      AUDIT_SIGNING_KEY_ALIAS = local.audit_signing_key_alias_name
-      LOCALSTACK_ENDPOINT     = var.use_localstack ? var.localstack_endpoint : null
-      AUDIT_HMAC_SECRET       = random_password.performance_analysis_hmac_key.result
+      LOCALSTACK_ENDPOINT = var.use_localstack ? var.localstack_endpoint : null
+      AUDIT_HMAC_SECRET   = random_password.performance_analysis_hmac_key.result
     }
   }
   kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn

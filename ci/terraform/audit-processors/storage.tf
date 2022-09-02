@@ -65,7 +65,6 @@ resource "aws_lambda_function" "audit_processor_lambda" {
   }
   environment {
     variables = {
-      AUDIT_SIGNING_KEY_ALIAS = local.audit_signing_key_alias_name
       LOCALSTACK_ENDPOINT     = var.use_localstack ? var.localstack_endpoint : null
       TOKEN_SIGNING_KEY_ALIAS = local.audit_signing_key_alias_name,
       AUDIT_STORAGE_S3_BUCKET = var.use_localstack ? null : aws_s3_bucket.audit_storage_bucket[0].bucket
