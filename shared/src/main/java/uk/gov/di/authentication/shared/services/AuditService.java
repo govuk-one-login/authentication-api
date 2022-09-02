@@ -31,12 +31,10 @@ public class AuditService {
         this.configurationService = configurationService;
         this.clock = Clock.systemUTC();
         this.txmaQueueClient =
-                configurationService.isTxmaAuditEnabled()
-                        ? new AwsSqsClient(
-                                configurationService.getAwsRegion(),
-                                configurationService.getTxmaAuditQueueUrl(),
-                                configurationService.getLocalstackEndpointUri())
-                        : new AwsSqsClient.NoOpSqsClient();
+                new AwsSqsClient(
+                        configurationService.getAwsRegion(),
+                        configurationService.getTxmaAuditQueueUrl(),
+                        configurationService.getLocalstackEndpointUri());
     }
 
     public void submitAuditEvent(
