@@ -21,14 +21,12 @@ module "update_email" {
   path_part       = "update-email"
   endpoint_method = "POST"
   handler_environment_variables = {
-    ENVIRONMENT             = var.environment
-    DYNAMO_ENDPOINT         = var.use_localstack ? var.lambda_dynamo_endpoint : null
-    EMAIL_QUEUE_URL         = aws_sqs_queue.email_queue.id
-    LOCALSTACK_ENDPOINT     = var.use_localstack ? var.localstack_endpoint : null
-    REDIS_KEY               = local.redis_key
-    EVENTS_SNS_TOPIC_ARN    = data.aws_sns_topic.events.arn
-    TXMA_AUDIT_QUEUE_URL    = module.account_management_txma_audit.queue_url
-    AUDIT_SIGNING_KEY_ALIAS = local.audit_signing_key_alias_name
+    ENVIRONMENT          = var.environment
+    DYNAMO_ENDPOINT      = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    EMAIL_QUEUE_URL      = aws_sqs_queue.email_queue.id
+    LOCALSTACK_ENDPOINT  = var.use_localstack ? var.localstack_endpoint : null
+    REDIS_KEY            = local.redis_key
+    TXMA_AUDIT_QUEUE_URL = module.account_management_txma_audit.queue_url
   }
   handler_function_name = "uk.gov.di.accountmanagement.lambda.UpdateEmailHandler::handleRequest"
 
