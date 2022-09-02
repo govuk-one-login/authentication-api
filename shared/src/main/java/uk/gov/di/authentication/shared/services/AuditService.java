@@ -17,20 +17,12 @@ public class AuditService {
     public static final String UNKNOWN = "";
 
     private final Clock clock;
-    private final SnsService snsService;
-    private final KmsConnectionService kmsConnectionService;
     private final ConfigurationService configurationService;
     private final AwsSqsClient txmaQueueClient;
 
     public AuditService(
-            Clock clock,
-            SnsService snsService,
-            KmsConnectionService kmsConnectionService,
-            ConfigurationService configurationService,
-            AwsSqsClient txmaQueueClient) {
+            Clock clock, ConfigurationService configurationService, AwsSqsClient txmaQueueClient) {
         this.clock = clock;
-        this.snsService = snsService;
-        this.kmsConnectionService = kmsConnectionService;
         this.configurationService = configurationService;
         this.txmaQueueClient = txmaQueueClient;
     }
@@ -38,20 +30,11 @@ public class AuditService {
     public AuditService(ConfigurationService configurationService) {
         this.configurationService = configurationService;
         this.clock = Clock.systemUTC();
-        this.snsService = new SnsService(configurationService);
-        this.kmsConnectionService =
-                new KmsConnectionService(
-                        configurationService.getLocalstackEndpointUri(),
-                        configurationService.getAwsRegion(),
-                        configurationService.getAuditSigningKeyAlias());
-
         this.txmaQueueClient =
-                configurationService.isTxmaAuditEnabled()
-                        ? new AwsSqsClient(
-                                configurationService.getAwsRegion(),
-                                configurationService.getTxmaAuditQueueUrl(),
-                                configurationService.getLocalstackEndpointUri())
-                        : new AwsSqsClient.NoOpSqsClient();
+                new AwsSqsClient(
+                        configurationService.getAwsRegion(),
+                        configurationService.getTxmaAuditQueueUrl(),
+                        configurationService.getLocalstackEndpointUri());
     }
 
     public void submitAuditEvent(

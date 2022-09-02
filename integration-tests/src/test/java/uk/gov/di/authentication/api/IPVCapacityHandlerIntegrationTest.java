@@ -50,10 +50,6 @@ class IPVCapacityHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                 spotQueue,
                 docAppPrivateKeyJwtSigner,
                 configurationParameters) {
-            @Override
-            public boolean isTxmaAuditEnabled() {
-                return true;
-            }
 
             @Override
             public String getTxmaAuditQueueUrl() {

@@ -26,7 +26,6 @@ module "update_phone_number" {
     LOCALSTACK_ENDPOINT     = var.use_localstack ? var.localstack_endpoint : null
     REDIS_KEY               = local.redis_key
     EVENTS_SNS_TOPIC_ARN    = data.aws_sns_topic.events.arn
-    TXMA_AUDIT_ENABLED      = true
     TXMA_AUDIT_QUEUE_URL    = module.account_management_txma_audit.queue_url
     AUDIT_SIGNING_KEY_ALIAS = local.audit_signing_key_alias_name
   }
