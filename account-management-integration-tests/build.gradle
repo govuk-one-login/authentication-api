@@ -16,8 +16,8 @@ dependencies {
             configurations.dynamodb,
             configurations.lambda,
             configurations.lettuce,
-            configurations.libphonenumber,
-            "com.google.protobuf:protobuf-java:${dependencyVersions.protobuf_version}"
+            configurations.libphonenumber
+
     testImplementation project(":shared"), noXray
     testImplementation project(":account-management-api"), noXray
     testImplementation project(":shared-test"), noXray

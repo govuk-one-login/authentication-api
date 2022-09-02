@@ -23,8 +23,7 @@ dependencies {
             configurations.ssm,
             configurations.xray,
             configurations.cloudwatch,
-            configurations.gson,
-            "com.google.protobuf:protobuf-java:3.21.5"
+            configurations.gson
 
     testImplementation configurations.tests,
             configurations.lambda_tests,
