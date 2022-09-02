@@ -18,8 +18,7 @@ dependencies {
             configurations.cloudwatch,
             configurations.dynamodb,
             configurations.lettuce,
-            configurations.lambda,
-            "com.google.protobuf:protobuf-java:${dependencyVersions.protobuf_version}"
+            configurations.lambda
 
     implementation project(":shared"), noXray
     implementation project(":shared-test"), noXray

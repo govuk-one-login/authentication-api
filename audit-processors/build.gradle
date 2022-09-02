@@ -5,12 +5,6 @@ plugins {
 group "uk.gov.di.authentication.audit"
 version "unspecified"
 
-ext {
-    dependencyVersions = [
-        protobuf_version: "3.21.5",
-    ]
-}
-
 dependencies {
     compileOnly configurations.lambda,
             configurations.sqs,
@@ -20,8 +14,6 @@ dependencies {
             configurations.dynamodb
 
     implementation configurations.secretsmanager,
-            "com.google.protobuf:protobuf-java:${dependencyVersions.protobuf_version}",
-            "com.google.protobuf:protobuf-java-util:${dependencyVersions.protobuf_version}",
             "com.google.code.gson:gson:2.9.1"
 
     implementation project(":shared")
