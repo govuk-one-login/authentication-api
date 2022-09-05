@@ -25,13 +25,12 @@ public class MfaCodeValidatorFactory {
     public Optional<MfaCodeValidator> getMfaCodeValidator(
             MFAMethodType mfaMethodType, boolean isRegistration, String emailAddress) {
 
-        int codeMaxRetries =
-                isRegistration
-                        ? configurationService.getCodeMaxRetriesRegistration()
-                        : configurationService.getCodeMaxRetries();
-
         switch (mfaMethodType) {
             case AUTH_APP:
+                int codeMaxRetries =
+                        isRegistration
+                                ? configurationService.getCodeMaxRetriesRegistration()
+                                : configurationService.getCodeMaxRetries();
                 return Optional.of(
                         new AuthAppCodeValidator(
                                 emailAddress,
@@ -39,9 +38,6 @@ public class MfaCodeValidatorFactory {
                                 configurationService,
                                 authenticationService,
                                 codeMaxRetries));
-            case SMS:
-                return Optional.of(
-                        new SMSCodeValidator(emailAddress, codeStorageService, codeMaxRetries));
             default:
                 return Optional.empty();
         }

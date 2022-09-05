@@ -12,8 +12,8 @@ import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.UpdatePhoneNumberRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
+import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -22,12 +22,10 @@ import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
-import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
-import uk.gov.di.authentication.shared.validation.MfaCodeValidatorFactory;
 
 import java.util.Map;
 
@@ -37,7 +35,6 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
-import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 
 public class UpdatePhoneNumberHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -48,7 +45,6 @@ public class UpdatePhoneNumberHandler
     private final CodeStorageService codeStorageService;
     private static final Logger LOG = LogManager.getLogger(UpdatePhoneNumberHandler.class);
     private final AuditService auditService;
-    private MfaCodeValidatorFactory mfaCodeValidatorFactory;
 
     public UpdatePhoneNumberHandler() {
         this(ConfigurationService.getInstance());
@@ -58,13 +54,11 @@ public class UpdatePhoneNumberHandler
             DynamoService dynamoService,
             AwsSqsClient sqsClient,
             CodeStorageService codeStorageService,
-            AuditService auditService,
-            MfaCodeValidatorFactory mfaCodeValidatorFactory) {
+            AuditService auditService) {
         this.dynamoService = dynamoService;
         this.sqsClient = sqsClient;
         this.codeStorageService = codeStorageService;
         this.auditService = auditService;
-        this.mfaCodeValidatorFactory = mfaCodeValidatorFactory;
     }
 
     public UpdatePhoneNumberHandler(ConfigurationService configurationService) {
@@ -77,9 +71,6 @@ public class UpdatePhoneNumberHandler
         this.codeStorageService =
                 new CodeStorageService(new RedisConnectionService(configurationService));
         this.auditService = new AuditService(configurationService);
-        this.mfaCodeValidatorFactory =
-                new MfaCodeValidatorFactory(
-                        configurationService, codeStorageService, dynamoService);
     }
 
     @Override
@@ -104,35 +95,15 @@ public class UpdatePhoneNumberHandler
                                 UpdatePhoneNumberRequest updatePhoneNumberRequest =
                                         objectMapper.readValue(
                                                 input.getBody(), UpdatePhoneNumberRequest.class);
-
-                                var validator =
-                                        mfaCodeValidatorFactory.getMfaCodeValidator(
-                                                MFAMethodType.SMS,
-                                                false,
-                                                updatePhoneNumberRequest.getEmail());
-
-                                if (validator.isEmpty()) {
+                                boolean isValidOtpCode =
+                                        codeStorageService.isValidOtpCode(
+                                                updatePhoneNumberRequest.getEmail(),
+                                                updatePhoneNumberRequest.getOtp(),
+                                                NotificationType.VERIFY_PHONE_NUMBER);
+                                if (!isValidOtpCode) {
                                     return generateApiGatewayProxyErrorResponse(
-                                            400, ErrorResponse.ERROR_1002);
+                                            400, ErrorResponse.ERROR_1020);
                                 }
-
-                                var errorResponse =
-                                        validator
-                                                .get()
-                                                .validateCode(updatePhoneNumberRequest.getOtp());
-
-                                if (ErrorResponse.ERROR_1027.equals(errorResponse.orElse(null))) {
-                                    blockCodeForSessionAndResetCount(
-                                            updatePhoneNumberRequest.getEmail());
-                                    return generateApiGatewayProxyErrorResponse(
-                                            400, ErrorResponse.ERROR_1027);
-                                }
-
-                                if (ErrorResponse.ERROR_1035.equals(errorResponse.orElse(null))) {
-                                    return generateApiGatewayProxyErrorResponse(
-                                            400, ErrorResponse.ERROR_1035);
-                                }
-
                                 UserProfile userProfile =
                                         dynamoService.getUserProfileByEmail(
                                                 updatePhoneNumberRequest.getEmail());
@@ -172,13 +143,5 @@ public class UpdatePhoneNumberHandler
                                         400, ErrorResponse.ERROR_1001);
                             }
                         });
-    }
-
-    private void blockCodeForSessionAndResetCount(String email) {
-        codeStorageService.saveBlockedForEmail(
-                email,
-                CODE_BLOCKED_KEY_PREFIX,
-                ConfigurationService.getInstance().getBlockedEmailDuration());
-        codeStorageService.deleteIncorrectMfaCodeAttemptsCount(email);
     }
 }

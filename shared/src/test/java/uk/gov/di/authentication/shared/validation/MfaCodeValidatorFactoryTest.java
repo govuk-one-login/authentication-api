@@ -39,13 +39,4 @@ class MfaCodeValidatorFactoryTest {
 
         assertInstanceOf(AuthAppCodeValidator.class, mfaCodeValidator.get());
     }
-
-    @Test
-    void whenMfaMethodGeneratesSMSAppCodeValidator() {
-        var mfaCodeValidator =
-                mfaCodeValidatorFactory.getMfaCodeValidator(
-                        MFAMethodType.SMS, false, "test@test.com");
-
-        assertInstanceOf(SMSCodeValidator.class, mfaCodeValidator.get());
-    }
 }
