@@ -14,10 +14,12 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.Argon2EncoderHelper;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.validation.PasswordValidator;
@@ -46,6 +48,7 @@ class UpdatePasswordHandlerTest {
     private final AuditService auditService = mock(AuditService.class);
     private final CommonPasswordsService commonPasswordsService =
             mock(CommonPasswordsService.class);
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final PasswordValidator passwordValidator = mock(PasswordValidator.class);
 
     private UpdatePasswordHandler handler;
@@ -64,7 +67,8 @@ class UpdatePasswordHandlerTest {
                         sqsClient,
                         auditService,
                         commonPasswordsService,
-                        passwordValidator);
+                        passwordValidator,
+                        configurationService);
     }
 
     @Test
@@ -94,7 +98,10 @@ class UpdatePasswordHandlerTest {
         assertThat(result, hasStatus(204));
         verify(dynamoService).updatePassword(EXISTING_EMAIL_ADDRESS, NEW_PASSWORD);
         NotifyRequest notifyRequest =
-                new NotifyRequest(EXISTING_EMAIL_ADDRESS, NotificationType.PASSWORD_UPDATED);
+                new NotifyRequest(
+                        EXISTING_EMAIL_ADDRESS,
+                        NotificationType.PASSWORD_UPDATED,
+                        SupportedLanguage.EN);
         verify(sqsClient).send(objectMapper.writeValueAsString(notifyRequest));
 
         verify(auditService)
@@ -156,7 +163,10 @@ class UpdatePasswordHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1024));
         verify(dynamoService, never()).updatePassword(EXISTING_EMAIL_ADDRESS, NEW_PASSWORD);
         NotifyRequest notifyRequest =
-                new NotifyRequest(EXISTING_EMAIL_ADDRESS, NotificationType.PASSWORD_UPDATED);
+                new NotifyRequest(
+                        EXISTING_EMAIL_ADDRESS,
+                        NotificationType.PASSWORD_UPDATED,
+                        SupportedLanguage.EN);
         verify(sqsClient, never()).send(objectMapper.writeValueAsString(notifyRequest));
 
         verify(auditService, never())

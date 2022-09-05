@@ -1,6 +1,8 @@
 package uk.gov.di.accountmanagement.services;
 
 import uk.gov.di.accountmanagement.entity.NotificationType;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.service.notify.NotificationClient;
 import uk.gov.service.notify.NotificationClientException;
 
@@ -9,37 +11,37 @@ import java.util.Map;
 public class NotificationService {
 
     private final NotificationClient notifyClient;
+    private final ConfigurationService configurationService;
 
-    public NotificationService(NotificationClient notifyClient) {
+    public NotificationService(
+            NotificationClient notifyClient, ConfigurationService configurationService) {
         this.notifyClient = notifyClient;
+        this.configurationService = configurationService;
     }
 
-    public void sendEmail(String email, Map<String, Object> personalisation, String templateId)
+    public void sendEmail(
+            String email,
+            Map<String, Object> personalisation,
+            NotificationType notificationType,
+            SupportedLanguage userLanguage)
             throws NotificationClientException {
-        notifyClient.sendEmail(templateId, email, personalisation, "");
+        notifyClient.sendEmail(
+                notificationType.getTemplateId(userLanguage, configurationService),
+                email,
+                personalisation,
+                "");
     }
 
-    public void sendText(String phoneNumber, Map<String, Object> personalisation, String templateId)
+    public void sendText(
+            String phoneNumber,
+            Map<String, Object> personalisation,
+            NotificationType notificationType,
+            SupportedLanguage userLanguage)
             throws NotificationClientException {
-        notifyClient.sendSms(templateId, phoneNumber, personalisation, "");
-    }
-
-    public String getNotificationTemplateId(NotificationType notificationType) {
-        switch (notificationType) {
-            case VERIFY_EMAIL:
-                return System.getenv("VERIFY_EMAIL_TEMPLATE_ID");
-            case VERIFY_PHONE_NUMBER:
-                return System.getenv("VERIFY_PHONE_NUMBER_TEMPLATE_ID");
-            case EMAIL_UPDATED:
-                return System.getenv("EMAIL_UPDATED_TEMPLATE_ID");
-            case DELETE_ACCOUNT:
-                return System.getenv("DELETE_ACCOUNT_TEMPLATE_ID");
-            case PHONE_NUMBER_UPDATED:
-                return System.getenv("PHONE_NUMBER_UPDATED_TEMPLATE_ID");
-            case PASSWORD_UPDATED:
-                return System.getenv("PASSWORD_UPDATED_TEMPLATE_ID");
-            default:
-                throw new RuntimeException("NotificationType template ID does not exist");
-        }
+        notifyClient.sendSms(
+                notificationType.getTemplateId(userLanguage, configurationService),
+                phoneNumber,
+                personalisation,
+                "");
     }
 }

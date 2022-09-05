@@ -15,6 +15,7 @@ import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.RequestBodyHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
@@ -32,6 +33,8 @@ import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_H
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
+import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
@@ -43,15 +46,18 @@ public class RemoveAccountHandler
     private final AuthenticationService authenticationService;
     private final AwsSqsClient sqsClient;
     private final AuditService auditService;
+    private final ConfigurationService configurationService;
     private final Json objectMapper = SerializationService.getInstance();
 
     public RemoveAccountHandler(
             AuthenticationService authenticationService,
             AwsSqsClient sqsClient,
-            AuditService auditService) {
+            AuditService auditService,
+            ConfigurationService configurationService) {
         this.authenticationService = authenticationService;
         this.sqsClient = sqsClient;
         this.auditService = auditService;
+        this.configurationService = configurationService;
     }
 
     public RemoveAccountHandler(ConfigurationService configurationService) {
@@ -62,6 +68,7 @@ public class RemoveAccountHandler
                         configurationService.getEmailQueueUri(),
                         configurationService.getSqsEndpointUri());
         this.auditService = new AuditService(configurationService);
+        this.configurationService = configurationService;
     }
 
     public RemoveAccountHandler() {
@@ -87,6 +94,10 @@ public class RemoveAccountHandler
                                                 input.getHeaders(), SESSION_ID_HEADER, "");
                                 attachSessionIdToLogs(sessionId);
                                 LOG.info("RemoveAccountHandler received request");
+                                SupportedLanguage userLanguage =
+                                        matchSupportedLanguage(
+                                                getUserLanguageFromRequestHeaders(
+                                                        input.getHeaders(), configurationService));
                                 RemoveAccountRequest removeAccountRequest =
                                         objectMapper.readValue(
                                                 input.getBody(), RemoveAccountRequest.class);
@@ -111,7 +122,10 @@ public class RemoveAccountHandler
                                 LOG.info("User account removed. Adding message to SQS queue");
 
                                 NotifyRequest notifyRequest =
-                                        new NotifyRequest(email, NotificationType.DELETE_ACCOUNT);
+                                        new NotifyRequest(
+                                                email,
+                                                NotificationType.DELETE_ACCOUNT,
+                                                userLanguage);
                                 sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
                                 LOG.info(
                                         "Remove account message successfully added to queue. Generating successful gateway response");

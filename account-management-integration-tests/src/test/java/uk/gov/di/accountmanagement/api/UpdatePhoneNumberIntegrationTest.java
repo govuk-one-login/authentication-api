@@ -12,6 +12,7 @@ import uk.gov.di.accountmanagement.entity.UpdatePhoneNumberRequest;
 import uk.gov.di.accountmanagement.lambda.UpdatePhoneNumberHandler;
 import uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 
@@ -89,7 +90,8 @@ class UpdatePhoneNumberIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                 is(expectedMatchType));
 
         NotificationAssertionHelper.assertNotificationsReceived(
-                notificationsQueue, List.of(new NotifyRequest(TEST_EMAIL, PHONE_NUMBER_UPDATED)));
+                notificationsQueue,
+                List.of(new NotifyRequest(TEST_EMAIL, PHONE_NUMBER_UPDATED, SupportedLanguage.EN)));
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(UPDATE_PHONE_NUMBER));
     }

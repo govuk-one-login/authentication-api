@@ -16,6 +16,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.Argon2MatcherHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.RequestBodyHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
@@ -35,6 +36,8 @@ import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_H
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
+import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
@@ -45,6 +48,7 @@ public class UpdatePasswordHandler
     private final DynamoService dynamoService;
     private final AwsSqsClient sqsClient;
     private final AuditService auditService;
+    private final ConfigurationService configurationService;
     private final CommonPasswordsService commonPasswordsService;
     private final PasswordValidator passwordValidator;
 
@@ -59,12 +63,14 @@ public class UpdatePasswordHandler
             AwsSqsClient sqsClient,
             AuditService auditService,
             CommonPasswordsService commonPasswordsService,
-            PasswordValidator passwordValidator) {
+            PasswordValidator passwordValidator,
+            ConfigurationService configurationService) {
         this.dynamoService = dynamoService;
         this.sqsClient = sqsClient;
         this.auditService = auditService;
         this.commonPasswordsService = commonPasswordsService;
         this.passwordValidator = passwordValidator;
+        this.configurationService = configurationService;
     }
 
     public UpdatePasswordHandler(ConfigurationService configurationService) {
@@ -77,6 +83,7 @@ public class UpdatePasswordHandler
         this.auditService = new AuditService(configurationService);
         this.commonPasswordsService = new CommonPasswordsService(configurationService);
         this.passwordValidator = new PasswordValidator(commonPasswordsService);
+        this.configurationService = configurationService;
     }
 
     @Override
@@ -97,6 +104,10 @@ public class UpdatePasswordHandler
                                             input.getHeaders(), SESSION_ID_HEADER, "");
                             attachSessionIdToLogs(sessionId);
                             LOG.info("UpdatePasswordHandler received request");
+                            SupportedLanguage userLanguage =
+                                    matchSupportedLanguage(
+                                            getUserLanguageFromRequestHeaders(
+                                                    input.getHeaders(), configurationService));
                             context.getClientContext();
                             try {
                                 UpdatePasswordRequest updatePasswordRequest =
@@ -146,7 +157,8 @@ public class UpdatePasswordHandler
                                 NotifyRequest notifyRequest =
                                         new NotifyRequest(
                                                 updatePasswordRequest.getEmail(),
-                                                NotificationType.PASSWORD_UPDATED);
+                                                NotificationType.PASSWORD_UPDATED,
+                                                userLanguage);
                                 sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
                                 LOG.info(
                                         "Message successfully added to queue. Generating successful gateway response");

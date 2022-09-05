@@ -10,10 +10,12 @@ import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.util.HashMap;
@@ -41,10 +43,13 @@ class RemoveAccountHandlerTest {
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final AuditService auditService = mock(AuditService.class);
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
 
     @BeforeEach
     public void setUp() {
-        handler = new RemoveAccountHandler(authenticationService, sqsClient, auditService);
+        handler =
+                new RemoveAccountHandler(
+                        authenticationService, sqsClient, auditService, configurationService);
     }
 
     @Test
@@ -68,7 +73,8 @@ class RemoveAccountHandlerTest {
         when(authenticationService.userExists(EMAIL)).thenReturn(true);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
         verify(authenticationService).removeAccount(eq(EMAIL));
-        NotifyRequest notifyRequest = new NotifyRequest(EMAIL, DELETE_ACCOUNT);
+        NotifyRequest notifyRequest =
+                new NotifyRequest(EMAIL, DELETE_ACCOUNT, SupportedLanguage.EN);
         verify(sqsClient).send(objectMapper.writeValueAsString(notifyRequest));
 
         verify(auditService)

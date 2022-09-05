@@ -9,6 +9,7 @@ import uk.gov.di.accountmanagement.entity.SendNotificationRequest;
 import uk.gov.di.accountmanagement.lambda.SendOtpNotificationHandler;
 import uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
@@ -54,7 +55,8 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
         assertThat(response, hasStatus(HttpStatus.SC_NO_CONTENT));
 
         NotificationAssertionHelper.assertNotificationsReceived(
-                notificationsQueue, List.of(new NotifyRequest(TEST_EMAIL, VERIFY_EMAIL)));
+                notificationsQueue,
+                List.of(new NotifyRequest(TEST_EMAIL, VERIFY_EMAIL, SupportedLanguage.EN)));
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(SEND_OTP));
     }
@@ -94,7 +96,9 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
         NotificationAssertionHelper.assertNotificationsReceived(
                 notificationsQueue,
-                List.of(new NotifyRequest(TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER)));
+                List.of(
+                        new NotifyRequest(
+                                TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, SupportedLanguage.EN)));
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(SEND_OTP));
     }
@@ -117,7 +121,9 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
 
         NotificationAssertionHelper.assertNotificationsReceived(
                 notificationsQueue,
-                List.of(new NotifyRequest(TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER)));
+                List.of(
+                        new NotifyRequest(
+                                TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, SupportedLanguage.EN)));
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(SEND_OTP));
     }

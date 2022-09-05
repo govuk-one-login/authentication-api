@@ -8,6 +8,7 @@ import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.UpdateEmailRequest;
 import uk.gov.di.accountmanagement.lambda.UpdateEmailHandler;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 
@@ -57,7 +58,8 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(userStore.getEmailForUser(SUBJECT), is(NEW_EMAIL_ADDRESS));
 
         assertNotificationsReceived(
-                notificationsQueue, List.of(new NotifyRequest(NEW_EMAIL_ADDRESS, EMAIL_UPDATED)));
+                notificationsQueue,
+                List.of(new NotifyRequest(NEW_EMAIL_ADDRESS, EMAIL_UPDATED, SupportedLanguage.EN)));
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(UPDATE_EMAIL));
     }
