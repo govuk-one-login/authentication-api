@@ -110,31 +110,7 @@ class UpdatePhoneNumberIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         Map.of("principalId", publicSubjectID));
 
         assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
-        assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1035)));
-
-        assertNoNotificationsReceived(notificationsQueue);
-
-        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
-    }
-
-    @Test
-    void shouldReturn400WhenOtpCodeEnteredTooManyTimes() throws Exception {
-        String publicSubjectID = userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
-        redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 300);
-        redis.blockMfaCodesForEmail(TEST_EMAIL);
-        String badOtp = "This is not the correct OTP";
-
-        var response =
-                makeRequest(
-                        Optional.of(
-                                new UpdatePhoneNumberRequest(TEST_EMAIL, NEW_PHONE_NUMBER, badOtp)),
-                        Collections.emptyMap(),
-                        Collections.emptyMap(),
-                        Collections.emptyMap(),
-                        Map.of("principalId", publicSubjectID));
-
-        assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
-        assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1027)));
+        assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1020)));
 
         assertNoNotificationsReceived(notificationsQueue);
 
