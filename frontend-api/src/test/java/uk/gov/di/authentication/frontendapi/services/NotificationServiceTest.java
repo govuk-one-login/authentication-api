@@ -21,8 +21,9 @@ class NotificationServiceTest {
     private static final String TEST_EMAIL = "test@digital.cabinet-office.gov.uk";
     private static final String TEST_PHONE_NUMBER = "01234567890";
     private final NotificationClient notificationClient = mock(NotificationClient.class);
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final NotificationService notificationService =
-            new NotificationService(notificationClient);
+            new NotificationService(notificationClient, configurationService);
 
     enum FakeNotificationType implements TemplateAware {
         FAKE_EMAIL,

@@ -14,9 +14,12 @@ public class NotificationService {
     private static final Logger LOG = LogManager.getLogger(NotificationService.class);
 
     private final NotificationClient notifyClient;
+    private final ConfigurationService configurationService;
 
-    public NotificationService(NotificationClient notifyClient) {
+    public NotificationService(
+            NotificationClient notifyClient, ConfigurationService configurationService) {
         this.notifyClient = notifyClient;
+        this.configurationService = configurationService;
     }
 
     public void sendEmail(
@@ -26,7 +29,8 @@ public class NotificationService {
             SupportedLanguage userLanguage)
             throws NotificationClientException {
         LOG.info("sendEmail language {}", userLanguage);
-        notifyClient.sendEmail(type.getTemplateId(), email, personalisation, "");
+        notifyClient.sendEmail(
+                type.getTemplateId(userLanguage, configurationService), email, personalisation, "");
     }
 
     public void sendText(
@@ -36,6 +40,10 @@ public class NotificationService {
             SupportedLanguage userLanguage)
             throws NotificationClientException {
         LOG.info("sendText language {}", userLanguage);
-        notifyClient.sendSms(type.getTemplateId(), phoneNumber, personalisation, "");
+        notifyClient.sendSms(
+                type.getTemplateId(userLanguage, configurationService),
+                phoneNumber,
+                personalisation,
+                "");
     }
 }

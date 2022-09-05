@@ -31,18 +31,14 @@ public enum NotificationType implements TemplateAware {
 
     private Map<SupportedLanguage, String> languageSpecificTemplates = new HashMap<>();
 
-    private NotificationType(String templateName) {
+    NotificationType(String templateName) {
         this.templateName = templateName;
     }
 
-    private NotificationType(
+    NotificationType(
             String templateName, Map<SupportedLanguage, String> languageSpecificTemplates) {
         this(templateName);
         this.languageSpecificTemplates = languageSpecificTemplates;
-    }
-
-    public String getTemplateId() {
-        return System.getenv(templateName);
     }
 
     public String getTemplateId(
@@ -56,10 +52,6 @@ public enum NotificationType implements TemplateAware {
     }
 
     String getTemplateName(SupportedLanguage language) {
-        if (languageSpecificTemplates.containsKey(language)) {
-            return languageSpecificTemplates.get(language);
-        } else {
-            return templateName;
-        }
+        return languageSpecificTemplates.getOrDefault(language, templateName);
     }
 }
