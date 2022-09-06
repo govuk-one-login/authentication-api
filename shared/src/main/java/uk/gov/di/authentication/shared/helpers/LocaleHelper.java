@@ -49,12 +49,14 @@ public class LocaleHelper {
         if (Objects.isNull(authenticationRequest.getUILocales())) {
             return Optional.empty();
         }
+        LOG.info("ui_locales is present: {}", authenticationRequest.getUILocales());
         for (LangTag langTag : authenticationRequest.getUILocales()) {
-            if (langTag.getPrimaryLanguage().equals(EN.getLanguage())) {
+            if (langTag.getPrimaryLanguage().equalsIgnoreCase(EN.getLanguage())) {
                 return Optional.of(EN);
             }
             if (configurationService.isLanguageEnabled(CY)
-                    && langTag.getPrimaryLanguage().equals(SupportedLanguage.CY.getLanguage())) {
+                    && langTag.getPrimaryLanguage()
+                            .equalsIgnoreCase(SupportedLanguage.CY.getLanguage())) {
                 return Optional.of(CY);
             }
         }
