@@ -293,14 +293,16 @@ public class AuthorisationHandler
 
         getPrimaryLanguageFromUILocales(authenticationRequest, configurationService)
                 .ifPresent(
-                        primaryLanguage ->
-                                cookies.add(
-                                        CookieHelper.buildCookieString(
-                                                CookieHelper.LANGUAGE_COOKIE_NAME,
-                                                primaryLanguage.getLanguage(),
-                                                configurationService.getLanguageCookieMaxAge(),
-                                                configurationService.getSessionCookieAttributes(),
-                                                configurationService.getDomainName())));
+                        primaryLanguage -> {
+                            LOG.info("Setting primary language: {}", primaryLanguage.getLanguage());
+                            cookies.add(
+                                    CookieHelper.buildCookieString(
+                                            CookieHelper.LANGUAGE_COOKIE_NAME,
+                                            primaryLanguage.getLanguage(),
+                                            configurationService.getLanguageCookieMaxAge(),
+                                            configurationService.getSessionCookieAttributes(),
+                                            configurationService.getDomainName()));
+                        });
 
         return generateApiGatewayProxyResponse(
                 302,
