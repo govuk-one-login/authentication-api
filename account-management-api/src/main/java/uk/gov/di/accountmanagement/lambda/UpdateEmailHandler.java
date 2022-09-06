@@ -16,6 +16,7 @@ import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.RequestBodyHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
@@ -35,6 +36,8 @@ import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_H
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
+import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
@@ -47,6 +50,7 @@ public class UpdateEmailHandler
     private final CodeStorageService codeStorageService;
     private static final Logger LOG = LogManager.getLogger(UpdateEmailHandler.class);
     private final AuditService auditService;
+    private final ConfigurationService configurationService;
 
     public UpdateEmailHandler() {
         this(ConfigurationService.getInstance());
@@ -56,11 +60,13 @@ public class UpdateEmailHandler
             DynamoService dynamoService,
             AwsSqsClient sqsClient,
             CodeStorageService codeStorageService,
-            AuditService auditService) {
+            AuditService auditService,
+            ConfigurationService configurationService) {
         this.dynamoService = dynamoService;
         this.sqsClient = sqsClient;
         this.codeStorageService = codeStorageService;
         this.auditService = auditService;
+        this.configurationService = configurationService;
     }
 
     public UpdateEmailHandler(ConfigurationService configurationService) {
@@ -73,6 +79,7 @@ public class UpdateEmailHandler
         this.codeStorageService =
                 new CodeStorageService(new RedisConnectionService(configurationService));
         this.auditService = new AuditService(configurationService);
+        this.configurationService = configurationService;
     }
 
     @Override
@@ -93,6 +100,10 @@ public class UpdateEmailHandler
                                             input.getHeaders(), SESSION_ID_HEADER, "");
                             attachSessionIdToLogs(sessionId);
                             LOG.info("UpdateEmailHandler received request");
+                            SupportedLanguage userLanguage =
+                                    matchSupportedLanguage(
+                                            getUserLanguageFromRequestHeaders(
+                                                    input.getHeaders(), configurationService));
                             try {
                                 UpdateEmailRequest updateInfoRequest =
                                         objectMapper.readValue(
@@ -135,7 +146,8 @@ public class UpdateEmailHandler
                                 NotifyRequest notifyRequest =
                                         new NotifyRequest(
                                                 updateInfoRequest.getReplacementEmailAddress(),
-                                                NotificationType.EMAIL_UPDATED);
+                                                NotificationType.EMAIL_UPDATED,
+                                                userLanguage);
                                 sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
 
                                 auditService.submitAuditEvent(

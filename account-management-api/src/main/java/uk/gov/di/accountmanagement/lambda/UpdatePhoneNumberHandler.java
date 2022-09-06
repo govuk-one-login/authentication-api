@@ -16,6 +16,7 @@ import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.RequestBodyHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
@@ -33,6 +34,8 @@ import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_H
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
+import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
@@ -43,6 +46,7 @@ public class UpdatePhoneNumberHandler
     private final DynamoService dynamoService;
     private final AwsSqsClient sqsClient;
     private final CodeStorageService codeStorageService;
+    private final ConfigurationService configurationService;
     private static final Logger LOG = LogManager.getLogger(UpdatePhoneNumberHandler.class);
     private final AuditService auditService;
 
@@ -54,11 +58,13 @@ public class UpdatePhoneNumberHandler
             DynamoService dynamoService,
             AwsSqsClient sqsClient,
             CodeStorageService codeStorageService,
-            AuditService auditService) {
+            AuditService auditService,
+            ConfigurationService configurationService) {
         this.dynamoService = dynamoService;
         this.sqsClient = sqsClient;
         this.codeStorageService = codeStorageService;
         this.auditService = auditService;
+        this.configurationService = configurationService;
     }
 
     public UpdatePhoneNumberHandler(ConfigurationService configurationService) {
@@ -71,6 +77,7 @@ public class UpdatePhoneNumberHandler
         this.codeStorageService =
                 new CodeStorageService(new RedisConnectionService(configurationService));
         this.auditService = new AuditService(configurationService);
+        this.configurationService = configurationService;
     }
 
     @Override
@@ -91,6 +98,10 @@ public class UpdatePhoneNumberHandler
                                             input.getHeaders(), SESSION_ID_HEADER, "");
                             attachSessionIdToLogs(sessionId);
                             LOG.info("UpdatePhoneNumberHandler received request");
+                            SupportedLanguage userLanguage =
+                                    matchSupportedLanguage(
+                                            getUserLanguageFromRequestHeaders(
+                                                    input.getHeaders(), configurationService));
                             try {
                                 UpdatePhoneNumberRequest updatePhoneNumberRequest =
                                         objectMapper.readValue(
@@ -120,7 +131,8 @@ public class UpdatePhoneNumberHandler
                                 NotifyRequest notifyRequest =
                                         new NotifyRequest(
                                                 updatePhoneNumberRequest.getEmail(),
-                                                NotificationType.PHONE_NUMBER_UPDATED);
+                                                NotificationType.PHONE_NUMBER_UPDATED,
+                                                userLanguage);
                                 sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
 
                                 auditService.submitAuditEvent(

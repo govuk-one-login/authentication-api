@@ -13,9 +13,11 @@ import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
@@ -42,6 +44,7 @@ class UpdateEmailHandlerTest {
     private final DynamoService dynamoService = mock(DynamoService.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private UpdateEmailHandler handler;
     private static final String EXISTING_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String NEW_EMAIL_ADDRESS = "bloggs.joe@digital.cabinet-office.gov.uk";
@@ -55,7 +58,12 @@ class UpdateEmailHandlerTest {
     @BeforeEach
     void setUp() {
         handler =
-                new UpdateEmailHandler(dynamoService, sqsClient, codeStorageService, auditService);
+                new UpdateEmailHandler(
+                        dynamoService,
+                        sqsClient,
+                        codeStorageService,
+                        auditService,
+                        configurationService);
     }
 
     @Test
@@ -83,7 +91,8 @@ class UpdateEmailHandlerTest {
 
         assertThat(result, hasStatus(204));
         verify(dynamoService).updateEmail(EXISTING_EMAIL_ADDRESS, NEW_EMAIL_ADDRESS);
-        NotifyRequest notifyRequest = new NotifyRequest(NEW_EMAIL_ADDRESS, EMAIL_UPDATED);
+        NotifyRequest notifyRequest =
+                new NotifyRequest(NEW_EMAIL_ADDRESS, EMAIL_UPDATED, SupportedLanguage.EN);
         verify(sqsClient).send(objectMapper.writeValueAsString(notifyRequest));
 
         verify(auditService)
@@ -120,7 +129,8 @@ class UpdateEmailHandlerTest {
 
         assertThat(result, hasStatus(400));
         verify(dynamoService, never()).updateEmail(EXISTING_EMAIL_ADDRESS, NEW_EMAIL_ADDRESS);
-        NotifyRequest notifyRequest = new NotifyRequest(NEW_EMAIL_ADDRESS, EMAIL_UPDATED);
+        NotifyRequest notifyRequest =
+                new NotifyRequest(NEW_EMAIL_ADDRESS, EMAIL_UPDATED, SupportedLanguage.EN);
         verify(sqsClient, never()).send(objectMapper.writeValueAsString(notifyRequest));
         String expectedResponse = objectMapper.writeValueAsString(ErrorResponse.ERROR_1009);
         assertThat(result, hasBody(expectedResponse));
@@ -162,7 +172,8 @@ class UpdateEmailHandlerTest {
 
         assertThat(result, hasStatus(400));
         verify(dynamoService, never()).updateEmail(EXISTING_EMAIL_ADDRESS, INVALID_EMAIL_ADDRESS);
-        NotifyRequest notifyRequest = new NotifyRequest(INVALID_EMAIL_ADDRESS, EMAIL_UPDATED);
+        NotifyRequest notifyRequest =
+                new NotifyRequest(INVALID_EMAIL_ADDRESS, EMAIL_UPDATED, SupportedLanguage.EN);
         verify(sqsClient, never()).send(objectMapper.writeValueAsString(notifyRequest));
         String expectedResponse = objectMapper.writeValueAsString(ErrorResponse.ERROR_1020);
         assertThat(result, hasBody(expectedResponse));
@@ -188,7 +199,8 @@ class UpdateEmailHandlerTest {
 
         assertThat(result, hasStatus(400));
         verify(dynamoService, never()).updateEmail(EXISTING_EMAIL_ADDRESS, INVALID_EMAIL_ADDRESS);
-        NotifyRequest notifyRequest = new NotifyRequest(INVALID_EMAIL_ADDRESS, EMAIL_UPDATED);
+        NotifyRequest notifyRequest =
+                new NotifyRequest(INVALID_EMAIL_ADDRESS, EMAIL_UPDATED, SupportedLanguage.EN);
         verify(sqsClient, never()).send(objectMapper.writeValueAsString(notifyRequest));
         String expectedResponse = objectMapper.writeValueAsString(ErrorResponse.ERROR_1004);
         assertThat(result, hasBody(expectedResponse));

@@ -14,6 +14,7 @@ import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -79,7 +80,11 @@ class SendOtpNotificationHandlerTest {
     void shouldReturn204AndPutMessageOnQueueForAValidEmailRequest() throws Json.JsonException {
         String persistentIdValue = "some-persistent-session-id";
         NotifyRequest notifyRequest =
-                new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, TEST_SIX_DIGIT_CODE);
+                new NotifyRequest(
+                        TEST_EMAIL_ADDRESS,
+                        VERIFY_EMAIL,
+                        TEST_SIX_DIGIT_CODE,
+                        SupportedLanguage.EN);
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -115,7 +120,11 @@ class SendOtpNotificationHandlerTest {
     @Test
     void shouldReturn204AndPutMessageOnQueueForAValidPhoneRequest() throws Json.JsonException {
         NotifyRequest notifyRequest =
-                new NotifyRequest(TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, TEST_SIX_DIGIT_CODE);
+                new NotifyRequest(
+                        TEST_PHONE_NUMBER,
+                        VERIFY_PHONE_NUMBER,
+                        TEST_SIX_DIGIT_CODE,
+                        SupportedLanguage.EN);
 
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
 
@@ -225,7 +234,11 @@ class SendOtpNotificationHandlerTest {
     @Test
     void shouldReturn500IfMessageCannotBeSentToQueue() throws Json.JsonException {
         NotifyRequest notifyRequest =
-                new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, TEST_SIX_DIGIT_CODE);
+                new NotifyRequest(
+                        TEST_EMAIL_ADDRESS,
+                        VERIFY_EMAIL,
+                        TEST_SIX_DIGIT_CODE,
+                        SupportedLanguage.EN);
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
         Mockito.doThrow(SdkClientException.class).when(awsSqsClient).send(eq(serialisedRequest));
 

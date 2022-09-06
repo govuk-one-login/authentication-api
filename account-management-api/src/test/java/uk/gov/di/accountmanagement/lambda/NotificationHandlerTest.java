@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.services.NotificationService;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -33,7 +34,6 @@ public class NotificationHandlerTest {
 
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String TEST_PHONE_NUMBER = "01234567890";
-    private static final String TEMPLATE_ID = "12345667";
     private static final String FRONTEND_BASE_URL = "https://localhost:8080/frontend";
     private static final String CONTACT_US_LINK_ROUTE = "contact-us";
     private final Context context = mock(Context.class);
@@ -52,9 +52,9 @@ public class NotificationHandlerTest {
     @Test
     public void shouldSuccessfullyProcessVerifyEmailMessageFromSQSQueue()
             throws Json.JsonException, NotificationClientException {
-        when(notificationService.getNotificationTemplateId(VERIFY_EMAIL)).thenReturn(TEMPLATE_ID);
 
-        NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, "654321");
+        NotifyRequest notifyRequest =
+                new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, "654321", SupportedLanguage.EN);
         var contactUsLinkUrl =
                 "https://localhost:8080/frontend/contact-us?referer=confirmEmailAddressEmail";
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
@@ -67,17 +67,17 @@ public class NotificationHandlerTest {
         personalisation.put("email-address", notifyRequest.getDestination());
         personalisation.put("contact-us-link", contactUsLinkUrl);
 
-        verify(notificationService).sendEmail(TEST_EMAIL_ADDRESS, personalisation, TEMPLATE_ID);
+        verify(notificationService)
+                .sendEmail(TEST_EMAIL_ADDRESS, personalisation, VERIFY_EMAIL, SupportedLanguage.EN);
     }
 
     @Test
     public void shouldSuccessfullyProcessVerifyPhoneMessageFromSQSQueue()
             throws Json.JsonException, NotificationClientException {
-        when(notificationService.getNotificationTemplateId(VERIFY_PHONE_NUMBER))
-                .thenReturn(TEMPLATE_ID);
 
         NotifyRequest notifyRequest =
-                new NotifyRequest(TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, "654321");
+                new NotifyRequest(
+                        TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, "654321", SupportedLanguage.EN);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
 
@@ -86,15 +86,20 @@ public class NotificationHandlerTest {
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("validation-code", "654321");
 
-        verify(notificationService).sendText(TEST_PHONE_NUMBER, personalisation, TEMPLATE_ID);
+        verify(notificationService)
+                .sendText(
+                        TEST_PHONE_NUMBER,
+                        personalisation,
+                        VERIFY_PHONE_NUMBER,
+                        SupportedLanguage.EN);
     }
 
     @Test
     public void shouldSuccessfullyProcessUpdateEmailMessageFromSQSQueue()
             throws Json.JsonException, NotificationClientException {
-        when(notificationService.getNotificationTemplateId(EMAIL_UPDATED)).thenReturn(TEMPLATE_ID);
 
-        NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, EMAIL_UPDATED);
+        NotifyRequest notifyRequest =
+                new NotifyRequest(TEST_EMAIL_ADDRESS, EMAIL_UPDATED, SupportedLanguage.EN);
         var contactUsLinkUrl =
                 "https://localhost:8080/frontend/contact-us?referer=emailAddressUpdatedEmail";
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
@@ -106,16 +111,17 @@ public class NotificationHandlerTest {
         personalisation.put("email-address", notifyRequest.getDestination());
         personalisation.put("contact-us-link", contactUsLinkUrl);
 
-        verify(notificationService).sendEmail(TEST_EMAIL_ADDRESS, personalisation, TEMPLATE_ID);
+        verify(notificationService)
+                .sendEmail(
+                        TEST_EMAIL_ADDRESS, personalisation, EMAIL_UPDATED, SupportedLanguage.EN);
     }
 
     @Test
     public void shouldSuccessfullyProcessUpdatePasswordMessageFromSQSQueue()
             throws Json.JsonException, NotificationClientException {
-        when(notificationService.getNotificationTemplateId(PASSWORD_UPDATED))
-                .thenReturn(TEMPLATE_ID);
 
-        NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, PASSWORD_UPDATED);
+        NotifyRequest notifyRequest =
+                new NotifyRequest(TEST_EMAIL_ADDRESS, PASSWORD_UPDATED, SupportedLanguage.EN);
         var contactUsLinkUrl =
                 "https://localhost:8080/frontend/contact-us?referer=passwordUpdatedEmail";
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
@@ -126,16 +132,20 @@ public class NotificationHandlerTest {
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("contact-us-link", contactUsLinkUrl);
 
-        verify(notificationService).sendEmail(TEST_EMAIL_ADDRESS, personalisation, TEMPLATE_ID);
+        verify(notificationService)
+                .sendEmail(
+                        TEST_EMAIL_ADDRESS,
+                        personalisation,
+                        PASSWORD_UPDATED,
+                        SupportedLanguage.EN);
     }
 
     @Test
     public void shouldSuccessfullyProcessUpdatePhoneNumberMessageFromSQSQueue()
             throws Json.JsonException, NotificationClientException {
-        when(notificationService.getNotificationTemplateId(PHONE_NUMBER_UPDATED))
-                .thenReturn(TEMPLATE_ID);
 
-        NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, PHONE_NUMBER_UPDATED);
+        NotifyRequest notifyRequest =
+                new NotifyRequest(TEST_EMAIL_ADDRESS, PHONE_NUMBER_UPDATED, SupportedLanguage.EN);
         var contactUsLinkUrl =
                 "https://localhost:8080/frontend/contact-us?referer=phoneNumberUpdatedEmail";
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
@@ -146,15 +156,20 @@ public class NotificationHandlerTest {
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("contact-us-link", contactUsLinkUrl);
 
-        verify(notificationService).sendEmail(TEST_EMAIL_ADDRESS, personalisation, TEMPLATE_ID);
+        verify(notificationService)
+                .sendEmail(
+                        TEST_EMAIL_ADDRESS,
+                        personalisation,
+                        PHONE_NUMBER_UPDATED,
+                        SupportedLanguage.EN);
     }
 
     @Test
     public void shouldSuccessfullyProcessDeleteAccountMessageFromSQSQueue()
             throws Json.JsonException, NotificationClientException {
-        when(notificationService.getNotificationTemplateId(DELETE_ACCOUNT)).thenReturn(TEMPLATE_ID);
 
-        NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, DELETE_ACCOUNT);
+        NotifyRequest notifyRequest =
+                new NotifyRequest(TEST_EMAIL_ADDRESS, DELETE_ACCOUNT, SupportedLanguage.EN);
         var contactUsLinkUrl =
                 "https://localhost:8080/frontend/contact-us?referer=accountDeletedEmail";
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
@@ -165,7 +180,9 @@ public class NotificationHandlerTest {
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("contact-us-link", contactUsLinkUrl);
 
-        verify(notificationService).sendEmail(TEST_EMAIL_ADDRESS, personalisation, TEMPLATE_ID);
+        verify(notificationService)
+                .sendEmail(
+                        TEST_EMAIL_ADDRESS, personalisation, DELETE_ACCOUNT, SupportedLanguage.EN);
     }
 
     @Test
@@ -185,9 +202,9 @@ public class NotificationHandlerTest {
     @Test
     public void shouldThrowExceptionIfNotifyIsUnableToSendEmail()
             throws Json.JsonException, NotificationClientException {
-        when(notificationService.getNotificationTemplateId(VERIFY_EMAIL)).thenReturn(TEMPLATE_ID);
 
-        NotifyRequest notifyRequest = new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, "654321");
+        NotifyRequest notifyRequest =
+                new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, "654321", SupportedLanguage.EN);
         var contactUsLinkUrl =
                 "https://localhost:8080/frontend/contact-us?referer=confirmEmailAddressEmail";
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
@@ -200,7 +217,7 @@ public class NotificationHandlerTest {
 
         Mockito.doThrow(NotificationClientException.class)
                 .when(notificationService)
-                .sendEmail(TEST_EMAIL_ADDRESS, personalisation, TEMPLATE_ID);
+                .sendEmail(TEST_EMAIL_ADDRESS, personalisation, VERIFY_EMAIL, SupportedLanguage.EN);
 
         RuntimeException exception =
                 assertThrows(
@@ -216,11 +233,10 @@ public class NotificationHandlerTest {
     @Test
     public void shouldThrowExceptionIfNotifyIsUnableToSendText()
             throws Json.JsonException, NotificationClientException {
-        when(notificationService.getNotificationTemplateId(VERIFY_PHONE_NUMBER))
-                .thenReturn(TEMPLATE_ID);
 
         NotifyRequest notifyRequest =
-                new NotifyRequest(TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, "654321");
+                new NotifyRequest(
+                        TEST_PHONE_NUMBER, VERIFY_PHONE_NUMBER, "654321", SupportedLanguage.EN);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
 
@@ -228,7 +244,11 @@ public class NotificationHandlerTest {
         personalisation.put("validation-code", "654321");
         Mockito.doThrow(NotificationClientException.class)
                 .when(notificationService)
-                .sendText(TEST_PHONE_NUMBER, personalisation, TEMPLATE_ID);
+                .sendText(
+                        TEST_PHONE_NUMBER,
+                        personalisation,
+                        VERIFY_PHONE_NUMBER,
+                        SupportedLanguage.EN);
 
         RuntimeException exception =
                 assertThrows(

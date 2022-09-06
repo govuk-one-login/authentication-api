@@ -15,6 +15,7 @@ import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.helpers.ValidationHelper;
@@ -36,6 +37,8 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
+import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
@@ -104,6 +107,10 @@ public class SendOtpNotificationHandler
                                             input.getHeaders(), SESSION_ID_HEADER, "");
                             attachSessionIdToLogs(sessionId);
                             LOG.info("Request received in SendOtp Lambda");
+                            SupportedLanguage userLanguage =
+                                    matchSupportedLanguage(
+                                            getUserLanguageFromRequestHeaders(
+                                                    input.getHeaders(), configurationService));
                             try {
                                 SendNotificationRequest sendNotificationRequest =
                                         objectMapper.readValue(
@@ -127,7 +134,8 @@ public class SendOtpNotificationHandler
                                                 sendNotificationRequest.getEmail(),
                                                 sendNotificationRequest,
                                                 input,
-                                                context);
+                                                context,
+                                                userLanguage);
                                     case VERIFY_PHONE_NUMBER:
                                         LOG.info("NotificationType is VERIFY_PHONE_NUMBER");
                                         var existingPhoneNumber =
@@ -149,7 +157,8 @@ public class SendOtpNotificationHandler
                                                 sendNotificationRequest.getPhoneNumber(),
                                                 sendNotificationRequest,
                                                 input,
-                                                context);
+                                                context,
+                                                userLanguage);
                                 }
                                 return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
                             } catch (SdkClientException ex) {
@@ -166,12 +175,14 @@ public class SendOtpNotificationHandler
             String destination,
             SendNotificationRequest sendNotificationRequest,
             APIGatewayProxyRequestEvent input,
-            Context context)
+            Context context,
+            SupportedLanguage language)
             throws JsonException {
 
         String code = codeGeneratorService.sixDigitCode();
         NotifyRequest notifyRequest =
-                new NotifyRequest(destination, sendNotificationRequest.getNotificationType(), code);
+                new NotifyRequest(
+                        destination, sendNotificationRequest.getNotificationType(), code, language);
         codeStorageService.saveOtpCode(
                 sendNotificationRequest.getEmail(),
                 code,

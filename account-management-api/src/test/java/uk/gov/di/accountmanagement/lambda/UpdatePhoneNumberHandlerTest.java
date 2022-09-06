@@ -12,9 +12,11 @@ import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
@@ -51,12 +53,17 @@ class UpdatePhoneNumberHandlerTest {
 
     private final Json objectMapper = SerializationService.getInstance();
     private final AuditService auditService = mock(AuditService.class);
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
 
     @BeforeEach
     public void setUp() {
         handler =
                 new UpdatePhoneNumberHandler(
-                        dynamoService, sqsClient, codeStorageService, auditService);
+                        dynamoService,
+                        sqsClient,
+                        codeStorageService,
+                        auditService,
+                        configurationService);
     }
 
     @Test
@@ -87,7 +94,8 @@ class UpdatePhoneNumberHandlerTest {
 
         assertThat(result, hasStatus(204));
         verify(dynamoService).updatePhoneNumber(EMAIL_ADDRESS, NEW_PHONE_NUMBER);
-        NotifyRequest notifyRequest = new NotifyRequest(EMAIL_ADDRESS, PHONE_NUMBER_UPDATED);
+        NotifyRequest notifyRequest =
+                new NotifyRequest(EMAIL_ADDRESS, PHONE_NUMBER_UPDATED, SupportedLanguage.EN);
         verify(sqsClient).send(objectMapper.writeValueAsString(notifyRequest));
 
         verify(auditService)
@@ -141,7 +149,8 @@ class UpdatePhoneNumberHandlerTest {
 
         assertThat(result, hasStatus(400));
         verify(dynamoService, times(0)).updatePhoneNumber(EMAIL_ADDRESS, INVALID_PHONE_NUMBER);
-        NotifyRequest notifyRequest = new NotifyRequest(INVALID_PHONE_NUMBER, PHONE_NUMBER_UPDATED);
+        NotifyRequest notifyRequest =
+                new NotifyRequest(INVALID_PHONE_NUMBER, PHONE_NUMBER_UPDATED, SupportedLanguage.EN);
         verify(sqsClient, times(0)).send(objectMapper.writeValueAsString(notifyRequest));
         String expectedResponse = objectMapper.writeValueAsString(ErrorResponse.ERROR_1020);
         assertThat(result, hasBody(expectedResponse));
