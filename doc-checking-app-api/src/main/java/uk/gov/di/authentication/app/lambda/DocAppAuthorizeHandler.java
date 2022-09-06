@@ -163,7 +163,7 @@ public class DocAppAuthorizeHandler
                                 authorisationService.storeState(session.getSessionId(), state);
                                 auditService.submitAuditEvent(
                                         DocAppAuditableEvent.DOC_APP_AUTHORISATION_REQUESTED,
-                                        context.getAwsRequestId(),
+                                        clientSessionId,
                                         session.getSessionId(),
                                         AuditService.UNKNOWN,
                                         clientSession.getDocAppSubjectId().toString(),

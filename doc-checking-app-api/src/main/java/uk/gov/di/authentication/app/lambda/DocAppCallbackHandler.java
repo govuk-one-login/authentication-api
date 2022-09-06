@@ -132,17 +132,16 @@ public class DocAppCallbackHandler
                                                                     "Session not found");
                                                         });
                                 attachSessionIdToLogs(session);
+                                var clientSessionId = sessionCookiesIds.getClientSessionId();
                                 var clientSession =
                                         clientSessionService
-                                                .getClientSession(
-                                                        sessionCookiesIds.getClientSessionId())
+                                                .getClientSession(clientSessionId)
                                                 .orElseThrow(
                                                         () -> {
                                                             throw new DocAppCallbackException(
                                                                     "ClientSession not found");
                                                         });
-                                attachLogFieldToLogs(
-                                        CLIENT_SESSION_ID, sessionCookiesIds.getClientSessionId());
+                                attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
 
                                 var authenticationRequest =
                                         AuthenticationRequest.parse(
@@ -164,7 +163,7 @@ public class DocAppCallbackHandler
                                 auditService.submitAuditEvent(
                                         DocAppAuditableEvent
                                                 .DOC_APP_AUTHORISATION_RESPONSE_RECEIVED,
-                                        context.getAwsRequestId(),
+                                        clientSessionId,
                                         session.getSessionId(),
                                         clientId,
                                         clientSession.getDocAppSubjectId().getValue(),
@@ -182,7 +181,7 @@ public class DocAppCallbackHandler
                                     auditService.submitAuditEvent(
                                             DocAppAuditableEvent
                                                     .DOC_APP_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
-                                            context.getAwsRequestId(),
+                                            clientSessionId,
                                             session.getSessionId(),
                                             clientId,
                                             clientSession.getDocAppSubjectId().getValue(),
@@ -197,7 +196,7 @@ public class DocAppCallbackHandler
                                     auditService.submitAuditEvent(
                                             DocAppAuditableEvent
                                                     .DOC_APP_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
-                                            context.getAwsRequestId(),
+                                            clientSessionId,
                                             session.getSessionId(),
                                             clientId,
                                             clientSession.getDocAppSubjectId().getValue(),
@@ -231,7 +230,7 @@ public class DocAppCallbackHandler
                                     auditService.submitAuditEvent(
                                             DocAppAuditableEvent
                                                     .DOC_APP_SUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED,
-                                            context.getAwsRequestId(),
+                                            clientSessionId,
                                             session.getSessionId(),
                                             clientId,
                                             clientSession.getDocAppSubjectId().getValue(),
@@ -261,7 +260,7 @@ public class DocAppCallbackHandler
                                     auditService.submitAuditEvent(
                                             DocAppAuditableEvent
                                                     .DOC_APP_UNSUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED,
-                                            context.getAwsRequestId(),
+                                            clientSessionId,
                                             session.getSessionId(),
                                             clientId,
                                             clientSession.getDocAppSubjectId().getValue(),

@@ -144,7 +144,7 @@ class DocAppAuthorizeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         DocAppAuditableEvent.DOC_APP_AUTHORISATION_REQUESTED,
-                        context.getAwsRequestId(),
+                        CLIENT_SESSION_ID,
                         SESSION_ID,
                         AuditService.UNKNOWN,
                         DOC_APP_SUBJECT_ID.getValue(),

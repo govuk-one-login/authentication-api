@@ -165,16 +165,15 @@ public class IPVCallbackHandler
                                         PersistentIdHelper.extractPersistentIdFromCookieHeader(
                                                 input.getHeaders());
                                 attachLogFieldToLogs(PERSISTENT_SESSION_ID, persistentId);
+                                var clientSessionId = sessionCookiesIds.getClientSessionId();
                                 var clientSession =
                                         clientSessionService
-                                                .getClientSession(
-                                                        sessionCookiesIds.getClientSessionId())
+                                                .getClientSession(clientSessionId)
                                                 .orElse(null);
                                 if (Objects.isNull(clientSession)) {
                                     throw new IpvCallbackException("ClientSession not found");
                                 }
-                                attachLogFieldToLogs(
-                                        CLIENT_SESSION_ID, sessionCookiesIds.getClientSessionId());
+                                attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
                                 var authRequest =
                                         AuthenticationRequest.parse(
                                                 clientSession.getAuthRequestParams());
@@ -223,7 +222,7 @@ public class IPVCallbackHandler
 
                                 auditService.submitAuditEvent(
                                         IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED,
-                                        context.getAwsRequestId(),
+                                        clientSessionId,
                                         session.getSessionId(),
                                         clientId,
                                         userProfile.getSubjectID(),
@@ -240,7 +239,7 @@ public class IPVCallbackHandler
                                     auditService.submitAuditEvent(
                                             IPVAuditableEvent
                                                     .IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
-                                            context.getAwsRequestId(),
+                                            clientSessionId,
                                             session.getSessionId(),
                                             clientId,
                                             userProfile.getSubjectID(),
@@ -255,7 +254,7 @@ public class IPVCallbackHandler
                                     auditService.submitAuditEvent(
                                             IPVAuditableEvent
                                                     .IPV_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
-                                            context.getAwsRequestId(),
+                                            clientSessionId,
                                             session.getSessionId(),
                                             clientId,
                                             userProfile.getSubjectID(),
@@ -292,7 +291,7 @@ public class IPVCallbackHandler
                                 }
                                 auditService.submitAuditEvent(
                                         IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED,
-                                        context.getAwsRequestId(),
+                                        clientSessionId,
                                         session.getSessionId(),
                                         clientId,
                                         userProfile.getSubjectID(),
@@ -312,7 +311,7 @@ public class IPVCallbackHandler
                                                         persistentId,
                                                         context.getAwsRequestId(),
                                                         clientId,
-                                                        sessionCookiesIds.getClientSessionId());
+                                                        clientSessionId);
                                         queueSPOTRequest(
                                                 logIds,
                                                 getSectorIdentifierForClient(clientRegistry),
@@ -323,7 +322,7 @@ public class IPVCallbackHandler
 
                                         auditService.submitAuditEvent(
                                                 IPVAuditableEvent.IPV_SPOT_REQUESTED,
-                                                context.getAwsRequestId(),
+                                                clientSessionId,
                                                 session.getSessionId(),
                                                 clientId,
                                                 userProfile.getSubjectID(),
