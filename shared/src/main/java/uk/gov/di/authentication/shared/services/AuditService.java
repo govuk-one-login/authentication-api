@@ -39,7 +39,7 @@ public class AuditService {
 
     public void submitAuditEvent(
             AuditableEvent event,
-            String requestId,
+            String clientSessionId,
             String sessionId,
             String clientId,
             String subjectId,
@@ -56,7 +56,8 @@ public class AuditService {
                         .withEmail(email)
                         .withIpAddress(ipAddress)
                         .withSessionId(sessionId)
-                        .withPersistentSessionId(persistentSessionId);
+                        .withPersistentSessionId(persistentSessionId)
+                        .withGovukSigninJourneyId(clientSessionId);
 
         var txmaAuditEvent =
                 auditEventWithTime(event, () -> Date.from(clock.instant()))

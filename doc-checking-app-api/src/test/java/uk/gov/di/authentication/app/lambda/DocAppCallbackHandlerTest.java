@@ -338,7 +338,7 @@ class DocAppCallbackHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         docAppAuditableEvent,
-                        REQUEST_ID,
+                        CLIENT_SESSION_ID,
                         SESSION_ID,
                         CLIENT_ID.getValue(),
                         PAIRWISE_SUBJECT_ID.getValue(),

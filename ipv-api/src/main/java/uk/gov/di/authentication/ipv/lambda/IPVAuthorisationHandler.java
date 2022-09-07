@@ -142,7 +142,7 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
             authorisationService.storeState(userContext.getSession().getSessionId(), state);
             auditService.submitAuditEvent(
                     IPVAuditableEvent.IPV_AUTHORISATION_REQUESTED,
-                    context.getAwsRequestId(),
+                    clientSessionId,
                     userContext.getSession().getSessionId(),
                     clientId.orElse(AuditService.UNKNOWN),
                     AuditService.UNKNOWN,

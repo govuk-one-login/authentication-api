@@ -50,7 +50,7 @@ public class IPVCapacityHandler
                             LOG.info("Request received to IPVCapacityHandler");
                             auditService.submitAuditEvent(
                                     IPVAuditableEvent.IPV_CAPACITY_REQUESTED,
-                                    context.getAwsRequestId(),
+                                    AuditService.UNKNOWN,
                                     AuditService.UNKNOWN,
                                     AuditService.UNKNOWN,
                                     AuditService.UNKNOWN,

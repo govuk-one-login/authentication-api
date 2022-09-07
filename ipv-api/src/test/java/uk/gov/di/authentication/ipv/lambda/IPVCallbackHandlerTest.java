@@ -493,7 +493,7 @@ class IPVCallbackHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED,
-                        REQUEST_ID,
+                        CLIENT_SESSION_ID,
                         SESSION_ID,
                         CLIENT_ID.getValue(),
                         userProfile.getSubjectID(),
@@ -505,7 +505,7 @@ class IPVCallbackHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         IPVAuditableEvent.IPV_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
-                        REQUEST_ID,
+                        CLIENT_SESSION_ID,
                         SESSION_ID,
                         CLIENT_ID.getValue(),
                         userProfile.getSubjectID(),
@@ -579,7 +579,7 @@ class IPVCallbackHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         auditableEvent,
-                        REQUEST_ID,
+                        CLIENT_SESSION_ID,
                         SESSION_ID,
                         CLIENT_ID.getValue(),
                         userProfile.getSubjectID(),
