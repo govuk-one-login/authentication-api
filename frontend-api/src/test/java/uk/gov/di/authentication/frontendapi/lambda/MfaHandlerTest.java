@@ -109,7 +109,7 @@ public class MfaHandlerTest {
 
     @BeforeEach
     void setUp() {
-        when(context.getAwsRequestId()).thenReturn("aws-session-id");
+        when(context.getAwsRequestId()).thenReturn("");
         when(configurationService.getCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         handler =
@@ -152,7 +152,7 @@ public class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_CODE_SENT,
-                        "aws-session-id",
+                        "",
                         session.getSessionId(),
                         "",
                         AuditService.UNKNOWN,
@@ -198,7 +198,7 @@ public class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_CODE_SENT,
-                        "aws-session-id",
+                        "",
                         session.getSessionId(),
                         "",
                         AuditService.UNKNOWN,
@@ -231,7 +231,7 @@ public class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_CODE_SENT,
-                        "aws-session-id",
+                        "",
                         session.getSessionId(),
                         "",
                         AuditService.UNKNOWN,
@@ -273,7 +273,7 @@ public class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_MISMATCHED_EMAIL,
-                        "aws-session-id",
+                        "",
                         session.getSessionId(),
                         "",
                         AuditService.UNKNOWN,
@@ -300,7 +300,7 @@ public class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_MISSING_PHONE_NUMBER,
-                        "aws-session-id",
+                        "",
                         session.getSessionId(),
                         "",
                         AuditService.UNKNOWN,
@@ -339,7 +339,7 @@ public class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST,
-                        "aws-session-id",
+                        "",
                         session.getSessionId(),
                         "",
                         AuditService.UNKNOWN,
@@ -369,7 +369,7 @@ public class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST,
-                        "aws-session-id",
+                        "",
                         session.getSessionId(),
                         "",
                         AuditService.UNKNOWN,
@@ -398,7 +398,7 @@ public class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST,
-                        "aws-session-id",
+                        "",
                         session.getSessionId(),
                         "",
                         AuditService.UNKNOWN,
@@ -433,7 +433,7 @@ public class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_CODE_SENT_FOR_TEST_CLIENT,
-                        "aws-session-id",
+                        "",
                         session.getSessionId(),
                         TEST_CLIENT_ID,
                         AuditService.UNKNOWN,

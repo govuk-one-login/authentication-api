@@ -110,7 +110,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                             processingStatus.toString()));
             auditService.submitAuditEvent(
                     IPVAuditableEvent.PROCESSING_IDENTITY_REQUEST,
-                    context.getAwsRequestId(),
+                    AuditService.UNKNOWN,
                     userContext.getSession().getSessionId(),
                     userContext.getClient().get().getClientID(),
                     AuditService.UNKNOWN,

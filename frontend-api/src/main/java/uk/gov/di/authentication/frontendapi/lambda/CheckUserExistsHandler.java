@@ -93,7 +93,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             if (errorResponse.isPresent()) {
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.CHECK_USER_INVALID_EMAIL,
-                        context.getAwsRequestId(),
+                        AuditService.UNKNOWN,
                         userContext.getSession().getSessionId(),
                         userContext
                                 .getClient()
@@ -116,7 +116,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             }
             auditService.submitAuditEvent(
                     auditableEvent,
-                    context.getAwsRequestId(),
+                    AuditService.UNKNOWN,
                     userContext.getSession().getSessionId(),
                     userContext
                             .getClient()

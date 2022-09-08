@@ -124,7 +124,7 @@ class LogoutHandlerTest {
                 TokenGeneratorHelper.generateIDToken(
                         "client-id", SUBJECT, "http://localhost-rp", ecSigningKey);
         session = generateSession().setEmailAddress(EMAIL);
-        when(context.getAwsRequestId()).thenReturn("aws-session-id");
+        when(context.getAwsRequestId()).thenReturn("");
     }
 
     @Test
@@ -152,7 +152,7 @@ class LogoutHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.LOG_OUT_SUCCESS,
-                        "aws-session-id",
+                        "",
                         SESSION_ID,
                         "client-id",
                         AuditService.UNKNOWN,
@@ -188,7 +188,7 @@ class LogoutHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.LOG_OUT_SUCCESS,
-                        "aws-session-id",
+                        "",
                         SESSION_ID,
                         "client-id",
                         AuditService.UNKNOWN,
@@ -220,7 +220,7 @@ class LogoutHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.LOG_OUT_SUCCESS,
-                        "aws-session-id",
+                        "",
                         SESSION_ID,
                         "client-id",
                         AuditService.UNKNOWN,
@@ -253,7 +253,7 @@ class LogoutHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.LOG_OUT_SUCCESS,
-                        "aws-session-id",
+                        "",
                         SESSION_ID,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
@@ -284,7 +284,7 @@ class LogoutHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.LOG_OUT_SUCCESS,
-                        "aws-session-id",
+                        "",
                         SESSION_ID,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
@@ -319,7 +319,7 @@ class LogoutHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.LOG_OUT_SUCCESS,
-                        "aws-session-id",
+                        "",
                         SESSION_ID,
                         "client-id",
                         AuditService.UNKNOWN,
@@ -350,7 +350,7 @@ class LogoutHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.LOG_OUT_SUCCESS,
-                        "aws-session-id",
+                        "",
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
@@ -391,7 +391,7 @@ class LogoutHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.LOG_OUT_SUCCESS,
-                        "aws-session-id",
+                        "",
                         SESSION_ID,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
@@ -428,7 +428,7 @@ class LogoutHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.LOG_OUT_SUCCESS,
-                        "aws-session-id",
+                        "",
                         SESSION_ID,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
@@ -474,7 +474,7 @@ class LogoutHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.LOG_OUT_SUCCESS,
-                        "aws-session-id",
+                        "",
                         SESSION_ID,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
@@ -521,7 +521,7 @@ class LogoutHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.LOG_OUT_SUCCESS,
-                        "aws-session-id",
+                        "",
                         SESSION_ID,
                         "invalid-client-id",
                         AuditService.UNKNOWN,
@@ -568,7 +568,7 @@ class LogoutHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.LOG_OUT_SUCCESS,
-                        "aws-session-id",
+                        "",
                         SESSION_ID,
                         "client-id",
                         AuditService.UNKNOWN,

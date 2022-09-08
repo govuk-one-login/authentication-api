@@ -154,7 +154,7 @@ class ResetPasswordRequestHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.PASSWORD_RESET_REQUESTED,
-                        context.getAwsRequestId(),
+                        AuditService.UNKNOWN,
                         session.getSessionId(),
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
@@ -201,7 +201,7 @@ class ResetPasswordRequestHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.PASSWORD_RESET_REQUESTED,
-                        context.getAwsRequestId(),
+                        AuditService.UNKNOWN,
                         session.getSessionId(),
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,

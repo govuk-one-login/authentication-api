@@ -110,7 +110,7 @@ class CheckUserExistsHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CHECK_USER_KNOWN_EMAIL,
-                        "aws-session-id",
+                        AuditService.UNKNOWN,
                         session.getSessionId(),
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
@@ -143,7 +143,7 @@ class CheckUserExistsHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CHECK_USER_NO_ACCOUNT_WITH_EMAIL,
-                        "aws-session-id",
+                        AuditService.UNKNOWN,
                         session.getSessionId(),
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
@@ -197,7 +197,7 @@ class CheckUserExistsHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CHECK_USER_INVALID_EMAIL,
-                        "aws-session-id",
+                        AuditService.UNKNOWN,
                         session.getSessionId(),
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,

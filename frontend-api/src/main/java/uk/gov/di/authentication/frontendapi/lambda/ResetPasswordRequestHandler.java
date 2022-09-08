@@ -110,7 +110,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.PASSWORD_RESET_REQUESTED,
-                    context.getAwsRequestId(),
+                    AuditService.UNKNOWN,
                     userContext.getSession().getSessionId(),
                     userContext
                             .getClient()

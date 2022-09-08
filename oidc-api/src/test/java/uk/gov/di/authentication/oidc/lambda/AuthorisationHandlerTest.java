@@ -93,7 +93,6 @@ class AuthorisationHandlerTest {
             "lng=en; Max-Age=31536000; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;";
     private static final URI LOGIN_URL = URI.create("https://example.com");
     private static final String PERSISTENT_SESSION_ID = "a-persistent-session-id";
-    private static final String AWS_REQUEST_ID = "aws-request-id";
     private static final ClientID CLIENT_ID = new ClientID("test-id");
     private static final String REDIRECT_URI = "https://localhost:8080";
     private static final String SCOPE = "email,openid,profile";
@@ -121,7 +120,7 @@ class AuthorisationHandlerTest {
         when(authorizationService.getExistingOrCreateNewPersistentSessionId(any()))
                 .thenReturn(PERSISTENT_SESSION_ID);
         when(userContext.getClient()).thenReturn(Optional.of(generateClientRegistry()));
-        when(context.getAwsRequestId()).thenReturn(AWS_REQUEST_ID);
+        when(context.getAwsRequestId()).thenReturn("");
         handler =
                 new AuthorisationHandler(
                         configService,
@@ -168,7 +167,7 @@ class AuthorisationHandlerTest {
         inOrder.verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.AUTHORISATION_INITIATED,
-                        context.getAwsRequestId(),
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         CLIENT_ID.getValue(),
                         AuditService.UNKNOWN,
@@ -236,7 +235,7 @@ class AuthorisationHandlerTest {
         inOrder.verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.AUTHORISATION_INITIATED,
-                        context.getAwsRequestId(),
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         CLIENT_ID.getValue(),
                         AuditService.UNKNOWN,
@@ -278,7 +277,7 @@ class AuthorisationHandlerTest {
         inOrder.verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.AUTHORISATION_INITIATED,
-                        context.getAwsRequestId(),
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         CLIENT_ID.getValue(),
                         AuditService.UNKNOWN,
@@ -321,7 +320,7 @@ class AuthorisationHandlerTest {
         inOrder.verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.AUTHORISATION_INITIATED,
-                        context.getAwsRequestId(),
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         CLIENT_ID.getValue(),
                         AuditService.UNKNOWN,
@@ -363,7 +362,7 @@ class AuthorisationHandlerTest {
         inOrder.verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.AUTHORISATION_INITIATED,
-                        context.getAwsRequestId(),
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         CLIENT_ID.getValue(),
                         AuditService.UNKNOWN,
@@ -403,7 +402,7 @@ class AuthorisationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTHORISATION_REQUEST_ERROR,
-                        AWS_REQUEST_ID,
+                        "",
                         "",
                         "",
                         "",
@@ -443,7 +442,7 @@ class AuthorisationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTHORISATION_REQUEST_ERROR,
-                        AWS_REQUEST_ID,
+                        "",
                         "",
                         CLIENT_ID.getValue(),
                         "",
@@ -485,7 +484,7 @@ class AuthorisationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTHORISATION_REQUEST_ERROR,
-                        AWS_REQUEST_ID,
+                        "",
                         "",
                         "",
                         "",
@@ -539,7 +538,7 @@ class AuthorisationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTHORISATION_REQUEST_ERROR,
-                        AWS_REQUEST_ID,
+                        "",
                         "",
                         CLIENT_ID.getValue(),
                         "",
@@ -603,7 +602,7 @@ class AuthorisationHandlerTest {
         inOrder.verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.AUTHORISATION_INITIATED,
-                        context.getAwsRequestId(),
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         CLIENT_ID.getValue(),
                         AuditService.UNKNOWN,
@@ -635,7 +634,7 @@ class AuthorisationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTHORISATION_REQUEST_ERROR,
-                        AWS_REQUEST_ID,
+                        "",
                         "",
                         CLIENT_ID.getValue(),
                         "",
@@ -652,7 +651,7 @@ class AuthorisationHandlerTest {
         inOrder.verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED,
-                        AWS_REQUEST_ID,
+                        "",
                         "",
                         "",
                         "",
@@ -664,7 +663,7 @@ class AuthorisationHandlerTest {
         LogEvent logEvent = logging.events().get(0);
 
         assertThat(logEvent, hasContextData("persistentSessionId", PERSISTENT_SESSION_ID));
-        assertThat(logEvent, hasContextData("awsRequestId", AWS_REQUEST_ID));
+        assertThat(logEvent, hasContextData("awsRequestId", ""));
 
         return response;
     }

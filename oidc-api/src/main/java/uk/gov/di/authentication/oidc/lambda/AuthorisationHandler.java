@@ -113,7 +113,7 @@ public class AuthorisationHandler
                             var ipAddress = IpAddressHelper.extractIpAddress(input);
                             auditService.submitAuditEvent(
                                     OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED,
-                                    context.getAwsRequestId(),
+                                    AuditService.UNKNOWN,
                                     AuditService.UNKNOWN,
                                     AuditService.UNKNOWN,
                                     AuditService.UNKNOWN,
@@ -221,9 +221,16 @@ public class AuthorisationHandler
         var session = existingSession.orElseGet(sessionService::createSession);
         attachSessionIdToLogs(session);
 
+        var clientSessionID =
+                clientSessionService.generateClientSession(
+                        new ClientSession(
+                                authenticationRequest.toParameters(),
+                                LocalDateTime.now(),
+                                authorizationService.getEffectiveVectorOfTrust(
+                                        authenticationRequest)));
         auditService.submitAuditEvent(
                 OidcAuditableEvent.AUTHORISATION_INITIATED,
-                context.getAwsRequestId(),
+                clientSessionID,
                 session.getSessionId(),
                 authenticationRequest.getClientID().getValue(),
                 AuditService.UNKNOWN,
@@ -241,13 +248,6 @@ public class AuthorisationHandler
             updateAttachedSessionIdToLogs(session.getSessionId());
             LOG.info("Updated session id from {} - new", oldSessionId);
         }
-        var clientSessionID =
-                clientSessionService.generateClientSession(
-                        new ClientSession(
-                                authenticationRequest.toParameters(),
-                                LocalDateTime.now(),
-                                authorizationService.getEffectiveVectorOfTrust(
-                                        authenticationRequest)));
 
         session.addClientSession(clientSessionID);
         updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionID);

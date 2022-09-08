@@ -185,7 +185,7 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.LOG_IN_SUCCESS,
-                        "aws-session-id",
+                        "",
                         session.getSessionId(),
                         CLIENT_ID.getValue(),
                         userProfile.getSubjectID(),
@@ -235,7 +235,7 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.LOG_IN_SUCCESS,
-                        "aws-session-id",
+                        "",
                         session.getSessionId(),
                         CLIENT_ID.getValue(),
                         userProfile.getSubjectID(),
@@ -285,7 +285,7 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.LOG_IN_SUCCESS,
-                        "aws-session-id",
+                        "",
                         session.getSessionId(),
                         CLIENT_ID.getValue(),
                         userProfile.getSubjectID(),
@@ -410,7 +410,7 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
-                        "aws-session-id",
+                        "",
                         session.getSessionId(),
                         "",
                         userProfile.getSubjectID(),
@@ -468,7 +468,7 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.INVALID_CREDENTIALS,
-                        "aws-session-id",
+                        "",
                         session.getSessionId(),
                         "",
                         "",
@@ -549,7 +549,7 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.NO_ACCOUNT_WITH_EMAIL,
-                        "aws-session-id",
+                        "",
                         session.getSessionId(),
                         "",
                         "",
