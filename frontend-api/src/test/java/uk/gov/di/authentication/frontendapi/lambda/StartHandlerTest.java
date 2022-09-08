@@ -61,7 +61,7 @@ class StartHandlerTest {
 
     public static final String TEST_CLIENT_ID = "test_client_id";
     public static final String TEST_CLIENT_NAME = "test_client_name";
-    public static final String CLIENT_SESSION_ID_HEADER = "client-session-id";
+    public static final String CLIENT_SESSION_ID_HEADER = "Client-Session-Id";
     public static final String SESSION_ID_HEADER = "Session-Id";
     public static final String CLIENT_SESSION_ID = "known-client-session-id";
     public static final String SESSION_ID = "some-session-id";
@@ -160,7 +160,7 @@ class StartHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.START_INFO_FOUND,
-                        CLIENT_SESSION_ID,
+                        AuditService.UNKNOWN,
                         SESSION_ID,
                         TEST_CLIENT_ID,
                         AuditService.UNKNOWN,
@@ -224,7 +224,7 @@ class StartHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.START_INFO_FOUND,
-                        CLIENT_SESSION_ID,
+                        AuditService.UNKNOWN,
                         SESSION_ID,
                         TEST_CLIENT_ID,
                         AuditService.UNKNOWN,

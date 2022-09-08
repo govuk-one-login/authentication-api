@@ -48,7 +48,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
@@ -66,6 +65,7 @@ class VerifyCodeHandlerTest {
     private static final String CODE = "123456";
     private static final String INVALID_CODE = "6543221";
     private static final String CLIENT_ID = "client-id";
+    private static final String CLIENT_SESSION_ID = "client-session-id";
     private static final String TEST_CLIENT_ID = "test-client-id";
     private static final String TEST_CLIENT_CODE = "654321";
     private static final String TEST_CLIENT_EMAIL =
@@ -158,7 +158,7 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_VERIFIED,
-                        CLIENT_SESSION_ID_HEADER,
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         CLIENT_ID,
                         "test-subject-id",
@@ -190,7 +190,7 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_VERIFIED,
-                        CLIENT_SESSION_ID_HEADER,
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         CLIENT_ID,
                         "test-subject-id",
@@ -371,7 +371,7 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_VERIFIED,
-                        CLIENT_SESSION_ID_HEADER,
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         CLIENT_ID,
                         "test-subject-id",

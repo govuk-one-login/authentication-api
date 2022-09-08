@@ -121,17 +121,18 @@ public class StartHandler
                                                 cookieConsent,
                                                 gaTrackingId,
                                                 configurationService.isIdentityEnabled());
-                                var clientSessionId =
-                                        getHeaderValueFromHeaders(
-                                                input.getHeaders(),
-                                                CLIENT_SESSION_ID_HEADER,
-                                                configurationService.getHeadersCaseInsensitive());
                                 if (userStartInfo.isDocCheckingAppUser()) {
                                     var docAppSubjectId =
                                             ClientSubjectHelper.calculatePairwiseIdentifier(
                                                     new Subject().getValue(),
                                                     configurationService.getDocAppDomain(),
                                                     SaltHelper.generateNewSalt());
+                                    var clientSessionId =
+                                            getHeaderValueFromHeaders(
+                                                    input.getHeaders(),
+                                                    CLIENT_SESSION_ID_HEADER,
+                                                    configurationService
+                                                            .getHeadersCaseInsensitive());
                                     clientSessionService.saveClientSession(
                                             clientSessionId,
                                             clientSession
@@ -147,7 +148,7 @@ public class StartHandler
 
                                 auditService.submitAuditEvent(
                                         FrontendAuditableEvent.START_INFO_FOUND,
-                                        clientSessionId,
+                                        AuditService.UNKNOWN,
                                         session.get().getSessionId(),
                                         userContext.getClient().get().getClientID(),
                                         AuditService.UNKNOWN,
