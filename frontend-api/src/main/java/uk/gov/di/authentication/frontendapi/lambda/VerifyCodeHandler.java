@@ -265,7 +265,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         codeStorageService.deleteOtpCode(session.getEmailAddress(), notificationType);
         auditService.submitAuditEvent(
                 FrontendAuditableEvent.CODE_VERIFIED,
-                context.getAwsRequestId(),
+                clientSessionId,
                 session.getSessionId(),
                 userContext
                         .getClient()
@@ -310,7 +310,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         }
         auditService.submitAuditEvent(
                 auditableEvent,
-                context.getAwsRequestId(),
+                AuditService.UNKNOWN,
                 session.getSessionId(),
                 userContext
                         .getClient()

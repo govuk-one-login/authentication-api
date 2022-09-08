@@ -107,7 +107,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
 
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS,
-                        context.getAwsRequestId(),
+                        AuditService.UNKNOWN,
                         userContext.getSession().getSessionId(),
                         userContext
                                 .getClient()
@@ -132,7 +132,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
 
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.CREATE_ACCOUNT,
-                    context.getAwsRequestId(),
+                    AuditService.UNKNOWN,
                     userContext.getSession().getSessionId(),
                     userContext
                             .getClient()

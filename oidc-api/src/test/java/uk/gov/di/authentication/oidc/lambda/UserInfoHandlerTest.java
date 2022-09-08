@@ -87,7 +87,7 @@ public class UserInfoHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.USER_INFO_RETURNED,
-                        "aws-request-id",
+                        "",
                         "",
                         "client-id",
                         SUBJECT.getValue(),

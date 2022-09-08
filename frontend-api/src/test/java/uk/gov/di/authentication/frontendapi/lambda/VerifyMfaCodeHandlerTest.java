@@ -160,7 +160,7 @@ class VerifyMfaCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_VERIFIED,
-                        context.getAwsRequestId(),
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         CLIENT_ID,
                         SUBJECT_ID,
@@ -195,7 +195,7 @@ class VerifyMfaCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_VERIFIED,
-                        context.getAwsRequestId(),
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         CLIENT_ID,
                         SUBJECT_ID,
@@ -256,7 +256,7 @@ class VerifyMfaCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
-                        context.getAwsRequestId(),
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         CLIENT_ID,
                         SUBJECT_ID,
@@ -291,7 +291,7 @@ class VerifyMfaCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.INVALID_CODE_SENT,
-                        context.getAwsRequestId(),
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         CLIENT_ID,
                         SUBJECT_ID,

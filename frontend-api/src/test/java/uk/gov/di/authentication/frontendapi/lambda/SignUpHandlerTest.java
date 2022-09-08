@@ -168,7 +168,7 @@ class SignUpHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CREATE_ACCOUNT,
-                        context.getAwsRequestId(),
+                        AuditService.UNKNOWN,
                         session.getSessionId(),
                         CLIENT_ID.getValue(),
                         AuditService.UNKNOWN,
@@ -238,7 +238,7 @@ class SignUpHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS,
-                        context.getAwsRequestId(),
+                        AuditService.UNKNOWN,
                         session.getSessionId(),
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,

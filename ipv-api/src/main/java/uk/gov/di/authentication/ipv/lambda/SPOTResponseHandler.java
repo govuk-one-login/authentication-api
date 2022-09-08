@@ -64,8 +64,7 @@ public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
                             spotResponse.getStatus());
                     submitAuditEvent(
                             IPVAuditableEvent.IPV_SUCCESSFUL_SPOT_RESPONSE_RECEIVED,
-                            spotResponse.getLogIds(),
-                            context.getAwsRequestId());
+                            spotResponse.getLogIds());
                     dynamoIdentityService.addCoreIdentityJWT(
                             spotResponse.getSub(),
                             spotResponse.getClaims().values().stream()
@@ -80,8 +79,7 @@ public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
                             spotResponse.getReason());
                     submitAuditEvent(
                             IPVAuditableEvent.IPV_UNSUCCESSFUL_SPOT_RESPONSE_RECEIVED,
-                            spotResponse.getLogIds(),
-                            context.getAwsRequestId());
+                            spotResponse.getLogIds());
                     dynamoIdentityService.deleteIdentityCredentials(spotResponse.getSub());
                     return null;
                 }
@@ -96,11 +94,10 @@ public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
         return null;
     }
 
-    private void submitAuditEvent(
-            AuditableEvent auditableEvent, LogIds logIds, String awsRequestId) {
+    private void submitAuditEvent(AuditableEvent auditableEvent, LogIds logIds) {
         auditService.submitAuditEvent(
                 auditableEvent,
-                awsRequestId,
+                AuditService.UNKNOWN,
                 logIds.getSessionId(),
                 logIds.getClientId(),
                 AuditService.UNKNOWN,

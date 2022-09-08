@@ -90,7 +90,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
     public void onRequestReceived(Context context) {
         auditService.submitAuditEvent(
                 UPDATE_PROFILE_REQUEST_RECEIVED,
-                context.getAwsRequestId(),
+                AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
@@ -104,7 +104,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
     public void onRequestValidationError(Context context) {
         auditService.submitAuditEvent(
                 UPDATE_PROFILE_REQUEST_ERROR,
-                context.getAwsRequestId(),
+                AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
@@ -275,7 +275,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
         }
         auditService.submitAuditEvent(
                 auditableEvent,
-                context.getAwsRequestId(),
+                AuditService.UNKNOWN,
                 session.getSessionId(),
                 auditableClientId,
                 userContext
@@ -334,7 +334,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
             String persistentSessionId) {
         auditService.submitAuditEvent(
                 UPDATE_PROFILE_REQUEST_ERROR,
-                context.getAwsRequestId(),
+                AuditService.UNKNOWN,
                 sessionId,
                 clientId,
                 AuditService.UNKNOWN,

@@ -48,6 +48,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
@@ -157,7 +158,7 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_VERIFIED,
-                        context.getAwsRequestId(),
+                        CLIENT_SESSION_ID_HEADER,
                         session.getSessionId(),
                         CLIENT_ID,
                         "test-subject-id",
@@ -189,7 +190,7 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_VERIFIED,
-                        context.getAwsRequestId(),
+                        CLIENT_SESSION_ID_HEADER,
                         session.getSessionId(),
                         CLIENT_ID,
                         "test-subject-id",
@@ -284,7 +285,7 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
-                        context.getAwsRequestId(),
+                        AuditService.UNKNOWN,
                         session.getSessionId(),
                         CLIENT_ID,
                         "test-subject-id",
@@ -332,7 +333,7 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
-                        context.getAwsRequestId(),
+                        AuditService.UNKNOWN,
                         session.getSessionId(),
                         CLIENT_ID,
                         "test-subject-id",
@@ -370,7 +371,7 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_VERIFIED,
-                        context.getAwsRequestId(),
+                        CLIENT_SESSION_ID_HEADER,
                         session.getSessionId(),
                         CLIENT_ID,
                         "test-subject-id",
@@ -416,7 +417,7 @@ class VerifyCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
-                        context.getAwsRequestId(),
+                        AuditService.UNKNOWN,
                         session.getSessionId(),
                         CLIENT_ID,
                         "test-subject-id",

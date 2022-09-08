@@ -152,7 +152,7 @@ class UpdateProfileHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         UPDATE_PROFILE_PHONE_NUMBER,
-                        "request-id",
+                        "",
                         session.getSessionId(),
                         "",
                         "",
@@ -191,7 +191,7 @@ class UpdateProfileHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         UPDATE_PROFILE_REQUEST_ERROR,
-                        "request-id",
+                        "",
                         SESSION_ID,
                         CLIENT_ID.getValue(),
                         "",
@@ -226,7 +226,7 @@ class UpdateProfileHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE,
-                        "request-id",
+                        "",
                         session.getSessionId(),
                         CLIENT_ID.getValue(),
                         INTERNAL_SUBJECT,
@@ -265,7 +265,7 @@ class UpdateProfileHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         UPDATE_PROFILE_CONSENT_UPDATED,
-                        "request-id",
+                        "",
                         session.getSessionId(),
                         CLIENT_ID.getValue(),
                         INTERNAL_SUBJECT,
@@ -292,8 +292,7 @@ class UpdateProfileHandlerTest {
         verify(authenticationService, never())
                 .updatePhoneNumber(eq(TEST_EMAIL_ADDRESS), eq(PHONE_NUMBER));
         verify(auditService)
-                .submitAuditEvent(
-                        UPDATE_PROFILE_REQUEST_ERROR, "request-id", "", "", "", "", "", "", "");
+                .submitAuditEvent(UPDATE_PROFILE_REQUEST_ERROR, "", "", "", "", "", "", "", "");
     }
 
     @Test
@@ -320,7 +319,7 @@ class UpdateProfileHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         UPDATE_PROFILE_AUTH_APP,
-                        "request-id",
+                        "",
                         session.getSessionId(),
                         CLIENT_ID.getValue(),
                         INTERNAL_SUBJECT,
@@ -360,7 +359,7 @@ class UpdateProfileHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         UPDATE_PROFILE_REQUEST_ERROR,
-                        "request-id",
+                        "",
                         SESSION_ID,
                         CLIENT_ID.getValue(),
                         "",
@@ -396,8 +395,7 @@ class UpdateProfileHandlerTest {
         var response = handler.handleRequest(event, context);
 
         verify(auditService)
-                .submitAuditEvent(
-                        UPDATE_PROFILE_REQUEST_RECEIVED, "request-id", "", "", "", "", "", "", "");
+                .submitAuditEvent(UPDATE_PROFILE_REQUEST_RECEIVED, "", "", "", "", "", "", "", "");
 
         return response;
     }
