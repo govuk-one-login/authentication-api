@@ -94,7 +94,7 @@ public class AuthenticateHandler
                                 auditService.submitAuditEvent(
                                         AccountManagementAuditableEvent
                                                 .ACCOUNT_MANAGEMENT_AUTHENTICATE,
-                                        context.getAwsRequestId(),
+                                        AuditService.UNKNOWN,
                                         sessionId,
                                         AuditService.UNKNOWN,
                                         AuditService.UNKNOWN,

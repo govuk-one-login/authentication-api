@@ -106,7 +106,7 @@ class SendOtpNotificationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AccountManagementAuditableEvent.SEND_OTP,
-                        context.getAwsRequestId(),
+                        AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
@@ -150,7 +150,7 @@ class SendOtpNotificationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AccountManagementAuditableEvent.SEND_OTP,
-                        context.getAwsRequestId(),
+                        AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,

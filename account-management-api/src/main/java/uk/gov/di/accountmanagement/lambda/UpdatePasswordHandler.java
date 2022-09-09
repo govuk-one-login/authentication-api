@@ -165,7 +165,7 @@ public class UpdatePasswordHandler
 
                                 auditService.submitAuditEvent(
                                         AccountManagementAuditableEvent.UPDATE_PASSWORD,
-                                        context.getAwsRequestId(),
+                                        AuditService.UNKNOWN,
                                         sessionId,
                                         AuditService.UNKNOWN,
                                         userProfile.getSubjectID(),

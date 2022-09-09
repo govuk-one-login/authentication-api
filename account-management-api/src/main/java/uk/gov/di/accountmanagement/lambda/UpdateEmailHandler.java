@@ -152,7 +152,7 @@ public class UpdateEmailHandler
 
                                 auditService.submitAuditEvent(
                                         AccountManagementAuditableEvent.UPDATE_EMAIL,
-                                        context.getAwsRequestId(),
+                                        AuditService.UNKNOWN,
                                         sessionId,
                                         AuditService.UNKNOWN,
                                         userProfile.getSubjectID(),

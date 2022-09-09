@@ -56,7 +56,7 @@ class AuthenticateHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE,
-                        context.getAwsRequestId(),
+                        AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,

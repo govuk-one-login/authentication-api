@@ -131,7 +131,7 @@ public class RemoveAccountHandler
                                         "Remove account message successfully added to queue. Generating successful gateway response");
                                 auditService.submitAuditEvent(
                                         AccountManagementAuditableEvent.DELETE_ACCOUNT,
-                                        context.getAwsRequestId(),
+                                        AuditService.UNKNOWN,
                                         sessionId,
                                         AuditService.UNKNOWN,
                                         userProfile.getSubjectID(),
