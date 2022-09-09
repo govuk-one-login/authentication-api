@@ -137,7 +137,7 @@ public class UpdatePhoneNumberHandler
 
                                 auditService.submitAuditEvent(
                                         AccountManagementAuditableEvent.UPDATE_PHONE_NUMBER,
-                                        context.getAwsRequestId(),
+                                        AuditService.UNKNOWN,
                                         sessionId,
                                         AuditService.UNKNOWN,
                                         userProfile.getSubjectID(),

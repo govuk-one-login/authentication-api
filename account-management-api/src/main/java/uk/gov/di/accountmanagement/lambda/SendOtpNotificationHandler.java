@@ -195,7 +195,7 @@ public class SendOtpNotificationHandler
 
         auditService.submitAuditEvent(
                 AccountManagementAuditableEvent.SEND_OTP,
-                context.getAwsRequestId(),
+                AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,

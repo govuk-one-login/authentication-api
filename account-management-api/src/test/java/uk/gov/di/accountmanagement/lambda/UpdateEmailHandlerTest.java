@@ -98,7 +98,7 @@ class UpdateEmailHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AccountManagementAuditableEvent.UPDATE_EMAIL,
-                        context.getAwsRequestId(),
+                        AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         userProfile.getSubjectID(),

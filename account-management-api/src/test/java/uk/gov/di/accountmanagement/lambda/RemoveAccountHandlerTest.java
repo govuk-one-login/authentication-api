@@ -80,7 +80,7 @@ class RemoveAccountHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AccountManagementAuditableEvent.DELETE_ACCOUNT,
-                        context.getAwsRequestId(),
+                        AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         userProfile.getSubjectID(),

@@ -75,7 +75,7 @@ public class UpdateClientConfigHandler
                             String ipAddress = IpAddressHelper.extractIpAddress(input);
                             auditService.submitAuditEvent(
                                     UPDATE_CLIENT_REQUEST_RECEIVED,
-                                    context.getAwsRequestId(),
+                                    AuditService.UNKNOWN,
                                     AuditService.UNKNOWN,
                                     AuditService.UNKNOWN,
                                     AuditService.UNKNOWN,
@@ -96,7 +96,7 @@ public class UpdateClientConfigHandler
                                 if (!clientService.isValidClient(clientId)) {
                                     auditService.submitAuditEvent(
                                             UPDATE_CLIENT_REQUEST_ERROR,
-                                            context.getAwsRequestId(),
+                                            AuditService.UNKNOWN,
                                             AuditService.UNKNOWN,
                                             clientId,
                                             AuditService.UNKNOWN,
@@ -121,7 +121,7 @@ public class UpdateClientConfigHandler
                                             errorResponse.get().getDescription());
                                     auditService.submitAuditEvent(
                                             UPDATE_CLIENT_REQUEST_ERROR,
-                                            context.getAwsRequestId(),
+                                            AuditService.UNKNOWN,
                                             AuditService.UNKNOWN,
                                             clientId,
                                             AuditService.UNKNOWN,
@@ -155,7 +155,7 @@ public class UpdateClientConfigHandler
                             } catch (JsonException | NullPointerException e) {
                                 auditService.submitAuditEvent(
                                         UPDATE_CLIENT_REQUEST_ERROR,
-                                        context.getAwsRequestId(),
+                                        AuditService.UNKNOWN,
                                         AuditService.UNKNOWN,
                                         AuditService.UNKNOWN,
                                         AuditService.UNKNOWN,

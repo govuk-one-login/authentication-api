@@ -107,7 +107,7 @@ class UpdatePasswordHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AccountManagementAuditableEvent.UPDATE_PASSWORD,
-                        context.getAwsRequestId(),
+                        AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         userProfile.getSubjectID(),

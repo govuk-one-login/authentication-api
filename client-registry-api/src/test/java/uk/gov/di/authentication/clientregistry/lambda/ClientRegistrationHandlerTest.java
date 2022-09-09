@@ -206,8 +206,7 @@ class ClientRegistrationHandlerTest {
         assertThat(result, hasBody(OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString()));
 
         verify(auditService)
-                .submitAuditEvent(
-                        REGISTER_CLIENT_REQUEST_ERROR, "request-id", "", "", "", "", "", "", "");
+                .submitAuditEvent(REGISTER_CLIENT_REQUEST_ERROR, "", "", "", "", "", "", "", "");
     }
 
     @Test
