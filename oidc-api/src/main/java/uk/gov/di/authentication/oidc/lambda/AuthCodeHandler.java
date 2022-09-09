@@ -274,7 +274,7 @@ public class AuthCodeHandler
 
                                 auditService.submitAuditEvent(
                                         OidcAuditableEvent.AUTH_CODE_ISSUED,
-                                        context.getAwsRequestId(),
+                                        clientSessionId,
                                         session.getSessionId(),
                                         authenticationRequest.getClientID().getValue(),
                                         AuditService.UNKNOWN,
