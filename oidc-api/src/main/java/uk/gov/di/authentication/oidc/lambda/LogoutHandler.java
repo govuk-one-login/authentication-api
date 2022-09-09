@@ -367,7 +367,7 @@ public class LogoutHandler
         }
         auditService.submitAuditEvent(
                 OidcAuditableEvent.LOG_OUT_SUCCESS,
-                context.getAwsRequestId(),
+                AuditService.UNKNOWN,
                 sessionId.orElse(AuditService.UNKNOWN),
                 clientId.orElse(AuditService.UNKNOWN),
                 AuditService.UNKNOWN,

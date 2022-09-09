@@ -130,7 +130,7 @@ public class UserInfoHandler
 
                             auditService.submitAuditEvent(
                                     OidcAuditableEvent.USER_INFO_RETURNED,
-                                    context.getAwsRequestId(),
+                                    AuditService.UNKNOWN,
                                     AuditService.UNKNOWN,
                                     accessTokenInfo.getClientID(),
                                     accessTokenInfo.getSubject(),

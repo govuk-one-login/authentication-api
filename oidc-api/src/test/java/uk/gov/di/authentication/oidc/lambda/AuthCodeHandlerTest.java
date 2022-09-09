@@ -211,7 +211,7 @@ class AuthCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.AUTH_CODE_ISSUED,
-                        "aws-session-id",
+                        CLIENT_SESSION_ID,
                         SESSION_ID,
                         CLIENT_ID.getValue(),
                         AuditService.UNKNOWN,
