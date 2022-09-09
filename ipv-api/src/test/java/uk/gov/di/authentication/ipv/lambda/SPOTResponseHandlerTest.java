@@ -15,6 +15,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.ipv.lambda.ProcessingIdentityHandlerTest.CLIENT_SESSION_ID;
 
 class SPOTResponseHandlerTest {
 
@@ -40,8 +41,13 @@ class SPOTResponseHandlerTest {
         var json =
                 format(
                         "{\"sub\":\"urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6\",\"status\":\"ACCEPTED\","
-                                + "\"claims\":{\"http://something/v1/verifiableIdentityJWT\":\"random-searalized-credential\"}, \"log_ids\":{\"session_id\":\"%s\",\"persistent_session_id\":\"%s\",\"request_id\":\"%s\",\"client_id\":\"%s\"}}",
-                        SESSION_ID, PERSISTENT_SESSION_ID, REQUEST_ID, CLIENT_ID);
+                                + "\"claims\":{\"http://something/v1/verifiableIdentityJWT\":\"random-searalized-credential\"}, "
+                                + "\"log_ids\":{\"session_id\":\"%s\",\"persistent_session_id\":\"%s\",\"request_id\":\"%s\",\"client_id\":\"%s\",\"client_session_id\":\"%s\"}}",
+                        SESSION_ID,
+                        PERSISTENT_SESSION_ID,
+                        REQUEST_ID,
+                        CLIENT_ID,
+                        CLIENT_SESSION_ID);
 
         handler.handleRequest(generateSQSEvent(json), context);
 
@@ -53,7 +59,7 @@ class SPOTResponseHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         IPVAuditableEvent.IPV_SUCCESSFUL_SPOT_RESPONSE_RECEIVED,
-                        REQUEST_ID,
+                        CLIENT_SESSION_ID,
                         SESSION_ID,
                         CLIENT_ID.getValue(),
                         AuditService.UNKNOWN,
@@ -77,8 +83,12 @@ class SPOTResponseHandlerTest {
         var json =
                 format(
                         "{\"sub\":\"urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6\",\"status\":\"REJECTED\","
-                                + "\"log_ids\":{\"session_id\":\"%s\",\"persistent_session_id\":\"%s\",\"request_id\":\"%s\",\"client_id\":\"%s\"}}",
-                        SESSION_ID, PERSISTENT_SESSION_ID, REQUEST_ID, CLIENT_ID);
+                                + "\"log_ids\":{\"session_id\":\"%s\",\"persistent_session_id\":\"%s\",\"request_id\":\"%s\",\"client_id\":\"%s\",\"client_session_id\":\"%s\"}}",
+                        SESSION_ID,
+                        PERSISTENT_SESSION_ID,
+                        REQUEST_ID,
+                        CLIENT_ID,
+                        CLIENT_SESSION_ID);
 
         handler.handleRequest(generateSQSEvent(json), context);
 
@@ -88,7 +98,7 @@ class SPOTResponseHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         IPVAuditableEvent.IPV_UNSUCCESSFUL_SPOT_RESPONSE_RECEIVED,
-                        REQUEST_ID,
+                        CLIENT_SESSION_ID,
                         SESSION_ID,
                         CLIENT_ID.getValue(),
                         AuditService.UNKNOWN,

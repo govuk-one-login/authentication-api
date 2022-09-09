@@ -87,10 +87,10 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
     }
 
     @Override
-    public void onRequestReceived(Context context) {
+    public void onRequestReceived(String clientSessionId) {
         auditService.submitAuditEvent(
                 UPDATE_PROFILE_REQUEST_RECEIVED,
-                context.getAwsRequestId(),
+                clientSessionId,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
@@ -101,10 +101,10 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
     }
 
     @Override
-    public void onRequestValidationError(Context context) {
+    public void onRequestValidationError(String clientSessionId) {
         auditService.submitAuditEvent(
                 UPDATE_PROFILE_REQUEST_ERROR,
-                context.getAwsRequestId(),
+                clientSessionId,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
@@ -137,7 +137,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
             LOG.info("Invalid session");
             return generateErrorResponse(
                     ErrorResponse.ERROR_1000,
-                    context,
+                    userContext.getClientSessionId(),
                     AuditService.UNKNOWN,
                     AuditService.UNKNOWN,
                     AuditService.UNKNOWN,
@@ -167,7 +167,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                     if (errorResponse.isPresent()) {
                         return generateErrorResponse(
                                 errorResponse.get(),
-                                context,
+                                userContext.getClientSessionId(),
                                 session.getSessionId(),
                                 auditableClientId,
                                 request.getEmail(),
@@ -188,7 +188,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                     if (clientSession == null) {
                         return generateErrorResponse(
                                 ErrorResponse.ERROR_1018,
-                                context,
+                                userContext.getClientSessionId(),
                                 session.getSessionId(),
                                 auditableClientId,
                                 request.getEmail(),
@@ -201,7 +201,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                     } catch (ParseException e) {
                         return generateErrorResponse(
                                 ErrorResponse.ERROR_1038,
-                                context,
+                                userContext.getClientSessionId(),
                                 session.getSessionId(),
                                 auditableClientId,
                                 request.getEmail(),
@@ -245,7 +245,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                     if (!base32.isInAlphabet(request.getProfileInformation())) {
                         return generateErrorResponse(
                                 ErrorResponse.ERROR_1041,
-                                context,
+                                userContext.getClientSessionId(),
                                 session.getSessionId(),
                                 auditableClientId,
                                 request.getEmail(),
@@ -267,7 +267,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                         session.getSessionId());
                 return generateErrorResponse(
                         ErrorResponse.ERROR_1013,
-                        context,
+                        userContext.getClientSessionId(),
                         session.getSessionId(),
                         auditableClientId,
                         request.getEmail(),
@@ -275,7 +275,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
         }
         auditService.submitAuditEvent(
                 auditableEvent,
-                context.getAwsRequestId(),
+                userContext.getClientSessionId(),
                 session.getSessionId(),
                 auditableClientId,
                 userContext
@@ -327,14 +327,14 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
 
     private APIGatewayProxyResponseEvent generateErrorResponse(
             ErrorResponse errorResponse,
-            Context context,
+            String clientSessionId,
             String sessionId,
             String clientId,
             String email,
             String persistentSessionId) {
         auditService.submitAuditEvent(
                 UPDATE_PROFILE_REQUEST_ERROR,
-                context.getAwsRequestId(),
+                clientSessionId,
                 sessionId,
                 clientId,
                 AuditService.UNKNOWN,

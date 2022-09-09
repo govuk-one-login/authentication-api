@@ -9,7 +9,6 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.VerifyCodeRequest;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
-import uk.gov.di.authentication.shared.domain.RequestHeaders;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -49,7 +48,6 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
-import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 
@@ -146,20 +144,11 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                         session,
                         codeRequest.getNotificationType(),
                         input,
-                        context,
                         userContext);
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
             }
             processSuccessfulCodeRequest(
-                    session,
-                    codeRequest.getNotificationType(),
-                    getHeaderValueFromHeaders(
-                            input.getHeaders(),
-                            RequestHeaders.CLIENT_SESSION_ID_HEADER,
-                            configurationService.getHeadersCaseInsensitive()),
-                    input,
-                    context,
-                    userContext);
+                    session, codeRequest.getNotificationType(), input, userContext);
 
             return generateEmptySuccessApiGatewayResponse();
         } catch (ClientNotFoundException e) {
@@ -191,9 +180,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     private void processSuccessfulCodeRequest(
             Session session,
             NotificationType notificationType,
-            String clientSessionId,
             APIGatewayProxyRequestEvent input,
-            Context context,
             UserContext userContext) {
         var metadataPairs =
                 new AuditService.MetadataPair[] {
@@ -225,7 +212,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             }
 
             clientSessionService.saveClientSession(
-                    clientSessionId,
+                    userContext.getClientSessionId(),
                     userContext.getClientSession().setEffectiveVectorOfTrust(vectorOfTrust));
             sessionService.save(
                     session.setCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL)
@@ -265,7 +252,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         codeStorageService.deleteOtpCode(session.getEmailAddress(), notificationType);
         auditService.submitAuditEvent(
                 FrontendAuditableEvent.CODE_VERIFIED,
-                context.getAwsRequestId(),
+                userContext.getClientSessionId(),
                 session.getSessionId(),
                 userContext
                         .getClient()
@@ -287,7 +274,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             Session session,
             NotificationType notificationType,
             APIGatewayProxyRequestEvent input,
-            Context context,
             UserContext userContext) {
         var metadataPairs =
                 new AuditService.MetadataPair[] {
@@ -310,7 +296,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         }
         auditService.submitAuditEvent(
                 auditableEvent,
-                context.getAwsRequestId(),
+                userContext.getClientSessionId(),
                 session.getSessionId(),
                 userContext
                         .getClient()

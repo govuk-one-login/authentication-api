@@ -128,7 +128,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             if (codeRequestValid.isPresent()) {
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST,
-                        context.getAwsRequestId(),
+                        userContext.getClientSessionId(),
                         userContext.getSession().getSessionId(),
                         userContext
                                 .getClient()
@@ -148,7 +148,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
 
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.MFA_MISMATCHED_EMAIL,
-                        context.getAwsRequestId(),
+                        userContext.getClientSessionId(),
                         userContext.getSession().getSessionId(),
                         userContext
                                 .getClient()
@@ -167,7 +167,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             if (phoneNumber == null) {
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.MFA_MISSING_PHONE_NUMBER,
-                        context.getAwsRequestId(),
+                        userContext.getClientSessionId(),
                         userContext.getSession().getSessionId(),
                         userContext
                                 .getClient()
@@ -212,7 +212,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             }
             auditService.submitAuditEvent(
                     auditableEvent,
-                    context.getAwsRequestId(),
+                    userContext.getClientSessionId(),
                     userContext.getSession().getSessionId(),
                     userContext
                             .getClient()

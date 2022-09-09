@@ -42,6 +42,8 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -103,6 +105,7 @@ class ResetPasswordHandlerTest {
         Map<String, String> headers = new HashMap<>();
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
         headers.put("Session-Id", session.getSessionId());
+        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(headers);
         event.setBody(format("{ \"code\": \"%s\", \"password\": \"%s\"}", CODE, NEW_PASSWORD));
@@ -117,7 +120,7 @@ class ResetPasswordHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
-                        context.getAwsRequestId(),
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
@@ -139,6 +142,7 @@ class ResetPasswordHandlerTest {
         Map<String, String> headers = new HashMap<>();
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
         headers.put("Session-Id", session.getSessionId());
+        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(headers);
         event.setBody(format("{ \"password\": \"%s\"}", NEW_PASSWORD));
@@ -152,7 +156,7 @@ class ResetPasswordHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
-                        context.getAwsRequestId(),
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
@@ -175,6 +179,7 @@ class ResetPasswordHandlerTest {
         Map<String, String> headers = new HashMap<>();
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
         headers.put("Session-Id", session.getSessionId());
+        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(format("{ \"code\": \"%s\", \"password\": \"%s\"}", CODE, NEW_PASSWORD));
         event.setHeaders(headers);
@@ -189,7 +194,7 @@ class ResetPasswordHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
-                        context.getAwsRequestId(),
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
@@ -277,6 +282,7 @@ class ResetPasswordHandlerTest {
         Map<String, String> headers = new HashMap<>();
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
         headers.put("Session-Id", session.getSessionId());
+        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(format("{ \"code\": \"%s\", \"password\": \"%s\"}", CODE, NEW_PASSWORD));
         event.setHeaders(headers);
@@ -290,7 +296,7 @@ class ResetPasswordHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
-                        context.getAwsRequestId(),
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,

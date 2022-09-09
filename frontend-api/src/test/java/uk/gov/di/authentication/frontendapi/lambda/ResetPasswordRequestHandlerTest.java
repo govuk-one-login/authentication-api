@@ -52,6 +52,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.PASSWORD_RESET_BLOCKED_KEY_PREFIX;
@@ -123,6 +125,7 @@ class ResetPasswordRequestHandlerTest {
         Map<String, String> headers = new HashMap<>();
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
         headers.put("Session-Id", session.getSessionId());
+        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         Subject subject = new Subject("subject_1");
         when(authenticationService.getSubjectFromEmail(TEST_EMAIL_ADDRESS)).thenReturn(subject);
         when(resetPasswordService.buildResetPasswordLink(
@@ -154,7 +157,7 @@ class ResetPasswordRequestHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.PASSWORD_RESET_REQUESTED,
-                        context.getAwsRequestId(),
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
@@ -170,6 +173,7 @@ class ResetPasswordRequestHandlerTest {
         Map<String, String> headers = new HashMap<>();
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
         headers.put("Session-Id", session.getSessionId());
+        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         Subject subject = new Subject("subject_1");
         when(authenticationService.getSubjectFromEmail(TEST_EMAIL_ADDRESS)).thenReturn(subject);
         NotifyRequest notifyRequest =
@@ -201,7 +205,7 @@ class ResetPasswordRequestHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.PASSWORD_RESET_REQUESTED,
-                        context.getAwsRequestId(),
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,

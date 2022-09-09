@@ -137,13 +137,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             var errorResponse = mfaCodeValidator.validateCode(codeRequest.getCode());
 
             processCodeSession(
-                    errorResponse,
-                    session,
-                    mfaMethodType,
-                    input,
-                    context,
-                    userContext,
-                    isRegistration);
+                    errorResponse, session, mfaMethodType, input, userContext, isRegistration);
 
             sessionService.save(session);
 
@@ -208,7 +202,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             Session session,
             MFAMethodType mfaMethodType,
             APIGatewayProxyRequestEvent input,
-            Context context,
             UserContext userContext,
             boolean isRegistration) {
 
@@ -226,7 +219,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
         auditService.submitAuditEvent(
                 auditableEvent,
-                context.getAwsRequestId(),
+                userContext.getClientSessionId(),
                 session.getSessionId(),
                 userContext
                         .getClient()

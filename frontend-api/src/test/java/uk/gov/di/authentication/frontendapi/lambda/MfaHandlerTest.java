@@ -55,6 +55,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
@@ -133,6 +135,7 @@ public class MfaHandlerTest {
         Map<String, String> headers = new HashMap<>();
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
         headers.put("Session-Id", session.getSessionId());
+        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(PHONE_NUMBER));
         when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
@@ -152,7 +155,7 @@ public class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_CODE_SENT,
-                        "aws-session-id",
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         "",
                         AuditService.UNKNOWN,
@@ -169,6 +172,7 @@ public class MfaHandlerTest {
         Map<String, String> headers = new HashMap<>();
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
         headers.put("Session-Id", session.getSessionId());
+        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(PHONE_NUMBER));
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER))
@@ -198,7 +202,7 @@ public class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_CODE_SENT,
-                        "aws-session-id",
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         "",
                         AuditService.UNKNOWN,
@@ -218,7 +222,12 @@ public class MfaHandlerTest {
         NotifyRequest notifyRequest =
                 new NotifyRequest(PHONE_NUMBER, MFA_SMS, CODE, SupportedLanguage.EN);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setHeaders(
+                Map.of(
+                        "Session-Id",
+                        session.getSessionId(),
+                        CLIENT_SESSION_ID_HEADER,
+                        CLIENT_SESSION_ID));
         event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
 
@@ -231,7 +240,7 @@ public class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_CODE_SENT,
-                        "aws-session-id",
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         "",
                         AuditService.UNKNOWN,
@@ -262,7 +271,12 @@ public class MfaHandlerTest {
                 .thenReturn(Optional.of(PHONE_NUMBER));
         when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setHeaders(
+                Map.of(
+                        "Session-Id",
+                        session.getSessionId(),
+                        CLIENT_SESSION_ID_HEADER,
+                        CLIENT_SESSION_ID));
         event.setBody(format("{ \"email\": \"%s\"}", "wrong.email@gov.uk"));
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
 
@@ -273,7 +287,7 @@ public class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_MISMATCHED_EMAIL,
-                        "aws-session-id",
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         "",
                         AuditService.UNKNOWN,
@@ -288,7 +302,12 @@ public class MfaHandlerTest {
         usingValidSession();
         when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS)).thenReturn(Optional.empty());
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setHeaders(
+                Map.of(
+                        "Session-Id",
+                        session.getSessionId(),
+                        CLIENT_SESSION_ID_HEADER,
+                        CLIENT_SESSION_ID));
         event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
 
@@ -300,7 +319,7 @@ public class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_MISSING_PHONE_NUMBER,
-                        "aws-session-id",
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         "",
                         AuditService.UNKNOWN,
@@ -321,7 +340,12 @@ public class MfaHandlerTest {
         session.incrementCodeRequestCount();
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setHeaders(
+                Map.of(
+                        "Session-Id",
+                        session.getSessionId(),
+                        CLIENT_SESSION_ID_HEADER,
+                        CLIENT_SESSION_ID));
         event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
 
@@ -339,7 +363,7 @@ public class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST,
-                        "aws-session-id",
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         "",
                         AuditService.UNKNOWN,
@@ -357,7 +381,12 @@ public class MfaHandlerTest {
                 .thenReturn(true);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setHeaders(
+                Map.of(
+                        "Session-Id",
+                        session.getSessionId(),
+                        CLIENT_SESSION_ID_HEADER,
+                        CLIENT_SESSION_ID));
         event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
 
@@ -369,7 +398,7 @@ public class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST,
-                        "aws-session-id",
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         "",
                         AuditService.UNKNOWN,
@@ -386,7 +415,12 @@ public class MfaHandlerTest {
                 .thenReturn(true);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setHeaders(
+                Map.of(
+                        "Session-Id",
+                        session.getSessionId(),
+                        CLIENT_SESSION_ID_HEADER,
+                        CLIENT_SESSION_ID));
         event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
 
@@ -398,7 +432,7 @@ public class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST,
-                        "aws-session-id",
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         "",
                         AuditService.UNKNOWN,
@@ -420,7 +454,12 @@ public class MfaHandlerTest {
         NotifyRequest notifyRequest =
                 new NotifyRequest(PHONE_NUMBER, MFA_SMS, CODE, SupportedLanguage.EN);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setHeaders(
+                Map.of(
+                        "Session-Id",
+                        session.getSessionId(),
+                        CLIENT_SESSION_ID_HEADER,
+                        CLIENT_SESSION_ID));
         event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
 
@@ -433,7 +472,7 @@ public class MfaHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.MFA_CODE_SENT_FOR_TEST_CLIENT,
-                        "aws-session-id",
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         TEST_CLIENT_ID,
                         AuditService.UNKNOWN,

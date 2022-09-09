@@ -117,7 +117,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.NO_ACCOUNT_WITH_EMAIL,
-                        context.getAwsRequestId(),
+                        userContext.getClientSessionId(),
                         userContext.getSession().getSessionId(),
                         clientId,
                         AuditService.UNKNOWN,
@@ -140,7 +140,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
-                        context.getAwsRequestId(),
+                        userContext.getClientSessionId(),
                         userContext.getSession().getSessionId(),
                         clientId,
                         userProfile.getSubjectID(),
@@ -157,7 +157,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.INVALID_CREDENTIALS,
-                        context.getAwsRequestId(),
+                        userContext.getClientSessionId(),
                         userContext.getSession().getSessionId(),
                         clientId,
                         AuditService.UNKNOWN,
@@ -203,7 +203,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
             auditService.submitAuditEvent(
                     LOG_IN_SUCCESS,
-                    context.getAwsRequestId(),
+                    userContext.getClientSessionId(),
                     userContext.getSession().getSessionId(),
                     clientId,
                     userProfile.getSubjectID(),
