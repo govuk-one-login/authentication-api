@@ -44,14 +44,13 @@ public class ClientSessionService {
         objectMapper = SerializationService.getInstance();
     }
 
-    public String generateClientSession(ClientSession clientSession) {
-        String id = IdGenerator.generate();
+    public void generateClientSession(String clientSessionId, ClientSession clientSession) {
 
-        attachLogFieldToLogs(CLIENT_SESSION_ID, id);
+        attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
 
         try {
             redisConnectionService.saveWithExpiry(
-                    CLIENT_SESSION_PREFIX.concat(id),
+                    CLIENT_SESSION_PREFIX.concat(clientSessionId),
                     objectMapper.writeValueAsString(clientSession),
                     configurationService.getSessionExpiry());
         } catch (JsonException e) {
@@ -59,7 +58,10 @@ public class ClientSessionService {
             throw new RuntimeException(e);
         }
         LOG.info("Generated new ClientSession");
-        return id;
+    }
+
+    public String generateClientSessionId() {
+        return IdGenerator.generate();
     }
 
     public Optional<ClientSession> getClientSession(String clientSessionId) {

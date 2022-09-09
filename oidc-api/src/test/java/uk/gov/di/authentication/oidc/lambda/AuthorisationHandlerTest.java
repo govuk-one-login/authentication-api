@@ -132,6 +132,7 @@ class AuthorisationHandlerTest {
                         requestObjectService);
         session = new Session("a-session-id");
         when(sessionService.createSession()).thenReturn(session);
+        when(clientSessionService.generateClientSessionId()).thenReturn(CLIENT_SESSION_ID);
     }
 
     @AfterEach
@@ -141,9 +142,6 @@ class AuthorisationHandlerTest {
 
     @Test
     void shouldRedirectToLoginWhenUserHasNoExistingSession() {
-        when(clientSessionService.generateClientSession(any(ClientSession.class)))
-                .thenReturn(CLIENT_SESSION_ID);
-
         Map<String, String> requestParams = buildRequestParams(null);
         APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
         event.setRequestContext(
@@ -168,7 +166,7 @@ class AuthorisationHandlerTest {
         inOrder.verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.AUTHORISATION_INITIATED,
-                        context.getAwsRequestId(),
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         CLIENT_ID.getValue(),
                         AuditService.UNKNOWN,
@@ -193,8 +191,7 @@ class AuthorisationHandlerTest {
             })
     void shouldRedirectToLoginWhenUserHasNoExistingSessionAndHaveCorrectLangCookie(
             String uiLocales) {
-        when(clientSessionService.generateClientSession(any(ClientSession.class)))
-                .thenReturn(CLIENT_SESSION_ID);
+
         when(configService.getLanguageCookieMaxAge()).thenReturn(Integer.parseInt("31536000"));
 
         Map<String, String> requestParams = buildRequestParams(null);
@@ -236,7 +233,7 @@ class AuthorisationHandlerTest {
         inOrder.verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.AUTHORISATION_INITIATED,
-                        context.getAwsRequestId(),
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         CLIENT_ID.getValue(),
                         AuditService.UNKNOWN,
@@ -253,8 +250,6 @@ class AuthorisationHandlerTest {
         when(userContext.getSession()).thenReturn(session);
         when(clientSession.getAuthRequestParams())
                 .thenReturn(generateAuthRequest(Optional.empty()).toParameters());
-        when(clientSessionService.generateClientSession(any(ClientSession.class)))
-                .thenReturn(CLIENT_SESSION_ID);
 
         Map<String, String> requestParams = buildRequestParams(Map.of("prompt", "login"));
         APIGatewayProxyResponseEvent response = makeHandlerRequest(withRequestEvent(requestParams));
@@ -278,7 +273,7 @@ class AuthorisationHandlerTest {
         inOrder.verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.AUTHORISATION_INITIATED,
-                        context.getAwsRequestId(),
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         CLIENT_ID.getValue(),
                         AuditService.UNKNOWN,
@@ -297,8 +292,6 @@ class AuthorisationHandlerTest {
         when(userContext.getSession()).thenReturn(session);
         when(clientSession.getAuthRequestParams())
                 .thenReturn(generateAuthRequest(Optional.of(jsonArrayOf("Cl.Cm"))).toParameters());
-        when(clientSessionService.generateClientSession(any(ClientSession.class)))
-                .thenReturn(CLIENT_SESSION_ID);
 
         APIGatewayProxyResponseEvent response =
                 makeHandlerRequest(withRequestEvent(buildRequestParams(Map.of("vtr", "Cl"))));
@@ -321,7 +314,7 @@ class AuthorisationHandlerTest {
         inOrder.verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.AUTHORISATION_INITIATED,
-                        context.getAwsRequestId(),
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         CLIENT_ID.getValue(),
                         AuditService.UNKNOWN,
@@ -339,8 +332,6 @@ class AuthorisationHandlerTest {
         when(clientSession.getAuthRequestParams())
                 .thenReturn(
                         generateAuthRequest(Optional.of(jsonArrayOf("P2.Cl.Cm"))).toParameters());
-        when(clientSessionService.generateClientSession(any(ClientSession.class)))
-                .thenReturn(CLIENT_SESSION_ID);
 
         APIGatewayProxyResponseEvent response =
                 makeHandlerRequest(withRequestEvent(buildRequestParams(Map.of("vtr", "P2.Cl.Cm"))));
@@ -363,7 +354,7 @@ class AuthorisationHandlerTest {
         inOrder.verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.AUTHORISATION_INITIATED,
-                        context.getAwsRequestId(),
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         CLIENT_ID.getValue(),
                         AuditService.UNKNOWN,
@@ -403,7 +394,7 @@ class AuthorisationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTHORISATION_REQUEST_ERROR,
-                        AWS_REQUEST_ID,
+                        CLIENT_SESSION_ID,
                         "",
                         "",
                         "",
@@ -422,6 +413,7 @@ class AuthorisationHandlerTest {
                                 new AuthRequestError(
                                         OAuth2Error.INVALID_SCOPE,
                                         URI.create("http://localhost:8080"))));
+
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(
                 Map.of(
@@ -443,7 +435,7 @@ class AuthorisationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTHORISATION_REQUEST_ERROR,
-                        AWS_REQUEST_ID,
+                        CLIENT_SESSION_ID,
                         "",
                         CLIENT_ID.getValue(),
                         "",
@@ -485,7 +477,7 @@ class AuthorisationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTHORISATION_REQUEST_ERROR,
-                        AWS_REQUEST_ID,
+                        CLIENT_SESSION_ID,
                         "",
                         "",
                         "",
@@ -539,7 +531,7 @@ class AuthorisationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTHORISATION_REQUEST_ERROR,
-                        AWS_REQUEST_ID,
+                        CLIENT_SESSION_ID,
                         "",
                         CLIENT_ID.getValue(),
                         "",
@@ -556,8 +548,6 @@ class AuthorisationHandlerTest {
         when(configService.isDocAppApiEnabled()).thenReturn(true);
         when(requestObjectService.validateRequestObject(any(AuthenticationRequest.class)))
                 .thenReturn(Optional.empty());
-        when(clientSessionService.generateClientSession(any(ClientSession.class)))
-                .thenReturn(CLIENT_SESSION_ID);
         var event = new APIGatewayProxyRequestEvent();
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
@@ -603,7 +593,7 @@ class AuthorisationHandlerTest {
         inOrder.verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.AUTHORISATION_INITIATED,
-                        context.getAwsRequestId(),
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         CLIENT_ID.getValue(),
                         AuditService.UNKNOWN,
@@ -635,7 +625,7 @@ class AuthorisationHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         AUTHORISATION_REQUEST_ERROR,
-                        AWS_REQUEST_ID,
+                        CLIENT_SESSION_ID,
                         "",
                         CLIENT_ID.getValue(),
                         "",
@@ -652,7 +642,7 @@ class AuthorisationHandlerTest {
         inOrder.verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED,
-                        AWS_REQUEST_ID,
+                        CLIENT_SESSION_ID,
                         "",
                         "",
                         "",
@@ -706,8 +696,6 @@ class AuthorisationHandlerTest {
 
     private void withExistingSession(Session session) {
         when(sessionService.getSessionFromSessionCookie(any())).thenReturn(Optional.of(session));
-        when(clientSessionService.generateClientSession(any(ClientSession.class)))
-                .thenReturn(CLIENT_SESSION_ID);
     }
 
     private ClientRegistry generateClientRegistry() {
