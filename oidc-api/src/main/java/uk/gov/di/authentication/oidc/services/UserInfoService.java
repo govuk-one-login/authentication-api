@@ -54,6 +54,7 @@ public class UserInfoService {
         var userProfile =
                 authenticationService.getUserProfileFromSubject(
                         accessTokenInfo.getAccessTokenStore().getInternalSubjectId());
+
         if (accessTokenInfo.getScopes().contains(OIDCScopeValue.EMAIL.getValue())) {
             userInfo.setEmailAddress(userProfile.getEmail());
             userInfo.setEmailVerified(userProfile.isEmailVerified());

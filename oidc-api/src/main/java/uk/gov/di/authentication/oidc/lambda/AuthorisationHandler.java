@@ -111,9 +111,12 @@ public class AuthorisationHandler
                                     authorizationService.getExistingOrCreateNewPersistentSessionId(
                                             input.getHeaders());
                             var ipAddress = IpAddressHelper.extractIpAddress(input);
+                            var clientSessionId = clientSessionService.generateClientSessionId();
+                            attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
+
                             auditService.submitAuditEvent(
                                     OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED,
-                                    context.getAwsRequestId(),
+                                    clientSessionId,
                                     AuditService.UNKNOWN,
                                     AuditService.UNKNOWN,
                                     AuditService.UNKNOWN,
@@ -153,7 +156,8 @@ public class AuthorisationHandler
                                         context,
                                         ipAddress,
                                         persistentSessionId,
-                                        AuditService.UNKNOWN);
+                                        AuditService.UNKNOWN,
+                                        clientSessionId);
                             } catch (NullPointerException e) {
                                 LOG.warn(
                                         "No query string parameters are present in the Authentication request",
@@ -182,7 +186,8 @@ public class AuthorisationHandler
                                         context,
                                         ipAddress,
                                         persistentSessionId,
-                                        authRequest.getClientID().getValue());
+                                        authRequest.getClientID().getValue(),
+                                        clientSessionId);
                             } else {
                                 authRequest =
                                         RequestObjectToAuthRequestHelper.transform(authRequest);
@@ -192,7 +197,8 @@ public class AuthorisationHandler
                                         authRequest,
                                         context,
                                         ipAddress,
-                                        persistentSessionId);
+                                        persistentSessionId,
+                                        clientSessionId);
                             }
                         });
     }
@@ -202,7 +208,8 @@ public class AuthorisationHandler
             AuthenticationRequest authenticationRequest,
             Context context,
             String ipAddress,
-            String persistentSessionId) {
+            String persistentSessionId,
+            String clientSessionId) {
         if (Objects.nonNull(authenticationRequest.getPrompt())
                 && (authenticationRequest.getPrompt().contains(Prompt.Type.CONSENT)
                         || authenticationRequest
@@ -216,14 +223,15 @@ public class AuthorisationHandler
                     context,
                     ipAddress,
                     persistentSessionId,
-                    authenticationRequest.getClientID().getValue());
+                    authenticationRequest.getClientID().getValue(),
+                    clientSessionId);
         }
         var session = existingSession.orElseGet(sessionService::createSession);
         attachSessionIdToLogs(session);
 
         auditService.submitAuditEvent(
                 OidcAuditableEvent.AUTHORISATION_INITIATED,
-                context.getAwsRequestId(),
+                clientSessionId,
                 session.getSessionId(),
                 authenticationRequest.getClientID().getValue(),
                 AuditService.UNKNOWN,
@@ -241,20 +249,19 @@ public class AuthorisationHandler
             updateAttachedSessionIdToLogs(session.getSessionId());
             LOG.info("Updated session id from {} - new", oldSessionId);
         }
-        var clientSessionID =
-                clientSessionService.generateClientSession(
-                        new ClientSession(
-                                authenticationRequest.toParameters(),
-                                LocalDateTime.now(),
-                                authorizationService.getEffectiveVectorOfTrust(
-                                        authenticationRequest)));
+        clientSessionService.storeClientSession(
+                clientSessionId,
+                new ClientSession(
+                        authenticationRequest.toParameters(),
+                        LocalDateTime.now(),
+                        authorizationService.getEffectiveVectorOfTrust(authenticationRequest)));
 
-        session.addClientSession(clientSessionID);
-        updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionID);
+        session.addClientSession(clientSessionId);
+        updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
         updateAttachedLogFieldToLogs(CLIENT_ID, authenticationRequest.getClientID().getValue());
         sessionService.save(session);
         LOG.info("Session saved successfully");
-        return redirect(session, clientSessionID, authenticationRequest, persistentSessionId);
+        return redirect(session, clientSessionId, authenticationRequest, persistentSessionId);
     }
 
     private APIGatewayProxyResponseEvent redirect(
@@ -319,11 +326,12 @@ public class AuthorisationHandler
             Context context,
             String ipAddress,
             String persistentSessionId,
-            String clientId) {
+            String clientId,
+            String clientSessionId) {
 
         auditService.submitAuditEvent(
                 OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR,
-                context.getAwsRequestId(),
+                clientSessionId,
                 AuditService.UNKNOWN,
                 clientId,
                 AuditService.UNKNOWN,
