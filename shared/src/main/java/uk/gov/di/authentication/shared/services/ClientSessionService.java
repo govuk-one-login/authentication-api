@@ -44,10 +44,7 @@ public class ClientSessionService {
         objectMapper = SerializationService.getInstance();
     }
 
-    public void generateClientSession(String clientSessionId, ClientSession clientSession) {
-
-        attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
-
+    public void storeClientSession(String clientSessionId, ClientSession clientSession) {
         try {
             redisConnectionService.saveWithExpiry(
                     CLIENT_SESSION_PREFIX.concat(clientSessionId),

@@ -112,6 +112,8 @@ public class AuthorisationHandler
                                             input.getHeaders());
                             var ipAddress = IpAddressHelper.extractIpAddress(input);
                             var clientSessionId = clientSessionService.generateClientSessionId();
+                            attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
+
                             auditService.submitAuditEvent(
                                     OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED,
                                     clientSessionId,
@@ -247,7 +249,7 @@ public class AuthorisationHandler
             updateAttachedSessionIdToLogs(session.getSessionId());
             LOG.info("Updated session id from {} - new", oldSessionId);
         }
-        clientSessionService.generateClientSession(
+        clientSessionService.storeClientSession(
                 clientSessionId,
                 new ClientSession(
                         authenticationRequest.toParameters(),
