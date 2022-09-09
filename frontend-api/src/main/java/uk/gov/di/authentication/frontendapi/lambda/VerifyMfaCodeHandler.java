@@ -137,13 +137,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             var errorResponse = mfaCodeValidator.validateCode(codeRequest.getCode());
 
             processCodeSession(
-                    errorResponse,
-                    session,
-                    mfaMethodType,
-                    input,
-                    userContext,
-                    isRegistration,
-                    clientSessionId);
+                    errorResponse, session, mfaMethodType, input, userContext, isRegistration);
 
             sessionService.save(session);
 
@@ -209,8 +203,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             MFAMethodType mfaMethodType,
             APIGatewayProxyRequestEvent input,
             UserContext userContext,
-            boolean isRegistration,
-            String clientSessionId) {
+            boolean isRegistration) {
 
         var auditableEvent = errorResponseAsFrontendAuditableEvent(errorResponse);
 
@@ -226,7 +219,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
         auditService.submitAuditEvent(
                 auditableEvent,
-                clientSessionId,
+                userContext.getClientSessionId(),
                 session.getSessionId(),
                 userContext
                         .getClient()
