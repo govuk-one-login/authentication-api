@@ -25,11 +25,13 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import java.util.Locale;
 import java.util.Optional;
 
+import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
 import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public abstract class BaseFrontendHandler<T>
@@ -104,9 +106,9 @@ public abstract class BaseFrontendHandler<T>
                 () -> isWarming(input).orElseGet(() -> validateAndHandleRequest(input, context)));
     }
 
-    public void onRequestReceived(Context context) {}
+    public void onRequestReceived(String clientSessionId) {}
 
-    public void onRequestValidationError(Context context) {}
+    public void onRequestValidationError(String clientSessionId) {}
 
     public abstract APIGatewayProxyResponseEvent handleRequestWithUserContext(
             APIGatewayProxyRequestEvent input,
@@ -116,7 +118,14 @@ public abstract class BaseFrontendHandler<T>
 
     private APIGatewayProxyResponseEvent validateAndHandleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        onRequestReceived(context);
+
+        String clientSessionId =
+                getHeaderValueFromHeaders(
+                        input.getHeaders(),
+                        CLIENT_SESSION_ID_HEADER,
+                        configurationService.getHeadersCaseInsensitive());
+
+        onRequestReceived(clientSessionId);
         Optional<Session> session = sessionService.getSessionFromRequestHeaders(input.getHeaders());
         Optional<ClientSession> clientSession =
                 clientSessionService.getClientSessionFromRequestHeaders(input.getHeaders());
@@ -133,11 +142,13 @@ public abstract class BaseFrontendHandler<T>
             request = objectMapper.readValue(input.getBody(), clazz);
         } catch (JsonException e) {
             LOG.warn("Request is missing parameters.");
-            onRequestValidationError(context);
+            onRequestValidationError(clientSessionId);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
 
         UserContext.Builder userContextBuilder = UserContext.builder(session.get());
+
+        userContextBuilder.withClientSessionId(clientSessionId);
 
         clientSession
                 .map(ClientSession::getAuthRequestParams)

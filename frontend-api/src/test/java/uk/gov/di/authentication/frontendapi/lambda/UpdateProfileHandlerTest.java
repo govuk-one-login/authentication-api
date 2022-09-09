@@ -62,6 +62,7 @@ import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.ADD_
 import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.CAPTURE_CONSENT;
 import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.REGISTER_AUTH_APP;
 import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.UPDATE_TERMS_CONDS;
+import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.MFAMethodType.AUTH_APP;
 import static uk.gov.di.authentication.shared.helpers.CookieHelper.buildCookieString;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
@@ -137,6 +138,7 @@ class UpdateProfileHandlerTest {
         Map<String, String> headers = new HashMap<>();
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
         headers.put("Session-Id", session.getSessionId());
+        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(headers);
         event.setBody(
@@ -152,7 +154,7 @@ class UpdateProfileHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         UPDATE_PROFILE_PHONE_NUMBER,
-                        "request-id",
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         "",
                         "",
@@ -174,6 +176,7 @@ class UpdateProfileHandlerTest {
         Map<String, String> headers = new HashMap<>();
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_SESSION_ID);
         headers.put("Session-Id", session.getSessionId());
+        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(headers);
         event.setBody(
@@ -191,7 +194,7 @@ class UpdateProfileHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         UPDATE_PROFILE_REQUEST_ERROR,
-                        "request-id",
+                        CLIENT_SESSION_ID,
                         SESSION_ID,
                         CLIENT_ID.getValue(),
                         "",
@@ -211,7 +214,12 @@ class UpdateProfileHandlerTest {
         when(clientRegistry.getClientID()).thenReturn(CLIENT_ID.getValue());
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setHeaders(
+                Map.of(
+                        "Session-Id",
+                        session.getSessionId(),
+                        CLIENT_SESSION_ID_HEADER,
+                        CLIENT_SESSION_ID));
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"updateProfileType\": \"%s\", \"profileInformation\": \"%s\" }",
@@ -226,7 +234,7 @@ class UpdateProfileHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE,
-                        "request-id",
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         CLIENT_ID.getValue(),
                         INTERNAL_SUBJECT,
@@ -252,7 +260,9 @@ class UpdateProfileHandlerTest {
                                 SESSION_ID + "." + CLIENT_SESSION_ID,
                                 3600,
                                 "Secure; HttpOnly;",
-                                "domain")));
+                                "domain"),
+                        CLIENT_SESSION_ID_HEADER,
+                        CLIENT_SESSION_ID));
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"updateProfileType\": \"%s\", \"profileInformation\": \"%s\" }",
@@ -265,7 +275,7 @@ class UpdateProfileHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         UPDATE_PROFILE_CONSENT_UPDATED,
-                        "request-id",
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         CLIENT_ID.getValue(),
                         INTERNAL_SUBJECT,
@@ -280,7 +290,12 @@ class UpdateProfileHandlerTest {
         usingValidSession();
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setHeaders(
+                Map.of(
+                        "Session-Id",
+                        session.getSessionId(),
+                        CLIENT_SESSION_ID_HEADER,
+                        CLIENT_SESSION_ID));
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"updateProfileType\": \"%s\"}",
@@ -293,7 +308,15 @@ class UpdateProfileHandlerTest {
                 .updatePhoneNumber(eq(TEST_EMAIL_ADDRESS), eq(PHONE_NUMBER));
         verify(auditService)
                 .submitAuditEvent(
-                        UPDATE_PROFILE_REQUEST_ERROR, "request-id", "", "", "", "", "", "", "");
+                        UPDATE_PROFILE_REQUEST_ERROR,
+                        CLIENT_SESSION_ID,
+                        "",
+                        "",
+                        "",
+                        "",
+                        "",
+                        "",
+                        "");
     }
 
     @Test
@@ -307,7 +330,12 @@ class UpdateProfileHandlerTest {
 
         var authAppSecret = "JZ5PYIOWNZDAOBA65S5T77FEEKYCCIT2VE4RQDAJD7SO73T3LODA";
         var event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setHeaders(
+                Map.of(
+                        "Session-Id",
+                        session.getSessionId(),
+                        CLIENT_SESSION_ID_HEADER,
+                        CLIENT_SESSION_ID));
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"updateProfileType\": \"%s\", \"profileInformation\": \"%s\" }",
@@ -320,7 +348,7 @@ class UpdateProfileHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         UPDATE_PROFILE_AUTH_APP,
-                        "request-id",
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         CLIENT_ID.getValue(),
                         INTERNAL_SUBJECT,
@@ -346,7 +374,9 @@ class UpdateProfileHandlerTest {
                         "Session-Id",
                         session.getSessionId(),
                         PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
-                        PERSISTENT_SESSION_ID));
+                        PERSISTENT_SESSION_ID,
+                        CLIENT_SESSION_ID_HEADER,
+                        CLIENT_SESSION_ID));
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"updateProfileType\": \"%s\", \"profileInformation\": \"%s\" }",
@@ -360,7 +390,7 @@ class UpdateProfileHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         UPDATE_PROFILE_REQUEST_ERROR,
-                        "request-id",
+                        CLIENT_SESSION_ID,
                         SESSION_ID,
                         CLIENT_ID.getValue(),
                         "",
@@ -397,7 +427,15 @@ class UpdateProfileHandlerTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        UPDATE_PROFILE_REQUEST_RECEIVED, "request-id", "", "", "", "", "", "", "");
+                        UPDATE_PROFILE_REQUEST_RECEIVED,
+                        CLIENT_SESSION_ID,
+                        "",
+                        "",
+                        "",
+                        "",
+                        "",
+                        "",
+                        "");
 
         return response;
     }

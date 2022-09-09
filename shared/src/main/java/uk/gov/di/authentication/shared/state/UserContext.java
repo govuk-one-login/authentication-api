@@ -17,6 +17,7 @@ public class UserContext {
     private final Optional<ClientRegistry> client;
     private final ClientSession clientSession;
     private final SupportedLanguage userLanguage;
+    private final String clientSessionId;
 
     protected UserContext(
             Session session,
@@ -25,7 +26,8 @@ public class UserContext {
             boolean userAuthenticated,
             Optional<ClientRegistry> client,
             ClientSession clientSession,
-            SupportedLanguage userLanguage) {
+            SupportedLanguage userLanguage,
+            String clientSessionId) {
         this.session = session;
         this.userProfile = userProfile;
         this.userCredentials = userCredentials;
@@ -33,6 +35,7 @@ public class UserContext {
         this.client = client;
         this.clientSession = clientSession;
         this.userLanguage = userLanguage;
+        this.clientSessionId = clientSessionId;
     }
 
     public Session getSession() {
@@ -63,6 +66,10 @@ public class UserContext {
         return userLanguage;
     }
 
+    public String getClientSessionId() {
+        return clientSessionId;
+    }
+
     public static Builder builder(Session session) {
         return new Builder(session);
     }
@@ -75,6 +82,7 @@ public class UserContext {
         private Optional<ClientRegistry> client = Optional.empty();
         private ClientSession clientSession = null;
         private SupportedLanguage userLanguage;
+        private String clientSessionId;
 
         protected Builder(Session session) {
             this.session = session;
@@ -118,6 +126,11 @@ public class UserContext {
             return this;
         }
 
+        public Builder withClientSessionId(String clientSessionId) {
+            this.clientSessionId = clientSessionId;
+            return this;
+        }
+
         public UserContext build() {
             return new UserContext(
                     session,
@@ -126,7 +139,8 @@ public class UserContext {
                     userAuthenticated,
                     client,
                     clientSession,
-                    userLanguage);
+                    userLanguage,
+                    clientSessionId);
         }
     }
 }

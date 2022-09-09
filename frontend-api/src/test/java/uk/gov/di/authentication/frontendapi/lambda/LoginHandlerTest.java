@@ -69,6 +69,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.MFAMethodType.SMS;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
@@ -151,6 +153,7 @@ class LoginHandlerTest {
         Map<String, String> headers = new HashMap<>();
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
         headers.put("Session-Id", session.getSessionId());
+        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -185,7 +188,7 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.LOG_IN_SUCCESS,
-                        "aws-session-id",
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         CLIENT_ID.getValue(),
                         userProfile.getSubjectID(),
@@ -206,6 +209,7 @@ class LoginHandlerTest {
         Map<String, String> headers = new HashMap<>();
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
         headers.put("Session-Id", session.getSessionId());
+        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -235,7 +239,7 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.LOG_IN_SUCCESS,
-                        "aws-session-id",
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         CLIENT_ID.getValue(),
                         userProfile.getSubjectID(),
@@ -256,6 +260,7 @@ class LoginHandlerTest {
         Map<String, String> headers = new HashMap<>();
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
         headers.put("Session-Id", session.getSessionId());
+        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
@@ -285,7 +290,7 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.LOG_IN_SUCCESS,
-                        "aws-session-id",
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         CLIENT_ID.getValue(),
                         userProfile.getSubjectID(),
@@ -400,7 +405,12 @@ class LoginHandlerTest {
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setHeaders(
+                Map.of(
+                        "Session-Id",
+                        session.getSessionId(),
+                        CLIENT_SESSION_ID_HEADER,
+                        CLIENT_SESSION_ID));
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
@@ -410,7 +420,7 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
-                        "aws-session-id",
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         "",
                         userProfile.getSubjectID(),
@@ -457,7 +467,12 @@ class LoginHandlerTest {
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setHeaders(
+                Map.of(
+                        "Session-Id",
+                        session.getSessionId(),
+                        CLIENT_SESSION_ID_HEADER,
+                        CLIENT_SESSION_ID));
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
 
         usingValidSession();
@@ -468,7 +483,7 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.INVALID_CREDENTIALS,
-                        "aws-session-id",
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         "",
                         "",
@@ -494,7 +509,12 @@ class LoginHandlerTest {
         when(userMigrationService.processMigratedUser(applicableUserCredentials, PASSWORD))
                 .thenReturn(false);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setHeaders(
+                Map.of(
+                        "Session-Id",
+                        session.getSessionId(),
+                        CLIENT_SESSION_ID_HEADER,
+                        CLIENT_SESSION_ID));
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
         usingValidSession();
         usingDefaultVectorOfTrust();
@@ -508,7 +528,12 @@ class LoginHandlerTest {
     @Test
     void shouldReturn400IfAnyRequestParametersAreMissing() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setHeaders(
+                Map.of(
+                        "Session-Id",
+                        session.getSessionId(),
+                        CLIENT_SESSION_ID_HEADER,
+                        CLIENT_SESSION_ID));
         event.setBody(format("{ \"password\": \"%s\"}", PASSWORD));
 
         usingValidSession();
@@ -522,7 +547,12 @@ class LoginHandlerTest {
     @Test
     void shouldReturn400IfSessionIdIsInvalid() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setHeaders(
+                Map.of(
+                        "Session-Id",
+                        session.getSessionId(),
+                        CLIENT_SESSION_ID_HEADER,
+                        CLIENT_SESSION_ID));
         event.setBody(format("{ \"password\": \"%s\"}", PASSWORD));
 
         when(sessionService.getSessionFromRequestHeaders(event.getHeaders()))
@@ -539,7 +569,12 @@ class LoginHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL)).thenReturn(Optional.empty());
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setHeaders(
+                Map.of(
+                        "Session-Id",
+                        session.getSessionId(),
+                        CLIENT_SESSION_ID_HEADER,
+                        CLIENT_SESSION_ID));
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
         usingValidSession();
         usingDefaultVectorOfTrust();
@@ -549,7 +584,7 @@ class LoginHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.NO_ACCOUNT_WITH_EMAIL,
-                        "aws-session-id",
+                        CLIENT_SESSION_ID,
                         session.getSessionId(),
                         "",
                         "",

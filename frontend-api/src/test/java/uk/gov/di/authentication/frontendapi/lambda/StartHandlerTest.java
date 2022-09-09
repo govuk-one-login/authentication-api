@@ -160,7 +160,7 @@ class StartHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.START_INFO_FOUND,
-                        "aws-session-id",
+                        CLIENT_SESSION_ID,
                         SESSION_ID,
                         TEST_CLIENT_ID,
                         AuditService.UNKNOWN,
@@ -224,7 +224,7 @@ class StartHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.START_INFO_FOUND,
-                        "aws-session-id",
+                        CLIENT_SESSION_ID,
                         SESSION_ID,
                         TEST_CLIENT_ID,
                         AuditService.UNKNOWN,

@@ -150,7 +150,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             sqsClient.send(serialiseRequest(notifyRequest));
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
-                    context.getAwsRequestId(),
+                    userContext.getClientSessionId(),
                     userContext.getSession().getSessionId(),
                     userContext
                             .getClient()
