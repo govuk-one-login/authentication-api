@@ -141,17 +141,15 @@ public class ClientConfigValidationService {
     private boolean isPublicKeyValid(String publicKey) {
         byte[] decodedKey = Base64.getMimeDecoder().decode(publicKey);
         X509EncodedKeySpec x509publicKey = new X509EncodedKeySpec(decodedKey);
-        KeyFactory rsaKeyFactory;
-        KeyFactory ecKeyFactory;
 
         try {
-            rsaKeyFactory = KeyFactory.getInstance("RSA");
+            KeyFactory rsaKeyFactory = KeyFactory.getInstance("RSA");
             rsaKeyFactory.generatePublic(x509publicKey);
             LOG.info("Valid RSA key found");
             return true;
         } catch (Exception e) {
             try {
-                ecKeyFactory = KeyFactory.getInstance("EC");
+                KeyFactory ecKeyFactory = KeyFactory.getInstance("EC");
                 ecKeyFactory.generatePublic(x509publicKey);
             } catch (Exception ex) {
                 LOG.info("Valid key not found (checked RSA and EC)");

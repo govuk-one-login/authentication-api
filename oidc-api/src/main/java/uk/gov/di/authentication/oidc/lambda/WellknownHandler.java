@@ -103,7 +103,10 @@ public class WellknownHandler
                                                 JWSAlgorithm.RS512,
                                                 JWSAlgorithm.PS256,
                                                 JWSAlgorithm.PS384,
-                                                JWSAlgorithm.PS512));
+                                                JWSAlgorithm.PS512,
+                                                JWSAlgorithm.ES256,
+                                                JWSAlgorithm.ES384,
+                                                JWSAlgorithm.ES512));
                                 providerMetadata.setServiceDocsURI(
                                         new URI("https://docs.sign-in.service.gov.uk/"));
                                 providerMetadata.setEndSessionEndpointURI(
