@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
 import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.UpdateClientConfigRequest;
@@ -263,13 +264,14 @@ class ClientConfigValidationServiceTest {
                 Arguments.of("PAIRWISE", Optional.of(INVALID_SUBJECT_TYPE)));
     }
 
-    @Test
-    void shouldPassValidationForValidUpdateRequest() {
+    @ParameterizedTest
+    @ValueSource(strings = {VALID_RSA_PUBLIC_CERT, VALID_ECDSA_PUBLIC_CERT})
+    void shouldPassValidationForValidUpdateRequest(String publicCert) {
         Optional<ErrorObject> errorResponse =
                 validationService.validateClientUpdateConfig(
                         generateClientUpdateRequest(
                                 singletonList("http://localhost:1000/redirect"),
-                                VALID_RSA_PUBLIC_CERT,
+                                publicCert,
                                 singletonList("openid"),
                                 singletonList("http://localhost/post-redirect-logout"),
                                 String.valueOf(MANDATORY),

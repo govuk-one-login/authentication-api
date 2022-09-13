@@ -139,10 +139,12 @@ public class ClientConfigValidationService {
     }
 
     private boolean isPublicKeyValid(String publicKey) {
-        byte[] decodedKey = Base64.getMimeDecoder().decode(publicKey);
-        X509EncodedKeySpec x509publicKey = new X509EncodedKeySpec(decodedKey);
+        byte[] decodedKey;
+        X509EncodedKeySpec x509publicKey = null;
 
         try {
+            decodedKey = Base64.getMimeDecoder().decode(publicKey);
+            x509publicKey = new X509EncodedKeySpec(decodedKey);
             KeyFactory rsaKeyFactory = KeyFactory.getInstance("RSA");
             rsaKeyFactory.generatePublic(x509publicKey);
             LOG.info("Valid RSA key found");
