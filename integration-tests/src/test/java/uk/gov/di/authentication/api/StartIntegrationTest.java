@@ -92,7 +92,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         redis.createClientSession(CLIENT_SESSION_ID, authRequest.toParameters());
 
-        registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR(), ClientType.WEB);
+        registerClient(KeyPairHelper.generateRsaKeyPair(), ClientType.WEB);
 
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", sessionId);
@@ -135,7 +135,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @ValueSource(booleans = {true, false})
     void shouldReturn200WhenUserIsADocCheckingAppUser(boolean isAuthenticated)
             throws JOSEException, Json.JsonException {
-        var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        var keyPair = KeyPairHelper.generateRsaKeyPair();
         var state = new State();
         var sessionId = redis.createSession(isAuthenticated);
         var scope = new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP);

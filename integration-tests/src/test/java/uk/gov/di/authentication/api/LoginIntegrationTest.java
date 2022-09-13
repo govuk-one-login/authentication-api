@@ -39,7 +39,7 @@ import static uk.gov.di.authentication.shared.entity.MFAMethodType.AUTH_APP;
 import static uk.gov.di.authentication.shared.entity.MFAMethodType.SMS;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
-import static uk.gov.di.authentication.sharedtest.helper.KeyPairHelper.GENERATE_RSA_KEY_PAIR;
+import static uk.gov.di.authentication.sharedtest.helper.KeyPairHelper.generateRsaKeyPair;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -100,7 +100,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 singletonList("test-client@test.com"),
                 singletonList(scope.toString()),
                 Base64.getMimeEncoder()
-                        .encodeToString(GENERATE_RSA_KEY_PAIR().getPublic().getEncoded()),
+                        .encodeToString(generateRsaKeyPair().getPublic().getEncoded()),
                 singletonList("http://localhost/post-redirect-logout"),
                 "http://example.com",
                 String.valueOf(ServiceType.MANDATORY),

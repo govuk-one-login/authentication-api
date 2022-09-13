@@ -48,7 +48,7 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldReturn302WithSuccessfulAuthorisationResponse() throws Json.JsonException {
         String sessionId = "some-session-id";
         String clientSessionId = "some-client-session-id";
-        KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        KeyPair keyPair = KeyPairHelper.generateRsaKeyPair();
         redis.createSession(sessionId);
         redis.setVerifiedMfaMethodType(sessionId, MFAMethodType.AUTH_APP);
         redis.addAuthRequestToSession(

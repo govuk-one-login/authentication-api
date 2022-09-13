@@ -55,6 +55,7 @@ import uk.gov.di.authentication.sharedtest.helper.SubjectHelper;
 import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
+import java.security.InvalidAlgorithmParameterException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
@@ -89,6 +90,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
+import static uk.gov.di.authentication.sharedtest.helper.SupportedAlgorithmsTestHelper.getAlgorithmFamilyName;
+import static uk.gov.di.authentication.sharedtest.helper.SupportedAlgorithmsTestHelper.getKeyGenParameterSpec;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 public class TokenServiceTest {
@@ -358,13 +361,16 @@ public class TokenServiceTest {
                 JWSAlgorithm.RS512,
                 JWSAlgorithm.PS256,
                 JWSAlgorithm.PS384,
-                JWSAlgorithm.PS512);
+                JWSAlgorithm.PS512,
+                JWSAlgorithm.ES256,
+                JWSAlgorithm.ES384,
+                JWSAlgorithm.ES512);
     }
 
     @ParameterizedTest
     @MethodSource("supportedAlgorithms")
     void shouldSuccessfullyValidatePrivateKeyJWT(JWSAlgorithm algorithm) throws JOSEException {
-        KeyPair keyPair = generateRsaKeyPair();
+        KeyPair keyPair = generateRsaOrEcKeyPair(algorithm);
         String publicKey = Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded());
         Date expiryDate = NowHelper.nowPlus(5, ChronoUnit.MINUTES);
         String requestParams =
@@ -377,7 +383,7 @@ public class TokenServiceTest {
 
     @Test
     void shouldFailToValidatePrivateKeyJWTIfExpired() throws JOSEException {
-        KeyPair keyPair = generateRsaKeyPair();
+        KeyPair keyPair = generateRsaOrEcKeyPair(JWSAlgorithm.RS256);
         String publicKey = Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded());
         Date expiryDate = NowHelper.nowMinus(2, ChronoUnit.MINUTES);
         String requestParams =
@@ -389,7 +395,7 @@ public class TokenServiceTest {
 
     @Test
     void shouldFailToValidatePrivateKeyJWTIfInvalidClientId() throws JOSEException {
-        KeyPair keyPair = generateRsaKeyPair();
+        KeyPair keyPair = generateRsaOrEcKeyPair(JWSAlgorithm.RS256);
         String publicKey = Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded());
         Date expiryDate = NowHelper.nowPlus(5, ChronoUnit.MINUTES);
         String requestParams =
@@ -402,8 +408,8 @@ public class TokenServiceTest {
 
     @Test
     void shouldReturnErrorIfUnableToValidatePrivateKeyJWTSignature() throws JOSEException {
-        KeyPair keyPair = generateRsaKeyPair();
-        KeyPair keyPairTwo = generateRsaKeyPair();
+        KeyPair keyPair = generateRsaOrEcKeyPair(JWSAlgorithm.RS256);
+        KeyPair keyPairTwo = generateRsaOrEcKeyPair(JWSAlgorithm.RS256);
         String publicKey =
                 Base64.getMimeEncoder().encodeToString(keyPairTwo.getPublic().getEncoded());
         Date expiryDate = NowHelper.nowPlus(5, ChronoUnit.MINUTES);
@@ -416,7 +422,7 @@ public class TokenServiceTest {
 
     @Test
     void shouldSuccessfullyGetClientFromPrivateKeyJWT() throws JOSEException {
-        KeyPair keyPair = generateRsaKeyPair();
+        KeyPair keyPair = generateRsaOrEcKeyPair(JWSAlgorithm.RS256);
         Date expiryDate = NowHelper.nowPlus(5, ChronoUnit.MINUTES);
         String requestParams =
                 generateSerialisedPrivateKeyJWT(keyPair.getPrivate(), expiryDate.getTime());
@@ -610,14 +616,21 @@ public class TokenServiceTest {
         when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(accessTokenResult);
     }
 
-    private KeyPair generateRsaKeyPair() {
+    private KeyPair generateRsaOrEcKeyPair(JWSAlgorithm algorithm) {
         KeyPairGenerator kpg;
+        String algorithmFamily = getAlgorithmFamilyName(algorithm);
         try {
-            kpg = KeyPairGenerator.getInstance("RSA");
+            kpg = KeyPairGenerator.getInstance(algorithmFamily);
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
         }
-        kpg.initialize(2048);
+
+        var keySpec = getKeyGenParameterSpec(algorithm);
+        try {
+            kpg.initialize(keySpec);
+        } catch (InvalidAlgorithmParameterException e) {
+            throw new RuntimeException(e);
+        }
         return kpg.generateKeyPair();
     }
 

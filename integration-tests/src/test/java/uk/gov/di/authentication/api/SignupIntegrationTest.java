@@ -33,7 +33,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CREATE_ACCOUNT;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
-import static uk.gov.di.authentication.sharedtest.helper.KeyPairHelper.GENERATE_RSA_KEY_PAIR;
+import static uk.gov.di.authentication.sharedtest.helper.KeyPairHelper.generateRsaKeyPair;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -83,7 +83,7 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 singletonList("test-client@test.com"),
                 singletonList(scope.toString()),
                 Base64.getMimeEncoder()
-                        .encodeToString(GENERATE_RSA_KEY_PAIR().getPublic().getEncoded()),
+                        .encodeToString(generateRsaKeyPair().getPublic().getEncoded()),
                 singletonList("http://localhost/post-redirect-logout"),
                 "http://example.com",
                 String.valueOf(ServiceType.MANDATORY),
@@ -141,7 +141,7 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 singletonList("test-client@test.com"),
                 singletonList(scope.toString()),
                 Base64.getMimeEncoder()
-                        .encodeToString(GENERATE_RSA_KEY_PAIR().getPublic().getEncoded()),
+                        .encodeToString(generateRsaKeyPair().getPublic().getEncoded()),
                 singletonList("http://localhost/post-redirect-logout"),
                 "http://example.com",
                 String.valueOf(ServiceType.MANDATORY),

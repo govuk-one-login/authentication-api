@@ -552,7 +552,7 @@ class AuthorisationHandlerTest {
 
     @Test
     void shouldRedirectToLoginWhenRequestObjectIsValid() throws JOSEException {
-        var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        var keyPair = KeyPairHelper.generateRsaKeyPair();
         when(configService.isDocAppApiEnabled()).thenReturn(true);
         when(requestObjectService.validateRequestObject(any(AuthenticationRequest.class)))
                 .thenReturn(Optional.empty());

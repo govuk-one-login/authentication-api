@@ -401,7 +401,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         userStore.signUp(TEST_EMAIL_ADDRESS, TEST_PASSWORD, INTERNAL_SUBJECT);
         userStore.addPhoneNumber(TEST_EMAIL_ADDRESS, TEST_PHONE_NUMBER);
         userStore.setPhoneNumberVerified(TEST_EMAIL_ADDRESS, true);
-        KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        KeyPair keyPair = KeyPairHelper.generateRsaKeyPair();
         clientStore.registerClient(
                 CLIENT_ID,
                 "test-client",
@@ -420,7 +420,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     private void setUpAppClientInDynamo() {
-        KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        KeyPair keyPair = KeyPairHelper.generateRsaKeyPair();
         clientStore.registerClient(
                 APP_CLIENT_ID,
                 "app-test-client",

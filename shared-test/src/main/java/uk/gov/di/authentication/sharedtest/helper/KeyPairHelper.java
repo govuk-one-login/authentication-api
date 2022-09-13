@@ -1,10 +1,15 @@
 package uk.gov.di.authentication.sharedtest.helper;
 
+import com.nimbusds.jose.JWSAlgorithm;
+
+import java.security.InvalidAlgorithmParameterException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 
 import static java.util.Objects.isNull;
+import static uk.gov.di.authentication.sharedtest.helper.SupportedAlgorithmsTestHelper.getAlgorithmFamilyName;
+import static uk.gov.di.authentication.sharedtest.helper.SupportedAlgorithmsTestHelper.getKeyGenParameterSpec;
 
 public class KeyPairHelper {
 
@@ -12,7 +17,7 @@ public class KeyPairHelper {
 
     private static KeyPair cachedKeyPair = null;
 
-    public static final KeyPair GENERATE_RSA_KEY_PAIR() {
+    public static KeyPair generateRsaKeyPair() {
         if (isNull(KeyPairHelper.cachedKeyPair)) {
             KeyPairGenerator kpg;
             try {
@@ -24,5 +29,23 @@ public class KeyPairHelper {
             KeyPairHelper.cachedKeyPair = kpg.generateKeyPair();
         }
         return KeyPairHelper.cachedKeyPair;
+    }
+
+    public static KeyPair generateRsaOrEcKeyPair(JWSAlgorithm algorithm) {
+        KeyPairGenerator kpg;
+        String algorithmFamily = getAlgorithmFamilyName(algorithm);
+        try {
+            kpg = KeyPairGenerator.getInstance(algorithmFamily);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
+
+        var keySpec = getKeyGenParameterSpec(algorithm);
+        try {
+            kpg.initialize(keySpec);
+        } catch (InvalidAlgorithmParameterException e) {
+            throw new RuntimeException(e);
+        }
+        return kpg.generateKeyPair();
     }
 }

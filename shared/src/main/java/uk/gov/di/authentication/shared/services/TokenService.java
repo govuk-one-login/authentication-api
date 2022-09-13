@@ -73,6 +73,7 @@ import java.util.stream.Collectors;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.shared.helpers.HashHelper.hashSha256String;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.SupportedAlgorithmsHelper.getAlgorithmFamilyName;
 
 public class TokenService {
 
@@ -479,10 +480,11 @@ public class TokenService {
                     boolean forceRefresh,
                     com.nimbusds.oauth2.sdk.auth.verifier.Context context) {
 
+                var algorithmFamilyName = getAlgorithmFamilyName(jwsHeader.getAlgorithm());
                 byte[] decodedKey = Base64.getMimeDecoder().decode(publicKey);
                 try {
                     X509EncodedKeySpec x509publicKey = new X509EncodedKeySpec(decodedKey);
-                    KeyFactory kf = KeyFactory.getInstance("RSA");
+                    KeyFactory kf = KeyFactory.getInstance(algorithmFamilyName);
                     return Collections.singletonList(kf.generatePublic(x509publicKey));
                 } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
                     LOG.warn("Exception when selecting public key", e);

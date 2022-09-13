@@ -33,7 +33,7 @@ class RequestObjectToAuthRequestHelperTest {
 
     @Test
     void shouldConvertRequestObjectToAuthRequest() throws JOSEException {
-        var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        var keyPair = KeyPairHelper.generateRsaKeyPair();
         var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
@@ -69,7 +69,7 @@ class RequestObjectToAuthRequestHelperTest {
 
     @Test
     void shouldConvertRequestObjectToAuthRequestWhenVTRClaimIsPresent() throws JOSEException {
-        var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        var keyPair = KeyPairHelper.generateRsaKeyPair();
         var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()

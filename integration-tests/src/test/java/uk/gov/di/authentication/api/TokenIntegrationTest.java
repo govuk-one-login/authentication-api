@@ -111,7 +111,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldCallTokenResourceAndReturnAccessAndRefreshToken(
             Optional<String> vtr, String expectedVotClaim, Optional<String> clientId)
             throws Exception {
-        KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        KeyPair keyPair = KeyPairHelper.generateRsaKeyPair();
         Scope scope =
                 new Scope(
                         OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
@@ -144,7 +144,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldCallTokenResourceAndReturn400WhenClientIdParameterDoesNotMatch() throws Exception {
-        KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        KeyPair keyPair = KeyPairHelper.generateRsaKeyPair();
         Scope scope =
                 new Scope(
                         OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
@@ -163,7 +163,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldReturnIdTokenWithPublicSubjectId() throws Exception {
-        KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        KeyPair keyPair = KeyPairHelper.generateRsaKeyPair();
         Scope scope =
                 new Scope(
                         OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
@@ -197,7 +197,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldReturnIdTokenWithPairwiseSubjectId() throws Exception {
-        KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        KeyPair keyPair = KeyPairHelper.generateRsaKeyPair();
         Scope scope =
                 new Scope(
                         OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
@@ -231,7 +231,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldCallTokenResourceAndReturnIdentityClaims() throws Exception {
-        KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        KeyPair keyPair = KeyPairHelper.generateRsaKeyPair();
         Scope scope = new Scope(OIDCScopeValue.OPENID.getValue());
         var claimsSetRequest = new ClaimsSetRequest().add("nickname").add("birthdate");
         var oidcClaimsRequest = new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
@@ -277,7 +277,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @Test
     void shouldCallTokenResourceAndOnlyReturnAccessTokenWithoutOfflineAccessScope()
             throws Exception {
-        KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        KeyPair keyPair = KeyPairHelper.generateRsaKeyPair();
         Scope scope = new Scope(OIDCScopeValue.OPENID.getValue());
         setUpDynamo(keyPair, scope, new Subject());
         var response =
@@ -307,7 +307,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
         Subject publicSubject = new Subject();
         Subject internalSubject = new Subject();
-        KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        KeyPair keyPair = KeyPairHelper.generateRsaKeyPair();
         setUpDynamo(keyPair, scope, internalSubject);
         SignedJWT signedJWT = generateSignedRefreshToken(scope, publicSubject);
         RefreshToken refreshToken = new RefreshToken(signedJWT.serialize());

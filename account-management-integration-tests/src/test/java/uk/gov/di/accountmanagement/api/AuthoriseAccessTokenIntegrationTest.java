@@ -136,7 +136,7 @@ class AuthoriseAccessTokenIntegrationTest
     }
 
     private void setUpClient(List<String> scopes) {
-        var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        var keyPair = KeyPairHelper.generateRsaKeyPair();
         clientStore.registerClient(
                 CLIENT_ID.getValue(),
                 "test-client",
