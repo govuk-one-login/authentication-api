@@ -2,6 +2,7 @@ package uk.gov.di.authentication.oidc.services;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSVerifier;
+import com.nimbusds.jose.crypto.ECDSAVerifier;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
@@ -25,6 +26,7 @@ import java.net.URI;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
+import java.security.interfaces.ECPublicKey;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
@@ -39,6 +41,7 @@ import static java.util.Collections.emptyList;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
+import static uk.gov.di.authentication.shared.helpers.SupportedAlgorithmsHelper.getAlgorithmFamilyName;
 
 public class RequestObjectService {
 
@@ -201,9 +204,14 @@ public class RequestObjectService {
         try {
             byte[] decodedKey = Base64.getMimeDecoder().decode(publicKey);
             X509EncodedKeySpec keySpec = new X509EncodedKeySpec(decodedKey);
-            KeyFactory kf = KeyFactory.getInstance("RSA");
+            String algorithmFamilyName =
+                    getAlgorithmFamilyName(signedJWT.getHeader().getAlgorithm());
+            KeyFactory kf = KeyFactory.getInstance(algorithmFamilyName);
             PublicKey pubKey = kf.generatePublic(keySpec);
-            JWSVerifier verifier = new RSASSAVerifier((RSAPublicKey) pubKey);
+            JWSVerifier verifier =
+                    algorithmFamilyName.equals("EC")
+                            ? new ECDSAVerifier((ECPublicKey) pubKey)
+                            : new RSASSAVerifier((RSAPublicKey) pubKey);
             return signedJWT.verify(verifier);
         } catch (NoSuchAlgorithmException | InvalidKeySpecException | JOSEException e) {
             LOG.error("Error when validating JWT signature");
