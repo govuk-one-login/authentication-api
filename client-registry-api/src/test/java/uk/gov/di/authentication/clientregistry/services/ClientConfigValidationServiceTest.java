@@ -32,8 +32,11 @@ class ClientConfigValidationServiceTest {
 
     private final ClientConfigValidationService validationService =
             new ClientConfigValidationService();
-    private static final String VALID_PUBLIC_CERT =
+    private static final String VALID_RSA_PUBLIC_CERT =
             "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxt91w8GsMDdklOpS8ZXAsIM1ztQZd5QT/bRCQahZJeS1a6Os4hbuKwzHlz52zfTNp7BL4RB/KOcRIPhOQLgqeyM+bVngRa1EIfTkugJHS2/gu2Xv0aelwvXj8FZgAPRPD+ps2wiV4tUehrFIsRyHZM3yOp9g6qapCcxF7l0E1PlVkKPcPNmxn2oFiqnP6ZThGbE+N2avdXHcySIqt/v6Hbmk8cDHzSExazW7j/XvA+xnp0nQ5m2GisCZul5If5edCTXD0tKzx/I/gtEG4gkv9kENWOt4grP8/0zjNAl2ac6kpRny3tY5RkKBKCOB1VHwq2lUTSNKs32O1BsA5ByyYQIDAQAB";
+    private static final String VALID_ECDSA_PUBLIC_CERT =
+            "MFYwEAYHKoZIzj0CAQYFK4EEAAoDQgAESfEEiC4jDdrcsfLiCe3ltPxh048GyM9G\n"
+                    + "lsCeif85XpaqfJos/MfZX6wh8CmTfOl7UrjbWTwX2MNxpm8TVwA9sA==";
 
     private static Stream<Arguments> registrationRequestParams() {
         return Stream.of(
@@ -60,7 +63,7 @@ class ClientConfigValidationServiceTest {
 
     @ParameterizedTest
     @MethodSource("registrationRequestParams")
-    void shouldPassValidationForValidRegistrationRequest(
+    void shouldPassValidationForValidRegistrationRequestWithRsaAlgorithm(
             List<String> postlogoutUris,
             String backChannelLogoutUri,
             List<String> claims,
@@ -70,7 +73,31 @@ class ClientConfigValidationServiceTest {
                 validationService.validateClientRegistrationConfig(
                         generateClientRegRequest(
                                 singletonList("http://localhost:1000/redirect"),
-                                VALID_PUBLIC_CERT,
+                                VALID_RSA_PUBLIC_CERT,
+                                singletonList("openid"),
+                                postlogoutUris,
+                                backChannelLogoutUri,
+                                serviceType,
+                                "http://test.com",
+                                "public",
+                                claims,
+                                clientType));
+        assertThat(errorResponse, equalTo(Optional.empty()));
+    }
+
+    @ParameterizedTest
+    @MethodSource("registrationRequestParams")
+    void shouldPassValidationForValidRegistrationRequestWithEcAlgorithm(
+            List<String> postlogoutUris,
+            String backChannelLogoutUri,
+            List<String> claims,
+            String serviceType,
+            String clientType) {
+        Optional<ErrorObject> errorResponse =
+                validationService.validateClientRegistrationConfig(
+                        generateClientRegRequest(
+                                singletonList("http://localhost:1000/redirect"),
+                                VALID_ECDSA_PUBLIC_CERT,
                                 singletonList("openid"),
                                 postlogoutUris,
                                 backChannelLogoutUri,
@@ -88,7 +115,7 @@ class ClientConfigValidationServiceTest {
                 validationService.validateClientRegistrationConfig(
                         generateClientRegRequest(
                                 singletonList("http://localhost:1000/redirect"),
-                                VALID_PUBLIC_CERT,
+                                VALID_RSA_PUBLIC_CERT,
                                 singletonList("openid"),
                                 singletonList("invalid-logout-uri"),
                                 "http://example.com",
@@ -106,7 +133,7 @@ class ClientConfigValidationServiceTest {
                 validationService.validateClientRegistrationConfig(
                         generateClientRegRequest(
                                 singletonList("invalid-redirect-uri"),
-                                VALID_PUBLIC_CERT,
+                                VALID_RSA_PUBLIC_CERT,
                                 singletonList("openid"),
                                 singletonList("http://localhost/post-redirect-logout"),
                                 "http://example.com",
@@ -142,7 +169,7 @@ class ClientConfigValidationServiceTest {
                 validationService.validateClientRegistrationConfig(
                         generateClientRegRequest(
                                 singletonList("http://localhost:1000/redirect"),
-                                VALID_PUBLIC_CERT,
+                                VALID_RSA_PUBLIC_CERT,
                                 List.of("openid", "email", "fax"),
                                 singletonList("http://localhost/post-redirect-logout"),
                                 "http://example.com",
@@ -160,7 +187,7 @@ class ClientConfigValidationServiceTest {
                 validationService.validateClientRegistrationConfig(
                         generateClientRegRequest(
                                 singletonList("http://localhost:1000/redirect"),
-                                VALID_PUBLIC_CERT,
+                                VALID_RSA_PUBLIC_CERT,
                                 List.of("openid", "am"),
                                 singletonList("http://localhost/post-redirect-logout"),
                                 "http://example.com",
@@ -178,7 +205,7 @@ class ClientConfigValidationServiceTest {
                 validationService.validateClientRegistrationConfig(
                         generateClientRegRequest(
                                 singletonList("http://localhost:1000/redirect"),
-                                VALID_PUBLIC_CERT,
+                                VALID_RSA_PUBLIC_CERT,
                                 singletonList("openid"),
                                 singletonList("http://localhost/post-redirect-logout"),
                                 "http://example.com",
@@ -196,7 +223,7 @@ class ClientConfigValidationServiceTest {
                 validationService.validateClientRegistrationConfig(
                         generateClientRegRequest(
                                 singletonList("http://localhost:1000/redirect"),
-                                VALID_PUBLIC_CERT,
+                                VALID_RSA_PUBLIC_CERT,
                                 singletonList("openid"),
                                 singletonList("http://localhost/post-redirect-logout"),
                                 "http://example.com",
@@ -216,7 +243,7 @@ class ClientConfigValidationServiceTest {
                 validationService.validateClientRegistrationConfig(
                         generateClientRegRequest(
                                 singletonList("http://localhost:1000/redirect"),
-                                VALID_PUBLIC_CERT,
+                                VALID_RSA_PUBLIC_CERT,
                                 singletonList("openid"),
                                 singletonList("http://localhost/post-redirect-logout"),
                                 "http://example.com",
@@ -242,7 +269,7 @@ class ClientConfigValidationServiceTest {
                 validationService.validateClientUpdateConfig(
                         generateClientUpdateRequest(
                                 singletonList("http://localhost:1000/redirect"),
-                                VALID_PUBLIC_CERT,
+                                VALID_RSA_PUBLIC_CERT,
                                 singletonList("openid"),
                                 singletonList("http://localhost/post-redirect-logout"),
                                 String.valueOf(MANDATORY),
@@ -264,7 +291,7 @@ class ClientConfigValidationServiceTest {
                 validationService.validateClientUpdateConfig(
                         generateClientUpdateRequest(
                                 singletonList("http://localhost:1000/redirect"),
-                                VALID_PUBLIC_CERT,
+                                VALID_RSA_PUBLIC_CERT,
                                 singletonList("openid"),
                                 singletonList("invalid-logout-uri"),
                                 String.valueOf(MANDATORY),
@@ -279,7 +306,7 @@ class ClientConfigValidationServiceTest {
                 validationService.validateClientUpdateConfig(
                         generateClientUpdateRequest(
                                 singletonList("invalid-redirect-uri"),
-                                VALID_PUBLIC_CERT,
+                                VALID_RSA_PUBLIC_CERT,
                                 singletonList("openid"),
                                 singletonList("http://localhost/post-redirect-logout"),
                                 String.valueOf(MANDATORY),
@@ -309,7 +336,7 @@ class ClientConfigValidationServiceTest {
                 validationService.validateClientUpdateConfig(
                         generateClientUpdateRequest(
                                 singletonList("http://localhost:1000/redirect"),
-                                VALID_PUBLIC_CERT,
+                                VALID_RSA_PUBLIC_CERT,
                                 List.of("openid", "email", "fax"),
                                 singletonList("http://localhost/post-redirect-logout"),
                                 String.valueOf(MANDATORY),
@@ -324,7 +351,7 @@ class ClientConfigValidationServiceTest {
                 validationService.validateClientUpdateConfig(
                         generateClientUpdateRequest(
                                 singletonList("http://localhost:1000/redirect"),
-                                VALID_PUBLIC_CERT,
+                                VALID_RSA_PUBLIC_CERT,
                                 List.of("openid", "email"),
                                 singletonList("http://localhost/post-redirect-logout"),
                                 String.valueOf(MANDATORY),

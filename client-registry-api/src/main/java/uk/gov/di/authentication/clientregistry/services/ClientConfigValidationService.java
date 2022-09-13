@@ -3,6 +3,8 @@ package uk.gov.di.authentication.clientregistry.services;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.client.RegistrationError;
 import com.nimbusds.openid.connect.sdk.SubjectType;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
 import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.UpdateClientConfigRequest;
@@ -23,7 +25,7 @@ import static uk.gov.di.authentication.shared.entity.ServiceType.MANDATORY;
 import static uk.gov.di.authentication.shared.entity.ServiceType.OPTIONAL;
 
 public class ClientConfigValidationService {
-
+    private static final Logger LOG = LogManager.getLogger(ClientConfigValidationService.class);
     public static final ErrorObject INVALID_POST_LOGOUT_URI =
             new ErrorObject("invalid_client_metadata", "Invalid Post logout redirect URIs");
     public static final ErrorObject INVALID_SCOPE =
@@ -137,15 +139,27 @@ public class ClientConfigValidationService {
     }
 
     private boolean isPublicKeyValid(String publicKey) {
+        byte[] decodedKey = Base64.getMimeDecoder().decode(publicKey);
+        X509EncodedKeySpec x509publicKey = new X509EncodedKeySpec(decodedKey);
+        KeyFactory rsaKeyFactory;
+        KeyFactory ecKeyFactory;
+
         try {
-            byte[] decodedKey = Base64.getMimeDecoder().decode(publicKey);
-            X509EncodedKeySpec x509publicKey = new X509EncodedKeySpec(decodedKey);
-            KeyFactory kf = KeyFactory.getInstance("RSA");
-            kf.generatePublic(x509publicKey);
+            rsaKeyFactory = KeyFactory.getInstance("RSA");
+            rsaKeyFactory.generatePublic(x509publicKey);
+            LOG.info("Valid RSA key found");
+            return true;
         } catch (Exception e) {
-            return false;
+            try {
+                ecKeyFactory = KeyFactory.getInstance("EC");
+                ecKeyFactory.generatePublic(x509publicKey);
+            } catch (Exception ex) {
+                LOG.info("Valid key not found (checked RSA and EC)");
+                return false;
+            }
+            LOG.info("Valid EC key found");
+            return true;
         }
-        return true;
     }
 
     private boolean areScopesValid(List<String> scopes) {
