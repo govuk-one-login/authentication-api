@@ -5,6 +5,8 @@ import com.nimbusds.jose.JWSAlgorithm;
 import java.util.Map;
 
 public class SupportedAlgorithmsHelper {
+    private SupportedAlgorithmsHelper() {}
+
     private static final Map<JWSAlgorithm, String> algorithmKeySpec =
             Map.ofEntries(
                     Map.entry(JWSAlgorithm.RS256, "RSA"),

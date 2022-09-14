@@ -8,6 +8,8 @@ import java.security.spec.RSAKeyGenParameterSpec;
 import java.util.Map;
 
 public class SupportedAlgorithmsTestHelper {
+    private SupportedAlgorithmsTestHelper() {}
+
     private static final Map<JWSAlgorithm, AlgorithmParameterSpec> algorithmKeySpec =
             Map.ofEntries(
                     Map.entry(
