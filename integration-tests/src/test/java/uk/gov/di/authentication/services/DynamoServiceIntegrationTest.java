@@ -86,6 +86,18 @@ class DynamoServiceIntegrationTest {
     }
 
     @Test
+    void shouldUpdateEmailAndDeletePreviousItemsWithAccountVerified() {
+        setUpDynamo();
+        dynamoService.setAccountVerified(TEST_EMAIL);
+
+        UserProfile userProfile =
+                dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL).orElseThrow();
+        UserCredentials userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+
+        testUpdateEmail(userProfile, userCredentials);
+    }
+
+    @Test
     void shouldUpdateEmailAndDeletePreviousItemsWithSalt() {
         setUpDynamo();
         userStore.addSalt(TEST_EMAIL);

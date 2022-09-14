@@ -229,7 +229,7 @@ public class UserProfile implements DynamoDBItem {
         if (getAccountVerified() != null) {
             attributes.put(
                     ATTRIBUTE_ACCOUNT_VERIFIED,
-                    new AttributeValue().withBOOL(getAccountVerified()));
+                    new AttributeValue().withN(getAccountVerified() ? "1" : "0"));
         }
         return attributes;
     }
