@@ -44,6 +44,7 @@ public class CloudwatchMetricsService {
     public void incrementAuthenticationSuccess(
             Session.AccountState accountState,
             String clientId,
+            String clientName,
             String requestedLevelOfConfidence,
             boolean isTestJourney,
             boolean mfaRequired) {
@@ -61,6 +62,8 @@ public class CloudwatchMetricsService {
                         "RequestedLevelOfConfidence",
                         requestedLevelOfConfidence,
                         "MfaRequired",
-                        Boolean.toString(mfaRequired)));
+                        Boolean.toString(mfaRequired),
+                        "ClientName",
+                        clientName));
     }
 }
