@@ -23,7 +23,10 @@ import java.util.List;
 import java.util.Optional;
 
 import static com.amazonaws.services.dynamodbv2.model.KeyType.HASH;
+import static com.amazonaws.services.dynamodbv2.model.KeyType.RANGE;
 import static com.amazonaws.services.dynamodbv2.model.ProjectionType.ALL;
+import static com.amazonaws.services.dynamodbv2.model.ProjectionType.KEYS_ONLY;
+import static com.amazonaws.services.dynamodbv2.model.ScalarAttributeType.N;
 import static com.amazonaws.services.dynamodbv2.model.ScalarAttributeType.S;
 
 public class UserStoreExtension extends DynamoExtension implements AfterEachCallback {
@@ -33,8 +36,12 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
     public static final String EMAIL_FIELD = "Email";
     public static final String SUBJECT_ID_FIELD = "SubjectID";
     public static final String PUBLIC_SUBJECT_ID_FIELD = "PublicSubjectID";
+
+    public static final String ACCOUNT_VERIFIED_FIELD = "accountVerified";
     public static final String SUBJECT_ID_INDEX = "SubjectIDIndex";
     public static final String PUBLIC_SUBJECT_ID_INDEX = "PublicSubjectIDIndex";
+
+    public static final String VERIFIED_ACCOUNT_ID_INDEX = "VerifiedAccountIndex";
 
     private DynamoService dynamoService;
 
@@ -175,7 +182,8 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
                         .withAttributeDefinitions(
                                 new AttributeDefinition(EMAIL_FIELD, S),
                                 new AttributeDefinition(SUBJECT_ID_FIELD, S),
-                                new AttributeDefinition(PUBLIC_SUBJECT_ID_FIELD, S))
+                                new AttributeDefinition(PUBLIC_SUBJECT_ID_FIELD, S),
+                                new AttributeDefinition(ACCOUNT_VERIFIED_FIELD, N))
                         .withGlobalSecondaryIndexes(
                                 new GlobalSecondaryIndex()
                                         .withIndexName(SUBJECT_ID_INDEX)
@@ -185,7 +193,14 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
                                         .withIndexName(PUBLIC_SUBJECT_ID_INDEX)
                                         .withKeySchema(
                                                 new KeySchemaElement(PUBLIC_SUBJECT_ID_FIELD, HASH))
-                                        .withProjection(new Projection().withProjectionType(ALL)));
+                                        .withProjection(new Projection().withProjectionType(ALL)),
+                                new GlobalSecondaryIndex()
+                                        .withIndexName(VERIFIED_ACCOUNT_ID_INDEX)
+                                        .withKeySchema(
+                                                new KeySchemaElement(SUBJECT_ID_FIELD, HASH),
+                                                new KeySchemaElement(ACCOUNT_VERIFIED_FIELD, RANGE))
+                                        .withProjection(
+                                                new Projection().withProjectionType(KEYS_ONLY)));
         dynamoDB.createTable(request);
     }
 }
