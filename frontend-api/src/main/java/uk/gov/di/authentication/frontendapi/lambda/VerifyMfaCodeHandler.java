@@ -165,6 +165,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                                 cloudwatchMetricsService.incrementAuthenticationSuccess(
                                         session.isNewAccount(),
                                         clientId,
+                                        userContext.getClientName(),
                                         levelOfConfidence.getValue(),
                                         clientService.isTestJourney(
                                                 clientId, session.getEmailAddress()),

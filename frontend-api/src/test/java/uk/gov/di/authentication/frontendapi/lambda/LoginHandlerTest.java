@@ -93,6 +93,7 @@ class LoginHandlerTest {
                     .setMfaMethod(AUTH_APP_MFA_METHOD);
     private static final String PHONE_NUMBER = "01234567890";
     private static final ClientID CLIENT_ID = new ClientID();
+    private static final String CLIENT_NAME = "client-name";
     private static final MFAMethod AUTH_APP_MFA_METHOD =
             new MFAMethod()
                     .setMfaMethodType(MFAMethodType.AUTH_APP.getValue())
@@ -198,7 +199,12 @@ class LoginHandlerTest {
                         persistentId);
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
-                        Session.AccountState.EXISTING, CLIENT_ID.getValue(), "P0", false, false);
+                        Session.AccountState.EXISTING,
+                        CLIENT_ID.getValue(),
+                        CLIENT_NAME,
+                        "P0",
+                        false,
+                        false);
     }
 
     @ParameterizedTest
@@ -248,7 +254,8 @@ class LoginHandlerTest {
                         userProfile.getPhoneNumber(),
                         persistentId);
         verify(cloudwatchMetricsService, never())
-                .incrementAuthenticationSuccess(any(), any(), any(), anyBoolean(), anyBoolean());
+                .incrementAuthenticationSuccess(
+                        any(), any(), any(), any(), anyBoolean(), anyBoolean());
     }
 
     @ParameterizedTest
@@ -302,7 +309,8 @@ class LoginHandlerTest {
         verify(sessionService)
                 .save(argThat(session -> session.isNewAccount() == Session.AccountState.EXISTING));
         verify(cloudwatchMetricsService, never())
-                .incrementAuthenticationSuccess(any(), any(), any(), anyBoolean(), anyBoolean());
+                .incrementAuthenticationSuccess(
+                        any(), any(), any(), any(), anyBoolean(), anyBoolean());
     }
 
     @ParameterizedTest
@@ -657,7 +665,7 @@ class LoginHandlerTest {
         return new ClientRegistry()
                 .withClientID(CLIENT_ID.getValue())
                 .withConsentRequired(false)
-                .withClientName("test-client")
+                .withClientName(CLIENT_NAME)
                 .withSectorIdentifierUri("https://test.com")
                 .withSubjectType("public");
     }

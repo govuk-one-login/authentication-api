@@ -66,6 +66,7 @@ class VerifyCodeHandlerTest {
     private static final String CODE = "123456";
     private static final String INVALID_CODE = "6543221";
     private static final String CLIENT_ID = "client-id";
+    private static final String CLIENT_NAME = "client-name";
     private static final String TEST_CLIENT_ID = "test-client-id";
     private static final String TEST_CLIENT_CODE = "654321";
     private static final String TEST_CLIENT_EMAIL =
@@ -91,7 +92,10 @@ class VerifyCodeHandlerTest {
             mock(CloudwatchMetricsService.class);
 
     private final ClientRegistry clientRegistry =
-            new ClientRegistry().withTestClient(false).withClientID(CLIENT_ID);
+            new ClientRegistry()
+                    .withTestClient(false)
+                    .withClientID(CLIENT_ID)
+                    .withClientName(CLIENT_NAME);
     private final ClientRegistry testClientRegistry =
             new ClientRegistry()
                     .withTestClient(true)
@@ -202,7 +206,7 @@ class VerifyCodeHandlerTest {
                         pair("mfa-type", MFAMethodType.SMS.getValue()));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
-                        Session.AccountState.NEW, CLIENT_ID, "P0", false, false);
+                        Session.AccountState.NEW, CLIENT_ID, CLIENT_NAME, "P0", false, false);
     }
 
     @Test
@@ -383,7 +387,7 @@ class VerifyCodeHandlerTest {
                         pair("mfa-type", MFAMethodType.SMS.getValue()));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
-                        Session.AccountState.EXISTING, CLIENT_ID, "P0", false, true);
+                        Session.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false, true);
     }
 
     @Test

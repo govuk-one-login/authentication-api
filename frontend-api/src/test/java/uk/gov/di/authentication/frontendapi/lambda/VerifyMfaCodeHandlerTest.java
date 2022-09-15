@@ -69,6 +69,7 @@ class VerifyMfaCodeHandlerTest {
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
     private static final String CODE = "123456";
     private static final String CLIENT_ID = "client-id";
+    private static final String CLIENT_NAME = "client-name";
     private static final String TEST_CLIENT_CODE = "654321";
     private static final String CLIENT_SESSION_ID = "client-session-id";
     private static final String SUBJECT_ID = "test-subject-id";
@@ -103,6 +104,8 @@ class VerifyMfaCodeHandlerTest {
                 .thenReturn(Optional.of(userProfile));
         when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.of(clientRegistry));
         when(clientRegistry.getClientID()).thenReturn(CLIENT_ID);
+        when(clientRegistry.getClientName()).thenReturn(CLIENT_NAME);
+
         when(clientSession.getAuthRequestParams())
                 .thenReturn(withAuthenticationRequest().toParameters());
 
@@ -171,7 +174,7 @@ class VerifyMfaCodeHandlerTest {
                         pair("mfa-type", MFAMethodType.AUTH_APP.getValue()));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
-                        Session.AccountState.NEW, CLIENT_ID, "P0", false, true);
+                        Session.AccountState.NEW, CLIENT_ID, CLIENT_NAME, "P0", false, true);
     }
 
     @Test
@@ -206,7 +209,7 @@ class VerifyMfaCodeHandlerTest {
                         pair("mfa-type", MFAMethodType.AUTH_APP.getValue()));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
-                        Session.AccountState.EXISTING, CLIENT_ID, "P0", false, true);
+                        Session.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false, true);
     }
 
     @Test

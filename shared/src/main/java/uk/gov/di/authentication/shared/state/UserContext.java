@@ -58,6 +58,14 @@ public class UserContext {
         return client;
     }
 
+    public String getClientId() {
+        return getClient().map(ClientRegistry::getClientID).orElse("");
+    }
+
+    public String getClientName() {
+        return getClient().map(ClientRegistry::getClientName).orElse("");
+    }
+
     public ClientSession getClientSession() {
         return clientSession;
     }
