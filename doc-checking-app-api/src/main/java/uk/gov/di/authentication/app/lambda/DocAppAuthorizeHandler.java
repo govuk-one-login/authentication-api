@@ -40,7 +40,6 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
-import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class DocAppAuthorizeHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -98,98 +97,75 @@ public class DocAppAuthorizeHandler
 
     public APIGatewayProxyResponseEvent docAppAuthoriseRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
-        return isWarming(input)
-                .orElseGet(
-                        () -> {
-                            try {
-                                LOG.info("DocAppAuthorizeHandler received request");
+        try {
+            LOG.info("DocAppAuthorizeHandler received request");
 
-                                var session =
-                                        sessionService
-                                                .getSessionFromRequestHeaders(input.getHeaders())
-                                                .orElse(null);
-                                if (Objects.isNull(session)) {
-                                    LOG.warn("Session cannot be found");
-                                    return generateApiGatewayProxyErrorResponse(
-                                            400, ErrorResponse.ERROR_1000);
-                                }
-                                attachSessionIdToLogs(session);
-                                var clientSession =
-                                        clientSessionService
-                                                .getClientSessionFromRequestHeaders(
-                                                        input.getHeaders())
-                                                .orElse(null);
-                                if (Objects.isNull(clientSession)) {
-                                    LOG.warn("ClientSession cannot be found");
-                                    return generateApiGatewayProxyErrorResponse(
-                                            400, ErrorResponse.ERROR_1018);
-                                }
-                                String clientSessionId =
-                                        getHeaderValueFromHeaders(
-                                                input.getHeaders(),
-                                                CLIENT_SESSION_ID_HEADER,
-                                                configurationService.getHeadersCaseInsensitive());
-                                attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
-                                var clientID =
-                                        new ClientID(
-                                                configurationService
-                                                        .getDocAppAuthorisationClientId());
-                                attachLogFieldToLogs(CLIENT_ID, clientID.getValue());
-                                var clientRegistry =
-                                        clientSession
-                                                .getAuthRequestParams()
-                                                .get("client_id")
-                                                .stream()
-                                                .findFirst()
-                                                .flatMap(clientService::getClient)
-                                                .orElseThrow();
-                                var state = new State();
-                                var encryptedJWT =
-                                        authorisationService.constructRequestJWT(
-                                                state,
-                                                clientSession.getDocAppSubjectId(),
-                                                clientRegistry,
-                                                clientSessionId);
-                                var authRequestBuilder =
-                                        new AuthorizationRequest.Builder(
-                                                        new ResponseType(ResponseType.Value.CODE),
-                                                        clientID)
-                                                .endpointURI(
-                                                        configurationService
-                                                                .getDocAppAuthorisationURI())
-                                                .requestObject(encryptedJWT);
+            var session =
+                    sessionService.getSessionFromRequestHeaders(input.getHeaders()).orElse(null);
+            if (Objects.isNull(session)) {
+                LOG.warn("Session cannot be found");
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+            }
+            attachSessionIdToLogs(session);
+            var clientSession =
+                    clientSessionService
+                            .getClientSessionFromRequestHeaders(input.getHeaders())
+                            .orElse(null);
+            if (Objects.isNull(clientSession)) {
+                LOG.warn("ClientSession cannot be found");
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1018);
+            }
+            String clientSessionId =
+                    getHeaderValueFromHeaders(
+                            input.getHeaders(),
+                            CLIENT_SESSION_ID_HEADER,
+                            configurationService.getHeadersCaseInsensitive());
+            attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
+            var clientID = new ClientID(configurationService.getDocAppAuthorisationClientId());
+            attachLogFieldToLogs(CLIENT_ID, clientID.getValue());
+            var clientRegistry =
+                    clientSession.getAuthRequestParams().get("client_id").stream()
+                            .findFirst()
+                            .flatMap(clientService::getClient)
+                            .orElseThrow();
+            var state = new State();
+            var encryptedJWT =
+                    authorisationService.constructRequestJWT(
+                            state,
+                            clientSession.getDocAppSubjectId(),
+                            clientRegistry,
+                            clientSessionId);
+            var authRequestBuilder =
+                    new AuthorizationRequest.Builder(
+                                    new ResponseType(ResponseType.Value.CODE), clientID)
+                            .endpointURI(configurationService.getDocAppAuthorisationURI())
+                            .requestObject(encryptedJWT);
 
-                                var authorisationRequest = authRequestBuilder.build();
-                                authorisationService.storeState(session.getSessionId(), state);
-                                auditService.submitAuditEvent(
-                                        DocAppAuditableEvent.DOC_APP_AUTHORISATION_REQUESTED,
-                                        clientSessionId,
-                                        session.getSessionId(),
-                                        AuditService.UNKNOWN,
-                                        clientSession.getDocAppSubjectId().toString(),
-                                        AuditService.UNKNOWN,
-                                        IpAddressHelper.extractIpAddress(input),
-                                        AuditService.UNKNOWN,
-                                        PersistentIdHelper.extractPersistentIdFromHeaders(
-                                                input.getHeaders()));
-                                LOG.info(
-                                        "DocAppAuthorizeHandler successfully processed request, redirect URI {}",
-                                        authorisationRequest.toURI().toString());
+            var authorisationRequest = authRequestBuilder.build();
+            authorisationService.storeState(session.getSessionId(), state);
+            auditService.submitAuditEvent(
+                    DocAppAuditableEvent.DOC_APP_AUTHORISATION_REQUESTED,
+                    clientSessionId,
+                    session.getSessionId(),
+                    AuditService.UNKNOWN,
+                    clientSession.getDocAppSubjectId().toString(),
+                    AuditService.UNKNOWN,
+                    IpAddressHelper.extractIpAddress(input),
+                    AuditService.UNKNOWN,
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+            LOG.info(
+                    "DocAppAuthorizeHandler successfully processed request, redirect URI {}",
+                    authorisationRequest.toURI().toString());
 
-                                return generateApiGatewayProxyResponse(
-                                        200,
-                                        new DocAppAuthorisationResponse(
-                                                authorisationRequest.toURI().toString()));
+            return generateApiGatewayProxyResponse(
+                    200, new DocAppAuthorisationResponse(authorisationRequest.toURI().toString()));
 
-                            } catch (JsonException e) {
-                                return generateApiGatewayProxyErrorResponse(
-                                        400, ErrorResponse.ERROR_1001);
-                            } catch (NoSuchElementException e) {
-                                LOG.warn("Invalid client or client not found in Client Registry");
-                                return generateApiGatewayProxyResponse(
-                                        400,
-                                        OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString());
-                            }
-                        });
+        } catch (JsonException e) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+        } catch (NoSuchElementException e) {
+            LOG.warn("Invalid client or client not found in Client Registry");
+            return generateApiGatewayProxyResponse(
+                    400, OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString());
+        }
     }
 }

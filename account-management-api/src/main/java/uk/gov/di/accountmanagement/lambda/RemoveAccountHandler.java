@@ -36,7 +36,6 @@ import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segm
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
-import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class RemoveAccountHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -85,67 +84,52 @@ public class RemoveAccountHandler
 
     public APIGatewayProxyResponseEvent removeAccountRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
-        return isWarming(input)
-                .orElseGet(
-                        () -> {
-                            try {
-                                String sessionId =
-                                        RequestHeaderHelper.getHeaderValueOrElse(
-                                                input.getHeaders(), SESSION_ID_HEADER, "");
-                                attachSessionIdToLogs(sessionId);
-                                LOG.info("RemoveAccountHandler received request");
-                                SupportedLanguage userLanguage =
-                                        matchSupportedLanguage(
-                                                getUserLanguageFromRequestHeaders(
-                                                        input.getHeaders(), configurationService));
-                                RemoveAccountRequest removeAccountRequest =
-                                        objectMapper.readValue(
-                                                input.getBody(), RemoveAccountRequest.class);
+        try {
+            String sessionId =
+                    RequestHeaderHelper.getHeaderValueOrElse(
+                            input.getHeaders(), SESSION_ID_HEADER, "");
+            attachSessionIdToLogs(sessionId);
+            LOG.info("RemoveAccountHandler received request");
+            SupportedLanguage userLanguage =
+                    matchSupportedLanguage(
+                            getUserLanguageFromRequestHeaders(
+                                    input.getHeaders(), configurationService));
+            RemoveAccountRequest removeAccountRequest =
+                    objectMapper.readValue(input.getBody(), RemoveAccountRequest.class);
 
-                                String email = removeAccountRequest.getEmail();
+            String email = removeAccountRequest.getEmail();
 
-                                UserProfile userProfile =
-                                        authenticationService
-                                                .getUserProfileByEmailMaybe(email)
-                                                .orElseThrow(
-                                                        () ->
-                                                                new RuntimeException(
-                                                                        "User not found"));
+            UserProfile userProfile =
+                    authenticationService
+                            .getUserProfileByEmailMaybe(email)
+                            .orElseThrow(() -> new RuntimeException("User not found"));
 
-                                Map<String, Object> authorizerParams =
-                                        input.getRequestContext().getAuthorizer();
-                                RequestBodyHelper.validatePrincipal(
-                                        new Subject(userProfile.getPublicSubjectID()),
-                                        authorizerParams);
+            Map<String, Object> authorizerParams = input.getRequestContext().getAuthorizer();
+            RequestBodyHelper.validatePrincipal(
+                    new Subject(userProfile.getPublicSubjectID()), authorizerParams);
 
-                                authenticationService.removeAccount(email);
-                                LOG.info("User account removed. Adding message to SQS queue");
+            authenticationService.removeAccount(email);
+            LOG.info("User account removed. Adding message to SQS queue");
 
-                                NotifyRequest notifyRequest =
-                                        new NotifyRequest(
-                                                email,
-                                                NotificationType.DELETE_ACCOUNT,
-                                                userLanguage);
-                                sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
-                                LOG.info(
-                                        "Remove account message successfully added to queue. Generating successful gateway response");
-                                auditService.submitAuditEvent(
-                                        AccountManagementAuditableEvent.DELETE_ACCOUNT,
-                                        AuditService.UNKNOWN,
-                                        sessionId,
-                                        AuditService.UNKNOWN,
-                                        userProfile.getSubjectID(),
-                                        userProfile.getEmail(),
-                                        IpAddressHelper.extractIpAddress(input),
-                                        userProfile.getPhoneNumber(),
-                                        PersistentIdHelper.extractPersistentIdFromHeaders(
-                                                input.getHeaders()));
+            NotifyRequest notifyRequest =
+                    new NotifyRequest(email, NotificationType.DELETE_ACCOUNT, userLanguage);
+            sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
+            LOG.info(
+                    "Remove account message successfully added to queue. Generating successful gateway response");
+            auditService.submitAuditEvent(
+                    AccountManagementAuditableEvent.DELETE_ACCOUNT,
+                    AuditService.UNKNOWN,
+                    sessionId,
+                    AuditService.UNKNOWN,
+                    userProfile.getSubjectID(),
+                    userProfile.getEmail(),
+                    IpAddressHelper.extractIpAddress(input),
+                    userProfile.getPhoneNumber(),
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
-                                return generateEmptySuccessApiGatewayResponse();
-                            } catch (JsonException e) {
-                                return generateApiGatewayProxyErrorResponse(
-                                        400, ErrorResponse.ERROR_1001);
-                            }
-                        });
+            return generateEmptySuccessApiGatewayResponse();
+        } catch (JsonException e) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+        }
     }
 }

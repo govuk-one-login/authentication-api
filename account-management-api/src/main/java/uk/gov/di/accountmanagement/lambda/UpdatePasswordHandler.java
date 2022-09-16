@@ -39,7 +39,6 @@ import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segm
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
-import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class UpdatePasswordHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -96,92 +95,73 @@ public class UpdatePasswordHandler
 
     public APIGatewayProxyResponseEvent updatePasswordRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
-        return isWarming(input)
-                .orElseGet(
-                        () -> {
-                            String sessionId =
-                                    RequestHeaderHelper.getHeaderValueOrElse(
-                                            input.getHeaders(), SESSION_ID_HEADER, "");
-                            attachSessionIdToLogs(sessionId);
-                            LOG.info("UpdatePasswordHandler received request");
-                            SupportedLanguage userLanguage =
-                                    matchSupportedLanguage(
-                                            getUserLanguageFromRequestHeaders(
-                                                    input.getHeaders(), configurationService));
-                            context.getClientContext();
-                            try {
-                                UpdatePasswordRequest updatePasswordRequest =
-                                        objectMapper.readValue(
-                                                input.getBody(), UpdatePasswordRequest.class);
+        String sessionId =
+                RequestHeaderHelper.getHeaderValueOrElse(input.getHeaders(), SESSION_ID_HEADER, "");
+        attachSessionIdToLogs(sessionId);
+        LOG.info("UpdatePasswordHandler received request");
+        SupportedLanguage userLanguage =
+                matchSupportedLanguage(
+                        getUserLanguageFromRequestHeaders(
+                                input.getHeaders(), configurationService));
+        context.getClientContext();
+        try {
+            UpdatePasswordRequest updatePasswordRequest =
+                    objectMapper.readValue(input.getBody(), UpdatePasswordRequest.class);
 
-                                Optional<ErrorResponse> passwordValidationError =
-                                        passwordValidator.validate(
-                                                updatePasswordRequest.getNewPassword());
+            Optional<ErrorResponse> passwordValidationError =
+                    passwordValidator.validate(updatePasswordRequest.getNewPassword());
 
-                                if (passwordValidationError.isPresent()) {
-                                    LOG.info(
-                                            "Error message: {}",
-                                            passwordValidationError.get().getMessage());
-                                    return generateApiGatewayProxyErrorResponse(
-                                            400, passwordValidationError.get());
-                                }
+            if (passwordValidationError.isPresent()) {
+                LOG.info("Error message: {}", passwordValidationError.get().getMessage());
+                return generateApiGatewayProxyErrorResponse(400, passwordValidationError.get());
+            }
 
-                                UserProfile userProfile =
-                                        dynamoService.getUserProfileByEmail(
-                                                updatePasswordRequest.getEmail());
-                                Map<String, Object> authorizerParams =
-                                        input.getRequestContext().getAuthorizer();
+            UserProfile userProfile =
+                    dynamoService.getUserProfileByEmail(updatePasswordRequest.getEmail());
+            Map<String, Object> authorizerParams = input.getRequestContext().getAuthorizer();
 
-                                RequestBodyHelper.validatePrincipal(
-                                        new Subject(userProfile.getPublicSubjectID()),
-                                        authorizerParams);
+            RequestBodyHelper.validatePrincipal(
+                    new Subject(userProfile.getPublicSubjectID()), authorizerParams);
 
-                                String currentPassword =
-                                        dynamoService
-                                                .getUserCredentialsFromEmail(
-                                                        updatePasswordRequest.getEmail())
-                                                .getPassword();
+            String currentPassword =
+                    dynamoService
+                            .getUserCredentialsFromEmail(updatePasswordRequest.getEmail())
+                            .getPassword();
 
-                                if (isNewPasswordSameAsCurrentPassword(
-                                        currentPassword, updatePasswordRequest.getNewPassword())) {
-                                    return generateApiGatewayProxyErrorResponse(
-                                            400, ErrorResponse.ERROR_1024);
-                                }
+            if (isNewPasswordSameAsCurrentPassword(
+                    currentPassword, updatePasswordRequest.getNewPassword())) {
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1024);
+            }
 
-                                dynamoService.updatePassword(
-                                        updatePasswordRequest.getEmail(),
-                                        updatePasswordRequest.getNewPassword());
+            dynamoService.updatePassword(
+                    updatePasswordRequest.getEmail(), updatePasswordRequest.getNewPassword());
 
-                                LOG.info(
-                                        "User Password has successfully been updated.  Adding confirmation message to SQS queue");
-                                NotifyRequest notifyRequest =
-                                        new NotifyRequest(
-                                                updatePasswordRequest.getEmail(),
-                                                NotificationType.PASSWORD_UPDATED,
-                                                userLanguage);
-                                sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
-                                LOG.info(
-                                        "Message successfully added to queue. Generating successful gateway response");
+            LOG.info(
+                    "User Password has successfully been updated.  Adding confirmation message to SQS queue");
+            NotifyRequest notifyRequest =
+                    new NotifyRequest(
+                            updatePasswordRequest.getEmail(),
+                            NotificationType.PASSWORD_UPDATED,
+                            userLanguage);
+            sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
+            LOG.info("Message successfully added to queue. Generating successful gateway response");
 
-                                auditService.submitAuditEvent(
-                                        AccountManagementAuditableEvent.UPDATE_PASSWORD,
-                                        AuditService.UNKNOWN,
-                                        sessionId,
-                                        AuditService.UNKNOWN,
-                                        userProfile.getSubjectID(),
-                                        userProfile.getEmail(),
-                                        IpAddressHelper.extractIpAddress(input),
-                                        userProfile.getPhoneNumber(),
-                                        PersistentIdHelper.extractPersistentIdFromHeaders(
-                                                input.getHeaders()));
+            auditService.submitAuditEvent(
+                    AccountManagementAuditableEvent.UPDATE_PASSWORD,
+                    AuditService.UNKNOWN,
+                    sessionId,
+                    AuditService.UNKNOWN,
+                    userProfile.getSubjectID(),
+                    userProfile.getEmail(),
+                    IpAddressHelper.extractIpAddress(input),
+                    userProfile.getPhoneNumber(),
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
-                                return generateEmptySuccessApiGatewayResponse();
+            return generateEmptySuccessApiGatewayResponse();
 
-                            } catch (JsonException | IllegalArgumentException e) {
-                                return generateApiGatewayProxyErrorResponse(
-                                        400, ErrorResponse.ERROR_1001);
-                            }
-                        });
+        } catch (JsonException | IllegalArgumentException e) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+        }
     }
 
     private static boolean isNewPasswordSameAsCurrentPassword(

@@ -51,7 +51,6 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFie
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.updateAttachedLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.updateAttachedSessionIdToLogs;
-import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class AuthorisationHandler
@@ -104,103 +103,87 @@ public class AuthorisationHandler
 
     public APIGatewayProxyResponseEvent authoriseRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
-        return isWarming(input)
-                .orElseGet(
-                        () -> {
-                            var persistentSessionId =
-                                    authorizationService.getExistingOrCreateNewPersistentSessionId(
-                                            input.getHeaders());
-                            var ipAddress = IpAddressHelper.extractIpAddress(input);
-                            var clientSessionId = clientSessionService.generateClientSessionId();
-                            attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
+        var persistentSessionId =
+                authorizationService.getExistingOrCreateNewPersistentSessionId(input.getHeaders());
+        var ipAddress = IpAddressHelper.extractIpAddress(input);
+        var clientSessionId = clientSessionService.generateClientSessionId();
+        attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
 
-                            auditService.submitAuditEvent(
-                                    OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED,
-                                    clientSessionId,
-                                    AuditService.UNKNOWN,
-                                    AuditService.UNKNOWN,
-                                    AuditService.UNKNOWN,
-                                    AuditService.UNKNOWN,
-                                    ipAddress,
-                                    AuditService.UNKNOWN,
-                                    persistentSessionId);
-                            attachLogFieldToLogs(PERSISTENT_SESSION_ID, persistentSessionId);
-                            attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
-                            LOG.info("Received authentication request");
+        auditService.submitAuditEvent(
+                OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED,
+                clientSessionId,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                ipAddress,
+                AuditService.UNKNOWN,
+                persistentSessionId);
+        attachLogFieldToLogs(PERSISTENT_SESSION_ID, persistentSessionId);
+        attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
+        LOG.info("Received authentication request");
 
-                            Map<String, List<String>> queryStringParameters;
-                            AuthenticationRequest authRequest;
-                            try {
-                                queryStringParameters =
-                                        input.getQueryStringParameters().entrySet().stream()
-                                                .collect(
-                                                        Collectors.toMap(
-                                                                Map.Entry::getKey,
-                                                                entry ->
-                                                                        List.of(entry.getValue())));
-                                authRequest = AuthenticationRequest.parse(queryStringParameters);
-                            } catch (ParseException e) {
-                                if (e.getRedirectionURI() == null) {
-                                    LOG.warn(
-                                            "Authentication request could not be parsed: redirect URI or Client ID is missing from auth request");
-                                    throw new RuntimeException(
-                                            "Redirect URI or ClientID is missing from auth request",
-                                            e);
-                                }
-                                LOG.warn("Authentication request could not be parsed", e);
-                                return generateErrorResponse(
-                                        e.getRedirectionURI(),
-                                        e.getState(),
-                                        e.getResponseMode(),
-                                        e.getErrorObject(),
-                                        context,
-                                        ipAddress,
-                                        persistentSessionId,
-                                        AuditService.UNKNOWN,
-                                        clientSessionId);
-                            } catch (NullPointerException e) {
-                                LOG.warn(
-                                        "No query string parameters are present in the Authentication request",
-                                        e);
-                                throw new RuntimeException(
-                                        "No query string parameters are present in the Authentication request",
-                                        e);
-                            }
-                            Optional<AuthRequestError> authRequestError;
-                            if (authRequest.getRequestObject() != null
-                                    && configurationService.isDocAppApiEnabled()) {
-                                LOG.info("RequestObject auth request received");
-                                authRequestError =
-                                        requestObjectService.validateRequestObject(authRequest);
-                            } else {
-                                authRequestError =
-                                        authorizationService.validateAuthRequest(authRequest);
-                            }
+        Map<String, List<String>> queryStringParameters;
+        AuthenticationRequest authRequest;
+        try {
+            queryStringParameters =
+                    input.getQueryStringParameters().entrySet().stream()
+                            .collect(
+                                    Collectors.toMap(
+                                            Map.Entry::getKey, entry -> List.of(entry.getValue())));
+            authRequest = AuthenticationRequest.parse(queryStringParameters);
+        } catch (ParseException e) {
+            if (e.getRedirectionURI() == null) {
+                LOG.warn(
+                        "Authentication request could not be parsed: redirect URI or Client ID is missing from auth request");
+                throw new RuntimeException(
+                        "Redirect URI or ClientID is missing from auth request", e);
+            }
+            LOG.warn("Authentication request could not be parsed", e);
+            return generateErrorResponse(
+                    e.getRedirectionURI(),
+                    e.getState(),
+                    e.getResponseMode(),
+                    e.getErrorObject(),
+                    context,
+                    ipAddress,
+                    persistentSessionId,
+                    AuditService.UNKNOWN,
+                    clientSessionId);
+        } catch (NullPointerException e) {
+            LOG.warn("No query string parameters are present in the Authentication request", e);
+            throw new RuntimeException(
+                    "No query string parameters are present in the Authentication request", e);
+        }
+        Optional<AuthRequestError> authRequestError;
+        if (authRequest.getRequestObject() != null && configurationService.isDocAppApiEnabled()) {
+            LOG.info("RequestObject auth request received");
+            authRequestError = requestObjectService.validateRequestObject(authRequest);
+        } else {
+            authRequestError = authorizationService.validateAuthRequest(authRequest);
+        }
 
-                            if (authRequestError.isPresent()) {
-                                return generateErrorResponse(
-                                        authRequestError.get().getRedirectURI(),
-                                        authRequest.getState(),
-                                        authRequest.getResponseMode(),
-                                        authRequestError.get().getErrorObject(),
-                                        context,
-                                        ipAddress,
-                                        persistentSessionId,
-                                        authRequest.getClientID().getValue(),
-                                        clientSessionId);
-                            } else {
-                                authRequest =
-                                        RequestObjectToAuthRequestHelper.transform(authRequest);
-                                return getOrCreateSessionAndRedirect(
-                                        sessionService.getSessionFromSessionCookie(
-                                                input.getHeaders()),
-                                        authRequest,
-                                        context,
-                                        ipAddress,
-                                        persistentSessionId,
-                                        clientSessionId);
-                            }
-                        });
+        if (authRequestError.isPresent()) {
+            return generateErrorResponse(
+                    authRequestError.get().getRedirectURI(),
+                    authRequest.getState(),
+                    authRequest.getResponseMode(),
+                    authRequestError.get().getErrorObject(),
+                    context,
+                    ipAddress,
+                    persistentSessionId,
+                    authRequest.getClientID().getValue(),
+                    clientSessionId);
+        } else {
+            authRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
+            return getOrCreateSessionAndRedirect(
+                    sessionService.getSessionFromSessionCookie(input.getHeaders()),
+                    authRequest,
+                    context,
+                    ipAddress,
+                    persistentSessionId,
+                    clientSessionId);
+        }
     }
 
     private APIGatewayProxyResponseEvent getOrCreateSessionAndRedirect(

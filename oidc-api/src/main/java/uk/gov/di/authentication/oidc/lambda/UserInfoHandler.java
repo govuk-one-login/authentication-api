@@ -31,7 +31,6 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.headersContainValidHeader;
-import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class UserInfoHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -87,59 +86,48 @@ public class UserInfoHandler
 
     public APIGatewayProxyResponseEvent userInfoRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
-        return isWarming(input)
-                .orElseGet(
-                        () -> {
-                            LOG.info("Request received to the UserInfoHandler");
-                            if (!headersContainValidHeader(
+        LOG.info("Request received to the UserInfoHandler");
+        if (!headersContainValidHeader(
+                input.getHeaders(),
+                AUTHORIZATION_HEADER,
+                configurationService.getHeadersCaseInsensitive())) {
+            LOG.warn("AccessToken is missing from request");
+            return generateApiGatewayProxyResponse(
+                    401,
+                    "",
+                    new UserInfoErrorResponse(MISSING_TOKEN).toHTTPResponse().getHeaderMap());
+        }
+        UserInfo userInfo;
+        AccessTokenInfo accessTokenInfo;
+        try {
+            accessTokenInfo =
+                    accessTokenService.parse(
+                            getHeaderValueFromHeaders(
                                     input.getHeaders(),
                                     AUTHORIZATION_HEADER,
-                                    configurationService.getHeadersCaseInsensitive())) {
-                                LOG.warn("AccessToken is missing from request");
-                                return generateApiGatewayProxyResponse(
-                                        401,
-                                        "",
-                                        new UserInfoErrorResponse(MISSING_TOKEN)
-                                                .toHTTPResponse()
-                                                .getHeaderMap());
-                            }
-                            UserInfo userInfo;
-                            AccessTokenInfo accessTokenInfo;
-                            try {
-                                accessTokenInfo =
-                                        accessTokenService.parse(
-                                                getHeaderValueFromHeaders(
-                                                        input.getHeaders(),
-                                                        AUTHORIZATION_HEADER,
-                                                        configurationService
-                                                                .getHeadersCaseInsensitive()),
-                                                configurationService.isIdentityEnabled());
-                                userInfo = userInfoService.populateUserInfo(accessTokenInfo);
-                            } catch (AccessTokenException e) {
-                                LOG.warn(
-                                        "AccessTokenException. Sending back UserInfoErrorResponse");
-                                return generateApiGatewayProxyResponse(
-                                        401,
-                                        "",
-                                        new UserInfoErrorResponse(e.getError())
-                                                .toHTTPResponse()
-                                                .getHeaderMap());
-                            }
-                            LOG.info(
-                                    "Successfully processed UserInfo request. Sending back UserInfo response");
+                                    configurationService.getHeadersCaseInsensitive()),
+                            configurationService.isIdentityEnabled());
+            userInfo = userInfoService.populateUserInfo(accessTokenInfo);
+        } catch (AccessTokenException e) {
+            LOG.warn("AccessTokenException. Sending back UserInfoErrorResponse");
+            return generateApiGatewayProxyResponse(
+                    401,
+                    "",
+                    new UserInfoErrorResponse(e.getError()).toHTTPResponse().getHeaderMap());
+        }
+        LOG.info("Successfully processed UserInfo request. Sending back UserInfo response");
 
-                            auditService.submitAuditEvent(
-                                    OidcAuditableEvent.USER_INFO_RETURNED,
-                                    AuditService.UNKNOWN,
-                                    AuditService.UNKNOWN,
-                                    accessTokenInfo.getClientID(),
-                                    accessTokenInfo.getSubject(),
-                                    AuditService.UNKNOWN,
-                                    AuditService.UNKNOWN,
-                                    AuditService.UNKNOWN,
-                                    AuditService.UNKNOWN);
+        auditService.submitAuditEvent(
+                OidcAuditableEvent.USER_INFO_RETURNED,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                accessTokenInfo.getClientID(),
+                accessTokenInfo.getSubject(),
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN);
 
-                            return generateApiGatewayProxyResponse(200, userInfo.toJSONString());
-                        });
+        return generateApiGatewayProxyResponse(200, userInfo.toJSONString());
     }
 }
