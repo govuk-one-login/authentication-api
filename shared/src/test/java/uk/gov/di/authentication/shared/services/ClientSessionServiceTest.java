@@ -114,11 +114,33 @@ class ClientSessionServiceTest {
         assertTrue(clientSessionService.getClientSession(clientSessionId).isEmpty());
     }
 
+    @Test
+    void shouldGenerateClientSession() {
+        ClientSession clientSession =
+                clientSessionService.generateClientSession(
+                        Map.of("authparam", List.of("v1", "v2")),
+                        LocalDateTime.now(),
+                        VectorOfTrust.getDefaults(),
+                        "client-name");
+
+        assertTrue(
+                clientSession
+                        .getAuthRequestParams()
+                        .equals(Map.of("authparam", List.of("v1", "v2"))));
+        assertTrue(
+                clientSession
+                        .getEffectiveVectorOfTrust()
+                        .getCredentialTrustLevel()
+                        .equals(VectorOfTrust.getDefaults().getCredentialTrustLevel()));
+        assertTrue(clientSession.getClientName().equals("client-name"));
+    }
+
     private String generateSerialisedClientSession() throws Json.JsonException {
         return objectMapper.writeValueAsString(
                 new ClientSession(
                         Map.of("authparam", List.of("v1", "v2")),
                         LocalDateTime.now(),
-                        VectorOfTrust.getDefaults()));
+                        VectorOfTrust.getDefaults(),
+                        "client-name"));
     }
 }

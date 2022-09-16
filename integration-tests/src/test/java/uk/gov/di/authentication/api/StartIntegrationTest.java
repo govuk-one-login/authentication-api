@@ -90,7 +90,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         customAuthParameters.forEach(builder::customParameter);
         var authRequest = builder.build();
 
-        redis.createClientSession(CLIENT_SESSION_ID, authRequest.toParameters());
+        redis.createClientSession(CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
 
         registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR(), ClientType.WEB);
 
@@ -149,7 +149,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .nonce(new Nonce())
                         .requestObject(createSignedJWT(keyPair, state))
                         .build();
-        redis.createClientSession(CLIENT_SESSION_ID, authRequest.toParameters());
+        redis.createClientSession(CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
 
         registerClient(keyPair, ClientType.APP);
 

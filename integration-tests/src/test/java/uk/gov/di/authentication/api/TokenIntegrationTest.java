@@ -440,7 +440,8 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 "a-client-session-id",
                 TEST_EMAIL,
                 generateAuthRequest(scope, vtr, oidcClaimsRequest).toParameters(),
-                vectorOfTrust);
+                vectorOfTrust,
+                "client-name");
         Map<String, List<String>> customParams = new HashMap<>();
         customParams.put(
                 "grant_type", Collections.singletonList(GrantType.AUTHORIZATION_CODE.getValue()));

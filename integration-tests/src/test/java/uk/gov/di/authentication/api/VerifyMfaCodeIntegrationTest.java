@@ -43,6 +43,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     public static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final String AUTH_APP_SECRET_BASE_32 = "ORSXG5BNORSXQ5A=";
     private static final AuthAppStub AUTH_APP_STUB = new AuthAppStub();
+    private static final String CLIENT_NAME = "test-client-name";
     private String sessionId;
 
     @BeforeEach
@@ -230,7 +231,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .nonce(new Nonce())
                         .state(new State())
                         .build();
-        redis.createClientSession(CLIENT_SESSION_ID, authRequest.toParameters());
+        redis.createClientSession(CLIENT_SESSION_ID, CLIENT_NAME, authRequest.toParameters());
         clientStore.registerClient(
                 CLIENT_ID,
                 "test-client",

@@ -45,6 +45,7 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
     public static final String SESSION_ID = "some-session-id";
     public static final String CLIENT_SESSION_ID = "some-client-session-id";
     private static final ClientID CLIENT_ID = new ClientID("test-client");
+    private static final String CLIENT_NAME = "client-name";
     private static final String CLIENT_SECTOR = "https://test.com";
     private static final Subject INTERNAL_SUBJECT = new Subject();
     private static final String TEST_EMAIL_ADDRESS = "test@emailtest.com";
@@ -186,7 +187,8 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
                 new ClientSession(
                         authRequestBuilder.build().toParameters(),
                         LocalDateTime.now(),
-                        VectorOfTrust.getDefaults());
+                        VectorOfTrust.getDefaults(),
+                        CLIENT_NAME);
         redis.createClientSession(CLIENT_SESSION_ID, clientSession);
         redis.addStateToRedis(STATE, SESSION_ID);
         if (incrementProcessIdentityAttempts) {

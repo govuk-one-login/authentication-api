@@ -119,7 +119,10 @@ public class RedisExtension
     }
 
     public void addAuthRequestToSession(
-            String clientSessionId, String sessionId, Map<String, List<String>> authRequest)
+            String clientSessionId,
+            String sessionId,
+            Map<String, List<String>> authRequest,
+            String clientName)
             throws Json.JsonException {
         Session session = objectMapper.readValue(redis.getValue(sessionId), Session.class);
         session.addClientSession(clientSessionId);
@@ -129,7 +132,10 @@ public class RedisExtension
                 CLIENT_SESSION_PREFIX.concat(clientSessionId),
                 objectMapper.writeValueAsString(
                         new ClientSession(
-                                authRequest, LocalDateTime.now(), VectorOfTrust.getDefaults())),
+                                authRequest,
+                                LocalDateTime.now(),
+                                VectorOfTrust.getDefaults(),
+                                clientName)),
                 3600);
     }
 
@@ -222,9 +228,10 @@ public class RedisExtension
             String clientSessionId,
             String email,
             Map<String, List<String>> authRequest,
-            VectorOfTrust vtr)
+            VectorOfTrust vtr,
+            String clientName)
             throws Json.JsonException {
-        var clientSession = new ClientSession(authRequest, LocalDateTime.now(), vtr);
+        var clientSession = new ClientSession(authRequest, LocalDateTime.now(), vtr, clientName);
         redis.saveWithExpiry(
                 AUTH_CODE_PREFIX.concat(authCode),
                 objectMapper.writeValueAsString(
@@ -239,13 +246,17 @@ public class RedisExtension
                 300);
     }
 
-    public void createClientSession(String clientSessionId, Map<String, List<String>> authRequest)
+    public void createClientSession(
+            String clientSessionId, String clientName, Map<String, List<String>> authRequest)
             throws Json.JsonException {
         redis.saveWithExpiry(
                 CLIENT_SESSION_PREFIX.concat(clientSessionId),
                 objectMapper.writeValueAsString(
                         new ClientSession(
-                                authRequest, LocalDateTime.now(), VectorOfTrust.getDefaults())),
+                                authRequest,
+                                LocalDateTime.now(),
+                                VectorOfTrust.getDefaults(),
+                                clientName)),
                 300);
     }
 

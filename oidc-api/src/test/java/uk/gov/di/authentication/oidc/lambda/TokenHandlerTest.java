@@ -102,6 +102,7 @@ public class TokenHandlerTest {
     private static final String AUDIENCE = "oidc-audience";
     private static final State STATE = new State();
     private static final String CLIENT_ID = "test-id";
+    private static final String CLIENT_NAME = "test-client-name";
     private static final String IGNORE_CLIENT_ID = "ignore-test-id";
     private static final ClientID DOC_APP_CLIENT_ID = new ClientID("doc-app-test-id");
     private static final Scope SCOPES =
@@ -212,7 +213,8 @@ public class TokenHandlerTest {
                                                 new ClientSession(
                                                         authenticationRequest.toParameters(),
                                                         LocalDateTime.now(),
-                                                        vtr))));
+                                                        vtr,
+                                                        CLIENT_NAME))));
         when(dynamoService.getUserProfileByEmail(eq(TEST_EMAIL))).thenReturn(userProfile);
         when(tokenService.generateTokenResponse(
                         CLIENT_ID,
@@ -388,7 +390,8 @@ public class TokenHandlerTest {
                                                 new ClientSession(
                                                         generateAuthRequest().toParameters(),
                                                         LocalDateTime.now(),
-                                                        mock(VectorOfTrust.class)))));
+                                                        mock(VectorOfTrust.class),
+                                                        CLIENT_NAME))));
 
         APIGatewayProxyResponseEvent result =
                 generateApiGatewayRequest(
@@ -429,7 +432,11 @@ public class TokenHandlerTest {
                 VectorOfTrust.parseFromAuthRequestAttribute(
                         authenticationRequest.getCustomParameter("vtr"));
         ClientSession clientSession =
-                new ClientSession(authenticationRequest.toParameters(), LocalDateTime.now(), vtr);
+                new ClientSession(
+                        authenticationRequest.toParameters(),
+                        LocalDateTime.now(),
+                        vtr,
+                        CLIENT_NAME);
         clientSession.setDocAppSubjectId(DOC_APP_USER_PUBLIC_SUBJECT);
         when(authorisationCodeService.getExchangeDataForCode(authCode))
                 .thenReturn(

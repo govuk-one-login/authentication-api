@@ -95,7 +95,7 @@ class DocAppCallbackHandlerTest {
     private final Session session = new Session(SESSION_ID).setEmailAddress(TEST_EMAIL_ADDRESS);
 
     private final ClientSession clientSession =
-            new ClientSession(generateAuthRequest().toParameters(), null, null);
+            new ClientSession(generateAuthRequest().toParameters(), null, null, null);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging =

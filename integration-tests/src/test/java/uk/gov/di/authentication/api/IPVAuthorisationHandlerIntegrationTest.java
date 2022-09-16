@@ -45,6 +45,7 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
     private static final String CLIENT_SESSION_ID = "some-client-session-id";
     private static final String PERSISTENT_SESSION_ID = "some-persistent-session-id";
     private static final ClientID CLIENT_ID = new ClientID("test-client");
+    private static final String CLIENT_NAME = "some-client-name";
 
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
     private static final String IPV_SECTOR = "https://ipv/redirect";
@@ -70,7 +71,8 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
         redis.addAuthRequestToSession(
                 CLIENT_SESSION_ID,
                 SESSION_ID,
-                withAuthenticationRequest(CLIENT_ID.getValue()).toParameters());
+                withAuthenticationRequest(CLIENT_ID.getValue()).toParameters(),
+                CLIENT_NAME);
         txmaAuditQueue.clear();
     }
 

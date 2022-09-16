@@ -49,6 +49,8 @@ class DocAppAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegration
     private static final String CLIENT_SESSION_ID = "some-client-session-id";
     private static final String PERSISTENT_SESSION_ID = "some-persistent-session-id";
     private static final ClientID RP_CLIENT_ID = new ClientID("test-client");
+    private static final String RP_CLIENT_NAME = "test-client-name";
+
     private static final URI CALLBACK_URI = URI.create("http://localhost/callback");
     private static final URI AUTHORIZE_URI = URI.create("http://doc-app/authorize");
     private static final String DOC_APP_CLIENT_ID = "doc-app-client-id";
@@ -74,7 +76,8 @@ class DocAppAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegration
         redis.addAuthRequestToSession(
                 CLIENT_SESSION_ID,
                 SESSION_ID,
-                withAuthenticationRequest(RP_CLIENT_ID.getValue()).toParameters());
+                withAuthenticationRequest(RP_CLIENT_ID.getValue()).toParameters(),
+                RP_CLIENT_NAME);
         txmaAuditQueue.clear();
     }
 

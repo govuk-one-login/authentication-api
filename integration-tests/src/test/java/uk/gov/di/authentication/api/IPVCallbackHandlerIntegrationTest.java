@@ -75,6 +75,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
     private static final String REDIRECT_URI = "http://localhost/redirect";
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
     private static final Subject INTERNAL_SUBJECT = new Subject();
+    public static final String CLIENT_NAME = "test-client-name";
 
     @BeforeEach
     void setup() {
@@ -99,7 +100,8 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                         .nonce(new Nonce());
         var state = new State();
         redis.createSession(sessionId);
-        redis.createClientSession(clientSessionId, authRequestBuilder.build().toParameters());
+        redis.createClientSession(
+                clientSessionId, CLIENT_NAME, authRequestBuilder.build().toParameters());
         redis.addStateToRedis(state, sessionId);
         redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
         setUpDynamo();

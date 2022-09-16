@@ -79,6 +79,7 @@ class SignUpHandlerTest {
     private final PasswordValidator passwordValidator = mock(PasswordValidator.class);
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final ClientID CLIENT_ID = new ClientID();
+    private static final String CLIENT_NAME = "client-name";
     private static final URI REDIRECT_URI = URI.create("test-uri");
     private static final Json objectMapper = SerializationService.getInstance();
 
@@ -86,7 +87,7 @@ class SignUpHandlerTest {
 
     private final Session session = new Session(IdGenerator.generate());
     private final ClientSession clientSession =
-            new ClientSession(generateAuthRequest().toParameters(), null, null);
+            new ClientSession(generateAuthRequest().toParameters(), null, null, CLIENT_NAME);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging =

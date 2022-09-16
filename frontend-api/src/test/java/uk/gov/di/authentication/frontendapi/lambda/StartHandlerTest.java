@@ -325,7 +325,8 @@ class StartHandlerTest {
                                 new ClientID(TEST_CLIENT_ID),
                                 URI.create("http://localhost/redirect"))
                         .build();
-        return new ClientSession(authRequest.toParameters(), null, mock(VectorOfTrust.class));
+        return new ClientSession(
+                authRequest.toParameters(), null, mock(VectorOfTrust.class), TEST_CLIENT_NAME);
     }
 
     private ClientStartInfo getClientStartInfo() {

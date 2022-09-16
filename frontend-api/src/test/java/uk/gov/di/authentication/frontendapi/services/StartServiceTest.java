@@ -91,7 +91,10 @@ class StartServiceTest {
                         .build();
         var clientSession =
                 new ClientSession(
-                        authRequest.toParameters(), LocalDateTime.now(), mock(VectorOfTrust.class));
+                        authRequest.toParameters(),
+                        LocalDateTime.now(),
+                        mock(VectorOfTrust.class),
+                        CLIENT_NAME);
         var userContext = startService.buildUserContext(SESSION, clientSession);
 
         assertThat(userContext.getSession(), equalTo(SESSION));
@@ -385,7 +388,10 @@ class StartServiceTest {
         }
         var clientSession =
                 new ClientSession(
-                        authRequest.toParameters(), LocalDateTime.now(), clientSessionVTR);
+                        authRequest.toParameters(),
+                        LocalDateTime.now(),
+                        clientSessionVTR,
+                        CLIENT_NAME);
         var clientRegistry =
                 new ClientRegistry()
                         .withClientID(CLIENT_ID.getValue())

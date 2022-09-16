@@ -40,6 +40,7 @@ import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
@@ -84,6 +85,8 @@ class AuthorisationHandlerTest {
     private final UserContext userContext = mock(UserContext.class);
     private final AuditService auditService = mock(AuditService.class);
     private final RequestObjectService requestObjectService = mock(RequestObjectService.class);
+    private final ClientService clientService = mock(ClientService.class);
+    private final ClientRegistry clientRegistry = mock(ClientRegistry.class);
     private final InOrder inOrder = inOrder(auditService);
     private static final String EXPECTED_SESSION_COOKIE_STRING =
             "gs=a-session-id.client-session-id; Max-Age=3600; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;";
@@ -129,10 +132,15 @@ class AuthorisationHandlerTest {
                         clientSessionService,
                         authorizationService,
                         auditService,
-                        requestObjectService);
+                        requestObjectService,
+                        clientService);
         session = new Session("a-session-id");
         when(sessionService.createSession()).thenReturn(session);
         when(clientSessionService.generateClientSessionId()).thenReturn(CLIENT_SESSION_ID);
+        when(clientSessionService.generateClientSession(any(), any(), any(), any()))
+                .thenReturn(clientSession);
+        when(clientService.getClient(any())).thenReturn(Optional.of(clientRegistry));
+        when(clientRegistry.getClientName()).thenReturn("client-name");
     }
 
     @AfterEach
@@ -162,6 +170,7 @@ class AuthorisationHandlerTest {
                         .get(ResponseHeaders.SET_COOKIE)
                         .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
         verify(sessionService).save(eq(session));
+        verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
 
         inOrder.verify(auditService)
                 .submitAuditEvent(
@@ -229,6 +238,7 @@ class AuthorisationHandlerTest {
         }
 
         verify(sessionService).save(session);
+        verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
 
         inOrder.verify(auditService)
                 .submitAuditEvent(
@@ -269,6 +279,7 @@ class AuthorisationHandlerTest {
                         .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
 
         verify(sessionService).save(eq(session));
+        verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
 
         inOrder.verify(auditService)
                 .submitAuditEvent(
@@ -310,6 +321,7 @@ class AuthorisationHandlerTest {
                         .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
 
         verify(sessionService).save(eq(session));
+        verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
 
         inOrder.verify(auditService)
                 .submitAuditEvent(
@@ -350,6 +362,7 @@ class AuthorisationHandlerTest {
                         .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
 
         verify(sessionService).save(eq(session));
+        verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
 
         inOrder.verify(auditService)
                 .submitAuditEvent(
