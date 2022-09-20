@@ -16,6 +16,7 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
+import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -35,11 +36,18 @@ public class AuthenticateHandler
     private final AuthenticationService authenticationService;
     private final Json objectMapper = SerializationService.getInstance();
     private final AuditService auditService;
+    private final CodeStorageService codeStorageService;
+    private final ConfigurationService configurationService;
 
     public AuthenticateHandler(
-            AuthenticationService authenticationService, AuditService auditService) {
+            AuthenticationService authenticationService,
+            AuditService auditService,
+            CodeStorageService codeStorageService,
+            ConfigurationService configurationService) {
         this.authenticationService = authenticationService;
         this.auditService = auditService;
+        this.codeStorageService = codeStorageService;
+        this.configurationService = configurationService;
     }
 
     public AuthenticateHandler() {
@@ -49,6 +57,8 @@ public class AuthenticateHandler
     public AuthenticateHandler(ConfigurationService configurationService) {
         this.authenticationService = new DynamoService(configurationService);
         this.auditService = new AuditService(configurationService);
+        this.codeStorageService = new CodeStorageService(configurationService);
+        this.configurationService = configurationService;
     }
 
     @Override
@@ -74,6 +84,31 @@ public class AuthenticateHandler
                                 AuthenticateRequest loginRequest =
                                         objectMapper.readValue(
                                                 input.getBody(), AuthenticateRequest.class);
+                                var persistentSessionId =
+                                        PersistentIdHelper.extractPersistentIdFromHeaders(
+                                                input.getHeaders());
+                                int incorrectPasswordCount =
+                                        codeStorageService.getIncorrectPasswordCount(
+                                                loginRequest.getEmail());
+                                if (incorrectPasswordCount
+                                        >= configurationService.getMaxPasswordRetries()) {
+                                    LOG.info("User has exceeded max password retries");
+
+                                    auditService.submitAuditEvent(
+                                            AccountManagementAuditableEvent
+                                                    .ACCOUNT_TEMPORARILY_LOCKED,
+                                            AuditService.UNKNOWN,
+                                            sessionId,
+                                            AuditService.UNKNOWN,
+                                            AuditService.UNKNOWN,
+                                            loginRequest.getEmail(),
+                                            IpAddressHelper.extractIpAddress(input),
+                                            AuditService.UNKNOWN,
+                                            persistentSessionId);
+
+                                    return generateApiGatewayProxyErrorResponse(
+                                            400, ErrorResponse.ERROR_1028);
+                                }
                                 boolean userHasAccount =
                                         authenticationService.userExists(loginRequest.getEmail());
                                 if (!userHasAccount) {
@@ -85,8 +120,14 @@ public class AuthenticateHandler
                                                 loginRequest.getEmail(),
                                                 loginRequest.getPassword());
                                 if (!hasValidCredentials) {
+                                    codeStorageService.increaseIncorrectPasswordCount(
+                                            loginRequest.getEmail());
                                     return generateApiGatewayProxyErrorResponse(
                                             401, ErrorResponse.ERROR_1008);
+                                }
+                                if (incorrectPasswordCount != 0) {
+                                    codeStorageService.deleteIncorrectPasswordCount(
+                                            loginRequest.getEmail());
                                 }
                                 LOG.info(
                                         "User has successfully Logged in. Generating successful AuthenticateResponse");
