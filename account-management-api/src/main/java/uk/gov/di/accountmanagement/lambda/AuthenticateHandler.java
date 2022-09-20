@@ -26,7 +26,6 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
-import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class AuthenticateHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -71,85 +70,71 @@ public class AuthenticateHandler
 
     public APIGatewayProxyResponseEvent authenticateRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
-        return isWarming(input)
-                .orElseGet(
-                        () -> {
-                            String sessionId =
-                                    RequestHeaderHelper.getHeaderValueOrElse(
-                                            input.getHeaders(), SESSION_ID_HEADER, "");
-                            attachSessionIdToLogs(sessionId);
-                            LOG.info("Request received to the AuthenticateHandler");
+        String sessionId =
+                RequestHeaderHelper.getHeaderValueOrElse(input.getHeaders(), SESSION_ID_HEADER, "");
+        attachSessionIdToLogs(sessionId);
+        LOG.info("Request received to the AuthenticateHandler");
 
-                            try {
-                                AuthenticateRequest loginRequest =
-                                        objectMapper.readValue(
-                                                input.getBody(), AuthenticateRequest.class);
-                                var persistentSessionId =
-                                        PersistentIdHelper.extractPersistentIdFromHeaders(
-                                                input.getHeaders());
-                                int incorrectPasswordCount =
-                                        codeStorageService.getIncorrectPasswordCount(
-                                                loginRequest.getEmail());
-                                if (incorrectPasswordCount
-                                        >= configurationService.getMaxPasswordRetries()) {
-                                    LOG.info("User has exceeded max password retries");
+        try {
+            AuthenticateRequest loginRequest =
+                    objectMapper.readValue(input.getBody(), AuthenticateRequest.class);
+            var persistentSessionId =
+                    PersistentIdHelper.extractPersistentIdFromHeaders(
+                            input.getHeaders());
+            var incorrectPasswordCount =
+                    codeStorageService.getIncorrectPasswordCount(
+                            loginRequest.getEmail());
+            if (incorrectPasswordCount
+                    >= configurationService.getMaxPasswordRetries()) {
+                LOG.info("User has exceeded max password retries");
 
-                                    auditService.submitAuditEvent(
-                                            AccountManagementAuditableEvent
-                                                    .ACCOUNT_TEMPORARILY_LOCKED,
-                                            AuditService.UNKNOWN,
-                                            sessionId,
-                                            AuditService.UNKNOWN,
-                                            AuditService.UNKNOWN,
-                                            loginRequest.getEmail(),
-                                            IpAddressHelper.extractIpAddress(input),
-                                            AuditService.UNKNOWN,
-                                            persistentSessionId);
+                auditService.submitAuditEvent(
+                        AccountManagementAuditableEvent
+                                .ACCOUNT_TEMPORARILY_LOCKED,
+                        AuditService.UNKNOWN,
+                        sessionId,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        loginRequest.getEmail(),
+                        IpAddressHelper.extractIpAddress(input),
+                        AuditService.UNKNOWN,
+                        persistentSessionId);
 
-                                    return generateApiGatewayProxyErrorResponse(
-                                            400, ErrorResponse.ERROR_1028);
-                                }
-                                boolean userHasAccount =
-                                        authenticationService.userExists(loginRequest.getEmail());
-                                if (!userHasAccount) {
-                                    return generateApiGatewayProxyErrorResponse(
-                                            400, ErrorResponse.ERROR_1010);
-                                }
-                                boolean hasValidCredentials =
-                                        authenticationService.login(
-                                                loginRequest.getEmail(),
-                                                loginRequest.getPassword());
-                                if (!hasValidCredentials) {
-                                    codeStorageService.increaseIncorrectPasswordCount(
-                                            loginRequest.getEmail());
-                                    return generateApiGatewayProxyErrorResponse(
-                                            401, ErrorResponse.ERROR_1008);
-                                }
-                                if (incorrectPasswordCount != 0) {
-                                    codeStorageService.deleteIncorrectPasswordCount(
-                                            loginRequest.getEmail());
-                                }
-                                LOG.info(
-                                        "User has successfully Logged in. Generating successful AuthenticateResponse");
+                return generateApiGatewayProxyErrorResponse(
+                        400, ErrorResponse.ERROR_1028);
+            }
+            boolean userHasAccount = authenticationService.userExists(loginRequest.getEmail());
+            if (!userHasAccount) {
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
+            }
+            boolean hasValidCredentials =
+                    authenticationService.login(
+                            loginRequest.getEmail(), loginRequest.getPassword());
+            if (!hasValidCredentials) {
+                codeStorageService.increaseIncorrectPasswordCount(
+                        loginRequest.getEmail());
+                return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1008);
+            }
+            if (incorrectPasswordCount != 0) {
+                codeStorageService.deleteIncorrectPasswordCount(
+                        loginRequest.getEmail());
+            }
+            LOG.info("User has successfully Logged in. Generating successful AuthenticateResponse");
 
-                                auditService.submitAuditEvent(
-                                        AccountManagementAuditableEvent
-                                                .ACCOUNT_MANAGEMENT_AUTHENTICATE,
-                                        AuditService.UNKNOWN,
-                                        sessionId,
-                                        AuditService.UNKNOWN,
-                                        AuditService.UNKNOWN,
-                                        loginRequest.getEmail(),
-                                        IpAddressHelper.extractIpAddress(input),
-                                        AuditService.UNKNOWN,
-                                        PersistentIdHelper.extractPersistentIdFromHeaders(
-                                                input.getHeaders()));
+            auditService.submitAuditEvent(
+                    AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE,
+                    AuditService.UNKNOWN,
+                    sessionId,
+                    AuditService.UNKNOWN,
+                    AuditService.UNKNOWN,
+                    loginRequest.getEmail(),
+                    IpAddressHelper.extractIpAddress(input),
+                    AuditService.UNKNOWN,
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
-                                return generateEmptySuccessApiGatewayResponse();
-                            } catch (JsonException e) {
-                                return generateApiGatewayProxyErrorResponse(
-                                        400, ErrorResponse.ERROR_1001);
-                            }
-                        });
+            return generateEmptySuccessApiGatewayResponse();
+        } catch (JsonException e) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+        }
     }
 }
