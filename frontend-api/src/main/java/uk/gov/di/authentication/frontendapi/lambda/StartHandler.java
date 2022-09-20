@@ -32,7 +32,6 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
-import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class StartHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -75,103 +74,79 @@ public class StartHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return isWarming(input)
-                .orElseGet(
-                        () -> {
-                            LOG.info("Start request received");
-                            var session =
-                                    sessionService.getSessionFromRequestHeaders(input.getHeaders());
-                            if (session.isEmpty()) {
-                                return generateApiGatewayProxyErrorResponse(
-                                        400, ErrorResponse.ERROR_1000);
-                            } else {
-                                attachSessionIdToLogs(session.get());
-                                LOG.info("Start session retrieved");
-                            }
+        LOG.info("Start request received");
+        var session = sessionService.getSessionFromRequestHeaders(input.getHeaders());
+        if (session.isEmpty()) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+        } else {
+            attachSessionIdToLogs(session.get());
+            LOG.info("Start session retrieved");
+        }
 
-                            var clientSession =
-                                    clientSessionService.getClientSessionFromRequestHeaders(
-                                            input.getHeaders());
+        var clientSession =
+                clientSessionService.getClientSessionFromRequestHeaders(input.getHeaders());
 
-                            if (clientSession.isEmpty()) {
-                                return generateApiGatewayProxyErrorResponse(
-                                        400, ErrorResponse.ERROR_1018);
-                            }
-                            try {
-                                var userContext =
-                                        startService.buildUserContext(
-                                                session.get(), clientSession.get());
-                                var clientStartInfo =
-                                        startService.buildClientStartInfo(userContext);
+        if (clientSession.isEmpty()) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1018);
+        }
+        try {
+            var userContext = startService.buildUserContext(session.get(), clientSession.get());
+            var clientStartInfo = startService.buildClientStartInfo(userContext);
 
-                                var cookieConsent =
-                                        startService.getCookieConsentValue(
-                                                userContext
-                                                        .getClientSession()
-                                                        .getAuthRequestParams(),
-                                                userContext.getClient().get().getClientID());
-                                var gaTrackingId =
-                                        startService.getGATrackingId(
-                                                userContext
-                                                        .getClientSession()
-                                                        .getAuthRequestParams());
-                                var userStartInfo =
-                                        startService.buildUserStartInfo(
-                                                userContext,
-                                                cookieConsent,
-                                                gaTrackingId,
-                                                configurationService.isIdentityEnabled());
-                                var clientSessionId =
-                                        getHeaderValueFromHeaders(
-                                                input.getHeaders(),
-                                                CLIENT_SESSION_ID_HEADER,
-                                                configurationService.getHeadersCaseInsensitive());
-                                if (userStartInfo.isDocCheckingAppUser()) {
-                                    var docAppSubjectId =
-                                            ClientSubjectHelper.calculatePairwiseIdentifier(
-                                                    new Subject().getValue(),
-                                                    configurationService.getDocAppDomain(),
-                                                    SaltHelper.generateNewSalt());
-                                    clientSessionService.saveClientSession(
-                                            clientSessionId,
-                                            clientSession
-                                                    .get()
-                                                    .setDocAppSubjectId(
-                                                            new Subject(docAppSubjectId)));
-                                    LOG.info(
-                                            "Subject saved to ClientSession for DocCheckingAppUser");
-                                }
+            var cookieConsent =
+                    startService.getCookieConsentValue(
+                            userContext.getClientSession().getAuthRequestParams(),
+                            userContext.getClient().get().getClientID());
+            var gaTrackingId =
+                    startService.getGATrackingId(
+                            userContext.getClientSession().getAuthRequestParams());
+            var userStartInfo =
+                    startService.buildUserStartInfo(
+                            userContext,
+                            cookieConsent,
+                            gaTrackingId,
+                            configurationService.isIdentityEnabled());
+            var clientSessionId =
+                    getHeaderValueFromHeaders(
+                            input.getHeaders(),
+                            CLIENT_SESSION_ID_HEADER,
+                            configurationService.getHeadersCaseInsensitive());
+            if (userStartInfo.isDocCheckingAppUser()) {
+                var docAppSubjectId =
+                        ClientSubjectHelper.calculatePairwiseIdentifier(
+                                new Subject().getValue(),
+                                configurationService.getDocAppDomain(),
+                                SaltHelper.generateNewSalt());
+                clientSessionService.saveClientSession(
+                        clientSessionId,
+                        clientSession.get().setDocAppSubjectId(new Subject(docAppSubjectId)));
+                LOG.info("Subject saved to ClientSession for DocCheckingAppUser");
+            }
 
-                                var startResponse =
-                                        new StartResponse(userStartInfo, clientStartInfo);
+            var startResponse = new StartResponse(userStartInfo, clientStartInfo);
 
-                                auditService.submitAuditEvent(
-                                        FrontendAuditableEvent.START_INFO_FOUND,
-                                        clientSessionId,
-                                        session.get().getSessionId(),
-                                        userContext.getClient().get().getClientID(),
-                                        AuditService.UNKNOWN,
-                                        userContext
-                                                .getUserProfile()
-                                                .map(UserProfile::getEmail)
-                                                .orElse(AuditService.UNKNOWN),
-                                        IpAddressHelper.extractIpAddress(input),
-                                        AuditService.UNKNOWN,
-                                        PersistentIdHelper.extractPersistentIdFromHeaders(
-                                                input.getHeaders()));
+            auditService.submitAuditEvent(
+                    FrontendAuditableEvent.START_INFO_FOUND,
+                    clientSessionId,
+                    session.get().getSessionId(),
+                    userContext.getClient().get().getClientID(),
+                    AuditService.UNKNOWN,
+                    userContext
+                            .getUserProfile()
+                            .map(UserProfile::getEmail)
+                            .orElse(AuditService.UNKNOWN),
+                    IpAddressHelper.extractIpAddress(input),
+                    AuditService.UNKNOWN,
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
-                                return generateApiGatewayProxyResponse(200, startResponse);
+            return generateApiGatewayProxyResponse(200, startResponse);
 
-                            } catch (JsonException e) {
-                                return generateApiGatewayProxyErrorResponse(
-                                        400, ErrorResponse.ERROR_1001);
-                            } catch (NoSuchElementException e) {
-                                return generateApiGatewayProxyErrorResponse(
-                                        400, ErrorResponse.ERROR_1015);
-                            } catch (ParseException e) {
-                                return generateApiGatewayProxyErrorResponse(
-                                        400, ErrorResponse.ERROR_1038);
-                            }
-                        });
+        } catch (JsonException e) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+        } catch (NoSuchElementException e) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
+        } catch (ParseException e) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1038);
+        }
     }
 }

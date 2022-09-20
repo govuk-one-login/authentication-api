@@ -40,7 +40,6 @@ import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segm
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
-import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class SendOtpNotificationHandler
@@ -99,76 +98,65 @@ public class SendOtpNotificationHandler
 
     public APIGatewayProxyResponseEvent sendOtpRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
-        return isWarming(input)
-                .orElseGet(
-                        () -> {
-                            String sessionId =
-                                    RequestHeaderHelper.getHeaderValueOrElse(
-                                            input.getHeaders(), SESSION_ID_HEADER, "");
-                            attachSessionIdToLogs(sessionId);
-                            LOG.info("Request received in SendOtp Lambda");
-                            SupportedLanguage userLanguage =
-                                    matchSupportedLanguage(
-                                            getUserLanguageFromRequestHeaders(
-                                                    input.getHeaders(), configurationService));
-                            try {
-                                SendNotificationRequest sendNotificationRequest =
-                                        objectMapper.readValue(
-                                                input.getBody(), SendNotificationRequest.class);
-                                switch (sendNotificationRequest.getNotificationType()) {
-                                    case VERIFY_EMAIL:
-                                        LOG.info("NotificationType is VERIFY_EMAIL");
-                                        Optional<ErrorResponse> emailErrorResponse =
-                                                ValidationHelper.validateEmailAddress(
-                                                        sendNotificationRequest.getEmail());
-                                        if (emailErrorResponse.isPresent()) {
-                                            return generateApiGatewayProxyErrorResponse(
-                                                    400, emailErrorResponse.get());
-                                        }
-                                        if (dynamoService.userExists(
-                                                sendNotificationRequest.getEmail())) {
-                                            return generateApiGatewayProxyErrorResponse(
-                                                    400, ErrorResponse.ERROR_1009);
-                                        }
-                                        return handleNotificationRequest(
-                                                sendNotificationRequest.getEmail(),
-                                                sendNotificationRequest,
-                                                input,
-                                                context,
-                                                userLanguage);
-                                    case VERIFY_PHONE_NUMBER:
-                                        LOG.info("NotificationType is VERIFY_PHONE_NUMBER");
-                                        var existingPhoneNumber =
-                                                dynamoService
-                                                        .getUserProfileByEmailMaybe(
-                                                                sendNotificationRequest.getEmail())
-                                                        .map(UserProfile::getPhoneNumber)
-                                                        .orElse(null);
-                                        var phoneNumberValidationError =
-                                                ValidationHelper.validatePhoneNumber(
-                                                        existingPhoneNumber,
-                                                        sendNotificationRequest.getPhoneNumber(),
-                                                        configurationService.getEnvironment());
-                                        if (phoneNumberValidationError.isPresent()) {
-                                            return generateApiGatewayProxyErrorResponse(
-                                                    400, phoneNumberValidationError.get());
-                                        }
-                                        return handleNotificationRequest(
-                                                sendNotificationRequest.getPhoneNumber(),
-                                                sendNotificationRequest,
-                                                input,
-                                                context,
-                                                userLanguage);
-                                }
-                                return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
-                            } catch (SdkClientException ex) {
-                                LOG.error("Error sending message to queue", ex);
-                                return generateApiGatewayProxyResponse(
-                                        500, "Error sending message to queue");
-                            } catch (JsonException e) {
-                                return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
-                            }
-                        });
+        String sessionId =
+                RequestHeaderHelper.getHeaderValueOrElse(input.getHeaders(), SESSION_ID_HEADER, "");
+        attachSessionIdToLogs(sessionId);
+        LOG.info("Request received in SendOtp Lambda");
+        SupportedLanguage userLanguage =
+                matchSupportedLanguage(
+                        getUserLanguageFromRequestHeaders(
+                                input.getHeaders(), configurationService));
+        try {
+            SendNotificationRequest sendNotificationRequest =
+                    objectMapper.readValue(input.getBody(), SendNotificationRequest.class);
+            switch (sendNotificationRequest.getNotificationType()) {
+                case VERIFY_EMAIL:
+                    LOG.info("NotificationType is VERIFY_EMAIL");
+                    Optional<ErrorResponse> emailErrorResponse =
+                            ValidationHelper.validateEmailAddress(
+                                    sendNotificationRequest.getEmail());
+                    if (emailErrorResponse.isPresent()) {
+                        return generateApiGatewayProxyErrorResponse(400, emailErrorResponse.get());
+                    }
+                    if (dynamoService.userExists(sendNotificationRequest.getEmail())) {
+                        return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1009);
+                    }
+                    return handleNotificationRequest(
+                            sendNotificationRequest.getEmail(),
+                            sendNotificationRequest,
+                            input,
+                            context,
+                            userLanguage);
+                case VERIFY_PHONE_NUMBER:
+                    LOG.info("NotificationType is VERIFY_PHONE_NUMBER");
+                    var existingPhoneNumber =
+                            dynamoService
+                                    .getUserProfileByEmailMaybe(sendNotificationRequest.getEmail())
+                                    .map(UserProfile::getPhoneNumber)
+                                    .orElse(null);
+                    var phoneNumberValidationError =
+                            ValidationHelper.validatePhoneNumber(
+                                    existingPhoneNumber,
+                                    sendNotificationRequest.getPhoneNumber(),
+                                    configurationService.getEnvironment());
+                    if (phoneNumberValidationError.isPresent()) {
+                        return generateApiGatewayProxyErrorResponse(
+                                400, phoneNumberValidationError.get());
+                    }
+                    return handleNotificationRequest(
+                            sendNotificationRequest.getPhoneNumber(),
+                            sendNotificationRequest,
+                            input,
+                            context,
+                            userLanguage);
+            }
+            return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
+        } catch (SdkClientException ex) {
+            LOG.error("Error sending message to queue", ex);
+            return generateApiGatewayProxyResponse(500, "Error sending message to queue");
+        } catch (JsonException e) {
+            return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
+        }
     }
 
     private APIGatewayProxyResponseEvent handleNotificationRequest(

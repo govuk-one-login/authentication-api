@@ -8,7 +8,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.ipv.services.IPVCapacityService;
 import uk.gov.di.authentication.shared.services.AuditService;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.mock;
@@ -18,7 +17,6 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 public class IPVCapacityHandlerTest {
 
     private final Context context = mock(Context.class);
-    private final ConfigurationService configService = mock(ConfigurationService.class);
 
     private final AuditService auditService = mock(AuditService.class);
     private final IPVCapacityService ipvCapacityService = mock(IPVCapacityService.class);
@@ -27,7 +25,7 @@ public class IPVCapacityHandlerTest {
 
     @BeforeEach
     void setup() {
-        handler = new IPVCapacityHandler(configService, ipvCapacityService, auditService);
+        handler = new IPVCapacityHandler(ipvCapacityService, auditService);
     }
 
     @Test

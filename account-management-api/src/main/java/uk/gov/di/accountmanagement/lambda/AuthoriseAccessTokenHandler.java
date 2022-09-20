@@ -24,9 +24,8 @@ import uk.gov.di.authentication.shared.services.TokenValidationService;
 import java.util.Date;
 import java.util.List;
 
-import static java.lang.Thread.sleep;
+import static uk.gov.di.accountmanagement.entity.AuthPolicy.PolicyDocument.getAllowAllPolicy;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
-import static uk.gov.di.authentication.shared.helpers.WarmerHelper.WARMUP_HEADER;
 
 public class AuthoriseAccessTokenHandler
         implements RequestHandler<TokenAuthorizerContext, AuthPolicy> {
@@ -79,87 +78,71 @@ public class AuthoriseAccessTokenHandler
     }
 
     public AuthPolicy authoriseAccessTokenHandler(TokenAuthorizerContext input, Context context) {
-        if (input.getType().equals(WARMUP_HEADER)) {
-            LOG.info("Warmup Request Received");
-            try {
-                sleep(configurationService.getWarmupDelayMillis());
-            } catch (InterruptedException e) {
-                LOG.error("Sleep was interrupted", e);
-                throw new RuntimeException("Sleep was interrupted", e);
-            }
-            LOG.info("Instance warmed for request");
-            throw new RuntimeException("Unauthorized");
-        } else {
-            LOG.info("Request received in AuthoriseAccessTokenHandler");
-            try {
-                String token = input.getAuthorizationToken();
+        LOG.info("Request received in AuthoriseAccessTokenHandler");
+        try {
+            String token = input.getAuthorizationToken();
 
-                AccessToken accessToken = AccessToken.parse(token, AccessTokenType.BEARER);
-                SignedJWT signedAccessToken = SignedJWT.parse(accessToken.getValue());
-                JWTClaimsSet claimsSet = signedAccessToken.getJWTClaimsSet();
+            AccessToken accessToken = AccessToken.parse(token, AccessTokenType.BEARER);
+            SignedJWT signedAccessToken = SignedJWT.parse(accessToken.getValue());
+            JWTClaimsSet claimsSet = signedAccessToken.getJWTClaimsSet();
 
-                Date currentDateTime = NowHelper.now();
-                if (DateUtils.isBefore(claimsSet.getExpirationTime(), currentDateTime, 0)) {
-                    LOG.warn(
-                            "Access Token expires at: {}. CurrentDateTime is: {}",
-                            claimsSet.getExpirationTime(),
-                            currentDateTime);
-                    throw new RuntimeException("Unauthorized");
-                }
-                boolean isAccessTokenSignatureValid =
-                        tokenValidationService.validateAccessTokenSignature(accessToken);
-                if (!isAccessTokenSignatureValid) {
-                    LOG.warn("Access Token signature is not valid");
-                    throw new RuntimeException("Unauthorized");
-                }
-                LOG.info("Successfully validated Access Token signature");
-
-                List<String> scopeList = claimsSet.getStringListClaim("scope");
-                if (scopeList == null
-                        || !scopeList.contains(CustomScopeValue.ACCOUNT_MANAGEMENT.getValue())) {
-                    LOG.warn("Access Token scope is not valid or missing");
-                    throw new RuntimeException("Unauthorized");
-                }
-                LOG.info("Successfully validated Access Token scope");
-                String clientId = claimsSet.getStringClaim("client_id");
-                if (clientId == null) {
-                    LOG.warn("Access Token client_id is missing");
-                    throw new RuntimeException("Unauthorized");
-                }
-                if (!clientService.isValidClient(clientId)) {
-                    LOG.warn(
-                            "Access Token client_id does not exist in Dynamo. ClientId {}",
-                            clientId);
-                    throw new RuntimeException("Unauthorized");
-                }
-                String subject = claimsSet.getSubject();
-                if (subject == null) {
-                    LOG.warn("Access Token subject is missing");
-                    throw new RuntimeException("Unauthorized");
-                }
-                try {
-                    dynamoService.getUserProfileFromPublicSubject(subject);
-                } catch (Exception e) {
-                    LOG.error("Unable to retrieve UserProfile from Dynamo with given SubjectID");
-                    throw new RuntimeException("Unauthorized");
-                }
-                LOG.info("User found in Dynamo with given SubjectID");
-                String methodArn = input.getMethodArn();
-                String[] arnPartials = methodArn.split(":");
-                String region = arnPartials[3];
-                String awsAccountId = arnPartials[4];
-                String[] apiGatewayArnPartials = arnPartials[5].split("/");
-                String restApiId = apiGatewayArnPartials[0];
-                String stage = apiGatewayArnPartials[1];
-                LOG.info("Generating AuthPolicy");
-                return new AuthPolicy(
-                        subject,
-                        AuthPolicy.PolicyDocument.getAllowAllPolicy(
-                                region, awsAccountId, restApiId, stage));
-            } catch (ParseException | java.text.ParseException e) {
-                LOG.warn("Unable to parse Access Token");
+            Date currentDateTime = NowHelper.now();
+            if (DateUtils.isBefore(claimsSet.getExpirationTime(), currentDateTime, 0)) {
+                LOG.warn(
+                        "Access Token expires at: {}. CurrentDateTime is: {}",
+                        claimsSet.getExpirationTime(),
+                        currentDateTime);
                 throw new RuntimeException("Unauthorized");
             }
+            boolean isAccessTokenSignatureValid =
+                    tokenValidationService.validateAccessTokenSignature(accessToken);
+            if (!isAccessTokenSignatureValid) {
+                LOG.warn("Access Token signature is not valid");
+                throw new RuntimeException("Unauthorized");
+            }
+            LOG.info("Successfully validated Access Token signature");
+
+            List<String> scopeList = claimsSet.getStringListClaim("scope");
+            if (scopeList == null
+                    || !scopeList.contains(CustomScopeValue.ACCOUNT_MANAGEMENT.getValue())) {
+                LOG.warn("Access Token scope is not valid or missing");
+                throw new RuntimeException("Unauthorized");
+            }
+            LOG.info("Successfully validated Access Token scope");
+            String clientId = claimsSet.getStringClaim("client_id");
+            if (clientId == null) {
+                LOG.warn("Access Token client_id is missing");
+                throw new RuntimeException("Unauthorized");
+            }
+            if (!clientService.isValidClient(clientId)) {
+                LOG.warn("Access Token client_id does not exist in Dynamo. ClientId {}", clientId);
+                throw new RuntimeException("Unauthorized");
+            }
+            String subject = claimsSet.getSubject();
+            if (subject == null) {
+                LOG.warn("Access Token subject is missing");
+                throw new RuntimeException("Unauthorized");
+            }
+            try {
+                dynamoService.getUserProfileFromPublicSubject(subject);
+            } catch (Exception e) {
+                LOG.error("Unable to retrieve UserProfile from Dynamo with given SubjectID");
+                throw new RuntimeException("Unauthorized");
+            }
+            LOG.info("User found in Dynamo with given SubjectID");
+            String methodArn = input.getMethodArn();
+            String[] arnPartials = methodArn.split(":");
+            String region = arnPartials[3];
+            String awsAccountId = arnPartials[4];
+            String[] apiGatewayArnPartials = arnPartials[5].split("/");
+            String restApiId = apiGatewayArnPartials[0];
+            String stage = apiGatewayArnPartials[1];
+            LOG.info("Generating AuthPolicy");
+            return new AuthPolicy(
+                    subject, getAllowAllPolicy(region, awsAccountId, restApiId, stage));
+        } catch (ParseException | java.text.ParseException e) {
+            LOG.warn("Unable to parse Access Token");
+            throw new RuntimeException("Unauthorized");
         }
     }
 }

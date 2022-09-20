@@ -50,7 +50,6 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
-import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class AuthCodeHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -106,197 +105,158 @@ public class AuthCodeHandler
 
     public APIGatewayProxyResponseEvent authCodeRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
-        return isWarming(input)
-                .orElseGet(
-                        () -> {
-                            Session session =
-                                    sessionService
-                                            .getSessionFromRequestHeaders(input.getHeaders())
-                                            .orElse(null);
-                            if (Objects.isNull(session)) {
-                                return generateApiGatewayProxyErrorResponse(
-                                        400, ErrorResponse.ERROR_1000);
-                            }
-                            String clientSessionId =
-                                    getHeaderValueFromHeaders(
-                                            input.getHeaders(),
-                                            CLIENT_SESSION_ID_HEADER,
-                                            configurationService.getHeadersCaseInsensitive());
+        Session session =
+                sessionService.getSessionFromRequestHeaders(input.getHeaders()).orElse(null);
+        if (Objects.isNull(session)) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+        }
+        String clientSessionId =
+                getHeaderValueFromHeaders(
+                        input.getHeaders(),
+                        CLIENT_SESSION_ID_HEADER,
+                        configurationService.getHeadersCaseInsensitive());
 
-                            if (Objects.isNull(clientSessionId)) {
-                                return generateApiGatewayProxyErrorResponse(
-                                        400, ErrorResponse.ERROR_1018);
-                            }
-                            attachSessionIdToLogs(session);
-                            attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
+        if (Objects.isNull(clientSessionId)) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1018);
+        }
+        attachSessionIdToLogs(session);
+        attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
 
-                            LOG.info("Processing request");
+        LOG.info("Processing request");
 
-                            AuthenticationRequest authenticationRequest;
-                            ClientSession clientSession;
-                            try {
-                                clientSession =
-                                        clientSessionService
-                                                .getClientSessionFromRequestHeaders(
-                                                        input.getHeaders())
-                                                .orElse(null);
-                                if (Objects.isNull(clientSession)) {
-                                    LOG.info("ClientSession not found");
-                                    return generateApiGatewayProxyErrorResponse(
-                                            400, ErrorResponse.ERROR_1018);
-                                }
-                                authenticationRequest =
-                                        AuthenticationRequest.parse(
-                                                clientSession.getAuthRequestParams());
-                            } catch (ParseException e) {
-                                if (e.getRedirectionURI() == null) {
-                                    LOG.warn(
-                                            "Authentication request could not be parsed: redirect URI or Client ID is missing from auth request",
-                                            e);
-                                    throw new RuntimeException(
-                                            "Redirect URI or Client ID is missing from auth request",
-                                            e);
-                                }
-                                AuthenticationErrorResponse errorResponse =
-                                        authorizationService.generateAuthenticationErrorResponse(
-                                                e.getRedirectionURI(),
-                                                e.getState(),
-                                                e.getResponseMode(),
-                                                e.getErrorObject());
-                                LOG.warn("Authentication request could not be parsed", e);
-                                return generateResponse(
-                                        new AuthCodeResponse(errorResponse.toURI().toString()));
-                            }
-                            addAnnotation(
-                                    "client_id",
-                                    String.valueOf(
-                                            clientSession.getAuthRequestParams().get("client_id")));
+        AuthenticationRequest authenticationRequest;
+        ClientSession clientSession;
+        try {
+            clientSession =
+                    clientSessionService
+                            .getClientSessionFromRequestHeaders(input.getHeaders())
+                            .orElse(null);
+            if (Objects.isNull(clientSession)) {
+                LOG.info("ClientSession not found");
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1018);
+            }
+            authenticationRequest =
+                    AuthenticationRequest.parse(clientSession.getAuthRequestParams());
+        } catch (ParseException e) {
+            if (e.getRedirectionURI() == null) {
+                LOG.warn(
+                        "Authentication request could not be parsed: redirect URI or Client ID is missing from auth request",
+                        e);
+                throw new RuntimeException(
+                        "Redirect URI or Client ID is missing from auth request", e);
+            }
+            AuthenticationErrorResponse errorResponse =
+                    authorizationService.generateAuthenticationErrorResponse(
+                            e.getRedirectionURI(),
+                            e.getState(),
+                            e.getResponseMode(),
+                            e.getErrorObject());
+            LOG.warn("Authentication request could not be parsed", e);
+            return generateResponse(new AuthCodeResponse(errorResponse.toURI().toString()));
+        }
+        addAnnotation(
+                "client_id", String.valueOf(clientSession.getAuthRequestParams().get("client_id")));
 
-                            URI redirectUri = authenticationRequest.getRedirectionURI();
-                            State state = authenticationRequest.getState();
-                            try {
-                                if (!authorizationService.isClientRedirectUriValid(
-                                        authenticationRequest.getClientID(), redirectUri)) {
-                                    return generateApiGatewayProxyErrorResponse(
-                                            400, ErrorResponse.ERROR_1016);
-                                }
-                                VectorOfTrust requestedVectorOfTrust =
-                                        clientSession.getEffectiveVectorOfTrust();
-                                if (isNull(session.getCurrentCredentialStrength())
-                                        || requestedVectorOfTrust
-                                                        .getCredentialTrustLevel()
-                                                        .compareTo(
-                                                                session
-                                                                        .getCurrentCredentialStrength())
-                                                > 0) {
-                                    session.setCurrentCredentialStrength(
-                                            requestedVectorOfTrust.getCredentialTrustLevel());
-                                }
-                                AuthorizationCode authCode =
-                                        authorisationCodeService.generateAuthorisationCode(
-                                                clientSessionId,
-                                                session.getEmailAddress(),
-                                                clientSession);
+        URI redirectUri = authenticationRequest.getRedirectionURI();
+        State state = authenticationRequest.getState();
+        try {
+            if (!authorizationService.isClientRedirectUriValid(
+                    authenticationRequest.getClientID(), redirectUri)) {
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1016);
+            }
+            VectorOfTrust requestedVectorOfTrust = clientSession.getEffectiveVectorOfTrust();
+            if (isNull(session.getCurrentCredentialStrength())
+                    || requestedVectorOfTrust
+                                    .getCredentialTrustLevel()
+                                    .compareTo(session.getCurrentCredentialStrength())
+                            > 0) {
+                session.setCurrentCredentialStrength(
+                        requestedVectorOfTrust.getCredentialTrustLevel());
+            }
+            AuthorizationCode authCode =
+                    authorisationCodeService.generateAuthorisationCode(
+                            clientSessionId, session.getEmailAddress(), clientSession);
 
-                                AuthenticationSuccessResponse authenticationResponse =
-                                        authorizationService.generateSuccessfulAuthResponse(
-                                                authenticationRequest,
-                                                authCode,
-                                                redirectUri,
-                                                state);
+            AuthenticationSuccessResponse authenticationResponse =
+                    authorizationService.generateSuccessfulAuthResponse(
+                            authenticationRequest, authCode, redirectUri, state);
 
-                                LOG.info("Successfully processed request");
+            LOG.info("Successfully processed request");
 
-                                var isTestJourney =
-                                        authorizationService.isTestJourney(
-                                                authenticationRequest.getClientID(),
-                                                session.getEmailAddress());
-                                boolean docAppJourney =
-                                        isDocCheckingAppUserWithSubjectId(clientSession);
+            var isTestJourney =
+                    authorizationService.isTestJourney(
+                            authenticationRequest.getClientID(), session.getEmailAddress());
+            boolean docAppJourney = isDocCheckingAppUserWithSubjectId(clientSession);
 
-                                Map<String, String> dimensions =
-                                        new HashMap<>(
-                                                Map.of(
-                                                        "Account",
-                                                        session.isNewAccount().name(),
-                                                        "Environment",
-                                                        configurationService.getEnvironment(),
-                                                        "Client",
-                                                        authenticationRequest
-                                                                .getClientID()
-                                                                .getValue(),
-                                                        "IsTest",
-                                                        Boolean.toString(isTestJourney),
-                                                        "IsDocApp",
-                                                        Boolean.toString(docAppJourney)));
+            Map<String, String> dimensions =
+                    new HashMap<>(
+                            Map.of(
+                                    "Account",
+                                    session.isNewAccount().name(),
+                                    "Environment",
+                                    configurationService.getEnvironment(),
+                                    "Client",
+                                    authenticationRequest.getClientID().getValue(),
+                                    "IsTest",
+                                    Boolean.toString(isTestJourney),
+                                    "IsDocApp",
+                                    Boolean.toString(docAppJourney)));
 
-                                if (Objects.nonNull(session.getVerifiedMfaMethodType())) {
-                                    dimensions.put(
-                                            "MfaMethod",
-                                            session.getVerifiedMfaMethodType().getValue());
-                                } else {
-                                    LOG.info(
-                                            "No mfa method to set. User is either authenticated or signing in from a low level service");
-                                }
+            if (Objects.nonNull(session.getVerifiedMfaMethodType())) {
+                dimensions.put("MfaMethod", session.getVerifiedMfaMethodType().getValue());
+            } else {
+                LOG.info(
+                        "No mfa method to set. User is either authenticated or signing in from a low level service");
+            }
 
-                                if (!docAppJourney) {
-                                    var mfaRequired = "Yes";
-                                    if (clientSession
-                                            .getEffectiveVectorOfTrust()
-                                            .getCredentialTrustLevel()
-                                            .equals(CredentialTrustLevel.LOW_LEVEL)) {
-                                        mfaRequired = "No";
-                                    }
+            if (!docAppJourney) {
+                var mfaRequired = "Yes";
+                if (clientSession
+                        .getEffectiveVectorOfTrust()
+                        .getCredentialTrustLevel()
+                        .equals(CredentialTrustLevel.LOW_LEVEL)) {
+                    mfaRequired = "No";
+                }
 
-                                    var levelOfConfidence = LevelOfConfidence.NONE.getValue();
-                                    if (clientSession
-                                            .getEffectiveVectorOfTrust()
-                                            .containsLevelOfConfidence()) {
-                                        levelOfConfidence =
-                                                clientSession
-                                                        .getEffectiveVectorOfTrust()
-                                                        .getLevelOfConfidence()
-                                                        .getValue();
-                                    }
+                var levelOfConfidence = LevelOfConfidence.NONE.getValue();
+                if (clientSession.getEffectiveVectorOfTrust().containsLevelOfConfidence()) {
+                    levelOfConfidence =
+                            clientSession
+                                    .getEffectiveVectorOfTrust()
+                                    .getLevelOfConfidence()
+                                    .getValue();
+                }
 
-                                    dimensions.put("MfaRequired", mfaRequired);
-                                    dimensions.put("RequestedLevelOfConfidence", levelOfConfidence);
-                                }
+                dimensions.put("MfaRequired", mfaRequired);
+                dimensions.put("RequestedLevelOfConfidence", levelOfConfidence);
+            }
 
-                                cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
+            cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
 
-                                if (!docAppJourney) {
-                                    sessionService.save(
-                                            session.setAuthenticated(true).setNewAccount(EXISTING));
-                                } else {
-                                    LOG.info("Session not saved for DocCheckingAppUser");
-                                }
+            if (!docAppJourney) {
+                sessionService.save(session.setAuthenticated(true).setNewAccount(EXISTING));
+            } else {
+                LOG.info("Session not saved for DocCheckingAppUser");
+            }
 
-                                auditService.submitAuditEvent(
-                                        OidcAuditableEvent.AUTH_CODE_ISSUED,
-                                        clientSessionId,
-                                        session.getSessionId(),
-                                        authenticationRequest.getClientID().getValue(),
-                                        AuditService.UNKNOWN,
-                                        session.getEmailAddress(),
-                                        IpAddressHelper.extractIpAddress(input),
-                                        AuditService.UNKNOWN,
-                                        PersistentIdHelper.extractPersistentIdFromHeaders(
-                                                input.getHeaders()));
-                                return generateResponse(
-                                        new AuthCodeResponse(
-                                                authenticationResponse.toURI().toString()));
-                            } catch (ClientNotFoundException e) {
-                                AuthenticationErrorResponse errorResponse =
-                                        authorizationService.generateAuthenticationErrorResponse(
-                                                authenticationRequest,
-                                                OAuth2Error.INVALID_CLIENT,
-                                                redirectUri,
-                                                state);
-                                return generateResponse(
-                                        new AuthCodeResponse(errorResponse.toURI().toString()));
-                            }
-                        });
+            auditService.submitAuditEvent(
+                    OidcAuditableEvent.AUTH_CODE_ISSUED,
+                    clientSessionId,
+                    session.getSessionId(),
+                    authenticationRequest.getClientID().getValue(),
+                    AuditService.UNKNOWN,
+                    session.getEmailAddress(),
+                    IpAddressHelper.extractIpAddress(input),
+                    AuditService.UNKNOWN,
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+            return generateResponse(
+                    new AuthCodeResponse(authenticationResponse.toURI().toString()));
+        } catch (ClientNotFoundException e) {
+            AuthenticationErrorResponse errorResponse =
+                    authorizationService.generateAuthenticationErrorResponse(
+                            authenticationRequest, OAuth2Error.INVALID_CLIENT, redirectUri, state);
+            return generateResponse(new AuthCodeResponse(errorResponse.toURI().toString()));
+        }
     }
 
     private APIGatewayProxyResponseEvent generateResponse(AuthCodeResponse response) {

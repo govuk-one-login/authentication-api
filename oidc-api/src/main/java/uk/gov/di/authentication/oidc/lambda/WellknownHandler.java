@@ -26,7 +26,6 @@ import java.util.NoSuchElementException;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
-import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class WellknownHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -67,58 +66,44 @@ public class WellknownHandler
 
     public APIGatewayProxyResponseEvent wellknownRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
-        return isWarming(input)
-                .orElseGet(
-                        () -> {
-                            try {
-                                LOG.info("Wellknown request received");
-                                providerMetadata.setTokenEndpointURI(buildURI(baseUrl, "/token"));
-                                providerMetadata.setUserInfoEndpointURI(
-                                        buildURI(baseUrl, "/userinfo"));
-                                providerMetadata.setAuthorizationEndpointURI(
-                                        buildURI(baseUrl, "/authorize"));
-                                providerMetadata.setRegistrationEndpointURI(
-                                        buildURI(baseUrl, "/connect/register"));
-                                providerMetadata.setTokenEndpointAuthMethods(
-                                        List.of(ClientAuthenticationMethod.PRIVATE_KEY_JWT));
-                                providerMetadata.setScopes(
-                                        new Scope(ValidScopes.getScopesForWellKnownHandler()));
-                                providerMetadata.setResponseTypes(
-                                        List.of(new ResponseType("code")));
-                                providerMetadata.setGrantTypes(
-                                        List.of(GrantType.AUTHORIZATION_CODE));
-                                providerMetadata.setClaimTypes(List.of(ClaimType.NORMAL));
-                                providerMetadata.setClaims(
-                                        List.of(
-                                                "sub",
-                                                "email",
-                                                "email_verified",
-                                                "phone_number",
-                                                "phone_number_verified"));
-                                providerMetadata.setIDTokenJWSAlgs(List.of(JWSAlgorithm.ES256));
-                                providerMetadata.setTokenEndpointJWSAlgs(
-                                        List.of(
-                                                JWSAlgorithm.RS256,
-                                                JWSAlgorithm.RS384,
-                                                JWSAlgorithm.RS512,
-                                                JWSAlgorithm.PS256,
-                                                JWSAlgorithm.PS384,
-                                                JWSAlgorithm.PS512));
-                                providerMetadata.setServiceDocsURI(
-                                        new URI("https://docs.sign-in.service.gov.uk/"));
-                                providerMetadata.setEndSessionEndpointURI(
-                                        buildURI(baseUrl, "/logout"));
-                                providerMetadata.setSupportsBackChannelLogout(true);
-                                providerMetadata.setCustomParameter(
-                                        "trustmarks", buildURI(baseUrl, "/trustmark").toString());
+        try {
+            LOG.info("Wellknown request received");
+            providerMetadata.setTokenEndpointURI(buildURI(baseUrl, "/token"));
+            providerMetadata.setUserInfoEndpointURI(buildURI(baseUrl, "/userinfo"));
+            providerMetadata.setAuthorizationEndpointURI(buildURI(baseUrl, "/authorize"));
+            providerMetadata.setRegistrationEndpointURI(buildURI(baseUrl, "/connect/register"));
+            providerMetadata.setTokenEndpointAuthMethods(
+                    List.of(ClientAuthenticationMethod.PRIVATE_KEY_JWT));
+            providerMetadata.setScopes(new Scope(ValidScopes.getScopesForWellKnownHandler()));
+            providerMetadata.setResponseTypes(List.of(new ResponseType("code")));
+            providerMetadata.setGrantTypes(List.of(GrantType.AUTHORIZATION_CODE));
+            providerMetadata.setClaimTypes(List.of(ClaimType.NORMAL));
+            providerMetadata.setClaims(
+                    List.of(
+                            "sub",
+                            "email",
+                            "email_verified",
+                            "phone_number",
+                            "phone_number_verified"));
+            providerMetadata.setIDTokenJWSAlgs(List.of(JWSAlgorithm.ES256));
+            providerMetadata.setTokenEndpointJWSAlgs(
+                    List.of(
+                            JWSAlgorithm.RS256,
+                            JWSAlgorithm.RS384,
+                            JWSAlgorithm.RS512,
+                            JWSAlgorithm.PS256,
+                            JWSAlgorithm.PS384,
+                            JWSAlgorithm.PS512));
+            providerMetadata.setServiceDocsURI(new URI("https://docs.sign-in.service.gov.uk/"));
+            providerMetadata.setEndSessionEndpointURI(buildURI(baseUrl, "/logout"));
+            providerMetadata.setSupportsBackChannelLogout(true);
+            providerMetadata.setCustomParameter(
+                    "trustmarks", buildURI(baseUrl, "/trustmark").toString());
 
-                                return generateApiGatewayProxyResponse(
-                                        200, providerMetadata.toString());
-                            } catch (URISyntaxException | NoSuchElementException e) {
-                                LOG.error("Exception encountered in WellKnownHandler", e);
-                                return generateApiGatewayProxyResponse(
-                                        500, "Service not configured");
-                            }
-                        });
+            return generateApiGatewayProxyResponse(200, providerMetadata.toString());
+        } catch (URISyntaxException | NoSuchElementException e) {
+            LOG.error("Exception encountered in WellKnownHandler", e);
+            return generateApiGatewayProxyResponse(500, "Service not configured");
+        }
     }
 }

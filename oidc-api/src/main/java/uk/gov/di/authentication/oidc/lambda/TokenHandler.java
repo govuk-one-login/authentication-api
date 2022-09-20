@@ -55,7 +55,6 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.updateAttachedLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.RequestBodyHelper.parseRequestBody;
-import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class TokenHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -127,212 +126,167 @@ public class TokenHandler
 
     public APIGatewayProxyResponseEvent tokenRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
-        return isWarming(input)
-                .orElseGet(
-                        () -> {
-                            LOG.info("Token request received");
-                            Optional<ErrorObject> invalidRequestParamError =
-                                    tokenService.validateTokenRequestParams(input.getBody());
-                            if (invalidRequestParamError.isPresent()) {
-                                LOG.warn(
-                                        "Invalid Token Request. ErrorCode: {}. ErrorDescription: {}",
-                                        invalidRequestParamError.get().getCode(),
-                                        invalidRequestParamError.get().getDescription());
-                                return generateApiGatewayProxyResponse(
-                                        400,
-                                        invalidRequestParamError
-                                                .get()
-                                                .toJSONObject()
-                                                .toJSONString());
-                            }
+        LOG.info("Token request received");
+        Optional<ErrorObject> invalidRequestParamError =
+                tokenService.validateTokenRequestParams(input.getBody());
+        if (invalidRequestParamError.isPresent()) {
+            LOG.warn(
+                    "Invalid Token Request. ErrorCode: {}. ErrorDescription: {}",
+                    invalidRequestParamError.get().getCode(),
+                    invalidRequestParamError.get().getDescription());
+            return generateApiGatewayProxyResponse(
+                    400, invalidRequestParamError.get().toJSONObject().toJSONString());
+        }
 
-                            Map<String, String> requestBody = parseRequestBody(input.getBody());
-                            addAnnotation("grant_type", requestBody.get("grant_type"));
+        Map<String, String> requestBody = parseRequestBody(input.getBody());
+        addAnnotation("grant_type", requestBody.get("grant_type"));
 
-                            String clientID;
-                            ClientRegistry client;
-                            try {
-                                clientID =
-                                        tokenService
-                                                .getClientIDFromPrivateKeyJWT(input.getBody())
-                                                .orElseThrow();
+        String clientID;
+        ClientRegistry client;
+        try {
+            clientID = tokenService.getClientIDFromPrivateKeyJWT(input.getBody()).orElseThrow();
 
-                                attachLogFieldToLogs(CLIENT_ID, clientID);
-                                addAnnotation("client_id", clientID);
-                                client = clientService.getClient(clientID).orElseThrow();
-                            } catch (NoSuchElementException e) {
-                                LOG.warn("Invalid client or client not found in Client Registry");
-                                return generateApiGatewayProxyResponse(
-                                        400,
-                                        OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString());
-                            }
-                            String baseUrl =
-                                    configurationService
-                                            .getOidcApiBaseURL()
-                                            .orElseThrow(
-                                                    () -> {
-                                                        LOG.error(
-                                                                "Application was not configured with baseURL");
-                                                        return new RuntimeException(
-                                                                "Application was not configured with baseURL");
-                                                    });
-                            String tokenUrl = buildURI(baseUrl, TOKEN_PATH).toString();
-                            Optional<ErrorObject> invalidPrivateKeyJwtError =
-                                    segmentedFunctionCall(
-                                            "validatePrivateKeyJWT",
-                                            () ->
-                                                    tokenService.validatePrivateKeyJWT(
-                                                            input.getBody(),
-                                                            client.getPublicKey(),
-                                                            tokenUrl,
-                                                            clientID));
-                            if (invalidPrivateKeyJwtError.isPresent()) {
-                                LOG.warn(
-                                        "Private Key JWT is not valid for Client ID: {}", clientID);
-                                return generateApiGatewayProxyResponse(
-                                        400,
-                                        invalidPrivateKeyJwtError
-                                                .get()
-                                                .toJSONObject()
-                                                .toJSONString());
-                            }
+            attachLogFieldToLogs(CLIENT_ID, clientID);
+            addAnnotation("client_id", clientID);
+            client = clientService.getClient(clientID).orElseThrow();
+        } catch (NoSuchElementException e) {
+            LOG.warn("Invalid client or client not found in Client Registry");
+            return generateApiGatewayProxyResponse(
+                    400, OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString());
+        }
+        String baseUrl =
+                configurationService
+                        .getOidcApiBaseURL()
+                        .orElseThrow(
+                                () -> {
+                                    LOG.error("Application was not configured with baseURL");
+                                    return new RuntimeException(
+                                            "Application was not configured with baseURL");
+                                });
+        String tokenUrl = buildURI(baseUrl, TOKEN_PATH).toString();
+        Optional<ErrorObject> invalidPrivateKeyJwtError =
+                segmentedFunctionCall(
+                        "validatePrivateKeyJWT",
+                        () ->
+                                tokenService.validatePrivateKeyJWT(
+                                        input.getBody(),
+                                        client.getPublicKey(),
+                                        tokenUrl,
+                                        clientID));
+        if (invalidPrivateKeyJwtError.isPresent()) {
+            LOG.warn("Private Key JWT is not valid for Client ID: {}", clientID);
+            return generateApiGatewayProxyResponse(
+                    400, invalidPrivateKeyJwtError.get().toJSONObject().toJSONString());
+        }
 
-                            if (requestBody
-                                    .get("grant_type")
-                                    .equals(GrantType.REFRESH_TOKEN.getValue())) {
-                                LOG.info("Processing refresh token request");
-                                return segmentedFunctionCall(
-                                        "processRefreshTokenRequest",
-                                        () ->
-                                                processRefreshTokenRequest(
-                                                        requestBody,
-                                                        client.getScopes(),
-                                                        new RefreshToken(
-                                                                requestBody.get("refresh_token")),
-                                                        clientID));
-                            }
-                            AuthCodeExchangeData authCodeExchangeData;
-                            try {
-                                authCodeExchangeData =
-                                        segmentedFunctionCall(
-                                                "authorisationCodeService",
-                                                () ->
-                                                        authorisationCodeService
-                                                                .getExchangeDataForCode(
-                                                                        requestBody.get("code"))
-                                                                .orElseThrow());
-                            } catch (NoSuchElementException e) {
-                                LOG.warn("Could not retrieve client session ID from code", e);
-                                return generateApiGatewayProxyResponse(
-                                        400,
-                                        OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
-                            }
-                            updateAttachedLogFieldToLogs(
-                                    CLIENT_SESSION_ID, authCodeExchangeData.getClientSessionId());
-                            ClientSession clientSession = authCodeExchangeData.getClientSession();
-                            AuthenticationRequest authRequest;
-                            try {
-                                authRequest =
-                                        AuthenticationRequest.parse(
-                                                clientSession.getAuthRequestParams());
-                            } catch (ParseException e) {
-                                LOG.warn(
-                                        "Could not parse authentication request from client session",
-                                        e);
-                                throw new RuntimeException(
-                                        format(
-                                                "Unable to parse Auth Request\n Auth Request Params: %s \n Exception: %s",
-                                                clientSession.getAuthRequestParams(), e));
-                            }
+        if (requestBody.get("grant_type").equals(GrantType.REFRESH_TOKEN.getValue())) {
+            LOG.info("Processing refresh token request");
+            return segmentedFunctionCall(
+                    "processRefreshTokenRequest",
+                    () ->
+                            processRefreshTokenRequest(
+                                    requestBody,
+                                    client.getScopes(),
+                                    new RefreshToken(requestBody.get("refresh_token")),
+                                    clientID));
+        }
+        AuthCodeExchangeData authCodeExchangeData;
+        try {
+            authCodeExchangeData =
+                    segmentedFunctionCall(
+                            "authorisationCodeService",
+                            () ->
+                                    authorisationCodeService
+                                            .getExchangeDataForCode(requestBody.get("code"))
+                                            .orElseThrow());
+        } catch (NoSuchElementException e) {
+            LOG.warn("Could not retrieve client session ID from code", e);
+            return generateApiGatewayProxyResponse(
+                    400, OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
+        }
+        updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, authCodeExchangeData.getClientSessionId());
+        ClientSession clientSession = authCodeExchangeData.getClientSession();
+        AuthenticationRequest authRequest;
+        try {
+            authRequest = AuthenticationRequest.parse(clientSession.getAuthRequestParams());
+        } catch (ParseException e) {
+            LOG.warn("Could not parse authentication request from client session", e);
+            throw new RuntimeException(
+                    format(
+                            "Unable to parse Auth Request\n Auth Request Params: %s \n Exception: %s",
+                            clientSession.getAuthRequestParams(), e));
+        }
 
-                            var authRequestRedirectURI = authRequest.getRedirectionURI().toString();
-                            if (!authRequestRedirectURI.equals(requestBody.get("redirect_uri"))) {
-                                LOG.warn(
-                                        "Redirect URI for auth request ({}) does not match redirect URI for request body ({})",
-                                        authRequestRedirectURI,
-                                        requestBody.get("redirect_uri"));
-                                return generateApiGatewayProxyResponse(
-                                        400,
-                                        OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
-                            }
+        var authRequestRedirectURI = authRequest.getRedirectionURI().toString();
+        if (!authRequestRedirectURI.equals(requestBody.get("redirect_uri"))) {
+            LOG.warn(
+                    "Redirect URI for auth request ({}) does not match redirect URI for request body ({})",
+                    authRequestRedirectURI,
+                    requestBody.get("redirect_uri"));
+            return generateApiGatewayProxyResponse(
+                    400, OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
+        }
 
-                            Map<String, Object> additionalTokenClaims = new HashMap<>();
-                            if (authRequest.getNonce() != null) {
-                                additionalTokenClaims.put("nonce", authRequest.getNonce());
-                            }
-                            String vot =
-                                    clientSession
-                                            .getEffectiveVectorOfTrust()
-                                            .retrieveVectorOfTrustForToken();
+        Map<String, Object> additionalTokenClaims = new HashMap<>();
+        if (authRequest.getNonce() != null) {
+            additionalTokenClaims.put("nonce", authRequest.getNonce());
+        }
+        String vot = clientSession.getEffectiveVectorOfTrust().retrieveVectorOfTrustForToken();
 
-                            OIDCClaimsRequest claimsRequest = null;
-                            if (Objects.nonNull(
-                                            clientSession
-                                                    .getEffectiveVectorOfTrust()
-                                                    .getLevelOfConfidence())
-                                    && Objects.nonNull(authRequest.getOIDCClaims())) {
-                                claimsRequest = authRequest.getOIDCClaims();
-                            }
-                            var isConsentRequired =
-                                    client.isConsentRequired()
-                                            && !clientSession
-                                                    .getEffectiveVectorOfTrust()
-                                                    .containsLevelOfConfidence();
-                            final OIDCClaimsRequest finalClaimsRequest = claimsRequest;
-                            OIDCTokenResponse tokenResponse;
-                            if (isDocCheckingAppUserWithSubjectId(clientSession)) {
-                                LOG.info("Doc Checking App User with SubjectId: true");
-                                tokenResponse =
-                                        segmentedFunctionCall(
-                                                "generateTokenResponse",
-                                                () ->
-                                                        tokenService.generateTokenResponse(
-                                                                clientID,
-                                                                clientSession.getDocAppSubjectId(),
-                                                                authRequest.getScope(),
-                                                                additionalTokenClaims,
-                                                                clientSession.getDocAppSubjectId(),
-                                                                vot,
-                                                                null,
-                                                                false,
-                                                                finalClaimsRequest,
-                                                                true));
-                            } else {
-                                UserProfile userProfile =
-                                        dynamoService.getUserProfileByEmail(
-                                                authCodeExchangeData.getEmail());
-                                Subject subject =
-                                        ClientSubjectHelper.getSubject(
-                                                userProfile, client, dynamoService);
-                                tokenResponse =
-                                        segmentedFunctionCall(
-                                                "generateTokenResponse",
-                                                () ->
-                                                        tokenService.generateTokenResponse(
-                                                                clientID,
-                                                                new Subject(
-                                                                        userProfile.getSubjectID()),
-                                                                authRequest.getScope(),
-                                                                additionalTokenClaims,
-                                                                subject,
-                                                                vot,
-                                                                userProfile.getClientConsent(),
-                                                                isConsentRequired,
-                                                                finalClaimsRequest,
-                                                                false));
-                            }
+        OIDCClaimsRequest claimsRequest = null;
+        if (Objects.nonNull(clientSession.getEffectiveVectorOfTrust().getLevelOfConfidence())
+                && Objects.nonNull(authRequest.getOIDCClaims())) {
+            claimsRequest = authRequest.getOIDCClaims();
+        }
+        var isConsentRequired =
+                client.isConsentRequired()
+                        && !clientSession.getEffectiveVectorOfTrust().containsLevelOfConfidence();
+        final OIDCClaimsRequest finalClaimsRequest = claimsRequest;
+        OIDCTokenResponse tokenResponse;
+        if (isDocCheckingAppUserWithSubjectId(clientSession)) {
+            LOG.info("Doc Checking App User with SubjectId: true");
+            tokenResponse =
+                    segmentedFunctionCall(
+                            "generateTokenResponse",
+                            () ->
+                                    tokenService.generateTokenResponse(
+                                            clientID,
+                                            clientSession.getDocAppSubjectId(),
+                                            authRequest.getScope(),
+                                            additionalTokenClaims,
+                                            clientSession.getDocAppSubjectId(),
+                                            vot,
+                                            null,
+                                            false,
+                                            finalClaimsRequest,
+                                            true));
+        } else {
+            UserProfile userProfile =
+                    dynamoService.getUserProfileByEmail(authCodeExchangeData.getEmail());
+            Subject subject = ClientSubjectHelper.getSubject(userProfile, client, dynamoService);
+            tokenResponse =
+                    segmentedFunctionCall(
+                            "generateTokenResponse",
+                            () ->
+                                    tokenService.generateTokenResponse(
+                                            clientID,
+                                            new Subject(userProfile.getSubjectID()),
+                                            authRequest.getScope(),
+                                            additionalTokenClaims,
+                                            subject,
+                                            vot,
+                                            userProfile.getClientConsent(),
+                                            isConsentRequired,
+                                            finalClaimsRequest,
+                                            false));
+        }
 
-                            clientSessionService.saveClientSession(
-                                    authCodeExchangeData.getClientSessionId(),
-                                    clientSession.setIdTokenHint(
-                                            tokenResponse
-                                                    .getOIDCTokens()
-                                                    .getIDToken()
-                                                    .serialize()));
-                            LOG.info("Successfully generated tokens");
-                            return generateApiGatewayProxyResponse(
-                                    200, tokenResponse.toJSONObject().toJSONString());
-                        });
+        clientSessionService.saveClientSession(
+                authCodeExchangeData.getClientSessionId(),
+                clientSession.setIdTokenHint(
+                        tokenResponse.getOIDCTokens().getIDToken().serialize()));
+        LOG.info("Successfully generated tokens");
+        return generateApiGatewayProxyResponse(200, tokenResponse.toJSONObject().toJSONString());
     }
 
     private APIGatewayProxyResponseEvent processRefreshTokenRequest(

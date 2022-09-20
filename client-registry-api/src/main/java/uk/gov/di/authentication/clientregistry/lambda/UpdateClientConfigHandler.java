@@ -29,7 +29,6 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
-import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class UpdateClientConfigHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -69,106 +68,93 @@ public class UpdateClientConfigHandler
 
     public APIGatewayProxyResponseEvent updateClientRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
-        return isWarming(input)
-                .orElseGet(
-                        () -> {
-                            String ipAddress = IpAddressHelper.extractIpAddress(input);
-                            auditService.submitAuditEvent(
-                                    UPDATE_CLIENT_REQUEST_RECEIVED,
-                                    AuditService.UNKNOWN,
-                                    AuditService.UNKNOWN,
-                                    AuditService.UNKNOWN,
-                                    AuditService.UNKNOWN,
-                                    AuditService.UNKNOWN,
-                                    ipAddress,
-                                    AuditService.UNKNOWN,
-                                    AuditService.UNKNOWN);
-                            try {
-                                String clientId = input.getPathParameters().get("clientId");
+        String ipAddress = IpAddressHelper.extractIpAddress(input);
+        auditService.submitAuditEvent(
+                UPDATE_CLIENT_REQUEST_RECEIVED,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                ipAddress,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN);
+        try {
+            String clientId = input.getPathParameters().get("clientId");
 
-                                attachLogFieldToLogs(CLIENT_ID, clientId);
+            attachLogFieldToLogs(CLIENT_ID, clientId);
 
-                                LOG.info("Update client config request received");
+            LOG.info("Update client config request received");
 
-                                var updateClientConfigRequest =
-                                        objectMapper.readValue(
-                                                input.getBody(), UpdateClientConfigRequest.class);
-                                if (!clientService.isValidClient(clientId)) {
-                                    auditService.submitAuditEvent(
-                                            UPDATE_CLIENT_REQUEST_ERROR,
-                                            AuditService.UNKNOWN,
-                                            AuditService.UNKNOWN,
-                                            clientId,
-                                            AuditService.UNKNOWN,
-                                            AuditService.UNKNOWN,
-                                            ipAddress,
-                                            AuditService.UNKNOWN,
-                                            AuditService.UNKNOWN);
-                                    LOG.warn("Invalid client id");
-                                    return generateApiGatewayProxyResponse(
-                                            400,
-                                            OAuth2Error.INVALID_CLIENT
-                                                    .toJSONObject()
-                                                    .toJSONString());
-                                }
-                                Optional<ErrorObject> errorResponse =
-                                        validationService.validateClientUpdateConfig(
-                                                updateClientConfigRequest);
-                                if (errorResponse.isPresent()) {
-                                    LOG.warn(
-                                            "Failed validation. ErrorCode: {}. ErrorDescription: {}",
-                                            errorResponse.get().getCode(),
-                                            errorResponse.get().getDescription());
-                                    auditService.submitAuditEvent(
-                                            UPDATE_CLIENT_REQUEST_ERROR,
-                                            AuditService.UNKNOWN,
-                                            AuditService.UNKNOWN,
-                                            clientId,
-                                            AuditService.UNKNOWN,
-                                            AuditService.UNKNOWN,
-                                            ipAddress,
-                                            AuditService.UNKNOWN,
-                                            AuditService.UNKNOWN);
-                                    return generateApiGatewayProxyResponse(
-                                            400, errorResponse.get().toJSONObject().toJSONString());
-                                }
-                                ClientRegistry clientRegistry =
-                                        clientService.updateClient(
-                                                clientId, updateClientConfigRequest);
-                                ClientRegistrationResponse clientRegistrationResponse =
-                                        new ClientRegistrationResponse(
-                                                clientRegistry.getClientName(),
-                                                clientRegistry.getClientID(),
-                                                clientRegistry.getRedirectUrls(),
-                                                clientRegistry.getContacts(),
-                                                clientRegistry.getScopes(),
-                                                clientRegistry.getPostLogoutRedirectUrls(),
-                                                clientRegistry.getBackChannelLogoutUri(),
-                                                clientRegistry.getServiceType(),
-                                                clientRegistry.getSubjectType(),
-                                                clientRegistry.getClaims(),
-                                                clientRegistry.getSectorIdentifierUri(),
-                                                clientRegistry.getClientType());
-                                LOG.info("Client updated");
-                                return generateApiGatewayProxyResponse(
-                                        200, clientRegistrationResponse);
-                            } catch (JsonException | NullPointerException e) {
-                                auditService.submitAuditEvent(
-                                        UPDATE_CLIENT_REQUEST_ERROR,
-                                        AuditService.UNKNOWN,
-                                        AuditService.UNKNOWN,
-                                        AuditService.UNKNOWN,
-                                        AuditService.UNKNOWN,
-                                        AuditService.UNKNOWN,
-                                        ipAddress,
-                                        AuditService.UNKNOWN,
-                                        AuditService.UNKNOWN);
-                                LOG.warn(
-                                        "Invalid Client registration request. Missing parameters from request");
-                                return generateApiGatewayProxyResponse(
-                                        400,
-                                        OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString());
-                            }
-                        });
+            var updateClientConfigRequest =
+                    objectMapper.readValue(input.getBody(), UpdateClientConfigRequest.class);
+            if (!clientService.isValidClient(clientId)) {
+                auditService.submitAuditEvent(
+                        UPDATE_CLIENT_REQUEST_ERROR,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        clientId,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        ipAddress,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN);
+                LOG.warn("Invalid client id");
+                return generateApiGatewayProxyResponse(
+                        400, OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString());
+            }
+            Optional<ErrorObject> errorResponse =
+                    validationService.validateClientUpdateConfig(updateClientConfigRequest);
+            if (errorResponse.isPresent()) {
+                LOG.warn(
+                        "Failed validation. ErrorCode: {}. ErrorDescription: {}",
+                        errorResponse.get().getCode(),
+                        errorResponse.get().getDescription());
+                auditService.submitAuditEvent(
+                        UPDATE_CLIENT_REQUEST_ERROR,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        clientId,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        ipAddress,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN);
+                return generateApiGatewayProxyResponse(
+                        400, errorResponse.get().toJSONObject().toJSONString());
+            }
+            ClientRegistry clientRegistry =
+                    clientService.updateClient(clientId, updateClientConfigRequest);
+            ClientRegistrationResponse clientRegistrationResponse =
+                    new ClientRegistrationResponse(
+                            clientRegistry.getClientName(),
+                            clientRegistry.getClientID(),
+                            clientRegistry.getRedirectUrls(),
+                            clientRegistry.getContacts(),
+                            clientRegistry.getScopes(),
+                            clientRegistry.getPostLogoutRedirectUrls(),
+                            clientRegistry.getBackChannelLogoutUri(),
+                            clientRegistry.getServiceType(),
+                            clientRegistry.getSubjectType(),
+                            clientRegistry.getClaims(),
+                            clientRegistry.getSectorIdentifierUri(),
+                            clientRegistry.getClientType());
+            LOG.info("Client updated");
+            return generateApiGatewayProxyResponse(200, clientRegistrationResponse);
+        } catch (JsonException | NullPointerException e) {
+            auditService.submitAuditEvent(
+                    UPDATE_CLIENT_REQUEST_ERROR,
+                    AuditService.UNKNOWN,
+                    AuditService.UNKNOWN,
+                    AuditService.UNKNOWN,
+                    AuditService.UNKNOWN,
+                    AuditService.UNKNOWN,
+                    ipAddress,
+                    AuditService.UNKNOWN,
+                    AuditService.UNKNOWN);
+            LOG.warn("Invalid Client registration request. Missing parameters from request");
+            return generateApiGatewayProxyResponse(
+                    400, OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString());
+        }
     }
 }

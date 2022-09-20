@@ -59,7 +59,6 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
-import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class IPVCallbackHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -135,240 +134,205 @@ public class IPVCallbackHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return isWarming(input)
-                .orElseGet(
-                        () -> {
-                            LOG.info("Request received to IPVCallbackHandler");
-                            try {
-                                if (!configurationService.isIdentityEnabled()) {
-                                    throw new IpvCallbackException("Identity is not enabled");
-                                }
-                                var sessionCookiesIds =
-                                        cookieHelper
-                                                .parseSessionCookie(input.getHeaders())
-                                                .orElseThrow(
-                                                        () -> {
-                                                            throw new IpvCallbackException(
-                                                                    "No session cookie present");
-                                                        });
-                                var session =
-                                        sessionService
-                                                .readSessionFromRedis(
-                                                        sessionCookiesIds.getSessionId())
-                                                .orElseThrow(
-                                                        () -> {
-                                                            throw new IpvCallbackException(
-                                                                    "Session not found");
-                                                        });
-                                attachSessionIdToLogs(session);
-                                var persistentId =
-                                        PersistentIdHelper.extractPersistentIdFromCookieHeader(
-                                                input.getHeaders());
-                                attachLogFieldToLogs(PERSISTENT_SESSION_ID, persistentId);
-                                var clientSessionId = sessionCookiesIds.getClientSessionId();
-                                var clientSession =
-                                        clientSessionService
-                                                .getClientSession(clientSessionId)
-                                                .orElse(null);
-                                if (Objects.isNull(clientSession)) {
-                                    throw new IpvCallbackException("ClientSession not found");
-                                }
-                                attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
-                                var authRequest =
-                                        AuthenticationRequest.parse(
-                                                clientSession.getAuthRequestParams());
+        LOG.info("Request received to IPVCallbackHandler");
+        try {
+            if (!configurationService.isIdentityEnabled()) {
+                throw new IpvCallbackException("Identity is not enabled");
+            }
+            var sessionCookiesIds =
+                    cookieHelper
+                            .parseSessionCookie(input.getHeaders())
+                            .orElseThrow(
+                                    () -> {
+                                        throw new IpvCallbackException("No session cookie present");
+                                    });
+            var session =
+                    sessionService
+                            .readSessionFromRedis(sessionCookiesIds.getSessionId())
+                            .orElseThrow(
+                                    () -> {
+                                        throw new IpvCallbackException("Session not found");
+                                    });
+            attachSessionIdToLogs(session);
+            var persistentId =
+                    PersistentIdHelper.extractPersistentIdFromCookieHeader(input.getHeaders());
+            attachLogFieldToLogs(PERSISTENT_SESSION_ID, persistentId);
+            var clientSessionId = sessionCookiesIds.getClientSessionId();
+            var clientSession = clientSessionService.getClientSession(clientSessionId).orElse(null);
+            if (Objects.isNull(clientSession)) {
+                throw new IpvCallbackException("ClientSession not found");
+            }
+            attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
+            var authRequest = AuthenticationRequest.parse(clientSession.getAuthRequestParams());
 
-                                var clientId = authRequest.getClientID().getValue();
-                                var clientRegistry =
-                                        dynamoClientService.getClient(clientId).orElse(null);
-                                if (Objects.isNull(clientRegistry)) {
-                                    throw new IpvCallbackException(
-                                            "Client registry not found with given clientId");
-                                }
+            var clientId = authRequest.getClientID().getValue();
+            var clientRegistry = dynamoClientService.getClient(clientId).orElse(null);
+            if (Objects.isNull(clientRegistry)) {
+                throw new IpvCallbackException("Client registry not found with given clientId");
+            }
 
-                                var errorObject =
-                                        ipvAuthorisationService.validateResponse(
-                                                input.getQueryStringParameters(),
-                                                session.getSessionId());
-                                if (errorObject.isPresent()) {
-                                    LOG.error(
-                                            "Error in IPV AuthorisationResponse. ErrorCode: {}. ErrorDescription: {}",
-                                            errorObject.get().getCode(),
-                                            errorObject.get().getDescription());
-                                    var errorResponse =
-                                            new AuthenticationErrorResponse(
-                                                    authRequest.getRedirectionURI(),
-                                                    new ErrorObject(
-                                                            ACCESS_DENIED_CODE,
-                                                            errorObject.get().getDescription()),
-                                                    authRequest.getState(),
-                                                    authRequest.getResponseMode());
-                                    return generateApiGatewayProxyResponse(
-                                            302,
-                                            "",
-                                            Map.of(
-                                                    ResponseHeaders.LOCATION,
-                                                    errorResponse.toURI().toString()),
-                                            null);
-                                }
-                                var userProfile =
-                                        dynamoService
-                                                .getUserProfileFromEmail(session.getEmailAddress())
-                                                .orElse(null);
-                                if (Objects.isNull(userProfile)) {
-                                    throw new IpvCallbackException(
-                                            "Email from session does not have a user profile");
-                                }
+            var errorObject =
+                    ipvAuthorisationService.validateResponse(
+                            input.getQueryStringParameters(), session.getSessionId());
+            if (errorObject.isPresent()) {
+                LOG.error(
+                        "Error in IPV AuthorisationResponse. ErrorCode: {}. ErrorDescription: {}",
+                        errorObject.get().getCode(),
+                        errorObject.get().getDescription());
+                var errorResponse =
+                        new AuthenticationErrorResponse(
+                                authRequest.getRedirectionURI(),
+                                new ErrorObject(
+                                        ACCESS_DENIED_CODE, errorObject.get().getDescription()),
+                                authRequest.getState(),
+                                authRequest.getResponseMode());
+                return generateApiGatewayProxyResponse(
+                        302,
+                        "",
+                        Map.of(ResponseHeaders.LOCATION, errorResponse.toURI().toString()),
+                        null);
+            }
+            var userProfile =
+                    dynamoService.getUserProfileFromEmail(session.getEmailAddress()).orElse(null);
+            if (Objects.isNull(userProfile)) {
+                throw new IpvCallbackException("Email from session does not have a user profile");
+            }
 
-                                auditService.submitAuditEvent(
-                                        IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED,
-                                        clientSessionId,
-                                        session.getSessionId(),
-                                        clientId,
-                                        userProfile.getSubjectID(),
-                                        userProfile.getEmail(),
-                                        AuditService.UNKNOWN,
-                                        userProfile.getPhoneNumber(),
-                                        persistentId);
+            auditService.submitAuditEvent(
+                    IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED,
+                    clientSessionId,
+                    session.getSessionId(),
+                    clientId,
+                    userProfile.getSubjectID(),
+                    userProfile.getEmail(),
+                    AuditService.UNKNOWN,
+                    userProfile.getPhoneNumber(),
+                    persistentId);
 
-                                var tokenRequest =
-                                        ipvTokenService.constructTokenRequest(
-                                                input.getQueryStringParameters().get("code"));
-                                var tokenResponse = ipvTokenService.sendTokenRequest(tokenRequest);
-                                if (tokenResponse.indicatesSuccess()) {
-                                    auditService.submitAuditEvent(
-                                            IPVAuditableEvent
-                                                    .IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
-                                            clientSessionId,
-                                            session.getSessionId(),
-                                            clientId,
-                                            userProfile.getSubjectID(),
-                                            userProfile.getEmail(),
-                                            AuditService.UNKNOWN,
-                                            userProfile.getPhoneNumber(),
-                                            persistentId);
-                                } else {
-                                    LOG.error(
-                                            "IPV TokenResponse was not successful: {}",
-                                            tokenResponse.toErrorResponse().toJSONObject());
-                                    auditService.submitAuditEvent(
-                                            IPVAuditableEvent
-                                                    .IPV_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
-                                            clientSessionId,
-                                            session.getSessionId(),
-                                            clientId,
-                                            userProfile.getSubjectID(),
-                                            userProfile.getEmail(),
-                                            AuditService.UNKNOWN,
-                                            userProfile.getPhoneNumber(),
-                                            persistentId);
-                                    return redirectToFrontendErrorPage();
-                                }
-                                var pairwiseSubject =
-                                        ClientSubjectHelper.getSubject(
-                                                userProfile, clientRegistry, dynamoService);
-                                var userIdentityUserInfo =
-                                        ipvTokenService.sendIpvUserIdentityRequest(
-                                                new UserInfoRequest(
-                                                        ConstructUriHelper.buildURI(
-                                                                configurationService
-                                                                        .getIPVBackendURI()
-                                                                        .toString(),
-                                                                "user-identity"),
-                                                        tokenResponse
-                                                                .toSuccessResponse()
-                                                                .getTokens()
-                                                                .getBearerAccessToken()));
-                                LOG.info(userIdentityUserInfo);
-                                if (Objects.isNull(userIdentityUserInfo)) {
-                                    throw new IpvCallbackException(
-                                            "IPV UserIdentityRequest failed");
-                                }
-                                if (configurationService.isIdentityTraceLoggingEnabled()) {
-                                    LOG.info(
-                                            "IPV UserIdentityRequest succeeded: {}",
-                                            userIdentityUserInfo.toJSONObject().toJSONString());
-                                }
-                                auditService.submitAuditEvent(
-                                        IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED,
-                                        clientSessionId,
-                                        session.getSessionId(),
-                                        clientId,
-                                        userProfile.getSubjectID(),
-                                        userProfile.getEmail(),
-                                        AuditService.UNKNOWN,
-                                        userProfile.getPhoneNumber(),
-                                        persistentId);
+            var tokenRequest =
+                    ipvTokenService.constructTokenRequest(
+                            input.getQueryStringParameters().get("code"));
+            var tokenResponse = ipvTokenService.sendTokenRequest(tokenRequest);
+            if (tokenResponse.indicatesSuccess()) {
+                auditService.submitAuditEvent(
+                        IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
+                        clientSessionId,
+                        session.getSessionId(),
+                        clientId,
+                        userProfile.getSubjectID(),
+                        userProfile.getEmail(),
+                        AuditService.UNKNOWN,
+                        userProfile.getPhoneNumber(),
+                        persistentId);
+            } else {
+                LOG.error(
+                        "IPV TokenResponse was not successful: {}",
+                        tokenResponse.toErrorResponse().toJSONObject());
+                auditService.submitAuditEvent(
+                        IPVAuditableEvent.IPV_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
+                        clientSessionId,
+                        session.getSessionId(),
+                        clientId,
+                        userProfile.getSubjectID(),
+                        userProfile.getEmail(),
+                        AuditService.UNKNOWN,
+                        userProfile.getPhoneNumber(),
+                        persistentId);
+                return redirectToFrontendErrorPage();
+            }
+            var pairwiseSubject =
+                    ClientSubjectHelper.getSubject(userProfile, clientRegistry, dynamoService);
+            var userIdentityUserInfo =
+                    ipvTokenService.sendIpvUserIdentityRequest(
+                            new UserInfoRequest(
+                                    ConstructUriHelper.buildURI(
+                                            configurationService.getIPVBackendURI().toString(),
+                                            "user-identity"),
+                                    tokenResponse
+                                            .toSuccessResponse()
+                                            .getTokens()
+                                            .getBearerAccessToken()));
+            LOG.info(userIdentityUserInfo);
+            if (Objects.isNull(userIdentityUserInfo)) {
+                throw new IpvCallbackException("IPV UserIdentityRequest failed");
+            }
+            if (configurationService.isIdentityTraceLoggingEnabled()) {
+                LOG.info(
+                        "IPV UserIdentityRequest succeeded: {}",
+                        userIdentityUserInfo.toJSONObject().toJSONString());
+            }
+            auditService.submitAuditEvent(
+                    IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED,
+                    clientSessionId,
+                    session.getSessionId(),
+                    clientId,
+                    userProfile.getSubjectID(),
+                    userProfile.getEmail(),
+                    AuditService.UNKNOWN,
+                    userProfile.getPhoneNumber(),
+                    persistentId);
 
-                                if (configurationService.isSpotEnabled()) {
-                                    Optional<ErrorObject> userIdentityError =
-                                            validateUserIdentityResponse(userIdentityUserInfo);
-                                    if (userIdentityError.isEmpty()) {
-                                        LOG.info("SPOT will be invoked.");
-                                        var logIds =
-                                                new LogIds(
-                                                        session.getSessionId(),
-                                                        persistentId,
-                                                        context.getAwsRequestId(),
-                                                        clientId,
-                                                        clientSessionId);
-                                        queueSPOTRequest(
-                                                logIds,
-                                                getSectorIdentifierForClient(clientRegistry),
-                                                userProfile,
-                                                pairwiseSubject,
-                                                userIdentityUserInfo,
-                                                clientId);
+            if (configurationService.isSpotEnabled()) {
+                Optional<ErrorObject> userIdentityError =
+                        validateUserIdentityResponse(userIdentityUserInfo);
+                if (userIdentityError.isEmpty()) {
+                    LOG.info("SPOT will be invoked.");
+                    var logIds =
+                            new LogIds(
+                                    session.getSessionId(),
+                                    persistentId,
+                                    context.getAwsRequestId(),
+                                    clientId,
+                                    clientSessionId);
+                    queueSPOTRequest(
+                            logIds,
+                            getSectorIdentifierForClient(clientRegistry),
+                            userProfile,
+                            pairwiseSubject,
+                            userIdentityUserInfo,
+                            clientId);
 
-                                        auditService.submitAuditEvent(
-                                                IPVAuditableEvent.IPV_SPOT_REQUESTED,
-                                                clientSessionId,
-                                                session.getSessionId(),
-                                                clientId,
-                                                userProfile.getSubjectID(),
-                                                userProfile.getEmail(),
-                                                AuditService.UNKNOWN,
-                                                userProfile.getPhoneNumber(),
-                                                persistentId);
-                                    } else {
-                                        LOG.warn("SPOT will not be invoked. Returning Error to RP");
-                                        var errorResponse =
-                                                new AuthenticationErrorResponse(
-                                                        authRequest.getRedirectionURI(),
-                                                        userIdentityError.get(),
-                                                        authRequest.getState(),
-                                                        authRequest.getResponseMode());
-                                        return generateApiGatewayProxyResponse(
-                                                302,
-                                                "",
-                                                Map.of(
-                                                        ResponseHeaders.LOCATION,
-                                                        errorResponse.toURI().toString()),
-                                                null);
-                                    }
-                                }
-                                saveIdentityClaimsToDynamo(pairwiseSubject, userIdentityUserInfo);
-                                var redirectURI =
-                                        ConstructUriHelper.buildURI(
-                                                configurationService.getLoginURI().toString(),
-                                                REDIRECT_PATH);
-                                return generateApiGatewayProxyResponse(
-                                        302,
-                                        "",
-                                        Map.of(ResponseHeaders.LOCATION, redirectURI.toString()),
-                                        null);
-                            } catch (IpvCallbackException e) {
-                                LOG.warn(e.getMessage());
-                                return redirectToFrontendErrorPage();
-                            } catch (ParseException e) {
-                                LOG.info(
-                                        "Cannot retrieve auth request params from client session id");
-                                return redirectToFrontendErrorPage();
-                            } catch (JsonException e) {
-                                LOG.error("Unable to serialize SPOTRequest when placing on queue");
-                                return redirectToFrontendErrorPage();
-                            }
-                        });
+                    auditService.submitAuditEvent(
+                            IPVAuditableEvent.IPV_SPOT_REQUESTED,
+                            clientSessionId,
+                            session.getSessionId(),
+                            clientId,
+                            userProfile.getSubjectID(),
+                            userProfile.getEmail(),
+                            AuditService.UNKNOWN,
+                            userProfile.getPhoneNumber(),
+                            persistentId);
+                } else {
+                    LOG.warn("SPOT will not be invoked. Returning Error to RP");
+                    var errorResponse =
+                            new AuthenticationErrorResponse(
+                                    authRequest.getRedirectionURI(),
+                                    userIdentityError.get(),
+                                    authRequest.getState(),
+                                    authRequest.getResponseMode());
+                    return generateApiGatewayProxyResponse(
+                            302,
+                            "",
+                            Map.of(ResponseHeaders.LOCATION, errorResponse.toURI().toString()),
+                            null);
+                }
+            }
+            saveIdentityClaimsToDynamo(pairwiseSubject, userIdentityUserInfo);
+            var redirectURI =
+                    ConstructUriHelper.buildURI(
+                            configurationService.getLoginURI().toString(), REDIRECT_PATH);
+            return generateApiGatewayProxyResponse(
+                    302, "", Map.of(ResponseHeaders.LOCATION, redirectURI.toString()), null);
+        } catch (IpvCallbackException e) {
+            LOG.warn(e.getMessage());
+            return redirectToFrontendErrorPage();
+        } catch (ParseException e) {
+            LOG.info("Cannot retrieve auth request params from client session id");
+            return redirectToFrontendErrorPage();
+        } catch (JsonException e) {
+            LOG.error("Unable to serialize SPOTRequest when placing on queue");
+            return redirectToFrontendErrorPage();
+        }
     }
 
     private void saveIdentityClaimsToDynamo(

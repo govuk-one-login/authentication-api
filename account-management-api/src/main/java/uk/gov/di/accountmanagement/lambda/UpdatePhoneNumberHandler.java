@@ -37,7 +37,6 @@ import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segm
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
-import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class UpdatePhoneNumberHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -90,70 +89,55 @@ public class UpdatePhoneNumberHandler
 
     public APIGatewayProxyResponseEvent updatePhoneNumberRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
-        return isWarming(input)
-                .orElseGet(
-                        () -> {
-                            String sessionId =
-                                    RequestHeaderHelper.getHeaderValueOrElse(
-                                            input.getHeaders(), SESSION_ID_HEADER, "");
-                            attachSessionIdToLogs(sessionId);
-                            LOG.info("UpdatePhoneNumberHandler received request");
-                            SupportedLanguage userLanguage =
-                                    matchSupportedLanguage(
-                                            getUserLanguageFromRequestHeaders(
-                                                    input.getHeaders(), configurationService));
-                            try {
-                                UpdatePhoneNumberRequest updatePhoneNumberRequest =
-                                        objectMapper.readValue(
-                                                input.getBody(), UpdatePhoneNumberRequest.class);
-                                boolean isValidOtpCode =
-                                        codeStorageService.isValidOtpCode(
-                                                updatePhoneNumberRequest.getEmail(),
-                                                updatePhoneNumberRequest.getOtp(),
-                                                NotificationType.VERIFY_PHONE_NUMBER);
-                                if (!isValidOtpCode) {
-                                    return generateApiGatewayProxyErrorResponse(
-                                            400, ErrorResponse.ERROR_1020);
-                                }
-                                UserProfile userProfile =
-                                        dynamoService.getUserProfileByEmail(
-                                                updatePhoneNumberRequest.getEmail());
-                                Map<String, Object> authorizerParams =
-                                        input.getRequestContext().getAuthorizer();
-                                RequestBodyHelper.validatePrincipal(
-                                        new Subject(userProfile.getPublicSubjectID()),
-                                        authorizerParams);
-                                dynamoService.updatePhoneNumber(
-                                        updatePhoneNumberRequest.getEmail(),
-                                        updatePhoneNumberRequest.getPhoneNumber());
-                                LOG.info(
-                                        "Phone Number has successfully been updated. Adding message to SQS queue");
-                                NotifyRequest notifyRequest =
-                                        new NotifyRequest(
-                                                updatePhoneNumberRequest.getEmail(),
-                                                NotificationType.PHONE_NUMBER_UPDATED,
-                                                userLanguage);
-                                sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
+        String sessionId =
+                RequestHeaderHelper.getHeaderValueOrElse(input.getHeaders(), SESSION_ID_HEADER, "");
+        attachSessionIdToLogs(sessionId);
+        LOG.info("UpdatePhoneNumberHandler received request");
+        SupportedLanguage userLanguage =
+                matchSupportedLanguage(
+                        getUserLanguageFromRequestHeaders(
+                                input.getHeaders(), configurationService));
+        try {
+            UpdatePhoneNumberRequest updatePhoneNumberRequest =
+                    objectMapper.readValue(input.getBody(), UpdatePhoneNumberRequest.class);
+            boolean isValidOtpCode =
+                    codeStorageService.isValidOtpCode(
+                            updatePhoneNumberRequest.getEmail(),
+                            updatePhoneNumberRequest.getOtp(),
+                            NotificationType.VERIFY_PHONE_NUMBER);
+            if (!isValidOtpCode) {
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1020);
+            }
+            UserProfile userProfile =
+                    dynamoService.getUserProfileByEmail(updatePhoneNumberRequest.getEmail());
+            Map<String, Object> authorizerParams = input.getRequestContext().getAuthorizer();
+            RequestBodyHelper.validatePrincipal(
+                    new Subject(userProfile.getPublicSubjectID()), authorizerParams);
+            dynamoService.updatePhoneNumber(
+                    updatePhoneNumberRequest.getEmail(), updatePhoneNumberRequest.getPhoneNumber());
+            LOG.info("Phone Number has successfully been updated. Adding message to SQS queue");
+            NotifyRequest notifyRequest =
+                    new NotifyRequest(
+                            updatePhoneNumberRequest.getEmail(),
+                            NotificationType.PHONE_NUMBER_UPDATED,
+                            userLanguage);
+            sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
 
-                                auditService.submitAuditEvent(
-                                        AccountManagementAuditableEvent.UPDATE_PHONE_NUMBER,
-                                        AuditService.UNKNOWN,
-                                        sessionId,
-                                        AuditService.UNKNOWN,
-                                        userProfile.getSubjectID(),
-                                        userProfile.getEmail(),
-                                        IpAddressHelper.extractIpAddress(input),
-                                        updatePhoneNumberRequest.getPhoneNumber(),
-                                        PersistentIdHelper.extractPersistentIdFromHeaders(
-                                                input.getHeaders()));
+            auditService.submitAuditEvent(
+                    AccountManagementAuditableEvent.UPDATE_PHONE_NUMBER,
+                    AuditService.UNKNOWN,
+                    sessionId,
+                    AuditService.UNKNOWN,
+                    userProfile.getSubjectID(),
+                    userProfile.getEmail(),
+                    IpAddressHelper.extractIpAddress(input),
+                    updatePhoneNumberRequest.getPhoneNumber(),
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
-                                LOG.info(
-                                        "Message successfully added to queue. Generating successful gateway response");
-                                return generateEmptySuccessApiGatewayResponse();
-                            } catch (JsonException | IllegalArgumentException e) {
-                                return generateApiGatewayProxyErrorResponse(
-                                        400, ErrorResponse.ERROR_1001);
-                            }
-                        });
+            LOG.info("Message successfully added to queue. Generating successful gateway response");
+            return generateEmptySuccessApiGatewayResponse();
+        } catch (JsonException | IllegalArgumentException e) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+        }
     }
 }

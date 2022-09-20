@@ -26,7 +26,6 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
-import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class ClientRegistrationHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -66,108 +65,97 @@ public class ClientRegistrationHandler
 
     public APIGatewayProxyResponseEvent clientRegistrationRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
-        return isWarming(input)
-                .orElseGet(
-                        () -> {
-                            String ipAddress = IpAddressHelper.extractIpAddress(input);
-                            auditService.submitAuditEvent(
-                                    REGISTER_CLIENT_REQUEST_RECEIVED,
-                                    context.getAwsRequestId(),
-                                    AuditService.UNKNOWN,
-                                    AuditService.UNKNOWN,
-                                    AuditService.UNKNOWN,
-                                    AuditService.UNKNOWN,
-                                    ipAddress,
-                                    AuditService.UNKNOWN,
-                                    AuditService.UNKNOWN);
+        String ipAddress = IpAddressHelper.extractIpAddress(input);
+        auditService.submitAuditEvent(
+                REGISTER_CLIENT_REQUEST_RECEIVED,
+                context.getAwsRequestId(),
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                ipAddress,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN);
 
-                            try {
-                                LOG.info("Client registration request received");
-                                var clientRegistrationRequest =
-                                        objectMapper.readValue(
-                                                input.getBody(), ClientRegistrationRequest.class);
-                                var errorResponse =
-                                        validationService.validateClientRegistrationConfig(
-                                                clientRegistrationRequest);
-                                if (errorResponse.isPresent()) {
-                                    LOG.warn(
-                                            "Invalid Client registration request. Failed validation. Error Code: {}. Error description: {}",
-                                            errorResponse.get().getCode(),
-                                            errorResponse.get().getDescription());
-                                    auditService.submitAuditEvent(
-                                            REGISTER_CLIENT_REQUEST_ERROR,
-                                            context.getAwsRequestId(),
-                                            AuditService.UNKNOWN,
-                                            AuditService.UNKNOWN,
-                                            AuditService.UNKNOWN,
-                                            AuditService.UNKNOWN,
-                                            ipAddress,
-                                            AuditService.UNKNOWN,
-                                            AuditService.UNKNOWN);
+        try {
+            LOG.info("Client registration request received");
+            var clientRegistrationRequest =
+                    objectMapper.readValue(input.getBody(), ClientRegistrationRequest.class);
+            var errorResponse =
+                    validationService.validateClientRegistrationConfig(clientRegistrationRequest);
+            if (errorResponse.isPresent()) {
+                LOG.warn(
+                        "Invalid Client registration request. Failed validation. Error Code: {}. Error description: {}",
+                        errorResponse.get().getCode(),
+                        errorResponse.get().getDescription());
+                auditService.submitAuditEvent(
+                        REGISTER_CLIENT_REQUEST_ERROR,
+                        context.getAwsRequestId(),
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        ipAddress,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN);
 
-                                    return generateApiGatewayProxyResponse(
-                                            400, errorResponse.get().toJSONObject().toJSONString());
-                                }
+                return generateApiGatewayProxyResponse(
+                        400, errorResponse.get().toJSONObject().toJSONString());
+            }
 
-                                var clientID = clientService.generateClientID().toString();
+            var clientID = clientService.generateClientID().toString();
 
-                                attachLogFieldToLogs(CLIENT_ID, clientID);
+            attachLogFieldToLogs(CLIENT_ID, clientID);
 
-                                clientService.addClient(
-                                        clientID,
-                                        clientRegistrationRequest.getClientName(),
-                                        clientRegistrationRequest.getRedirectUris(),
-                                        clientRegistrationRequest.getContacts(),
-                                        clientRegistrationRequest.getScopes(),
-                                        clientRegistrationRequest.getPublicKey(),
-                                        clientRegistrationRequest.getPostLogoutRedirectUris(),
-                                        clientRegistrationRequest.getBackChannelLogoutUri(),
-                                        clientRegistrationRequest.getServiceType(),
-                                        sanitiseUrl(
-                                                clientRegistrationRequest.getSectorIdentifierUri()),
-                                        clientRegistrationRequest.getSubjectType(),
-                                        !clientRegistrationRequest.isIdentityVerificationRequired(),
-                                        clientRegistrationRequest.getClaims(),
-                                        clientRegistrationRequest.getClientType(),
-                                        clientRegistrationRequest.isIdentityVerificationRequired());
+            clientService.addClient(
+                    clientID,
+                    clientRegistrationRequest.getClientName(),
+                    clientRegistrationRequest.getRedirectUris(),
+                    clientRegistrationRequest.getContacts(),
+                    clientRegistrationRequest.getScopes(),
+                    clientRegistrationRequest.getPublicKey(),
+                    clientRegistrationRequest.getPostLogoutRedirectUris(),
+                    clientRegistrationRequest.getBackChannelLogoutUri(),
+                    clientRegistrationRequest.getServiceType(),
+                    sanitiseUrl(clientRegistrationRequest.getSectorIdentifierUri()),
+                    clientRegistrationRequest.getSubjectType(),
+                    !clientRegistrationRequest.isIdentityVerificationRequired(),
+                    clientRegistrationRequest.getClaims(),
+                    clientRegistrationRequest.getClientType(),
+                    clientRegistrationRequest.isIdentityVerificationRequired());
 
-                                var clientRegistrationResponse =
-                                        new ClientRegistrationResponse(
-                                                clientRegistrationRequest.getClientName(),
-                                                clientID,
-                                                clientRegistrationRequest.getRedirectUris(),
-                                                clientRegistrationRequest.getContacts(),
-                                                clientRegistrationRequest.getScopes(),
-                                                clientRegistrationRequest
-                                                        .getPostLogoutRedirectUris(),
-                                                clientRegistrationRequest.getBackChannelLogoutUri(),
-                                                clientRegistrationRequest.getServiceType(),
-                                                clientRegistrationRequest.getSubjectType(),
-                                                clientRegistrationRequest.getClaims(),
-                                                clientRegistrationRequest.getSectorIdentifierUri(),
-                                                clientRegistrationRequest.getClientType());
-                                LOG.info("Generating successful Client registration response");
-                                return generateApiGatewayProxyResponse(
-                                        200, clientRegistrationResponse);
-                            } catch (JsonException e) {
-                                LOG.warn(
-                                        "Invalid Client registration request. Missing parameters from request");
-                                auditService.submitAuditEvent(
-                                        REGISTER_CLIENT_REQUEST_ERROR,
-                                        AuditService.UNKNOWN,
-                                        AuditService.UNKNOWN,
-                                        AuditService.UNKNOWN,
-                                        AuditService.UNKNOWN,
-                                        AuditService.UNKNOWN,
-                                        ipAddress,
-                                        AuditService.UNKNOWN,
-                                        AuditService.UNKNOWN);
+            var clientRegistrationResponse =
+                    new ClientRegistrationResponse(
+                            clientRegistrationRequest.getClientName(),
+                            clientID,
+                            clientRegistrationRequest.getRedirectUris(),
+                            clientRegistrationRequest.getContacts(),
+                            clientRegistrationRequest.getScopes(),
+                            clientRegistrationRequest.getPostLogoutRedirectUris(),
+                            clientRegistrationRequest.getBackChannelLogoutUri(),
+                            clientRegistrationRequest.getServiceType(),
+                            clientRegistrationRequest.getSubjectType(),
+                            clientRegistrationRequest.getClaims(),
+                            clientRegistrationRequest.getSectorIdentifierUri(),
+                            clientRegistrationRequest.getClientType());
+            LOG.info("Generating successful Client registration response");
+            return generateApiGatewayProxyResponse(200, clientRegistrationResponse);
+        } catch (JsonException e) {
+            LOG.warn("Invalid Client registration request. Missing parameters from request");
+            auditService.submitAuditEvent(
+                    REGISTER_CLIENT_REQUEST_ERROR,
+                    AuditService.UNKNOWN,
+                    AuditService.UNKNOWN,
+                    AuditService.UNKNOWN,
+                    AuditService.UNKNOWN,
+                    AuditService.UNKNOWN,
+                    ipAddress,
+                    AuditService.UNKNOWN,
+                    AuditService.UNKNOWN);
 
-                                return generateApiGatewayProxyResponse(
-                                        400,
-                                        OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString());
-                            }
-                        });
+            return generateApiGatewayProxyResponse(
+                    400, OAuth2Error.INVALID_REQUEST.toJSONObject().toJSONString());
+        }
     }
 
     private String sanitiseUrl(String url) {

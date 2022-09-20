@@ -12,13 +12,11 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class IPVCapacityHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOG = LogManager.getLogger(IPVCapacityHandler.class);
-    private final ConfigurationService configurationService;
     private final IPVCapacityService capacityService;
     private final AuditService auditService;
 
@@ -26,17 +24,12 @@ public class IPVCapacityHandler
         this(ConfigurationService.getInstance());
     }
 
-    public IPVCapacityHandler(
-            ConfigurationService configurationService,
-            IPVCapacityService capacityService,
-            AuditService auditService) {
-        this.configurationService = configurationService;
+    public IPVCapacityHandler(IPVCapacityService capacityService, AuditService auditService) {
         this.capacityService = capacityService;
         this.auditService = auditService;
     }
 
     public IPVCapacityHandler(ConfigurationService configurationService) {
-        this.configurationService = configurationService;
         this.capacityService = new IPVCapacityService(configurationService);
         this.auditService = new AuditService(configurationService);
     }
@@ -44,27 +37,24 @@ public class IPVCapacityHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
-        return isWarming(input)
-                .orElseGet(
-                        () -> {
-                            LOG.info("Request received to IPVCapacityHandler");
-                            auditService.submitAuditEvent(
-                                    IPVAuditableEvent.IPV_CAPACITY_REQUESTED,
-                                    AuditService.UNKNOWN,
-                                    AuditService.UNKNOWN,
-                                    AuditService.UNKNOWN,
-                                    AuditService.UNKNOWN,
-                                    AuditService.UNKNOWN,
-                                    AuditService.UNKNOWN,
-                                    AuditService.UNKNOWN,
-                                    AuditService.UNKNOWN);
-                            if (capacityService.isIPVCapacityAvailable()) {
-                                LOG.info("IPV Capacity available");
-                                return generateApiGatewayProxyResponse(200, "");
-                            } else {
-                                LOG.warn("IPV Capacity unavailable");
-                                return generateApiGatewayProxyResponse(503, "");
-                            }
-                        });
+
+        LOG.info("Request received to IPVCapacityHandler");
+        auditService.submitAuditEvent(
+                IPVAuditableEvent.IPV_CAPACITY_REQUESTED,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN);
+        if (capacityService.isIPVCapacityAvailable()) {
+            LOG.info("IPV Capacity available");
+            return generateApiGatewayProxyResponse(200, "");
+        } else {
+            LOG.warn("IPV Capacity unavailable");
+            return generateApiGatewayProxyResponse(503, "");
+        }
     }
 }

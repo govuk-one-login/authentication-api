@@ -38,7 +38,6 @@ import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segm
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
-import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class LogoutHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -101,47 +100,32 @@ public class LogoutHandler
 
     public APIGatewayProxyResponseEvent logoutRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
-        return isWarming(input)
-                .orElseGet(
-                        () -> {
-                            LOG.info("Logout request received");
-                            Optional<String> state;
-                            if (input.getQueryStringParameters() == null
-                                    || input.getQueryStringParameters().isEmpty()) {
-                                LOG.info("No query string parameters in request");
-                                state = Optional.empty();
-                            } else {
-                                state =
-                                        Optional.ofNullable(
-                                                input.getQueryStringParameters().get("state"));
-                            }
-                            Optional<Session> sessionFromSessionCookie =
-                                    segmentedFunctionCall(
-                                            "getSessionFromSessionCookie",
-                                            () ->
-                                                    sessionService.getSessionFromSessionCookie(
-                                                            input.getHeaders()));
-                            if (sessionFromSessionCookie.isPresent()) {
-                                return segmentedFunctionCall(
-                                        "processLogoutRequest",
-                                        () ->
-                                                processLogoutRequest(
-                                                        sessionFromSessionCookie.get(),
-                                                        input,
-                                                        state,
-                                                        context));
-                            } else {
-                                return segmentedFunctionCall(
-                                        "generateDefaultLogoutResponse",
-                                        () ->
-                                                generateDefaultLogoutResponse(
-                                                        state,
-                                                        input,
-                                                        context,
-                                                        Optional.empty(),
-                                                        Optional.empty()));
-                            }
-                        });
+        LOG.info("Logout request received");
+        Optional<String> state;
+        if (input.getQueryStringParameters() == null
+                || input.getQueryStringParameters().isEmpty()) {
+            LOG.info("No query string parameters in request");
+            state = Optional.empty();
+        } else {
+            state = Optional.ofNullable(input.getQueryStringParameters().get("state"));
+        }
+        Optional<Session> sessionFromSessionCookie =
+                segmentedFunctionCall(
+                        "getSessionFromSessionCookie",
+                        () -> sessionService.getSessionFromSessionCookie(input.getHeaders()));
+        if (sessionFromSessionCookie.isPresent()) {
+            return segmentedFunctionCall(
+                    "processLogoutRequest",
+                    () ->
+                            processLogoutRequest(
+                                    sessionFromSessionCookie.get(), input, state, context));
+        } else {
+            return segmentedFunctionCall(
+                    "generateDefaultLogoutResponse",
+                    () ->
+                            generateDefaultLogoutResponse(
+                                    state, input, context, Optional.empty(), Optional.empty()));
+        }
     }
 
     private APIGatewayProxyResponseEvent processLogoutRequest(

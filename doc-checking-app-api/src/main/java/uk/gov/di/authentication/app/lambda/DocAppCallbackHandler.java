@@ -40,7 +40,6 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
-import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class DocAppCallbackHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -109,179 +108,152 @@ public class DocAppCallbackHandler
 
     public APIGatewayProxyResponseEvent docAppCallbackRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
-        return isWarming(input)
-                .orElseGet(
-                        () -> {
-                            LOG.info("Request received to DocAppCallbackHandler");
-                            try {
-                                var sessionCookiesIds =
-                                        cookieHelper
-                                                .parseSessionCookie(input.getHeaders())
-                                                .orElseThrow(
-                                                        () -> {
-                                                            throw new DocAppCallbackException(
-                                                                    "No session cookie present");
-                                                        });
-                                var session =
-                                        sessionService
-                                                .readSessionFromRedis(
-                                                        sessionCookiesIds.getSessionId())
-                                                .orElseThrow(
-                                                        () -> {
-                                                            throw new DocAppCallbackException(
-                                                                    "Session not found");
-                                                        });
-                                attachSessionIdToLogs(session);
-                                var clientSessionId = sessionCookiesIds.getClientSessionId();
-                                var clientSession =
-                                        clientSessionService
-                                                .getClientSession(clientSessionId)
-                                                .orElseThrow(
-                                                        () -> {
-                                                            throw new DocAppCallbackException(
-                                                                    "ClientSession not found");
-                                                        });
-                                attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
+        LOG.info("Request received to DocAppCallbackHandler");
+        try {
+            var sessionCookiesIds =
+                    cookieHelper
+                            .parseSessionCookie(input.getHeaders())
+                            .orElseThrow(
+                                    () -> {
+                                        throw new DocAppCallbackException(
+                                                "No session cookie present");
+                                    });
+            var session =
+                    sessionService
+                            .readSessionFromRedis(sessionCookiesIds.getSessionId())
+                            .orElseThrow(
+                                    () -> {
+                                        throw new DocAppCallbackException("Session not found");
+                                    });
+            attachSessionIdToLogs(session);
+            var clientSessionId = sessionCookiesIds.getClientSessionId();
+            var clientSession =
+                    clientSessionService
+                            .getClientSession(clientSessionId)
+                            .orElseThrow(
+                                    () -> {
+                                        throw new DocAppCallbackException(
+                                                "ClientSession not found");
+                                    });
+            attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
 
-                                var authenticationRequest =
-                                        AuthenticationRequest.parse(
-                                                clientSession.getAuthRequestParams());
+            var authenticationRequest =
+                    AuthenticationRequest.parse(clientSession.getAuthRequestParams());
 
-                                var clientId = authenticationRequest.getClientID().getValue();
-                                attachLogFieldToLogs(CLIENT_ID, clientId);
+            var clientId = authenticationRequest.getClientID().getValue();
+            attachLogFieldToLogs(CLIENT_ID, clientId);
 
-                                var errorObject =
-                                        authorisationService.validateResponse(
-                                                input.getQueryStringParameters(),
-                                                session.getSessionId());
+            var errorObject =
+                    authorisationService.validateResponse(
+                            input.getQueryStringParameters(), session.getSessionId());
 
-                                if (errorObject.isPresent()) {
-                                    return generateAuthenticationErrorResponse(
-                                            authenticationRequest, errorObject.get());
-                                }
+            if (errorObject.isPresent()) {
+                return generateAuthenticationErrorResponse(
+                        authenticationRequest, errorObject.get());
+            }
 
-                                auditService.submitAuditEvent(
-                                        DocAppAuditableEvent
-                                                .DOC_APP_AUTHORISATION_RESPONSE_RECEIVED,
-                                        clientSessionId,
-                                        session.getSessionId(),
-                                        clientId,
-                                        clientSession.getDocAppSubjectId().getValue(),
-                                        AuditService.UNKNOWN,
-                                        AuditService.UNKNOWN,
-                                        AuditService.UNKNOWN,
-                                        AuditService.UNKNOWN);
+            auditService.submitAuditEvent(
+                    DocAppAuditableEvent.DOC_APP_AUTHORISATION_RESPONSE_RECEIVED,
+                    clientSessionId,
+                    session.getSessionId(),
+                    clientId,
+                    clientSession.getDocAppSubjectId().getValue(),
+                    AuditService.UNKNOWN,
+                    AuditService.UNKNOWN,
+                    AuditService.UNKNOWN,
+                    AuditService.UNKNOWN);
 
-                                var tokenRequest =
-                                        tokenService.constructTokenRequest(
-                                                input.getQueryStringParameters().get("code"));
-                                var tokenResponse = tokenService.sendTokenRequest(tokenRequest);
-                                if (tokenResponse.indicatesSuccess()) {
-                                    LOG.info("TokenResponse was successful");
-                                    auditService.submitAuditEvent(
-                                            DocAppAuditableEvent
-                                                    .DOC_APP_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
-                                            clientSessionId,
-                                            session.getSessionId(),
-                                            clientId,
-                                            clientSession.getDocAppSubjectId().getValue(),
-                                            AuditService.UNKNOWN,
-                                            AuditService.UNKNOWN,
-                                            AuditService.UNKNOWN,
-                                            AuditService.UNKNOWN);
-                                } else {
-                                    LOG.error(
-                                            "Doc App TokenResponse was not successful: {}",
-                                            tokenResponse.toErrorResponse().toJSONObject());
-                                    auditService.submitAuditEvent(
-                                            DocAppAuditableEvent
-                                                    .DOC_APP_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
-                                            clientSessionId,
-                                            session.getSessionId(),
-                                            clientId,
-                                            clientSession.getDocAppSubjectId().getValue(),
-                                            AuditService.UNKNOWN,
-                                            AuditService.UNKNOWN,
-                                            AuditService.UNKNOWN,
-                                            AuditService.UNKNOWN);
-                                    return redirectToFrontendErrorPage();
-                                }
+            var tokenRequest =
+                    tokenService.constructTokenRequest(
+                            input.getQueryStringParameters().get("code"));
+            var tokenResponse = tokenService.sendTokenRequest(tokenRequest);
+            if (tokenResponse.indicatesSuccess()) {
+                LOG.info("TokenResponse was successful");
+                auditService.submitAuditEvent(
+                        DocAppAuditableEvent.DOC_APP_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
+                        clientSessionId,
+                        session.getSessionId(),
+                        clientId,
+                        clientSession.getDocAppSubjectId().getValue(),
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN);
+            } else {
+                LOG.error(
+                        "Doc App TokenResponse was not successful: {}",
+                        tokenResponse.toErrorResponse().toJSONObject());
+                auditService.submitAuditEvent(
+                        DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
+                        clientSessionId,
+                        session.getSessionId(),
+                        clientId,
+                        clientSession.getDocAppSubjectId().getValue(),
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN);
+                return redirectToFrontendErrorPage();
+            }
 
-                                try {
-                                    var criDataURI =
-                                            buildURI(
-                                                    configurationService
-                                                            .getDocAppBackendURI()
-                                                            .toString(),
-                                                    configurationService
-                                                            .getDocAppCriDataEndpoint());
+            try {
+                var criDataURI =
+                        buildURI(
+                                configurationService.getDocAppBackendURI().toString(),
+                                configurationService.getDocAppCriDataEndpoint());
 
-                                    var request = new HTTPRequest(POST, criDataURI);
-                                    request.setAuthorization(
-                                            tokenResponse
-                                                    .toSuccessResponse()
-                                                    .getTokens()
-                                                    .getAccessToken()
-                                                    .toAuthorizationHeader());
-                                    var credential =
-                                            tokenService.sendCriDataRequest(
-                                                    request,
-                                                    clientSession.getDocAppSubjectId().getValue());
-                                    auditService.submitAuditEvent(
-                                            DocAppAuditableEvent
-                                                    .DOC_APP_SUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED,
-                                            clientSessionId,
-                                            session.getSessionId(),
-                                            clientId,
-                                            clientSession.getDocAppSubjectId().getValue(),
-                                            AuditService.UNKNOWN,
-                                            AuditService.UNKNOWN,
-                                            AuditService.UNKNOWN,
-                                            AuditService.UNKNOWN);
-                                    LOG.info("Adding DocAppCredential to dynamo");
-                                    dynamoDocAppService.addDocAppCredential(
-                                            clientSession.getDocAppSubjectId().getValue(),
-                                            credential);
+                var request = new HTTPRequest(POST, criDataURI);
+                request.setAuthorization(
+                        tokenResponse
+                                .toSuccessResponse()
+                                .getTokens()
+                                .getAccessToken()
+                                .toAuthorizationHeader());
+                var credential =
+                        tokenService.sendCriDataRequest(
+                                request, clientSession.getDocAppSubjectId().getValue());
+                auditService.submitAuditEvent(
+                        DocAppAuditableEvent.DOC_APP_SUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED,
+                        clientSessionId,
+                        session.getSessionId(),
+                        clientId,
+                        clientSession.getDocAppSubjectId().getValue(),
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN);
+                LOG.info("Adding DocAppCredential to dynamo");
+                dynamoDocAppService.addDocAppCredential(
+                        clientSession.getDocAppSubjectId().getValue(), credential);
 
-                                    var redirectURI =
-                                            ConstructUriHelper.buildURI(
-                                                    configurationService.getLoginURI().toString(),
-                                                    REDIRECT_PATH);
-                                    LOG.info("Redirecting to frontend");
-                                    return generateApiGatewayProxyResponse(
-                                            302,
-                                            "",
-                                            Map.of(
-                                                    ResponseHeaders.LOCATION,
-                                                    redirectURI.toString()),
-                                            null);
+                var redirectURI =
+                        ConstructUriHelper.buildURI(
+                                configurationService.getLoginURI().toString(), REDIRECT_PATH);
+                LOG.info("Redirecting to frontend");
+                return generateApiGatewayProxyResponse(
+                        302, "", Map.of(ResponseHeaders.LOCATION, redirectURI.toString()), null);
 
-                                } catch (UnsuccesfulCredentialResponseException e) {
-                                    auditService.submitAuditEvent(
-                                            DocAppAuditableEvent
-                                                    .DOC_APP_UNSUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED,
-                                            clientSessionId,
-                                            session.getSessionId(),
-                                            clientId,
-                                            clientSession.getDocAppSubjectId().getValue(),
-                                            AuditService.UNKNOWN,
-                                            AuditService.UNKNOWN,
-                                            AuditService.UNKNOWN,
-                                            AuditService.UNKNOWN);
-                                    LOG.error(
-                                            "Doc App sendCriDataRequest was not successful: {}",
-                                            e.getMessage());
-                                    return redirectToFrontendErrorPage();
-                                }
-                            } catch (DocAppCallbackException e) {
-                                LOG.warn(e.getMessage());
-                                return redirectToFrontendErrorPage();
-                            } catch (ParseException e) {
-                                LOG.info(
-                                        "Cannot retrieve auth request params from client session id");
-                                return redirectToFrontendErrorPage();
-                            }
-                        });
+            } catch (UnsuccesfulCredentialResponseException e) {
+                auditService.submitAuditEvent(
+                        DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED,
+                        clientSessionId,
+                        session.getSessionId(),
+                        clientId,
+                        clientSession.getDocAppSubjectId().getValue(),
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN);
+                LOG.error("Doc App sendCriDataRequest was not successful: {}", e.getMessage());
+                return redirectToFrontendErrorPage();
+            }
+        } catch (DocAppCallbackException e) {
+            LOG.warn(e.getMessage());
+            return redirectToFrontendErrorPage();
+        } catch (ParseException e) {
+            LOG.info("Cannot retrieve auth request params from client session id");
+            return redirectToFrontendErrorPage();
+        }
     }
 
     private APIGatewayProxyResponseEvent generateAuthenticationErrorResponse(

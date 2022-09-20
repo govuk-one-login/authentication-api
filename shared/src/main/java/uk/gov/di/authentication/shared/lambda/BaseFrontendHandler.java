@@ -32,7 +32,6 @@ import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLangua
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
-import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public abstract class BaseFrontendHandler<T>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -103,7 +102,7 @@ public abstract class BaseFrontendHandler<T>
             APIGatewayProxyRequestEvent input, Context context) {
         return segmentedFunctionCall(
                 "frontend-api::" + getClass().getSimpleName(),
-                () -> isWarming(input).orElseGet(() -> validateAndHandleRequest(input, context)));
+                () -> validateAndHandleRequest(input, context));
     }
 
     public void onRequestReceived(String clientSessionId) {}

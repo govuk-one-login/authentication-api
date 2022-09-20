@@ -16,7 +16,6 @@ import java.util.Map;
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
-import static uk.gov.di.authentication.shared.helpers.WarmerHelper.isWarming;
 
 public class JwksHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -51,39 +50,30 @@ public class JwksHandler
 
     public APIGatewayProxyResponseEvent jwksRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
-        return isWarming(input)
-                .orElseGet(
-                        () -> {
-                            try {
-                                LOG.info("JWKs request received");
+        try {
+            LOG.info("JWKs request received");
 
-                                JWKSet jwkSet;
-                                if (configurationService.isDocAppApiEnabled()) {
-                                    jwkSet =
-                                            new JWKSet(
-                                                    List.of(
-                                                            jwksService
-                                                                    .getPublicTokenJwkWithOpaqueId(),
-                                                            jwksService
-                                                                    .getPublicDocAppSigningJwkWithOpaqueId()));
-                                } else {
-                                    jwkSet =
-                                            new JWKSet(jwksService.getPublicTokenJwkWithOpaqueId());
-                                }
+            JWKSet jwkSet;
+            if (configurationService.isDocAppApiEnabled()) {
+                jwkSet =
+                        new JWKSet(
+                                List.of(
+                                        jwksService.getPublicTokenJwkWithOpaqueId(),
+                                        jwksService.getPublicDocAppSigningJwkWithOpaqueId()));
+            } else {
+                jwkSet = new JWKSet(jwksService.getPublicTokenJwkWithOpaqueId());
+            }
 
-                                LOG.info("Generating JWKs successful response");
+            LOG.info("Generating JWKs successful response");
 
-                                return generateApiGatewayProxyResponse(
-                                        200,
-                                        segmentedFunctionCall(
-                                                "serialiseJWKSet", () -> jwkSet.toString(true)),
-                                        Map.of("Cache-Control", "max-age=86400"),
-                                        null);
-                            } catch (Exception e) {
-                                LOG.error("Error in JWKs lambda", e);
-                                return generateApiGatewayProxyResponse(
-                                        500, "Error providing JWKs data");
-                            }
-                        });
+            return generateApiGatewayProxyResponse(
+                    200,
+                    segmentedFunctionCall("serialiseJWKSet", () -> jwkSet.toString(true)),
+                    Map.of("Cache-Control", "max-age=86400"),
+                    null);
+        } catch (Exception e) {
+            LOG.error("Error in JWKs lambda", e);
+            return generateApiGatewayProxyResponse(500, "Error providing JWKs data");
+        }
     }
 }
