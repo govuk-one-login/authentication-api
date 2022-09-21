@@ -100,6 +100,7 @@ class UpdateClientConfigHandlerTest {
         assertThat(clientRegistrationResponse.getScopes(), equalTo(SCOPES));
         assertThat(clientRegistrationResponse.getServiceType(), equalTo(SERVICE_TYPE));
         assertThat(clientRegistrationResponse.getClientType(), equalTo(ClientType.WEB.getValue()));
+        assertThat(clientRegistrationResponse.getClaims(), equalTo(List.of("claim")));
     }
 
     @Test
@@ -197,7 +198,8 @@ class UpdateClientConfigHandlerTest {
                 .withContacts(singletonList("contant-name"))
                 .withPostLogoutRedirectUrls(singletonList("localhost/logout"))
                 .withServiceType(SERVICE_TYPE)
-                .withClientType(ClientType.WEB.getValue());
+                .withClientType(ClientType.WEB.getValue())
+                .withClaims(List.of("claim"));
     }
 
     private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {
