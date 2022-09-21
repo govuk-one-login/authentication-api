@@ -355,7 +355,9 @@ public class TokenService {
         }
 
         SignedJWT signedJWT = generateSignedJWT(claimSetBuilder.build(), Optional.empty());
-        AccessToken accessToken = new BearerAccessToken(signedJWT.serialize());
+        AccessToken accessToken =
+                new BearerAccessToken(
+                        signedJWT.serialize(), configService.getAccessTokenExpiry(), null);
 
         try {
             redisConnectionService.saveWithExpiry(

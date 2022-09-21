@@ -635,6 +635,8 @@ public class TokenServiceTest {
 
         var header = (JWSHeader) tokenResponse.getOIDCTokens().getIDToken().getHeader();
 
+        assertThat(tokenResponse.getOIDCTokens().getAccessToken().getLifetime(), is(300L));
+
         assertThat(
                 header.getKeyID(),
                 is("1d504aece298a14d74ee0a02b6740b4372a1fab4206778e486ba72770ff4beb8"));
