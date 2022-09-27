@@ -49,6 +49,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     public static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final String CURRENT_TERMS_AND_CONDITIONS = "1.0";
     private static final String OLD_TERMS_AND_CONDITIONS = "0.1";
+    public static final String CLIENT_NAME = "test-client-name";
 
     @BeforeEach
     void setup() {
@@ -92,7 +93,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             builder.customParameter("vtr", jsonArrayOf(level.getValue()));
         }
         AuthenticationRequest authRequest = builder.build();
-        redis.createClientSession(CLIENT_SESSION_ID, authRequest.toParameters());
+        redis.createClientSession(CLIENT_SESSION_ID, CLIENT_NAME, authRequest.toParameters());
         clientStore.registerClient(
                 CLIENT_ID,
                 "The test client",

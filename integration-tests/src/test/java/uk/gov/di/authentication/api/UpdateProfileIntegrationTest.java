@@ -45,6 +45,7 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
     private static final String EMAIL_ADDRESS = "test@test.com";
     private static final String CLIENT_ID = "test-id";
+    private static final String CLIENT_NAME = "test-client-name";
 
     @BeforeEach
     void setup() {
@@ -92,7 +93,7 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
         String sessionId = redis.createSession();
         String clientSessionId = IdGenerator.generate();
         AuthenticationRequest authRequest = setUpTest(sessionId, clientSessionId);
-        redis.createClientSession(clientSessionId, authRequest.toParameters());
+        redis.createClientSession(clientSessionId, CLIENT_NAME, authRequest.toParameters());
         UpdateProfileRequest request =
                 new UpdateProfileRequest(EMAIL_ADDRESS, CAPTURE_CONSENT, String.valueOf(true));
 
@@ -182,7 +183,7 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
                                 URI.create("http://localhost/redirect"))
                         .nonce(new Nonce())
                         .build();
-        redis.createClientSession(clientSessionId, authRequest.toParameters());
+        redis.createClientSession(clientSessionId, CLIENT_NAME, authRequest.toParameters());
         clientStore.registerClient(
                 CLIENT_ID,
                 "test-client",

@@ -110,6 +110,7 @@ class IPVCallbackHandlerTest {
     private static final State RP_STATE = new State();
     private static final URI IPV_URI = URI.create("http://ipv/");
     private static final ClientID CLIENT_ID = new ClientID();
+    private static final String CLIENT_NAME = "client-name";
 
     private static final Subject PUBLIC_SUBJECT =
             new Subject("TsEVC7vg0NPAmzB33vRUFztL2c0-fecKWKcc73fuDhc");
@@ -122,7 +123,7 @@ class IPVCallbackHandlerTest {
     private final Session session = new Session(SESSION_ID).setEmailAddress(TEST_EMAIL_ADDRESS);
 
     private final ClientSession clientSession =
-            new ClientSession(generateAuthRequest().toParameters(), null, null);
+            new ClientSession(generateAuthRequest().toParameters(), null, null, CLIENT_NAME);
 
     private final Json objectMapper = SerializationService.getInstance();
 

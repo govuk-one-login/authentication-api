@@ -19,13 +19,17 @@ public class ClientSession {
 
     @Expose private Subject docAppSubjectId;
 
+    @Expose private String clientName;
+
     public ClientSession(
             Map<String, List<String>> authRequestParams,
             LocalDateTime creationDate,
-            VectorOfTrust effectiveVectorOfTrust) {
+            VectorOfTrust effectiveVectorOfTrust,
+            String clientName) {
         this.authRequestParams = authRequestParams;
         this.creationDate = creationDate;
         this.effectiveVectorOfTrust = effectiveVectorOfTrust;
+        this.clientName = clientName;
     }
 
     public ClientSession setIdTokenHint(String idTokenHint) {
@@ -61,5 +65,9 @@ public class ClientSession {
     public ClientSession setDocAppSubjectId(Subject docAppSubjectId) {
         this.docAppSubjectId = docAppSubjectId;
         return this;
+    }
+
+    public String getClientName() {
+        return clientName;
     }
 }

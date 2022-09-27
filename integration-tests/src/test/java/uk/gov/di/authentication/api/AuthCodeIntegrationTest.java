@@ -48,11 +48,12 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldReturn302WithSuccessfulAuthorisationResponse() throws Json.JsonException {
         String sessionId = "some-session-id";
         String clientSessionId = "some-client-session-id";
+        String clientName = "some-client-name";
         KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         redis.createSession(sessionId);
         redis.setVerifiedMfaMethodType(sessionId, MFAMethodType.AUTH_APP);
         redis.addAuthRequestToSession(
-                clientSessionId, sessionId, generateAuthRequest().toParameters());
+                clientSessionId, sessionId, generateAuthRequest().toParameters(), clientName);
         setUpDynamo(keyPair);
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", sessionId);

@@ -593,7 +593,8 @@ class LogoutHandlerTest {
                                 "state",
                                 List.of("some-state")),
                         LocalDateTime.now(),
-                        mock(VectorOfTrust.class));
+                        mock(VectorOfTrust.class),
+                        "client_name");
         clientSession.setIdTokenHint(idToken.serialize());
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(clientSession));
@@ -655,7 +656,8 @@ class LogoutHandlerTest {
                                 new ClientSession(
                                         Map.of("client_id", List.of(clientId)),
                                         LocalDateTime.now(),
-                                        VectorOfTrust.getDefaults())));
+                                        VectorOfTrust.getDefaults(),
+                                        "client_name")));
         when(dynamoClientService.getClient(clientId))
                 .thenReturn(Optional.of(new ClientRegistry().withClientID(clientId)));
     }

@@ -45,6 +45,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     private static final String CLIENT_ID = "test-client-id";
     private static final String REDIRECT_URI = "http://localhost/redirect";
     public static final String CLIENT_SESSION_ID = "a-client-session-id";
+    public static final String CLIENT_NAME = "test-client-name";
 
     @BeforeEach
     void setup() {
@@ -296,7 +297,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         .nonce(new Nonce())
                         .state(new State())
                         .build();
-        redis.createClientSession(CLIENT_SESSION_ID, authRequest.toParameters());
+        redis.createClientSession(CLIENT_SESSION_ID, CLIENT_NAME, authRequest.toParameters());
         clientStore.registerClient(
                 CLIENT_ID,
                 "test-client",

@@ -64,6 +64,7 @@ class ProcessingIdentityHandlerTest {
     public static final String SESSION_ID = "some-session-id";
     private static final String EMAIL_ADDRESS = "test@test.com";
     private static final String CLIENT_ID = "test-client-id";
+    private static final String CLIENT_NAME = "test-client-name";
     private static final String PHONE_NUMBER = "01234567890";
     private static final Subject PAIRWISE_SUBJECT = new Subject();
     private static final Date CREATED_DATE_TIME = NowHelper.nowMinus(30, ChronoUnit.SECONDS);
@@ -259,7 +260,8 @@ class ProcessingIdentityHandlerTest {
                                 URI.create("http://localhost/redirect"))
                         .build();
 
-        return new ClientSession(authRequest.toParameters(), null, mock(VectorOfTrust.class));
+        return new ClientSession(
+                authRequest.toParameters(), null, mock(VectorOfTrust.class), CLIENT_NAME);
     }
 
     private void usingValidSession() {

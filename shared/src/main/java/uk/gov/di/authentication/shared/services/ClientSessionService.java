@@ -3,10 +3,13 @@ package uk.gov.di.authentication.shared.services;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -42,6 +45,15 @@ public class ClientSessionService {
         this.configurationService = configurationService;
         this.redisConnectionService = redisConnectionService;
         objectMapper = SerializationService.getInstance();
+    }
+
+    public ClientSession generateClientSession(
+            Map<String, List<String>> authRequestParams,
+            LocalDateTime creationDate,
+            VectorOfTrust effectiveVectorOfTrust,
+            String clientName) {
+        return new ClientSession(
+                authRequestParams, creationDate, effectiveVectorOfTrust, clientName);
     }
 
     public void storeClientSession(String clientSessionId, ClientSession clientSession) {

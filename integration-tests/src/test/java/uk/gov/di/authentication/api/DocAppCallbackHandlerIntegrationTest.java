@@ -93,6 +93,8 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                     docAppPrivateKeyJwtSigner);
 
     private static final String CLIENT_ID = "test-client-id";
+    private static final String CLIENT_NAME = "test-client-name";
+
     private static final String REDIRECT_URI = "http://localhost/redirect";
 
     @BeforeEach
@@ -250,7 +252,8 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                 new ClientSession(
                         authRequestBuilder.build().toParameters(),
                         LocalDateTime.now(),
-                        VectorOfTrust.getDefaults());
+                        VectorOfTrust.getDefaults(),
+                        CLIENT_NAME);
         clientSession.setDocAppSubjectId(docAppSubjectId);
         redis.createClientSession(CLIENT_SESSION_ID, clientSession);
         redis.addStateToRedis(STATE, SESSION_ID);

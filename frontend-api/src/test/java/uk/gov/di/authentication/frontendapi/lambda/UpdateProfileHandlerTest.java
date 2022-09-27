@@ -79,6 +79,7 @@ class UpdateProfileHandlerTest {
     private static final String CLIENT_SESSION_ID = "client-session-id";
     private static final String PERSISTENT_SESSION_ID = "psid";
     private static final ClientID CLIENT_ID = new ClientID("client-one");
+    private static final String CLIENT_NAME = "client-name";
     private static final String INTERNAL_SUBJECT = new Subject().getValue();
     private static final Scope SCOPES =
             new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
@@ -417,7 +418,10 @@ class UpdateProfileHandlerTest {
                         .build();
         var clientSession =
                 new ClientSession(
-                        authRequest.toParameters(), LocalDateTime.now(), mock(VectorOfTrust.class));
+                        authRequest.toParameters(),
+                        LocalDateTime.now(),
+                        mock(VectorOfTrust.class),
+                        CLIENT_NAME);
         when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(clientSession));
     }

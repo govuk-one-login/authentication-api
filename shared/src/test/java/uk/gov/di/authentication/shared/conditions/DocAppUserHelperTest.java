@@ -176,7 +176,8 @@ class DocAppUserHelperTest {
                 new ClientSession(
                         authRequest.toParameters(),
                         LocalDateTime.now(),
-                        VectorOfTrust.getDefaults());
+                        VectorOfTrust.getDefaults(),
+                        CLIENT_NAME);
         subject.ifPresent(clientSession::setDocAppSubjectId);
         var clientRegistry =
                 new ClientRegistry()

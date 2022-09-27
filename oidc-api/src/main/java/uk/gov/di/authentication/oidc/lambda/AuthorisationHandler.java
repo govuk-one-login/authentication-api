@@ -20,14 +20,16 @@ import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.oidc.helpers.RequestObjectToAuthRequestHelper;
 import uk.gov.di.authentication.oidc.services.AuthorizationService;
 import uk.gov.di.authentication.oidc.services.RequestObjectService;
-import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.net.URI;
@@ -46,6 +48,7 @@ import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getPrimaryLan
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
@@ -64,6 +67,7 @@ public class AuthorisationHandler
     private final AuthorizationService authorizationService;
     private final RequestObjectService requestObjectService;
     private final AuditService auditService;
+    private final ClientService clientService;
 
     public AuthorisationHandler(
             ConfigurationService configurationService,
@@ -71,13 +75,15 @@ public class AuthorisationHandler
             ClientSessionService clientSessionService,
             AuthorizationService authorizationService,
             AuditService auditService,
-            RequestObjectService requestObjectService) {
+            RequestObjectService requestObjectService,
+            ClientService clientService) {
         this.configurationService = configurationService;
         this.sessionService = sessionService;
         this.clientSessionService = clientSessionService;
         this.authorizationService = authorizationService;
         this.auditService = auditService;
         this.requestObjectService = requestObjectService;
+        this.clientService = clientService;
     }
 
     public AuthorisationHandler(ConfigurationService configurationService) {
@@ -87,6 +93,7 @@ public class AuthorisationHandler
         this.authorizationService = new AuthorizationService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.requestObjectService = new RequestObjectService(configurationService);
+        this.clientService = new DynamoClientService(configurationService);
     }
 
     public AuthorisationHandler() {
@@ -108,6 +115,7 @@ public class AuthorisationHandler
         var ipAddress = IpAddressHelper.extractIpAddress(input);
         var clientSessionId = clientSessionService.generateClientSessionId();
         attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
+        attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
 
         auditService.submitAuditEvent(
                 OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED,
@@ -145,7 +153,6 @@ public class AuthorisationHandler
                     e.getState(),
                     e.getResponseMode(),
                     e.getErrorObject(),
-                    context,
                     ipAddress,
                     persistentSessionId,
                     AuditService.UNKNOWN,
@@ -169,7 +176,6 @@ public class AuthorisationHandler
                     authRequest.getState(),
                     authRequest.getResponseMode(),
                     authRequestError.get().getErrorObject(),
-                    context,
                     ipAddress,
                     persistentSessionId,
                     authRequest.getClientID().getValue(),
@@ -179,7 +185,6 @@ public class AuthorisationHandler
             return getOrCreateSessionAndRedirect(
                     sessionService.getSessionFromSessionCookie(input.getHeaders()),
                     authRequest,
-                    context,
                     ipAddress,
                     persistentSessionId,
                     clientSessionId);
@@ -189,7 +194,6 @@ public class AuthorisationHandler
     private APIGatewayProxyResponseEvent getOrCreateSessionAndRedirect(
             Optional<Session> existingSession,
             AuthenticationRequest authenticationRequest,
-            Context context,
             String ipAddress,
             String persistentSessionId,
             String clientSessionId) {
@@ -203,7 +207,6 @@ public class AuthorisationHandler
                     authenticationRequest.getState(),
                     authenticationRequest.getResponseMode(),
                     OIDCError.UNMET_AUTHENTICATION_REQUIREMENTS,
-                    context,
                     ipAddress,
                     persistentSessionId,
                     authenticationRequest.getClientID().getValue(),
@@ -232,16 +235,23 @@ public class AuthorisationHandler
             updateAttachedSessionIdToLogs(session.getSessionId());
             LOG.info("Updated session id from {} - new", oldSessionId);
         }
-        clientSessionService.storeClientSession(
-                clientSessionId,
-                new ClientSession(
+        var clientName =
+                clientService
+                        .getClient(authenticationRequest.getClientID().getValue())
+                        .map(ClientRegistry::getClientName)
+                        .orElse("");
+        var clientSession =
+                clientSessionService.generateClientSession(
                         authenticationRequest.toParameters(),
                         LocalDateTime.now(),
-                        authorizationService.getEffectiveVectorOfTrust(authenticationRequest)));
+                        authorizationService.getEffectiveVectorOfTrust(authenticationRequest),
+                        clientName);
+        clientSessionService.storeClientSession(clientSessionId, clientSession);
 
         session.addClientSession(clientSessionId);
         updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
         updateAttachedLogFieldToLogs(CLIENT_ID, authenticationRequest.getClientID().getValue());
+        updateAttachedLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
         sessionService.save(session);
         LOG.info("Session saved successfully");
         return redirect(session, clientSessionId, authenticationRequest, persistentSessionId);
@@ -306,7 +316,6 @@ public class AuthorisationHandler
             State state,
             ResponseMode responseMode,
             ErrorObject errorObject,
-            Context context,
             String ipAddress,
             String persistentSessionId,
             String clientId,
