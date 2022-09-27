@@ -19,6 +19,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
@@ -123,16 +124,12 @@ class ClientSessionServiceTest {
                         VectorOfTrust.getDefaults(),
                         "client-name");
 
-        assertTrue(
-                clientSession
-                        .getAuthRequestParams()
-                        .equals(Map.of("authparam", List.of("v1", "v2"))));
-        assertTrue(
-                clientSession
-                        .getEffectiveVectorOfTrust()
-                        .getCredentialTrustLevel()
-                        .equals(VectorOfTrust.getDefaults().getCredentialTrustLevel()));
-        assertTrue(clientSession.getClientName().equals("client-name"));
+        assertEquals(
+                Map.of("authparam", List.of("v1", "v2")), clientSession.getAuthRequestParams());
+        assertEquals(
+                VectorOfTrust.getDefaults().getCredentialTrustLevel(),
+                clientSession.getEffectiveVectorOfTrust().getCredentialTrustLevel());
+        assertEquals("client-name", clientSession.getClientName());
     }
 
     private String generateSerialisedClientSession() throws Json.JsonException {

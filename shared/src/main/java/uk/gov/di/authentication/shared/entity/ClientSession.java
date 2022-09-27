@@ -70,9 +70,4 @@ public class ClientSession {
     public String getClientName() {
         return clientName;
     }
-
-    public ClientSession setClientName(String clientName) {
-        this.clientName = clientName;
-        return this;
-    }
 }
