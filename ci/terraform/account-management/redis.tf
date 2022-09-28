@@ -33,7 +33,7 @@ resource "aws_elasticache_replication_group" "account_management_sessions_store"
   engine_version                = "6.x"
   parameter_group_name          = "default.redis6.x"
   port                          = local.redis_port_number
-  maintenance_window            = "mon:02:00-mon:03:00"
+  maintenance_window            = "tue:22:00-tue:23:00"
   notification_topic_arn        = data.aws_sns_topic.slack_events.arn
 
   multi_az_enabled = true
