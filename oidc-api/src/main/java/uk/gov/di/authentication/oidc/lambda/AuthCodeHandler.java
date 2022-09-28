@@ -200,7 +200,9 @@ public class AuthCodeHandler
                                     "IsTest",
                                     Boolean.toString(isTestJourney),
                                     "IsDocApp",
-                                    Boolean.toString(docAppJourney)));
+                                    Boolean.toString(docAppJourney),
+                                    "ClientName",
+                                    clientSession.getClientName()));
 
             if (Objects.nonNull(session.getVerifiedMfaMethodType())) {
                 dimensions.put("MfaMethod", session.getVerifiedMfaMethodType().getValue());

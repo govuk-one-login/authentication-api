@@ -88,6 +88,7 @@ class AuthCodeHandlerTest {
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
     private static final ClientID CLIENT_ID = new ClientID();
+    private static final String CLIENT_NAME = "test-client-name";
     private static final String AUDIENCE = "oidc-audience";
     private static final State STATE = new State();
     private static final Nonce NONCE = new Nonce();
@@ -234,7 +235,9 @@ class AuthCodeHandlerTest {
                         "IsDocApp",
                         Boolean.toString(docAppJourney),
                         "MfaMethod",
-                        mfaMethodType.getValue()));
+                        mfaMethodType.getValue(),
+                        "ClientName",
+                        CLIENT_NAME));
         if (!docAppJourney) {
             dimensions.put("MfaRequired", requestedLevel.equals(LOW_LEVEL) ? "No" : "Yes");
             dimensions.put("RequestedLevelOfConfidence", "P0");
@@ -391,6 +394,7 @@ class AuthCodeHandlerTest {
         if (docAppJourney) {
             when(clientSession.getDocAppSubjectId()).thenReturn(new Subject("docAppSubjectId"));
         }
+        when(clientSession.getClientName()).thenReturn(CLIENT_NAME);
     }
 
     private APIGatewayProxyResponseEvent generateApiRequest() {
