@@ -307,14 +307,15 @@ public class DynamoService implements AuthenticationService {
 
     @Override
     public void updatePhoneNumberAndAccountVerifiedStatus(String email, boolean verifiedStatus) {
-        dynamoUserProfileTable.updateItem(
+        var userProfile =
                 dynamoUserProfileTable
                         .getItem(
                                 Key.builder()
                                         .partitionValue(email.toLowerCase(Locale.ROOT))
                                         .build())
-                        .withPhoneNumberVerified(verifiedStatus)
-                        .withAccountVerified(verifiedStatus ? true : null));
+                        .withPhoneNumberVerified(verifiedStatus);
+        if (verifiedStatus) userProfile.withAccountVerified(1);
+        dynamoUserProfileTable.updateItem(userProfile);
     }
 
     @Override
@@ -416,7 +417,7 @@ public class DynamoService implements AuthenticationService {
                                 Key.builder()
                                         .partitionValue(email.toLowerCase(Locale.ROOT))
                                         .build())
-                        .withAccountVerified(true));
+                        .withAccountVerified(1));
     }
 
     private static String hashPassword(String password) {

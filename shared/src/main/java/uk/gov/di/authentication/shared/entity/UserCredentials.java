@@ -4,16 +4,11 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttri
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey;
-import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
-import uk.gov.di.authentication.shared.dynamodb.DynamoDBItem;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @DynamoDbBean
-public class UserCredentials implements DynamoDBItem {
+public class UserCredentials {
 
     public static final String ATTRIBUTE_EMAIL = "Email";
     public static final String ATTRIBUTE_SUBJECT_ID = "SubjectID";
@@ -141,28 +136,5 @@ public class UserCredentials implements DynamoDBItem {
             this.mfaMethods.add(mfaMethod);
         }
         return this;
-    }
-
-    @Override
-    public Map<String, AttributeValue> toItem() {
-        Map<String, AttributeValue> attributes = new HashMap<>();
-        if (getEmail() != null) attributes.put(ATTRIBUTE_EMAIL, AttributeValue.fromS(getEmail()));
-        if (getSubjectID() != null)
-            attributes.put(ATTRIBUTE_SUBJECT_ID, AttributeValue.fromS(getSubjectID()));
-        if (getPassword() != null)
-            attributes.put(ATTRIBUTE_PASSWORD, AttributeValue.fromS(getPassword()));
-        if (getCreated() != null)
-            attributes.put(ATTRIBUTE_CREATED, AttributeValue.fromS(getCreated()));
-        if (getUpdated() != null)
-            attributes.put(ATTRIBUTE_UPDATED, AttributeValue.fromS(getUpdated()));
-        if (getMigratedPassword() != null)
-            attributes.put(
-                    ATTRIBUTE_MIGRATED_PASSWORD, AttributeValue.fromS(getMigratedPassword()));
-        if (getMfaMethods() != null) {
-            List<AttributeValue> methods = new ArrayList<>();
-            getMfaMethods().forEach(m -> methods.add(m.toAttributeValue()));
-            attributes.put(ATTRIBUTE_MFA_METHODS, AttributeValue.fromL(methods));
-        }
-        return attributes;
     }
 }

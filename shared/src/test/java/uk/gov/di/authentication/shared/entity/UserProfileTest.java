@@ -12,7 +12,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -55,46 +54,6 @@ class UserProfileTest {
         assertThat(userProfile.getClientConsent(), equalTo(List.of(CLIENT_CONSENT)));
         assertThat(userProfile.getLegacySubjectID(), equalTo(LEGACY_SUBJECT_ID));
         assertThat(userProfile.getSalt(), equalTo(SALT));
-    }
-
-    @Test
-    void shouldConvertUserProfileToItem() {
-        UserProfile userProfile = generateUserProfile();
-        Map<String, AttributeValue> userProfileItem = userProfile.toItem();
-
-        assertThat(
-                userProfileItem.get(UserProfile.ATTRIBUTE_EMAIL).s(),
-                equalTo(userProfile.getEmail()));
-        assertThat(
-                userProfileItem.get(UserProfile.ATTRIBUTE_SUBJECT_ID).s(),
-                equalTo(userProfile.getSubjectID()));
-        assertThat(
-                userProfileItem.get(UserProfile.ATTRIBUTE_EMAIL_VERIFIED).n(),
-                equalTo(userProfile.isEmailVerified() ? "1" : "0"));
-        assertThat(
-                userProfileItem.get(UserProfile.ATTRIBUTE_PHONE_NUMBER).s(),
-                equalTo(userProfile.getPhoneNumber()));
-        assertThat(
-                userProfileItem.get(UserProfile.ATTRIBUTE_PHONE_NUMBER_VERIFIED).n(),
-                equalTo(userProfile.isPhoneNumberVerified() ? "1" : "0"));
-        assertThat(
-                userProfileItem.get(UserProfile.ATTRIBUTE_CREATED).s(),
-                equalTo(userProfile.getCreated()));
-        assertThat(
-                userProfileItem.get(UserProfile.ATTRIBUTE_UPDATED).s(),
-                equalTo(userProfile.getUpdated()));
-        assertThat(
-                userProfileItem.get(UserProfile.ATTRIBUTE_TERMS_AND_CONDITIONS),
-                equalTo(userProfile.getTermsAndConditions().toAttributeValue()));
-        compareClientConsentList(
-                userProfileItem.get(UserProfile.ATTRIBUTE_CLIENT_CONSENT).l(),
-                userProfile.getClientConsent());
-        assertThat(
-                userProfileItem.get(UserProfile.ATTRIBUTE_LEGACY_SUBJECT_ID).s(),
-                equalTo(userProfile.getLegacySubjectID()));
-        assertThat(
-                userProfileItem.get(UserProfile.ATTRIBUTE_SALT).b().asByteBuffer(),
-                equalTo(userProfile.getSalt()));
     }
 
     private void compareClientConsentList(

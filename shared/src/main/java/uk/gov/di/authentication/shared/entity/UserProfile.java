@@ -1,21 +1,15 @@
 package uk.gov.di.authentication.shared.entity;
 
-import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey;
-import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
-import uk.gov.di.authentication.shared.dynamodb.DynamoDBItem;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @DynamoDbBean
-public class UserProfile implements DynamoDBItem {
+public class UserProfile {
 
     public static final String ATTRIBUTE_EMAIL = "Email";
     public static final String ATTRIBUTE_SUBJECT_ID = "SubjectID";
@@ -43,7 +37,7 @@ public class UserProfile implements DynamoDBItem {
     private String publicSubjectID;
     private String legacySubjectID;
     private ByteBuffer salt;
-    private Boolean accountVerified = null;
+    private int accountVerified;
 
     public UserProfile() {}
 
@@ -228,56 +222,16 @@ public class UserProfile implements DynamoDBItem {
     }
 
     @DynamoDbAttribute(ATTRIBUTE_ACCOUNT_VERIFIED)
-    public Boolean getAccountVerified() {
+    public int getAccountVerified() {
         return accountVerified;
     }
 
-    public void setAccountVerified(Boolean accountVerified) {
+    public void setAccountVerified(int accountVerified) {
         this.accountVerified = accountVerified;
     }
 
-    public UserProfile withAccountVerified(Boolean accountVerified) {
+    public UserProfile withAccountVerified(int accountVerified) {
         this.accountVerified = accountVerified;
         return this;
-    }
-
-    @Override
-    public Map<String, AttributeValue> toItem() {
-        Map<String, AttributeValue> attributes = new HashMap<>();
-        if (getEmail() != null) attributes.put(ATTRIBUTE_EMAIL, AttributeValue.fromS(getEmail()));
-        if (getSubjectID() != null)
-            attributes.put(ATTRIBUTE_SUBJECT_ID, AttributeValue.fromS(getSubjectID()));
-        attributes.put(
-                ATTRIBUTE_EMAIL_VERIFIED, AttributeValue.fromN(isEmailVerified() ? "1" : "0"));
-        if (getPhoneNumber() != null)
-            attributes.put(ATTRIBUTE_PHONE_NUMBER, AttributeValue.fromS(getPhoneNumber()));
-        attributes.put(
-                ATTRIBUTE_PHONE_NUMBER_VERIFIED,
-                AttributeValue.fromN(isPhoneNumberVerified() ? "1" : "0"));
-        if (getCreated() != null)
-            attributes.put(ATTRIBUTE_CREATED, AttributeValue.fromS(getCreated()));
-        if (getUpdated() != null)
-            attributes.put(ATTRIBUTE_UPDATED, AttributeValue.fromS(getUpdated()));
-        if (getTermsAndConditions() != null)
-            attributes.put(
-                    ATTRIBUTE_TERMS_AND_CONDITIONS, getTermsAndConditions().toAttributeValue());
-        if (getClientConsent() != null) {
-            List<AttributeValue> consents = new ArrayList<>();
-            getClientConsent().forEach(c -> consents.add(c.toAttributeValue()));
-            attributes.put(ATTRIBUTE_CLIENT_CONSENT, AttributeValue.fromL(consents));
-        }
-        if (getPublicSubjectID() != null)
-            attributes.put(ATTRIBUTE_PUBLIC_SUBJECT_ID, AttributeValue.fromS(getPublicSubjectID()));
-        if (getLegacySubjectID() != null)
-            attributes.put(ATTRIBUTE_LEGACY_SUBJECT_ID, AttributeValue.fromS(getLegacySubjectID()));
-        if (getSalt() != null)
-            attributes.put(
-                    ATTRIBUTE_SALT, AttributeValue.fromB(SdkBytes.fromByteBuffer(getSalt())));
-        if (getAccountVerified() != null) {
-            attributes.put(
-                    ATTRIBUTE_ACCOUNT_VERIFIED,
-                    AttributeValue.fromN(getAccountVerified() ? "1" : "0"));
-        }
-        return attributes;
     }
 }
