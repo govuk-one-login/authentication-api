@@ -234,6 +234,11 @@ public class AuthCodeHandler
             }
 
             cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
+            cloudwatchMetricsService.incrementSignInByClient(
+                    session.isNewAccount(),
+                    authenticationRequest.getClientID().getValue(),
+                    clientSession.getClientName(),
+                    isTestJourney);
 
             if (!docAppJourney) {
                 sessionService.save(session.setAuthenticated(true).setNewAccount(EXISTING));
