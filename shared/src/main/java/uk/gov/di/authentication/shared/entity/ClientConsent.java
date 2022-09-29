@@ -1,14 +1,14 @@
 package uk.gov.di.authentication.shared.entity;
 
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBAttribute;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBDocument;
-import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-@DynamoDBDocument
+@DynamoDbBean
 public class ClientConsent {
 
     private String clientId;
@@ -23,45 +23,60 @@ public class ClientConsent {
         this.updatedTimestamp = updatedTimestamp;
     }
 
-    @DynamoDBAttribute(attributeName = "ClientId")
+    @DynamoDbAttribute("ClientId")
     public String getClientId() {
         return clientId;
     }
 
-    @DynamoDBAttribute(attributeName = "UpdatedTimestamp")
-    public String getUpdatedTimestamp() {
-        return updatedTimestamp;
+    public void setClientId(String clientId) {
+        this.clientId = clientId;
     }
 
-    @DynamoDBAttribute(attributeName = "Claims")
-    public Set<String> getClaims() {
-        return claims;
-    }
-
-    public ClientConsent setClaims(Set<String> claims) {
-        this.claims = claims;
-        return this;
-    }
-
-    public ClientConsent setClientId(String clientId) {
+    public ClientConsent withClientId(String clientId) {
         this.clientId = clientId;
         return this;
     }
 
-    public ClientConsent setUpdatedTimestamp(String updatedTimestamp) {
+    @DynamoDbAttribute("UpdatedTimestamp")
+    public String getUpdatedTimestamp() {
+        return updatedTimestamp;
+    }
+
+    public void setUpdatedTimestamp(String updatedTimestamp) {
+        this.updatedTimestamp = updatedTimestamp;
+    }
+
+    public ClientConsent withUpdatedTimestamp(String updatedTimestamp) {
         this.updatedTimestamp = updatedTimestamp;
         return this;
     }
 
+    @DynamoDbAttribute("Claims")
+    public Set<String> getClaims() {
+        return claims;
+    }
+
+    public void setClaims(Set<String> claims) {
+        this.claims = claims;
+    }
+
+    public ClientConsent withClaims(Set<String> claims) {
+        this.claims = claims;
+        return this;
+    }
+
     AttributeValue toAttributeValue() {
-        return new AttributeValue()
-                .withM(
+        return AttributeValue.builder()
+                .m(
                         Map.ofEntries(
-                                Map.entry("ClientId", new AttributeValue(getClientId())),
+                                Map.entry("ClientId", AttributeValue.fromS(getClientId())),
                                 Map.entry(
                                         "UpdatedTimestamp",
-                                        new AttributeValue(getUpdatedTimestamp())),
-                                Map.entry("Claims", new AttributeValue().withSS(getClaims()))));
+                                        AttributeValue.fromS(getUpdatedTimestamp())),
+                                Map.entry(
+                                        "Claims",
+                                        AttributeValue.builder().ss(getClaims()).build())))
+                .build();
     }
 
     @Override

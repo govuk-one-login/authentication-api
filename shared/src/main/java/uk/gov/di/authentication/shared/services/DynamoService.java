@@ -1,17 +1,16 @@
 package uk.gov.di.authentication.shared.services;
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBQueryExpression;
-import com.amazonaws.services.dynamodbv2.datamodeling.QueryResultPage;
-import com.amazonaws.services.dynamodbv2.model.AttributeValue;
-import com.amazonaws.services.dynamodbv2.model.Delete;
-import com.amazonaws.services.dynamodbv2.model.Put;
-import com.amazonaws.services.dynamodbv2.model.TransactWriteItem;
-import com.amazonaws.services.dynamodbv2.model.TransactWriteItemsRequest;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbIndex;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.enhanced.dynamodb.Key;
+import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
+import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
+import software.amazon.awssdk.enhanced.dynamodb.model.QueryEnhancedRequest;
+import software.amazon.awssdk.enhanced.dynamodb.model.TransactWriteItemsEnhancedRequest;
 import uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper;
-import uk.gov.di.authentication.shared.dynamodb.DynamoDBSchemaHelper;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
@@ -26,72 +25,75 @@ import uk.gov.di.authentication.shared.helpers.SaltHelper;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Optional;
 
-import static java.lang.String.format;
 import static java.util.Objects.nonNull;
-import static uk.gov.di.authentication.shared.dynamodb.DynamoDBSchemaHelper.Table.USER_CREDENTIALS_TABLE;
-import static uk.gov.di.authentication.shared.dynamodb.DynamoDBSchemaHelper.Table.USER_PROFILE_TABLE;
 
 public class DynamoService implements AuthenticationService {
 
-    private final DynamoDBMapper userCredentialsMapper;
-    private final DynamoDBMapper userProfileMapper;
-    private final AmazonDynamoDB dynamoDB;
-    private final DynamoDBSchemaHelper dynamoDBSchemaHelper;
+    private final DynamoDbTable<UserProfile> dynamoUserProfileTable;
+    private final DynamoDbTable<UserCredentials> dynamoUserCredentialsTable;
+    private final DynamoDbEnhancedClient dynamoDbEnhancedClient;
+    private static final String USER_PROFILE_TABLE = "user-profile";
+    private static final String USER_CREDENTIAL_TABLE = "user-credentials";
 
     public DynamoService(ConfigurationService configurationService) {
-        this.dynamoDB = DynamoClientHelper.createDynamoClient(configurationService);
-        this.dynamoDBSchemaHelper =
-                new DynamoDBSchemaHelper(dynamoDB, configurationService.getEnvironment());
-        this.userCredentialsMapper =
-                dynamoDBSchemaHelper.buildConfiguredDynamoDBMapper(USER_CREDENTIALS_TABLE);
-        this.userProfileMapper =
-                dynamoDBSchemaHelper.buildConfiguredDynamoDBMapper(USER_PROFILE_TABLE);
-        warmUp(dynamoDBSchemaHelper.getFullyQualifiedTableName(USER_PROFILE_TABLE));
+        String userProfileTableName =
+                configurationService.getEnvironment() + "-" + USER_PROFILE_TABLE;
+        String userCredentialsTableName =
+                configurationService.getEnvironment() + "-" + USER_CREDENTIAL_TABLE;
+        dynamoDbEnhancedClient =
+                DynamoClientHelper.createDynamoEnhancedClient(configurationService);
+        this.dynamoUserProfileTable =
+                dynamoDbEnhancedClient.table(
+                        userProfileTableName, TableSchema.fromBean(UserProfile.class));
+        this.dynamoUserCredentialsTable =
+                dynamoDbEnhancedClient.table(
+                        userCredentialsTableName, TableSchema.fromBean(UserCredentials.class));
+        warmUp();
     }
 
     @Override
     public boolean userExists(String email) {
-        return userProfileMapper.load(UserProfile.class, email.toLowerCase(Locale.ROOT)) != null;
+        return dynamoUserProfileTable.getItem(
+                        Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build())
+                != null;
     }
 
     @Override
     public void signUp(
             String email, String password, Subject subject, TermsAndConditions termsAndConditions) {
-        String dateTime = LocalDateTime.now().toString();
-        String hashedPassword = hashPassword(password);
-        UserCredentials userCredentials =
+        var dateTime = LocalDateTime.now().toString();
+        var hashedPassword = hashPassword(password);
+        var userCredentials =
                 new UserCredentials()
-                        .setEmail(email.toLowerCase(Locale.ROOT))
-                        .setSubjectID(subject.toString())
-                        .setPassword(hashedPassword)
-                        .setCreated(dateTime)
-                        .setUpdated(dateTime);
+                        .withEmail(email.toLowerCase(Locale.ROOT))
+                        .withSubjectID(subject.toString())
+                        .withPassword(hashedPassword)
+                        .withCreated(dateTime)
+                        .withUpdated(dateTime);
 
-        UserProfile userProfile =
+        var userProfile =
                 new UserProfile()
-                        .setEmail(email.toLowerCase(Locale.ROOT))
-                        .setSubjectID(subject.toString())
-                        .setEmailVerified(true)
-                        .setCreated(dateTime)
-                        .setUpdated(dateTime)
-                        .setPublicSubjectID((new Subject()).toString())
-                        .setTermsAndConditions(termsAndConditions)
-                        .setLegacySubjectID(null);
-        userCredentialsMapper.save(userCredentials);
-        userProfileMapper.save(userProfile);
+                        .withEmail(email.toLowerCase(Locale.ROOT))
+                        .withSubjectID(subject.toString())
+                        .withEmailVerified(true)
+                        .withCreated(dateTime)
+                        .withUpdated(dateTime)
+                        .withPublicSubjectID((new Subject()).toString())
+                        .withTermsAndConditions(termsAndConditions)
+                        .withLegacySubjectID(null);
+        dynamoUserCredentialsTable.putItem(userCredentials);
+        dynamoUserProfileTable.putItem(userProfile);
     }
 
     @Override
     public boolean login(String email, String password) {
-        UserCredentials userCredentials =
-                userCredentialsMapper.load(UserCredentials.class, email.toLowerCase(Locale.ROOT));
+        var userCredentials =
+                dynamoUserCredentialsTable.getItem(
+                        Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
         return login(userCredentials, password);
     }
 
@@ -103,31 +105,41 @@ public class DynamoService implements AuthenticationService {
     @Override
     public Subject getSubjectFromEmail(String email) {
         return new Subject(
-                userProfileMapper
-                        .load(UserProfile.class, email.toLowerCase(Locale.ROOT))
+                dynamoUserProfileTable
+                        .getItem(
+                                Key.builder()
+                                        .partitionValue(email.toLowerCase(Locale.ROOT))
+                                        .build())
                         .getSubjectID());
     }
 
     @Override
     public void updatePhoneNumber(String email, String phoneNumber) {
-        final String formattedPhoneNumber = PhoneNumberHelper.formatPhoneNumber(phoneNumber);
-        userProfileMapper.save(
-                userProfileMapper
-                        .load(UserProfile.class, email.toLowerCase(Locale.ROOT))
-                        .setPhoneNumber(formattedPhoneNumber));
+        var formattedPhoneNumber = PhoneNumberHelper.formatPhoneNumber(phoneNumber);
+        dynamoUserProfileTable.updateItem(
+                dynamoUserProfileTable
+                        .getItem(
+                                Key.builder()
+                                        .partitionValue(email.toLowerCase(Locale.ROOT))
+                                        .build())
+                        .withPhoneNumber(formattedPhoneNumber));
     }
 
     @Override
     public void updateConsent(String email, ClientConsent clientConsent) {
-        userProfileMapper.save(
-                userProfileMapper
-                        .load(UserProfile.class, email.toLowerCase(Locale.ROOT))
-                        .setClientConsent(clientConsent));
+        dynamoUserProfileTable.updateItem(
+                dynamoUserProfileTable
+                        .getItem(
+                                Key.builder()
+                                        .partitionValue(email.toLowerCase(Locale.ROOT))
+                                        .build())
+                        .withClientConsent(clientConsent));
     }
 
     @Override
     public UserProfile getUserProfileByEmail(String email) {
-        return userProfileMapper.load(UserProfile.class, email.toLowerCase(Locale.ROOT));
+        return dynamoUserProfileTable.getItem(
+                Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
     }
 
     @Override
@@ -137,13 +149,15 @@ public class DynamoService implements AuthenticationService {
 
     @Override
     public void updateTermsAndConditions(String email, String version) {
-        TermsAndConditions termsAndConditions =
+        var termsAndConditions =
                 new TermsAndConditions(version, LocalDateTime.now(ZoneId.of("UTC")).toString());
-
-        userProfileMapper.save(
-                userProfileMapper
-                        .load(UserProfile.class, email.toLowerCase(Locale.ROOT))
-                        .setTermsAndConditions(termsAndConditions));
+        dynamoUserProfileTable.updateItem(
+                dynamoUserProfileTable
+                        .getItem(
+                                Key.builder()
+                                        .partitionValue(email.toLowerCase(Locale.ROOT))
+                                        .build())
+                        .withTermsAndConditions(termsAndConditions));
     }
 
     @Override
@@ -153,87 +167,94 @@ public class DynamoService implements AuthenticationService {
 
     @Override
     public void updateEmail(String currentEmail, String newEmail, LocalDateTime updatedDateTime) {
-        UserProfile userProfile =
-                userProfileMapper
-                        .load(UserProfile.class, currentEmail)
-                        .setEmail(newEmail.toLowerCase(Locale.ROOT))
-                        .setUpdated(updatedDateTime.toString());
-        UserCredentials userCredentials =
-                userCredentialsMapper
-                        .load(UserCredentials.class, currentEmail)
-                        .setEmail(newEmail.toLowerCase(Locale.ROOT))
-                        .setUpdated(updatedDateTime.toString());
+        var userProfile =
+                dynamoUserProfileTable
+                        .getItem(
+                                Key.builder()
+                                        .partitionValue(currentEmail.toLowerCase(Locale.ROOT))
+                                        .build())
+                        .withEmail(newEmail.toLowerCase(Locale.ROOT))
+                        .withUpdated(updatedDateTime.toString());
+        var userCredentials =
+                dynamoUserCredentialsTable
+                        .getItem(
+                                Key.builder()
+                                        .partitionValue(currentEmail.toLowerCase(Locale.ROOT))
+                                        .build())
+                        .withEmail(newEmail.toLowerCase(Locale.ROOT))
+                        .withUpdated(updatedDateTime.toString());
 
-        Put userProfilePut = dynamoDBSchemaHelper.buildPut(USER_PROFILE_TABLE, userProfile);
-        Put userCredentialsPut =
-                dynamoDBSchemaHelper.buildPut(USER_CREDENTIALS_TABLE, userCredentials);
-        Delete userProfileDelete =
-                dynamoDBSchemaHelper.buildDelete(
-                        USER_PROFILE_TABLE,
-                        new AttributeValue(currentEmail.toLowerCase(Locale.ROOT)));
-        Delete userCredentialsDelete =
-                dynamoDBSchemaHelper.buildDelete(
-                        USER_CREDENTIALS_TABLE,
-                        new AttributeValue(currentEmail.toLowerCase(Locale.ROOT)));
-
-        dynamoDB.transactWriteItems(
-                new TransactWriteItemsRequest()
-                        .withTransactItems(
-                                Arrays.asList(
-                                        new TransactWriteItem().withPut(userProfilePut),
-                                        new TransactWriteItem().withPut(userCredentialsPut),
-                                        new TransactWriteItem().withDelete(userProfileDelete),
-                                        new TransactWriteItem()
-                                                .withDelete(userCredentialsDelete))));
+        dynamoDbEnhancedClient.transactWriteItems(
+                TransactWriteItemsEnhancedRequest.builder()
+                        .addPutItem(dynamoUserCredentialsTable, userCredentials)
+                        .addPutItem(dynamoUserProfileTable, userProfile)
+                        .addDeleteItem(
+                                dynamoUserCredentialsTable,
+                                Key.builder()
+                                        .partitionValue(currentEmail.toLowerCase(Locale.ROOT))
+                                        .build())
+                        .addDeleteItem(
+                                dynamoUserProfileTable,
+                                Key.builder()
+                                        .partitionValue(currentEmail.toLowerCase(Locale.ROOT))
+                                        .build())
+                        .build());
     }
 
     @Override
     public void updatePassword(String email, String newPassword) {
-        userCredentialsMapper.save(
-                userCredentialsMapper
-                        .load(UserCredentials.class, email.toLowerCase(Locale.ROOT))
-                        .setPassword(hashPassword(newPassword))
-                        .setMigratedPassword(null));
+        dynamoUserCredentialsTable.updateItem(
+                dynamoUserCredentialsTable
+                        .getItem(
+                                Key.builder()
+                                        .partitionValue(email.toLowerCase(Locale.ROOT))
+                                        .build())
+                        .withPassword(hashPassword(newPassword))
+                        .withMigratedPassword(null));
     }
 
     @Override
     public void removeAccount(String email) {
-        Delete userProfileDelete =
-                dynamoDBSchemaHelper.buildDelete(
-                        USER_PROFILE_TABLE, new AttributeValue(email.toLowerCase(Locale.ROOT)));
-        Delete userCredentialsDelete =
-                dynamoDBSchemaHelper.buildDelete(
-                        USER_CREDENTIALS_TABLE, new AttributeValue(email.toLowerCase(Locale.ROOT)));
-        dynamoDB.transactWriteItems(
-                new TransactWriteItemsRequest()
-                        .withTransactItems(
-                                List.of(
-                                        new TransactWriteItem().withDelete(userProfileDelete),
-                                        new TransactWriteItem()
-                                                .withDelete(userCredentialsDelete))));
+        dynamoDbEnhancedClient.transactWriteItems(
+                TransactWriteItemsEnhancedRequest.builder()
+                        .addDeleteItem(
+                                dynamoUserCredentialsTable,
+                                Key.builder()
+                                        .partitionValue(email.toLowerCase(Locale.ROOT))
+                                        .build())
+                        .addDeleteItem(
+                                dynamoUserProfileTable,
+                                Key.builder()
+                                        .partitionValue(email.toLowerCase(Locale.ROOT))
+                                        .build())
+                        .build());
     }
 
     @Override
     public UserCredentials getUserCredentialsFromSubject(String subject) {
-        Map<String, AttributeValue> eav = new HashMap<>();
-        eav.put(":val1", new AttributeValue().withS(subject));
-
-        DynamoDBQueryExpression<UserCredentials> queryExpression =
-                new DynamoDBQueryExpression<UserCredentials>()
-                        .withIndexName("SubjectIDIndex")
-                        .withKeyConditionExpression("SubjectID= :val1")
-                        .withExpressionAttributeValues(eav)
-                        .withConsistentRead(false);
-
-        return getUserCredentials(queryExpression);
+        QueryConditional q =
+                QueryConditional.keyEqualTo(Key.builder().partitionValue(subject).build());
+        DynamoDbIndex<UserCredentials> subjectIDIndex =
+                dynamoUserCredentialsTable.index("SubjectIDIndex");
+        QueryEnhancedRequest queryEnhancedRequest =
+                QueryEnhancedRequest.builder().consistentRead(false).queryConditional(q).build();
+        Optional<UserCredentials> userCredentials =
+                subjectIDIndex.query(queryEnhancedRequest).stream()
+                        .limit(1)
+                        .map(t -> t.items().get(0))
+                        .findFirst();
+        if (userCredentials.isEmpty()) {
+            throw new RuntimeException("No userCredentials found with query search");
+        }
+        return userCredentials.get();
     }
 
     @Override
     public Optional<UserProfile> getUserProfileFromEmail(String email) {
         if (nonNull(email) && !email.isBlank()) {
-            UserCredentials userCredentials =
-                    userCredentialsMapper.load(
-                            UserCredentials.class, email.toLowerCase(Locale.ROOT));
+            var userCredentials =
+                    dynamoUserCredentialsTable.getItem(
+                            Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
 
             if (nonNull(userCredentials)) {
                 return Optional.of(getUserProfileFromSubject(userCredentials.getSubjectID()));
@@ -244,59 +265,67 @@ public class DynamoService implements AuthenticationService {
 
     @Override
     public UserCredentials getUserCredentialsFromEmail(String email) {
-        return userCredentialsMapper.load(UserCredentials.class, email.toLowerCase(Locale.ROOT));
+        return dynamoUserCredentialsTable.getItem(
+                Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
     }
 
     @Override
     public void migrateLegacyPassword(String email, String password) {
-        userCredentialsMapper.save(
-                userCredentialsMapper
-                        .load(UserCredentials.class, email.toLowerCase(Locale.ROOT))
-                        .setPassword(hashPassword(password))
-                        .setMigratedPassword(null));
-    }
-
-    @Override
-    public void bulkAdd(
-            List<UserCredentials> userCredentialsList, List<UserProfile> userProfileList) {
-        userCredentialsMapper.batchSave(userCredentialsList);
-        userProfileMapper.batchSave(userProfileList);
+        dynamoUserCredentialsTable.updateItem(
+                dynamoUserCredentialsTable
+                        .getItem(
+                                Key.builder()
+                                        .partitionValue(email.toLowerCase(Locale.ROOT))
+                                        .build())
+                        .withPassword(hashPassword(password))
+                        .withMigratedPassword(null));
     }
 
     @Override
     public byte[] getOrGenerateSalt(UserProfile userProfile) {
-        if (userProfile.getSalt() == null || userProfile.getSalt().array().length == 0) {
+        if (userProfile.getSalt() == null
+                || SdkBytes.fromByteBuffer(userProfile.getSalt()).asByteArray().length == 0) {
             byte[] salt = SaltHelper.generateNewSalt();
             userProfile.setSalt(salt);
-            userProfileMapper.save(
+            dynamoUserProfileTable.updateItem(
                     getUserProfileFromSubject(userProfile.getSubjectID())
-                            .setSalt(userProfile.getSalt()));
+                            .withSalt(userProfile.getSalt()));
         }
-        return userProfile.getSalt().array();
+        return SdkBytes.fromByteBuffer(userProfile.getSalt()).asByteArray();
     }
 
     @Override
     public Optional<List<ClientConsent>> getUserConsents(String email) {
         return Optional.ofNullable(
-                userProfileMapper
-                        .load(UserProfile.class, email.toLowerCase(Locale.ROOT))
+                dynamoUserProfileTable
+                        .getItem(
+                                Key.builder()
+                                        .partitionValue(email.toLowerCase(Locale.ROOT))
+                                        .build())
                         .getClientConsent());
     }
 
     @Override
     public void updatePhoneNumberAndAccountVerifiedStatus(String email, boolean verifiedStatus) {
-        userProfileMapper.save(
-                userProfileMapper
-                        .load(UserProfile.class, email.toLowerCase(Locale.ROOT))
-                        .setPhoneNumberVerified(verifiedStatus)
-                        .setAccountVerified(verifiedStatus ? true : null));
+        var userProfile =
+                dynamoUserProfileTable
+                        .getItem(
+                                Key.builder()
+                                        .partitionValue(email.toLowerCase(Locale.ROOT))
+                                        .build())
+                        .withPhoneNumberVerified(verifiedStatus);
+        if (verifiedStatus) userProfile.withAccountVerified(1);
+        dynamoUserProfileTable.updateItem(userProfile);
     }
 
     @Override
     public Optional<String> getPhoneNumber(String email) {
         return Optional.ofNullable(
-                userProfileMapper
-                        .load(UserProfile.class, email.toLowerCase(Locale.ROOT))
+                dynamoUserProfileTable
+                        .getItem(
+                                Key.builder()
+                                        .partitionValue(email.toLowerCase(Locale.ROOT))
+                                        .build())
                         .getPhoneNumber());
     }
 
@@ -315,9 +344,12 @@ public class DynamoService implements AuthenticationService {
                         methodVerified,
                         enabled,
                         dateTime);
-        userCredentialsMapper.save(
-                userCredentialsMapper
-                        .load(UserCredentials.class, email.toLowerCase(Locale.ROOT))
+        dynamoUserCredentialsTable.updateItem(
+                dynamoUserCredentialsTable
+                        .getItem(
+                                Key.builder()
+                                        .partitionValue(email.toLowerCase(Locale.ROOT))
+                                        .build())
                         .setMfaMethod(mfaMethod));
     }
 
@@ -325,7 +357,8 @@ public class DynamoService implements AuthenticationService {
     public void setMFAMethodVerifiedTrue(String email, MFAMethodType mfaMethodType) {
         var dateTime = NowHelper.toTimestampString(NowHelper.now());
         var userCredentials =
-                userCredentialsMapper.load(UserCredentials.class, email.toLowerCase(Locale.ROOT));
+                dynamoUserCredentialsTable.getItem(
+                        Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
         var mfaMethod =
                 userCredentials.getMfaMethods().stream()
                         .filter(
@@ -334,79 +367,64 @@ public class DynamoService implements AuthenticationService {
                         .findFirst()
                         .orElseThrow();
 
-        mfaMethod.setMethodVerified(true);
-        mfaMethod.setUpdated(dateTime);
-        userCredentialsMapper.save(userCredentials);
+        mfaMethod.withMethodVerified(true);
+        mfaMethod.withUpdated(dateTime);
+        dynamoUserCredentialsTable.updateItem(userCredentials);
     }
 
     @Override
     public UserProfile getUserProfileFromSubject(String subject) {
-        Map<String, AttributeValue> eav = new HashMap<>();
-        eav.put(":val1", new AttributeValue().withS(subject));
-
-        DynamoDBQueryExpression<UserProfile> queryExpression =
-                new DynamoDBQueryExpression<UserProfile>()
-                        .withIndexName("SubjectIDIndex")
-                        .withKeyConditionExpression("SubjectID= :val1")
-                        .withExpressionAttributeValues(eav)
-                        .withConsistentRead(false);
-
-        return getUserProfile(queryExpression);
+        QueryConditional q =
+                QueryConditional.keyEqualTo(Key.builder().partitionValue(subject).build());
+        DynamoDbIndex<UserProfile> subjectIDIndex = dynamoUserProfileTable.index("SubjectIDIndex");
+        QueryEnhancedRequest queryEnhancedRequest =
+                QueryEnhancedRequest.builder().consistentRead(false).queryConditional(q).build();
+        Optional<UserProfile> userProfile =
+                subjectIDIndex.query(queryEnhancedRequest).stream()
+                        .limit(1)
+                        .map(t -> t.items().get(0))
+                        .findFirst();
+        if (userProfile.isEmpty()) {
+            throw new RuntimeException("No userCredentials found with query search");
+        }
+        return userProfile.get();
     }
 
     @Override
     public UserProfile getUserProfileFromPublicSubject(String subject) {
-        Map<String, AttributeValue> eav = new HashMap<>();
-        eav.put(":val1", new AttributeValue().withS(subject));
-
-        DynamoDBQueryExpression<UserProfile> queryExpression =
-                new DynamoDBQueryExpression<UserProfile>()
-                        .withIndexName("PublicSubjectIDIndex")
-                        .withKeyConditionExpression("PublicSubjectID= :val1")
-                        .withExpressionAttributeValues(eav)
-                        .withConsistentRead(false);
-
-        return getUserProfile(queryExpression);
+        QueryConditional q =
+                QueryConditional.keyEqualTo(Key.builder().partitionValue(subject).build());
+        DynamoDbIndex<UserProfile> subjectIDIndex =
+                dynamoUserProfileTable.index("PublicSubjectIDIndex");
+        QueryEnhancedRequest queryEnhancedRequest =
+                QueryEnhancedRequest.builder().consistentRead(false).queryConditional(q).build();
+        Optional<UserProfile> userProfile =
+                subjectIDIndex.query(queryEnhancedRequest).stream()
+                        .limit(1)
+                        .map(t -> t.items().get(0))
+                        .findFirst();
+        if (userProfile.isEmpty()) {
+            throw new RuntimeException("No userCredentials found with query search");
+        }
+        return userProfile.get();
     }
 
     @Override
     public void setAccountVerified(String email) {
-        userProfileMapper.save(
-                userProfileMapper
-                        .load(UserProfile.class, email.toLowerCase(Locale.ROOT))
-                        .setAccountVerified(true));
-    }
-
-    private UserProfile getUserProfile(DynamoDBQueryExpression<UserProfile> queryExpression) {
-        QueryResultPage<UserProfile> scanPage =
-                userProfileMapper.queryPage(UserProfile.class, queryExpression);
-        if (scanPage.getResults().isEmpty() || scanPage.getResults().size() > 1) {
-            throw new RuntimeException(
-                    format(
-                            "Invalid number of query expressions returned: %s",
-                            scanPage.getResults().size()));
-        }
-        return scanPage.getResults().get(0);
-    }
-
-    private UserCredentials getUserCredentials(
-            DynamoDBQueryExpression<UserCredentials> queryExpression) {
-        QueryResultPage<UserCredentials> scanPage =
-                userCredentialsMapper.queryPage(UserCredentials.class, queryExpression);
-        if (scanPage.getResults().isEmpty() || scanPage.getResults().size() > 1) {
-            throw new RuntimeException(
-                    format(
-                            "Invalid number of query expressions returned: %s",
-                            scanPage.getResults().size()));
-        }
-        return scanPage.getResults().get(0);
+        dynamoUserProfileTable.updateItem(
+                dynamoUserProfileTable
+                        .getItem(
+                                Key.builder()
+                                        .partitionValue(email.toLowerCase(Locale.ROOT))
+                                        .build())
+                        .withAccountVerified(1));
     }
 
     private static String hashPassword(String password) {
         return Argon2EncoderHelper.argon2Hash(password);
     }
 
-    private void warmUp(String tableName) {
-        dynamoDB.describeTable(tableName);
+    private void warmUp() {
+        dynamoUserProfileTable.describeTable();
     }
 }

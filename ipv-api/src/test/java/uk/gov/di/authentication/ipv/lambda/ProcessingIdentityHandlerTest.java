@@ -283,14 +283,14 @@ class ProcessingIdentityHandlerTest {
 
     private UserProfile generateUserProfile() {
         return new UserProfile()
-                .setEmail(EMAIL_ADDRESS)
-                .setEmailVerified(true)
-                .setPhoneNumber(PHONE_NUMBER)
-                .setPhoneNumberVerified(true)
-                .setPublicSubjectID(PUBLIC_SUBJECT_ID)
-                .setSubjectID(SUBJECT_ID)
-                .setSalt(SALT)
-                .setCreated(CREATED_DATE_TIME.toString())
-                .setUpdated(UPDATED_DATE_TIME.toString());
+                .withEmail(EMAIL_ADDRESS)
+                .withEmailVerified(true)
+                .withPhoneNumber(PHONE_NUMBER)
+                .withPhoneNumberVerified(true)
+                .withPublicSubjectID(PUBLIC_SUBJECT_ID)
+                .withSubjectID(SUBJECT_ID)
+                .withSalt(SALT)
+                .withCreated(CREATED_DATE_TIME.toString())
+                .withUpdated(UPDATED_DATE_TIME.toString());
     }
 }

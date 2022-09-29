@@ -167,15 +167,15 @@ class AccountVerifierLambdaTest {
     }
 
     private UserCredentials userCredential(String email, boolean hasVerifiedAuthApp) {
-        var credential = new UserCredentials().setEmail(email);
+        var credential = new UserCredentials().withEmail(email);
         if (hasVerifiedAuthApp) {
-            credential.setMfaMethods(
+            credential.withMfaMethods(
                     List.of(
                             new MFAMethod()
-                                    .setMethodVerified(true)
-                                    .setEnabled(true)
-                                    .setCredentialValue("a-secret-value")
-                                    .setMfaMethodType("AUTH_APP")));
+                                    .withMethodVerified(true)
+                                    .withEnabled(true)
+                                    .withCredentialValue("a-secret-value")
+                                    .withMfaMethodType("AUTH_APP")));
         }
         return credential;
     }

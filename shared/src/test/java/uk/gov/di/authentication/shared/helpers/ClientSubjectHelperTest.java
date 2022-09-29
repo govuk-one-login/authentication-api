@@ -316,15 +316,15 @@ class ClientSubjectHelperTest {
     private UserProfile generateUserProfile() {
         Set<String> claims = ValidScopes.getClaimsForListOfScopes(SCOPES.toStringList());
         return new UserProfile()
-                .setEmail(TEST_EMAIL)
-                .setEmailVerified(true)
-                .setPhoneNumber(PHONE_NUMBER)
-                .setPhoneNumberVerified(true)
-                .setSubjectID(INTERNAL_SUBJECT.getValue())
-                .setCreated(LocalDateTime.now().toString())
-                .setUpdated(LocalDateTime.now().toString())
-                .setPublicSubjectID(PUBLIC_SUBJECT.getValue())
-                .setClientConsent(
+                .withEmail(TEST_EMAIL)
+                .withEmailVerified(true)
+                .withPhoneNumber(PHONE_NUMBER)
+                .withPhoneNumberVerified(true)
+                .withSubjectID(INTERNAL_SUBJECT.getValue())
+                .withCreated(LocalDateTime.now().toString())
+                .withUpdated(LocalDateTime.now().toString())
+                .withPublicSubjectID(PUBLIC_SUBJECT.getValue())
+                .withClientConsent(
                         new ClientConsent(
                                 CLIENT_ID, claims, LocalDateTime.now(ZoneId.of("UTC")).toString()));
     }

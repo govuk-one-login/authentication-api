@@ -84,8 +84,8 @@ class UserMigrationServiceTest {
 
     private UserCredentials generateUserCredentials(String newPassword, String migratedPassword) {
         return new UserCredentials()
-                .setEmail(TEST_EMAIL)
-                .setPassword(newPassword)
-                .setMigratedPassword(migratedPassword);
+                .withEmail(TEST_EMAIL)
+                .withPassword(newPassword)
+                .withMigratedPassword(migratedPassword);
     }
 }

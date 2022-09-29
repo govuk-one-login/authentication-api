@@ -71,8 +71,8 @@ class UpdatePhoneNumberHandlerTest {
         String persistentIdValue = "some-persistent-session-id";
         UserProfile userProfile =
                 new UserProfile()
-                        .setPublicSubjectID(SUBJECT.getValue())
-                        .setPhoneNumber(OLD_PHONE_NUMBER);
+                        .withPublicSubjectID(SUBJECT.getValue())
+                        .withPhoneNumber(OLD_PHONE_NUMBER);
         when(dynamoService.getUserProfileByEmail(EMAIL_ADDRESS)).thenReturn(userProfile);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(

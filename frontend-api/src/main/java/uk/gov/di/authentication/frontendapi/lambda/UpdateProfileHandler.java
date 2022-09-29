@@ -308,8 +308,8 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                 clientConsentForClientId
                         .map(
                                 t ->
-                                        t.setClaims(claimsConsented)
-                                                .setUpdatedTimestamp(
+                                        t.withClaims(claimsConsented)
+                                                .withUpdatedTimestamp(
                                                         LocalDateTime.now(ZoneId.of("UTC"))
                                                                 .toString()))
                         .orElse(

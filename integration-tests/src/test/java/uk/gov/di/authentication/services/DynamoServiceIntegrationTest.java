@@ -5,6 +5,7 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import software.amazon.awssdk.core.SdkBytes;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
@@ -49,10 +50,10 @@ class DynamoServiceIntegrationTest {
         byte[] salt = dynamoService.getOrGenerateSalt(userProfile);
 
         assertThat(salt.length, equalTo(32));
-        assertThat(userProfile.getSalt().array(), equalTo(salt));
+        assertThat(SdkBytes.fromByteBuffer(userProfile.getSalt()).asByteArray(), equalTo(salt));
         UserProfile savedProfile =
                 dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL).orElseThrow();
-        assertThat(savedProfile.getSalt().array(), equalTo(salt));
+        assertThat(SdkBytes.fromByteBuffer(savedProfile.getSalt()).asByteArray(), equalTo(salt));
     }
 
     @Test
@@ -67,7 +68,9 @@ class DynamoServiceIntegrationTest {
         assertThat(salt, equalTo(existingSalt));
         UserProfile savedProfile =
                 dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL).orElseThrow();
-        assertThat(existingSalt, equalTo(savedProfile.getSalt().array()));
+        assertThat(
+                existingSalt,
+                equalTo(SdkBytes.fromByteBuffer(savedProfile.getSalt()).asByteArray()));
     }
 
     private void setUpDynamo() {

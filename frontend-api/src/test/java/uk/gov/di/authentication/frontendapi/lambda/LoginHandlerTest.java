@@ -84,21 +84,21 @@ class LoginHandlerTest {
     private static final String EMAIL = "joe.bloggs@test.com";
     private static final String PASSWORD = "computer-1";
     private final UserCredentials userCredentials =
-            new UserCredentials().setEmail(EMAIL).setPassword(PASSWORD);
+            new UserCredentials().withEmail(EMAIL).withPassword(PASSWORD);
 
     private final UserCredentials userCredentialsAuthApp =
             new UserCredentials()
-                    .setEmail(EMAIL)
-                    .setPassword(PASSWORD)
+                    .withEmail(EMAIL)
+                    .withPassword(PASSWORD)
                     .setMfaMethod(AUTH_APP_MFA_METHOD);
     private static final String PHONE_NUMBER = "01234567890";
     private static final ClientID CLIENT_ID = new ClientID();
     private static final String CLIENT_NAME = "client-name";
     private static final MFAMethod AUTH_APP_MFA_METHOD =
             new MFAMethod()
-                    .setMfaMethodType(MFAMethodType.AUTH_APP.getValue())
-                    .setMethodVerified(true)
-                    .setEnabled(true);
+                    .withMfaMethodType(MFAMethodType.AUTH_APP.getValue())
+                    .withMethodVerified(true)
+                    .withEnabled(true);
     private static final Json objectMapper = SerializationService.getInstance();
     private LoginHandler handler;
     private final Context context = mock(Context.class);
@@ -324,7 +324,7 @@ class LoginHandlerTest {
                 .thenReturn(Optional.of(userProfile));
         UserCredentials applicableUserCredentials =
                 usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
-        applicableUserCredentials.setPassword(null);
+        applicableUserCredentials.withPassword(null);
         when(userMigrationService.processMigratedUser(applicableUserCredentials, PASSWORD))
                 .thenReturn(true);
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
@@ -651,14 +651,14 @@ class LoginHandlerTest {
         LocalDateTime localDateTime = LocalDateTime.now();
         Date currentDateTime = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
         return new UserProfile()
-                .setEmail(EMAIL)
-                .setEmailVerified(true)
-                .setPhoneNumber(PHONE_NUMBER)
-                .setPhoneNumberVerified(true)
-                .setPublicSubjectID(new Subject().getValue())
-                .setSubjectID(new Subject().getValue())
-                .setLegacySubjectID(legacySubjectId)
-                .setTermsAndConditions(new TermsAndConditions("1.0", currentDateTime.toString()));
+                .withEmail(EMAIL)
+                .withEmailVerified(true)
+                .withPhoneNumber(PHONE_NUMBER)
+                .withPhoneNumberVerified(true)
+                .withPublicSubjectID(new Subject().getValue())
+                .withSubjectID(new Subject().getValue())
+                .withLegacySubjectID(legacySubjectId)
+                .withTermsAndConditions(new TermsAndConditions("1.0", currentDateTime.toString()));
     }
 
     private ClientRegistry generateClientRegistry() {

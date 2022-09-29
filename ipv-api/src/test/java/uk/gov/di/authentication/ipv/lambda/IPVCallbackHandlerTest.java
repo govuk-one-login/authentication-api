@@ -545,12 +545,12 @@ class IPVCallbackHandlerTest {
 
     private UserProfile generateUserProfile() {
         return new UserProfile()
-                .setEmail(TEST_EMAIL_ADDRESS)
-                .setEmailVerified(true)
-                .setPhoneNumber("012345678902")
-                .setPhoneNumberVerified(true)
-                .setPublicSubjectID(PUBLIC_SUBJECT.getValue())
-                .setSubjectID(SUBJECT.getValue());
+                .withEmail(TEST_EMAIL_ADDRESS)
+                .withEmailVerified(true)
+                .withPhoneNumber("012345678902")
+                .withPhoneNumberVerified(true)
+                .withPublicSubjectID(PUBLIC_SUBJECT.getValue())
+                .withSubjectID(SUBJECT.getValue());
     }
 
     private ClientRegistry generateClientRegistry() {
