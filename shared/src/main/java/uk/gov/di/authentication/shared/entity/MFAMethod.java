@@ -2,7 +2,9 @@ package uk.gov.di.authentication.shared.entity;
 
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbConvertedBy;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import uk.gov.di.authentication.shared.dynamodb.BooleanToIntAttributeConverter;
 
 import java.util.Map;
 import java.util.Objects;
@@ -65,6 +67,7 @@ public class MFAMethod {
         return this;
     }
 
+    @DynamoDbConvertedBy(BooleanToIntAttributeConverter.class)
     @DynamoDbAttribute(ATTRIBUTE_METHOD_VERIFIED)
     public boolean isMethodVerified() {
         return methodVerified;
@@ -79,6 +82,7 @@ public class MFAMethod {
         return this;
     }
 
+    @DynamoDbConvertedBy(BooleanToIntAttributeConverter.class)
     @DynamoDbAttribute(ATTRIBUTE_ENABLED)
     public boolean isEnabled() {
         return enabled;
