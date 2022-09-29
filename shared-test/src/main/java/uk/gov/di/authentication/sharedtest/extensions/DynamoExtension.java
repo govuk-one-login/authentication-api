@@ -1,15 +1,18 @@
 package uk.gov.di.authentication.sharedtest.extensions;
 
-import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
-import com.amazonaws.services.dynamodbv2.model.AttributeValue;
-import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
-import com.amazonaws.services.dynamodbv2.model.ScanRequest;
-import com.amazonaws.services.dynamodbv2.model.ScanResult;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.DeleteItemRequest;
+import software.amazon.awssdk.services.dynamodb.model.DescribeTableRequest;
+import software.amazon.awssdk.services.dynamodb.model.ResourceNotFoundException;
+import software.amazon.awssdk.services.dynamodb.model.ScanRequest;
+import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
 
+import java.net.URI;
 import java.util.Map;
 
 public abstract class DynamoExtension extends BaseAwsResourceExtension
@@ -20,14 +23,15 @@ public abstract class DynamoExtension extends BaseAwsResourceExtension
     protected static final String DYNAMO_ENDPOINT =
             System.getenv().getOrDefault("DYNAMO_ENDPOINT", "http://localhost:8000");
 
-    protected AmazonDynamoDB dynamoDB;
+    protected DynamoDbClient dynamoDB;
 
     @Override
     public void beforeAll(ExtensionContext context) throws Exception {
         dynamoDB =
-                AmazonDynamoDBClientBuilder.standard()
-                        .withEndpointConfiguration(
-                                new AwsClientBuilder.EndpointConfiguration(DYNAMO_ENDPOINT, REGION))
+                DynamoDbClient.builder()
+                        .credentialsProvider(DefaultCredentialsProvider.create())
+                        .region(Region.of(REGION))
+                        .endpointOverride(URI.create(DYNAMO_ENDPOINT))
                         .build();
 
         createTables();
@@ -35,9 +39,10 @@ public abstract class DynamoExtension extends BaseAwsResourceExtension
 
     protected void createInstance() {
         dynamoDB =
-                AmazonDynamoDBClientBuilder.standard()
-                        .withEndpointConfiguration(
-                                new AwsClientBuilder.EndpointConfiguration(DYNAMO_ENDPOINT, REGION))
+                DynamoDbClient.builder()
+                        .credentialsProvider(DefaultCredentialsProvider.create())
+                        .region(Region.of(REGION))
+                        .endpointOverride(URI.create(DYNAMO_ENDPOINT))
                         .build();
 
         createTables();
@@ -47,19 +52,23 @@ public abstract class DynamoExtension extends BaseAwsResourceExtension
 
     protected boolean tableExists(String tableName) {
         try {
-            dynamoDB.describeTable(tableName);
+            dynamoDB.describeTable(DescribeTableRequest.builder().tableName(tableName).build());
             return true;
         } catch (ResourceNotFoundException ignored) {
             return false;
         }
     }
 
-    protected void clearDynamoTable(AmazonDynamoDB dynamoDB, String tableName, String key) {
-        ScanRequest scanRequest = new ScanRequest().withTableName(tableName);
-        ScanResult result = dynamoDB.scan(scanRequest);
+    protected void clearDynamoTable(DynamoDbClient dynamoDB, String tableName, String key) {
+        var scanRequest = ScanRequest.builder().tableName(tableName).build();
+        ScanResponse result = dynamoDB.scan(scanRequest);
 
-        for (Map<String, AttributeValue> item : result.getItems()) {
-            dynamoDB.deleteItem(tableName, Map.of(key, item.get(key)));
+        for (Map<String, AttributeValue> item : result.items()) {
+            dynamoDB.deleteItem(
+                    DeleteItemRequest.builder()
+                            .tableName(tableName)
+                            .key(Map.of(key, item.get(key)))
+                            .build());
         }
     }
 }

@@ -1,14 +1,16 @@
 package uk.gov.di.authentication.sharedtest.extensions;
 
-import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
-import com.amazonaws.services.dynamodbv2.model.BillingMode;
-import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
-import com.amazonaws.services.dynamodbv2.model.GlobalSecondaryIndex;
-import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
-import com.amazonaws.services.dynamodbv2.model.Projection;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
+import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
+import software.amazon.awssdk.services.dynamodb.model.BillingMode;
+import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
+import software.amazon.awssdk.services.dynamodb.model.GlobalSecondaryIndex;
+import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
+import software.amazon.awssdk.services.dynamodb.model.KeyType;
+import software.amazon.awssdk.services.dynamodb.model.ProjectionType;
+import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
@@ -21,13 +23,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
-
-import static com.amazonaws.services.dynamodbv2.model.KeyType.HASH;
-import static com.amazonaws.services.dynamodbv2.model.KeyType.RANGE;
-import static com.amazonaws.services.dynamodbv2.model.ProjectionType.ALL;
-import static com.amazonaws.services.dynamodbv2.model.ProjectionType.KEYS_ONLY;
-import static com.amazonaws.services.dynamodbv2.model.ScalarAttributeType.N;
-import static com.amazonaws.services.dynamodbv2.model.ScalarAttributeType.S;
 
 public class UserStoreExtension extends DynamoExtension implements AfterEachCallback {
 
@@ -62,7 +57,7 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
     public String getPublicSubjectIdForEmail(String email) {
         return dynamoService
                 .getUserProfileByEmailMaybe(email)
-                .map(u -> u.getPublicSubjectID())
+                .map(UserProfile::getPublicSubjectID)
                 .orElseThrow();
     }
 
@@ -158,49 +153,99 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
 
     private void createUserCredentialsTable(String tableName) {
         CreateTableRequest request =
-                new CreateTableRequest()
-                        .withTableName(tableName)
-                        .withKeySchema(new KeySchemaElement(EMAIL_FIELD, HASH))
-                        .withBillingMode(BillingMode.PAY_PER_REQUEST)
-                        .withAttributeDefinitions(
-                                new AttributeDefinition(EMAIL_FIELD, S),
-                                new AttributeDefinition(SUBJECT_ID_FIELD, S))
-                        .withGlobalSecondaryIndexes(
-                                new GlobalSecondaryIndex()
-                                        .withIndexName(SUBJECT_ID_INDEX)
-                                        .withKeySchema(new KeySchemaElement(SUBJECT_ID_FIELD, HASH))
-                                        .withProjection(new Projection().withProjectionType(ALL)));
+                CreateTableRequest.builder()
+                        .tableName(tableName)
+                        .keySchema(
+                                KeySchemaElement.builder()
+                                        .keyType(KeyType.HASH)
+                                        .attributeName(EMAIL_FIELD)
+                                        .build())
+                        .billingMode(BillingMode.PAY_PER_REQUEST)
+                        .attributeDefinitions(
+                                AttributeDefinition.builder()
+                                        .attributeName(EMAIL_FIELD)
+                                        .attributeType(ScalarAttributeType.S)
+                                        .build(),
+                                AttributeDefinition.builder()
+                                        .attributeName(SUBJECT_ID_FIELD)
+                                        .attributeType(ScalarAttributeType.S)
+                                        .build())
+                        .globalSecondaryIndexes(
+                                GlobalSecondaryIndex.builder()
+                                        .indexName(SUBJECT_ID_INDEX)
+                                        .keySchema(
+                                                KeySchemaElement.builder()
+                                                        .attributeName(SUBJECT_ID_FIELD)
+                                                        .keyType(KeyType.HASH)
+                                                        .build())
+                                        .projection(t -> t.projectionType(ProjectionType.ALL))
+                                        .build())
+                        .build();
         dynamoDB.createTable(request);
     }
 
     private void createUserProfileTable(String tableName) {
         CreateTableRequest request =
-                new CreateTableRequest()
-                        .withTableName(tableName)
-                        .withKeySchema(new KeySchemaElement(EMAIL_FIELD, HASH))
-                        .withBillingMode(BillingMode.PAY_PER_REQUEST)
-                        .withAttributeDefinitions(
-                                new AttributeDefinition(EMAIL_FIELD, S),
-                                new AttributeDefinition(SUBJECT_ID_FIELD, S),
-                                new AttributeDefinition(PUBLIC_SUBJECT_ID_FIELD, S),
-                                new AttributeDefinition(ACCOUNT_VERIFIED_FIELD, N))
-                        .withGlobalSecondaryIndexes(
-                                new GlobalSecondaryIndex()
-                                        .withIndexName(SUBJECT_ID_INDEX)
-                                        .withKeySchema(new KeySchemaElement(SUBJECT_ID_FIELD, HASH))
-                                        .withProjection(new Projection().withProjectionType(ALL)),
-                                new GlobalSecondaryIndex()
-                                        .withIndexName(PUBLIC_SUBJECT_ID_INDEX)
-                                        .withKeySchema(
-                                                new KeySchemaElement(PUBLIC_SUBJECT_ID_FIELD, HASH))
-                                        .withProjection(new Projection().withProjectionType(ALL)),
-                                new GlobalSecondaryIndex()
-                                        .withIndexName(VERIFIED_ACCOUNT_ID_INDEX)
-                                        .withKeySchema(
-                                                new KeySchemaElement(SUBJECT_ID_FIELD, HASH),
-                                                new KeySchemaElement(ACCOUNT_VERIFIED_FIELD, RANGE))
-                                        .withProjection(
-                                                new Projection().withProjectionType(KEYS_ONLY)));
+                CreateTableRequest.builder()
+                        .tableName(tableName)
+                        .keySchema(
+                                KeySchemaElement.builder()
+                                        .keyType(KeyType.HASH)
+                                        .attributeName(EMAIL_FIELD)
+                                        .build())
+                        .billingMode(BillingMode.PAY_PER_REQUEST)
+                        .attributeDefinitions(
+                                AttributeDefinition.builder()
+                                        .attributeName(EMAIL_FIELD)
+                                        .attributeType(ScalarAttributeType.S)
+                                        .build(),
+                                AttributeDefinition.builder()
+                                        .attributeName(SUBJECT_ID_FIELD)
+                                        .attributeType(ScalarAttributeType.S)
+                                        .build(),
+                                AttributeDefinition.builder()
+                                        .attributeName(PUBLIC_SUBJECT_ID_FIELD)
+                                        .attributeType(ScalarAttributeType.S)
+                                        .build(),
+                                AttributeDefinition.builder()
+                                        .attributeName(ACCOUNT_VERIFIED_FIELD)
+                                        .attributeType(ScalarAttributeType.N)
+                                        .build())
+                        .globalSecondaryIndexes(
+                                GlobalSecondaryIndex.builder()
+                                        .indexName(SUBJECT_ID_INDEX)
+                                        .keySchema(
+                                                KeySchemaElement.builder()
+                                                        .attributeName(SUBJECT_ID_FIELD)
+                                                        .keyType(KeyType.HASH)
+                                                        .build())
+                                        .projection(t -> t.projectionType(ProjectionType.ALL))
+                                        .build(),
+                                GlobalSecondaryIndex.builder()
+                                        .indexName(PUBLIC_SUBJECT_ID_INDEX)
+                                        .keySchema(
+                                                KeySchemaElement.builder()
+                                                        .attributeName(PUBLIC_SUBJECT_ID_FIELD)
+                                                        .keyType(KeyType.HASH)
+                                                        .build())
+                                        .projection(t -> t.projectionType(ProjectionType.ALL))
+                                        .build(),
+                                GlobalSecondaryIndex.builder()
+                                        .indexName(VERIFIED_ACCOUNT_ID_INDEX)
+                                        .keySchema(
+                                                KeySchemaElement.builder()
+                                                        .attributeName(SUBJECT_ID_FIELD)
+                                                        .keyType(KeyType.HASH)
+                                                        .build())
+                                        .keySchema(
+                                                KeySchemaElement.builder()
+                                                        .attributeName(ACCOUNT_VERIFIED_FIELD)
+                                                        .keyType(KeyType.HASH)
+                                                        .build())
+                                        .projection(t -> t.projectionType(ProjectionType.KEYS_ONLY))
+                                        .build())
+                        .build();
+
         dynamoDB.createTable(request);
     }
 }

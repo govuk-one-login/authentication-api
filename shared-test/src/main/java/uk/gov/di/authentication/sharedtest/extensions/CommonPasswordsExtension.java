@@ -1,19 +1,20 @@
 package uk.gov.di.authentication.sharedtest.extensions;
 
-import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
-import com.amazonaws.services.dynamodbv2.model.AttributeValue;
-import com.amazonaws.services.dynamodbv2.model.BillingMode;
-import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
-import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
-import com.amazonaws.services.dynamodbv2.model.PutItemRequest;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
+import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.dynamodb.model.BillingMode;
+import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
+import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
+import software.amazon.awssdk.services.dynamodb.model.KeyType;
+import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
+import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.sharedtest.basetest.DynamoTestConfiguration;
 
-import static com.amazonaws.services.dynamodbv2.model.KeyType.HASH;
-import static com.amazonaws.services.dynamodbv2.model.ScalarAttributeType.S;
+import java.util.Map;
 
 public class CommonPasswordsExtension extends DynamoExtension
         implements AfterEachCallback, BeforeEachCallback {
@@ -55,20 +56,30 @@ public class CommonPasswordsExtension extends DynamoExtension
 
     private void createCommonPasswordsTable() {
         CreateTableRequest request =
-                new CreateTableRequest()
-                        .withTableName(COMMON_PASSWORDS_TABLE)
-                        .withKeySchema(new KeySchemaElement(PASSWORD_FIELD, HASH))
-                        .withBillingMode(BillingMode.PAY_PER_REQUEST)
-                        .withAttributeDefinitions(new AttributeDefinition(PASSWORD_FIELD, S));
+                CreateTableRequest.builder()
+                        .tableName(COMMON_PASSWORDS_TABLE)
+                        .keySchema(
+                                KeySchemaElement.builder()
+                                        .keyType(KeyType.HASH)
+                                        .attributeName(PASSWORD_FIELD)
+                                        .build())
+                        .billingMode(BillingMode.PAY_PER_REQUEST)
+                        .attributeDefinitions(
+                                AttributeDefinition.builder()
+                                        .attributeName(PASSWORD_FIELD)
+                                        .attributeType(ScalarAttributeType.S)
+                                        .build())
+                        .build();
 
         dynamoDB.createTable(request);
     }
 
     private void addTestPasswordToCommonPasswordsTable() {
         PutItemRequest request =
-                new PutItemRequest()
-                        .withTableName(COMMON_PASSWORDS_TABLE)
-                        .addItemEntry(PASSWORD_FIELD, new AttributeValue(TEST_COMMON_PASSWORD));
+                PutItemRequest.builder()
+                        .tableName(COMMON_PASSWORDS_TABLE)
+                        .item(Map.of(PASSWORD_FIELD, AttributeValue.fromS(TEST_COMMON_PASSWORD)))
+                        .build();
 
         dynamoDB.putItem(request);
     }

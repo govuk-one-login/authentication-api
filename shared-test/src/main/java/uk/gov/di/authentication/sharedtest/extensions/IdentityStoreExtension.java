@@ -1,11 +1,13 @@
 package uk.gov.di.authentication.sharedtest.extensions;
 
-import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
-import com.amazonaws.services.dynamodbv2.model.BillingMode;
-import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
-import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
+import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
+import software.amazon.awssdk.services.dynamodb.model.BillingMode;
+import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
+import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
+import software.amazon.awssdk.services.dynamodb.model.KeyType;
+import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import uk.gov.di.authentication.shared.entity.IdentityCredentials;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoIdentityService;
@@ -13,9 +15,6 @@ import uk.gov.di.authentication.sharedtest.basetest.DynamoTestConfiguration;
 
 import java.util.Map;
 import java.util.Optional;
-
-import static com.amazonaws.services.dynamodbv2.model.KeyType.HASH;
-import static com.amazonaws.services.dynamodbv2.model.ScalarAttributeType.S;
 
 public class IdentityStoreExtension extends DynamoExtension implements AfterEachCallback {
 
@@ -74,11 +73,21 @@ public class IdentityStoreExtension extends DynamoExtension implements AfterEach
 
     private void createIdentityCredentialTable() {
         CreateTableRequest request =
-                new CreateTableRequest()
-                        .withTableName(IDENTITY_CREDENTIALS_TABLE)
-                        .withKeySchema(new KeySchemaElement(SUBJECT_ID_FIELD, HASH))
-                        .withBillingMode(BillingMode.PAY_PER_REQUEST)
-                        .withAttributeDefinitions(new AttributeDefinition(SUBJECT_ID_FIELD, S));
+                CreateTableRequest.builder()
+                        .tableName(IDENTITY_CREDENTIALS_TABLE)
+                        .keySchema(
+                                KeySchemaElement.builder()
+                                        .keyType(KeyType.HASH)
+                                        .attributeName(SUBJECT_ID_FIELD)
+                                        .build())
+                        .billingMode(BillingMode.PAY_PER_REQUEST)
+                        .attributeDefinitions(
+                                AttributeDefinition.builder()
+                                        .attributeName(SUBJECT_ID_FIELD)
+                                        .attributeType(ScalarAttributeType.S)
+                                        .build())
+                        .build();
+
         dynamoDB.createTable(request);
     }
 }
