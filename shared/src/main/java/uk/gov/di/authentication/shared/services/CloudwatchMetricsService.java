@@ -7,6 +7,18 @@ import uk.gov.di.authentication.shared.entity.Session;
 
 import java.util.Map;
 
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ACCOUNT;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.CLIENT;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.CLIENT_NAME;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.IS_TEST;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.MFA_REQUIRED;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetricDimensions.REQUESTED_LEVEL_OF_CONFIDENCE;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.AUTHENTICATION_SUCCESS;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.AUTHENTICATION_SUCCESS_EXISTING_ACCOUNT_BY_CLIENT;
+import static uk.gov.di.authentication.shared.domain.CloudwatchMetrics.AUTHENTICATION_SUCCESS_NEW_ACCOUNT_BY_CLIENT;
+import static uk.gov.di.authentication.shared.entity.Session.AccountState.EXISTING;
+import static uk.gov.di.authentication.shared.entity.Session.AccountState.NEW;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class CloudwatchMetricsService {
@@ -49,21 +61,43 @@ public class CloudwatchMetricsService {
             boolean isTestJourney,
             boolean mfaRequired) {
         incrementCounter(
-                "AuthenticationSuccess",
+                AUTHENTICATION_SUCCESS.getValue(),
                 Map.of(
-                        "Account",
+                        ACCOUNT.getValue(),
                         accountState.name(),
-                        "Environment",
+                        ENVIRONMENT.getValue(),
                         configurationService.getEnvironment(),
-                        "Client",
+                        CLIENT.getValue(),
                         clientId,
-                        "IsTest",
+                        IS_TEST.getValue(),
                         Boolean.toString(isTestJourney),
-                        "RequestedLevelOfConfidence",
+                        REQUESTED_LEVEL_OF_CONFIDENCE.getValue(),
                         requestedLevelOfConfidence,
-                        "MfaRequired",
+                        MFA_REQUIRED.getValue(),
                         Boolean.toString(mfaRequired),
-                        "ClientName",
+                        CLIENT_NAME.getValue(),
                         clientName));
+        if (NEW.equals(accountState) && !isTestJourney) {
+            incrementCounter(
+                    AUTHENTICATION_SUCCESS_NEW_ACCOUNT_BY_CLIENT.getValue(),
+                    Map.of(
+                            ENVIRONMENT.getValue(),
+                            configurationService.getEnvironment(),
+                            CLIENT.getValue(),
+                            clientId,
+                            CLIENT_NAME.getValue(),
+                            clientName));
+        }
+        if (EXISTING.equals(accountState) && !isTestJourney) {
+            incrementCounter(
+                    AUTHENTICATION_SUCCESS_EXISTING_ACCOUNT_BY_CLIENT.getValue(),
+                    Map.of(
+                            ENVIRONMENT.getValue(),
+                            configurationService.getEnvironment(),
+                            CLIENT.getValue(),
+                            clientId,
+                            CLIENT_NAME.getValue(),
+                            clientName));
+        }
     }
 }
