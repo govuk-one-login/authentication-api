@@ -164,7 +164,7 @@ public class UserProfile {
         this.clientConsent = clientConsent;
     }
 
-    public UserProfile setClientConsent(ClientConsent consent) {
+    public UserProfile withClientConsent(ClientConsent consent) {
         if (this.clientConsent == null) {
             this.clientConsent = List.of(consent);
         } else {

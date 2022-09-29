@@ -459,7 +459,7 @@ class UpdateProfileHandlerTest {
                 .withEmailVerified(true)
                 .withPublicSubjectID(new Subject().getValue())
                 .withSubjectID(INTERNAL_SUBJECT)
-                .setClientConsent(
+                .withClientConsent(
                         new ClientConsent(
                                 CLIENT_ID.getValue(),
                                 claims,

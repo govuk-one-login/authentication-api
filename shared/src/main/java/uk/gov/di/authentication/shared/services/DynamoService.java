@@ -133,7 +133,7 @@ public class DynamoService implements AuthenticationService {
                                 Key.builder()
                                         .partitionValue(email.toLowerCase(Locale.ROOT))
                                         .build())
-                        .setClientConsent(clientConsent));
+                        .withClientConsent(clientConsent));
     }
 
     @Override

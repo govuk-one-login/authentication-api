@@ -74,7 +74,7 @@ class UserProfileTest {
                 .withPublicSubjectID(PUBLIC_SUBJECT_ID)
                 .withSubjectID(SUBJECT_ID)
                 .withLegacySubjectID(LEGACY_SUBJECT_ID)
-                .setClientConsent(CLIENT_CONSENT)
+                .withClientConsent(CLIENT_CONSENT)
                 .withTermsAndConditions(TERMS_AND_CONDITIONS)
                 .withSalt(SALT)
                 .withCreated(CREATED_DATE_TIME.toString())

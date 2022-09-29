@@ -324,7 +324,7 @@ class ClientSubjectHelperTest {
                 .withCreated(LocalDateTime.now().toString())
                 .withUpdated(LocalDateTime.now().toString())
                 .withPublicSubjectID(PUBLIC_SUBJECT.getValue())
-                .setClientConsent(
+                .withClientConsent(
                         new ClientConsent(
                                 CLIENT_ID, claims, LocalDateTime.now(ZoneId.of("UTC")).toString()));
     }
