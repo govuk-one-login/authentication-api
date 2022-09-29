@@ -2,8 +2,10 @@ package uk.gov.di.authentication.shared.entity;
 
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbConvertedBy;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey;
+import uk.gov.di.authentication.shared.dynamodb.BooleanToIntAttributeConverter;
 
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -71,6 +73,7 @@ public class UserProfile {
         return this;
     }
 
+    @DynamoDbConvertedBy(BooleanToIntAttributeConverter.class)
     @DynamoDbAttribute(ATTRIBUTE_EMAIL_VERIFIED)
     public boolean isEmailVerified() {
         return emailVerified;
@@ -99,6 +102,7 @@ public class UserProfile {
         return this;
     }
 
+    @DynamoDbConvertedBy(BooleanToIntAttributeConverter.class)
     @DynamoDbAttribute(ATTRIBUTE_PHONE_NUMBER_VERIFIED)
     public boolean isPhoneNumberVerified() {
         return phoneNumberVerified;
