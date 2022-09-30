@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.shared.entity;
+package uk.gov.di.accountmanagement.entity;
 
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
@@ -8,39 +8,12 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
+import static uk.gov.di.accountmanagement.entity.NotificationType.DELETE_ACCOUNT;
+import static uk.gov.di.accountmanagement.entity.NotificationType.VERIFY_EMAIL;
 
 class NotificationTypeTest {
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-
-    @Test
-    void shouldReturnDefaultTemplateForVerifyEmailWithLanguageEN() {
-        assertThat(
-                VERIFY_EMAIL.getTemplateName(SupportedLanguage.EN),
-                equalTo("VERIFY_EMAIL_TEMPLATE_ID"));
-    }
-
-    @Test
-    void shouldReturnWelshTemplateForVerifyEmailWithLanguageCY() {
-        assertThat(
-                VERIFY_EMAIL.getTemplateName(SupportedLanguage.CY),
-                equalTo("VERIFY_EMAIL_TEMPLATE_ID_CY"));
-    }
-
-    @Test
-    void shouldReturnDefaultTemplateForVerifyPhoneNumberWithLanguageEN() {
-        assertThat(
-                NotificationType.VERIFY_PHONE_NUMBER.getTemplateName(SupportedLanguage.EN),
-                equalTo("VERIFY_PHONE_NUMBER_TEMPLATE_ID"));
-    }
-
-    @Test
-    void shouldReturnWelshTemplateForVerifyPhoneNumberWithLanguageCY() {
-        assertThat(
-                NotificationType.VERIFY_PHONE_NUMBER.getTemplateName(SupportedLanguage.CY),
-                equalTo("VERIFY_PHONE_NUMBER_TEMPLATE_ID_CY"));
-    }
 
     @Test
     void shouldReturnDefaultTemplateForVerifyEmailWhenLanguageEN() {
@@ -54,7 +27,7 @@ class NotificationTypeTest {
     }
 
     @Test
-    void shouldReturnCYTemplateForVerifyEmailWhenLanguageCYAndSingleTemplatePerLanguage() {
+    void shouldReturnDefaultTemplateForVerifyEmailWhenLanguageCYAndSingleTemplatePerLanguage() {
         when(configurationService.getNotifyTemplateId("VERIFY_EMAIL_TEMPLATE_ID_CY"))
                 .thenReturn("67890");
         when(configurationService.getNotifyTemplateId("VERIFY_EMAIL_TEMPLATE_ID"))
@@ -66,7 +39,7 @@ class NotificationTypeTest {
     }
 
     @Test
-    void shouldReturnENTemplateForVerifyEmailWhenLanguageCYAndNotSingleTemplatePerLanguage() {
+    void shouldReturnDefaultTemplateForVerifyEmailWhenLanguageCYAndNotSingleTemplatePerLanguage() {
         when(configurationService.getNotifyTemplateId("VERIFY_EMAIL_TEMPLATE_ID_CY"))
                 .thenReturn("67890");
         when(configurationService.getNotifyTemplateId("VERIFY_EMAIL_TEMPLATE_ID"))
@@ -74,6 +47,31 @@ class NotificationTypeTest {
         when(configurationService.isNotifyTemplatePerLanguage()).thenReturn(false);
         assertThat(
                 VERIFY_EMAIL.getTemplateId(SupportedLanguage.CY, configurationService),
+                equalTo("12345"));
+    }
+
+    @Test
+    void shouldReturnCYTemplateForDeleteAccountWhenLanguageCYAndSingleTemplatePerLanguage() {
+        when(configurationService.getNotifyTemplateId("DELETE_ACCOUNT_TEMPLATE_ID_CY"))
+                .thenReturn("67890");
+        when(configurationService.getNotifyTemplateId("DELETE_ACCOUNT_TEMPLATE_ID"))
+                .thenReturn("12345");
+        when(configurationService.isNotifyTemplatePerLanguage()).thenReturn(true);
+        assertThat(
+                DELETE_ACCOUNT.getTemplateId(SupportedLanguage.CY, configurationService),
+                equalTo("67890"));
+    }
+
+    @Test
+    void
+            shouldReturnDefaultTemplateForDeleteAccountWhenLanguageCYAndNotSingleTemplatePerLanguage() {
+        when(configurationService.getNotifyTemplateId("DELETE_ACCOUNT_TEMPLATE_ID_CY"))
+                .thenReturn("67890");
+        when(configurationService.getNotifyTemplateId("DELETE_ACCOUNT_TEMPLATE_ID"))
+                .thenReturn("12345");
+        when(configurationService.isNotifyTemplatePerLanguage()).thenReturn(false);
+        assertThat(
+                DELETE_ACCOUNT.getTemplateId(SupportedLanguage.CY, configurationService),
                 equalTo("12345"));
     }
 

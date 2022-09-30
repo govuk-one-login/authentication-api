@@ -399,6 +399,11 @@ variable "language_cy_enabled" {
   type    = bool
 }
 
+variable "notify_template_per_language" {
+  default = false
+  type    = bool
+}
+
 locals {
   default_performance_parameters = {
     memory          = var.endpoint_memory_size
