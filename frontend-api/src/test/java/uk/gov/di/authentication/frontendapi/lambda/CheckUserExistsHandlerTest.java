@@ -3,7 +3,6 @@ package uk.gov.di.authentication.frontendapi.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -87,7 +86,7 @@ class CheckUserExistsHandlerTest {
     }
 
     @Test
-    void shouldReturn200IfUserExists() throws JsonProcessingException, Json.JsonException {
+    void shouldReturn200IfUserExists() throws Json.JsonException {
         usingValidSession();
         String persistentId = "some-persistent-id-value";
         Map<String, String> headers = new HashMap<>();
@@ -124,7 +123,7 @@ class CheckUserExistsHandlerTest {
     }
 
     @Test
-    void shouldReturn200IfUserDoesNotExist() throws JsonProcessingException, Json.JsonException {
+    void shouldReturn200IfUserDoesNotExist() throws Json.JsonException {
         usingValidSession();
         when(authenticationService.userExists(eq("joe.bloggs@digital.cabinet-office.gov.uk")))
                 .thenReturn(false);

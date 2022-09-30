@@ -3,7 +3,6 @@ package uk.gov.di.authentication.oidc.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.oidc.entity.TrustMarkResponse;
@@ -38,8 +37,7 @@ class TrustMarkHandlerTest {
     }
 
     @Test
-    public void shouldReturn200WhenRequestIsSuccessful()
-            throws JsonProcessingException, Json.JsonException {
+    public void shouldReturn200WhenRequestIsSuccessful() throws Json.JsonException {
         TrustMarkResponse trustMarkResponse =
                 new TrustMarkResponse(
                         configurationService.getOidcApiBaseURL().orElseThrow(),

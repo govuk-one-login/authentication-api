@@ -3,7 +3,6 @@ package uk.gov.di.authentication.frontendapi.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -120,8 +119,7 @@ class SignUpHandlerTest {
 
     @ParameterizedTest
     @MethodSource("consentValues")
-    void shouldReturn200IfSignUpIsSuccessful(boolean consentRequired)
-            throws JsonProcessingException, Json.JsonException {
+    void shouldReturn200IfSignUpIsSuccessful(boolean consentRequired) throws Json.JsonException {
         String email = "joe.bloggs@test.com";
         String password = "computer-1";
         String persistentId = "some-persistent-id-value";
