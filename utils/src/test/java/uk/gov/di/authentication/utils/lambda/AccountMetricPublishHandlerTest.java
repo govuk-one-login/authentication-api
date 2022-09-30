@@ -1,12 +1,13 @@
 package uk.gov.di.authentication.utils.lambda;
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.model.DescribeTableResult;
-import com.amazonaws.services.dynamodbv2.model.GlobalSecondaryIndexDescription;
-import com.amazonaws.services.dynamodbv2.model.TableDescription;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.ScheduledEvent;
 import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.DescribeTableRequest;
+import software.amazon.awssdk.services.dynamodb.model.DescribeTableResponse;
+import software.amazon.awssdk.services.dynamodb.model.GlobalSecondaryIndexDescription;
+import software.amazon.awssdk.services.dynamodb.model.TableDescription;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
@@ -27,7 +28,7 @@ class AccountMetricPublishHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
-    private final AmazonDynamoDB client = mock(AmazonDynamoDB.class);
+    private final DynamoDbClient client = mock(DynamoDbClient.class);
 
     private final AccountMetricPublishHandler handler =
             new AccountMetricPublishHandler(configurationService, client, cloudwatchMetricsService);
@@ -35,20 +36,24 @@ class AccountMetricPublishHandlerTest {
     @Test
     void shouldPublishMetrics() {
         when(configurationService.getEnvironment()).thenReturn("test");
-        when(client.describeTable("test-user-profile"))
+        when(client.describeTable(
+                        DescribeTableRequest.builder().tableName("test-user-profile").build()))
                 .thenReturn(
-                        new DescribeTableResult()
-                                .withTable(
-                                        new TableDescription()
-                                                .withGlobalSecondaryIndexes(
-                                                        new GlobalSecondaryIndexDescription()
-                                                                .withIndexName(
-                                                                        "VerifiedAccountIndex")
-                                                                .withItemCount(5000l),
-                                                        new GlobalSecondaryIndexDescription()
-                                                                .withIndexName("AnotherIndex")
-                                                                .withItemCount(3000l))
-                                                .withItemCount(5100l)));
+                        DescribeTableResponse.builder()
+                                .table(
+                                        TableDescription.builder()
+                                                .globalSecondaryIndexes(
+                                                        GlobalSecondaryIndexDescription.builder()
+                                                                .indexName("VerifiedAccountIndex")
+                                                                .itemCount(5000l)
+                                                                .build(),
+                                                        GlobalSecondaryIndexDescription.builder()
+                                                                .indexName("AnotherIndex")
+                                                                .itemCount(3000l)
+                                                                .build())
+                                                .itemCount(5100l)
+                                                .build())
+                                .build());
 
         handler.handleRequest(mock(ScheduledEvent.class), mock(Context.class));
 
@@ -61,16 +66,20 @@ class AccountMetricPublishHandlerTest {
     @Test
     void shouldNotPublishMetricsIfIndexNotFound() {
         when(configurationService.getEnvironment()).thenReturn("test");
-        when(client.describeTable("test-user-profile"))
+        when(client.describeTable(
+                        DescribeTableRequest.builder().tableName("test-user-profile").build()))
                 .thenReturn(
-                        new DescribeTableResult()
-                                .withTable(
-                                        new TableDescription()
-                                                .withGlobalSecondaryIndexes(
-                                                        new GlobalSecondaryIndexDescription()
-                                                                .withIndexName("AnotherIndex")
-                                                                .withItemCount(3000l))
-                                                .withItemCount(5100l)));
+                        DescribeTableResponse.builder()
+                                .table(
+                                        TableDescription.builder()
+                                                .globalSecondaryIndexes(
+                                                        GlobalSecondaryIndexDescription.builder()
+                                                                .indexName("AnotherIndex")
+                                                                .itemCount(3000l)
+                                                                .build())
+                                                .itemCount(5100l)
+                                                .build())
+                                .build());
 
         assertThrows(
                 NoSuchElementException.class,

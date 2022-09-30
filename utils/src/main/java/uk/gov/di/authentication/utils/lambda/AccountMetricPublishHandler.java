@@ -1,9 +1,10 @@
 package uk.gov.di.authentication.utils.lambda;
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.ScheduledEvent;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.DescribeTableRequest;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
@@ -15,12 +16,12 @@ import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.create
 public class AccountMetricPublishHandler implements RequestHandler<ScheduledEvent, Long> {
 
     private final ConfigurationService configurationService;
-    private final AmazonDynamoDB client;
+    private final DynamoDbClient client;
     private final CloudwatchMetricsService cloudwatchMetricsService;
 
     public AccountMetricPublishHandler(
             ConfigurationService configurationService,
-            AmazonDynamoDB client,
+            DynamoDbClient client,
             CloudwatchMetricsService cloudwatchMetricsService) {
         this.configurationService = configurationService;
         this.client = client;
@@ -37,14 +38,19 @@ public class AccountMetricPublishHandler implements RequestHandler<ScheduledEven
     public Long handleRequest(ScheduledEvent input, Context context) {
         var result =
                 client.describeTable(
-                        format("{0}-user-profile", configurationService.getEnvironment()));
-        var numberOfAccounts = result.getTable().getItemCount();
+                        DescribeTableRequest.builder()
+                                .tableName(
+                                        format(
+                                                "{0}-user-profile",
+                                                configurationService.getEnvironment()))
+                                .build());
+        var numberOfAccounts = result.table().itemCount();
         var numberOfVerifiedAccounts =
-                result.getTable().getGlobalSecondaryIndexes().stream()
-                        .filter(i -> i.getIndexName().equals("VerifiedAccountIndex"))
+                result.table().globalSecondaryIndexes().stream()
+                        .filter(i -> i.indexName().equals("VerifiedAccountIndex"))
                         .findFirst()
                         .orElseThrow()
-                        .getItemCount();
+                        .itemCount();
 
         cloudwatchMetricsService.putEmbeddedValue("NumberOfAccounts", numberOfAccounts, Map.of());
         cloudwatchMetricsService.putEmbeddedValue(
