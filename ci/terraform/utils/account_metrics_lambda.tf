@@ -13,6 +13,10 @@ data "aws_iam_policy_document" "account_metrics_dynamo_access" {
   }
 }
 
+data "aws_dynamodb_table" "user_profile" {
+  name = "${var.environment}-user-profile"
+}
+
 resource "aws_iam_policy" "account_metrics_dynamo_access" {
   name_prefix = "account-metrics-dynamo-access-policy"
   description = "IAM policy for managing permissions to the Dynamo User Profile table"
