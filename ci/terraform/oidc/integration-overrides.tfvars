@@ -17,6 +17,7 @@ ipv_backend_uri                = "https://api.identity.integration.account.gov.u
 ipv_audience                   = "https://identity.integration.account.gov.uk"
 ipv_sector                     = "https://identity.integration.account.gov.uk"
 spot_enabled                   = true
+identity_trace_logging_enabled = true
 ipv_auth_public_encryption_key = <<-EOT
 -----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzgTML6YZ+XUEPQprWBlW
