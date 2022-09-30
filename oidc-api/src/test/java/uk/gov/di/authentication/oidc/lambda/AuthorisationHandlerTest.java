@@ -182,7 +182,8 @@ class AuthorisationHandlerTest {
                         AuditService.UNKNOWN,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
+                        PERSISTENT_SESSION_ID,
+                        pair("client-name", "client-name"));
     }
 
     @ParameterizedTest
@@ -250,7 +251,8 @@ class AuthorisationHandlerTest {
                         AuditService.UNKNOWN,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
+                        PERSISTENT_SESSION_ID,
+                        pair("client-name", "client-name"));
     }
 
     @Test
@@ -291,7 +293,8 @@ class AuthorisationHandlerTest {
                         AuditService.UNKNOWN,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
+                        PERSISTENT_SESSION_ID,
+                        pair("client-name", "client-name"));
     }
 
     @Test
@@ -333,7 +336,8 @@ class AuthorisationHandlerTest {
                         AuditService.UNKNOWN,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
+                        PERSISTENT_SESSION_ID,
+                        pair("client-name", "client-name"));
     }
 
     @Test
@@ -374,7 +378,8 @@ class AuthorisationHandlerTest {
                         AuditService.UNKNOWN,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
+                        PERSISTENT_SESSION_ID,
+                        pair("client-name", "client-name"));
     }
 
     @Test
@@ -613,7 +618,8 @@ class AuthorisationHandlerTest {
                         AuditService.UNKNOWN,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
+                        PERSISTENT_SESSION_ID,
+                        pair("client-name", "client-name"));
     }
 
     private static Stream<Arguments> invalidPromptValues() {
