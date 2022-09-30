@@ -14,3 +14,8 @@ notify_template_map = {
   VERIFY_PHONE_NUMBER_TEMPLATE_ID          = "16608047-106e-4fe9-bf3a-b1676e29eca9"
   MFA_SMS_TEMPLATE_ID                      = "6b9b6c82-a8c0-4b39-990b-a10130467f1e"
 }
+
+logging_endpoint_arns = [
+  "arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prod",
+  "arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython"
+]
