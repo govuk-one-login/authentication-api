@@ -38,3 +38,9 @@ jobs:
         run: |
           terraform init -input=false -backend=false
           terraform validate
+
+      - name: Terraform Validate (utils)
+        working-directory: ci/terraform/utils
+        run: |
+          terraform init -input=false -backend=false
+          terraform validate
