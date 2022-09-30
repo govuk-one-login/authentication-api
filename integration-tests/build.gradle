@@ -9,6 +9,7 @@ version "unspecified"
 dependencies {
     testImplementation configurations.tests,
             configurations.glassfish,
+            configurations.apache,
             configurations.gson,
             configurations.nimbus,
             configurations.bouncycastle,

@@ -21,7 +21,6 @@ apply plugin: "idea"
 
 ext {
     dependencyVersions = [
-        aws_sdk_version: "1.12.286",
         aws_sdk_v2_version: "2.17.261",
         aws_lambda_core_version: "1.2.1",
         aws_lambda_events_version: "3.11.0",
@@ -64,6 +63,7 @@ subprojects {
     }
 
     configurations {
+        apache
         bouncycastle
         cloudwatch
         dynamodb
@@ -95,12 +95,14 @@ subprojects {
     }
 
     dependencies {
+        apache "commons-codec:commons-codec:1.15",
+                "org.apache.httpcomponents:httpclient:4.5.13"
+
         bouncycastle "org.bouncycastle:bcpkix-jdk15on:1.70"
 
         cloudwatch "software.amazon.cloudwatchlogs:aws-embedded-metrics:2.0.0"
 
-        dynamodb "com.amazonaws:aws-java-sdk-dynamodb:${dependencyVersions.aws_sdk_version}",
-                "software.amazon.awssdk:dynamodb:${dependencyVersions.aws_sdk_v2_version}",
+        dynamodb "software.amazon.awssdk:dynamodb:${dependencyVersions.aws_sdk_v2_version}",
                 "software.amazon.awssdk:dynamodb-enhanced:${dependencyVersions.aws_sdk_v2_version}"
 
         glassfish "org.glassfish.jersey.core:jersey-client:${dependencyVersions.glassfish_version}",

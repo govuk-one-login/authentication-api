@@ -3,7 +3,6 @@ package uk.gov.di.authentication.ipv.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.ipv.services.IPVCapacityService;
@@ -29,7 +28,7 @@ public class IPVCapacityHandlerTest {
     }
 
     @Test
-    void shouldReturn200WhenIPVCapacityAvailable() throws JsonProcessingException {
+    void shouldReturn200WhenIPVCapacityAvailable() {
         when(ipvCapacityService.isIPVCapacityAvailable()).thenReturn(true);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -39,7 +38,7 @@ public class IPVCapacityHandlerTest {
     }
 
     @Test
-    void shouldReturn503WhenIPVCapacityUnavailable() throws JsonProcessingException {
+    void shouldReturn503WhenIPVCapacityUnavailable() {
         when(ipvCapacityService.isIPVCapacityAvailable()).thenReturn(false);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
