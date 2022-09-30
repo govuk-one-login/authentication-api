@@ -242,6 +242,15 @@ public class IPVCallbackHandler
             }
             var pairwiseSubject =
                     ClientSubjectHelper.getSubject(userProfile, clientRegistry, dynamoService);
+            if (configurationService.isIdentityTraceLoggingEnabled()) {
+                LOG.info(
+                        "Sending UserInfo request with accessToken {}",
+                        tokenResponse
+                                .toSuccessResponse()
+                                .getTokens()
+                                .getBearerAccessToken()
+                                .getValue());
+            }
             var userIdentityUserInfo =
                     ipvTokenService.sendIpvUserIdentityRequest(
                             new UserInfoRequest(
