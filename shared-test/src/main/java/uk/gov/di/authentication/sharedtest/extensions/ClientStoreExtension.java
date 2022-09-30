@@ -1,23 +1,21 @@
 package uk.gov.di.authentication.sharedtest.extensions;
 
-import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
-import com.amazonaws.services.dynamodbv2.model.BillingMode;
-import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
-import com.amazonaws.services.dynamodbv2.model.GlobalSecondaryIndex;
-import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
-import com.amazonaws.services.dynamodbv2.model.Projection;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
+import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
+import software.amazon.awssdk.services.dynamodb.model.BillingMode;
+import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
+import software.amazon.awssdk.services.dynamodb.model.GlobalSecondaryIndex;
+import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
+import software.amazon.awssdk.services.dynamodb.model.KeyType;
+import software.amazon.awssdk.services.dynamodb.model.ProjectionType;
+import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.sharedtest.basetest.DynamoTestConfiguration;
 
 import java.util.Collections;
 import java.util.List;
-
-import static com.amazonaws.services.dynamodbv2.model.KeyType.HASH;
-import static com.amazonaws.services.dynamodbv2.model.ProjectionType.ALL;
-import static com.amazonaws.services.dynamodbv2.model.ScalarAttributeType.S;
 
 public class ClientStoreExtension extends DynamoExtension implements AfterEachCallback {
 
@@ -147,19 +145,34 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
 
     private void createClientRegistryTable(String tableName) {
         CreateTableRequest request =
-                new CreateTableRequest()
-                        .withTableName(tableName)
-                        .withKeySchema(new KeySchemaElement(CLIENT_ID_FIELD, HASH))
-                        .withBillingMode(BillingMode.PAY_PER_REQUEST)
-                        .withAttributeDefinitions(
-                                new AttributeDefinition(CLIENT_ID_FIELD, S),
-                                new AttributeDefinition(CLIENT_NAME_FIELD, S))
-                        .withGlobalSecondaryIndexes(
-                                new GlobalSecondaryIndex()
-                                        .withIndexName(CLIENT_NAME_INDEX)
-                                        .withKeySchema(
-                                                new KeySchemaElement(CLIENT_NAME_FIELD, HASH))
-                                        .withProjection(new Projection().withProjectionType(ALL)));
+                CreateTableRequest.builder()
+                        .tableName(tableName)
+                        .keySchema(
+                                KeySchemaElement.builder()
+                                        .keyType(KeyType.HASH)
+                                        .attributeName(CLIENT_ID_FIELD)
+                                        .build())
+                        .billingMode(BillingMode.PAY_PER_REQUEST)
+                        .attributeDefinitions(
+                                AttributeDefinition.builder()
+                                        .attributeName(CLIENT_ID_FIELD)
+                                        .attributeType(ScalarAttributeType.S)
+                                        .build(),
+                                AttributeDefinition.builder()
+                                        .attributeName(CLIENT_NAME_FIELD)
+                                        .attributeType(ScalarAttributeType.S)
+                                        .build())
+                        .globalSecondaryIndexes(
+                                GlobalSecondaryIndex.builder()
+                                        .indexName(CLIENT_NAME_INDEX)
+                                        .keySchema(
+                                                KeySchemaElement.builder()
+                                                        .attributeName(CLIENT_NAME_FIELD)
+                                                        .keyType(KeyType.HASH)
+                                                        .build())
+                                        .projection(t -> t.projectionType(ProjectionType.ALL))
+                                        .build())
+                        .build();
         dynamoDB.createTable(request);
     }
 }

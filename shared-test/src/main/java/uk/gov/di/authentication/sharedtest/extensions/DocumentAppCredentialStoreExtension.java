@@ -1,11 +1,13 @@
 package uk.gov.di.authentication.sharedtest.extensions;
 
-import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
-import com.amazonaws.services.dynamodbv2.model.BillingMode;
-import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
-import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
+import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
+import software.amazon.awssdk.services.dynamodb.model.BillingMode;
+import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
+import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
+import software.amazon.awssdk.services.dynamodb.model.KeyType;
+import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import uk.gov.di.authentication.app.entity.DocAppCredential;
 import uk.gov.di.authentication.app.services.DynamoDocAppService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -13,9 +15,6 @@ import uk.gov.di.authentication.sharedtest.basetest.DynamoTestConfiguration;
 
 import java.util.List;
 import java.util.Optional;
-
-import static com.amazonaws.services.dynamodbv2.model.KeyType.HASH;
-import static com.amazonaws.services.dynamodbv2.model.ScalarAttributeType.S;
 
 public class DocumentAppCredentialStoreExtension extends DynamoExtension
         implements AfterEachCallback {
@@ -59,11 +58,20 @@ public class DocumentAppCredentialStoreExtension extends DynamoExtension
 
     private void createCredentialRegistryTable(String tableName) {
         CreateTableRequest request =
-                new CreateTableRequest()
-                        .withTableName(tableName)
-                        .withKeySchema(new KeySchemaElement(SUBJECT_ID_FIELD, HASH))
-                        .withBillingMode(BillingMode.PAY_PER_REQUEST)
-                        .withAttributeDefinitions(new AttributeDefinition(SUBJECT_ID_FIELD, S));
+                CreateTableRequest.builder()
+                        .tableName(tableName)
+                        .keySchema(
+                                KeySchemaElement.builder()
+                                        .keyType(KeyType.HASH)
+                                        .attributeName(SUBJECT_ID_FIELD)
+                                        .build())
+                        .billingMode(BillingMode.PAY_PER_REQUEST)
+                        .attributeDefinitions(
+                                AttributeDefinition.builder()
+                                        .attributeName(SUBJECT_ID_FIELD)
+                                        .attributeType(ScalarAttributeType.S)
+                                        .build())
+                        .build();
         dynamoDB.createTable(request);
     }
 
