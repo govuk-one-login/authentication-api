@@ -44,7 +44,9 @@ public enum NotificationType implements TemplateAware {
     public String getTemplateId(
             SupportedLanguage language, ConfigurationService configurationService) {
         String templateId = configurationService.getNotifyTemplateId(getTemplateName(language));
-        if (templateId == null || templateId.length() == 0) {
+        if (!configurationService.isNotifyTemplatePerLanguage()
+                || templateId == null
+                || templateId.length() == 0) {
             return configurationService.getNotifyTemplateId(templateName);
         } else {
             return templateId;
