@@ -215,17 +215,6 @@ public class AuthorisationHandler
         var session = existingSession.orElseGet(sessionService::createSession);
         attachSessionIdToLogs(session);
 
-        auditService.submitAuditEvent(
-                OidcAuditableEvent.AUTHORISATION_INITIATED,
-                clientSessionId,
-                session.getSessionId(),
-                authenticationRequest.getClientID().getValue(),
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                ipAddress,
-                AuditService.UNKNOWN,
-                persistentSessionId);
-
         if (existingSession.isEmpty()) {
             updateAttachedSessionIdToLogs(session.getSessionId());
             LOG.info("Created session");
@@ -240,6 +229,17 @@ public class AuthorisationHandler
                         .getClient(authenticationRequest.getClientID().getValue())
                         .map(ClientRegistry::getClientName)
                         .orElse("");
+        auditService.submitAuditEvent(
+                OidcAuditableEvent.AUTHORISATION_INITIATED,
+                clientSessionId,
+                session.getSessionId(),
+                authenticationRequest.getClientID().getValue(),
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                ipAddress,
+                AuditService.UNKNOWN,
+                persistentSessionId,
+                pair("client-name", clientName));
         var clientSession =
                 clientSessionService.generateClientSession(
                         authenticationRequest.toParameters(),
