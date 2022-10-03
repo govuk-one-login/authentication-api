@@ -28,7 +28,7 @@ ext {
         nimbusds_oauth_version: "9.41",
         nimbusds_jwt_version: "9.24.3",
         junit: "5.9.1",
-        glassfish_version: "3.0.6",
+        glassfish_version: "3.0.8",
         xray: "2.11.2"
     ]
 
