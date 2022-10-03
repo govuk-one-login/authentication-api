@@ -28,7 +28,7 @@ ext {
         nimbusds_oauth_version: "9.43.1",
         nimbusds_jwt_version: "9.25.4",
         junit: "5.9.1",
-        glassfish_version: "3.0.6",
+        glassfish_version: "3.0.8",
         xray: "2.11.2"
     ]
 
@@ -147,7 +147,7 @@ subprojects {
 
         tests "org.junit.jupiter:junit-jupiter-api:${dependencyVersions.junit}",
                 "org.junit.jupiter:junit-jupiter-params:${dependencyVersions.junit}",
-                "org.mockito:mockito-core:4.7.0",
+                "org.mockito:mockito-core:4.8.0",
                 "org.awaitility:awaitility:4.2.0",
                 configurations.hamcrest
 
