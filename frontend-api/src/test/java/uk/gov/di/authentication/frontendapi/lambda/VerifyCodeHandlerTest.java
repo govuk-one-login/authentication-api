@@ -286,6 +286,7 @@ class VerifyCodeHandlerTest {
         verify(codeStorageService)
                 .saveBlockedForEmail(
                         TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, BLOCKED_EMAIL_DURATION);
+        verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
@@ -316,7 +317,7 @@ class VerifyCodeHandlerTest {
     }
 
     @Test
-    void shouldUpdateRedisWhenUserHasReachedMaxEmailCodeAttempts() {
+    void shouldNotUpdateRedisWhenUserHasReachedMaxEmailCodeAttempts() {
         when(configurationService.getCodeMaxRetries()).thenReturn(0);
 
         when(configurationService.getBlockedEmailDuration()).thenReturn(BLOCKED_EMAIL_DURATION);
@@ -331,9 +332,10 @@ class VerifyCodeHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1033));
         assertThat(session.getRetryCount(), equalTo(0));
-        verify(codeStorageService)
+        verify(codeStorageService, never())
                 .saveBlockedForEmail(
                         TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, BLOCKED_EMAIL_DURATION);
+        verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
@@ -418,6 +420,7 @@ class VerifyCodeHandlerTest {
         verify(codeStorageService)
                 .saveBlockedForEmail(
                         TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, BLOCKED_EMAIL_DURATION);
+        verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
