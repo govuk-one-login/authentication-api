@@ -17,12 +17,20 @@ public class SendNotificationRequest extends BaseFrontendRequest {
     @Expose
     private String phoneNumber;
 
+    @SerializedName("requestNewCode")
+    @Expose
+    private Boolean requestNewCode;
+
     public NotificationType getNotificationType() {
         return notificationType;
     }
 
     public String getPhoneNumber() {
         return phoneNumber;
+    }
+
+    public Boolean isRequestNewCode() {
+        return requestNewCode;
     }
 
     @Override
@@ -35,6 +43,9 @@ public class SendNotificationRequest extends BaseFrontendRequest {
                 + '\''
                 + ", email='"
                 + email
+                + '\''
+                + ", requestNewCode='"
+                + requestNewCode
                 + '\''
                 + '}';
     }

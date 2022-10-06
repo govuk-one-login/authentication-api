@@ -134,7 +134,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                             request.getEmail(),
                             request.getNotificationType(),
                             userContext.getSession(),
-                            userContext);
+                            userContext,
+                            request.isRequestNewCode());
                 case VERIFY_PHONE_NUMBER:
                     if (request.getPhoneNumber() == null) {
                         return generateApiGatewayProxyResponse(400, ERROR_1011);
@@ -144,7 +145,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                                     request.getPhoneNumber()),
                             request.getNotificationType(),
                             userContext.getSession(),
-                            userContext);
+                            userContext,
+                            request.isRequestNewCode());
             }
             return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
         } catch (SdkClientException ex) {
@@ -161,22 +163,20 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             String destination,
             NotificationType notificationType,
             Session session,
-            UserContext userContext)
+            UserContext userContext,
+            Boolean requestNewCode)
             throws JsonException, ClientNotFoundException {
 
         String code =
-                codeStorageService
-                        .getOtpCode(session.getEmailAddress(), notificationType)
-                        .orElseGet(
-                                () -> {
-                                    String newCode = codeGeneratorService.sixDigitCode();
-                                    codeStorageService.saveOtpCode(
-                                            session.getEmailAddress(),
-                                            newCode,
-                                            configurationService.getCodeExpiry(),
-                                            notificationType);
-                                    return newCode;
-                                });
+                requestNewCode != null && requestNewCode
+                        ? generateAndSaveNewCode(session.getEmailAddress(), notificationType)
+                        : codeStorageService
+                                .getOtpCode(session.getEmailAddress(), notificationType)
+                                .orElseGet(
+                                        () ->
+                                                generateAndSaveNewCode(
+                                                        session.getEmailAddress(),
+                                                        notificationType));
 
         var notifyRequest =
                 new NotifyRequest(
@@ -200,6 +200,13 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             LOG.info("Successfully processed request");
         }
         return generateEmptySuccessApiGatewayResponse();
+    }
+
+    private String generateAndSaveNewCode(String email, NotificationType notificationType) {
+        String newCode = codeGeneratorService.sixDigitCode();
+        codeStorageService.saveOtpCode(
+                email, newCode, configurationService.getCodeExpiry(), notificationType);
+        return newCode;
     }
 
     private Optional<ErrorResponse> isCodeRequestAttemptValid(
