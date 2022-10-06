@@ -169,17 +169,12 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 session.getEmailAddress(), CODE_BLOCKED_KEY_PREFIX);
     }
 
-    private void blockCodeForSession(Session session) {
+    private void blockCodeForSessionAndResetCount(Session session) {
         codeStorageService.saveBlockedForEmail(
                 session.getEmailAddress(),
                 CODE_BLOCKED_KEY_PREFIX,
                 configurationService.getBlockedEmailDuration());
-        LOG.info("Email is blocked");
-    }
-
-    private void resetIncorrectMfaCodeAttemptsCount(Session session) {
         codeStorageService.deleteIncorrectMfaCodeAttemptsCount(session.getEmailAddress());
-        LOG.info("IncorrectMfaCodeAttemptsCount reset");
     }
 
     private void processSuccessfulCodeRequest(
@@ -296,11 +291,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         AuditableEvent auditableEvent;
         if (List.of(ErrorResponse.ERROR_1027, ErrorResponse.ERROR_1033, ErrorResponse.ERROR_1034)
                 .contains(errorResponse)) {
-            if (!notificationType.equals(VERIFY_EMAIL)
-                    && !errorResponse.equals(ErrorResponse.ERROR_1033)) {
-                blockCodeForSession(session);
-            }
-            resetIncorrectMfaCodeAttemptsCount(session);
+            blockCodeForSessionAndResetCount(session);
             auditableEvent = FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED;
         } else {
             auditableEvent = FrontendAuditableEvent.INVALID_CODE_SENT;
