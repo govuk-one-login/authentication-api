@@ -43,6 +43,8 @@ resource "aws_dynamodb_table" "user_profile_table" {
   name         = "${var.environment}-user-profile"
   billing_mode = var.provision_dynamo ? "PROVISIONED" : "PAY_PER_REQUEST"
   hash_key     = "Email"
+  stream_enabled   = true
+  stream_view_type = "NEW_AND_OLD_IMAGES"
 
   read_capacity  = var.provision_dynamo ? var.dynamo_default_read_capacity : null
   write_capacity = var.provision_dynamo ? var.dynamo_default_write_capacity : null
