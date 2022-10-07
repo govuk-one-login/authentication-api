@@ -1,0 +1,75 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: SNS topic for sending slack notifications
+Parameters:
+  Environment:
+    Type: String
+    Default: sandpit
+    AllowedValues:
+      - dev
+      - sandpit
+      - build
+      - integration
+      - staging
+      - production
+    Description: The logical name for this deployment environment
+
+Outputs:
+  SlackNotificationsTopic:
+    Value: !Ref SlackNotificationsTopic
+    Export:
+      Name: SlackNotificationsTopic
+  SlackNotificationPublisherPolicy:
+    Value: !Ref SlackNotificationPublisherPolicy
+    Export:
+      Name: SlackNotificationPublisherPolicy
+
+Resources:
+  SlackNotificationsTopicEncryptionKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS key for Slack Alerts SNS topic
+      Enabled: true
+      KeySpec: SYMMETRIC_DEFAULT
+      KeyPolicy:
+        Version: 2012-10-17
+        Id: key-policy-sns
+        Statement:
+          - Sid: Enable IAM User Permissions for root user
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: 'kms:*'
+            Resource: '*'
+      KeyUsage: ENCRYPT_DECRYPT
+      PendingWindowInDays: 30
+      EnableKeyRotation: true
+
+  SlackNotificationsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: !Sub "Slack Alerts for ${Environment}"
+      FifoTopic: false
+      KmsMasterKeyId: !Ref SlackNotificationsTopicEncryptionKey
+      TopicName: !Sub "${Environment}-alerts-to-slack"
+
+  SlackNotificationPublisherPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub "${Environment}-slack-notifications-publisher"
+      Description: Gives access to publish messages the Slack alerts SNS topic
+      Path: !Sub "/${Environment}/sns/"
+      PolicyDocument:
+        Version: 2012-10-17
+        Id: publisher-policy
+        Statement:
+          - Sid: KmsPermissions
+            Effect: Allow
+            Action:
+              - "kms:Decrypt"
+              - "kms:GenerateDataKey"
+            Resource: !GetAtt SlackNotificationsTopicEncryptionKey.Arn
+          - Sid: SnsPermissions
+            Effect: Allow
+            Action:
+              - "sns:Publish"
+            Resource: !Ref SlackNotificationsTopic
