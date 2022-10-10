@@ -168,6 +168,7 @@ class SendNotificationHandlerTest {
         assertEquals(204, result.getStatusCode());
 
         verify(awsSqsClient).send(serialisedRequest);
+        verify(codeStorageService).getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL);
         verify(codeStorageService)
                 .saveOtpCode(
                         TEST_EMAIL_ADDRESS, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, VERIFY_EMAIL);
@@ -210,6 +211,36 @@ class SendNotificationHandlerTest {
     }
 
     @Test
+    void shouldGenerateNewOtpCodeIfOneExistsWhenNewCodeRequested() throws Json.JsonException {
+        usingValidSession();
+        usingValidClientSession(CLIENT_ID);
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setBody(
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"requestNewCode\": \"%s\" }",
+                        TEST_EMAIL_ADDRESS, VERIFY_EMAIL, true));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        var notifyRequest =
+                new NotifyRequest(
+                        TEST_EMAIL_ADDRESS,
+                        VERIFY_EMAIL,
+                        TEST_SIX_DIGIT_CODE,
+                        SupportedLanguage.EN);
+        verify(awsSqsClient).send(objectMapper.writeValueAsString(notifyRequest));
+        String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
+
+        verify(codeGeneratorService).sixDigitCode();
+        verify(codeStorageService, never()).getOtpCode(any(), any());
+        verify(codeStorageService)
+                .saveOtpCode(
+                        TEST_EMAIL_ADDRESS, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, VERIFY_EMAIL);
+        verify(awsSqsClient).send(serialisedRequest);
+        assertThat(result, hasStatus(204));
+    }
+
+    @Test
     void shouldReturn204AndNotPutMessageOnQueueForAValidRequestUsingTestClientWithAllowedEmail()
             throws Json.JsonException {
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
@@ -234,6 +265,7 @@ class SendNotificationHandlerTest {
         assertEquals(204, result.getStatusCode());
 
         verify(awsSqsClient, never()).send(serialisedRequest);
+        verify(codeStorageService).getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL);
         verify(codeStorageService)
                 .saveOtpCode(
                         TEST_EMAIL_ADDRESS, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, VERIFY_EMAIL);
