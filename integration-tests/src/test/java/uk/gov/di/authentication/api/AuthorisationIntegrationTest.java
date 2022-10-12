@@ -17,6 +17,8 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.oidc.lambda.AuthorisationHandler;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.ClientType;
@@ -25,6 +27,7 @@ import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
+import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
@@ -532,14 +535,15 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 txmaAuditQueue, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
     }
 
-    @Test
-    void shouldCallAuthorizeAsDocAppClient() throws JOSEException, ParseException {
+    @ParameterizedTest
+    @ValueSource(strings = {"", "en", "cy", "en cy", "es fr ja", "cy-AR"})
+    void shouldCallAuthorizeAsDocAppClient(String uiLocales) throws JOSEException, ParseException {
         registerClient(
                 CLIENT_ID,
                 "test-client",
                 List.of(OPENID.getValue(), CustomScopeValue.DOC_CHECKING_APP.getValue()),
                 ClientType.APP);
-        var signedJWT = createSignedJWT();
+        var signedJWT = createSignedJWT(uiLocales);
         var queryStringParameters =
                 new HashMap<>(
                         Map.of(
@@ -567,6 +571,17 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var sessionCookie =
                 getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs")
                         .orElseThrow();
+        var languageCookie =
+                getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "lng");
+        if (uiLocales.contains("en")) {
+            assertThat(languageCookie.isPresent(), equalTo(true));
+            assertThat(languageCookie.get().getValue(), equalTo("en"));
+        } else if (uiLocales.contains("cy")) {
+            assertThat(languageCookie.isPresent(), equalTo(true));
+            assertThat(languageCookie.get().getValue(), equalTo("cy"));
+        } else {
+            assertThat(languageCookie.isPresent(), equalTo(false));
+        }
         var clientSessionID = sessionCookie.getValue().split("\\.")[1];
         var clientSession = redis.getClientSession(clientSessionID);
         var authRequest = AuthenticationRequest.parse(clientSession.getAuthRequestParams());
@@ -647,8 +662,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 clientType);
     }
 
-    private SignedJWT createSignedJWT() throws JOSEException {
-        var jwtClaimsSet =
+    private SignedJWT createSignedJWT(String uiLocales) throws JOSEException {
+        var jwtClaimsSetBuilder =
                 new JWTClaimsSet.Builder()
                         .audience("http://localhost/authorize")
                         .claim("redirect_uri", RP_REDIRECT_URI)
@@ -660,10 +675,12 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .claim("nonce", new Nonce().getValue())
                         .claim("client_id", CLIENT_ID)
                         .claim("state", new State().getValue())
-                        .issuer(CLIENT_ID)
-                        .build();
+                        .issuer(CLIENT_ID);
+        if (uiLocales != null && !uiLocales.isBlank()) {
+            jwtClaimsSetBuilder.claim("ui_locales", uiLocales);
+        }
         var jwsHeader = new JWSHeader(JWSAlgorithm.RS256);
-        var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSet);
+        var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSetBuilder.build());
         var signer = new RSASSASigner(KEY_PAIR.getPrivate());
         signedJWT.sign(signer);
         return signedJWT;
@@ -686,6 +703,12 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         @Override
         public String getTxmaAuditQueueUrl() {
             return txmaAuditQueue.getQueueUrl();
+        }
+
+        @Override
+        public boolean isLanguageEnabled(LocaleHelper.SupportedLanguage supportedLanguage) {
+            return supportedLanguage.equals(LocaleHelper.SupportedLanguage.EN)
+                    || supportedLanguage.equals(LocaleHelper.SupportedLanguage.CY);
         }
     }
 }

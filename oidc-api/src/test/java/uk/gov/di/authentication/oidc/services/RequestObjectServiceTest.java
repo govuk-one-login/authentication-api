@@ -518,6 +518,28 @@ class RequestObjectServiceTest {
         assertThat(requestObjectError.get().getRedirectURI().toString(), equalTo(REDIRECT_URI));
     }
 
+    @Test
+    void shouldReturnErrorForInvalidUILocales() throws JOSEException {
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(AUDIENCE)
+                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", SCOPE)
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.toString())
+                        .issuer(CLIENT_ID.getValue())
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .claim("ui_locales", "123456")
+                        .build();
+        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+        var requestObjectError = service.validateRequestObject(authRequest);
+
+        assertTrue(requestObjectError.isPresent());
+        assertThat(requestObjectError.get().getErrorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
+        assertThat(requestObjectError.get().getRedirectURI().toString(), equalTo(REDIRECT_URI));
+    }
+
     private ClientRegistry generateClientRegistry(String clientType, Scope scope) {
         return new ClientRegistry()
                 .withClientID(CLIENT_ID.getValue())

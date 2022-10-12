@@ -2,6 +2,8 @@ package uk.gov.di.authentication.oidc.helpers;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.langtag.LangTag;
+import com.nimbusds.langtag.LangTagException;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -21,6 +23,7 @@ import java.net.URI;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.oidc.helper.RequestObjectTestHelper.generateSignedJWT;
 
 class RequestObjectToAuthRequestHelperTest {
@@ -35,17 +38,7 @@ class RequestObjectToAuthRequestHelperTest {
     void shouldConvertRequestObjectToAuthRequest() throws JOSEException {
         var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
-                        .claim("redirect_uri", REDIRECT_URI.toString())
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", scope.toString())
-                        .claim("nonce", NONCE)
-                        .claim("state", STATE)
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
+        var jwtClaimsSet = getClaimsSetBuilder(scope).build();
         var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
         var authRequest =
                 new AuthenticationRequest.Builder(
@@ -72,16 +65,8 @@ class RequestObjectToAuthRequestHelperTest {
         var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);
         var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
-                        .claim("redirect_uri", REDIRECT_URI.toString())
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", scope.toString())
-                        .claim("nonce", NONCE)
-                        .claim("state", STATE)
-                        .claim("client_id", CLIENT_ID.getValue())
+                getClaimsSetBuilder(scope)
                         .claim("vtr", JsonArrayHelper.jsonArrayOf("P2.Cl.Cm"))
-                        .issuer(CLIENT_ID.getValue())
                         .build();
         var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
         var authRequest =
@@ -110,6 +95,35 @@ class RequestObjectToAuthRequestHelperTest {
     }
 
     @Test
+    void shouldConvertRequestObjectToAuthRequestWhenUILocalesClaimIsPresent()
+            throws JOSEException, LangTagException {
+        var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);
+        var uiLocales = "cy";
+        var jwtClaimsSet = getClaimsSetBuilder(scope).claim("ui_locales", uiLocales).build();
+        var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
+        var authRequest =
+                new AuthenticationRequest.Builder(
+                                ResponseType.CODE,
+                                new Scope(OIDCScopeValue.OPENID),
+                                CLIENT_ID,
+                                null)
+                        .requestObject(signedJWT)
+                        .build();
+
+        var transformedAuthRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
+
+        assertThat(transformedAuthRequest.getState(), equalTo(STATE));
+        assertThat(transformedAuthRequest.getNonce(), equalTo(NONCE));
+        assertThat(transformedAuthRequest.getRedirectionURI(), equalTo(REDIRECT_URI));
+        assertThat(transformedAuthRequest.getScope(), equalTo(scope));
+        assertThat(transformedAuthRequest.getClientID(), equalTo(CLIENT_ID));
+        assertTrue(transformedAuthRequest.getUILocales().contains(LangTag.parse("cy")));
+        assertThat(transformedAuthRequest.getResponseType(), equalTo(ResponseType.CODE));
+        assertThat(transformedAuthRequest.getRequestObject(), equalTo(signedJWT));
+    }
+
+    @Test
     void shouldReturnAuthRequestWhenNoRequestObjectIsPresent() {
         Scope scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.PHONE);
         var authRequest =
@@ -130,5 +144,17 @@ class RequestObjectToAuthRequestHelperTest {
         assertThat(
                 transformedAuthRequest.getResponseType(), equalTo(authRequest.getResponseType()));
         assertThat(transformedAuthRequest.getScope(), equalTo(authRequest.getScope()));
+    }
+
+    private JWTClaimsSet.Builder getClaimsSetBuilder(Scope scope) {
+        return new JWTClaimsSet.Builder()
+                .audience(AUDIENCE)
+                .claim("redirect_uri", REDIRECT_URI.toString())
+                .claim("response_type", ResponseType.CODE.toString())
+                .claim("scope", scope.toString())
+                .claim("nonce", NONCE)
+                .claim("state", STATE)
+                .claim("client_id", CLIENT_ID.getValue())
+                .issuer(CLIENT_ID.getValue());
     }
 }
