@@ -17,7 +17,8 @@ class ValidClaimsTest {
         return Stream.of(
                 "https://vocab.account.gov.uk/v1/address",
                 "https://vocab.account.gov.uk/v1/passport",
-                "https://vocab.account.gov.uk/v1/coreIdentityJWT");
+                "https://vocab.account.gov.uk/v1/coreIdentityJWT",
+                "https://vocab.account.gov.uk/v1/drivingPermit");
     }
 
     static Stream<String> unsupportedClaims() {
@@ -28,7 +29,7 @@ class ValidClaimsTest {
 
     @Test
     void shouldReturnCorrectNumberOfClaimsSupported() {
-        assertThat(ValidClaims.getAllValidClaims().size(), equalTo(3));
+        assertThat(ValidClaims.getAllValidClaims().size(), equalTo(4));
     }
 
     @ParameterizedTest

@@ -9,6 +9,9 @@ public final class IdentityTestData {
     public static final String PASSPORT_CLAIM =
             "[{\"documentNumber\":\"12345678\",\"expiryDate\":\"2022-02-01\"}]";
 
+    public static final String DRIVING_PERMIT =
+            "[{\"personalNumber\":\"DOE99802085J99KV\",\"fullAddress\":\"122 BURNS CRESCENT EDINBURGH EH1 9GP\",\"issueNumber\":\"16\",\"issuedBy\":\"DVLA\",\"issueDate\":\"2019-01-23\",\"expiryDate\":\"2023-01-18\"}]";
+
     public static final String CORE_IDENTITY_CLAIM =
             "{\"name\":[{\"nameParts\":[{\"type\":\"GivenName\",\"value\":\"kenneth\"},{\"type\":\"FamilyName\",\"value\":\"decerqueira\"}]}],\"birthDate\":[{\"value\":\"1964-11-07\"}]}";
 

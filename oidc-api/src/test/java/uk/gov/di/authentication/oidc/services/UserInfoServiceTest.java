@@ -132,6 +132,7 @@ class UserInfoServiceTest {
         assertNull(userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
         assertNull(userInfo.getClaim(ValidClaims.ADDRESS.getValue()));
         assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
+        assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
     }
 
     @Test
@@ -155,6 +156,7 @@ class UserInfoServiceTest {
         assertNull(userInfo.getPhoneNumberVerified());
         assertNull(userInfo.getClaim(ValidClaims.ADDRESS.getValue()));
         assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
+        assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
         assertNull(userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
     }
 
@@ -178,6 +180,7 @@ class UserInfoServiceTest {
         assertThat(userInfo.getPhoneNumberVerified(), equalTo(true));
         assertNull(userInfo.getClaim(ValidClaims.ADDRESS.getValue()));
         assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
+        assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
         assertNull(userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
     }
 
@@ -194,6 +197,8 @@ class UserInfoServiceTest {
                                         ValidClaims.ADDRESS.getValue(),
                                         ADDRESS_CLAIM,
                                         ValidClaims.PASSPORT.getValue(),
+                                        PASSPORT_CLAIM,
+                                        ValidClaims.DRIVING_PERMIT.getValue(),
                                         PASSPORT_CLAIM));
         accessToken = createSignedAccessToken(oidcValidClaimsRequest);
         when(authenticationService.getUserProfileFromSubject(INTERNAL_SUBJECT.getValue()))
