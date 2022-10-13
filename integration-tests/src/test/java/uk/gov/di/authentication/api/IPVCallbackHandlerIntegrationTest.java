@@ -165,6 +165,12 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                         .map(t -> t.get(ValidClaims.PASSPORT.getValue()))
                         .isPresent());
 
+        assertTrue(
+                identityCredentials
+                        .map(IdentityCredentials::getAdditionalClaims)
+                        .map(t -> t.get(ValidClaims.DRIVING_PERMIT.getValue()))
+                        .isPresent());
+
         var addressClaim =
                 objectMapper.readValue(
                         identityCredentials
@@ -182,6 +188,15 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 .get(ValidClaims.PASSPORT.getValue()),
                         JSONArray.class);
         assertThat(((LinkedTreeMap) passportClaim.get(0)).size(), equalTo(2));
+
+        var drivingPermit =
+                objectMapper.readValue(
+                        identityCredentials
+                                .get()
+                                .getAdditionalClaims()
+                                .get(ValidClaims.DRIVING_PERMIT.getValue()),
+                        JSONArray.class);
+        assertThat(((LinkedTreeMap) drivingPermit.get(0)).size(), equalTo(6));
     }
 
     private void setUpDynamo() {
