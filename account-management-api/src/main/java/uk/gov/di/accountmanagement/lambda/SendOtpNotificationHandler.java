@@ -174,7 +174,7 @@ public class SendOtpNotificationHandler
         codeStorageService.saveOtpCode(
                 sendNotificationRequest.getEmail(),
                 code,
-                configurationService.getCodeExpiry(),
+                configurationService.getSmsOtpCodeExpiry(),
                 sendNotificationRequest.getNotificationType());
         LOG.info(
                 "Sending message to SQS queue for notificationType: {}",

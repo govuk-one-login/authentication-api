@@ -19,7 +19,7 @@ public class ResetPasswordService {
     public String buildResetPasswordLink(
             String code, String sessionID, String persistentSessionId) {
         Date expiryDate =
-                NowHelper.nowPlus(configurationService.getCodeExpiry(), ChronoUnit.SECONDS);
+                NowHelper.nowPlus(configurationService.getSmsOtpCodeExpiry(), ChronoUnit.SECONDS);
         return buildURI(
                         configurationService.getFrontendBaseUrl(),
                         configurationService.getResetPasswordRoute()

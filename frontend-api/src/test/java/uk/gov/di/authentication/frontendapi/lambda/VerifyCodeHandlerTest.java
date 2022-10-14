@@ -141,7 +141,7 @@ class VerifyCodeHandlerTest {
         when(authenticationService.getUserProfileFromEmail(TEST_CLIENT_EMAIL))
                 .thenReturn(Optional.of(userProfile));
 
-        when(configurationService.getCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
+        when(configurationService.getSmsOtpCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
 
         when(userProfile.getSubjectID()).thenReturn("test-subject-id");
 

@@ -133,7 +133,8 @@ class SendNotificationHandlerTest {
 
     @BeforeEach
     void setup() {
-        when(configurationService.getCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
+        when(configurationService.getSmsOtpCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
+        when(configurationService.getEmailOtpCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
         when(configurationService.getBlockedEmailDuration()).thenReturn(BLOCKED_EMAIL_DURATION);
         when(codeGeneratorService.sixDigitCode()).thenReturn(TEST_SIX_DIGIT_CODE);
         when(configurationService.getCodeMaxRetries()).thenReturn(5);

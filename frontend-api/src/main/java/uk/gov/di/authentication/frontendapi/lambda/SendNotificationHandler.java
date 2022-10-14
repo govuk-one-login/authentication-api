@@ -205,7 +205,12 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
     private String generateAndSaveNewCode(String email, NotificationType notificationType) {
         String newCode = codeGeneratorService.sixDigitCode();
         codeStorageService.saveOtpCode(
-                email, newCode, configurationService.getCodeExpiry(), notificationType);
+                email,
+                newCode,
+                notificationType.equals(VERIFY_PHONE_NUMBER)
+                        ? configurationService.getSmsOtpCodeExpiry()
+                        : configurationService.getEmailOtpCodeExpiry(),
+                notificationType);
         return newCode;
     }
 
