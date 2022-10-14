@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.oidc.helpers;
 
 import com.nimbusds.jwt.SignedJWT;
+import com.nimbusds.langtag.LangTagUtils;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -41,6 +42,16 @@ public class RequestObjectToAuthRequestHelper {
 
             if (Objects.nonNull(jwtClaimsSet.getClaim("vtr"))) {
                 builder.customParameter("vtr", (String) jwtClaimsSet.getClaim("vtr"));
+            }
+            if (Objects.nonNull(jwtClaimsSet.getClaim("ui_locales"))) {
+                try {
+                    String uiLocales = (String) jwtClaimsSet.getClaim("ui_locales");
+                    if (!uiLocales.isBlank()) {
+                        builder.uiLocales(LangTagUtils.parseLangTagList(uiLocales.split(" ")));
+                    }
+                } catch (ClassCastException e) {
+                    LOG.error("Unable to read ui_locales claim: {}", e.getMessage());
+                }
             }
             return builder.build();
         } catch (ParseException | com.nimbusds.oauth2.sdk.ParseException e) {

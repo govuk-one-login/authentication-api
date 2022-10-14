@@ -5,6 +5,8 @@ import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import com.nimbusds.langtag.LangTagException;
+import com.nimbusds.langtag.LangTagUtils;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
@@ -176,6 +178,20 @@ public class RequestObjectService {
             var vtrError = validateVtr(jwtClaimsSet, redirectURI);
             if (vtrError.isPresent()) {
                 return vtrError;
+            }
+            if (Objects.nonNull(jwtClaimsSet.getClaim("ui_locales"))) {
+                try {
+                    String uiLocales = (String) jwtClaimsSet.getClaim("ui_locales");
+                    LangTagUtils.parseLangTagList(uiLocales.split(" "));
+                } catch (ClassCastException | LangTagException e) {
+                    LOG.warn("ui_locales parameter is invalid: {}", e.getMessage());
+                    return Optional.of(
+                            new AuthRequestError(
+                                    new ErrorObject(
+                                            OAuth2Error.INVALID_REQUEST_CODE,
+                                            "ui_locales parameter is invalid"),
+                                    redirectURI));
+                }
             }
             LOG.info("RequestObject has passed initial validation");
             return Optional.empty();
