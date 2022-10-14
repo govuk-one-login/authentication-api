@@ -168,13 +168,14 @@ public class SendOtpNotificationHandler
             throws JsonException {
 
         String code = codeGeneratorService.sixDigitCode();
+        var notificationType = sendNotificationRequest.getNotificationType();
+
         NotifyRequest notifyRequest =
-                new NotifyRequest(
-                        destination, sendNotificationRequest.getNotificationType(), code, language);
+                new NotifyRequest(destination, notificationType, code, language);
         codeStorageService.saveOtpCode(
                 sendNotificationRequest.getEmail(),
                 code,
-                configurationService.getSmsOtpCodeExpiry(),
+                configurationService.getDefaultOtpCodeExpiry(),
                 sendNotificationRequest.getNotificationType());
         LOG.info(
                 "Sending message to SQS queue for notificationType: {}",

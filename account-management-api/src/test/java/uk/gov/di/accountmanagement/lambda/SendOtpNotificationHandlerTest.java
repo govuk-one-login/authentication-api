@@ -72,7 +72,7 @@ class SendOtpNotificationHandlerTest {
 
     @BeforeEach
     void setup() {
-        when(configurationService.getSmsOtpCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
+        when(configurationService.getDefaultOtpCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
         when(codeGeneratorService.sixDigitCode()).thenReturn(TEST_SIX_DIGIT_CODE);
     }
 

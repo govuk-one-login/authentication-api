@@ -208,8 +208,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 email,
                 newCode,
                 notificationType.equals(VERIFY_PHONE_NUMBER)
-                        ? configurationService.getSmsOtpCodeExpiry()
-                        : configurationService.getEmailOtpCodeExpiry(),
+                        ? configurationService.getDefaultOtpCodeExpiry()
+                        : configurationService.getEmailAccountCreationOtpCodeExpiry(),
                 notificationType);
         return newCode;
     }

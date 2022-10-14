@@ -194,7 +194,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                                         codeStorageService.saveOtpCode(
                                                 email,
                                                 newCode,
-                                                configurationService.getSmsOtpCodeExpiry(),
+                                                configurationService.getDefaultOtpCodeExpiry(),
                                                 notificationType);
                                         return newCode;
                                     });
