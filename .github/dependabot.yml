@@ -5,6 +5,7 @@ updates:
     schedule:
       interval: daily
       time: "03:00"
+    open-pull-requests-limit: 100
     target-branch: main
     labels:
       - dependabot
@@ -13,6 +14,7 @@ updates:
     schedule:
       interval: daily
       time: "03:00"
+    open-pull-requests-limit: 100
     target-branch: main
     labels:
     - dependabot
