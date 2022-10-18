@@ -21,12 +21,15 @@ module "send_otp_notification" {
   environment     = var.environment
 
   handler_environment_variables = {
-    ENVIRONMENT          = var.environment
-    EMAIL_QUEUE_URL      = aws_sqs_queue.email_queue.id
-    DYNAMO_ENDPOINT      = var.use_localstack ? var.lambda_dynamo_endpoint : null
-    LOCALSTACK_ENDPOINT  = var.use_localstack ? var.localstack_endpoint : null
-    REDIS_KEY            = local.redis_key
-    TXMA_AUDIT_QUEUE_URL = module.account_management_txma_audit.queue_url
+    ENVIRONMENT                            = var.environment
+    EMAIL_QUEUE_URL                        = aws_sqs_queue.email_queue.id
+    DYNAMO_ENDPOINT                        = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    LOCALSTACK_ENDPOINT                    = var.use_localstack ? var.localstack_endpoint : null
+    REDIS_KEY                              = local.redis_key
+    TXMA_AUDIT_QUEUE_URL                   = module.account_management_txma_audit.queue_url
+    BLOCKED_EMAIL_DURATION                 = var.blocked_email_duration
+    DEFAULT_OTP_CODE_EXPIRY                = var.otp_code_ttl_duration
+    EMAIL_OTP_ACCOUNT_CREATION_CODE_EXPIRY = var.email_acct_creation_otp_code_ttl_duration
   }
   handler_function_name = "uk.gov.di.accountmanagement.lambda.SendOtpNotificationHandler::handleRequest"
 

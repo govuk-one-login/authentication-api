@@ -112,7 +112,7 @@ public class MfaHandlerTest {
     @BeforeEach
     void setUp() {
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
-        when(configurationService.getCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
+        when(configurationService.getDefaultOtpCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         handler =
                 new MfaHandler(

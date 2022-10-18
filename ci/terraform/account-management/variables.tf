@@ -215,6 +215,21 @@ variable "txma_account_id" {
   type    = string
 }
 
+variable "blocked_email_duration" {
+  type    = number
+  default = 900
+}
+
+variable "otp_code_ttl_duration" {
+  type    = number
+  default = 900
+}
+
+variable "email_acct_creation_otp_code_ttl_duration" {
+  type    = number
+  default = 7200
+}
+
 locals {
   default_performance_parameters = {
     memory          = var.endpoint_memory_size

@@ -64,8 +64,13 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Long.parseLong(System.getenv().getOrDefault("BLOCKED_EMAIL_DURATION", "900"));
     }
 
-    public long getCodeExpiry() {
-        return Long.parseLong(System.getenv().getOrDefault("CODE_EXPIRY", "900"));
+    public long getDefaultOtpCodeExpiry() {
+        return Long.parseLong(System.getenv().getOrDefault("DEFAULT_OTP_CODE_EXPIRY", "900"));
+    }
+
+    public long getEmailAccountCreationOtpCodeExpiry() {
+        return Long.parseLong(
+                System.getenv().getOrDefault("EMAIL_OTP_ACCOUNT_CREATION_CODE_EXPIRY", "7200"));
     }
 
     public int getCodeMaxRetries() {

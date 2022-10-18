@@ -25,14 +25,16 @@ module "reset_password" {
   environment     = var.environment
 
   handler_environment_variables = {
-    DYNAMO_ENDPOINT          = var.use_localstack ? var.lambda_dynamo_endpoint : null
-    LOCALSTACK_ENDPOINT      = var.use_localstack ? var.localstack_endpoint : null
-    EMAIL_QUEUE_URL          = aws_sqs_queue.email_queue.id
-    ENVIRONMENT              = var.environment
-    TXMA_AUDIT_QUEUE_URL     = module.oidc_txma_audit.queue_url
-    REDIS_KEY                = local.redis_key
-    SQS_ENDPOINT             = var.use_localstack ? "http://localhost:45678/" : null
-    TERMS_CONDITIONS_VERSION = var.terms_and_conditions
+    DYNAMO_ENDPOINT                        = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    LOCALSTACK_ENDPOINT                    = var.use_localstack ? var.localstack_endpoint : null
+    EMAIL_QUEUE_URL                        = aws_sqs_queue.email_queue.id
+    ENVIRONMENT                            = var.environment
+    TXMA_AUDIT_QUEUE_URL                   = module.oidc_txma_audit.queue_url
+    REDIS_KEY                              = local.redis_key
+    SQS_ENDPOINT                           = var.use_localstack ? "http://localhost:45678/" : null
+    TERMS_CONDITIONS_VERSION               = var.terms_and_conditions
+    DEFAULT_OTP_CODE_EXPIRY                = var.otp_code_ttl_duration
+    EMAIL_OTP_ACCOUNT_CREATION_CODE_EXPIRY = var.email_acct_creation_otp_code_ttl_duration
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.ResetPasswordHandler::handleRequest"
 

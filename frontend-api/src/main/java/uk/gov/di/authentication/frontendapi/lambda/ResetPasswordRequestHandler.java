@@ -161,7 +161,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                                         codeStorageService.saveOtpCode(
                                                 resetPasswordRequest.getEmail(),
                                                 newCode,
-                                                configurationService.getCodeExpiry(),
+                                                configurationService.getDefaultOtpCodeExpiry(),
                                                 notificationType);
                                         return newCode;
                                     });
@@ -175,7 +175,10 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                             code, userContext.getSession().getSessionId(), persistentSessionId);
             notificationType = RESET_PASSWORD;
             codeStorageService.savePasswordResetCode(
-                    subjectId, code, configurationService.getCodeExpiry(), notificationType);
+                    subjectId,
+                    code,
+                    configurationService.getDefaultOtpCodeExpiry(),
+                    notificationType);
         }
         NotifyRequest notifyRequest =
                 new NotifyRequest(
