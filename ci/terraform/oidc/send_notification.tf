@@ -23,13 +23,15 @@ module "send_notification" {
   environment     = var.environment
 
   handler_environment_variables = {
-    ENVIRONMENT            = var.environment
-    BLOCKED_EMAIL_DURATION = var.blocked_email_duration
-    EMAIL_QUEUE_URL        = aws_sqs_queue.email_queue.id
-    TXMA_AUDIT_QUEUE_URL   = module.oidc_txma_audit.queue_url
-    LOCALSTACK_ENDPOINT    = var.use_localstack ? var.localstack_endpoint : null
-    REDIS_KEY              = local.redis_key
-    TEST_CLIENTS_ENABLED   = var.test_clients_enabled
+    ENVIRONMENT                            = var.environment
+    BLOCKED_EMAIL_DURATION                 = var.blocked_email_duration
+    EMAIL_QUEUE_URL                        = aws_sqs_queue.email_queue.id
+    TXMA_AUDIT_QUEUE_URL                   = module.oidc_txma_audit.queue_url
+    LOCALSTACK_ENDPOINT                    = var.use_localstack ? var.localstack_endpoint : null
+    REDIS_KEY                              = local.redis_key
+    TEST_CLIENTS_ENABLED                   = var.test_clients_enabled
+    DEFAULT_OTP_CODE_EXPIRY                = var.otp_code_ttl_duration
+    EMAIL_OTP_ACCOUNT_CREATION_CODE_EXPIRY = var.email_acct_creation_otp_code_ttl_duration
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.SendNotificationHandler::handleRequest"
 

@@ -12,3 +12,7 @@ keep_lambdas_warm      = false
 endpoint_memory_size   = 1024
 lambda_max_concurrency = 0
 lambda_min_concurrency = 0
+
+blocked_email_duration                    = 30
+otp_code_ttl_duration                     = 120
+email_acct_creation_otp_code_ttl_duration = 60

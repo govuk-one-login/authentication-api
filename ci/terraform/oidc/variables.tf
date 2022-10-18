@@ -170,6 +170,16 @@ variable "blocked_email_duration" {
   default = 900
 }
 
+variable "otp_code_ttl_duration" {
+  type    = number
+  default = 900
+}
+
+variable "email_acct_creation_otp_code_ttl_duration" {
+  type    = number
+  default = 7200
+}
+
 variable "contact_us_link_route" {
   type    = string
   default = "contact-us"
