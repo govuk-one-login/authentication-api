@@ -9,6 +9,11 @@ resource "aws_kms_key" "txma_audit_queue_encryption_key" {
   tags = var.default_tags
 }
 
+resource "aws_kms_alias" "txma_audit_queue_encryption_key_alias" {
+  name          = "alias/${var.environment}-audit-encryption-key-alias"
+  target_key_id = aws_kms_key.txma_audit_queue_encryption_key.key_id
+}
+
 data "aws_caller_identity" "current" {}
 
 data "aws_iam_policy_document" "txma_audit_queue_encryption_key_access_policy" {
