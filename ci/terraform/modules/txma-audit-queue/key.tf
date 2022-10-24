@@ -10,7 +10,7 @@ resource "aws_kms_key" "txma_audit_queue_encryption_key" {
 }
 
 resource "aws_kms_alias" "txma_audit_queue_encryption_key_alias" {
-  name          = "alias/${var.environment}-audit-encryption-key-alias"
+  name          = "alias/${var.environment}-${var.service_name}-audit-kms-alias"
   target_key_id = aws_kms_key.txma_audit_queue_encryption_key.key_id
 }
 
