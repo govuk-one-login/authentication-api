@@ -14,19 +14,25 @@ import uk.gov.di.authentication.shared.conditions.IdentityHelper;
 import uk.gov.di.authentication.shared.conditions.UpliftHelper;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.entity.MFAMethod;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.UserCredentials;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.net.URI;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 
+import static java.util.function.Predicate.not;
 import static uk.gov.di.authentication.frontendapi.entity.RequestParameters.COOKIE_CONSENT;
 import static uk.gov.di.authentication.frontendapi.entity.RequestParameters.GA;
 
@@ -57,7 +63,15 @@ public class StartService {
             Optional.of(session)
                     .map(Session::getEmailAddress)
                     .flatMap(dynamoService::getUserProfileByEmailMaybe)
-                    .ifPresent(builder::withUserProfile);
+                    .ifPresent(
+                            t ->
+                                    builder.withUserProfile(t)
+                                            .withUserCredentials(
+                                                    Optional.of(
+                                                            dynamoService
+                                                                    .getUserCredentialsFromEmail(
+                                                                            session
+                                                                                    .getEmailAddress()))));
             userContext = builder.withClient(clientRegistry).build();
         } catch (NoSuchElementException e) {
             LOG.error("Error creating UserContext");
@@ -115,6 +129,7 @@ public class StartService {
         var uplift = false;
         var identityRequired = false;
         var consentRequired = false;
+        MFAMethodType mfaMethodType = null;
         var docCheckingAppUser = DocAppUserHelper.isDocCheckingAppUser(userContext);
         if (Boolean.FALSE.equals(docCheckingAppUser)) {
             consentRequired = ConsentHelper.userHasNotGivenConsent(userContext);
@@ -126,6 +141,12 @@ public class StartService {
                             clientRegistry.isIdentityVerificationSupported(),
                             identityEnabled);
         }
+        if (userContext.getUserProfile().filter(UserProfile::isPhoneNumberVerified).isPresent()) {
+            mfaMethodType = MFAMethodType.SMS;
+        } else if (authApp(userContext)) {
+            mfaMethodType = MFAMethodType.AUTH_APP;
+        }
+
         LOG.info(
                 "Found UserStartInfo for Authenticated: {} ConsentRequired: {} UpliftRequired: {} IdentityRequired: {}. CookieConsent: {}. GATrackingId: {}. DocCheckingAppUser: {}",
                 userContext.getSession().isAuthenticated(),
@@ -143,7 +164,19 @@ public class StartService {
                 docCheckingAppUser ? false : userContext.getSession().isAuthenticated(),
                 cookieConsent,
                 gaTrackingId,
-                docCheckingAppUser);
+                docCheckingAppUser,
+                mfaMethodType);
+    }
+
+    private boolean authApp(UserContext userContext) {
+        return userContext.getUserCredentials().stream()
+                .map(UserCredentials::getMfaMethods)
+                .filter(Objects::nonNull)
+                .filter(not(List::isEmpty))
+                .flatMap(Collection::stream)
+                .filter(MFAMethod::isMethodVerified)
+                .map(MFAMethod::getMfaMethodType)
+                .anyMatch(MFAMethodType.AUTH_APP.getValue()::equals);
     }
 
     public String getGATrackingId(Map<String, List<String>> authRequestParameters) {

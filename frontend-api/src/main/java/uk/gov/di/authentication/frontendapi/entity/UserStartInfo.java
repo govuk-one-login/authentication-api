@@ -2,6 +2,7 @@ package uk.gov.di.authentication.frontendapi.entity;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.validation.Required;
 
 public class UserStartInfo {
@@ -38,6 +39,10 @@ public class UserStartInfo {
     @Expose
     private boolean docCheckingAppUser;
 
+    @SerializedName("mfaMethodType")
+    @Expose
+    private MFAMethodType mfaMethodType;
+
     public UserStartInfo() {}
 
     public UserStartInfo(
@@ -47,7 +52,8 @@ public class UserStartInfo {
             boolean authenticated,
             String cookieConsent,
             String gaCrossDomainTrackingId,
-            boolean docCheckingAppUser) {
+            boolean docCheckingAppUser,
+            MFAMethodType mfaMethodType) {
         this.consentRequired = consentRequired;
         this.upliftRequired = upliftRequired;
         this.identityRequired = identityRequired;
@@ -55,6 +61,7 @@ public class UserStartInfo {
         this.cookieConsent = cookieConsent;
         this.gaCrossDomainTrackingId = gaCrossDomainTrackingId;
         this.docCheckingAppUser = docCheckingAppUser;
+        this.mfaMethodType = mfaMethodType;
     }
 
     public boolean isConsentRequired() {
@@ -83,5 +90,9 @@ public class UserStartInfo {
 
     public boolean isDocCheckingAppUser() {
         return docCheckingAppUser;
+    }
+
+    public MFAMethodType getMfaMethodType() {
+        return mfaMethodType;
     }
 }

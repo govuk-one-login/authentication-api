@@ -24,10 +24,14 @@ import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
+import uk.gov.di.authentication.shared.entity.MFAMethod;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.state.UserContext;
@@ -36,6 +40,7 @@ import java.net.URI;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.Objects;
 import java.util.Optional;
@@ -80,6 +85,8 @@ class StartServiceTest {
                                         REDIRECT_URI.toString(), CLIENT_ID.getValue(), false)));
         when(dynamoService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(mock(UserProfile.class)));
+        when(dynamoService.getUserCredentialsFromEmail(EMAIL))
+                .thenReturn((mock(UserCredentials.class)));
         var authRequest =
                 new AuthenticationRequest.Builder(
                                 new ResponseType(ResponseType.Value.CODE),
@@ -123,7 +130,9 @@ class StartServiceTest {
                         ClientType.WEB,
                         null,
                         rpSupportsIdentity,
-                        isAuthenticated);
+                        isAuthenticated,
+                        Optional.empty(),
+                        Optional.empty());
         var userStartInfo =
                 startService.buildUserStartInfo(userContext, cookieConsent, gaTrackingId, true);
 
@@ -154,7 +163,16 @@ class StartServiceTest {
             boolean rpSupportsIdentity,
             boolean identityEnabled) {
         var userContext =
-                buildUserContext(vtr, false, true, ClientType.WEB, null, rpSupportsIdentity, false);
+                buildUserContext(
+                        vtr,
+                        false,
+                        true,
+                        ClientType.WEB,
+                        null,
+                        rpSupportsIdentity,
+                        false,
+                        Optional.empty(),
+                        Optional.empty());
         var userStartInfo =
                 startService.buildUserStartInfo(
                         userContext, "some-cookie-consent", "some-ga-tracking-id", identityEnabled);
@@ -183,7 +201,9 @@ class StartServiceTest {
                         ClientType.APP,
                         generateSignedJWT(),
                         true,
-                        isAuthenticated);
+                        isAuthenticated,
+                        Optional.empty(),
+                        Optional.empty());
         var userStartInfo =
                 startService.buildUserStartInfo(
                         userContext, "some-cookie-consent", "some-ga-tracking-id", true);
@@ -198,12 +218,119 @@ class StartServiceTest {
     }
 
     private static Stream<Arguments> userStartUpliftInfo() {
+        var authAppUserCredentialsVerified =
+                new UserCredentials()
+                        .withEmail(EMAIL)
+                        .setMfaMethod(
+                                (new MFAMethod(
+                                        MFAMethodType.AUTH_APP.getValue(),
+                                        "rubbish-value",
+                                        true,
+                                        true,
+                                        NowHelper.nowMinus(50, ChronoUnit.DAYS).toString())));
+        var authAppUserProfileVerified = new UserProfile().withEmail(EMAIL).withAccountVerified(1);
+
+        var authAppUserCredentialsUnverified =
+                new UserCredentials()
+                        .withEmail(EMAIL)
+                        .setMfaMethod(
+                                (new MFAMethod(
+                                        MFAMethodType.AUTH_APP.getValue(),
+                                        "rubbish-value",
+                                        false,
+                                        true,
+                                        NowHelper.nowMinus(50, ChronoUnit.DAYS).toString())));
+        var authAppUserProfileUnverified =
+                new UserProfile().withEmail(EMAIL).withAccountVerified(0);
+
+        var smsUserCredentialsVerified = new UserCredentials().withEmail(EMAIL);
+        var smsUserProfileVerified =
+                new UserProfile()
+                        .withEmail(EMAIL)
+                        .withAccountVerified(1)
+                        .withPhoneNumber("+447316763843")
+                        .withPhoneNumberVerified(true);
+
+        var smsUserCredentialsUnverified = new UserCredentials().withEmail(EMAIL);
+        var smsUserProfileUnverified =
+                new UserProfile()
+                        .withEmail(EMAIL)
+                        .withAccountVerified(0)
+                        .withPhoneNumber("+447316763843")
+                        .withPhoneNumberVerified(false);
+
+        var unverifiedUserCredentials = new UserCredentials().withEmail(EMAIL);
+        var unverifiedUserProfile =
+                new UserProfile()
+                        .withEmail(EMAIL)
+                        .withAccountVerified(0)
+                        .withPhoneNumberVerified(false);
+
         return Stream.of(
-                Arguments.of(jsonArrayOf("Cl.Cm"), false, CredentialTrustLevel.LOW_LEVEL, true),
-                Arguments.of(jsonArrayOf("Cl"), false, CredentialTrustLevel.LOW_LEVEL, false),
-                Arguments.of(jsonArrayOf("Cl.Cm"), false, CredentialTrustLevel.MEDIUM_LEVEL, false),
                 Arguments.of(
-                        jsonArrayOf("P2.Cl.Cm"), true, CredentialTrustLevel.MEDIUM_LEVEL, false));
+                        jsonArrayOf("Cl.Cm"),
+                        false,
+                        CredentialTrustLevel.LOW_LEVEL,
+                        true,
+                        authAppUserProfileVerified,
+                        authAppUserCredentialsVerified,
+                        MFAMethodType.AUTH_APP),
+                Arguments.of(
+                        jsonArrayOf("Cl.Cm"),
+                        false,
+                        null,
+                        false,
+                        authAppUserProfileUnverified,
+                        authAppUserCredentialsUnverified,
+                        null),
+                Arguments.of(
+                        jsonArrayOf("Cl.Cm"),
+                        false,
+                        CredentialTrustLevel.LOW_LEVEL,
+                        true,
+                        smsUserProfileVerified,
+                        smsUserCredentialsVerified,
+                        MFAMethodType.SMS),
+                Arguments.of(
+                        jsonArrayOf("Cl.Cm"),
+                        false,
+                        null,
+                        false,
+                        smsUserProfileUnverified,
+                        smsUserCredentialsUnverified,
+                        null),
+                Arguments.of(
+                        jsonArrayOf("Cl.Cm"),
+                        false,
+                        null,
+                        false,
+                        unverifiedUserProfile,
+                        unverifiedUserCredentials,
+                        null),
+                Arguments.of(
+                        jsonArrayOf("Cl"),
+                        false,
+                        CredentialTrustLevel.LOW_LEVEL,
+                        false,
+                        authAppUserProfileVerified,
+                        authAppUserCredentialsVerified,
+                        MFAMethodType.AUTH_APP),
+                Arguments.of(
+                        jsonArrayOf("Cl.Cm"),
+                        false,
+                        CredentialTrustLevel.MEDIUM_LEVEL,
+                        false,
+                        authAppUserProfileVerified,
+                        authAppUserCredentialsVerified,
+                        MFAMethodType.AUTH_APP),
+                Arguments.of(
+                        jsonArrayOf("P2.Cl.Cm"),
+                        true,
+                        CredentialTrustLevel.MEDIUM_LEVEL,
+                        false,
+                        authAppUserProfileVerified,
+                        authAppUserCredentialsVerified,
+                        MFAMethodType.AUTH_APP));
     }
 
     @ParameterizedTest
@@ -212,9 +339,25 @@ class StartServiceTest {
             String vtr,
             boolean expectedIdentityRequiredValue,
             CredentialTrustLevel credentialTrustLevel,
-            boolean expectedUpliftRequiredValue) {
-        var userContext = buildUserContext(vtr, false, true, ClientType.WEB, null, true, false);
-        userContext.getSession().setCurrentCredentialStrength(credentialTrustLevel);
+            boolean expectedUpliftRequiredValue,
+            UserProfile userProfile,
+            UserCredentials userCredentials,
+            MFAMethodType expectedMfaMethodType) {
+        var userContext =
+                buildUserContext(
+                        vtr,
+                        false,
+                        true,
+                        ClientType.WEB,
+                        null,
+                        true,
+                        false,
+                        Optional.of(userProfile),
+                        Optional.of(userCredentials));
+        userContext
+                .getSession()
+                .setCurrentCredentialStrength(credentialTrustLevel)
+                .setEmailAddress(EMAIL);
         var userStartInfo =
                 startService.buildUserStartInfo(
                         userContext, "some-cookie-consent", "some-ga-tracking-id", true);
@@ -225,6 +368,7 @@ class StartServiceTest {
         assertThat(userStartInfo.getCookieConsent(), equalTo("some-cookie-consent"));
         assertThat(userStartInfo.getGaCrossDomainTrackingId(), equalTo("some-ga-tracking-id"));
         assertThat(userStartInfo.isDocCheckingAppUser(), equalTo(false));
+        assertThat(userStartInfo.getMfaMethodType(), equalTo(expectedMfaMethodType));
     }
 
     @ParameterizedTest
@@ -240,7 +384,9 @@ class StartServiceTest {
                         clientType,
                         signedJWT,
                         false,
-                        false);
+                        false,
+                        Optional.empty(),
+                        Optional.empty());
 
         var clientStartInfo = startService.buildClientStartInfo(userContext);
 
@@ -357,7 +503,9 @@ class StartServiceTest {
             ClientType clientType,
             SignedJWT requestObject,
             boolean identityVerificationSupport,
-            boolean isAuthenticated) {
+            boolean isAuthenticated,
+            Optional<UserProfile> userProfile,
+            Optional<UserCredentials> userCredentials) {
         AuthenticationRequest authRequest;
         var clientSessionVTR = VectorOfTrust.getDefaults();
         if (Objects.nonNull(requestObject)) {
@@ -403,6 +551,8 @@ class StartServiceTest {
         return UserContext.builder(SESSION.setAuthenticated(isAuthenticated))
                 .withClientSession(clientSession)
                 .withClient(clientRegistry)
+                .withUserCredentials(userCredentials)
+                .withUserProfile(userProfile)
                 .build();
     }
 
