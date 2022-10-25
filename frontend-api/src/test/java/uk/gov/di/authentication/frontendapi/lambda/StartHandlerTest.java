@@ -174,7 +174,7 @@ class StartHandlerTest {
     void shouldReturn200WhenDocCheckingAppUserIsPresent()
             throws ParseException, Json.JsonException {
         when(configurationService.getDocAppDomain()).thenReturn(URI.create("https://doc-app"));
-        var userStartInfo = new UserStartInfo(false, false, false, false, null, null, true);
+        var userStartInfo = new UserStartInfo(false, false, false, false, null, null, true, null);
         when(startService.buildUserContext(session, clientSession)).thenReturn(userContext);
         var scope = new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP);
         when(startService.buildClientStartInfo(userContext))
@@ -338,6 +338,6 @@ class StartHandlerTest {
 
     private UserStartInfo getUserStartInfo(String cookieConsent, String gaCrossDomainTrackingId) {
         return new UserStartInfo(
-                true, false, false, true, cookieConsent, gaCrossDomainTrackingId, false);
+                true, false, false, true, cookieConsent, gaCrossDomainTrackingId, false, null);
     }
 }

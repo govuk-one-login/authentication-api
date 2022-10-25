@@ -23,6 +23,7 @@ import uk.gov.di.authentication.frontendapi.entity.StartResponse;
 import uk.gov.di.authentication.frontendapi.lambda.StartHandler;
 import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
@@ -35,6 +36,7 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -108,6 +110,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(startResponse.getUser().isIdentityRequired(), equalTo(identityRequired));
         assertThat(startResponse.getUser().isConsentRequired(), equalTo(true));
         assertThat(startResponse.getUser().isUpliftRequired(), equalTo(false));
+        assertThat(startResponse.getUser().getMfaMethodType(), equalTo(null));
         assertThat(startResponse.getClient().getClientName(), equalTo(TEST_CLIENT_NAME));
         assertThat(startResponse.getClient().getServiceType(), equalTo("MANDATORY"));
         assertThat(startResponse.getClient().getCookieConsentShared(), equalTo(false));
@@ -117,6 +120,70 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(startResponse.getUser().getCookieConsent(), equalTo(null));
         assertThat(startResponse.getUser().getGaCrossDomainTrackingId(), equalTo(null));
         assertThat(startResponse.getUser().isAuthenticated(), equalTo(isAuthenticated));
+
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(START_INFO_FOUND));
+    }
+
+    private static Stream<MFAMethodType> mfaMethodTypes() {
+        return Stream.of(MFAMethodType.AUTH_APP, MFAMethodType.SMS, null);
+    }
+
+    @ParameterizedTest
+    @MethodSource("mfaMethodTypes")
+    void shouldReturn200WithSMSMfaMethodTypeWhenTheseIsAnExistingSession(
+            MFAMethodType mfaMethodType) throws Json.JsonException {
+        var userEmail = "joe.bloggs+3@digital.cabinet-office.gov.uk";
+        var sessionId = redis.createSession(true);
+        redis.addEmailToSession(sessionId, userEmail);
+
+        userStore.signUp(userEmail, "rubbbishPassword");
+
+        if (Objects.nonNull(mfaMethodType) && mfaMethodType.equals(MFAMethodType.SMS)) {
+            userStore.addPhoneNumber(userEmail, "+447316763843");
+            userStore.setPhoneNumberVerified(userEmail, true);
+        } else if (Objects.nonNull(mfaMethodType) && mfaMethodType.equals(MFAMethodType.AUTH_APP)) {
+            userStore.addMfaMethod(
+                    userEmail, MFAMethodType.AUTH_APP, true, true, "rubbish-credential-value");
+        }
+
+        var state = new State();
+        var scope = new Scope(OIDCScopeValue.OPENID);
+        var builder =
+                new AuthenticationRequest.Builder(
+                                ResponseType.CODE, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
+                        .nonce(new Nonce())
+                        .state(state)
+                        .customParameter("vtr", "[\"Cl.Cm\"]");
+        var authRequest = builder.build();
+
+        redis.createClientSession(CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
+
+        registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR(), ClientType.WEB);
+
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Session-Id", sessionId);
+        headers.put("Client-Session-Id", CLIENT_SESSION_ID);
+        headers.put("X-API-Key", FRONTEND_API_KEY);
+
+        var response = makeRequest(Optional.empty(), headers, Map.of());
+        assertThat(response, hasStatus(200));
+
+        StartResponse startResponse =
+                objectMapper.readValue(response.getBody(), StartResponse.class);
+
+        assertThat(startResponse.getUser().isIdentityRequired(), equalTo(false));
+        assertThat(startResponse.getUser().isConsentRequired(), equalTo(true));
+        assertThat(startResponse.getUser().isUpliftRequired(), equalTo(false));
+        assertThat(startResponse.getUser().getMfaMethodType(), equalTo(mfaMethodType));
+        assertThat(startResponse.getClient().getClientName(), equalTo(TEST_CLIENT_NAME));
+        assertThat(startResponse.getClient().getServiceType(), equalTo("MANDATORY"));
+        assertThat(startResponse.getClient().getCookieConsentShared(), equalTo(false));
+        assertThat(startResponse.getClient().getScopes(), equalTo(scope.toStringList()));
+        assertThat(startResponse.getClient().getRedirectUri(), equalTo(REDIRECT_URI));
+        assertThat(startResponse.getClient().getState().getValue(), equalTo(state.getValue()));
+        assertThat(startResponse.getUser().getCookieConsent(), equalTo(null));
+        assertThat(startResponse.getUser().getGaCrossDomainTrackingId(), equalTo(null));
+        assertThat(startResponse.getUser().isAuthenticated(), equalTo(true));
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(START_INFO_FOUND));
     }
