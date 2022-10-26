@@ -87,6 +87,17 @@ public class VectorOfTrust {
                     Arrays.stream(splitVtr)
                             .filter(a -> a.startsWith("P"))
                             .map(LevelOfConfidence::retrieveLevelOfConfidence)
+                            .collect(
+                                    Collectors.collectingAndThen(
+                                            Collectors.toList(),
+                                            list -> {
+                                                if (list.size() > 1) {
+                                                    throw new IllegalArgumentException(
+                                                            "VTR must contain either 0 or 1 identity proofing components");
+                                                }
+                                                return list;
+                                            }))
+                            .stream()
                             .findFirst();
 
             var credentialTrustLevel =
