@@ -88,14 +88,16 @@ public class VectorOfTrust {
                             .filter(a -> a.startsWith("P"))
                             .map(LevelOfConfidence::retrieveLevelOfConfidence)
                             .collect(Collectors.toList());
+            var ctl =
+                    CredentialTrustLevel.retrieveCredentialTrustLevel(
+                            Arrays.stream(splitVtr)
+                                    .filter(a -> a.startsWith("C"))
+                                    .sorted()
+                                    .collect(Collectors.joining(".")));
             if (levelOfConfidence.isEmpty()) {
-                var ctl = CredentialTrustLevel.retrieveCredentialTrustLevel(vtr);
                 vectorOfTrusts.add(new VectorOfTrust(ctl));
             } else {
                 var loc = levelOfConfidence.get(0);
-                var ctl =
-                        CredentialTrustLevel.retrieveCredentialTrustLevel(
-                                vtr.substring(vtr.indexOf(".") + 1));
                 vectorOfTrusts.add(new VectorOfTrust(ctl, loc));
             }
         }
@@ -131,5 +133,19 @@ public class VectorOfTrust {
                 + ", levelOfConfidence="
                 + levelOfConfidence
                 + '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        VectorOfTrust that = (VectorOfTrust) o;
+        return credentialTrustLevel == that.credentialTrustLevel
+                && levelOfConfidence == that.levelOfConfidence;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(credentialTrustLevel, levelOfConfidence);
     }
 }
