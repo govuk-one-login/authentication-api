@@ -1,9 +1,14 @@
 package uk.gov.di.authentication.shared.entity;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
+import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -82,16 +87,6 @@ class VectorOfTrustTest {
     }
 
     @Test
-    void shouldThrowWhenIdentityValueIsNotFirstValueInVector() {
-        var jsonArray = jsonArrayOf("Cl.Cm.P2");
-        assertThrows(
-                IllegalArgumentException.class,
-                () ->
-                        VectorOfTrust.parseFromAuthRequestAttribute(
-                                Collections.singletonList(jsonArray)));
-    }
-
-    @Test
     void shouldThrowWhenTooManyValuesInVector() {
         var jsonArray = jsonArrayOf("Cl.Cm.Cl");
         assertThrows(
@@ -109,15 +104,6 @@ class VectorOfTrustTest {
                 () ->
                         VectorOfTrust.parseFromAuthRequestAttribute(
                                 Collections.singletonList(jsonArray)));
-    }
-
-    @Test
-    void shouldThrowWhenCredentialTrustLevelsAreOrderedIncorrectly() {
-        assertThrows(
-                IllegalArgumentException.class,
-                () ->
-                        VectorOfTrust.parseFromAuthRequestAttribute(
-                                Collections.singletonList(jsonArrayOf("P2.Cm.Cl"))));
     }
 
     @Test
@@ -191,5 +177,24 @@ class VectorOfTrustTest {
                 VectorOfTrust.parseFromAuthRequestAttribute(
                         Collections.singletonList(jsonArrayOf(vectorString)));
         assertFalse(vectorOfTrust.containsLevelOfConfidence());
+    }
+
+    @ParameterizedTest
+    @MethodSource("equalityTests")
+    void shouldReturnCorrectEquality(String one, String two, boolean areEqual) {
+        var vtrOne = VectorOfTrust.parseFromAuthRequestAttribute(List.of(one));
+        var vtrTwo = VectorOfTrust.parseFromAuthRequestAttribute(List.of(two));
+
+        assertThat(vtrOne.equals(vtrTwo), equalTo(areEqual));
+    }
+
+    public static Stream<Arguments> equalityTests() {
+        return Stream.of(
+                Arguments.of("[\"P2.Cl\"]", "[\"Cl.P2\"]", true),
+                Arguments.of("[\"P2.Cl.Cm\"]", "[\"Cl.Cm.P2\"]", true),
+                Arguments.of("[\"P2.Cm.Cl\"]", "[\"Cl.Cm.P2\"]", true),
+                Arguments.of("[\"Cm.Cl\"]", "[\"Cl.Cm\"]", true),
+                Arguments.of("[\"Cl.Cm\"]", "[\"Cl.Cm.P2\"]", false),
+                Arguments.of("[\"Cl.Cm\"]", "[\"P2.Cl\"]", false));
     }
 }
