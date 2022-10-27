@@ -14,6 +14,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
 import static net.minidev.json.parser.JSONParser.DEFAULT_PERMISSIVE_MODE;
 import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.NONE;
 
@@ -49,7 +51,7 @@ public class VectorOfTrust {
     }
 
     public static VectorOfTrust parseFromAuthRequestAttribute(List<String> vtr) {
-        if (Objects.isNull(vtr) || vtr.isEmpty()) {
+        if (isNull(vtr) || vtr.isEmpty()) {
             LOG.info(
                     "VTR attribute is not present so defaulting to {}",
                     CredentialTrustLevel.getDefault().getValue());
@@ -75,6 +77,13 @@ public class VectorOfTrust {
 
     public String retrieveVectorOfTrustForToken() {
         return credentialTrustLevel.getValue();
+    }
+
+    public boolean isValid() {
+        return nonNull(getCredentialTrustLevel())
+                && !(Objects.equals(getLevelOfConfidence(), LevelOfConfidence.MEDIUM_LEVEL)
+                        && Objects.equals(
+                                getCredentialTrustLevel(), CredentialTrustLevel.LOW_LEVEL));
     }
 
     private static VectorOfTrust parseVtrSet(JSONArray vtrJsonArray) {
@@ -106,7 +115,12 @@ public class VectorOfTrust {
                                     .filter(a -> a.startsWith("C"))
                                     .sorted()
                                     .collect(Collectors.joining(".")));
-            vectorOfTrusts.add(new VectorOfTrust(credentialTrustLevel, levelOfConfidence));
+            var vot = new VectorOfTrust(credentialTrustLevel, levelOfConfidence);
+            if (!vot.isValid()) {
+                throw new IllegalArgumentException(
+                        "P2 identity confidence must require at least Cl.Cm credential trust");
+            }
+            vectorOfTrusts.add(vot);
         }
 
         return vectorOfTrusts.stream()
@@ -154,5 +168,10 @@ public class VectorOfTrust {
     @Override
     public int hashCode() {
         return Objects.hash(credentialTrustLevel, levelOfConfidence);
+    }
+
+    static VectorOfTrust of(
+            CredentialTrustLevel credentialTrustLevel, LevelOfConfidence levelOfConfidence) {
+        return new VectorOfTrust(credentialTrustLevel, Optional.ofNullable(levelOfConfidence));
     }
 }

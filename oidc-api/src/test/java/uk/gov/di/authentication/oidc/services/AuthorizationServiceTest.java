@@ -143,7 +143,7 @@ class AuthorizationServiceTest {
                         REDIRECT_URI.toString(),
                         responseType,
                         scope,
-                        jsonArrayOf("P2.Cl.Cm", "P2.Cl"),
+                        jsonArrayOf("P2.Cl.Cm"),
                         Optional.empty());
         var errorObject = authorizationService.validateAuthRequest(authRequest);
 
