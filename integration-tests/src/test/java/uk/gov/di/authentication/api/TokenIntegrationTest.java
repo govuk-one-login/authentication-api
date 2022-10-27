@@ -97,12 +97,10 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 Arguments.of(Optional.of("Cl.Cm"), "Cl.Cm", Optional.of(CLIENT_ID)),
                 Arguments.of(Optional.of("Cl"), "Cl", Optional.of(CLIENT_ID)),
                 Arguments.of(Optional.of("P2.Cl.Cm"), "Cl.Cm", Optional.of(CLIENT_ID)),
-                Arguments.of(Optional.of("P2.Cl"), "Cl", Optional.of(CLIENT_ID)),
                 Arguments.of(Optional.empty(), "Cl.Cm", Optional.of(CLIENT_ID)),
                 Arguments.of(Optional.of("Cl.Cm"), "Cl.Cm", Optional.empty()),
                 Arguments.of(Optional.of("Cl"), "Cl", Optional.empty()),
                 Arguments.of(Optional.of("P2.Cl.Cm"), "Cl.Cm", Optional.empty()),
-                Arguments.of(Optional.of("P2.Cl"), "Cl", Optional.empty()),
                 Arguments.of(Optional.empty(), "Cl.Cm", Optional.empty()));
     }
 
