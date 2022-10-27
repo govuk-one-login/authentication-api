@@ -68,15 +68,6 @@ class VectorOfTrustTest {
         assertThat(vectorOfTrust.getLevelOfConfidence(), equalTo(LevelOfConfidence.MEDIUM_LEVEL));
     }
 
-    @Test
-    void shouldParseToLowCredentialTrustLevelAndMediumLevelOfConfidence() {
-        var jsonArray = jsonArrayOf("P2.Cl.Cm", "P2.Cl");
-        VectorOfTrust vectorOfTrust =
-                VectorOfTrust.parseFromAuthRequestAttribute(Collections.singletonList(jsonArray));
-        assertThat(vectorOfTrust.getCredentialTrustLevel(), equalTo(LOW_LEVEL));
-        assertThat(vectorOfTrust.getLevelOfConfidence(), equalTo(LevelOfConfidence.MEDIUM_LEVEL));
-    }
-
     @ParameterizedTest
     @MethodSource("invalidVtrValues")
     void shouldThrowWhenInvalidVtrPassed(String errorMessage, String jsonArray) {
@@ -100,7 +91,42 @@ class VectorOfTrustTest {
                 Arguments.of(
                         "Invalid LevelOfConfidence provided", jsonArrayOf("P2.Cl.Cm", "P3.Cl")),
                 Arguments.of("Invalid CredentialTrustLevel", jsonArrayOf("Cm")),
-                Arguments.of("Invalid CredentialTrustLevel", jsonArrayOf("")));
+                Arguments.of("Invalid CredentialTrustLevel", jsonArrayOf("")),
+                Arguments.of(
+                        "P2 identity confidence must require at least Cl.Cm credential trust",
+                        jsonArrayOf("P2.Cl")));
+    }
+
+    @ParameterizedTest
+    @MethodSource("validCombinations")
+    void isValidShouldReturnTrueForValidCombinations(
+            CredentialTrustLevel credentialTrustLevel, LevelOfConfidence levelOfConfidence) {
+        var vectorOfTrust = VectorOfTrust.of(credentialTrustLevel, levelOfConfidence);
+
+        assertTrue(vectorOfTrust.isValid());
+    }
+
+    public static Stream<Arguments> validCombinations() {
+        return Stream.of(
+                Arguments.of(LOW_LEVEL, null),
+                Arguments.of(MEDIUM_LEVEL, null),
+                Arguments.of(LOW_LEVEL, LevelOfConfidence.NONE),
+                Arguments.of(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL));
+    }
+
+    @ParameterizedTest
+    @MethodSource("invalidCombinations")
+    void isValidShouldReturnFalseForInvalidCombinations(
+            CredentialTrustLevel credentialTrustLevel, LevelOfConfidence levelOfConfidence) {
+        var vectorOfTrust = VectorOfTrust.of(credentialTrustLevel, levelOfConfidence);
+
+        assertFalse(vectorOfTrust.isValid());
+    }
+
+    public static Stream<Arguments> invalidCombinations() {
+        return Stream.of(
+                Arguments.of(LOW_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
+                Arguments.of(null, LevelOfConfidence.MEDIUM_LEVEL));
     }
 
     @Test
@@ -160,11 +186,10 @@ class VectorOfTrustTest {
 
     public static Stream<Arguments> equalityTests() {
         return Stream.of(
-                Arguments.of("[\"P2.Cl\"]", "[\"Cl.P2\"]", true),
                 Arguments.of("[\"P2.Cl.Cm\"]", "[\"Cl.Cm.P2\"]", true),
                 Arguments.of("[\"P2.Cm.Cl\"]", "[\"Cl.Cm.P2\"]", true),
                 Arguments.of("[\"Cm.Cl\"]", "[\"Cl.Cm\"]", true),
                 Arguments.of("[\"Cl.Cm\"]", "[\"Cl.Cm.P2\"]", false),
-                Arguments.of("[\"Cl.Cm\"]", "[\"P2.Cl\"]", false));
+                Arguments.of("[\"Cl.Cm\"]", "[\"P2.Cl.Cm\"]", false));
     }
 }
