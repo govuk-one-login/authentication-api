@@ -21,6 +21,7 @@ import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 
 class VectorOfTrustTest {
+
     @Test
     void shouldParseValidStringWithSingleVector() {
         var jsonArray = jsonArrayOf("Cl.Cm");
@@ -76,61 +77,30 @@ class VectorOfTrustTest {
         assertThat(vectorOfTrust.getLevelOfConfidence(), equalTo(LevelOfConfidence.MEDIUM_LEVEL));
     }
 
-    @Test
-    void shouldThrowWhenUnsupportedIdentityValueInVector() {
-        var jsonArray = jsonArrayOf("P2.Cl.Cm", "P3.Cl");
-        assertThrows(
-                IllegalArgumentException.class,
-                () ->
-                        VectorOfTrust.parseFromAuthRequestAttribute(
-                                Collections.singletonList(jsonArray)));
+    @ParameterizedTest
+    @MethodSource("invalidVtrValues")
+    void shouldThrowWhenInvalidVtrPassed(String errorMessage, String jsonArray) {
+        var exception =
+                assertThrows(
+                        IllegalArgumentException.class,
+                        () ->
+                                VectorOfTrust.parseFromAuthRequestAttribute(
+                                        Collections.singletonList(jsonArray)));
+        assertThat(exception.getMessage(), equalTo(errorMessage));
     }
 
-    @Test
-    void shouldThrowWhenTooManyValuesInVector() {
-        var jsonArray = jsonArrayOf("Cl.Cm.Cl");
-        assertThrows(
-                IllegalArgumentException.class,
-                () ->
-                        VectorOfTrust.parseFromAuthRequestAttribute(
-                                Collections.singletonList(jsonArray)));
-    }
-
-    @Test
-    void shouldThrowWhenOnlyIdentityLevelIsSentInRequest() {
-        var jsonArray = jsonArrayOf("P2");
-        assertThrows(
-                IllegalArgumentException.class,
-                () ->
-                        VectorOfTrust.parseFromAuthRequestAttribute(
-                                Collections.singletonList(jsonArray)));
-    }
-
-    @Test
-    void shouldThrowWhenMultipleIdentityValuesArePresentInVector() {
-        var jsonArray = jsonArrayOf("P1.Pb");
-        assertThrows(
-                IllegalArgumentException.class,
-                () ->
-                        VectorOfTrust.parseFromAuthRequestAttribute(
-                                Collections.singletonList(jsonArray)));
-    }
-
-    @Test
-    void shouldThrowIfOnlyCmIsPresent() {
-        var jsonArray = jsonArrayOf("Cm");
-        assertThrows(
-                IllegalArgumentException.class,
-                () ->
-                        VectorOfTrust.parseFromAuthRequestAttribute(
-                                Collections.singletonList(jsonArray)));
-    }
-
-    @Test
-    void shouldThrowIfEmptyListIsPresent() {
-        assertThrows(
-                IllegalArgumentException.class,
-                () -> VectorOfTrust.parseFromAuthRequestAttribute(Collections.singletonList("")));
+    private static Stream<Arguments> invalidVtrValues() {
+        return Stream.of(
+                Arguments.of(
+                        "VTR must contain either 0 or 1 identity proofing components",
+                        jsonArrayOf("P2.P0")),
+                Arguments.of("Invalid CredentialTrustLevel", jsonArrayOf("Cm")),
+                Arguments.of("Invalid CredentialTrustLevel", jsonArrayOf("P2")),
+                Arguments.of("Invalid CredentialTrustLevel", jsonArrayOf("Cl.Cm.Cl")),
+                Arguments.of(
+                        "Invalid LevelOfConfidence provided", jsonArrayOf("P2.Cl.Cm", "P3.Cl")),
+                Arguments.of("Invalid CredentialTrustLevel", jsonArrayOf("Cm")),
+                Arguments.of("Invalid CredentialTrustLevel", jsonArrayOf("")));
     }
 
     @Test

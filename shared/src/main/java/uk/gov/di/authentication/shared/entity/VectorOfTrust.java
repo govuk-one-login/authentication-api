@@ -11,6 +11,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static net.minidev.json.parser.JSONParser.DEFAULT_PERMISSIVE_MODE;
@@ -25,15 +26,14 @@ public class VectorOfTrust {
     @Expose private LevelOfConfidence levelOfConfidence;
 
     private VectorOfTrust(CredentialTrustLevel credentialTrustLevel) {
-        this(credentialTrustLevel, null);
+        this(credentialTrustLevel, Optional.empty());
     }
 
-    public VectorOfTrust() {}
-
     private VectorOfTrust(
-            CredentialTrustLevel credentialTrustLevel, LevelOfConfidence levelOfConfidence) {
+            CredentialTrustLevel credentialTrustLevel,
+            Optional<LevelOfConfidence> levelOfConfidence) {
         this.credentialTrustLevel = credentialTrustLevel;
-        this.levelOfConfidence = levelOfConfidence;
+        this.levelOfConfidence = levelOfConfidence.orElse(null);
     }
 
     public CredentialTrustLevel getCredentialTrustLevel() {
@@ -83,23 +83,30 @@ public class VectorOfTrust {
             String vtr = (String) obj;
             var splitVtr = vtr.split("\\.");
 
-            List<LevelOfConfidence> levelOfConfidence =
+            var levelOfConfidence =
                     Arrays.stream(splitVtr)
                             .filter(a -> a.startsWith("P"))
                             .map(LevelOfConfidence::retrieveLevelOfConfidence)
-                            .collect(Collectors.toList());
-            var ctl =
+                            .collect(
+                                    Collectors.collectingAndThen(
+                                            Collectors.toList(),
+                                            list -> {
+                                                if (list.size() > 1) {
+                                                    throw new IllegalArgumentException(
+                                                            "VTR must contain either 0 or 1 identity proofing components");
+                                                }
+                                                return list;
+                                            }))
+                            .stream()
+                            .findFirst();
+
+            var credentialTrustLevel =
                     CredentialTrustLevel.retrieveCredentialTrustLevel(
                             Arrays.stream(splitVtr)
                                     .filter(a -> a.startsWith("C"))
                                     .sorted()
                                     .collect(Collectors.joining(".")));
-            if (levelOfConfidence.isEmpty()) {
-                vectorOfTrusts.add(new VectorOfTrust(ctl));
-            } else {
-                var loc = levelOfConfidence.get(0);
-                vectorOfTrusts.add(new VectorOfTrust(ctl, loc));
-            }
+            vectorOfTrusts.add(new VectorOfTrust(credentialTrustLevel, levelOfConfidence));
         }
 
         return vectorOfTrusts.stream()
