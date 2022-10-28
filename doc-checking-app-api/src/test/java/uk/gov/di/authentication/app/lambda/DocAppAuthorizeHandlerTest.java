@@ -146,7 +146,7 @@ class DocAppAuthorizeHandlerTest {
                         DocAppAuditableEvent.DOC_APP_AUTHORISATION_REQUESTED,
                         CLIENT_SESSION_ID,
                         SESSION_ID,
-                        AuditService.UNKNOWN,
+                        DOC_APP_CLIENT_ID,
                         DOC_APP_SUBJECT_ID.getValue(),
                         AuditService.UNKNOWN,
                         "123.123.123.123",
