@@ -9,6 +9,7 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -161,7 +162,9 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                                         MFAMethodType.AUTH_APP.getValue(),
                                         codeRequest.isRegistration());
                                 sessionService.save(
-                                        session.setVerifiedMfaMethodType(MFAMethodType.AUTH_APP));
+                                        session.setCurrentCredentialStrength(
+                                                        CredentialTrustLevel.MEDIUM_LEVEL)
+                                                .setVerifiedMfaMethodType(MFAMethodType.AUTH_APP));
                                 cloudwatchMetricsService.incrementAuthenticationSuccess(
                                         session.isNewAccount(),
                                         clientId,

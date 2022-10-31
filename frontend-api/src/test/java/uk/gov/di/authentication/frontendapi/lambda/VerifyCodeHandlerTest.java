@@ -14,9 +14,12 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -37,6 +40,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -173,12 +177,19 @@ class VerifyCodeHandlerTest {
                         pair("notification-type", VERIFY_EMAIL.name()));
     }
 
-    @Test
-    void shouldReturn204ForValidVerifyPhoneNumberRequest() {
+    private static Stream<CredentialTrustLevel> credentialTrustLevels() {
+        return Stream.of(CredentialTrustLevel.LOW_LEVEL, CredentialTrustLevel.MEDIUM_LEVEL);
+    }
+
+    @ParameterizedTest
+    @MethodSource("credentialTrustLevels")
+    void shouldReturn204ForValidVerifyPhoneNumberRequest(
+            CredentialTrustLevel credentialTrustLevel) {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER))
                 .thenReturn(Optional.of(CODE));
         session.setNewAccount(Session.AccountState.NEW);
+        session.setCurrentCredentialStrength(credentialTrustLevel);
 
         APIGatewayProxyResponseEvent result =
                 makeCallWithCode(CODE, VERIFY_PHONE_NUMBER.toString());
