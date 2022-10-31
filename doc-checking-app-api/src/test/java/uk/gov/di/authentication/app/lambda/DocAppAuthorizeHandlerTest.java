@@ -83,7 +83,7 @@ class DocAppAuthorizeHandlerTest {
     private static final Subject DOC_APP_SUBJECT_ID = new Subject();
     private static final Json objectMapper = SerializationService.getInstance();
 
-    private static final String CLIENT_ID = "test-client";
+    private static final ClientID CLIENT_ID = new ClientID("test-client");
 
     private final Context context = mock(Context.class);
     private final SessionService sessionService = mock(SessionService.class);
@@ -93,7 +93,7 @@ class DocAppAuthorizeHandlerTest {
             mock(DocAppAuthorisationService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AuditService auditService = mock(AuditService.class);
-
+    private final ClientRegistry clientRegistry = mock(ClientRegistry.class);
     private final ClientService clientService = mock(ClientService.class);
 
     private DocAppAuthorizeHandler handler;
@@ -127,7 +127,8 @@ class DocAppAuthorizeHandlerTest {
                         any(ClientRegistry.class),
                         anyString()))
                 .thenReturn(encryptedJWT);
-        when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.of(new ClientRegistry()));
+        when(clientRegistry.getClientID()).thenReturn(CLIENT_ID.getValue());
+        when(clientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.of(clientRegistry));
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
         usingValidSession();
         usingValidClientSession();
@@ -146,7 +147,7 @@ class DocAppAuthorizeHandlerTest {
                         DocAppAuditableEvent.DOC_APP_AUTHORISATION_REQUESTED,
                         CLIENT_SESSION_ID,
                         SESSION_ID,
-                        AuditService.UNKNOWN,
+                        CLIENT_ID.getValue(),
                         DOC_APP_SUBJECT_ID.getValue(),
                         AuditService.UNKNOWN,
                         "123.123.123.123",

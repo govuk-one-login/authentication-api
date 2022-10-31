@@ -147,7 +147,7 @@ public class DocAppAuthorizeHandler
                     DocAppAuditableEvent.DOC_APP_AUTHORISATION_REQUESTED,
                     clientSessionId,
                     session.getSessionId(),
-                    AuditService.UNKNOWN,
+                    clientRegistry.getClientID(),
                     clientSession.getDocAppSubjectId().toString(),
                     AuditService.UNKNOWN,
                     IpAddressHelper.extractIpAddress(input),
