@@ -20,6 +20,7 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -141,18 +142,27 @@ class VerifyMfaCodeHandlerTest {
                                         CLIENT_SESSION_ID))));
     }
 
-    @Test
-    void shouldReturn204WhenSuccessfulAuthCodeRegistrationRequest() throws Json.JsonException {
+    private static Stream<CredentialTrustLevel> credentialTrustLevels() {
+        return Stream.of(CredentialTrustLevel.LOW_LEVEL, CredentialTrustLevel.MEDIUM_LEVEL);
+    }
+
+    @ParameterizedTest
+    @MethodSource("credentialTrustLevels")
+    void shouldReturn204WhenSuccessfulAuthCodeRegistrationRequest(
+            CredentialTrustLevel credentialTrustLevel) throws Json.JsonException {
         when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
                 .thenReturn(Optional.of(authAppCodeValidator));
         when(authAppCodeValidator.validateCode(CODE)).thenReturn(Optional.empty());
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
                 .thenReturn(Optional.of(CODE));
         session.setNewAccount(Session.AccountState.NEW);
+        session.setCurrentCredentialStrength(credentialTrustLevel);
         var result = makeCallWithCode(true);
 
         assertThat(result, hasStatus(204));
         assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.AUTH_APP));
+        assertThat(
+                session.getCurrentCredentialStrength(), equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
         verify(authenticationService)
                 .setMFAMethodVerifiedTrue(TEST_EMAIL_ADDRESS, MFAMethodType.AUTH_APP);
         verify(authenticationService).setAccountVerified(TEST_EMAIL_ADDRESS);
