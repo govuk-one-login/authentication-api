@@ -274,11 +274,19 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     public Optional<DeliveryReceiptsNotificationType> getNotificationTypeFromTemplateId(
             String templateId) {
         for (DeliveryReceiptsNotificationType type : DeliveryReceiptsNotificationType.values()) {
-            if (System.getenv(type.getTemplateName()).equals(templateId)) {
+            if (commaSeparatedListContains(templateId, System.getenv(type.getTemplateName()))) {
                 return Optional.of(type);
             }
         }
         return Optional.empty();
+    }
+
+    boolean commaSeparatedListContains(String searchTerm, String stringToSearch) {
+        return (searchTerm != null
+                && !searchTerm.isBlank()
+                && stringToSearch != null
+                && !stringToSearch.isBlank()
+                && Arrays.stream(stringToSearch.split(",")).anyMatch(id -> id.equals(searchTerm)));
     }
 
     public Optional<String> getOidcApiBaseURL() {
