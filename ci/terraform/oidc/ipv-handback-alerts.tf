@@ -16,7 +16,7 @@ data "aws_cloudwatch_log_group" "processing_identity_lambda_log_group" {
 resource "aws_cloudwatch_log_metric_filter" "ipv_callback_metric_filter" {
   count          = var.use_localstack ? 0 : 1
   name           = replace("${var.environment}-ipv-callback-p1-errors", ".", "")
-  pattern        = "ERROR"
+  pattern        = "{($.level = \"ERROR\")}"
   log_group_name = data.aws_cloudwatch_log_group.ipv_callback_lambda_log_group[0].name
 
   metric_transformation {
@@ -29,7 +29,7 @@ resource "aws_cloudwatch_log_metric_filter" "ipv_callback_metric_filter" {
 resource "aws_cloudwatch_log_metric_filter" "spot_response_metric_filter" {
   count          = var.use_localstack ? 0 : 1
   name           = replace("${var.environment}-spot-response-p1-errors", ".", "")
-  pattern        = "ERROR"
+  pattern        = "{($.level = \"ERROR\")}"
   log_group_name = data.aws_cloudwatch_log_group.spot_response_lambda_log_group[0].name
 
   metric_transformation {
@@ -42,7 +42,7 @@ resource "aws_cloudwatch_log_metric_filter" "spot_response_metric_filter" {
 resource "aws_cloudwatch_log_metric_filter" "processing_identity_metric_filter" {
   count          = var.use_localstack ? 0 : 1
   name           = replace("${var.environment}-processing-identity-p1-errors", ".", "")
-  pattern        = "ERROR"
+  pattern        = "{($.level = \"ERROR\")}"
   log_group_name = data.aws_cloudwatch_log_group.processing_identity_lambda_log_group[0].name
 
   metric_transformation {
