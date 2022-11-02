@@ -6,7 +6,7 @@ data "aws_cloudwatch_log_group" "ipv_authorize_lambda_log_group" {
 resource "aws_cloudwatch_log_metric_filter" "ipv_authorize_metric_filter" {
   count          = var.use_localstack ? 0 : 1
   name           = replace("${var.environment}-ipv-handoff-p1-errors", ".", "")
-  pattern        = "ERROR"
+  pattern        = "{($.level = \"ERROR\")}"
   log_group_name = data.aws_cloudwatch_log_group.ipv_authorize_lambda_log_group[0].name
 
   metric_transformation {
