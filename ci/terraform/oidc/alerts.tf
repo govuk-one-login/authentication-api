@@ -78,7 +78,3 @@ resource "aws_cloudwatch_metric_alarm" "spot_request_sqs_dlq_cloudwatch_alarm" {
 #  alarm_description = "${var.waf_alarm_blocked_reqeuest_threshold} or more blocked requests have been received by the ${aws_wafv2_web_acl.wafregional_web_acl_frontend_api[count.index].name} in the last 5 minutes"
 #  alarm_actions     = [data.aws_sns_topic.slack_events.arn]
 #}
-
-data "aws_sns_topic" "slack_events" {
-  name = "${var.environment}-slack-events"
-}

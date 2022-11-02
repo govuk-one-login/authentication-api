@@ -34,6 +34,18 @@ variable "lambda_warmer_zip_file" {
   type        = string
 }
 
+variable "ipv_p1_alarm_error_threshold" {
+  type        = number
+  description = "The number of IPV errors raised before generating a Cloudwatch alarm"
+  default     = 20
+}
+
+variable "ipv_p1_alarm_error_time_period" {
+  type        = number
+  description = "The time period in seconds for when the IPV errors need to occur"
+  default     = 600
+}
+
 variable "deployer_role_arn" {
   default     = ""
   description = "The name of the AWS role to assume, leave blank when running locally"
