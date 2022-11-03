@@ -40,4 +40,3 @@ Resources:
         Environment: !Ref Environment
         AWSOrganizationId: !Ref AWSOrganizationId
         LoggingBucket: !GetAtt [LoggingBucket, Outputs.Bucket]
-  
