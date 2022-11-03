@@ -1,0 +1,52 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: GOV.UK One Login - Access Logs Bucket
+Outputs:
+  Bucket:
+    Value: !Ref S3AccessLogsBucket
+Resources:
+  S3AccessLogsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      # checkov:skip=CKV_AWS_18:This is the access logs bucket. It should not log itself.
+      BucketName: di-auth-access-logs
+      VersioningConfiguration:
+        Status: "Enabled"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      Tags:
+        - Key: Name
+          Value: di-auth-access-logs
+        - Key: Service
+          Value: "ci/cd"
+        - Key: Source
+          Value: "alphagov/di-devplatform-deploy/upload-bucket/template.yaml"
+        - Key: CheckovRulesToSkip
+          Value: CKV_AWS_18
+
+  S3AccessLogsBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref S3AccessLogsBucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: "EnableS3Logging"
+            Effect: Allow
+            Resource:
+              - !Sub "${S3AccessLogsBucket.Arn}/*"
+            Principal:
+              Service: "logging.s3.amazonaws.com"
+            Action:
+              - "s3:PutObject"
+            Condition:
+              StringEquals:
+                "aws:SourceAccount": !Sub "${AWS::AccountId}"
+              Bool:
+                "aws:SecureTransport": true

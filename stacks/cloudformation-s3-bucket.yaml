@@ -1,0 +1,64 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: GOV.UK One Login - CloudFormation S3 Bucket
+Parameters:
+  Environment:
+    Type: String
+    Default: build
+    AllowedValues:
+      - build
+    Description: The logical name for this deployment environment
+  LoggingBucket:
+    Type: String
+    Description: Name of bucket to send access logs to.
+  AWSOrganizationId:
+    Description: >
+      ID of an AWS Organization that should have access to the templates
+      contained herein.
+    Type: String
+    Default: o-pjzf8d99ys
+    AllowedPattern: "^[a-z0-9-]+$"
+    ConstraintDescription:
+      must be a valid organization ID, made of lowercase letters and numbers
+Resources:
+  CloudFormationBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Properties:
+      BucketName: di-auth-stacks
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: AES256
+      LoggingConfiguration:
+        DestinationBucketName: !Ref LoggingBucket
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+      - Key: Name
+        Value: di-auth-stacks
+  CloudFormationBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref CloudFormationBucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Resource:
+              - !GetAtt CloudFormationBucket.Arn
+              - !Sub "${CloudFormationBucket.Arn}/*"
+            Principal: "*"
+            Action:
+              - "s3:GetObject"
+              - "s3:GetObjectVersion"
+              - "s3:ListBucket"
+            Condition:
+              StringEquals:
+                "aws:PrincipalOrgID": !Ref AWSOrganizationId
+              Bool:
+                "aws:SecureTransport": true

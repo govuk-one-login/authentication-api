@@ -1,0 +1,43 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: GOV.UK One Login - Root Template
+Parameters:
+  Environment:
+    Type: String
+    Default: sandpit
+    AllowedValues:
+      - sandpit
+      - build
+      - integration
+      - staging
+      - production
+    Description: The logical name for this deployment environment
+  AWSOrganizationId:
+    Description: >
+      ID of an AWS Organization that should have access to the templates
+      contained herein.
+    Type: String
+    Default: o-pjzf8d99ys
+    AllowedPattern: "^[a-z0-9-]+$"
+    ConstraintDescription:
+      must be a valid organization ID, made of lowercase letters and numbers
+Conditions:
+  IsBuild: !Equals  
+  - !Ref Environment
+  - build
+Resources:
+  LoggingBucket:
+    Type: AWS::CloudFormation::Stack
+    DeletionPolicy: Delete
+    Properties:
+      TemplateURL: https://di-auth-stacks.s3.eu-west-2.amazonaws.com/logging-bucket.yaml
+  CloudFormationBucket:
+    Type: AWS::CloudFormation::Stack
+    DeletionPolicy: Delete
+    Condition: IsBuild
+    Properties:
+      TemplateURL: https://di-auth-stacks.s3.eu-west-2.amazonaws.com/cloudformation-s3-bucket.yaml
+      Parameters:
+        Environment: !Ref Environment
+        AWSOrganizationId: !Ref AWSOrganizationId
+        LoggingBucket: !GetAtt [LoggingBucket, Outputs.Bucket]
+  
