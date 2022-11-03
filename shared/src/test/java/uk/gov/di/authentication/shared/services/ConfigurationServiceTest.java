@@ -4,12 +4,18 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType;
 
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class ConfigurationServiceTest {
+
+    private final SystemService systemService = mock(SystemService.class);
 
     @Test
     void sessionCookieMaxAgeShouldEqualDefaultWhenEnvVarUnset() {
@@ -54,5 +60,26 @@ class ConfigurationServiceTest {
         ConfigurationService configurationService = new ConfigurationService();
         assertEquals(
                 result, configurationService.commaSeparatedListContains(searchTerm, searchString));
+    }
+
+    @Test
+    void shouldGetNotificationTypeFromTemplateId() {
+        when(systemService.getenv("VERIFY_EMAIL_TEMPLATE_ID")).thenReturn("1234-abcd");
+        when(systemService.getenv("EMAIL_UPDATED_TEMPLATE_ID")).thenReturn("1234-efgh,4567-ijkl");
+        ConfigurationService configurationService = new ConfigurationService();
+        configurationService.setSystemService(systemService);
+
+        assertEquals(
+                Optional.of(DeliveryReceiptsNotificationType.VERIFY_EMAIL),
+                configurationService.getNotificationTypeFromTemplateId("1234-abcd"));
+        assertEquals(
+                Optional.empty(),
+                configurationService.getNotificationTypeFromTemplateId("1234-wxyz"));
+        assertEquals(
+                Optional.of(DeliveryReceiptsNotificationType.EMAIL_UPDATED),
+                configurationService.getNotificationTypeFromTemplateId("4567-ijkl"));
+        assertEquals(
+                Optional.of(DeliveryReceiptsNotificationType.EMAIL_UPDATED),
+                configurationService.getNotificationTypeFromTemplateId("1234-efgh"));
     }
 }

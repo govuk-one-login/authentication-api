@@ -40,11 +40,16 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     private SsmClient ssmClient;
     private Map<String, String> ssmRedisParameters;
     private Optional<String> passwordPepper;
+    private SystemService systemService;
 
     public ConfigurationService() {}
 
     protected ConfigurationService(SsmClient ssmClient) {
         this.ssmClient = ssmClient;
+    }
+
+    public void setSystemService(SystemService systemService) {
+        this.systemService = systemService;
     }
 
     // Please keep the method names in alphabetical order so we can find stuff more easily.
@@ -274,7 +279,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     public Optional<DeliveryReceiptsNotificationType> getNotificationTypeFromTemplateId(
             String templateId) {
         for (DeliveryReceiptsNotificationType type : DeliveryReceiptsNotificationType.values()) {
-            if (commaSeparatedListContains(templateId, System.getenv(type.getTemplateName()))) {
+            if (commaSeparatedListContains(
+                    templateId, systemService.getenv(type.getTemplateName()))) {
                 return Optional.of(type);
             }
         }
