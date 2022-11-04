@@ -46,6 +46,18 @@ variable "ipv_p1_alarm_error_time_period" {
   default     = 600
 }
 
+variable "doc_app_p1_alarm_error_threshold" {
+  type        = number
+  description = "The number of Doc App errors raised before generating a Cloudwatch alarm"
+  default     = 20
+}
+
+variable "doc_app_p1_alarm_error_time_period" {
+  type        = number
+  description = "The time period in seconds for when the Doc App errors need to occur"
+  default     = 600
+}
+
 variable "deployer_role_arn" {
   default     = ""
   description = "The name of the AWS role to assume, leave blank when running locally"
