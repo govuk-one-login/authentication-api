@@ -12,7 +12,6 @@ import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
-import uk.gov.di.authentication.shared.services.SystemService;
 import uk.gov.di.authentication.sharedtest.extensions.ParameterStoreExtension;
 
 import java.util.Date;
@@ -39,9 +38,7 @@ public class NotifyCallbackHandlerIntegrationTest {
 
     @BeforeEach
     void setup() {
-        ConfigurationService configurationService = new ConfigurationService();
-        configurationService.setSystemService(new SystemService());
-        handler = new NotifyCallbackHandler(configurationService);
+        handler = new NotifyCallbackHandler(new ConfigurationService());
     }
 
     @Test
