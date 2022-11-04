@@ -21,7 +21,7 @@ resource "aws_cloudwatch_metric_alarm" "lambda_error_cloudwatch_alarm" {
   period              = "3600"
   statistic           = "Sum"
   threshold           = var.lambda_log_alarm_threshold
-  alarm_description   = "${var.lambda_log_alarm_threshold} or more errors have occurred in the ${var.environment} ${var.endpoint_name} lambda"
+  alarm_description   = "${var.lambda_log_alarm_threshold} or more errors have occurred in the ${var.environment} ${var.endpoint_name} lambda.ACCOUNT: ${data.aws_iam_account_alias.current.account_alias}"
   alarm_actions       = [data.aws_sns_topic.slack_events.arn]
 }
 

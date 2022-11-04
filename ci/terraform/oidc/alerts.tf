@@ -12,7 +12,7 @@ resource "aws_cloudwatch_metric_alarm" "sqs_deadletter_cloudwatch_alarm" {
   dimensions = {
     QueueName = aws_sqs_queue.email_dead_letter_queue.name
   }
-  alarm_description = "${var.dlq_alarm_threshold} or more messages have appeared on the ${aws_sqs_queue.email_dead_letter_queue.name}"
+  alarm_description = "${var.dlq_alarm_threshold} or more messages have appeared on the ${aws_sqs_queue.email_dead_letter_queue.name}.ACCOUNT: ${data.aws_iam_account_alias.current.account_alias}"
   alarm_actions     = [data.aws_sns_topic.slack_events.arn]
 }
 
@@ -30,7 +30,7 @@ resource "aws_cloudwatch_metric_alarm" "spot_request_sqs_dlq_cloudwatch_alarm" {
   dimensions = {
     QueueName = aws_sqs_queue.spot_request_dead_letter_queue.name
   }
-  alarm_description = "${var.dlq_alarm_threshold} or more messages have appeared on the ${aws_sqs_queue.spot_request_dead_letter_queue.name}"
+  alarm_description = "${var.dlq_alarm_threshold} or more messages have appeared on the ${aws_sqs_queue.spot_request_dead_letter_queue.name}.ACCOUNT: ${data.aws_iam_account_alias.current.account_alias}"
   alarm_actions     = [data.aws_sns_topic.slack_events.arn]
 }
 
