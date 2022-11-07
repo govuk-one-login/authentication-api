@@ -118,6 +118,10 @@ public class RedisExtension
                 session.getSessionId(), objectMapper.writeValueAsString(session), 3600);
     }
 
+    public void incrementPasswordCount(String email) {
+        codeStorageService.increaseIncorrectPasswordCount(email);
+    }
+
     public void addAuthRequestToSession(
             String clientSessionId,
             String sessionId,

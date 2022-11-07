@@ -6,9 +6,11 @@ import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
 import uk.gov.di.authentication.frontendapi.lambda.CheckUserExistsHandler;
 import uk.gov.di.authentication.shared.entity.BaseFrontendRequest;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -17,9 +19,11 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CHECK_USER_KNOWN_EMAIL;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CHECK_USER_NO_ACCOUNT_WITH_EMAIL;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class UserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -69,5 +73,35 @@ public class UserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertFalse(checkUserExistsResponse.doesUserExist());
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CHECK_USER_NO_ACCOUNT_WITH_EMAIL));
+    }
+
+    @Test
+    public void shouldCallUserExistsEndpointAndReturnErrorResponse1045WhenUserAccountIsLocked()
+            throws JsonException {
+        String emailAddress = "joe.bloggs+2@digital.cabinet-office.gov.uk";
+        String sessionId = redis.createUnauthenticatedSessionWithEmail(emailAddress);
+        redis.incrementPasswordCount(emailAddress);
+        redis.incrementPasswordCount(emailAddress);
+        redis.incrementPasswordCount(emailAddress);
+        redis.incrementPasswordCount(emailAddress);
+        redis.incrementPasswordCount(emailAddress);
+
+        BaseFrontendRequest request = new CheckUserExistsRequest(emailAddress);
+
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Session-Id", sessionId);
+        headers.put("X-API-Key", FRONTEND_API_KEY);
+
+        var response =
+                makeRequest(
+                        Optional.of(request),
+                        constructFrontendHeaders(sessionId),
+                        headers,
+                        Map.of());
+
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1045));
+
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(ACCOUNT_TEMPORARILY_LOCKED));
     }
 }

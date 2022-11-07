@@ -47,6 +47,7 @@ import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIEN
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class CheckUserExistsHandlerTest {
 
@@ -242,7 +243,8 @@ class CheckUserExistsHandlerTest {
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        assertEquals(400, result.getStatusCode());
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1045));
 
         verify(auditService)
                 .submitAuditEvent(
