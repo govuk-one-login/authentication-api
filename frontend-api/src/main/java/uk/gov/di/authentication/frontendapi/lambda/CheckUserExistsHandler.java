@@ -21,6 +21,7 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
@@ -41,6 +42,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
     private static final Logger LOG = LogManager.getLogger(CheckUserExistsHandler.class);
 
     private final AuditService auditService;
+    private final CodeStorageService codeStorageService;
 
     public CheckUserExistsHandler(
             ConfigurationService configurationService,
@@ -48,7 +50,8 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             ClientSessionService clientSessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
-            AuditService auditService) {
+            AuditService auditService,
+            CodeStorageService codeStorageService) {
         super(
                 CheckUserExistsRequest.class,
                 configurationService,
@@ -57,6 +60,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                 clientService,
                 authenticationService);
         this.auditService = auditService;
+        this.codeStorageService = codeStorageService;
     }
 
     public CheckUserExistsHandler() {
@@ -66,6 +70,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
     public CheckUserExistsHandler(ConfigurationService configurationService) {
         super(CheckUserExistsRequest.class, configurationService);
         this.auditService = new AuditService(configurationService);
+        this.codeStorageService = new CodeStorageService(configurationService);
     }
 
     @Override
@@ -106,6 +111,26 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                         persistentSessionId);
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
             }
+
+            var incorrectPasswordCount = codeStorageService.getIncorrectPasswordCount(emailAddress);
+
+            if (incorrectPasswordCount >= configurationService.getMaxPasswordRetries()) {
+                LOG.info("User account is locked");
+
+                auditService.submitAuditEvent(
+                        FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
+                        userContext.getClientSessionId(),
+                        userContext.getSession().getSessionId(),
+                        userContext.getClientId(),
+                        AuditService.UNKNOWN,
+                        emailAddress,
+                        IpAddressHelper.extractIpAddress(input),
+                        AuditService.UNKNOWN,
+                        persistentSessionId);
+
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1045);
+            }
+
             boolean userExists = authenticationService.userExists(emailAddress);
             userContext.getSession().setEmailAddress(emailAddress);
             AuditableEvent auditableEvent;

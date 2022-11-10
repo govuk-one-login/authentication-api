@@ -18,6 +18,7 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
@@ -40,11 +41,13 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class CheckUserExistsHandlerTest {
 
@@ -55,6 +58,7 @@ class CheckUserExistsHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ClientService clientService = mock(ClientService.class);
+    private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
 
     private CheckUserExistsHandler handler;
     private static final Json objectMapper = SerializationService.getInstance();
@@ -73,6 +77,7 @@ class CheckUserExistsHandlerTest {
     @BeforeEach
     void setup() {
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
+        when(configurationService.getMaxPasswordRetries()).thenReturn(5);
 
         handler =
                 new CheckUserExistsHandler(
@@ -81,7 +86,8 @@ class CheckUserExistsHandlerTest {
                         clientSessionService,
                         clientService,
                         authenticationService,
-                        auditService);
+                        auditService,
+                        codeStorageService);
         reset(authenticationService);
     }
 
@@ -124,9 +130,10 @@ class CheckUserExistsHandlerTest {
 
     @Test
     void shouldReturn200IfUserDoesNotExist() throws Json.JsonException {
+        String email = "joe.bloggs@digital.cabinet-office.gov.uk";
         usingValidSession();
-        when(authenticationService.userExists(eq("joe.bloggs@digital.cabinet-office.gov.uk")))
-                .thenReturn(false);
+        when(authenticationService.userExists(eq(email))).thenReturn(false);
+        when(codeStorageService.getIncorrectPasswordCount(email)).thenReturn(0);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody("{ \"email\": \"joe.bloggs@digital.cabinet-office.gov.uk\" }");
@@ -143,8 +150,7 @@ class CheckUserExistsHandlerTest {
 
         CheckUserExistsResponse checkUserExistsResponse =
                 objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
-        assertEquals(
-                "joe.bloggs@digital.cabinet-office.gov.uk", checkUserExistsResponse.getEmail());
+        assertEquals(email, checkUserExistsResponse.getEmail());
         assertFalse(checkUserExistsResponse.doesUserExist());
 
         verify(auditService)
@@ -154,7 +160,7 @@ class CheckUserExistsHandlerTest {
                         session.getSessionId(),
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
-                        "joe.bloggs@digital.cabinet-office.gov.uk",
+                        email,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
@@ -214,6 +220,40 @@ class CheckUserExistsHandlerTest {
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         "joe.bloggs",
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
+    }
+
+    @Test
+    void shouldReturn400IfUserAccountIsLocked() throws Json.JsonException {
+        String email = "joe.bloggs@digital.cabinet-office.gov.uk";
+        usingValidSession();
+        when(authenticationService.userExists(eq(email))).thenReturn(false);
+        when(codeStorageService.getIncorrectPasswordCount(email)).thenReturn(5);
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setBody("{ \"email\": \"joe.bloggs@digital.cabinet-office.gov.uk\" }");
+        event.setHeaders(
+                Map.of(
+                        "Session-Id",
+                        session.getSessionId(),
+                        CLIENT_SESSION_ID_HEADER,
+                        CLIENT_SESSION_ID));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1045));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        ACCOUNT_TEMPORARILY_LOCKED,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        email,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
