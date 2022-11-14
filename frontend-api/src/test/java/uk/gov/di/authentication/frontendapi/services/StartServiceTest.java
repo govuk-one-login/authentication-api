@@ -132,7 +132,8 @@ class StartServiceTest {
                         rpSupportsIdentity,
                         isAuthenticated,
                         Optional.empty(),
-                        Optional.empty());
+                        Optional.empty(),
+                        false);
         var userStartInfo =
                 startService.buildUserStartInfo(userContext, cookieConsent, gaTrackingId, true);
 
@@ -172,7 +173,8 @@ class StartServiceTest {
                         rpSupportsIdentity,
                         false,
                         Optional.empty(),
-                        Optional.empty());
+                        Optional.empty(),
+                        false);
         var userStartInfo =
                 startService.buildUserStartInfo(
                         userContext, "some-cookie-consent", "some-ga-tracking-id", identityEnabled);
@@ -203,7 +205,8 @@ class StartServiceTest {
                         true,
                         isAuthenticated,
                         Optional.empty(),
-                        Optional.empty());
+                        Optional.empty(),
+                        false);
         var userStartInfo =
                 startService.buildUserStartInfo(
                         userContext, "some-cookie-consent", "some-ga-tracking-id", true);
@@ -353,7 +356,8 @@ class StartServiceTest {
                         true,
                         false,
                         Optional.of(userProfile),
-                        Optional.of(userCredentials));
+                        Optional.of(userCredentials),
+                        false);
         userContext
                 .getSession()
                 .setCurrentCredentialStrength(credentialTrustLevel)
@@ -374,7 +378,10 @@ class StartServiceTest {
     @ParameterizedTest
     @MethodSource("clientStartInfo")
     void shouldCreateClientStartInfo(
-            boolean cookieConsentShared, ClientType clientType, SignedJWT signedJWT)
+            boolean cookieConsentShared,
+            ClientType clientType,
+            SignedJWT signedJWT,
+            boolean oneLoginService)
             throws ParseException {
         var userContext =
                 buildUserContext(
@@ -386,7 +393,8 @@ class StartServiceTest {
                         false,
                         false,
                         Optional.empty(),
-                        Optional.empty());
+                        Optional.empty(),
+                        oneLoginService);
 
         var clientStartInfo = startService.buildClientStartInfo(userContext);
 
@@ -394,6 +402,7 @@ class StartServiceTest {
         assertThat(clientStartInfo.getClientName(), equalTo(CLIENT_NAME));
         assertThat(clientStartInfo.getRedirectUri(), equalTo(REDIRECT_URI));
         assertThat(clientStartInfo.getState().getValue(), equalTo(STATE.getValue()));
+        assertThat(clientStartInfo.isOneLoginService(), equalTo(oneLoginService));
 
         var expectedScopes = SCOPES;
         if (Objects.nonNull(signedJWT)) {
@@ -480,9 +489,10 @@ class StartServiceTest {
     private static Stream<Arguments> clientStartInfo()
             throws NoSuchAlgorithmException, JOSEException {
         return Stream.of(
-                Arguments.of(false, ClientType.WEB, null),
-                Arguments.of(true, ClientType.WEB, null),
-                Arguments.of(true, ClientType.APP, generateSignedJWT()));
+                Arguments.of(false, ClientType.WEB, null, false),
+                Arguments.of(true, ClientType.WEB, null, false),
+                Arguments.of(true, ClientType.WEB, null, true),
+                Arguments.of(true, ClientType.APP, generateSignedJWT(), false));
     }
 
     private ClientRegistry generateClientRegistry(
@@ -505,7 +515,8 @@ class StartServiceTest {
             boolean identityVerificationSupport,
             boolean isAuthenticated,
             Optional<UserProfile> userProfile,
-            Optional<UserCredentials> userCredentials) {
+            Optional<UserCredentials> userCredentials,
+            boolean oneLoginService) {
         AuthenticationRequest authRequest;
         var clientSessionVTR = VectorOfTrust.getDefaults();
         if (Objects.nonNull(requestObject)) {
@@ -547,7 +558,8 @@ class StartServiceTest {
                         .withConsentRequired(consentRequired)
                         .withCookieConsentShared(cookieConsentShared)
                         .withClientType(clientType.getValue())
-                        .withIdentityVerificationSupported(identityVerificationSupport);
+                        .withIdentityVerificationSupported(identityVerificationSupport)
+                        .withOneLoginService(oneLoginService);
         return UserContext.builder(SESSION.setAuthenticated(isAuthenticated))
                 .withClientSession(clientSession)
                 .withClient(clientRegistry)
