@@ -33,6 +33,10 @@ public class ClientStartInfo {
     @Expose
     private State state;
 
+    @SerializedName("isOneLoginService")
+    @Expose
+    private boolean oneLoginService;
+
     public ClientStartInfo() {}
 
     public ClientStartInfo(
@@ -41,13 +45,15 @@ public class ClientStartInfo {
             String serviceType,
             boolean cookieConsentShared,
             URI redirectUri,
-            State state) {
+            State state,
+            boolean oneLoginService) {
         this.clientName = clientName;
         this.scopes = scopes;
         this.serviceType = serviceType;
         this.cookieConsentShared = cookieConsentShared;
         this.redirectUri = redirectUri;
         this.state = state;
+        this.oneLoginService = oneLoginService;
     }
 
     public String getClientName() {
@@ -72,5 +78,9 @@ public class ClientStartInfo {
 
     public State getState() {
         return state;
+    }
+
+    public boolean isOneLoginService() {
+        return oneLoginService;
     }
 }

@@ -30,6 +30,8 @@ public class ClientRegistry {
     private String clientType;
     private boolean identityVerificationSupported = false;
 
+    private boolean oneLoginService = false;
+
     public ClientRegistry() {}
 
     @DynamoDbPartitionKey
@@ -283,6 +285,20 @@ public class ClientRegistry {
 
     public ClientRegistry withIdentityVerificationSupported(boolean identityVerificationSupported) {
         this.identityVerificationSupported = identityVerificationSupported;
+        return this;
+    }
+
+    @DynamoDbAttribute("OneLoginService")
+    public boolean isOneLoginService() {
+        return oneLoginService;
+    }
+
+    public void setOneLoginService(boolean oneLoginService) {
+        this.oneLoginService = oneLoginService;
+    }
+
+    public ClientRegistry withOneLoginService(boolean oneLoginService) {
+        this.oneLoginService = oneLoginService;
         return this;
     }
 }

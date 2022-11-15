@@ -111,7 +111,8 @@ public class StartService {
                         clientRegistry.getServiceType(),
                         clientRegistry.isCookieConsentShared(),
                         redirectURI,
-                        state);
+                        state,
+                        clientRegistry.isOneLoginService());
         LOG.info(
                 "Found ClientStartInfo for ClientName: {} Scopes: {} ServiceType: {}",
                 clientRegistry.getClientName(),

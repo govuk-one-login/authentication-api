@@ -147,6 +147,7 @@ class StartHandlerTest {
                 response.getClient().getCookieConsentShared(),
                 equalTo(getClientStartInfo().getCookieConsentShared()));
         assertThat(response.getClient().getRedirectUri(), equalTo(REDIRECT_URL));
+        assertFalse(response.getClient().isOneLoginService());
         assertThat(
                 response.getUser().isConsentRequired(), equalTo(userStartInfo.isConsentRequired()));
         assertThat(
@@ -185,7 +186,8 @@ class StartHandlerTest {
                                 "MANDATORY",
                                 false,
                                 REDIRECT_URL,
-                                STATE));
+                                STATE,
+                                false));
         when(startService.getGATrackingId(anyMap())).thenReturn(null);
         when(startService.getCookieConsentValue(anyMap(), anyString())).thenReturn(null);
         when(startService.buildUserStartInfo(userContext, null, null, true))
@@ -333,7 +335,13 @@ class StartHandlerTest {
         Scope scope = new Scope(OIDCScopeValue.OPENID.getValue());
 
         return new ClientStartInfo(
-                TEST_CLIENT_NAME, scope.toStringList(), "MANDATORY", false, REDIRECT_URL, STATE);
+                TEST_CLIENT_NAME,
+                scope.toStringList(),
+                "MANDATORY",
+                false,
+                REDIRECT_URL,
+                STATE,
+                false);
     }
 
     private UserStartInfo getUserStartInfo(String cookieConsent, String gaCrossDomainTrackingId) {
