@@ -36,6 +36,11 @@ public class LoginResponse {
     @Required
     private boolean consentRequired;
 
+    @SerializedName(value = "passwordChangeRequired")
+    @Expose
+    @Required
+    private boolean passwordChangeRequired;
+
     public LoginResponse() {}
 
     public LoginResponse(
@@ -44,13 +49,15 @@ public class LoginResponse {
             boolean latestTermsAndConditionsAccepted,
             boolean consentRequired,
             MFAMethodType mfaMethodType,
-            boolean mfaMethodVerified) {
+            boolean mfaMethodVerified,
+            boolean passwordChangeRequired) {
         this.redactedPhoneNumber = redactedPhoneNumber;
         this.mfaRequired = mfaRequired;
         this.latestTermsAndConditionsAccepted = latestTermsAndConditionsAccepted;
         this.consentRequired = consentRequired;
         this.mfaMethodType = mfaMethodType;
         this.mfaMethodVerified = mfaMethodVerified;
+        this.passwordChangeRequired = passwordChangeRequired;
     }
 
     public String getRedactedPhoneNumber() {
@@ -75,5 +82,9 @@ public class LoginResponse {
 
     public boolean isMfaMethodVerified() {
         return mfaMethodVerified;
+    }
+
+    public boolean isPasswordChangeRequired() {
+        return passwordChangeRequired;
     }
 }

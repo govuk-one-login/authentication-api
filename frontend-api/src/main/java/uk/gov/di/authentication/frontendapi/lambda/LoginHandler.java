@@ -29,6 +29,7 @@ import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
+import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SessionService;
@@ -53,6 +54,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
     private final UserMigrationService userMigrationService;
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final CommonPasswordsService commonPasswordsService;
 
     public LoginHandler(
             ConfigurationService configurationService,
@@ -63,7 +65,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             CodeStorageService codeStorageService,
             UserMigrationService userMigrationService,
             AuditService auditService,
-            CloudwatchMetricsService cloudwatchMetricsService) {
+            CloudwatchMetricsService cloudwatchMetricsService,
+            CommonPasswordsService commonPasswordsService) {
         super(
                 LoginRequest.class,
                 configurationService,
@@ -76,6 +79,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         this.userMigrationService = userMigrationService;
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.commonPasswordsService = commonPasswordsService;
     }
 
     public LoginHandler(ConfigurationService configurationService) {
@@ -86,6 +90,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         new DynamoService(configurationService), configurationService);
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
+        this.commonPasswordsService = new CommonPasswordsService(configurationService);
     }
 
     public LoginHandler() {
@@ -194,6 +199,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             boolean mfaMethodVerified =
                     mfaMethod.map(MFAMethod::isMethodVerified).orElse(isPhoneNumberVerified);
 
+            boolean isPasswordChangeRequired = isPasswordResetRequired(request.getPassword());
+
             LOG.info("User has successfully logged in with MFAType: {}", mfaMethodType);
 
             auditService.submitAuditEvent(
@@ -224,7 +231,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                             termsAndConditionsAccepted,
                             consentRequired,
                             mfaMethodType,
-                            mfaMethodVerified));
+                            mfaMethodVerified,
+                            isPasswordChangeRequired));
         } catch (JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
@@ -242,5 +250,16 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         } else {
             return authenticationService.login(userCredentials, request.getPassword());
         }
+    }
+
+    private boolean isPasswordResetRequired(String password) {
+        boolean isPasswordChangeRequired = false;
+        try {
+            isPasswordChangeRequired = commonPasswordsService.isCommonPassword(password);
+        } catch (Exception e) {
+            LOG.error("Unable to check if password was a common password");
+        }
+
+        return isPasswordChangeRequired;
     }
 }

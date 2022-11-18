@@ -41,6 +41,7 @@ import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
+import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
@@ -64,6 +65,7 @@ import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -113,6 +115,8 @@ class LoginHandlerTest {
     private final AuditService auditService = mock(AuditService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
+    private final CommonPasswordsService commonPasswordsService =
+            mock(CommonPasswordsService.class);
 
     private final Session session = new Session(IdGenerator.generate()).setEmailAddress(EMAIL);
 
@@ -144,7 +148,8 @@ class LoginHandlerTest {
                         codeStorageService,
                         userMigrationService,
                         auditService,
-                        cloudwatchMetricsService);
+                        cloudwatchMetricsService,
+                        commonPasswordsService);
     }
 
     @Test
@@ -315,6 +320,33 @@ class LoginHandlerTest {
 
     @ParameterizedTest
     @EnumSource(MFAMethodType.class)
+    void shouldReturn200IfLoginIsSuccessfulButPasswordWasCommonPassword(MFAMethodType mfaMethodType)
+            throws Json.JsonException {
+        when(commonPasswordsService.isCommonPassword(anyString())).thenReturn(true);
+        UserProfile userProfile = generateUserProfile(null);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
+        usingValidSession();
+        usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
+        usingDefaultVectorOfTrust();
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(new HashMap<>());
+        event.setBody(
+                format(
+                        "{ \"password\": \"%s\", \"email\": \"%s\" }",
+                        PASSWORD, EMAIL.toUpperCase()));
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        assertThat(result, hasStatus(200));
+
+        LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
+        assertThat(response.isPasswordChangeRequired(), equalTo(true));
+    }
+
+    @ParameterizedTest
+    @EnumSource(MFAMethodType.class)
     void shouldReturn200IfMigratedUserHasBeenProcessesSuccessfully(MFAMethodType mfaMethodType)
             throws Json.JsonException {
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("1.0");
@@ -453,7 +485,7 @@ class LoginHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        handler.handleRequest(event, context);
 
         when(authenticationService.login(applicableUserCredentials, PASSWORD)).thenReturn(true);
         when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
@@ -462,7 +494,7 @@ class LoginHandlerTest {
 
         assertThat(result2, hasStatus(200));
 
-        LoginResponse response = objectMapper.readValue(result2.getBody(), LoginResponse.class);
+        objectMapper.readValue(result2.getBody(), LoginResponse.class);
     }
 
     @ParameterizedTest
