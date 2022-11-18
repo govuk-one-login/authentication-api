@@ -394,6 +394,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("TEST_CLIENTS_ENABLED", "false").equals("true");
     }
 
+    public String getSyntheticsUsers() {
+        return System.getenv().getOrDefault("SYNTHETICS_USERS", "");
+    }
+
     public boolean isResourceIdScopeEnabled() {
         return Boolean.parseBoolean(
                 System.getenv().getOrDefault("RESOURCE_ID_SCOPE_ENABLED", "false"));
