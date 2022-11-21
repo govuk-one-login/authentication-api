@@ -12,6 +12,7 @@ module "frontend_api_login_role" {
     aws_iam_policy.lambda_sns_policy.arn,
     aws_iam_policy.pepper_parameter_policy.arn,
     aws_iam_policy.redis_parameter_policy.arn,
+    aws_iam_policy.dynamo_common_passwords_read_access_policy.arn,
     module.oidc_txma_audit.access_policy_arn
   ]
 }
