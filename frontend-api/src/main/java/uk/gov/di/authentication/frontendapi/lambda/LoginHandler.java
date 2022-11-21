@@ -259,6 +259,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         } catch (Exception e) {
             LOG.error("Unable to check if password was a common password");
         }
+        LOG.info("Password reset required: {}", isPasswordChangeRequired);
 
         return isPasswordChangeRequired;
     }
