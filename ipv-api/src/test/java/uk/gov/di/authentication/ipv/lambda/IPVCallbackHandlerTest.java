@@ -146,7 +146,6 @@ class IPVCallbackHandlerTest {
         when(configService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_BASE_URL));
         when(configService.isSpotEnabled()).thenReturn(true);
         when(configService.getIPVBackendURI()).thenReturn(IPV_URI);
-        when(configService.getIPVSector()).thenReturn(OIDC_BASE_URL + "/trustmark");
         when(configService.isIdentityEnabled()).thenReturn(true);
         when(context.getAwsRequestId()).thenReturn(REQUEST_ID);
         when(cookieHelper.parseSessionCookie(anyMap())).thenCallRealMethod();

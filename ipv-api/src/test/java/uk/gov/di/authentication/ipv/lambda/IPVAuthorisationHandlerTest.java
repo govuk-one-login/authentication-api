@@ -105,7 +105,7 @@ public class IPVAuthorisationHandlerTest {
     private static final URI IPV_CALLBACK_URI = URI.create("http://localhost/oidc/ipv/callback");
     private static final URI IPV_AUTHORISATION_URI = URI.create("http://localhost/ipv/authorize");
     private static final String EMAIL_ADDRESS = "test@test.com";
-    private static final String IPV_SECTOR = "https://ipv.account.gov.uk";
+    private static final String INTERNAL_SECTOR_URI = "https://ipv.account.gov.uk";
 
     private final IPVAuthorisationService authorisationService =
             mock(IPVAuthorisationService.class);
@@ -141,7 +141,7 @@ public class IPVAuthorisationHandlerTest {
         when(authenticationService.getUserProfileFromEmail(EMAIL_ADDRESS))
                 .thenReturn(Optional.of(userProfile));
         when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT.array());
-        when(configService.getIPVSector()).thenReturn(IPV_SECTOR);
+        when(configService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         when(configService.isIdentityEnabled()).thenReturn(true);
     }
 

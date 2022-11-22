@@ -37,7 +37,7 @@ module "ipv-authorize" {
     IPV_AUTHORISATION_CLIENT_ID    = var.ipv_authorisation_client_id
     IPV_AUDIENCE                   = var.ipv_audience
     IPV_TOKEN_SIGNING_KEY_ALIAS    = local.ipv_token_auth_key_alias_name
-    IPV_SECTOR                     = var.ipv_sector
+    INTERNAl_SECTOR_URI            = var.internal_sector_uri
   }
   handler_function_name = "uk.gov.di.authentication.ipv.lambda.IPVAuthorisationHandler::handleRequest"
 
