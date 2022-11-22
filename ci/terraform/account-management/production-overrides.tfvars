@@ -1,3 +1,5 @@
+internal_sector_uri = "https://identity.account.gov.uk"
+
 notify_template_map = {
   VERIFY_EMAIL_TEMPLATE_ID         = "bda5cfb3-3d91-407e-90cc-b690c1fa8bf9"
   VERIFY_PHONE_NUMBER_TEMPLATE_ID  = "4bbc0a5c-833a-490e-89c6-5e286a030ac6"
