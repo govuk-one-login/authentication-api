@@ -27,7 +27,7 @@ ipv_authorisation_uri          = "https://identity.account.gov.uk/oauth2/authori
 ipv_authorisation_callback_uri = "https://oidc.account.gov.uk/ipv-callback"
 ipv_backend_uri                = "https://api.identity.account.gov.uk"
 ipv_audience                   = "https://identity.account.gov.uk"
-ipv_sector                     = "https://identity.account.gov.uk"
+internal_sector_uri            = "https://identity.account.gov.uk"
 ipv_authorisation_client_id    = "authOrchestrator"
 ipv_auth_public_encryption_key = <<-EOT
 -----BEGIN PUBLIC KEY-----

@@ -304,7 +304,7 @@ variable "ipv_backend_uri" {
   default = "undefined"
 }
 
-variable "ipv_sector" {
+variable "internal_sector_uri" {
   type    = string
   default = "undefined"
 }
