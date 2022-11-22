@@ -30,6 +30,7 @@ module "send_otp_notification" {
     BLOCKED_EMAIL_DURATION                 = var.blocked_email_duration
     DEFAULT_OTP_CODE_EXPIRY                = var.otp_code_ttl_duration
     EMAIL_OTP_ACCOUNT_CREATION_CODE_EXPIRY = var.email_acct_creation_otp_code_ttl_duration
+    INTERNAl_SECTOR_URI                    = var.internal_sector_uri
   }
   handler_function_name = "uk.gov.di.accountmanagement.lambda.SendOtpNotificationHandler::handleRequest"
 

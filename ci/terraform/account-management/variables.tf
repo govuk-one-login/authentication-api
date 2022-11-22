@@ -191,6 +191,11 @@ variable "endpoint_memory_size" {
   type    = number
 }
 
+variable "internal_sector_uri" {
+  type    = string
+  default = "undefined"
+}
+
 variable "performance_tuning" {
   type = map(object({
     memory : number,

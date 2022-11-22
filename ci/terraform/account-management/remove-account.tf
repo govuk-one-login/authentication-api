@@ -24,6 +24,7 @@ module "delete_account" {
     LOCALSTACK_ENDPOINT  = var.use_localstack ? var.localstack_endpoint : null
     EMAIL_QUEUE_URL      = aws_sqs_queue.email_queue.id
     TXMA_AUDIT_QUEUE_URL = module.account_management_txma_audit.queue_url
+    INTERNAl_SECTOR_URI  = var.internal_sector_uri
   }
   handler_function_name = "uk.gov.di.accountmanagement.lambda.RemoveAccountHandler::handleRequest"
 
