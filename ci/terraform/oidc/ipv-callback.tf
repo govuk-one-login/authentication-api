@@ -45,6 +45,7 @@ module "ipv-callback" {
     REDIS_KEY                      = local.redis_key
     SPOT_ENABLED                   = tostring(var.spot_enabled)
     SPOT_QUEUE_URL                 = aws_sqs_queue.spot_request_queue.id
+    INTERNAl_SECTOR_URI            = var.internal_sector_uri
   }
   handler_function_name = "uk.gov.di.authentication.ipv.lambda.IPVCallbackHandler::handleRequest"
 

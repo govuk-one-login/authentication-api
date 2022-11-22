@@ -34,6 +34,7 @@ module "login" {
     DYNAMO_ENDPOINT          = var.use_localstack ? var.lambda_dynamo_endpoint : null
     TERMS_CONDITIONS_VERSION = var.terms_and_conditions
     HEADERS_CASE_INSENSITIVE = var.use_localstack ? "true" : "false"
+    INTERNAl_SECTOR_URI      = var.internal_sector_uri
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.LoginHandler::handleRequest"
 

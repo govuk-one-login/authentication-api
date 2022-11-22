@@ -34,6 +34,7 @@ module "doc-app-authorize" {
     DOC_APP_JWKS_URL                   = var.doc_app_jwks_endpoint
     DOC_APP_ENCRYPTION_KEY_ID          = var.doc_app_encryption_key_id
     DOC_APP_TOKEN_SIGNING_KEY_ALIAS    = local.doc_app_auth_key_alias_name
+    INTERNAl_SECTOR_URI                = var.internal_sector_uri
   }
   handler_function_name = "uk.gov.di.authentication.app.lambda.DocAppAuthorizeHandler::handleRequest"
 
