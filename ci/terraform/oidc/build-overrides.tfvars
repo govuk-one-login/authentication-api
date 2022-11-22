@@ -9,6 +9,7 @@ doc_app_jwks_endpoint              = "https://build-doc-app-cri-stub.london.clou
 doc_app_encryption_key_id          = "7788bc975abd44e8b4fd7646d08ea9428476e37bff3e4365804b41cc29f8ef21"
 spot_enabled                       = false
 language_cy_enabled                = true
+internal_sector_uri                = "https://identity.build.account.gov.uk"
 
 blocked_email_duration                    = 30
 otp_code_ttl_duration                     = 120

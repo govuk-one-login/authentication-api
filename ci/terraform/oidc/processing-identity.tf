@@ -31,6 +31,7 @@ module "processing-identity" {
     HEADERS_CASE_INSENSITIVE = var.use_localstack ? "true" : "false"
     LOCALSTACK_ENDPOINT      = var.use_localstack ? var.localstack_endpoint : null
     REDIS_KEY                = local.redis_key
+    INTERNAl_SECTOR_URI      = var.internal_sector_uri
   }
   handler_function_name = "uk.gov.di.authentication.ipv.lambda.ProcessingIdentityHandler::handleRequest"
 

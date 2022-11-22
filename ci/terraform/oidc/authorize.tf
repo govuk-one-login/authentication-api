@@ -36,6 +36,7 @@ module "authorize" {
     REDIS_KEY                = local.redis_key
     TERMS_CONDITIONS_VERSION = var.terms_and_conditions
     SUPPORT_LANGUAGE_CY      = tostring(var.language_cy_enabled)
+    INTERNAl_SECTOR_URI      = var.internal_sector_uri
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.AuthorisationHandler::handleRequest"
   rest_api_id           = aws_api_gateway_rest_api.di_authentication_api.id

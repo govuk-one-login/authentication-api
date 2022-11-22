@@ -33,6 +33,7 @@ module "reset-password-request" {
     LOCALSTACK_ENDPOINT    = var.use_localstack ? var.localstack_endpoint : null
     REDIS_KEY              = local.redis_key
     DYNAMO_ENDPOINT        = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    INTERNAl_SECTOR_URI    = var.internal_sector_uri
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.ResetPasswordRequestHandler::handleRequest"
 
