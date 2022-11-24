@@ -56,11 +56,12 @@ class UpdatePasswordHandlerTest {
     private static final String NEW_PASSWORD = "password2";
     private static final String CURRENT_PASSWORD = "password1";
     private static final String INVALID_PASSWORD = "pwd";
-    private static final Subject SUBJECT = new Subject();
+    private static final Subject PUBLIC_SUBJECT = new Subject();
+    private static final String PERSISTENT_ID = "some-persistent-session-id";
     private final Json objectMapper = SerializationService.getInstance();
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         handler =
                 new UpdatePasswordHandler(
                         dynamoService,
@@ -72,37 +73,25 @@ class UpdatePasswordHandlerTest {
     }
 
     @Test
-    public void shouldReturn204ForValidRequest() throws Json.JsonException {
-        String persistentIdValue = "some-persistent-session-id";
-        UserProfile userProfile = new UserProfile().withPublicSubjectID(SUBJECT.getValue());
-        UserCredentials userCredentials = new UserCredentials().withPassword(CURRENT_PASSWORD);
-        when(dynamoService.getUserProfileByEmail(EXISTING_EMAIL_ADDRESS)).thenReturn(userProfile);
+    void shouldReturn204ForValidRequest() throws Json.JsonException {
+        var userProfile = new UserProfile().withPublicSubjectID(PUBLIC_SUBJECT.getValue());
+        var userCredentials = new UserCredentials().withPassword(CURRENT_PASSWORD);
+        when(dynamoService.getUserProfileByEmailMaybe(EXISTING_EMAIL_ADDRESS))
+                .thenReturn(Optional.of(userProfile));
         when(dynamoService.getUserCredentialsFromEmail(EXISTING_EMAIL_ADDRESS))
                 .thenReturn(userCredentials);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\", \"newPassword\": \"%s\" }",
-                        EXISTING_EMAIL_ADDRESS, NEW_PASSWORD));
-        event.setHeaders(Map.of(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentIdValue));
-        APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =
-                new APIGatewayProxyRequestEvent.ProxyRequestContext();
-        Map<String, Object> authorizerParams = new HashMap<>();
-        authorizerParams.put("principalId", SUBJECT.getValue());
-        proxyRequestContext.setIdentity(identityWithSourceIp("123.123.123.123"));
-        proxyRequestContext.setAuthorizer(authorizerParams);
-        event.setRequestContext(proxyRequestContext);
 
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        var result = generateRequest(NEW_PASSWORD);
 
         assertThat(result, hasStatus(204));
         verify(dynamoService).updatePassword(EXISTING_EMAIL_ADDRESS, NEW_PASSWORD);
-        NotifyRequest notifyRequest =
-                new NotifyRequest(
-                        EXISTING_EMAIL_ADDRESS,
-                        NotificationType.PASSWORD_UPDATED,
-                        SupportedLanguage.EN);
-        verify(sqsClient).send(objectMapper.writeValueAsString(notifyRequest));
+        verify(sqsClient)
+                .send(
+                        objectMapper.writeValueAsString(
+                                new NotifyRequest(
+                                        EXISTING_EMAIL_ADDRESS,
+                                        NotificationType.PASSWORD_UPDATED,
+                                        SupportedLanguage.EN)));
 
         verify(auditService)
                 .submitAuditEvent(
@@ -114,15 +103,15 @@ class UpdatePasswordHandlerTest {
                         userProfile.getEmail(),
                         "123.123.123.123",
                         userProfile.getPhoneNumber(),
-                        persistentIdValue);
+                        PERSISTENT_ID);
     }
 
     @Test
-    public void shouldReturn400WhenRequestHasIncorrectParameters() {
+    void shouldReturn400WhenRequestHasIncorrectParameters() {
         APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =
                 new APIGatewayProxyRequestEvent.ProxyRequestContext();
         Map<String, Object> authorizerParams = new HashMap<>();
-        authorizerParams.put("principalId", SUBJECT.getValue());
+        authorizerParams.put("principalId", PUBLIC_SUBJECT.getValue());
         proxyRequestContext.setAuthorizer(authorizerParams);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(proxyRequestContext);
@@ -137,73 +126,66 @@ class UpdatePasswordHandlerTest {
     }
 
     @Test
-    public void shouldReturn400WhenNewPasswordEqualsExistingPassword() throws Json.JsonException {
-        UserProfile userProfile = new UserProfile().withPublicSubjectID(SUBJECT.getValue());
-        UserCredentials userCredentials =
+    void shouldReturn400WhenNewPasswordEqualsExistingPassword() {
+        var userProfile = new UserProfile().withPublicSubjectID(PUBLIC_SUBJECT.getValue());
+        var userCredentials =
                 new UserCredentials().withPassword(Argon2EncoderHelper.argon2Hash(NEW_PASSWORD));
-        when(dynamoService.getUserProfileByEmail(EXISTING_EMAIL_ADDRESS)).thenReturn(userProfile);
+        when(dynamoService.getUserProfileByEmailMaybe(EXISTING_EMAIL_ADDRESS))
+                .thenReturn(Optional.of(userProfile));
         when(dynamoService.getUserCredentialsFromEmail(EXISTING_EMAIL_ADDRESS))
                 .thenReturn(userCredentials);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\", \"newPassword\": \"%s\" }",
-                        EXISTING_EMAIL_ADDRESS, NEW_PASSWORD));
-        APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =
-                new APIGatewayProxyRequestEvent.ProxyRequestContext();
-        Map<String, Object> authorizerParams = new HashMap<>();
-        authorizerParams.put("principalId", SUBJECT.getValue());
-        proxyRequestContext.setIdentity(identityWithSourceIp("123.123.123.123"));
-        proxyRequestContext.setAuthorizer(authorizerParams);
-        event.setRequestContext(proxyRequestContext);
 
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        var result = generateRequest(NEW_PASSWORD);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1024));
         verify(dynamoService, never()).updatePassword(EXISTING_EMAIL_ADDRESS, NEW_PASSWORD);
-        NotifyRequest notifyRequest =
-                new NotifyRequest(
-                        EXISTING_EMAIL_ADDRESS,
-                        NotificationType.PASSWORD_UPDATED,
-                        SupportedLanguage.EN);
-        verify(sqsClient, never()).send(objectMapper.writeValueAsString(notifyRequest));
-
-        verify(auditService, never())
-                .submitAuditEvent(
-                        AccountManagementAuditableEvent.UPDATE_PASSWORD,
-                        context.getAwsRequestId(),
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        userProfile.getSubjectID(),
-                        userProfile.getEmail(),
-                        "123.123.123.123",
-                        userProfile.getPhoneNumber(),
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
+        verifyNoInteractions(sqsClient);
+        verifyNoInteractions(auditService);
     }
 
     @Test
-    void shouldReturn400WhenPasswordValidationFails() throws Json.JsonException {
+    void shouldReturn400IfUserAccountDoesNotExistForCurrentEmail() {
+        when(dynamoService.getUserProfileByEmailMaybe(EXISTING_EMAIL_ADDRESS))
+                .thenReturn(Optional.empty());
+
+        var result = generateRequest(NEW_PASSWORD);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1010));
+        verify(dynamoService, never()).updatePassword(EXISTING_EMAIL_ADDRESS, NEW_PASSWORD);
+        verifyNoInteractions(sqsClient);
+        verifyNoInteractions(auditService);
+    }
+
+    @Test
+    void shouldReturn400WhenPasswordValidationFails() {
         doReturn(Optional.of(ErrorResponse.ERROR_1006))
                 .when(passwordValidator)
                 .validate(INVALID_PASSWORD);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\", \"newPassword\": \"%s\" }",
-                        EXISTING_EMAIL_ADDRESS, INVALID_PASSWORD));
-        APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =
-                new APIGatewayProxyRequestEvent.ProxyRequestContext();
-        Map<String, Object> authorizerParams = new HashMap<>();
-        authorizerParams.put("principalId", SUBJECT.getValue());
-        proxyRequestContext.setIdentity(identityWithSourceIp("123.123.123.123"));
-        proxyRequestContext.setAuthorizer(authorizerParams);
-        event.setRequestContext(proxyRequestContext);
 
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        var result = generateRequest(INVALID_PASSWORD);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1006));
         verify(dynamoService, never()).updatePassword(EXISTING_EMAIL_ADDRESS, NEW_PASSWORD);
+    }
+
+    private APIGatewayProxyResponseEvent generateRequest(String newPassword) {
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setBody(
+                format(
+                        "{\"email\": \"%s\", \"newPassword\": \"%s\" }",
+                        EXISTING_EMAIL_ADDRESS, newPassword));
+        APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =
+                new APIGatewayProxyRequestEvent.ProxyRequestContext();
+        Map<String, Object> authorizerParams = new HashMap<>();
+        authorizerParams.put("principalId", PUBLIC_SUBJECT.getValue());
+        proxyRequestContext.setAuthorizer(authorizerParams);
+        proxyRequestContext.setIdentity(identityWithSourceIp("123.123.123.123"));
+        event.setRequestContext(proxyRequestContext);
+        event.setHeaders(Map.of(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID));
+
+        return handler.handleRequest(event, context);
     }
 }

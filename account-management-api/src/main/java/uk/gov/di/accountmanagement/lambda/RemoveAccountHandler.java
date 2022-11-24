@@ -13,7 +13,7 @@ import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.RemoveAccountRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.exceptions.UserNotFoundException;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -98,11 +98,13 @@ public class RemoveAccountHandler
                     objectMapper.readValue(input.getBody(), RemoveAccountRequest.class);
 
             String email = removeAccountRequest.getEmail();
-
-            UserProfile userProfile =
+            var userProfile =
                     authenticationService
                             .getUserProfileByEmailMaybe(email)
-                            .orElseThrow(() -> new RuntimeException("User not found"));
+                            .orElseThrow(
+                                    () ->
+                                            new UserNotFoundException(
+                                                    "User not found with given email"));
 
             Map<String, Object> authorizerParams = input.getRequestContext().getAuthorizer();
             RequestBodyHelper.validatePrincipal(
@@ -128,6 +130,8 @@ public class RemoveAccountHandler
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
             return generateEmptySuccessApiGatewayResponse();
+        } catch (UserNotFoundException e) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
         } catch (JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
