@@ -14,7 +14,7 @@ import uk.gov.di.accountmanagement.entity.UpdatePhoneNumberRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.exceptions.UserNotFoundException;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -108,8 +108,14 @@ public class UpdatePhoneNumberHandler
             if (!isValidOtpCode) {
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1020);
             }
-            UserProfile userProfile =
-                    dynamoService.getUserProfileByEmail(updatePhoneNumberRequest.getEmail());
+            var userProfile =
+                    dynamoService
+                            .getUserProfileByEmailMaybe(updatePhoneNumberRequest.getEmail())
+                            .orElseThrow(
+                                    () ->
+                                            new UserNotFoundException(
+                                                    "User not found with given email"));
+
             Map<String, Object> authorizerParams = input.getRequestContext().getAuthorizer();
             RequestBodyHelper.validatePrincipal(
                     new Subject(userProfile.getPublicSubjectID()), authorizerParams);
@@ -136,6 +142,8 @@ public class UpdatePhoneNumberHandler
 
             LOG.info("Message successfully added to queue. Generating successful gateway response");
             return generateEmptySuccessApiGatewayResponse();
+        } catch (UserNotFoundException e) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
         } catch (JsonException | IllegalArgumentException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }

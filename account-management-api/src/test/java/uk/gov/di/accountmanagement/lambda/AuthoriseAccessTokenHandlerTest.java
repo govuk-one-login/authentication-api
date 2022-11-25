@@ -17,7 +17,6 @@ import uk.gov.di.accountmanagement.entity.TokenAuthorizerContext;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
-import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
 import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
 
@@ -37,7 +36,6 @@ class AuthoriseAccessTokenHandlerTest {
 
     private final TokenValidationService tokenValidationServicen =
             mock(TokenValidationService.class);
-    private final DynamoService dynamoService = mock(DynamoService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final DynamoClientService clientService = mock(DynamoClientService.class);
     private AuthoriseAccessTokenHandler handler;
@@ -56,10 +54,7 @@ class AuthoriseAccessTokenHandlerTest {
     public void setUp() {
         handler =
                 new AuthoriseAccessTokenHandler(
-                        tokenValidationServicen,
-                        configurationService,
-                        dynamoService,
-                        clientService);
+                        tokenValidationServicen, configurationService, clientService);
     }
 
     @Test
@@ -104,27 +99,6 @@ class AuthoriseAccessTokenHandlerTest {
                         TOKEN_TYPE, signedAccessToken.toAuthorizationHeader(), METHOD_ARN);
         when(tokenValidationServicen.validateAccessTokenSignature(signedAccessToken))
                 .thenReturn(false);
-
-        RuntimeException exception =
-                assertThrows(
-                        RuntimeException.class,
-                        () -> handler.handleRequest(tokenAuthorizerContext, context),
-                        "Expected to throw exception");
-
-        assertEquals("Unauthorized", exception.getMessage());
-    }
-
-    @Test
-    public void shouldThrowExceptionWhenSubjectIdCannotBeLinkedToAUser() throws JOSEException {
-        BearerAccessToken signedAccessToken =
-                new BearerAccessToken(createSignedAccessToken(SCOPES).serialize());
-        TokenAuthorizerContext tokenAuthorizerContext =
-                new TokenAuthorizerContext(
-                        TOKEN_TYPE, signedAccessToken.toAuthorizationHeader(), METHOD_ARN);
-        when(tokenValidationServicen.validateAccessTokenSignature(signedAccessToken))
-                .thenReturn(true);
-        when(dynamoService.getUserProfileFromSubject(SUBJECT.getValue()))
-                .thenThrow(RuntimeException.class);
 
         RuntimeException exception =
                 assertThrows(

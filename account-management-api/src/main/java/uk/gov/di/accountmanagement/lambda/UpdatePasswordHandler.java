@@ -13,7 +13,7 @@ import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.UpdatePasswordRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.exceptions.UserNotFoundException;
 import uk.gov.di.authentication.shared.helpers.Argon2MatcherHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
@@ -115,9 +115,14 @@ public class UpdatePasswordHandler
                 LOG.info("Error message: {}", passwordValidationError.get().getMessage());
                 return generateApiGatewayProxyErrorResponse(400, passwordValidationError.get());
             }
+            var userProfile =
+                    dynamoService
+                            .getUserProfileByEmailMaybe(updatePasswordRequest.getEmail())
+                            .orElseThrow(
+                                    () ->
+                                            new UserNotFoundException(
+                                                    "User not found with given email"));
 
-            UserProfile userProfile =
-                    dynamoService.getUserProfileByEmail(updatePasswordRequest.getEmail());
             Map<String, Object> authorizerParams = input.getRequestContext().getAuthorizer();
 
             RequestBodyHelper.validatePrincipal(
@@ -159,6 +164,8 @@ public class UpdatePasswordHandler
 
             return generateEmptySuccessApiGatewayResponse();
 
+        } catch (UserNotFoundException e) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
         } catch (JsonException | IllegalArgumentException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }

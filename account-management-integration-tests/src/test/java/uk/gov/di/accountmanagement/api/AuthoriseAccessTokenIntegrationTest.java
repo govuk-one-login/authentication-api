@@ -35,6 +35,7 @@ class AuthoriseAccessTokenIntegrationTest
         extends HandlerIntegrationTest<TokenAuthorizerContext, AuthPolicy> {
 
     private static final ClientID CLIENT_ID = new ClientID();
+    private static final Subject PUBLIC_SUBJECT = new Subject();
     private Date validDate;
 
     private AuthPolicy makeRequest(String authToken) {
@@ -55,30 +56,30 @@ class AuthoriseAccessTokenIntegrationTest
 
     @Test
     void shouldReturnAuthPolicyForSuccessfulRequest() {
-        var publicSubject = setUpUserProfileAndGetPublicSubjectId();
         var scopes =
                 asList(
                         OIDCScopeValue.OPENID.getValue(),
                         CustomScopeValue.ACCOUNT_MANAGEMENT.getValue());
         var accessToken =
-                generateSignedAccessToken(scopes, CLIENT_ID.getValue(), publicSubject, validDate);
+                generateSignedAccessToken(
+                        scopes, CLIENT_ID.getValue(), PUBLIC_SUBJECT.getValue(), validDate);
         setUpClient(scopes);
 
         var authPolicy = makeRequest(accessToken.toAuthorizationHeader());
 
-        assertThat(authPolicy.getPrincipalId(), equalTo(publicSubject));
+        assertThat(authPolicy.getPrincipalId(), equalTo(PUBLIC_SUBJECT.getValue()));
     }
 
     @Test
     void shouldThrowExceptionWhenAccessTokenHasExpired() {
-        var publicSubject = setUpUserProfileAndGetPublicSubjectId();
         var expiryDate = NowHelper.nowMinus(1, ChronoUnit.MINUTES);
         var scopes =
                 asList(
                         OIDCScopeValue.OPENID.getValue(),
                         CustomScopeValue.ACCOUNT_MANAGEMENT.getValue());
         var accessToken =
-                generateSignedAccessToken(scopes, CLIENT_ID.getValue(), publicSubject, expiryDate);
+                generateSignedAccessToken(
+                        scopes, CLIENT_ID.getValue(), PUBLIC_SUBJECT.getValue(), expiryDate);
         setUpClient(scopes);
 
         expectException(() -> makeRequest(accessToken.toAuthorizationHeader()));
@@ -86,10 +87,10 @@ class AuthoriseAccessTokenIntegrationTest
 
     @Test
     void shouldThrowExceptionWhenAccessTokenIsMissingAmScope() {
-        var publicSubject = setUpUserProfileAndGetPublicSubjectId();
         var scopes = List.of(OIDCScopeValue.OPENID.getValue());
         var accessToken =
-                generateSignedAccessToken(scopes, CLIENT_ID.getValue(), publicSubject, validDate);
+                generateSignedAccessToken(
+                        scopes, CLIENT_ID.getValue(), PUBLIC_SUBJECT.getValue(), validDate);
         setUpClient(scopes);
 
         expectException(() -> makeRequest(accessToken.toAuthorizationHeader()));
@@ -97,29 +98,13 @@ class AuthoriseAccessTokenIntegrationTest
 
     @Test
     void shouldThrowExceptionWhenAccessTokenHasInvalidClientId() {
-        var publicSubject = setUpUserProfileAndGetPublicSubjectId();
         var scopes =
                 asList(
                         OIDCScopeValue.OPENID.getValue(),
                         CustomScopeValue.ACCOUNT_MANAGEMENT.getValue());
         var accessToken =
-                generateSignedAccessToken(scopes, "rubbish-client-id", publicSubject, validDate);
-        setUpClient(scopes);
-
-        expectException(() -> makeRequest(accessToken.toAuthorizationHeader()));
-    }
-
-    @Test
-    void shouldThrowExceptionWhenAccessTokenHasUnknownSubject() {
-        var publicSubject = new Subject().getValue();
-        var scopes =
-                asList(
-                        OIDCScopeValue.OPENID.getValue(),
-                        CustomScopeValue.ACCOUNT_MANAGEMENT.getValue());
-        var accessToken =
-                generateSignedAccessToken(scopes, CLIENT_ID.getValue(), publicSubject, validDate);
-        setUpClient(scopes);
-
+                generateSignedAccessToken(
+                        scopes, "rubbish-client-id", PUBLIC_SUBJECT.getValue(), validDate);
         setUpClient(scopes);
 
         expectException(() -> makeRequest(accessToken.toAuthorizationHeader()));
@@ -131,10 +116,6 @@ class AuthoriseAccessTokenIntegrationTest
         assertThat(ex.getMessage(), is("Unauthorized"));
     }
 
-    private String setUpUserProfileAndGetPublicSubjectId() {
-        return userStore.signUp("jim@test.com", "password", new Subject());
-    }
-
     private void setUpClient(List<String> scopes) {
         var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         clientStore.registerClient(
@@ -144,8 +125,8 @@ class AuthoriseAccessTokenIntegrationTest
                 singletonList("joe.bloggs@digital.cabinet-office.gov.uk"),
                 scopes,
                 Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()),
-                singletonList("http://localhost/post-redirect-logout"),
-                "http://example.com",
+                singletonList("https://localhost/post-redirect-logout"),
+                "https://example.com",
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "public",

@@ -6,7 +6,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.accountmanagement.entity.RemoveAccountRequest;
 import uk.gov.di.accountmanagement.lambda.RemoveAccountHandler;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 
 import java.util.Collections;
 import java.util.List;
@@ -18,7 +21,9 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent.DELETE_ACCOUNT;
+import static uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper.assertNoNotificationsReceived;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class RemoveAccountIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -27,10 +32,11 @@ public class RemoveAccountIntegrationTest extends ApiGatewayHandlerIntegrationTe
     void setup() {
         handler = new RemoveAccountHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
         txmaAuditQueue.clear();
+        notificationsQueue.clear();
     }
 
     @Test
-    public void shouldRemoveAccountAndReturn204WhenUserExists() {
+    void shouldRemoveAccountAndReturn204WhenUserExists() {
         String email = "joe.bloggs+3@digital.cabinet-office.gov.uk";
         String password = "password-1";
         Subject subject = new Subject();
@@ -52,7 +58,7 @@ public class RemoveAccountIntegrationTest extends ApiGatewayHandlerIntegrationTe
     }
 
     @Test
-    public void shouldThrowExceptionWhenUserAttemptsToDeleteDifferentAccount() {
+    void shouldThrowExceptionWhenUserAttemptsToDeleteDifferentAccount() {
         String user1Email = "joe.bloggs+3@digital.cabinet-office.gov.uk";
         String user2Email = "i-do-not-exist@example.com";
         String password1 = "password-1";
@@ -78,18 +84,19 @@ public class RemoveAccountIntegrationTest extends ApiGatewayHandlerIntegrationTe
     }
 
     @Test
-    public void shouldThrowExceptionWhenAttemptingToDeleteNonexistentUser() {
+    void shouldReturn400WhenAttemptingToDeleteNonexistentUser() throws Json.JsonException {
         String email = "i.do.not.exist@digital.cabinet-office.gov.uk";
 
-        Exception ex =
-                assertThrows(
-                        RuntimeException.class,
-                        () ->
-                                makeRequest(
-                                        Optional.of(new RemoveAccountRequest(email)),
-                                        Collections.emptyMap(),
-                                        Collections.emptyMap()));
+        var response =
+                makeRequest(
+                        Optional.of(new RemoveAccountRequest(email)),
+                        Collections.emptyMap(),
+                        Collections.emptyMap());
 
-        assertThat(ex.getMessage(), is("User not found"));
+        assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
+        assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1010)));
+
+        assertNoNotificationsReceived(notificationsQueue);
+        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
 }
