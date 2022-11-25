@@ -4,13 +4,14 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.UpdatePhoneNumberRequest;
+import uk.gov.di.accountmanagement.exceptions.InvalidPrincipalException;
+import uk.gov.di.accountmanagement.helpers.PrincipalValidationHelper;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -18,7 +19,6 @@ import uk.gov.di.authentication.shared.exceptions.UserNotFoundException;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
-import uk.gov.di.authentication.shared.helpers.RequestBodyHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
@@ -117,8 +117,13 @@ public class UpdatePhoneNumberHandler
                                                     "User not found with given email"));
 
             Map<String, Object> authorizerParams = input.getRequestContext().getAuthorizer();
-            RequestBodyHelper.validatePrincipal(
-                    new Subject(userProfile.getPublicSubjectID()), authorizerParams);
+            if (PrincipalValidationHelper.principleIsInvalid(
+                    userProfile,
+                    configurationService.getInternalSectorUri(),
+                    dynamoService,
+                    authorizerParams)) {
+                throw new InvalidPrincipalException("Invalid Principal in request");
+            }
             dynamoService.updatePhoneNumber(
                     updatePhoneNumberRequest.getEmail(), updatePhoneNumberRequest.getPhoneNumber());
             LOG.info("Phone Number has successfully been updated. Adding message to SQS queue");

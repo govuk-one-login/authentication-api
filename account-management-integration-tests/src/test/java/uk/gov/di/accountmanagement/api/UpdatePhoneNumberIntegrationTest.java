@@ -140,7 +140,7 @@ class UpdatePhoneNumberIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                                         Collections.emptyMap(),
                                         Map.of("principalId", otherSubjectID)));
 
-        assertThat(ex.getMessage(), is("Subject ID does not match principalId"));
+        assertThat(ex.getMessage(), is("Invalid Principal in request"));
     }
 
     @Test
@@ -159,6 +159,6 @@ class UpdatePhoneNumberIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                                         Collections.emptyMap(),
                                         Collections.emptyMap()));
 
-        assertThat(ex.getMessage(), is("principalId is missing"));
+        assertThat(ex.getMessage(), is("Invalid Principal in request"));
     }
 }

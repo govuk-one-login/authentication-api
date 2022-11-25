@@ -2,20 +2,22 @@ package uk.gov.di.accountmanagement.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
-import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
+import uk.gov.di.accountmanagement.exceptions.InvalidPrincipalException;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.Argon2EncoderHelper;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
@@ -30,6 +32,8 @@ import java.util.Optional;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -70,10 +74,11 @@ class UpdatePasswordHandlerTest {
                         commonPasswordsService,
                         passwordValidator,
                         configurationService);
+        when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
     }
 
     @Test
-    void shouldReturn204ForValidRequest() throws Json.JsonException {
+    void shouldReturn204WhenPrincipalContainsPublicSubjectId() throws Json.JsonException {
         var userProfile = new UserProfile().withPublicSubjectID(PUBLIC_SUBJECT.getValue());
         var userCredentials = new UserCredentials().withPassword(CURRENT_PASSWORD);
         when(dynamoService.getUserProfileByEmailMaybe(EXISTING_EMAIL_ADDRESS))
@@ -81,7 +86,8 @@ class UpdatePasswordHandlerTest {
         when(dynamoService.getUserCredentialsFromEmail(EXISTING_EMAIL_ADDRESS))
                 .thenReturn(userCredentials);
 
-        var result = generateRequest(NEW_PASSWORD);
+        var event = generateApiGatewayEvent(NEW_PASSWORD, PUBLIC_SUBJECT.getValue());
+        var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(204));
         verify(dynamoService).updatePassword(EXISTING_EMAIL_ADDRESS, NEW_PASSWORD);
@@ -107,6 +113,69 @@ class UpdatePasswordHandlerTest {
     }
 
     @Test
+    void shouldReturn204WhenPrincipalContainsInternalPairwiseSubjectId() throws Json.JsonException {
+        var internalSubject = new Subject();
+        var salt = SaltHelper.generateNewSalt();
+        var userProfile = new UserProfile().withSubjectID(internalSubject.getValue());
+        var userCredentials = new UserCredentials().withPassword(CURRENT_PASSWORD);
+        var internalPairwiseIdentifier =
+                ClientSubjectHelper.calculatePairwiseIdentifier(
+                        internalSubject.getValue(), "test.account.gov.uk", salt);
+        when(dynamoService.getUserProfileByEmailMaybe(EXISTING_EMAIL_ADDRESS))
+                .thenReturn(Optional.of(userProfile));
+        when(dynamoService.getUserCredentialsFromEmail(EXISTING_EMAIL_ADDRESS))
+                .thenReturn(userCredentials);
+        when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(salt);
+
+        var event = generateApiGatewayEvent(NEW_PASSWORD, internalPairwiseIdentifier);
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(204));
+        verify(dynamoService).updatePassword(EXISTING_EMAIL_ADDRESS, NEW_PASSWORD);
+        verify(sqsClient)
+                .send(
+                        objectMapper.writeValueAsString(
+                                new NotifyRequest(
+                                        EXISTING_EMAIL_ADDRESS,
+                                        NotificationType.PASSWORD_UPDATED,
+                                        SupportedLanguage.EN)));
+        verify(auditService)
+                .submitAuditEvent(
+                        AccountManagementAuditableEvent.UPDATE_PASSWORD,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        userProfile.getSubjectID(),
+                        userProfile.getEmail(),
+                        "123.123.123.123",
+                        userProfile.getPhoneNumber(),
+                        PERSISTENT_ID);
+    }
+
+    @Test
+    void shouldThrowIfPrincipalIdIsInvalid() {
+        var userProfile =
+                new UserProfile()
+                        .withPublicSubjectID(new Subject().getValue())
+                        .withSubjectID(new Subject().getValue());
+        when(dynamoService.getUserProfileByEmailMaybe(EXISTING_EMAIL_ADDRESS))
+                .thenReturn(Optional.of(userProfile));
+        when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(SaltHelper.generateNewSalt());
+
+        var event = generateApiGatewayEvent(NEW_PASSWORD, PUBLIC_SUBJECT.getValue());
+
+        var expectedException =
+                assertThrows(
+                        InvalidPrincipalException.class,
+                        () -> handler.handleRequest(event, context),
+                        "Expected to throw exception");
+
+        assertThat(expectedException.getMessage(), equalTo("Invalid Principal in request"));
+        verifyNoInteractions(sqsClient);
+        verifyNoInteractions(auditService);
+    }
+
+    @Test
     void shouldReturn400WhenRequestHasIncorrectParameters() {
         APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =
                 new APIGatewayProxyRequestEvent.ProxyRequestContext();
@@ -117,12 +186,12 @@ class UpdatePasswordHandlerTest {
         event.setRequestContext(proxyRequestContext);
         event.setBody(
                 format("{ \"incorrect\": \"%s\", \"parameter\": \"%s\"}", "incorrect", "value"));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
-
         verifyNoInteractions(auditService);
+        verifyNoInteractions(sqsClient);
     }
 
     @Test
@@ -135,7 +204,8 @@ class UpdatePasswordHandlerTest {
         when(dynamoService.getUserCredentialsFromEmail(EXISTING_EMAIL_ADDRESS))
                 .thenReturn(userCredentials);
 
-        var result = generateRequest(NEW_PASSWORD);
+        var event = generateApiGatewayEvent(NEW_PASSWORD, PUBLIC_SUBJECT.getValue());
+        var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1024));
@@ -149,7 +219,8 @@ class UpdatePasswordHandlerTest {
         when(dynamoService.getUserProfileByEmailMaybe(EXISTING_EMAIL_ADDRESS))
                 .thenReturn(Optional.empty());
 
-        var result = generateRequest(NEW_PASSWORD);
+        var event = generateApiGatewayEvent(NEW_PASSWORD, PUBLIC_SUBJECT.getValue());
+        var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1010));
@@ -164,15 +235,18 @@ class UpdatePasswordHandlerTest {
                 .when(passwordValidator)
                 .validate(INVALID_PASSWORD);
 
-        var result = generateRequest(INVALID_PASSWORD);
+        var event = generateApiGatewayEvent(INVALID_PASSWORD, PUBLIC_SUBJECT.getValue());
+        var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1006));
         verify(dynamoService, never()).updatePassword(EXISTING_EMAIL_ADDRESS, NEW_PASSWORD);
+        verifyNoInteractions(auditService);
     }
 
-    private APIGatewayProxyResponseEvent generateRequest(String newPassword) {
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+    private APIGatewayProxyRequestEvent generateApiGatewayEvent(
+            String newPassword, String principalId) {
+        var event = new APIGatewayProxyRequestEvent();
         event.setBody(
                 format(
                         "{\"email\": \"%s\", \"newPassword\": \"%s\" }",
@@ -180,12 +254,12 @@ class UpdatePasswordHandlerTest {
         APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =
                 new APIGatewayProxyRequestEvent.ProxyRequestContext();
         Map<String, Object> authorizerParams = new HashMap<>();
-        authorizerParams.put("principalId", PUBLIC_SUBJECT.getValue());
+        authorizerParams.put("principalId", principalId);
         proxyRequestContext.setAuthorizer(authorizerParams);
         proxyRequestContext.setIdentity(identityWithSourceIp("123.123.123.123"));
         event.setRequestContext(proxyRequestContext);
         event.setHeaders(Map.of(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID));
 
-        return handler.handleRequest(event, context);
+        return event;
     }
 }
