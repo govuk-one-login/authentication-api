@@ -16,7 +16,6 @@ import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
-import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.JwksService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
@@ -34,17 +33,14 @@ public class AuthoriseAccessTokenHandler
 
     private final TokenValidationService tokenValidationService;
     private final ConfigurationService configurationService;
-    private final DynamoService dynamoService;
     private final DynamoClientService clientService;
 
     public AuthoriseAccessTokenHandler(
             TokenValidationService tokenValidationService,
             ConfigurationService configurationService,
-            DynamoService dynamoService,
             DynamoClientService clientService) {
         this.tokenValidationService = tokenValidationService;
         this.configurationService = configurationService;
-        this.dynamoService = dynamoService;
         this.clientService = clientService;
     }
 
@@ -55,7 +51,6 @@ public class AuthoriseAccessTokenHandler
                         new JwksService(
                                 configurationService,
                                 new KmsConnectionService(configurationService)));
-        dynamoService = new DynamoService(configurationService);
         clientService = new DynamoClientService(configurationService);
     }
 
@@ -66,7 +61,6 @@ public class AuthoriseAccessTokenHandler
                         new JwksService(
                                 configurationService,
                                 new KmsConnectionService(configurationService)));
-        dynamoService = new DynamoService(configurationService);
         clientService = new DynamoClientService(configurationService);
     }
 
@@ -121,12 +115,6 @@ public class AuthoriseAccessTokenHandler
             String subject = claimsSet.getSubject();
             if (subject == null) {
                 LOG.warn("Access Token subject is missing");
-                throw new RuntimeException("Unauthorized");
-            }
-            try {
-                dynamoService.getUserProfileFromPublicSubject(subject);
-            } catch (Exception e) {
-                LOG.error("Unable to retrieve UserProfile from Dynamo with given SubjectID");
                 throw new RuntimeException("Unauthorized");
             }
             LOG.info("User found in Dynamo with given SubjectID");
