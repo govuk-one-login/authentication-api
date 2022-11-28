@@ -49,6 +49,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.sharedtest.exceptions.Unchecked.unchecked;
@@ -57,7 +59,7 @@ class DocAppCriServiceTest {
 
     private final ConfigurationService configService = mock(ConfigurationService.class);
     private final KmsConnectionService kmsService = mock(KmsConnectionService.class);
-    private final HTTPRequest userInfoHTTPRequest = mock(HTTPRequest.class);
+    private final HTTPRequest httpRequest = mock(HTTPRequest.class);
     private static final URI CRI_URI = URI.create("http://cri/");
     private static final URI REDIRECT_URI = URI.create("http://redirect");
     private static final ClientID CLIENT_ID = new ClientID("some-client-id");
@@ -76,6 +78,7 @@ class DocAppCriServiceTest {
         when(configService.getAccessTokenExpiry()).thenReturn(300L);
         when(configService.getDocAppAuthorisationCallbackURI()).thenReturn(REDIRECT_URI);
         when(configService.getEnvironment()).thenReturn("test");
+        when(configService.getDocAppJwksUri()).thenReturn(DOC_APP_JWKS_URI);
     }
 
     @Test
@@ -100,7 +103,48 @@ class DocAppCriServiceTest {
     }
 
     @Test
-    void shouldCallDocAppUserInfoEndpoint()
+    void shouldCallTokenEndpointAndReturn200() throws IOException {
+        var tokenRequest = mock(TokenRequest.class);
+        when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
+        when(tokenRequest.toHTTPRequest().send()).thenReturn(getSuccessfulTokenHttpResponse());
+
+        var tokenResponse = docAppCriService.sendTokenRequest(tokenRequest);
+
+        assertThat(tokenResponse.indicatesSuccess(), equalTo(true));
+    }
+
+    @Test
+    void shouldRetryCallToTokenIfFirstCallFails() throws IOException {
+        var tokenRequest = mock(TokenRequest.class);
+        when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
+
+        when(tokenRequest.toHTTPRequest().send())
+                .thenReturn(new HTTPResponse(500))
+                .thenReturn(getSuccessfulTokenHttpResponse());
+
+        var tokenResponse = docAppCriService.sendTokenRequest(tokenRequest);
+
+        assertThat(tokenResponse.indicatesSuccess(), equalTo(true));
+        verify(tokenRequest.toHTTPRequest(), times(2)).send();
+    }
+
+    @Test
+    void shouldReturnUnsuccessfulTokenResponseIf2CallsToTokenFail() throws IOException {
+        var tokenRequest = mock(TokenRequest.class);
+        when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
+
+        when(tokenRequest.toHTTPRequest().send())
+                .thenReturn(new HTTPResponse(500))
+                .thenReturn(new HTTPResponse(500));
+
+        var tokenResponse = docAppCriService.sendTokenRequest(tokenRequest);
+
+        assertThat(tokenResponse.indicatesSuccess(), equalTo(false));
+        verify(tokenRequest.toHTTPRequest(), times(2)).send();
+    }
+
+    @Test
+    void shouldCallUserInfoEndpointAndReturn200()
             throws IOException, JOSEException, NoSuchAlgorithmException {
         var keyPair = KeyPairGenerator.getInstance("EC").generateKeyPair();
         var signedJwtOne = generateSignedJWT(new JWTClaimsSet.Builder().build(), keyPair);
@@ -117,18 +161,47 @@ class DocAppCriServiceTest {
                                 + "}",
                         DOC_APP_SUBJECT_ID, signedJwtOne.serialize(), signedJwtTwo.serialize());
 
-        when(configService.getDocAppJwksUri()).thenReturn(DOC_APP_JWKS_URI);
-
         var userInfoHTTPResponse = new HTTPResponse(200);
         userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
         userInfoHTTPResponse.setContent(userInfoHTTPResponseContent);
-        when(userInfoHTTPRequest.send()).thenReturn(userInfoHTTPResponse);
+        when(httpRequest.send()).thenReturn(userInfoHTTPResponse);
 
-        var response = docAppCriService.sendCriDataRequest(userInfoHTTPRequest, DOC_APP_SUBJECT_ID);
+        var response = docAppCriService.sendCriDataRequest(httpRequest, DOC_APP_SUBJECT_ID);
 
         assertThat(response.size(), equalTo(2));
         assertTrue(response.contains(signedJwtOne.serialize()));
         assertTrue(response.contains(signedJwtTwo.serialize()));
+    }
+
+    @Test
+    void shouldRetryCallToUserInfoAndReturn200IfFirstCallFails()
+            throws NoSuchAlgorithmException, JOSEException, IOException {
+        var keyPair = KeyPairGenerator.getInstance("EC").generateKeyPair();
+        var signedJwtOne = generateSignedJWT(new JWTClaimsSet.Builder().build(), keyPair);
+        var signedJwtTwo = generateSignedJWT(new JWTClaimsSet.Builder().build(), keyPair);
+
+        var userInfoHTTPResponseContent =
+                format(
+                        "{"
+                                + " \"sub\": \"%s\","
+                                + " \"https://vocab.account.gov.uk/v1/credentialJWT\": ["
+                                + "     \"%s\","
+                                + "     \"%s\""
+                                + "]"
+                                + "}",
+                        DOC_APP_SUBJECT_ID, signedJwtOne.serialize(), signedJwtTwo.serialize());
+
+        var userInfoHTTPResponse = new HTTPResponse(200);
+        userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
+        userInfoHTTPResponse.setContent(userInfoHTTPResponseContent);
+        when(httpRequest.send()).thenReturn(new HTTPResponse(500)).thenReturn(userInfoHTTPResponse);
+
+        var response = docAppCriService.sendCriDataRequest(httpRequest, DOC_APP_SUBJECT_ID);
+
+        assertThat(response.size(), equalTo(2));
+        assertTrue(response.contains(signedJwtOne.serialize()));
+        assertTrue(response.contains(signedJwtTwo.serialize()));
+        verify(httpRequest, times(2)).send();
     }
 
     @Test
@@ -149,20 +222,15 @@ class DocAppCriServiceTest {
                                 + "}",
                         DOC_APP_SUBJECT_ID, signedJwtOne.serialize(), signedJwtTwo.serialize());
 
-        when(configService.getDocAppJwksUri()).thenReturn(DOC_APP_JWKS_URI);
-
         var userInfoHTTPResponse = new HTTPResponse(200);
         userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
         userInfoHTTPResponse.setContent(userInfoHTTPResponseContent);
-        when(userInfoHTTPRequest.send()).thenReturn(userInfoHTTPResponse);
+        when(httpRequest.send()).thenReturn(userInfoHTTPResponse);
 
         UnsuccesfulCredentialResponseException thrown =
                 assertThrows(
                         UnsuccesfulCredentialResponseException.class,
-                        () -> {
-                            docAppCriService.sendCriDataRequest(
-                                    userInfoHTTPRequest, "different-id");
-                        });
+                        () -> docAppCriService.sendCriDataRequest(httpRequest, "different-id"));
 
         assertEquals(
                 "Sub in CRI response does not match docAppSubjectId in client session",
@@ -207,5 +275,20 @@ class DocAppCriServiceTest {
         var ecdsaSigner = new ECDSASigner((ECPrivateKey) keyPair.getPrivate());
         signedJWT.sign(ecdsaSigner);
         return signedJWT;
+    }
+
+    public HTTPResponse getSuccessfulTokenHttpResponse() {
+        var tokenResponseContent =
+                "{"
+                        + "  \"access_token\": \"740e5834-3a29-46b4-9a6f-16142fde533a\","
+                        + "  \"token_type\": \"bearer\","
+                        + "  \"expires_in\": \"3600\","
+                        + "  \"uri\": \"https://localhost\""
+                        + "}";
+        var tokenHTTPResponse = new HTTPResponse(200);
+        tokenHTTPResponse.setEntityContentType(APPLICATION_JSON);
+        tokenHTTPResponse.setContent(tokenResponseContent);
+
+        return tokenHTTPResponse;
     }
 }
