@@ -80,7 +80,7 @@ public class RemoveAccountIntegrationTest extends ApiGatewayHandlerIntegrationTe
                                         Collections.emptyMap(),
                                         Map.of("principalId", subjectId1)));
 
-        assertThat(ex.getMessage(), is("Subject ID does not match principalId"));
+        assertThat(ex.getMessage(), is("Invalid Principal in request"));
     }
 
     @Test
