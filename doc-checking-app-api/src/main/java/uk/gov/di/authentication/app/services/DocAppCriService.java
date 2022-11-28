@@ -88,7 +88,15 @@ public class DocAppCriService {
     public TokenResponse sendTokenRequest(TokenRequest tokenRequest) {
         try {
             LOG.info("Sending TokenRequest");
-            return TokenResponse.parse(tokenRequest.toHTTPRequest().send());
+            int count = 0;
+            int maxTries = 2;
+            TokenResponse tokenResponse;
+            do {
+                if (count > 0) LOG.warn("Retrying DocApp token request");
+                count++;
+                tokenResponse = TokenResponse.parse(tokenRequest.toHTTPRequest().send());
+            } while (!tokenResponse.indicatesSuccess() && count < maxTries);
+            return tokenResponse;
         } catch (IOException e) {
             LOG.error("Error whilst sending TokenRequest", e);
             throw new RuntimeException(e);
@@ -101,7 +109,14 @@ public class DocAppCriService {
     public List<String> sendCriDataRequest(HTTPRequest request, String docAppSubjectId) {
         try {
             LOG.info("Sending userinfo request");
-            var response = request.send();
+            int count = 0;
+            int maxTries = 2;
+            HTTPResponse response;
+            do {
+                if (count > 0) LOG.warn("Retrying DocApp cri data request");
+                count++;
+                response = request.send();
+            } while (!response.indicatesSuccess() && count < maxTries);
             if (!response.indicatesSuccess()) {
                 LOG.error(
                         "Error {} when attempting to call CRI data endpoint: {}",
