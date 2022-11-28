@@ -66,6 +66,9 @@ public class UserInfoService {
         if (accessTokenInfo.getScopes().contains(CustomScopeValue.GOVUK_ACCOUNT.getValue())) {
             userInfo.setClaim("legacy_subject_id", userProfile.getLegacySubjectID());
         }
+        if (accessTokenInfo.getScopes().contains(CustomScopeValue.ACCOUNT_MANAGEMENT.getValue())) {
+            userInfo.setClaim("public_subject_id", userProfile.getPublicSubjectID());
+        }
         if (configurationService.isIdentityEnabled()
                 && Objects.nonNull(accessTokenInfo.getIdentityClaims())) {
             return populateIdentityInfo(accessTokenInfo, userInfo);
