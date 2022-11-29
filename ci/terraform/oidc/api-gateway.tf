@@ -335,6 +335,11 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_oidc_api" {
         excluded_rule {
           name = "GenericRFI_BODY"
         }
+
+        excluded_rule {
+          name = "NoUserAgent_HEADER"
+        }
+
         dynamic "excluded_rule" {
           for_each = var.environment != "production" ? ["1"] : []
           content {
