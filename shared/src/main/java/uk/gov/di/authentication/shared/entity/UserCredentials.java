@@ -17,6 +17,7 @@ public class UserCredentials {
     public static final String ATTRIBUTE_UPDATED = "Updated";
     public static final String ATTRIBUTE_MIGRATED_PASSWORD = "MigratedPassword";
     public static final String ATTRIBUTE_MFA_METHODS = "MfaMethods";
+    public static final String ATTRIBUTE_TEST_USER = "testUser";
 
     private String email;
     private String subjectID;
@@ -25,6 +26,7 @@ public class UserCredentials {
     private String updated;
     private String migratedPassword;
     private List<MFAMethod> mfaMethods;
+    private int testUser;
 
     public UserCredentials() {}
 
@@ -136,5 +138,14 @@ public class UserCredentials {
             this.mfaMethods.add(mfaMethod);
         }
         return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_TEST_USER)
+    public int getTestUser() {
+        return testUser;
+    }
+
+    public void setTestUser(int isTestUser) {
+        this.testUser = isTestUser;
     }
 }

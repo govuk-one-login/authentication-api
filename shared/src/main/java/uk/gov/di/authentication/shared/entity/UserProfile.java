@@ -26,6 +26,7 @@ public class UserProfile {
     public static final String ATTRIBUTE_LEGACY_SUBJECT_ID = "LegacySubjectID";
     public static final String ATTRIBUTE_SALT = "salt";
     public static final String ATTRIBUTE_ACCOUNT_VERIFIED = "accountVerified";
+    public static final String ATTRIBUTE_TEST_USER = "testUser";
 
     private String email;
     private String subjectID;
@@ -40,6 +41,7 @@ public class UserProfile {
     private String legacySubjectID;
     private ByteBuffer salt;
     private int accountVerified;
+    private int testUser;
 
     public UserProfile() {}
 
@@ -237,5 +239,14 @@ public class UserProfile {
     public UserProfile withAccountVerified(int accountVerified) {
         this.accountVerified = accountVerified;
         return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_TEST_USER)
+    public int getTestUser() {
+        return testUser;
+    }
+
+    public void setTestUser(int isTestUser) {
+        this.testUser = isTestUser;
     }
 }
