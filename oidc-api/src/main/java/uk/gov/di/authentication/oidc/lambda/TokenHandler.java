@@ -244,7 +244,6 @@ public class TokenHandler
         final OIDCClaimsRequest finalClaimsRequest = claimsRequest;
         OIDCTokenResponse tokenResponse;
         if (isDocCheckingAppUserWithSubjectId(clientSession)) {
-            LOG.info("Doc Checking App User with SubjectId: true");
             tokenResponse =
                     segmentedFunctionCall(
                             "generateTokenResponse",

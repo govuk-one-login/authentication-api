@@ -34,6 +34,7 @@ import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
@@ -44,6 +45,7 @@ import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
@@ -61,6 +63,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
@@ -68,6 +72,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -76,6 +81,7 @@ import static uk.gov.di.authentication.oidc.helper.RequestObjectTestHelper.gener
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.authentication.shared.entity.Session.AccountState.NEW;
+import static uk.gov.di.authentication.shared.entity.Session.AccountState.UNKNOWN;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -87,6 +93,9 @@ class AuthCodeHandlerTest {
     private static final String PERSISTENT_SESSION_ID = IdGenerator.generate();
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
+    private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
+    private static final Subject SUBJECT = new Subject();
+    private static final String DOC_APP_SUBJECT_ID = "docAppSubjectId";
     private static final ClientID CLIENT_ID = new ClientID();
     private static final String CLIENT_NAME = "test-client-name";
     private static final String AUDIENCE = "oidc-audience";
@@ -105,14 +114,11 @@ class AuthCodeHandlerTest {
     private final VectorOfTrust vectorOfTrust = mock(VectorOfTrust.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
+    private final DynamoService dynamoService = mock(DynamoService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private AuthCodeHandler handler;
 
-    private final Session session =
-            new Session(SESSION_ID)
-                    .addClientSession(CLIENT_SESSION_ID)
-                    .setEmailAddress(EMAIL)
-                    .setCurrentCredentialStrength(MEDIUM_LEVEL);
+    private final Session session = new Session(SESSION_ID).addClientSession(CLIENT_SESSION_ID);
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
@@ -142,21 +148,20 @@ class AuthCodeHandlerTest {
                         clientSessionService,
                         auditService,
                         cloudwatchMetricsService,
-                        configurationService);
+                        configurationService,
+                        dynamoService);
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(configurationService.getEnvironment()).thenReturn("unit-test");
+        when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
     }
 
     private static Stream<Arguments> upliftTestParameters() {
         return Stream.of(
-                arguments(null, LOW_LEVEL, LOW_LEVEL, false, MFAMethodType.AUTH_APP),
-                arguments(LOW_LEVEL, LOW_LEVEL, LOW_LEVEL, false, MFAMethodType.AUTH_APP),
-                arguments(MEDIUM_LEVEL, MEDIUM_LEVEL, MEDIUM_LEVEL, false, MFAMethodType.SMS),
-                arguments(LOW_LEVEL, MEDIUM_LEVEL, MEDIUM_LEVEL, false, MFAMethodType.SMS),
-                arguments(MEDIUM_LEVEL, LOW_LEVEL, MEDIUM_LEVEL, false, MFAMethodType.AUTH_APP),
-                arguments(LOW_LEVEL, LOW_LEVEL, LOW_LEVEL, true, MFAMethodType.AUTH_APP),
-                arguments(MEDIUM_LEVEL, MEDIUM_LEVEL, MEDIUM_LEVEL, true, MFAMethodType.SMS),
-                arguments(LOW_LEVEL, MEDIUM_LEVEL, MEDIUM_LEVEL, true, MFAMethodType.SMS));
+                arguments(null, LOW_LEVEL, LOW_LEVEL, MFAMethodType.AUTH_APP),
+                arguments(LOW_LEVEL, LOW_LEVEL, LOW_LEVEL, MFAMethodType.AUTH_APP),
+                arguments(MEDIUM_LEVEL, MEDIUM_LEVEL, MEDIUM_LEVEL, MFAMethodType.SMS),
+                arguments(LOW_LEVEL, MEDIUM_LEVEL, MEDIUM_LEVEL, MFAMethodType.SMS),
+                arguments(MEDIUM_LEVEL, LOW_LEVEL, MEDIUM_LEVEL, MFAMethodType.AUTH_APP));
     }
 
     @ParameterizedTest
@@ -165,16 +170,15 @@ class AuthCodeHandlerTest {
             CredentialTrustLevel initialLevel,
             CredentialTrustLevel requestedLevel,
             CredentialTrustLevel finalLevel,
-            boolean docAppJourney,
             MFAMethodType mfaMethodType)
             throws ClientNotFoundException, Json.JsonException, JOSEException {
-        AuthorizationCode authorizationCode = new AuthorizationCode();
-        AuthenticationRequest authRequest =
-                generateValidSessionAndAuthRequest(requestedLevel, docAppJourney);
+        var authorizationCode = new AuthorizationCode();
+        var authRequest = generateValidSessionAndAuthRequest(requestedLevel, false);
         session.setCurrentCredentialStrength(initialLevel)
                 .setNewAccount(NEW)
+                .setEmailAddress(EMAIL)
                 .setVerifiedMfaMethodType(mfaMethodType);
-        AuthenticationSuccessResponse authSuccessResponse =
+        var authSuccessResponse =
                 new AuthenticationSuccessResponse(
                         authRequest.getRedirectionURI(),
                         authorizationCode,
@@ -183,8 +187,9 @@ class AuthCodeHandlerTest {
                         authRequest.getState(),
                         null,
                         authRequest.getResponseMode());
-
-        when(authorizationService.isClientRedirectUriValid(eq(CLIENT_ID), eq(REDIRECT_URI)))
+        when(dynamoService.getUserProfileByEmail(EMAIL))
+                .thenReturn(new UserProfile().withEmail(EMAIL).withSubjectID(SUBJECT.getValue()));
+        when(authorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
                 .thenReturn(true);
         when(authorisationCodeService.generateAuthorisationCode(
                         CLIENT_SESSION_ID, EMAIL, clientSession))
@@ -196,18 +201,15 @@ class AuthCodeHandlerTest {
                         any(State.class)))
                 .thenReturn(authSuccessResponse);
 
-        when(authorizationService.isTestJourney(CLIENT_ID, EMAIL)).thenReturn(true);
-
-        APIGatewayProxyResponseEvent response = generateApiRequest();
+        var response = generateApiRequest();
 
         assertThat(response, hasStatus(200));
-        AuthCodeResponse authCodeResponse =
-                objectMapper.readValue(response.getBody(), AuthCodeResponse.class);
+        var authCodeResponse = objectMapper.readValue(response.getBody(), AuthCodeResponse.class);
         assertThat(authCodeResponse.getLocation(), equalTo(authSuccessResponse.toURI().toString()));
         assertThat(session.getCurrentCredentialStrength(), equalTo(finalLevel));
-        assertThat(session.isAuthenticated(), not(equalTo(docAppJourney)));
+        assertTrue(session.isAuthenticated());
 
-        verify(sessionService, times(docAppJourney ? 0 : 1)).save(session);
+        verify(sessionService, times(1)).save(session);
 
         verify(auditService)
                 .submitAuditEvent(
@@ -215,14 +217,13 @@ class AuthCodeHandlerTest {
                         CLIENT_SESSION_ID,
                         SESSION_ID,
                         CLIENT_ID.getValue(),
-                        AuditService.UNKNOWN,
+                        SUBJECT.getValue(),
                         EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_SESSION_ID);
 
-        var dimensions = new HashMap<String, String>();
-        dimensions.putAll(
+        var dimensions =
                 Map.of(
                         "Account",
                         "NEW",
@@ -231,18 +232,91 @@ class AuthCodeHandlerTest {
                         "Client",
                         CLIENT_ID.getValue(),
                         "IsTest",
-                        "true",
+                        "false",
                         "IsDocApp",
-                        Boolean.toString(docAppJourney),
+                        Boolean.toString(false),
                         "MfaMethod",
                         mfaMethodType.getValue(),
                         "ClientName",
-                        CLIENT_NAME));
-        if (!docAppJourney) {
-            dimensions.put("MfaRequired", requestedLevel.equals(LOW_LEVEL) ? "No" : "Yes");
-            dimensions.put("RequestedLevelOfConfidence", "P0");
-        }
+                        CLIENT_NAME,
+                        "MfaRequired",
+                        requestedLevel.equals(LOW_LEVEL) ? "No" : "Yes",
+                        "RequestedLevelOfConfidence",
+                        "P0");
+
         verify(cloudwatchMetricsService).incrementCounter("SignIn", dimensions);
+    }
+
+    private static Stream<CredentialTrustLevel> docAppTestParameters() {
+        return Stream.of(LOW_LEVEL, MEDIUM_LEVEL);
+    }
+
+    @ParameterizedTest
+    @MethodSource("docAppTestParameters")
+    void shouldGenerateSuccessfulAuthResponseForDocAppJourney(CredentialTrustLevel requestedLevel)
+            throws Json.JsonException, ClientNotFoundException, JOSEException {
+        var authorizationCode = new AuthorizationCode();
+        var authRequest = generateValidSessionAndAuthRequest(requestedLevel, true);
+        session.setNewAccount(UNKNOWN);
+        var authSuccessResponse =
+                new AuthenticationSuccessResponse(
+                        authRequest.getRedirectionURI(),
+                        authorizationCode,
+                        null,
+                        null,
+                        authRequest.getState(),
+                        null,
+                        authRequest.getResponseMode());
+
+        when(clientSession.getDocAppSubjectId()).thenReturn(new Subject(DOC_APP_SUBJECT_ID));
+        when(authorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
+                .thenReturn(true);
+        when(authorisationCodeService.generateAuthorisationCode(
+                        CLIENT_SESSION_ID, null, clientSession))
+                .thenReturn(authorizationCode);
+        when(authorizationService.generateSuccessfulAuthResponse(
+                        any(AuthenticationRequest.class),
+                        any(AuthorizationCode.class),
+                        any(URI.class),
+                        any(State.class)))
+                .thenReturn(authSuccessResponse);
+
+        var response = generateApiRequest();
+
+        assertThat(response, hasStatus(200));
+        var authCodeResponse = objectMapper.readValue(response.getBody(), AuthCodeResponse.class);
+        assertThat(authCodeResponse.getLocation(), equalTo(authSuccessResponse.toURI().toString()));
+        assertThat(session.getCurrentCredentialStrength(), equalTo(requestedLevel));
+        assertFalse(session.isAuthenticated());
+        verify(sessionService, never()).save(session);
+        verify(auditService)
+                .submitAuditEvent(
+                        OidcAuditableEvent.AUTH_CODE_ISSUED,
+                        CLIENT_SESSION_ID,
+                        SESSION_ID,
+                        CLIENT_ID.getValue(),
+                        DOC_APP_SUBJECT_ID,
+                        AuditService.UNKNOWN,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_SESSION_ID);
+
+        var expectedDimensions =
+                Map.of(
+                        "Account",
+                        "UNKNOWN",
+                        "Environment",
+                        "unit-test",
+                        "Client",
+                        CLIENT_ID.getValue(),
+                        "IsTest",
+                        "false",
+                        "IsDocApp",
+                        Boolean.toString(true),
+                        "ClientName",
+                        CLIENT_NAME);
+
+        verify(cloudwatchMetricsService).incrementCounter("SignIn", expectedDimensions);
     }
 
     @Test
@@ -258,6 +332,7 @@ class AuthCodeHandlerTest {
     @Test
     void shouldGenerateErrorResponseWhenRedirectUriIsInvalid()
             throws ClientNotFoundException, JOSEException {
+        session.setEmailAddress(EMAIL);
         generateValidSessionAndAuthRequest(MEDIUM_LEVEL, false);
         when(authorizationService.isClientRedirectUriValid(eq(CLIENT_ID), eq(REDIRECT_URI)))
                 .thenReturn(false);
@@ -272,6 +347,7 @@ class AuthCodeHandlerTest {
     @Test
     void shouldGenerateErrorResponseWhenClientIsNotFound()
             throws ClientNotFoundException, Json.JsonException, JOSEException {
+        session.setEmailAddress(EMAIL);
         AuthenticationErrorResponse authenticationErrorResponse =
                 new AuthenticationErrorResponse(
                         REDIRECT_URI, OAuth2Error.INVALID_CLIENT, null, null);
@@ -301,6 +377,7 @@ class AuthCodeHandlerTest {
 
     @Test
     void shouldGenerateErrorResponseIfUnableToParseAuthRequest() throws Json.JsonException {
+        session.setEmailAddress(EMAIL);
         AuthenticationErrorResponse authenticationErrorResponse =
                 new AuthenticationErrorResponse(
                         REDIRECT_URI, OAuth2Error.INVALID_REQUEST, null, null);
@@ -313,7 +390,7 @@ class AuthCodeHandlerTest {
         Map<String, List<String>> customParams = new HashMap<>();
         customParams.put("redirect_uri", singletonList("http://localhost/redirect"));
         customParams.put("client_id", singletonList(new ClientID().toString()));
-        generateValidSession(customParams, MEDIUM_LEVEL, false);
+        generateValidSession(customParams, MEDIUM_LEVEL);
         APIGatewayProxyResponseEvent response = generateApiRequest();
 
         assertThat(response, hasStatus(200));
@@ -365,25 +442,22 @@ class AuthCodeHandlerTest {
         if (docAppJourney) {
             authRequest = generateRequestObjectAuthRequest();
         } else {
-            ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
-            Scope scope = new Scope();
-            Nonce nonce = new Nonce();
-            scope.add(OIDCScopeValue.OPENID);
-
             authRequest =
-                    new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
-                            .state(new State())
-                            .nonce(nonce)
+                    new AuthenticationRequest.Builder(
+                                    new ResponseType(ResponseType.Value.CODE),
+                                    new Scope(OIDCScopeValue.OPENID),
+                                    CLIENT_ID,
+                                    REDIRECT_URI)
+                            .state(STATE)
+                            .nonce(NONCE)
                             .build();
         }
-        generateValidSession(authRequest.toParameters(), requestedLevel, docAppJourney);
+        generateValidSession(authRequest.toParameters(), requestedLevel);
         return authRequest;
     }
 
     private void generateValidSession(
-            Map<String, List<String>> authRequestParams,
-            CredentialTrustLevel requestedLevel,
-            boolean docAppJourney) {
+            Map<String, List<String>> authRequestParams, CredentialTrustLevel requestedLevel) {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
         when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
@@ -391,9 +465,6 @@ class AuthCodeHandlerTest {
         when(vectorOfTrust.getCredentialTrustLevel()).thenReturn(requestedLevel);
         when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vectorOfTrust);
         when(clientSession.getAuthRequestParams()).thenReturn(authRequestParams);
-        if (docAppJourney) {
-            when(clientSession.getDocAppSubjectId()).thenReturn(new Subject("docAppSubjectId"));
-        }
         when(clientSession.getClientName()).thenReturn(CLIENT_NAME);
     }
 
@@ -422,6 +493,7 @@ class AuthCodeHandlerTest {
                         .claim("scope", CustomScopeValue.DOC_CHECKING_APP.toString())
                         .claim("client_id", CLIENT_ID.getValue())
                         .claim("state", STATE.getValue())
+                        .claim("nonce", NONCE.getValue())
                         .issuer(CLIENT_ID.getValue())
                         .build();
         var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
