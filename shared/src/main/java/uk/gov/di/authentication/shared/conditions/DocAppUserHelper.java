@@ -36,8 +36,11 @@ public class DocAppUserHelper {
     }
 
     public static boolean isDocCheckingAppUserWithSubjectId(ClientSession clientSession) {
-        return clientSession.getDocAppSubjectId() != null
-                && hasDocCheckingScope(clientSession.getAuthRequestParams());
+        boolean isDocCheckingUser =
+                clientSession.getDocAppSubjectId() != null
+                        && hasDocCheckingScope(clientSession.getAuthRequestParams());
+        LOG.info("User is Doc Checking App user: {}", isDocCheckingUser);
+        return isDocCheckingUser;
     }
 
     private static boolean hasDocCheckingScope(Map<String, List<String>> authRequestParams) {

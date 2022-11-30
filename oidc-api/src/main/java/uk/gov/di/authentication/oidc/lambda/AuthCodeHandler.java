@@ -4,13 +4,11 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
@@ -31,6 +29,7 @@ import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.net.URI;
@@ -63,6 +62,7 @@ public class AuthCodeHandler
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final ConfigurationService configurationService;
+    private final DynamoService dynamoService;
 
     public AuthCodeHandler(
             SessionService sessionService,
@@ -71,7 +71,8 @@ public class AuthCodeHandler
             ClientSessionService clientSessionService,
             AuditService auditService,
             CloudwatchMetricsService cloudwatchMetricsService,
-            ConfigurationService configurationService) {
+            ConfigurationService configurationService,
+            DynamoService dynamoService) {
         this.sessionService = sessionService;
         this.authorisationCodeService = authorisationCodeService;
         this.authorizationService = authorizationService;
@@ -79,6 +80,7 @@ public class AuthCodeHandler
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.configurationService = configurationService;
+        this.dynamoService = dynamoService;
     }
 
     public AuthCodeHandler(ConfigurationService configurationService) {
@@ -89,6 +91,7 @@ public class AuthCodeHandler
         auditService = new AuditService(configurationService);
         cloudwatchMetricsService = new CloudwatchMetricsService();
         this.configurationService = configurationService;
+        dynamoService = new DynamoService(configurationService);
     }
 
     public AuthCodeHandler() {
@@ -173,11 +176,11 @@ public class AuthCodeHandler
                 session.setCurrentCredentialStrength(
                         requestedVectorOfTrust.getCredentialTrustLevel());
             }
-            AuthorizationCode authCode =
+            var authCode =
                     authorisationCodeService.generateAuthorisationCode(
                             clientSessionId, session.getEmailAddress(), clientSession);
 
-            AuthenticationSuccessResponse authenticationResponse =
+            var authenticationResponse =
                     authorizationService.generateSuccessfulAuthResponse(
                             authenticationRequest, authCode, redirectUri, state);
 
@@ -186,7 +189,7 @@ public class AuthCodeHandler
             var isTestJourney =
                     authorizationService.isTestJourney(
                             authenticationRequest.getClientID(), session.getEmailAddress());
-            boolean docAppJourney = isDocCheckingAppUserWithSubjectId(clientSession);
+            var docAppJourney = isDocCheckingAppUserWithSubjectId(clientSession);
 
             Map<String, String> dimensions =
                     new HashMap<>(
@@ -211,15 +214,16 @@ public class AuthCodeHandler
                         "No mfa method to set. User is either authenticated or signing in from a low level service");
             }
 
-            if (!docAppJourney) {
-                var mfaRequired = "Yes";
-                if (clientSession
-                        .getEffectiveVectorOfTrust()
-                        .getCredentialTrustLevel()
-                        .equals(CredentialTrustLevel.LOW_LEVEL)) {
-                    mfaRequired = "No";
-                }
-
+            String subjectId;
+            if (docAppJourney) {
+                LOG.info("Session not saved for DocCheckingAppUser");
+                subjectId = clientSession.getDocAppSubjectId().getValue();
+            } else {
+                var mfaNotRequired =
+                        clientSession
+                                .getEffectiveVectorOfTrust()
+                                .getCredentialTrustLevel()
+                                .equals(CredentialTrustLevel.LOW_LEVEL);
                 var levelOfConfidence = LevelOfConfidence.NONE.getValue();
                 if (clientSession.getEffectiveVectorOfTrust().containsLevelOfConfidence()) {
                     levelOfConfidence =
@@ -229,8 +233,13 @@ public class AuthCodeHandler
                                     .getValue();
                 }
 
-                dimensions.put("MfaRequired", mfaRequired);
+                dimensions.put("MfaRequired", mfaNotRequired ? "No" : "Yes");
                 dimensions.put("RequestedLevelOfConfidence", levelOfConfidence);
+                sessionService.save(session.setAuthenticated(true).setNewAccount(EXISTING));
+                subjectId =
+                        dynamoService
+                                .getUserProfileByEmail(session.getEmailAddress())
+                                .getSubjectID();
             }
 
             cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
@@ -240,26 +249,22 @@ public class AuthCodeHandler
                     clientSession.getClientName(),
                     isTestJourney);
 
-            if (!docAppJourney) {
-                sessionService.save(session.setAuthenticated(true).setNewAccount(EXISTING));
-            } else {
-                LOG.info("Session not saved for DocCheckingAppUser");
-            }
-
             auditService.submitAuditEvent(
                     OidcAuditableEvent.AUTH_CODE_ISSUED,
                     clientSessionId,
                     session.getSessionId(),
                     authenticationRequest.getClientID().getValue(),
-                    AuditService.UNKNOWN,
-                    session.getEmailAddress(),
+                    subjectId,
+                    Objects.isNull(session.getEmailAddress())
+                            ? AuditService.UNKNOWN
+                            : session.getEmailAddress(),
                     IpAddressHelper.extractIpAddress(input),
                     AuditService.UNKNOWN,
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
             return generateResponse(
                     new AuthCodeResponse(authenticationResponse.toURI().toString()));
         } catch (ClientNotFoundException e) {
-            AuthenticationErrorResponse errorResponse =
+            var errorResponse =
                     authorizationService.generateAuthenticationErrorResponse(
                             authenticationRequest, OAuth2Error.INVALID_CLIENT, redirectUri, state);
             return generateResponse(new AuthCodeResponse(errorResponse.toURI().toString()));
@@ -268,6 +273,7 @@ public class AuthCodeHandler
 
     private APIGatewayProxyResponseEvent generateResponse(AuthCodeResponse response) {
         try {
+            LOG.info("Generating successful auth code response");
             return generateApiGatewayProxyResponse(200, response);
         } catch (JsonException e) {
             throw new RuntimeException(e);

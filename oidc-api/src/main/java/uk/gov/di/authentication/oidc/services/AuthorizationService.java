@@ -68,6 +68,7 @@ public class AuthorizationService {
             URI redirectUri,
             State state) {
 
+        LOG.info("Generating Successful Auth Response");
         return new AuthenticationSuccessResponse(
                 redirectUri,
                 authorizationCode,
@@ -182,6 +183,7 @@ public class AuthorizationService {
 
     public AuthenticationErrorResponse generateAuthenticationErrorResponse(
             URI redirectUri, State state, ResponseMode responseMode, ErrorObject errorObject) {
+        LOG.info("Generating Authentication Error Response");
         return new AuthenticationErrorResponse(redirectUri, errorObject, state, responseMode);
     }
 
@@ -232,6 +234,8 @@ public class AuthorizationService {
     }
 
     public boolean isTestJourney(ClientID clientID, String emailAddress) {
-        return dynamoClientService.isTestJourney(clientID.toString(), emailAddress);
+        var isTestJourney = dynamoClientService.isTestJourney(clientID.toString(), emailAddress);
+        LOG.info("Is journey a test journey: {}", isTestJourney);
+        return isTestJourney;
     }
 }

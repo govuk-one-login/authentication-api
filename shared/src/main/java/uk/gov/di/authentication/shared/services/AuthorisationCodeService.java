@@ -41,6 +41,7 @@ public class AuthorisationCodeService {
 
     public AuthorizationCode generateAuthorisationCode(
             String clientSessionId, String email, ClientSession clientSession) {
+        LOG.info("Generating and saving AuthorisationCode");
         AuthorizationCode authorizationCode = new AuthorizationCode();
         try {
             redisConnectionService.saveWithExpiry(
