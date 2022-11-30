@@ -39,6 +39,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static uk.gov.di.authentication.shared.entity.IdentityClaims.CREDENTIAL_JWT;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
@@ -118,17 +119,14 @@ public class DocAppCriService {
                 response = request.send();
             } while (!response.indicatesSuccess() && count < maxTries);
             if (!response.indicatesSuccess()) {
-                LOG.error(
-                        "Error {} when attempting to call CRI data endpoint: {}",
-                        response.getStatusCode(),
-                        response.getContent());
                 throw new UnsuccesfulCredentialResponseException(
-                        "Error response received from CRI");
+                        format(
+                                "Error %s when attempting to call CRI data endpoint: %s",
+                                response.getStatusCode(), response.getContent()));
             }
 
             if (!response.getContentAsJSONObject().get("sub").equals(docAppSubjectId)
                     && !configurationService.getEnvironment().equals("build")) {
-                LOG.error("Sub in CRI response does not match docAppSubjectId in client session");
                 throw new UnsuccesfulCredentialResponseException(
                         "Sub in CRI response does not match docAppSubjectId in client session");
             }
@@ -137,11 +135,9 @@ public class DocAppCriService {
             LOG.info("Received successful userinfo response");
             return signedJWTS.stream().map(JWSObject::serialize).collect(Collectors.toList());
         } catch (IOException e) {
-            LOG.error("Error when attempting to call CRI data endpoint", e);
             throw new UnsuccesfulCredentialResponseException(
                     "Error when attempting to call CRI data endpoint", e);
         } catch (ParseException e) {
-            LOG.error("Error parsing HTTP response", e);
             throw new UnsuccesfulCredentialResponseException("Error parsing HTTP response", e);
         }
     }
