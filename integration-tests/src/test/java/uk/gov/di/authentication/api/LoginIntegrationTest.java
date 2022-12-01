@@ -25,12 +25,14 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.INVALID_CREDENTIALS;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.LOG_IN_SUCCESS;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
@@ -65,11 +67,13 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             MFAMethodType mfaMethodType,
             boolean mfaMethodVerified)
             throws Json.JsonException {
-        String email = "joe.bloggs+3@digital.cabinet-office.gov.uk";
-        String password = "password-1";
-        String phoneNumber = "01234567890";
+        var email = "joe.bloggs+3@digital.cabinet-office.gov.uk";
+        var password = "password-1";
+        var sessionId = redis.createUnauthenticatedSessionWithEmail(email);
+        var scope = new Scope(OIDCScopeValue.OPENID);
+
         userStore.signUp(email, password);
-        userStore.addPhoneNumber(email, phoneNumber);
+        userStore.addPhoneNumber(email, "01234567890");
         userStore.updateTermsAndConditions(email, termsAndConditionsVersion);
         if (mfaMethodType.equals(SMS)) {
             userStore.setPhoneNumberVerified(email, mfaMethodVerified);
@@ -77,10 +81,6 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             userStore.updateMFAMethod(
                     email, mfaMethodType, mfaMethodVerified, true, "auth-app-credential");
         }
-        String sessionId = redis.createUnauthenticatedSessionWithEmail(email);
-
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
 
         AuthenticationRequest.Builder builder =
                 new AuthenticationRequest.Builder(
@@ -92,8 +92,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         if (level != null) {
             builder.customParameter("vtr", jsonArrayOf(level.getValue()));
         }
-        AuthenticationRequest authRequest = builder.build();
-        redis.createClientSession(CLIENT_SESSION_ID, CLIENT_NAME, authRequest.toParameters());
+        redis.createClientSession(CLIENT_SESSION_ID, CLIENT_NAME, builder.build().toParameters());
         clientStore.registerClient(
                 CLIENT_ID,
                 "The test client",
@@ -118,8 +117,7 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 makeRequest(Optional.of(new LoginRequest(email, password)), headers, Map.of());
         assertThat(response, hasStatus(200));
 
-        LoginResponse loginResponse =
-                objectMapper.readValue(response.getBody(), LoginResponse.class);
+        var loginResponse = objectMapper.readValue(response.getBody(), LoginResponse.class);
 
         assertThat(loginResponse.isMfaRequired(), equalTo(level != LOW_LEVEL));
         assertThat(
@@ -128,7 +126,8 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(loginResponse.getMfaMethodType(), equalTo(mfaMethodType));
         assertThat(loginResponse.isMfaMethodVerified(), equalTo(mfaMethodVerified));
-
+        assertTrue(
+                Objects.nonNull(redis.getSession(sessionId).getInternalCommonSubjectIdentifier()));
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(LOG_IN_SUCCESS));
     }
 
@@ -174,7 +173,6 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var response =
                 makeRequest(Optional.of(new LoginRequest(email, password)), headers, Map.of());
         assertThat(response, hasStatus(401));
-
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(INVALID_CREDENTIALS));
     }
 }

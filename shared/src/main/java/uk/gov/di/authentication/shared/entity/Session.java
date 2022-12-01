@@ -35,6 +35,8 @@ public class Session {
 
     @Expose private MFAMethodType verifiedMfaMethodType;
 
+    @Expose private String internalCommonSubjectIdentifier;
+
     public Session(String sessionId) {
         this.sessionId = sessionId;
         this.clientSessions = new ArrayList<>();
@@ -157,6 +159,15 @@ public class Session {
 
     public Session setVerifiedMfaMethodType(MFAMethodType verifiedMfaMethodType) {
         this.verifiedMfaMethodType = verifiedMfaMethodType;
+        return this;
+    }
+
+    public String getInternalCommonSubjectIdentifier() {
+        return internalCommonSubjectIdentifier;
+    }
+
+    public Session setInternalCommonSubjectIdentifier(String internalCommonSubjectIdentifier) {
+        this.internalCommonSubjectIdentifier = internalCommonSubjectIdentifier;
         return this;
     }
 }

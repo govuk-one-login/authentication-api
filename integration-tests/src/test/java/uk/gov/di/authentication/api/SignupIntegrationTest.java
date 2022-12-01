@@ -24,6 +24,7 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -42,9 +43,10 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String REDIRECT_URI = "http://localhost/redirect";
     public static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final String CLIENT_NAME = "test-client-name";
+    private static final Scope OIDC_SCOPE = new Scope(OIDCScopeValue.OPENID);
 
     @BeforeEach
-    void setup() {
+    void setup() throws Json.JsonException {
         handler = new SignUpHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
         txmaAuditQueue.clear();
     }
@@ -56,41 +58,13 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @ParameterizedTest
     @MethodSource("consentValues")
     void shouldReturn200WhenValidSignUpRequest(boolean consentRequired) throws Json.JsonException {
-        String sessionId = redis.createSession();
+        setUpTest(consentRequired);
+        var sessionId = redis.createSession();
 
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", sessionId);
         headers.put("Client-Session-Id", CLIENT_SESSION_ID);
         headers.put("X-API-Key", FRONTEND_API_KEY);
-
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-
-        AuthenticationRequest authRequest =
-                new AuthenticationRequest.Builder(
-                                ResponseType.CODE,
-                                scope,
-                                new ClientID(CLIENT_ID),
-                                URI.create(REDIRECT_URI))
-                        .nonce(new Nonce())
-                        .build();
-
-        redis.createClientSession(CLIENT_SESSION_ID, CLIENT_NAME, authRequest.toParameters());
-
-        clientStore.registerClient(
-                CLIENT_ID,
-                "The test client",
-                singletonList(REDIRECT_URI),
-                singletonList("test-client@test.com"),
-                singletonList(scope.toString()),
-                Base64.getMimeEncoder()
-                        .encodeToString(GENERATE_RSA_KEY_PAIR().getPublic().getEncoded()),
-                singletonList("http://localhost/post-redirect-logout"),
-                "http://example.com",
-                String.valueOf(ServiceType.MANDATORY),
-                "https://test.com",
-                "public",
-                consentRequired);
 
         var response =
                 makeRequest(
@@ -102,53 +76,23 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of());
 
         assertThat(response, hasStatus(200));
-        SignUpResponse signUpResponse =
-                objectMapper.readValue(response.getBody(), SignUpResponse.class);
+        var signUpResponse = objectMapper.readValue(response.getBody(), SignUpResponse.class);
         assertThat(signUpResponse.isConsentRequired(), equalTo(consentRequired));
-
+        assertTrue(
+                Objects.nonNull(redis.getSession(sessionId).getInternalCommonSubjectIdentifier()));
         assertTrue(userStore.userExists("joe.bloggs+5@digital.cabinet-office.gov.uk"));
-
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CREATE_ACCOUNT));
     }
 
     @Test
     void shouldReturn400WhenCommonPassword() throws Json.JsonException {
-
-        String sessionId = redis.createSession();
+        setUpTest(false);
+        var sessionId = redis.createSession();
 
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", sessionId);
         headers.put("Client-Session-Id", CLIENT_SESSION_ID);
         headers.put("X-API-Key", FRONTEND_API_KEY);
-
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-
-        AuthenticationRequest authRequest =
-                new AuthenticationRequest.Builder(
-                                ResponseType.CODE,
-                                scope,
-                                new ClientID(CLIENT_ID),
-                                URI.create(REDIRECT_URI))
-                        .nonce(new Nonce())
-                        .build();
-
-        redis.createClientSession(CLIENT_SESSION_ID, CLIENT_NAME, authRequest.toParameters());
-
-        clientStore.registerClient(
-                CLIENT_ID,
-                "The test client",
-                singletonList(REDIRECT_URI),
-                singletonList("test-client@test.com"),
-                singletonList(scope.toString()),
-                Base64.getMimeEncoder()
-                        .encodeToString(GENERATE_RSA_KEY_PAIR().getPublic().getEncoded()),
-                singletonList("http://localhost/post-redirect-logout"),
-                "http://example.com",
-                String.valueOf(ServiceType.MANDATORY),
-                "https://test.com",
-                "public",
-                false);
 
         var response =
                 makeRequest(
@@ -161,5 +105,32 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(400));
         assertTrue(response.getBody().contains(ErrorResponse.ERROR_1040.getMessage()));
+    }
+
+    private void setUpTest(boolean consentRequired) throws Json.JsonException {
+        clientStore.registerClient(
+                CLIENT_ID,
+                "The test client",
+                singletonList(REDIRECT_URI),
+                singletonList("test-client@test.com"),
+                singletonList(OIDC_SCOPE.toString()),
+                Base64.getMimeEncoder()
+                        .encodeToString(GENERATE_RSA_KEY_PAIR().getPublic().getEncoded()),
+                singletonList("http://localhost/post-redirect-logout"),
+                "http://example.com",
+                String.valueOf(ServiceType.MANDATORY),
+                "https://test.com",
+                "public",
+                consentRequired);
+        var authRequest =
+                new AuthenticationRequest.Builder(
+                                ResponseType.CODE,
+                                OIDC_SCOPE,
+                                new ClientID(CLIENT_ID),
+                                URI.create(REDIRECT_URI))
+                        .nonce(new Nonce())
+                        .build();
+
+        redis.createClientSession(CLIENT_SESSION_ID, CLIENT_NAME, authRequest.toParameters());
     }
 }

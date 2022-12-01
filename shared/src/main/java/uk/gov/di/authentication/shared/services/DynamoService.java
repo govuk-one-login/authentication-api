@@ -15,6 +15,7 @@ import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
+import uk.gov.di.authentication.shared.entity.User;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.Argon2EncoderHelper;
@@ -63,7 +64,7 @@ public class DynamoService implements AuthenticationService {
     }
 
     @Override
-    public void signUp(
+    public User signUp(
             String email, String password, Subject subject, TermsAndConditions termsAndConditions) {
         var dateTime = LocalDateTime.now().toString();
         var hashedPassword = hashPassword(password);
@@ -85,8 +86,10 @@ public class DynamoService implements AuthenticationService {
                         .withPublicSubjectID((new Subject()).toString())
                         .withTermsAndConditions(termsAndConditions)
                         .withLegacySubjectID(null);
+        userProfile.setSalt(SaltHelper.generateNewSalt());
         dynamoUserCredentialsTable.putItem(userCredentials);
         dynamoUserProfileTable.putItem(userProfile);
+        return new User(userProfile, userCredentials);
     }
 
     @Override
