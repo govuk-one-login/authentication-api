@@ -14,6 +14,7 @@ import uk.gov.di.authentication.shared.conditions.ConsentHelper;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
@@ -121,13 +122,21 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
 
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1009);
             }
-            authenticationService.signUp(
-                    request.getEmail(),
-                    request.getPassword(),
-                    new Subject(),
-                    new TermsAndConditions(
-                            configurationService.getTermsAndConditionsVersion(),
-                            LocalDateTime.now(ZoneId.of("UTC")).toString()));
+            var user =
+                    authenticationService.signUp(
+                            request.getEmail(),
+                            request.getPassword(),
+                            new Subject(),
+                            new TermsAndConditions(
+                                    configurationService.getTermsAndConditionsVersion(),
+                                    LocalDateTime.now(ZoneId.of("UTC")).toString()));
+
+            LOG.info("Calculating internal common subject identifier");
+            var internalCommonSubjectIdentifier =
+                    ClientSubjectHelper.getSubjectWithSectorIdentifier(
+                            user.getUserProfile(),
+                            configurationService.getInternalSectorUri(),
+                            authenticationService);
             var consentRequired = ConsentHelper.userHasNotGivenConsent(userContext);
 
             auditService.submitAuditEvent(
@@ -144,11 +153,14 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                     AuditService.UNKNOWN,
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
+            LOG.info("Setting internal common subject identifier in user session");
             sessionService.save(
                     userContext
                             .getSession()
                             .setEmailAddress(request.getEmail())
-                            .setNewAccount(NEW));
+                            .setNewAccount(NEW)
+                            .setInternalCommonSubjectIdentifier(
+                                    internalCommonSubjectIdentifier.getValue()));
 
             LOG.info("Successfully processed request");
             try {

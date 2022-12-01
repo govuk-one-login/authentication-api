@@ -24,8 +24,12 @@ import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
+import uk.gov.di.authentication.shared.entity.User;
+import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -53,6 +57,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -72,6 +77,8 @@ class SignUpHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ClientService clientService = mock(ClientService.class);
+    private final User user = mock(User.class);
+    private final UserProfile userProfile = mock(UserProfile.class);
     private final AuditService auditService = mock(AuditService.class);
     private final CommonPasswordsService commonPasswordsService =
             mock(CommonPasswordsService.class);
@@ -79,7 +86,15 @@ class SignUpHandlerTest {
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final ClientID CLIENT_ID = new ClientID();
     private static final String CLIENT_NAME = "client-name";
+    private static final String EMAIL = "joe.bloggs@test.com";
+    private static final String PASSWORD = "computer-1";
+    private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
+    private static final byte[] SALT = SaltHelper.generateNewSalt();
     private static final URI REDIRECT_URI = URI.create("test-uri");
+    private static final Subject INTERNAL_SUBJECT_ID = new Subject();
+    private final String expectedCommonSubject =
+            ClientSubjectHelper.calculatePairwiseIdentifier(
+                    INTERNAL_SUBJECT_ID.getValue(), "test.account.gov.uk", SALT);
     private static final Json objectMapper = SerializationService.getInstance();
 
     private SignUpHandler handler;
@@ -100,6 +115,9 @@ class SignUpHandlerTest {
     @BeforeEach
     void setUp() {
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("1.0");
+        when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
+        when(user.getUserProfile()).thenReturn(userProfile);
+        when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
         doReturn(Optional.of(ErrorResponse.ERROR_1006)).when(passwordValidator).validate("pwd");
         handler =
                 new SignUpHandler(
@@ -120,38 +138,31 @@ class SignUpHandlerTest {
     @ParameterizedTest
     @MethodSource("consentValues")
     void shouldReturn200IfSignUpIsSuccessful(boolean consentRequired) throws Json.JsonException {
-        String email = "joe.bloggs@test.com";
-        String password = "computer-1";
         String persistentId = "some-persistent-id-value";
         Map<String, String> headers = new HashMap<>();
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
         headers.put("Session-Id", session.getSessionId());
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
-        when(authenticationService.userExists(eq("joe.bloggs@test.com"))).thenReturn(false);
+        when(authenticationService.userExists(EMAIL)).thenReturn(false);
         when(clientService.getClient(CLIENT_ID.getValue()))
                 .thenReturn(Optional.of(generateClientRegistry(consentRequired)));
         when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(clientSession));
+        when(authenticationService.signUp(
+                        eq(EMAIL), eq(PASSWORD), any(Subject.class), any(TermsAndConditions.class)))
+                .thenReturn(user);
+        when(userProfile.getSubjectID()).thenReturn(INTERNAL_SUBJECT_ID.getValue());
         usingValidSession();
         usingValidClientSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         event.setHeaders(headers);
-        event.setBody(
-                format("{ \"password\": \"computer-1\", \"email\": \"%s\" }", email.toUpperCase()));
+        event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         verify(authenticationService)
-                .signUp(
-                        eq("joe.bloggs@test.com"),
-                        eq(password),
-                        any(Subject.class),
-                        any(TermsAndConditions.class));
-        verify(sessionService)
-                .save(
-                        argThat(
-                                (session) ->
-                                        session.getEmailAddress().equals("joe.bloggs@test.com")));
+                .signUp(eq(EMAIL), eq(PASSWORD), any(Subject.class), any(TermsAndConditions.class));
+        verify(sessionService).save(argThat((session) -> session.getEmailAddress().equals(EMAIL)));
 
         assertThat(result, hasStatus(200));
 
@@ -161,7 +172,7 @@ class SignUpHandlerTest {
         assertThat(signUpResponse.isConsentRequired(), equalTo(consentRequired));
         verify(authenticationService)
                 .signUp(
-                        eq(email),
+                        eq(EMAIL),
                         eq("computer-1"),
                         any(Subject.class),
                         any(TermsAndConditions.class));
@@ -173,19 +184,28 @@ class SignUpHandlerTest {
                         session.getSessionId(),
                         CLIENT_ID.getValue(),
                         AuditService.UNKNOWN,
-                        "joe.bloggs@test.com",
+                        EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         persistentId);
 
         verify(sessionService)
                 .save(argThat(session -> session.isNewAccount() == Session.AccountState.NEW));
+        verify(sessionService, atLeastOnce())
+                .save(
+                        argThat(
+                                t ->
+                                        t.getInternalCommonSubjectIdentifier()
+                                                .equals(expectedCommonSubject)));
     }
 
     @Test
     void shouldReturn400IfSessionIdMissing() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setBody("{ \"password\": \"computer-1\", \"email\": \"joe.bloggs@test.com\" }");
+        event.setBody(
+                format(
+                        "{ \"password\": \"%s\", \"email\": \"%s\" }",
+                        PASSWORD, EMAIL.toUpperCase()));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -199,7 +219,7 @@ class SignUpHandlerTest {
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody("{ \"email\": \"joe.bloggs@test.com\" }");
+        event.setBody(format("{ \"email\": \"%s\" }", EMAIL.toUpperCase()));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -213,7 +233,8 @@ class SignUpHandlerTest {
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody("{ \"password\": \"pwd\", \"email\": \"joe.bloggs@test.com\" }");
+        event.setBody(
+                format("{ \"password\": \"%s\", \"email\": \"%s\" }", "pwd", EMAIL.toUpperCase()));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -235,7 +256,10 @@ class SignUpHandlerTest {
                         session.getSessionId(),
                         CLIENT_SESSION_ID_HEADER,
                         CLIENT_SESSION_ID));
-        event.setBody("{ \"password\": \"computer-1\", \"email\": \"joe.bloggs@test.com\" }");
+        event.setBody(
+                format(
+                        "{ \"password\": \"%s\", \"email\": \"%s\" }",
+                        PASSWORD, EMAIL.toUpperCase()));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));

@@ -4,6 +4,7 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
+import uk.gov.di.authentication.shared.entity.User;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 
@@ -14,7 +15,7 @@ import java.util.Optional;
 public interface AuthenticationService {
     boolean userExists(String email);
 
-    void signUp(
+    User signUp(
             String email, String password, Subject subject, TermsAndConditions termsAndConditions);
 
     boolean login(String email, String password);
