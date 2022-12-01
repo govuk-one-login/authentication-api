@@ -85,6 +85,7 @@ public class DynamoService implements AuthenticationService {
                         .withPublicSubjectID((new Subject()).toString())
                         .withTermsAndConditions(termsAndConditions)
                         .withLegacySubjectID(null);
+        userProfile.setSalt(SaltHelper.generateNewSalt());
         dynamoUserCredentialsTable.putItem(userCredentials);
         dynamoUserProfileTable.putItem(userProfile);
     }
