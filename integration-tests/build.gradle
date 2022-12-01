@@ -61,6 +61,7 @@ test {
     environment "IDENTITY_ENABLED", "false"
     environment "SPOT_ENABLED", "true"
     environment "TRACING_ENABLED", "false"
+    environment "INTERNAl_SECTOR_URI", "https://test.account.gov.uk"
 
     doLast {
         tasks.getByName("jacocoTestReport").sourceDirectories.from(

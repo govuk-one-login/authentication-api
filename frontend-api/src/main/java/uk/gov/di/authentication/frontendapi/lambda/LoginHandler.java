@@ -19,6 +19,7 @@ import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
@@ -135,6 +136,13 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             int incorrectPasswordCount =
                     codeStorageService.getIncorrectPasswordCount(request.getEmail());
 
+            LOG.info("Calculating internal common subject identifier");
+            var internalCommonSubjectIdentifier =
+                    ClientSubjectHelper.getSubjectWithSectorIdentifier(
+                            userProfile,
+                            configurationService.getInternalSectorUri(),
+                            authenticationService);
+
             if (incorrectPasswordCount >= configurationService.getMaxPasswordRetries()) {
                 LOG.info("User has exceeded max password retries");
 
@@ -172,6 +180,13 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             if (incorrectPasswordCount != 0) {
                 codeStorageService.deleteIncorrectPasswordCount(request.getEmail());
             }
+
+            LOG.info("Setting internal common subject identifier in user session");
+            sessionService.save(
+                    userContext
+                            .getSession()
+                            .setInternalCommonSubjectIdentifier(
+                                    internalCommonSubjectIdentifier.getValue()));
 
             var isPhoneNumberVerified = userProfile.isPhoneNumberVerified();
             String redactedPhoneNumber = null;

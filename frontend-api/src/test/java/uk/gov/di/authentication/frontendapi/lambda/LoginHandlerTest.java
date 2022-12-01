@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.mockito.ArgumentCaptor;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
 import uk.gov.di.authentication.frontendapi.helpers.RedactPhoneNumberHelper;
@@ -32,8 +33,11 @@ import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -48,10 +52,7 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -63,13 +64,15 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
@@ -85,6 +88,7 @@ class LoginHandlerTest {
 
     private static final String EMAIL = "joe.bloggs@test.com";
     private static final String PASSWORD = "computer-1";
+    private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private final UserCredentials userCredentials =
             new UserCredentials().withEmail(EMAIL).withPassword(PASSWORD);
 
@@ -96,6 +100,9 @@ class LoginHandlerTest {
     private static final String PHONE_NUMBER = "01234567890";
     private static final ClientID CLIENT_ID = new ClientID();
     private static final String CLIENT_NAME = "client-name";
+    private static final String PERSISTENT_ID = "some-persistent-id-value";
+    private static final Subject INTERNAL_SUBJECT_ID = new Subject();
+    private static final byte[] SALT = SaltHelper.generateNewSalt();
     private static final MFAMethod AUTH_APP_MFA_METHOD =
             new MFAMethod()
                     .withMfaMethodType(MFAMethodType.AUTH_APP.getValue())
@@ -119,6 +126,9 @@ class LoginHandlerTest {
             mock(CommonPasswordsService.class);
 
     private final Session session = new Session(IdGenerator.generate()).setEmailAddress(EMAIL);
+    private final String expectedCommonSubject =
+            ClientSubjectHelper.calculatePairwiseIdentifier(
+                    INTERNAL_SUBJECT_ID.getValue(), "test.account.gov.uk", SALT);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging = new CaptureLoggingExtension(LoginHandler.class);
@@ -131,13 +141,14 @@ class LoginHandlerTest {
     @BeforeEach
     void setUp() {
         when(configurationService.getMaxPasswordRetries()).thenReturn(5);
+        when(configurationService.getTermsAndConditionsVersion()).thenReturn("1.0");
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(clientSession));
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
-
         when(clientService.getClient(CLIENT_ID.getValue()))
                 .thenReturn(Optional.of(generateClientRegistry()));
-
+        when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
+        when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
         handler =
                 new LoginHandler(
                         configurationService,
@@ -154,10 +165,8 @@ class LoginHandlerTest {
 
     @Test
     void shouldReturn200IfLoginIsSuccessfulAndMfaNotRequired() throws Json.JsonException {
-        when(configurationService.getTermsAndConditionsVersion()).thenReturn("1.0");
-        String persistentId = "some-persistent-id-value";
         Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
         headers.put("Session-Id", session.getSessionId());
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         UserProfile userProfile = generateUserProfile(null);
@@ -201,7 +210,7 @@ class LoginHandlerTest {
                         userProfile.getEmail(),
                         "123.123.123.123",
                         userProfile.getPhoneNumber(),
-                        persistentId);
+                        PERSISTENT_ID);
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
                         Session.AccountState.EXISTING,
@@ -210,15 +219,23 @@ class LoginHandlerTest {
                         "P0",
                         false,
                         false);
+
+        verify(sessionService, atLeastOnce())
+                .save(
+                        argThat(
+                                t ->
+                                        t.getInternalCommonSubjectIdentifier()
+                                                .equals(expectedCommonSubject)));
+        verify(sessionService, atLeastOnce())
+                .save(argThat(t -> t.isNewAccount() == Session.AccountState.EXISTING));
     }
 
     @ParameterizedTest
     @EnumSource(MFAMethodType.class)
-    void shouldReturn200IfLoginIsSuccessful(MFAMethodType mfaMethodType) throws Json.JsonException {
-        when(configurationService.getTermsAndConditionsVersion()).thenReturn("1.0");
-        String persistentId = "some-persistent-id-value";
+    void shouldReturn200IfLoginIsSuccessfulAndMfaIsRequired(MFAMethodType mfaMethodType)
+            throws Json.JsonException {
         Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
         headers.put("Session-Id", session.getSessionId());
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         UserProfile userProfile = generateUserProfile(null);
@@ -257,10 +274,17 @@ class LoginHandlerTest {
                         userProfile.getEmail(),
                         "123.123.123.123",
                         userProfile.getPhoneNumber(),
-                        persistentId);
-        verify(cloudwatchMetricsService, never())
-                .incrementAuthenticationSuccess(
-                        any(), any(), any(), any(), anyBoolean(), anyBoolean());
+                        PERSISTENT_ID);
+        verifyNoInteractions(cloudwatchMetricsService);
+
+        verify(sessionService, atLeastOnce())
+                .save(
+                        argThat(
+                                t ->
+                                        t.getInternalCommonSubjectIdentifier()
+                                                .equals(expectedCommonSubject)));
+        verify(sessionService, atLeastOnce())
+                .save(argThat(t -> t.isNewAccount() == Session.AccountState.EXISTING));
     }
 
     @ParameterizedTest
@@ -268,9 +292,8 @@ class LoginHandlerTest {
     void shouldReturn200IfLoginIsSuccessfulAndTermsAndConditionsNotAccepted(
             MFAMethodType mfaMethodType) throws Json.JsonException {
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("2.0");
-        String persistentId = "some-persistent-id-value";
         Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
         headers.put("Session-Id", session.getSessionId());
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         UserProfile userProfile = generateUserProfile(null);
@@ -309,13 +332,17 @@ class LoginHandlerTest {
                         userProfile.getEmail(),
                         "123.123.123.123",
                         userProfile.getPhoneNumber(),
-                        persistentId);
+                        PERSISTENT_ID);
 
-        verify(sessionService)
-                .save(argThat(session -> session.isNewAccount() == Session.AccountState.EXISTING));
-        verify(cloudwatchMetricsService, never())
-                .incrementAuthenticationSuccess(
-                        any(), any(), any(), any(), anyBoolean(), anyBoolean());
+        verifyNoInteractions(cloudwatchMetricsService);
+        verify(sessionService, atLeastOnce())
+                .save(
+                        argThat(
+                                t ->
+                                        t.getInternalCommonSubjectIdentifier()
+                                                .equals(expectedCommonSubject)));
+        verify(sessionService, atLeastOnce())
+                .save(argThat(t -> t.isNewAccount() == Session.AccountState.EXISTING));
     }
 
     @ParameterizedTest
@@ -343,13 +370,25 @@ class LoginHandlerTest {
 
         LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
         assertThat(response.isPasswordChangeRequired(), equalTo(true));
+
+        var argument = ArgumentCaptor.forClass(Session.class);
+        verify(sessionService, times(2)).save(argument.capture());
+
+        verifyNoInteractions(cloudwatchMetricsService);
+        verify(sessionService, atLeastOnce())
+                .save(
+                        argThat(
+                                t ->
+                                        t.getInternalCommonSubjectIdentifier()
+                                                .equals(expectedCommonSubject)));
+        verify(sessionService, atLeastOnce())
+                .save(argThat(t -> t.isNewAccount() == Session.AccountState.EXISTING));
     }
 
     @ParameterizedTest
     @EnumSource(MFAMethodType.class)
     void shouldReturn200IfMigratedUserHasBeenProcessesSuccessfully(MFAMethodType mfaMethodType)
             throws Json.JsonException {
-        when(configurationService.getTermsAndConditionsVersion()).thenReturn("1.0");
         String legacySubjectId = new Subject().getValue();
         UserProfile userProfile = generateUserProfile(legacySubjectId);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
@@ -376,8 +415,18 @@ class LoginHandlerTest {
                 response.getRedactedPhoneNumber(),
                 equalTo(RedactPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
 
-        verify(sessionService)
-                .save(argThat(session -> session.isNewAccount() == Session.AccountState.EXISTING));
+        var argument = ArgumentCaptor.forClass(Session.class);
+        verify(sessionService, times(2)).save(argument.capture());
+
+        verifyNoInteractions(cloudwatchMetricsService);
+        verify(sessionService, atLeastOnce())
+                .save(
+                        argThat(
+                                t ->
+                                        t.getInternalCommonSubjectIdentifier()
+                                                .equals(expectedCommonSubject)));
+        verify(sessionService, atLeastOnce())
+                .save(argThat(t -> t.isNewAccount() == Session.AccountState.EXISTING));
     }
 
     @ParameterizedTest
@@ -405,8 +454,18 @@ class LoginHandlerTest {
                 response.getRedactedPhoneNumber(),
                 equalTo(RedactPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
 
-        verify(sessionService)
-                .save(argThat(session -> session.isNewAccount() == Session.AccountState.EXISTING));
+        var argument = ArgumentCaptor.forClass(Session.class);
+        verify(sessionService, times(2)).save(argument.capture());
+
+        verifyNoInteractions(cloudwatchMetricsService);
+        verify(sessionService, atLeastOnce())
+                .save(
+                        argThat(
+                                t ->
+                                        t.getInternalCommonSubjectIdentifier()
+                                                .equals(expectedCommonSubject)));
+        verify(sessionService, atLeastOnce())
+                .save(argThat(t -> t.isNewAccount() == Session.AccountState.EXISTING));
     }
 
     @ParameterizedTest
@@ -429,6 +488,13 @@ class LoginHandlerTest {
         assertThat(result, hasStatus(400));
 
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1028));
+        verifyNoInteractions(cloudwatchMetricsService);
+        verify(sessionService, never())
+                .save(
+                        argThat(
+                                t ->
+                                        t.getInternalCommonSubjectIdentifier()
+                                                .equals(expectedCommonSubject)));
     }
 
     @ParameterizedTest
@@ -468,6 +534,13 @@ class LoginHandlerTest {
                         "123.123.123.123",
                         userProfile.getPhoneNumber(),
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
+        verifyNoInteractions(cloudwatchMetricsService);
+        verify(sessionService, never())
+                .save(
+                        argThat(
+                                t ->
+                                        t.getInternalCommonSubjectIdentifier()
+                                                .equals(expectedCommonSubject)));
     }
 
     @ParameterizedTest
@@ -495,6 +568,15 @@ class LoginHandlerTest {
         assertThat(result2, hasStatus(200));
 
         objectMapper.readValue(result2.getBody(), LoginResponse.class);
+        verifyNoInteractions(cloudwatchMetricsService);
+        verify(sessionService, atLeastOnce())
+                .save(
+                        argThat(
+                                t ->
+                                        t.getInternalCommonSubjectIdentifier()
+                                                .equals(expectedCommonSubject)));
+        verify(sessionService, atLeastOnce())
+                .save(argThat(t -> t.isNewAccount() == Session.AccountState.EXISTING));
     }
 
     @ParameterizedTest
@@ -534,6 +616,14 @@ class LoginHandlerTest {
 
         assertThat(result, hasStatus(401));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1008));
+        verifyNoInteractions(cloudwatchMetricsService);
+        verifyNoInteractions(cloudwatchMetricsService);
+        verify(sessionService, never())
+                .save(
+                        argThat(
+                                t ->
+                                        t.getInternalCommonSubjectIdentifier()
+                                                .equals(expectedCommonSubject)));
     }
 
     @ParameterizedTest
@@ -563,6 +653,13 @@ class LoginHandlerTest {
 
         assertThat(result, hasStatus(401));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1008));
+        verifyNoInteractions(cloudwatchMetricsService);
+        verify(sessionService, never())
+                .save(
+                        argThat(
+                                t ->
+                                        t.getInternalCommonSubjectIdentifier()
+                                                .equals(expectedCommonSubject)));
     }
 
     @Test
@@ -582,6 +679,8 @@ class LoginHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+        verifyNoInteractions(cloudwatchMetricsService);
+        verify(sessionService, never()).save(any(Session.class));
     }
 
     @Test
@@ -602,6 +701,8 @@ class LoginHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1000));
+        verifyNoInteractions(cloudwatchMetricsService);
+        verify(sessionService, never()).save(any(Session.class));
     }
 
     @Test
@@ -635,6 +736,8 @@ class LoginHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1010));
+        verifyNoInteractions(cloudwatchMetricsService);
+        verify(sessionService, never()).save(any(Session.class));
     }
 
     private AuthenticationRequest generateAuthRequest() {
@@ -680,17 +783,16 @@ class LoginHandlerTest {
     }
 
     private UserProfile generateUserProfile(String legacySubjectId) {
-        LocalDateTime localDateTime = LocalDateTime.now();
-        Date currentDateTime = Date.from(localDateTime.atZone(ZoneId.of("UTC")).toInstant());
         return new UserProfile()
                 .withEmail(EMAIL)
                 .withEmailVerified(true)
                 .withPhoneNumber(PHONE_NUMBER)
                 .withPhoneNumberVerified(true)
                 .withPublicSubjectID(new Subject().getValue())
-                .withSubjectID(new Subject().getValue())
+                .withSubjectID(INTERNAL_SUBJECT_ID.getValue())
                 .withLegacySubjectID(legacySubjectId)
-                .withTermsAndConditions(new TermsAndConditions("1.0", currentDateTime.toString()));
+                .withTermsAndConditions(
+                        new TermsAndConditions("1.0", NowHelper.now().toInstant().toString()));
     }
 
     private ClientRegistry generateClientRegistry() {
