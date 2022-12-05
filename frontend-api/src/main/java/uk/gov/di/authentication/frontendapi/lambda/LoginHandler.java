@@ -46,6 +46,7 @@ import static uk.gov.di.authentication.shared.entity.Session.AccountState.EXISTI
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class LoginHandler extends BaseFrontendHandler<LoginRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -155,7 +156,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         userProfile.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
                         userProfile.getPhoneNumber(),
-                        persistentSessionId);
+                        persistentSessionId,
+                        pair("internalSubjectId", userProfile.getSubjectID()));
 
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1028);
             }
@@ -168,11 +170,12 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         userContext.getClientSessionId(),
                         userContext.getSession().getSessionId(),
                         clientId,
-                        AuditService.UNKNOWN,
+                        userProfile.getSubjectID(),
                         request.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
-                        persistentSessionId);
+                        persistentSessionId,
+                        pair("internalSubjectId", userProfile.getSubjectID()));
 
                 return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1008);
             }
@@ -227,7 +230,8 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     userProfile.getEmail(),
                     IpAddressHelper.extractIpAddress(input),
                     userProfile.getPhoneNumber(),
-                    persistentSessionId);
+                    persistentSessionId,
+                    pair("internalSubjectId", userProfile.getSubjectID()));
 
             if (!isMfaRequired) {
                 cloudwatchMetricsService.incrementAuthenticationSuccess(

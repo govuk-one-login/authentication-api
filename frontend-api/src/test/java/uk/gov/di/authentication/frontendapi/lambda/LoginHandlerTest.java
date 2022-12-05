@@ -17,7 +17,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-import org.mockito.ArgumentCaptor;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
 import uk.gov.di.authentication.frontendapi.helpers.RedactPhoneNumberHelper;
@@ -70,7 +69,6 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -78,6 +76,7 @@ import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIEN
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.MFAMethodType.SMS;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
@@ -210,7 +209,8 @@ class LoginHandlerTest {
                         userProfile.getEmail(),
                         "123.123.123.123",
                         userProfile.getPhoneNumber(),
-                        PERSISTENT_ID);
+                        PERSISTENT_ID,
+                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
                         Session.AccountState.EXISTING,
@@ -274,7 +274,8 @@ class LoginHandlerTest {
                         userProfile.getEmail(),
                         "123.123.123.123",
                         userProfile.getPhoneNumber(),
-                        PERSISTENT_ID);
+                        PERSISTENT_ID,
+                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
         verifyNoInteractions(cloudwatchMetricsService);
 
         verify(sessionService, atLeastOnce())
@@ -332,7 +333,8 @@ class LoginHandlerTest {
                         userProfile.getEmail(),
                         "123.123.123.123",
                         userProfile.getPhoneNumber(),
-                        PERSISTENT_ID);
+                        PERSISTENT_ID,
+                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
 
         verifyNoInteractions(cloudwatchMetricsService);
         verify(sessionService, atLeastOnce())
@@ -370,10 +372,6 @@ class LoginHandlerTest {
 
         LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
         assertThat(response.isPasswordChangeRequired(), equalTo(true));
-
-        var argument = ArgumentCaptor.forClass(Session.class);
-        verify(sessionService, times(2)).save(argument.capture());
-
         verifyNoInteractions(cloudwatchMetricsService);
         verify(sessionService, atLeastOnce())
                 .save(
@@ -415,9 +413,6 @@ class LoginHandlerTest {
                 response.getRedactedPhoneNumber(),
                 equalTo(RedactPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
 
-        var argument = ArgumentCaptor.forClass(Session.class);
-        verify(sessionService, times(2)).save(argument.capture());
-
         verifyNoInteractions(cloudwatchMetricsService);
         verify(sessionService, atLeastOnce())
                 .save(
@@ -453,9 +448,6 @@ class LoginHandlerTest {
         assertThat(
                 response.getRedactedPhoneNumber(),
                 equalTo(RedactPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
-
-        var argument = ArgumentCaptor.forClass(Session.class);
-        verify(sessionService, times(2)).save(argument.capture());
 
         verifyNoInteractions(cloudwatchMetricsService);
         verify(sessionService, atLeastOnce())
@@ -533,7 +525,8 @@ class LoginHandlerTest {
                         userProfile.getEmail(),
                         "123.123.123.123",
                         userProfile.getPhoneNumber(),
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
         verifyNoInteractions(cloudwatchMetricsService);
         verify(sessionService, never())
                 .save(
@@ -608,11 +601,12 @@ class LoginHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         "",
-                        "",
+                        INTERNAL_SUBJECT_ID.getValue(),
                         EMAIL,
                         "123.123.123.123",
                         "",
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
 
         assertThat(result, hasStatus(401));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1008));

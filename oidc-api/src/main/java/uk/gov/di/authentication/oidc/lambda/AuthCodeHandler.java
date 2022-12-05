@@ -49,6 +49,7 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class AuthCodeHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -214,10 +215,20 @@ public class AuthCodeHandler
                         "No mfa method to set. User is either authenticated or signing in from a low level service");
             }
 
-            String subjectId;
             if (docAppJourney) {
                 LOG.info("Session not saved for DocCheckingAppUser");
-                subjectId = clientSession.getDocAppSubjectId().getValue();
+                auditService.submitAuditEvent(
+                        OidcAuditableEvent.AUTH_CODE_ISSUED,
+                        clientSessionId,
+                        session.getSessionId(),
+                        authenticationRequest.getClientID().getValue(),
+                        clientSession.getDocAppSubjectId().getValue(),
+                        Objects.isNull(session.getEmailAddress())
+                                ? AuditService.UNKNOWN
+                                : session.getEmailAddress(),
+                        IpAddressHelper.extractIpAddress(input),
+                        AuditService.UNKNOWN,
+                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
             } else {
                 var mfaNotRequired =
                         clientSession
@@ -232,14 +243,26 @@ public class AuthCodeHandler
                                     .getLevelOfConfidence()
                                     .getValue();
                 }
-
                 dimensions.put("MfaRequired", mfaNotRequired ? "No" : "Yes");
                 dimensions.put("RequestedLevelOfConfidence", levelOfConfidence);
                 sessionService.save(session.setAuthenticated(true).setNewAccount(EXISTING));
-                subjectId =
+                var subjectId =
                         dynamoService
                                 .getUserProfileByEmail(session.getEmailAddress())
                                 .getSubjectID();
+                auditService.submitAuditEvent(
+                        OidcAuditableEvent.AUTH_CODE_ISSUED,
+                        clientSessionId,
+                        session.getSessionId(),
+                        authenticationRequest.getClientID().getValue(),
+                        subjectId,
+                        Objects.isNull(session.getEmailAddress())
+                                ? AuditService.UNKNOWN
+                                : session.getEmailAddress(),
+                        IpAddressHelper.extractIpAddress(input),
+                        AuditService.UNKNOWN,
+                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                        pair("internalSubjectId", subjectId));
             }
 
             cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
@@ -249,18 +272,6 @@ public class AuthCodeHandler
                     clientSession.getClientName(),
                     isTestJourney);
 
-            auditService.submitAuditEvent(
-                    OidcAuditableEvent.AUTH_CODE_ISSUED,
-                    clientSessionId,
-                    session.getSessionId(),
-                    authenticationRequest.getClientID().getValue(),
-                    subjectId,
-                    Objects.isNull(session.getEmailAddress())
-                            ? AuditService.UNKNOWN
-                            : session.getEmailAddress(),
-                    IpAddressHelper.extractIpAddress(input),
-                    AuditService.UNKNOWN,
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
             return generateResponse(
                     new AuthCodeResponse(authenticationResponse.toURI().toString()));
         } catch (ClientNotFoundException e) {
