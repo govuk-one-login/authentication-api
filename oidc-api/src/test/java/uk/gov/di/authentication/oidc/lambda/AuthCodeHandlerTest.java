@@ -37,8 +37,10 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
@@ -173,6 +175,10 @@ class AuthCodeHandlerTest {
             CredentialTrustLevel finalLevel,
             MFAMethodType mfaMethodType)
             throws ClientNotFoundException, Json.JsonException, JOSEException {
+        var expectedCommonSubject =
+                ClientSubjectHelper.calculatePairwiseIdentifier(
+                        SUBJECT.getValue(), "test.account.gov.uk", SaltHelper.generateNewSalt());
+        session.setInternalCommonSubjectIdentifier(expectedCommonSubject);
         var authorizationCode = new AuthorizationCode();
         var authRequest = generateValidSessionAndAuthRequest(requestedLevel, false);
         session.setCurrentCredentialStrength(initialLevel)
@@ -218,7 +224,7 @@ class AuthCodeHandlerTest {
                         CLIENT_SESSION_ID,
                         SESSION_ID,
                         CLIENT_ID.getValue(),
-                        SUBJECT.getValue(),
+                        expectedCommonSubject,
                         EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,

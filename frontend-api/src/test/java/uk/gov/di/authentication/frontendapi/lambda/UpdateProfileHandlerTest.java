@@ -23,7 +23,9 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -85,6 +87,9 @@ class UpdateProfileHandlerTest {
             new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
     private static final String COOKIE = "Cookie";
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
+    private final String expectedCommonSubject =
+            ClientSubjectHelper.calculatePairwiseIdentifier(
+                    INTERNAL_SUBJECT, "test.account.gov.uk", SaltHelper.generateNewSalt());
     private final Context context = mock(Context.class);
     private UpdateProfileHandler handler;
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
@@ -97,7 +102,10 @@ class UpdateProfileHandlerTest {
 
     private final String TERMS_AND_CONDITIONS_VERSION =
             configurationService.getTermsAndConditionsVersion();
-    private final Session session = new Session(SESSION_ID).setEmailAddress(TEST_EMAIL_ADDRESS);
+    private final Session session =
+            new Session(SESSION_ID)
+                    .setEmailAddress(TEST_EMAIL_ADDRESS)
+                    .setInternalCommonSubjectIdentifier(expectedCommonSubject);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging =
@@ -158,7 +166,7 @@ class UpdateProfileHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         "",
-                        "",
+                        expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "",
                         PHONE_NUMBER,
@@ -198,7 +206,7 @@ class UpdateProfileHandlerTest {
                         CLIENT_SESSION_ID,
                         SESSION_ID,
                         CLIENT_ID.getValue(),
-                        "",
+                        expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "",
                         "",
@@ -238,7 +246,7 @@ class UpdateProfileHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         CLIENT_ID.getValue(),
-                        INTERNAL_SUBJECT,
+                        expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "",
                         PHONE_NUMBER,
@@ -279,7 +287,7 @@ class UpdateProfileHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         CLIENT_ID.getValue(),
-                        INTERNAL_SUBJECT,
+                        expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "",
                         PHONE_NUMBER,
@@ -352,7 +360,7 @@ class UpdateProfileHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         CLIENT_ID.getValue(),
-                        INTERNAL_SUBJECT,
+                        expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "",
                         PHONE_NUMBER,
@@ -394,7 +402,7 @@ class UpdateProfileHandlerTest {
                         CLIENT_SESSION_ID,
                         SESSION_ID,
                         CLIENT_ID.getValue(),
-                        "",
+                        expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "",
                         "",

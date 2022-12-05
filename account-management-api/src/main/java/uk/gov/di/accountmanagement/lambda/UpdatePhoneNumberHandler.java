@@ -16,6 +16,7 @@ import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.exceptions.UserNotFoundException;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -134,12 +135,19 @@ public class UpdatePhoneNumberHandler
                             userLanguage);
             sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
 
+            LOG.info("Calculating internal common subject identifier");
+            var internalCommonSubjectIdentifier =
+                    ClientSubjectHelper.getSubjectWithSectorIdentifier(
+                            userProfile,
+                            configurationService.getInternalSectorUri(),
+                            dynamoService);
+
             auditService.submitAuditEvent(
                     AccountManagementAuditableEvent.UPDATE_PHONE_NUMBER,
                     AuditService.UNKNOWN,
                     sessionId,
                     AuditService.UNKNOWN,
-                    userProfile.getSubjectID(),
+                    internalCommonSubjectIdentifier.getValue(),
                     userProfile.getEmail(),
                     IpAddressHelper.extractIpAddress(input),
                     updatePhoneNumberRequest.getPhoneNumber(),

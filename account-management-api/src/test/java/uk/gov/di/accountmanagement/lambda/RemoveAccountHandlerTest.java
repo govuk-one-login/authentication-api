@@ -29,6 +29,7 @@ import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -44,8 +45,14 @@ class RemoveAccountHandlerTest {
 
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final Subject PUBLIC_SUBJECT = new Subject();
+    private static final Subject INTERNAL_SUBJECT = new Subject();
     private static final String PERSISTENT_ID = "some-persistent-session-id";
+    private static final byte[] SALT = SaltHelper.generateNewSalt();
     private final Json objectMapper = SerializationService.getInstance();
+
+    private final String expectedCommonSubject =
+            ClientSubjectHelper.calculatePairwiseIdentifier(
+                    INTERNAL_SUBJECT.getValue(), "test.account.gov.uk", SALT);
 
     private RemoveAccountHandler handler;
     private final Context context = mock(Context.class);
@@ -60,12 +67,16 @@ class RemoveAccountHandlerTest {
                 new RemoveAccountHandler(
                         authenticationService, sqsClient, auditService, configurationService);
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
+        when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
     }
 
     @Test
     void shouldReturn204IfAccountRemovalIsSuccessfulAndPrincipalContainsPublicSubjectId()
             throws Json.JsonException {
-        var userProfile = new UserProfile().withPublicSubjectID(PUBLIC_SUBJECT.getValue());
+        var userProfile =
+                new UserProfile()
+                        .withSubjectID(INTERNAL_SUBJECT.getValue())
+                        .withPublicSubjectID(PUBLIC_SUBJECT.getValue());
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
 
@@ -84,7 +95,7 @@ class RemoveAccountHandlerTest {
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
-                        userProfile.getSubjectID(),
+                        expectedCommonSubject,
                         userProfile.getEmail(),
                         "123.123.123.123",
                         userProfile.getPhoneNumber(),
@@ -94,20 +105,14 @@ class RemoveAccountHandlerTest {
     @Test
     void shouldReturn204IfAccountRemovalIsSuccessfulAndPrincipalContainsInternalPairwiseSubjectId()
             throws Json.JsonException {
-        var internalSubject = new Subject();
-        var salt = SaltHelper.generateNewSalt();
         var userProfile =
                 new UserProfile()
                         .withPublicSubjectID(PUBLIC_SUBJECT.getValue())
-                        .withSubjectID(internalSubject.getValue());
-        var internalPairwiseIdentifier =
-                ClientSubjectHelper.calculatePairwiseIdentifier(
-                        internalSubject.getValue(), "test.account.gov.uk", salt);
+                        .withSubjectID(INTERNAL_SUBJECT.getValue());
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(salt);
 
-        var event = generateApiGatewayEvent(internalPairwiseIdentifier);
+        var event = generateApiGatewayEvent(expectedCommonSubject);
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(204));
@@ -122,7 +127,7 @@ class RemoveAccountHandlerTest {
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
-                        userProfile.getSubjectID(),
+                        expectedCommonSubject,
                         userProfile.getEmail(),
                         "123.123.123.123",
                         userProfile.getPhoneNumber(),

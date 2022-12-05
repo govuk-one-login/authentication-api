@@ -31,6 +31,7 @@ import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -55,6 +56,11 @@ class UpdatePhoneNumberHandlerTest {
     private static final String OTP = "123456";
     private static final Subject PUBLIC_SUBJECT = new Subject();
     private static final String PERSISTENT_ID = "some-persistent-session-id";
+    private static final byte[] SALT = SaltHelper.generateNewSalt();
+    private static final Subject INTERNAL_SUBJECT = new Subject();
+    private final String expectedCommonSubject =
+            ClientSubjectHelper.calculatePairwiseIdentifier(
+                    INTERNAL_SUBJECT.getValue(), "test.account.gov.uk", SALT);
 
     private final Json objectMapper = SerializationService.getInstance();
     private final AuditService auditService = mock(AuditService.class);
@@ -70,6 +76,7 @@ class UpdatePhoneNumberHandlerTest {
                         auditService,
                         configurationService);
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
+        when(dynamoService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
     }
 
     @Test
@@ -79,6 +86,7 @@ class UpdatePhoneNumberHandlerTest {
         var userProfile =
                 new UserProfile()
                         .withPublicSubjectID(PUBLIC_SUBJECT.getValue())
+                        .withSubjectID(INTERNAL_SUBJECT.getValue())
                         .withPhoneNumber(OLD_PHONE_NUMBER);
         when(dynamoService.getUserProfileByEmailMaybe(EMAIL_ADDRESS))
                 .thenReturn(Optional.of(userProfile));
@@ -101,7 +109,7 @@ class UpdatePhoneNumberHandlerTest {
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
-                        userProfile.getSubjectID(),
+                        expectedCommonSubject,
                         userProfile.getEmail(),
                         "123.123.123.123",
                         NEW_PHONE_NUMBER,
@@ -110,22 +118,16 @@ class UpdatePhoneNumberHandlerTest {
 
     @Test
     void shouldReturn204WhenPrincipalContainsInternalPairwiseSubjectId() throws Json.JsonException {
-        var internalSubject = new Subject();
-        var salt = SaltHelper.generateNewSalt();
         var userProfile =
                 new UserProfile()
-                        .withSubjectID(internalSubject.getValue())
+                        .withSubjectID(INTERNAL_SUBJECT.getValue())
                         .withPhoneNumber(OLD_PHONE_NUMBER);
-        var internalPairwiseIdentifier =
-                ClientSubjectHelper.calculatePairwiseIdentifier(
-                        internalSubject.getValue(), "test.account.gov.uk", salt);
         when(codeStorageService.isValidOtpCode(EMAIL_ADDRESS, OTP, VERIFY_PHONE_NUMBER))
                 .thenReturn(true);
         when(dynamoService.getUserProfileByEmailMaybe(EMAIL_ADDRESS))
                 .thenReturn(Optional.of(userProfile));
-        when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(salt);
 
-        var event = generateApiGatewayEvent(internalPairwiseIdentifier);
+        var event = generateApiGatewayEvent(expectedCommonSubject);
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(204));
@@ -143,7 +145,7 @@ class UpdatePhoneNumberHandlerTest {
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
-                        userProfile.getSubjectID(),
+                        expectedCommonSubject,
                         userProfile.getEmail(),
                         "123.123.123.123",
                         NEW_PHONE_NUMBER,

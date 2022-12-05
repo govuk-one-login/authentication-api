@@ -255,7 +255,7 @@ public class AuthCodeHandler
                         clientSessionId,
                         session.getSessionId(),
                         authenticationRequest.getClientID().getValue(),
-                        subjectId,
+                        session.getInternalCommonSubjectIdentifier(),
                         Objects.isNull(session.getEmailAddress())
                                 ? AuditService.UNKNOWN
                                 : session.getEmailAddress(),

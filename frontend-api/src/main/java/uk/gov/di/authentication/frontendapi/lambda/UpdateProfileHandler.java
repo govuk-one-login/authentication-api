@@ -141,7 +141,8 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                     AuditService.UNKNOWN,
                     AuditService.UNKNOWN,
                     AuditService.UNKNOWN,
-                    persistentSessionId);
+                    persistentSessionId,
+                    AuditService.UNKNOWN);
         }
 
         AuditableEvent auditableEvent;
@@ -171,7 +172,8 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                                 session.getSessionId(),
                                 auditableClientId,
                                 request.getEmail(),
-                                persistentSessionId);
+                                persistentSessionId,
+                                session.getInternalCommonSubjectIdentifier());
                     }
                     authenticationService.updatePhoneNumber(
                             request.getEmail(), request.getProfileInformation());
@@ -192,7 +194,8 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                                 session.getSessionId(),
                                 auditableClientId,
                                 request.getEmail(),
-                                persistentSessionId);
+                                persistentSessionId,
+                                session.getInternalCommonSubjectIdentifier());
                     }
                     AuthenticationRequest authorizationRequest;
                     try {
@@ -205,7 +208,8 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                                 session.getSessionId(),
                                 auditableClientId,
                                 request.getEmail(),
-                                persistentSessionId);
+                                persistentSessionId,
+                                session.getInternalCommonSubjectIdentifier());
                     }
                     String clientId = authorizationRequest.getClientID().getValue();
 
@@ -249,7 +253,8 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                                 session.getSessionId(),
                                 auditableClientId,
                                 request.getEmail(),
-                                persistentSessionId);
+                                persistentSessionId,
+                                session.getInternalCommonSubjectIdentifier());
                     }
                     authenticationService.updateMFAMethod(
                             userContext.getSession().getEmailAddress(),
@@ -271,18 +276,16 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                         session.getSessionId(),
                         auditableClientId,
                         request.getEmail(),
-                        persistentSessionId);
+                        persistentSessionId,
+                        AuditService.UNKNOWN);
         }
         auditService.submitAuditEvent(
                 auditableEvent,
                 userContext.getClientSessionId(),
                 session.getSessionId(),
                 auditableClientId,
-                userContext
-                        .getUserProfile()
-                        .map(UserProfile::getSubjectID)
-                        .orElse(AuditService.UNKNOWN),
-                userContext.getSession().getEmailAddress(),
+                session.getInternalCommonSubjectIdentifier(),
+                session.getEmailAddress(),
                 ipAddress,
                 auditablePhoneNumber,
                 persistentSessionId);
@@ -331,13 +334,14 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
             String sessionId,
             String clientId,
             String email,
-            String persistentSessionId) {
+            String persistentSessionId,
+            String subjectId) {
         auditService.submitAuditEvent(
                 UPDATE_PROFILE_REQUEST_ERROR,
                 clientSessionId,
                 sessionId,
                 clientId,
-                AuditService.UNKNOWN,
+                subjectId,
                 email,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,

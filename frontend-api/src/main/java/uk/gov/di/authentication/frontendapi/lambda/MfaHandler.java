@@ -173,7 +173,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                                 .getClient()
                                 .map(ClientRegistry::getClientID)
                                 .orElse(AuditService.UNKNOWN),
-                        AuditService.UNKNOWN,
+                        userContext.getSession().getInternalCommonSubjectIdentifier(),
                         email,
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
@@ -218,7 +218,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                             .getClient()
                             .map(ClientRegistry::getClientID)
                             .orElse(AuditService.UNKNOWN),
-                    AuditService.UNKNOWN,
+                    userContext.getSession().getInternalCommonSubjectIdentifier(),
                     email,
                     IpAddressHelper.extractIpAddress(input),
                     phoneNumber,

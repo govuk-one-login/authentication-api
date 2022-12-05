@@ -16,6 +16,7 @@ import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.exceptions.UserNotFoundException;
 import uk.gov.di.authentication.shared.helpers.Argon2MatcherHelper;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -156,12 +157,19 @@ public class UpdatePasswordHandler
             sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
             LOG.info("Message successfully added to queue. Generating successful gateway response");
 
+            LOG.info("Calculating internal common subject identifier");
+            var internalCommonSubjectIdentifier =
+                    ClientSubjectHelper.getSubjectWithSectorIdentifier(
+                            userProfile,
+                            configurationService.getInternalSectorUri(),
+                            dynamoService);
+
             auditService.submitAuditEvent(
                     AccountManagementAuditableEvent.UPDATE_PASSWORD,
                     AuditService.UNKNOWN,
                     sessionId,
                     AuditService.UNKNOWN,
-                    userProfile.getSubjectID(),
+                    internalCommonSubjectIdentifier.getValue(),
                     userProfile.getEmail(),
                     IpAddressHelper.extractIpAddress(input),
                     userProfile.getPhoneNumber(),
