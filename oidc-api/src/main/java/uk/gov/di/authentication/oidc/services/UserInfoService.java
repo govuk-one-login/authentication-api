@@ -11,6 +11,7 @@ import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
 import uk.gov.di.authentication.oidc.exceptions.UserInfoException;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
@@ -43,6 +44,24 @@ public class UserInfoService {
         this.dynamoDocAppService = dynamoDocAppService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.configurationService = configurationService;
+    }
+
+    public String calculateSubjectForAudit(AccessTokenInfo accessTokenInfo) {
+        LOG.info("Calculating Subject for audit payload");
+        if (accessTokenInfo.getScopes().contains(CustomScopeValue.DOC_CHECKING_APP.getValue())) {
+            LOG.info("Getting subject for Doc App user");
+            return accessTokenInfo.getSubject();
+        } else {
+            LOG.info("Calculating internal common subject identifier");
+            var userProfile =
+                    authenticationService.getUserProfileFromSubject(
+                            accessTokenInfo.getAccessTokenStore().getInternalSubjectId());
+            return ClientSubjectHelper.getSubjectWithSectorIdentifier(
+                            userProfile,
+                            configurationService.getInternalSectorUri(),
+                            authenticationService)
+                    .getValue();
+        }
     }
 
     public UserInfo populateUserInfo(AccessTokenInfo accessTokenInfo) {

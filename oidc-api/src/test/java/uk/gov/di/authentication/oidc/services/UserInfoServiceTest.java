@@ -26,7 +26,9 @@ import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.IdentityCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
+import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -63,8 +65,10 @@ class UserInfoServiceTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
+    private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final Subject INTERNAL_SUBJECT = new Subject("internal-subject");
     private static final Subject SUBJECT = new Subject("some-subject");
+    private static final Subject DOC_APP_SUBJECT = new Subject("some-subject");
     private static final List<String> SCOPES =
             List.of(
                     OIDCScopeValue.OPENID.getValue(),
@@ -109,6 +113,7 @@ class UserInfoServiceTest {
                         cloudwatchMetricsService,
                         configurationService);
         clientRegistry = generateClientRegistry();
+        when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         when(configurationService.getEnvironment()).thenReturn("test");
     }
 
@@ -299,6 +304,45 @@ class UserInfoServiceTest {
         assertClaimMetricPublished("doc-app-credential");
     }
 
+    @Test
+    void shouldReturnInternalCommonSubjectIdentifierWhenDocAppScopeIsNotPresent()
+            throws JOSEException {
+        var salt = SaltHelper.generateNewSalt();
+        var expectedCommonSubject =
+                ClientSubjectHelper.calculatePairwiseIdentifier(
+                        INTERNAL_SUBJECT.getValue(), "test.account.gov.uk", salt);
+        accessToken = createSignedAccessToken(null);
+        var userProfile = generateUserprofile();
+        when(authenticationService.getUserProfileFromSubject(INTERNAL_SUBJECT.getValue()))
+                .thenReturn(userProfile);
+        when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(salt);
+        var accessTokenStore =
+                new AccessTokenStore(accessToken.getValue(), INTERNAL_SUBJECT.getValue());
+        var accessTokenInfo =
+                new AccessTokenInfo(accessTokenStore, SUBJECT.getValue(), SCOPES, null, CLIENT_ID);
+
+        var subjectForAudit = userInfoService.calculateSubjectForAudit(accessTokenInfo);
+
+        assertThat(subjectForAudit, equalTo(expectedCommonSubject));
+    }
+
+    @Test
+    void shouldReturnDocAppSubjectIdWhenDocAppScopeIsPresent() throws JOSEException {
+        accessToken = createSignedAccessToken(null);
+        var docAppScope =
+                List.of(
+                        OIDCScopeValue.OPENID.getValue(),
+                        CustomScopeValue.DOC_CHECKING_APP.getValue());
+        var accessTokenStore =
+                new AccessTokenStore(accessToken.getValue(), DOC_APP_SUBJECT.getValue());
+        var accessTokenInfo =
+                new AccessTokenInfo(
+                        accessTokenStore, DOC_APP_SUBJECT.getValue(), docAppScope, null, CLIENT_ID);
+        var subjectForAudit = userInfoService.calculateSubjectForAudit(accessTokenInfo);
+
+        assertThat(subjectForAudit, equalTo(DOC_APP_SUBJECT.getValue()));
+    }
+
     private AccessToken createSignedAccessToken(OIDCClaimsRequest identityClaims)
             throws JOSEException {
         return createSignedAccessToken(identityClaims, SCOPES);
@@ -332,7 +376,7 @@ class UserInfoServiceTest {
                 .withEmailVerified(true)
                 .withPhoneNumber(PHONE_NUMBER)
                 .withPhoneNumberVerified(true)
-                .withSubjectID(SUBJECT.toString())
+                .withSubjectID(INTERNAL_SUBJECT.toString())
                 .withCreated(LocalDateTime.now().toString())
                 .withUpdated(LocalDateTime.now().toString());
     }
