@@ -2,9 +2,7 @@ version: '3.8'
 
 services:
   aws:
-    build:
-      context: docker
-      dockerfile: localstack.Dockerfile
+    image: localstack/localstack:0.12.20@sha256:ae2c8cbf90ec8dace5d34ff5690b049f030021a0c1a2f8e49bcb8cd6986fae52
     environment:
       SERVICES: iam, ec2, sqs, s3, sts, kms, sns, ssm, cloudwatch
       EDGE_PORT: "45678"
@@ -20,15 +18,6 @@ services:
       - di-authentication-api-net
     ports:
       - 45678:45678
-    healthcheck:
-      test:
-        - CMD
-        - bash
-        - -c
-        - awslocal s3 ls terraform-state
-      interval: 5s
-      timeout: 10s
-      start_period: 10s
 
   redis:
     image: redis:6.0.5-alpine
