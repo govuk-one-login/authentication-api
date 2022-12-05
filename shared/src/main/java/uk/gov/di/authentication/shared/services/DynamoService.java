@@ -1,6 +1,8 @@
 package uk.gov.di.authentication.shared.services;
 
 import com.nimbusds.oauth2.sdk.id.Subject;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbIndex;
@@ -26,19 +28,25 @@ import uk.gov.di.authentication.shared.helpers.SaltHelper;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static java.util.Objects.nonNull;
 
 public class DynamoService implements AuthenticationService {
-
     private final DynamoDbTable<UserProfile> dynamoUserProfileTable;
     private final DynamoDbTable<UserCredentials> dynamoUserCredentialsTable;
     private final DynamoDbEnhancedClient dynamoDbEnhancedClient;
     private static final String USER_PROFILE_TABLE = "user-profile";
     private static final String USER_CREDENTIAL_TABLE = "user-credentials";
+    private static final String TEST_USER_INDEX_NAME = "TestUserIndex";
+    private static final Logger LOG = LogManager.getLogger(DynamoService.class);
 
     public DynamoService(ConfigurationService configurationService) {
         String userProfileTableName =
@@ -66,6 +74,15 @@ public class DynamoService implements AuthenticationService {
     @Override
     public User signUp(
             String email, String password, Subject subject, TermsAndConditions termsAndConditions) {
+        return signUp(email, password, subject, termsAndConditions, false);
+    }
+
+    public User signUp(
+            String email,
+            String password,
+            Subject subject,
+            TermsAndConditions termsAndConditions,
+            boolean isTestUser) {
         var dateTime = LocalDateTime.now().toString();
         var hashedPassword = hashPassword(password);
         var userCredentials =
@@ -87,6 +104,12 @@ public class DynamoService implements AuthenticationService {
                         .withTermsAndConditions(termsAndConditions)
                         .withLegacySubjectID(null);
         userProfile.setSalt(SaltHelper.generateNewSalt());
+
+        if (isTestUser) {
+            userCredentials.setTestUser(1);
+            userProfile.setTestUser(1);
+        }
+
         dynamoUserCredentialsTable.putItem(userCredentials);
         dynamoUserProfileTable.putItem(userProfile);
         return new User(userProfile, userCredentials);
@@ -421,6 +444,142 @@ public class DynamoService implements AuthenticationService {
                                         .partitionValue(email.toLowerCase(Locale.ROOT))
                                         .build())
                         .withAccountVerified(1));
+    }
+
+    public List<UserProfile> getAllTestUsers() {
+        DynamoDbIndex<UserProfile> testUserIndex =
+                dynamoUserProfileTable.index(TEST_USER_INDEX_NAME);
+        var results = testUserIndex.scan();
+        return results.stream()
+                .flatMap(userProfilePage -> userProfilePage.items().stream())
+                .collect(Collectors.toList());
+    }
+
+    public void createBatchTestUsers(Map<UserProfile, UserCredentials> testUsers) {
+        int maxBatchWriteUsersToBothTables = 12;
+        List<Map<UserProfile, UserCredentials>> partitions = new ArrayList<>();
+
+        Iterator<Map.Entry<UserProfile, UserCredentials>> iterator =
+                testUsers.entrySet().iterator();
+
+        Map<UserProfile, UserCredentials> currentPartition = new HashMap();
+
+        while (iterator.hasNext()) {
+            Map.Entry<UserProfile, UserCredentials> entry = iterator.next();
+            if (currentPartition.size() == maxBatchWriteUsersToBothTables) {
+                partitions.add(currentPartition);
+                currentPartition = new HashMap();
+            }
+            currentPartition.put(entry.getKey(), entry.getValue());
+        }
+
+        partitions.add(currentPartition);
+
+        LOG.info("Partitions: {} of max size {}", partitions, maxBatchWriteUsersToBothTables);
+
+        int numberOfThreadsForPartitionWrite = 4;
+        int indexOfFinalPartition = partitions.size() - 1;
+        int numberOfPartitionsPerThread =
+                (int) Math.ceil((double) partitions.size() / numberOfThreadsForPartitionWrite);
+        int indexOfFirstPartitionToBeProcessedByCurrentThread = 0;
+        int indexOfLastPartitionToBeProcessedByCurrentThread = numberOfPartitionsPerThread - 1;
+
+        List<Thread> dbWriterThreads = new ArrayList<>();
+
+        while (indexOfFirstPartitionToBeProcessedByCurrentThread <= indexOfFinalPartition) {
+            List<Map<UserProfile, UserCredentials>> partitionsForThisThread =
+                    partitions.subList(
+                            Math.min(
+                                    indexOfFirstPartitionToBeProcessedByCurrentThread,
+                                    indexOfFinalPartition),
+                            Math.min(
+                                    indexOfLastPartitionToBeProcessedByCurrentThread + 1,
+                                    indexOfFinalPartition + 1));
+
+            Runnable testUserDbWriter = new TestUserDbWriter(partitionsForThisThread);
+            Thread dbWriterThread = new Thread(testUserDbWriter);
+            dbWriterThreads.add(dbWriterThread);
+            dbWriterThread.start();
+
+            indexOfFirstPartitionToBeProcessedByCurrentThread += numberOfPartitionsPerThread;
+            indexOfLastPartitionToBeProcessedByCurrentThread += numberOfPartitionsPerThread;
+        }
+
+        for (Thread thread : dbWriterThreads) {
+            try {
+                thread.join();
+            } catch (Exception e) {
+                LOG.error("Thread failed to write to DB {}", e);
+            }
+        }
+    }
+
+    private class TestUserDbWriter implements Runnable {
+        private final List<Map<UserProfile, UserCredentials>> partitionsToWrite;
+
+        public TestUserDbWriter(List<Map<UserProfile, UserCredentials>> partitionsToWrite) {
+            this.partitionsToWrite = partitionsToWrite;
+        }
+
+        @Override
+        public void run() {
+            writeTestUserBatchPartitionToDb(partitionsToWrite);
+        }
+    }
+
+    private void writeTestUserBatchPartitionToDb(
+            List<Map<UserProfile, UserCredentials>> testUserBatchPartitions) {
+        for (Map<UserProfile, UserCredentials> testUserBatch : testUserBatchPartitions) {
+            TransactWriteItemsEnhancedRequest.Builder insertItemsRequestBuilder =
+                    TransactWriteItemsEnhancedRequest.builder();
+
+            testUserBatch.forEach(
+                    (key, value) ->
+                            insertItemsRequestBuilder
+                                    .addPutItem(dynamoUserProfileTable, key)
+                                    .addPutItem(dynamoUserCredentialsTable, value));
+
+            var insertItemsBatchRequest = insertItemsRequestBuilder.build();
+
+            dynamoDbEnhancedClient.transactWriteItems(insertItemsBatchRequest);
+        }
+    }
+
+    public void deleteBatchTestUsers(List<String> emailAddresses) {
+        int maxBatchWriteItemsToBothTables = 12;
+        List<List<String>> partitions = new ArrayList<>();
+
+        for (int i = 0; i < emailAddresses.size(); i += maxBatchWriteItemsToBothTables) {
+            partitions.add(
+                    emailAddresses.subList(
+                            i,
+                            Math.min(i + maxBatchWriteItemsToBothTables, emailAddresses.size())));
+        }
+
+        for (List<String> testUserBatch : partitions) {
+            TransactWriteItemsEnhancedRequest.Builder deleteItemsRequestBuilder =
+                    TransactWriteItemsEnhancedRequest.builder();
+
+            testUserBatch.forEach(
+                    emailAddress ->
+                            deleteItemsRequestBuilder
+                                    .addDeleteItem(
+                                            dynamoUserCredentialsTable,
+                                            Key.builder()
+                                                    .partitionValue(
+                                                            emailAddress.toLowerCase(Locale.ROOT))
+                                                    .build())
+                                    .addDeleteItem(
+                                            dynamoUserProfileTable,
+                                            Key.builder()
+                                                    .partitionValue(
+                                                            emailAddress.toLowerCase(Locale.ROOT))
+                                                    .build()));
+
+            var deleteItemsBatchRequest = deleteItemsRequestBuilder.build();
+
+            dynamoDbEnhancedClient.transactWriteItems(deleteItemsBatchRequest);
+        }
     }
 
     private static String hashPassword(String password) {

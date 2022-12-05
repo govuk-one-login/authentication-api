@@ -60,6 +60,8 @@ Resources:
           AttributeType: S
         - AttributeName: accountVerified
           AttributeType: N
+        - AttributeName: testUser
+          AttributeType: N
       BillingMode: PAY_PER_REQUEST
       GlobalSecondaryIndexes:
         - IndexName: SubjectIDIndex
@@ -79,6 +81,14 @@ Resources:
             - AttributeName: SubjectID
               KeyType: HASH
             - AttributeName: accountVerified
+              KeyType: RANGE
+          Projection:
+            ProjectionType: KEYS_ONLY
+        - IndexName: TestUserIndex
+          KeySchema:
+            - AttributeName: PublicSubjectID
+              KeyType: HASH
+            - AttributeName: testUser
               KeyType: RANGE
           Projection:
             ProjectionType: KEYS_ONLY
