@@ -18,7 +18,7 @@ function usage() {
   Requires a GDS CLI, AWS CLI and jq installed and configured.
 
   Usage:
-    $0 [-b|--build] [-c|--clean] [-s|--shared] [-o|--oidc] [-a|--account-management] [--audit] [--destroy] [-p|--prompt]
+    $0 [-b|--build] [-c|--clean] [-s|--shared] [-o|--oidc] [-a|--account-management] [-t|--test-services] [--audit] [--destroy] [-p|--prompt]
 
   Options:
     -b, --build               run gradle build and buildZip tasks (default)
@@ -29,6 +29,7 @@ function usage() {
     --audit                   run the audit terraform
     -d, --delivery-receipts   run the delivery receipts terraform
     -u, --utils               run the utils terraform
+    -t, --test-services       run the test services terraform
     --destroy                 run all terraform with the -destroy flag (destroys all managed resources)
     -p, --prompt              will prompt for plan review before applying any terraform
 
@@ -43,6 +44,7 @@ OIDC=0
 RECEIPTS=0
 SHARED=0
 UTILS=0
+TEST_SERVICES=0
 CLEAN=""
 TERRAFORM_OPTS="-auto-approve"
 if [[ $# == 0 ]]; then
@@ -76,6 +78,9 @@ while [[ $# -gt 0 ]]; do
       ;;
     -u|--utils)
       UTILS=1
+      ;;
+    -t|--test-services)
+      TEST_SERVICES=1
       ;;
     --destroy)
       TERRAFORM_OPTS="-destroy"
@@ -132,4 +137,8 @@ fi
 
 if [[ $UTILS == "1" ]]; then
   runTerraform "utils" "${TERRAFORM_OPTS}"
+fi
+
+if [[ $TEST_SERVICES == "1" ]]; then
+  runTerraform "test-services" "${TERRAFORM_OPTS}"
 fi
