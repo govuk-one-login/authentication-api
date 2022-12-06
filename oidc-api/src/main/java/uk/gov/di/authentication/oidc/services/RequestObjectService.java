@@ -94,19 +94,19 @@ public class RequestObjectService {
             }
             var redirectURI = URI.create((String) jwtClaimsSet.getClaim("redirect_uri"));
             if (Boolean.FALSE.equals(client.getClientType().equals(ClientType.APP.getValue()))) {
-                LOG.warn("ClientType of client is not 'app'");
+                LOG.error("ClientType of client is not 'app'");
                 return Optional.of(
                         new AuthRequestError(OAuth2Error.UNAUTHORIZED_CLIENT, redirectURI));
             }
             if (!authRequest.getResponseType().toString().equals(ResponseType.CODE.toString())) {
-                LOG.warn(
+                LOG.error(
                         "Unsupported responseType included in request. Expected responseType of code");
                 return Optional.of(
                         new AuthRequestError(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE, redirectURI));
             }
             if (requestContainsInvalidScopes(
                     authRequest.getScope().toStringList(), client, false)) {
-                LOG.warn(
+                LOG.error(
                         "Invalid scopes in authRequest. Scopes in request: {}",
                         authRequest.getScope().toStringList());
                 return Optional.of(new AuthRequestError(OAuth2Error.INVALID_SCOPE, redirectURI));
@@ -121,7 +121,7 @@ public class RequestObjectService {
             }
             if (Objects.nonNull(jwtClaimsSet.getClaim("request"))
                     || Objects.nonNull(jwtClaimsSet.getClaim("request_uri"))) {
-                LOG.warn("request or request_uri claim should not be incldued in request JWT");
+                LOG.error("request or request_uri claim should not be included in request JWT");
                 return Optional.of(new AuthRequestError(OAuth2Error.INVALID_REQUEST, redirectURI));
             }
             if (Objects.isNull(jwtClaimsSet.getAudience())
@@ -134,17 +134,17 @@ public class RequestObjectService {
                                                             .orElseThrow(),
                                                     "/authorize")
                                             .toString())) {
-                LOG.warn("Invalid or missing audience");
+                LOG.error("Invalid or missing audience");
                 return Optional.of(new AuthRequestError(OAuth2Error.ACCESS_DENIED, redirectURI));
             }
             if (Objects.isNull(jwtClaimsSet.getIssuer())
                     || !jwtClaimsSet.getIssuer().equals(client.getClientID())) {
-                LOG.warn("Invalid or missing issuer");
+                LOG.error("Invalid or missing issuer");
                 return Optional.of(
                         new AuthRequestError(OAuth2Error.UNAUTHORIZED_CLIENT, redirectURI));
             }
             if (!ResponseType.CODE.toString().equals(jwtClaimsSet.getClaim("response_type"))) {
-                LOG.warn(
+                LOG.error(
                         "Unsupported responseType included in request JWT. Expected responseType of code");
                 return Optional.of(
                         new AuthRequestError(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE, redirectURI));
@@ -154,11 +154,11 @@ public class RequestObjectService {
                             Scope.parse(jwtClaimsSet.getClaim("scope").toString()).toStringList(),
                             client,
                             true)) {
-                LOG.warn("Invalid scopes in request JWT");
+                LOG.error("Invalid scopes in request JWT");
                 return Optional.of(new AuthRequestError(OAuth2Error.INVALID_SCOPE, redirectURI));
             }
             if (Objects.isNull(jwtClaimsSet.getClaim("state"))) {
-                LOG.warn("State is missing from authRequest");
+                LOG.error("State is missing from authRequest");
                 return Optional.of(
                         new AuthRequestError(
                                 new ErrorObject(
@@ -167,7 +167,7 @@ public class RequestObjectService {
                                 redirectURI));
             }
             if (Objects.isNull(jwtClaimsSet.getClaim("nonce"))) {
-                LOG.warn("Nomce is missing from authRequest");
+                LOG.error("Nonce is missing from authRequest");
                 return Optional.of(
                         new AuthRequestError(
                                 new ErrorObject(
@@ -241,7 +241,7 @@ public class RequestObjectService {
                         new AuthRequestError(OAuth2Error.TEMPORARILY_UNAVAILABLE, redirectURI));
             }
         } catch (IllegalArgumentException e) {
-            LOG.warn(
+            LOG.error(
                     "vtr in AuthRequest is not valid. vtr in request: {}. IllegalArgumentException: {}",
                     authRequestVtr,
                     e);

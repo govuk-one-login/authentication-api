@@ -101,28 +101,25 @@ public class AuthorizationService {
         }
         var redirectURI = authRequest.getRedirectionURI();
         if (authRequest.getRequestURI() != null) {
+            LOG.error("Request URI is not supported");
             return Optional.of(
                     new AuthRequestError(OAuth2Error.REQUEST_URI_NOT_SUPPORTED, redirectURI));
         }
         if (authRequest.getRequestObject() != null) {
+            LOG.error("Request object not expected here");
             return Optional.of(
                     new AuthRequestError(OAuth2Error.REQUEST_NOT_SUPPORTED, redirectURI));
         }
         if (!authRequest.getResponseType().toString().equals(ResponseType.CODE.toString())) {
-            LOG.warn("Unsupported responseType included in request. Expected responseType of code");
+            LOG.error(
+                    "Unsupported responseType included in request. Expected responseType of code");
             return Optional.of(
                     new AuthRequestError(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE, redirectURI));
         }
         if (!areScopesValid(authRequest.getScope().toStringList(), client.get())) {
-            LOG.warn(
-                    "Invalid scopes in authRequest. Scopes in request: {}",
-                    authRequest.getScope().toStringList());
             return Optional.of(new AuthRequestError(OAuth2Error.INVALID_SCOPE, redirectURI));
         }
         if (!areClaimsValid(authRequest.getOIDCClaims(), client.get())) {
-            LOG.warn(
-                    "Invalid claims in authRequest. Claims in request: {}",
-                    authRequest.getOIDCClaims().toJSONString());
             return Optional.of(
                     new AuthRequestError(
                             new ErrorObject(
@@ -131,7 +128,7 @@ public class AuthorizationService {
                             redirectURI));
         }
         if (authRequest.getNonce() == null) {
-            LOG.warn("Nonce is missing from authRequest");
+            LOG.error("Nonce is missing from authRequest");
             return Optional.of(
                     new AuthRequestError(
                             new ErrorObject(
@@ -140,7 +137,7 @@ public class AuthorizationService {
                             redirectURI));
         }
         if (authRequest.getState() == null) {
-            LOG.warn("State is missing from authRequest");
+            LOG.error("State is missing from authRequest");
             return Optional.of(
                     new AuthRequestError(
                             new ErrorObject(
@@ -158,7 +155,7 @@ public class AuthorizationService {
                         new AuthRequestError(OAuth2Error.TEMPORARILY_UNAVAILABLE, redirectURI));
             }
         } catch (IllegalArgumentException e) {
-            LOG.warn(
+            LOG.error(
                     "vtr in AuthRequest is not valid. vtr in request: {}. IllegalArgumentException: {}",
                     authRequestVtr,
                     e);
@@ -195,12 +192,16 @@ public class AuthorizationService {
     private boolean areScopesValid(List<String> scopes, ClientRegistry clientRegistry) {
         for (String scope : scopes) {
             if (ValidScopes.getAllValidScopes().stream().noneMatch(t -> t.equals(scope))) {
-                LOG.warn("Scopes have been requested which are not yet supported");
+                LOG.error(
+                        "Scopes have been requested which are not yet supported. Scopes in request: {}",
+                        scopes);
                 return false;
             }
         }
         if (!clientRegistry.getScopes().containsAll(scopes)) {
-            LOG.warn("Scopes have been requested which this client is not supported to request");
+            LOG.error(
+                    "Scopes have been requested which this client is not supported to request. Scopes in request: {}",
+                    scopes);
             return false;
         }
         return true;
@@ -217,12 +218,16 @@ public class AuthorizationService {
                         .collect(Collectors.toList());
         for (String claim : claimNames) {
             if (ValidClaims.getAllValidClaims().stream().noneMatch(t -> t.equals(claim))) {
-                LOG.warn("Claims have been requested which are not yet supported");
+                LOG.error(
+                        "Claims have been requested which are not yet supported. Claims in request: {}",
+                        claimsRequest.toJSONString());
                 return false;
             }
         }
         if (!clientRegistry.getClaims().containsAll(claimNames)) {
-            LOG.warn("Claims have been requested which this client is not supported to request");
+            LOG.error(
+                    "Claims have been requested which this client is not supported to request. Claims in request: {}",
+                    claimsRequest.toJSONString());
             return false;
         }
         LOG.info("Claims are present AND valid in auth request");
