@@ -78,6 +78,7 @@ class LogoutHandlerTest {
 
     private static final State STATE = new State();
     private static final String COOKIE = "Cookie";
+    private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final String SESSION_ID = IdGenerator.generate();
     private static final String CLIENT_SESSION_ID = IdGenerator.generate();
     private static final String PERSISTENT_SESSION_ID = IdGenerator.generate();
@@ -118,6 +119,7 @@ class LogoutHandlerTest {
                         auditService,
                         backChannelLogoutService);
         when(configurationService.getDefaultLogoutURI()).thenReturn(DEFAULT_LOGOUT_URI);
+        when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
         signedIDToken =
@@ -666,11 +668,14 @@ class LogoutHandlerTest {
         verify(sessionService).deleteSessionFromRedis(SESSION_ID);
 
         verify(backChannelLogoutService)
-                .sendLogoutMessage(argThat(withClientId("client-id")), eq(EMAIL));
+                .sendLogoutMessage(
+                        argThat(withClientId("client-id")), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
         verify(backChannelLogoutService)
-                .sendLogoutMessage(argThat(withClientId("client-id-2")), eq(EMAIL));
+                .sendLogoutMessage(
+                        argThat(withClientId("client-id-2")), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
         verify(backChannelLogoutService)
-                .sendLogoutMessage(argThat(withClientId("client-id-3")), eq(EMAIL));
+                .sendLogoutMessage(
+                        argThat(withClientId("client-id-3")), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
 
         verify(clientSessionService).deleteClientSessionFromRedis(CLIENT_SESSION_ID);
         verify(clientSessionService).deleteClientSessionFromRedis("client-session-id-2");

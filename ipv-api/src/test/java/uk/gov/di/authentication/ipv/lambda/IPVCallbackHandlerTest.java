@@ -99,6 +99,7 @@ class IPVCallbackHandlerTest {
     private final AwsSqsClient awsSqsClient = mock(AwsSqsClient.class);
     private static final URI LOGIN_URL = URI.create("https://example.com");
     private static final String OIDC_BASE_URL = "https://base-url.com";
+    private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
     private static final String COOKIE = "Cookie";
     private static final String SESSION_ID = "a-session-id";
@@ -259,7 +260,8 @@ class IPVCallbackHandlerTest {
         var expectedRedirectURI = new URIBuilder(LOGIN_URL).setPath("ipv-callback").build();
         assertThat(response.getHeaders().get("Location"), equalTo(expectedRedirectURI.toString()));
         var expectedPairwiseSub =
-                ClientSubjectHelper.getSubject(userProfile, clientRegistry, dynamoService);
+                ClientSubjectHelper.getSubject(
+                        userProfile, clientRegistry, dynamoService, INTERNAL_SECTOR_URI);
         verify(awsSqsClient)
                 .send(
                         objectMapper.writeValueAsString(

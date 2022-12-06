@@ -262,7 +262,12 @@ public class TokenHandler
         } else {
             UserProfile userProfile =
                     dynamoService.getUserProfileByEmail(authCodeExchangeData.getEmail());
-            Subject subject = ClientSubjectHelper.getSubject(userProfile, client, dynamoService);
+            Subject subject =
+                    ClientSubjectHelper.getSubject(
+                            userProfile,
+                            client,
+                            dynamoService,
+                            configurationService.getInternalSectorUri());
             tokenResponse =
                     segmentedFunctionCall(
                             "generateTokenResponse",

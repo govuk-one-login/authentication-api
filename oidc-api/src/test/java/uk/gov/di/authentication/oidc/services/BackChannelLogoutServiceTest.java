@@ -25,6 +25,7 @@ class BackChannelLogoutServiceTest {
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final BackChannelLogoutService service =
             new BackChannelLogoutService(sqs, authenticationService);
+    private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
 
     @Test
     void shouldPostBackChannelLogoutMessageToSqsForPairwiseClients() {
@@ -40,7 +41,8 @@ class BackChannelLogoutServiceTest {
                         .withSubjectType("pairwise")
                         .withSectorIdentifierUri("https://example.sign-in.service.gov.uk")
                         .withBackChannelLogoutUri("http://localhost:8080/back-channel-logout"),
-                "test@test.com");
+                "test@test.com",
+                INTERNAL_SECTOR_URI);
 
         var captor = ArgumentCaptor.forClass(BackChannelLogoutMessage.class);
 
@@ -62,7 +64,10 @@ class BackChannelLogoutServiceTest {
         var neitherField = new ClientRegistry();
 
         Stream.of(noLogoutUri, noClientId, neitherField)
-                .forEach(clientRegistry -> service.sendLogoutMessage(clientRegistry, null));
+                .forEach(
+                        clientRegistry ->
+                                service.sendLogoutMessage(
+                                        clientRegistry, null, INTERNAL_SECTOR_URI));
 
         verify(sqs, never()).send(anyString());
     }
@@ -76,7 +81,8 @@ class BackChannelLogoutServiceTest {
                 new ClientRegistry()
                         .withClientID("client-id")
                         .withBackChannelLogoutUri("http://localhost:8080/back-channel-logout"),
-                "test@test.com");
+                "test@test.com",
+                INTERNAL_SECTOR_URI);
 
         verify(sqs, never()).send(anyString());
     }

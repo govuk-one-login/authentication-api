@@ -35,7 +35,8 @@ public class BackChannelLogoutService {
         this.authenticationService = authenticationService;
     }
 
-    public void sendLogoutMessage(ClientRegistry clientRegistry, String emailAddress) {
+    public void sendLogoutMessage(
+            ClientRegistry clientRegistry, String emailAddress, String internalSectorUri) {
 
         if (isBlank(clientRegistry.getClientID())
                 || isBlank(clientRegistry.getBackChannelLogoutUri())) {
@@ -54,7 +55,9 @@ public class BackChannelLogoutService {
             return;
         }
 
-        var subjectId = getSubject(user.get(), clientRegistry, authenticationService).getValue();
+        var subjectId =
+                getSubject(user.get(), clientRegistry, authenticationService, internalSectorUri)
+                        .getValue();
 
         var message =
                 new BackChannelLogoutMessage(

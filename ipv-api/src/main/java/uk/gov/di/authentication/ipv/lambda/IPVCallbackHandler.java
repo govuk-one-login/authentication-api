@@ -241,7 +241,11 @@ public class IPVCallbackHandler
                 return redirectToFrontendErrorPage();
             }
             var pairwiseSubject =
-                    ClientSubjectHelper.getSubject(userProfile, clientRegistry, dynamoService);
+                    ClientSubjectHelper.getSubject(
+                            userProfile,
+                            clientRegistry,
+                            dynamoService,
+                            configurationService.getInternalSectorUri());
             if (configurationService.isIdentityTraceLoggingEnabled()) {
                 LOG.info(
                         "Sending UserInfo request with accessToken {}",
@@ -295,7 +299,8 @@ public class IPVCallbackHandler
                                     clientSessionId);
                     queueSPOTRequest(
                             logIds,
-                            getSectorIdentifierForClient(clientRegistry),
+                            getSectorIdentifierForClient(
+                                    clientRegistry, configurationService.getInternalSectorUri()),
                             userProfile,
                             pairwiseSubject,
                             userIdentityUserInfo,

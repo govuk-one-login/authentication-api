@@ -83,7 +83,8 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                     ClientSubjectHelper.getSubject(
                             userContext.getUserProfile().orElseThrow(),
                             userContext.getClient().orElseThrow(),
-                            authenticationService);
+                            authenticationService,
+                            configurationService.getInternalSectorUri());
             int processingAttempts = userContext.getSession().incrementProcessingIdentityAttempts();
             LOG.info(
                     "Attempting to find identity credentials in dynamo. Attempt: {}",
