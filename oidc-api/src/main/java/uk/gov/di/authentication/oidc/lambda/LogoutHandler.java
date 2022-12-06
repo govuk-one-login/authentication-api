@@ -376,7 +376,9 @@ public class LogoutHandler
                     .ifPresent(
                             clientRegistry ->
                                     backChannelLogoutService.sendLogoutMessage(
-                                            clientRegistry, session.getEmailAddress()));
+                                            clientRegistry,
+                                            session.getEmailAddress(),
+                                            configurationService.getInternalSectorUri()));
             LOG.info("Deleting Client Session");
             clientSessionService.deleteClientSessionFromRedis(clientSessionId);
         }

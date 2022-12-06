@@ -14,6 +14,8 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.stream.Collectors;
 
+import static com.nimbusds.openid.connect.sdk.SubjectType.PUBLIC;
+
 public class ClientSubjectHelper {
 
     private static final Logger LOG = LogManager.getLogger(ClientSubjectHelper.class);
@@ -22,14 +24,15 @@ public class ClientSubjectHelper {
     public static Subject getSubject(
             UserProfile userProfile,
             ClientRegistry client,
-            AuthenticationService authenticationService) {
-        if ("public".equalsIgnoreCase(client.getSubjectType())) {
+            AuthenticationService authenticationService,
+            String internalSectorURI) {
+        if (PUBLIC.toString().equalsIgnoreCase(client.getSubjectType())) {
             return new Subject(userProfile.getPublicSubjectID());
         } else {
             return new Subject(
                     calculatePairwiseIdentifier(
                             userProfile.getSubjectID(),
-                            getSectorIdentifierForClient(client),
+                            getSectorIdentifierForClient(client, internalSectorURI),
                             authenticationService.getOrGenerateSalt(userProfile)));
         }
     }
@@ -45,7 +48,11 @@ public class ClientSubjectHelper {
                         authenticationService.getOrGenerateSalt(userProfile)));
     }
 
-    public static String getSectorIdentifierForClient(ClientRegistry client) {
+    public static String getSectorIdentifierForClient(
+            ClientRegistry client, String internalSectorUri) {
+        if (client.isOneLoginService()) {
+            return returnHost(internalSectorUri);
+        }
         if (!hasValidClientConfig(client)) {
             String message =
                     String.format(
