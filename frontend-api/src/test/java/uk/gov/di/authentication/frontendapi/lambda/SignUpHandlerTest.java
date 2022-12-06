@@ -184,7 +184,7 @@ class SignUpHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         CLIENT_ID.getValue(),
-                        AuditService.UNKNOWN,
+                        expectedCommonSubject,
                         EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,

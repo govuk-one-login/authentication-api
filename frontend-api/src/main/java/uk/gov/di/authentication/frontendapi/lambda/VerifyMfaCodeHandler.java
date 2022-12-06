@@ -13,7 +13,6 @@ import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
@@ -229,10 +228,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         .getClient()
                         .map(ClientRegistry::getClientID)
                         .orElse(AuditService.UNKNOWN),
-                userContext
-                        .getUserProfile()
-                        .map(UserProfile::getSubjectID)
-                        .orElse(AuditService.UNKNOWN),
+                session.getInternalCommonSubjectIdentifier(),
                 session.getEmailAddress(),
                 IpAddressHelper.extractIpAddress(input),
                 AuditService.UNKNOWN,

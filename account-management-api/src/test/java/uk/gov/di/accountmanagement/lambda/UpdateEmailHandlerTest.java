@@ -33,6 +33,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -56,8 +57,13 @@ class UpdateEmailHandlerTest {
     private static final String NEW_EMAIL_ADDRESS = "bloggs.joe@digital.cabinet-office.gov.uk";
     private static final String INVALID_EMAIL_ADDRESS = "igital.cabinet-office.gov.uk";
     private static final String PERSISTENT_ID = "some-persistent-session-id";
+    private static final byte[] SALT = SaltHelper.generateNewSalt();
     private static final String OTP = "123456";
     private static final Subject PUBLIC_SUBJECT = new Subject();
+    private static final Subject INTERNAL_SUBJECT = new Subject();
+    private final String expectedCommonSubject =
+            ClientSubjectHelper.calculatePairwiseIdentifier(
+                    INTERNAL_SUBJECT.getValue(), "test.account.gov.uk", SALT);
 
     private final Json objectMapper = SerializationService.getInstance();
     private final AuditService auditService = mock(AuditService.class);
@@ -72,11 +78,15 @@ class UpdateEmailHandlerTest {
                         auditService,
                         configurationService);
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
+        when(dynamoService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
     }
 
     @Test
     void shouldReturn204WhenPrincipalContainsPublicSubjectId() throws Json.JsonException {
-        var userProfile = new UserProfile().withPublicSubjectID(PUBLIC_SUBJECT.getValue());
+        var userProfile =
+                new UserProfile()
+                        .withPublicSubjectID(PUBLIC_SUBJECT.getValue())
+                        .withSubjectID(INTERNAL_SUBJECT.getValue());
         when(dynamoService.getUserProfileByEmailMaybe(EXISTING_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(userProfile));
         when(codeStorageService.isValidOtpCode(NEW_EMAIL_ADDRESS, OTP, VERIFY_EMAIL))
@@ -97,7 +107,7 @@ class UpdateEmailHandlerTest {
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
-                        userProfile.getSubjectID(),
+                        expectedCommonSubject,
                         NEW_EMAIL_ADDRESS,
                         "123.123.123.123",
                         userProfile.getPhoneNumber(),
@@ -106,19 +116,13 @@ class UpdateEmailHandlerTest {
 
     @Test
     void shouldReturn204WhenPrincipalContainsInternalPairwiseSubjectId() throws Json.JsonException {
-        var internalSubject = new Subject();
-        var salt = SaltHelper.generateNewSalt();
-        var userProfile = new UserProfile().withSubjectID(internalSubject.getValue());
-        var internalPairwiseIdentifier =
-                ClientSubjectHelper.calculatePairwiseIdentifier(
-                        internalSubject.getValue(), "test.account.gov.uk", salt);
+        var userProfile = new UserProfile().withSubjectID(INTERNAL_SUBJECT.getValue());
         when(dynamoService.getUserProfileByEmailMaybe(EXISTING_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(userProfile));
-        when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(salt);
         when(codeStorageService.isValidOtpCode(NEW_EMAIL_ADDRESS, OTP, VERIFY_EMAIL))
                 .thenReturn(true);
 
-        var event = generateApiGatewayEvent(NEW_EMAIL_ADDRESS, internalPairwiseIdentifier);
+        var event = generateApiGatewayEvent(NEW_EMAIL_ADDRESS, expectedCommonSubject);
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(204));
@@ -135,7 +139,7 @@ class UpdateEmailHandlerTest {
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
-                        userProfile.getSubjectID(),
+                        expectedCommonSubject,
                         NEW_EMAIL_ADDRESS,
                         "123.123.123.123",
                         userProfile.getPhoneNumber(),

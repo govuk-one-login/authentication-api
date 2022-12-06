@@ -148,7 +148,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                             .getClient()
                             .map(ClientRegistry::getClientID)
                             .orElse(AuditService.UNKNOWN),
-                    AuditService.UNKNOWN,
+                    internalCommonSubjectIdentifier.getValue(),
                     request.getEmail(),
                     IpAddressHelper.extractIpAddress(input),
                     AuditService.UNKNOWN,

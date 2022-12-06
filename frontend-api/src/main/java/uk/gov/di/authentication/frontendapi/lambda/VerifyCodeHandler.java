@@ -15,7 +15,6 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
@@ -265,10 +264,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                         .getClient()
                         .map(ClientRegistry::getClientID)
                         .orElse(AuditService.UNKNOWN),
-                userContext
-                        .getUserProfile()
-                        .map(UserProfile::getSubjectID)
-                        .orElse(AuditService.UNKNOWN),
+                session.getInternalCommonSubjectIdentifier(),
                 session.getEmailAddress(),
                 IpAddressHelper.extractIpAddress(input),
                 AuditService.UNKNOWN,
@@ -313,10 +309,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                         .getClient()
                         .map(ClientRegistry::getClientID)
                         .orElse(AuditService.UNKNOWN),
-                userContext
-                        .getUserProfile()
-                        .map(UserProfile::getSubjectID)
-                        .orElse(AuditService.UNKNOWN),
+                session.getInternalCommonSubjectIdentifier(),
                 session.getEmailAddress(),
                 IpAddressHelper.extractIpAddress(input),
                 AuditService.UNKNOWN,

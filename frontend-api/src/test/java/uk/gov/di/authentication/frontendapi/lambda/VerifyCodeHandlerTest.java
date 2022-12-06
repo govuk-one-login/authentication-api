@@ -7,6 +7,7 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
@@ -25,7 +26,9 @@ import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -84,7 +87,13 @@ class VerifyCodeHandlerTest {
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final UserProfile userProfile = mock(UserProfile.class);
-    private final Session session = new Session("session-id").setEmailAddress(TEST_EMAIL_ADDRESS);
+    private final String expectedCommonSubject =
+            ClientSubjectHelper.calculatePairwiseIdentifier(
+                    new Subject().getValue(), "test.account.gov.uk", SaltHelper.generateNewSalt());
+    private final Session session =
+            new Session("session-id")
+                    .setEmailAddress(TEST_EMAIL_ADDRESS)
+                    .setInternalCommonSubjectIdentifier(expectedCommonSubject);
     private final Session testClientSession =
             new Session("test-client-session-id").setEmailAddress(TEST_CLIENT_EMAIL);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
@@ -169,7 +178,7 @@ class VerifyCodeHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         CLIENT_ID,
-                        "test-subject-id",
+                        expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
@@ -208,7 +217,7 @@ class VerifyCodeHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         CLIENT_ID,
-                        "test-subject-id",
+                        expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
@@ -304,7 +313,7 @@ class VerifyCodeHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         CLIENT_ID,
-                        "test-subject-id",
+                        expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
@@ -353,7 +362,7 @@ class VerifyCodeHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         CLIENT_ID,
-                        "test-subject-id",
+                        expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
@@ -391,7 +400,7 @@ class VerifyCodeHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         CLIENT_ID,
-                        "test-subject-id",
+                        expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
@@ -438,7 +447,7 @@ class VerifyCodeHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         CLIENT_ID,
-                        "test-subject-id",
+                        expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         AuditService.UNKNOWN,

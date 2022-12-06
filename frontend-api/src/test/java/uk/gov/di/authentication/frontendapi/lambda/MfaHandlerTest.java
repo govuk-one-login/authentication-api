@@ -7,6 +7,7 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
@@ -21,8 +22,10 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -75,6 +78,9 @@ public class MfaHandlerTest {
     private static final long CODE_EXPIRY_TIME = 900;
     private static final long BLOCKED_EMAIL_DURATION = 799;
     private static final String TEST_CLIENT_ID = "test-client-id";
+    private final String expectedCommonSubject =
+            ClientSubjectHelper.calculatePairwiseIdentifier(
+                    new Subject().getValue(), "test.account.gov.uk", SaltHelper.generateNewSalt());
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
     private final Context context = mock(Context.class);
     private final SessionService sessionService = mock(SessionService.class);
@@ -88,7 +94,10 @@ public class MfaHandlerTest {
     private final ClientSession clientSession = mock(ClientSession.class);
     private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private static final Json objectMapper = SerializationService.getInstance();
-    private final Session session = new Session("a-session-id").setEmailAddress(TEST_EMAIL_ADDRESS);
+    private final Session session =
+            new Session("a-session-id")
+                    .setEmailAddress(TEST_EMAIL_ADDRESS)
+                    .setInternalCommonSubjectIdentifier(expectedCommonSubject);
     private final ClientRegistry testClientRegistry =
             new ClientRegistry()
                     .withTestClient(true)
@@ -158,7 +167,7 @@ public class MfaHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         "",
-                        AuditService.UNKNOWN,
+                        expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         PHONE_NUMBER,
@@ -205,7 +214,7 @@ public class MfaHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         "",
-                        AuditService.UNKNOWN,
+                        expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         PHONE_NUMBER,
@@ -243,7 +252,7 @@ public class MfaHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         "",
-                        AuditService.UNKNOWN,
+                        expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         PHONE_NUMBER,
@@ -322,7 +331,7 @@ public class MfaHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         "",
-                        AuditService.UNKNOWN,
+                        expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
@@ -475,7 +484,7 @@ public class MfaHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         TEST_CLIENT_ID,
-                        AuditService.UNKNOWN,
+                        expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         PHONE_NUMBER,

@@ -38,6 +38,7 @@ public class UserInfoHandlerTest {
     private static final String EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String PHONE_NUMBER = "01234567890";
     private static final Subject SUBJECT = new Subject();
+    private static final Subject AUDIT_SUBJECT_ID = new Subject();
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final UserInfoService userInfoService = mock(UserInfoService.class);
@@ -71,6 +72,8 @@ public class UserInfoHandlerTest {
         when(accessTokenService.parse(accessToken.toAuthorizationHeader(), false))
                 .thenReturn(accessTokenInfo);
         when(userInfoService.populateUserInfo(accessTokenInfo)).thenReturn(userInfo);
+        when(userInfoService.calculateSubjectForAudit(accessTokenInfo))
+                .thenReturn(AUDIT_SUBJECT_ID.getValue());
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Authorization", accessToken.toAuthorizationHeader()));
@@ -90,7 +93,7 @@ public class UserInfoHandlerTest {
                         AuditService.UNKNOWN,
                         "",
                         "client-id",
-                        SUBJECT.getValue(),
+                        AUDIT_SUBJECT_ID.getValue(),
                         "",
                         "",
                         "",

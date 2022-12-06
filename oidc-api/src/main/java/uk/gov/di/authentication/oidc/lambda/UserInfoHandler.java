@@ -115,6 +115,8 @@ public class UserInfoHandler
                     "",
                     new UserInfoErrorResponse(e.getError()).toHTTPResponse().getHeaderMap());
         }
+        var subjectForAudit = userInfoService.calculateSubjectForAudit(accessTokenInfo);
+
         LOG.info("Successfully processed UserInfo request. Sending back UserInfo response");
 
         auditService.submitAuditEvent(
@@ -122,7 +124,7 @@ public class UserInfoHandler
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 accessTokenInfo.getClientID(),
-                accessTokenInfo.getSubject(),
+                subjectForAudit,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,

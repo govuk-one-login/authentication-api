@@ -34,6 +34,7 @@ import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -61,7 +62,12 @@ class UpdatePasswordHandlerTest {
     private static final String CURRENT_PASSWORD = "password1";
     private static final String INVALID_PASSWORD = "pwd";
     private static final Subject PUBLIC_SUBJECT = new Subject();
+    private static final byte[] SALT = SaltHelper.generateNewSalt();
     private static final String PERSISTENT_ID = "some-persistent-session-id";
+    private static final Subject INTERNAL_SUBJECT = new Subject();
+    private final String expectedCommonSubject =
+            ClientSubjectHelper.calculatePairwiseIdentifier(
+                    INTERNAL_SUBJECT.getValue(), "test.account.gov.uk", SALT);
     private final Json objectMapper = SerializationService.getInstance();
 
     @BeforeEach
@@ -75,11 +81,15 @@ class UpdatePasswordHandlerTest {
                         passwordValidator,
                         configurationService);
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
+        when(dynamoService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
     }
 
     @Test
     void shouldReturn204WhenPrincipalContainsPublicSubjectId() throws Json.JsonException {
-        var userProfile = new UserProfile().withPublicSubjectID(PUBLIC_SUBJECT.getValue());
+        var userProfile =
+                new UserProfile()
+                        .withPublicSubjectID(PUBLIC_SUBJECT.getValue())
+                        .withSubjectID(INTERNAL_SUBJECT.getValue());
         var userCredentials = new UserCredentials().withPassword(CURRENT_PASSWORD);
         when(dynamoService.getUserProfileByEmailMaybe(EXISTING_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(userProfile));
@@ -105,7 +115,7 @@ class UpdatePasswordHandlerTest {
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
-                        userProfile.getSubjectID(),
+                        expectedCommonSubject,
                         userProfile.getEmail(),
                         "123.123.123.123",
                         userProfile.getPhoneNumber(),
@@ -114,20 +124,14 @@ class UpdatePasswordHandlerTest {
 
     @Test
     void shouldReturn204WhenPrincipalContainsInternalPairwiseSubjectId() throws Json.JsonException {
-        var internalSubject = new Subject();
-        var salt = SaltHelper.generateNewSalt();
-        var userProfile = new UserProfile().withSubjectID(internalSubject.getValue());
+        var userProfile = new UserProfile().withSubjectID(INTERNAL_SUBJECT.getValue());
         var userCredentials = new UserCredentials().withPassword(CURRENT_PASSWORD);
-        var internalPairwiseIdentifier =
-                ClientSubjectHelper.calculatePairwiseIdentifier(
-                        internalSubject.getValue(), "test.account.gov.uk", salt);
         when(dynamoService.getUserProfileByEmailMaybe(EXISTING_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(userProfile));
         when(dynamoService.getUserCredentialsFromEmail(EXISTING_EMAIL_ADDRESS))
                 .thenReturn(userCredentials);
-        when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(salt);
 
-        var event = generateApiGatewayEvent(NEW_PASSWORD, internalPairwiseIdentifier);
+        var event = generateApiGatewayEvent(NEW_PASSWORD, expectedCommonSubject);
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(204));
@@ -145,7 +149,7 @@ class UpdatePasswordHandlerTest {
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
-                        userProfile.getSubjectID(),
+                        expectedCommonSubject,
                         userProfile.getEmail(),
                         "123.123.123.123",
                         userProfile.getPhoneNumber(),
