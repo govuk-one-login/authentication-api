@@ -116,19 +116,19 @@ public class RemoveAccountHandler
                     authorizerParams)) {
                 throw new InvalidPrincipalException("Invalid Principal in request");
             }
-            authenticationService.removeAccount(email);
-            LOG.info("User account removed. Adding message to SQS queue");
-
-            NotifyRequest notifyRequest =
-                    new NotifyRequest(email, NotificationType.DELETE_ACCOUNT, userLanguage);
-            sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
-
             LOG.info("Calculating internal common subject identifier");
             var internalCommonSubjectIdentifier =
                     ClientSubjectHelper.getSubjectWithSectorIdentifier(
                             userProfile,
                             configurationService.getInternalSectorUri(),
                             authenticationService);
+
+            authenticationService.removeAccount(email);
+            LOG.info("User account removed. Adding message to SQS queue");
+
+            NotifyRequest notifyRequest =
+                    new NotifyRequest(email, NotificationType.DELETE_ACCOUNT, userLanguage);
+            sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
 
             LOG.info(
                     "Remove account message successfully added to queue. Generating successful gateway response");
