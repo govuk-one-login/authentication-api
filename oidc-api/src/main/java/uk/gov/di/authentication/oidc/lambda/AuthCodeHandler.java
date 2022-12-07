@@ -19,6 +19,7 @@ import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
@@ -215,20 +216,11 @@ public class AuthCodeHandler
                         "No mfa method to set. User is either authenticated or signing in from a low level service");
             }
 
+            var internalSubjectId = AuditService.UNKNOWN;
+            String internalCommonPairwiseSubjectId;
             if (docAppJourney) {
                 LOG.info("Session not saved for DocCheckingAppUser");
-                auditService.submitAuditEvent(
-                        OidcAuditableEvent.AUTH_CODE_ISSUED,
-                        clientSessionId,
-                        session.getSessionId(),
-                        authenticationRequest.getClientID().getValue(),
-                        clientSession.getDocAppSubjectId().getValue(),
-                        Objects.isNull(session.getEmailAddress())
-                                ? AuditService.UNKNOWN
-                                : session.getEmailAddress(),
-                        IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+                internalCommonPairwiseSubjectId = clientSession.getDocAppSubjectId().getValue();
             } else {
                 var mfaNotRequired =
                         clientSession
@@ -246,24 +238,29 @@ public class AuthCodeHandler
                 dimensions.put("MfaRequired", mfaNotRequired ? "No" : "Yes");
                 dimensions.put("RequestedLevelOfConfidence", levelOfConfidence);
                 sessionService.save(session.setAuthenticated(true).setNewAccount(EXISTING));
-                var subjectId =
-                        dynamoService
-                                .getUserProfileByEmail(session.getEmailAddress())
-                                .getSubjectID();
-                auditService.submitAuditEvent(
-                        OidcAuditableEvent.AUTH_CODE_ISSUED,
-                        clientSessionId,
-                        session.getSessionId(),
-                        authenticationRequest.getClientID().getValue(),
-                        session.getInternalCommonSubjectIdentifier(),
+                internalCommonPairwiseSubjectId = session.getInternalCommonSubjectIdentifier();
+                internalSubjectId =
                         Objects.isNull(session.getEmailAddress())
                                 ? AuditService.UNKNOWN
-                                : session.getEmailAddress(),
-                        IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                        pair("internalSubjectId", subjectId));
+                                : dynamoService
+                                        .getUserProfileByEmailMaybe(session.getEmailAddress())
+                                        .map(UserProfile::getSubjectID)
+                                        .orElse(AuditService.UNKNOWN);
             }
+
+            auditService.submitAuditEvent(
+                    OidcAuditableEvent.AUTH_CODE_ISSUED,
+                    clientSessionId,
+                    session.getSessionId(),
+                    authenticationRequest.getClientID().getValue(),
+                    internalCommonPairwiseSubjectId,
+                    Objects.isNull(session.getEmailAddress())
+                            ? AuditService.UNKNOWN
+                            : session.getEmailAddress(),
+                    IpAddressHelper.extractIpAddress(input),
+                    AuditService.UNKNOWN,
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                    pair("internalSubjectId", internalSubjectId));
 
             cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
             cloudwatchMetricsService.incrementSignInByClient(
