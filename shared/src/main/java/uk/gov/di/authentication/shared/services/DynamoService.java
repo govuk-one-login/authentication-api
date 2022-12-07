@@ -462,13 +462,13 @@ public class DynamoService implements AuthenticationService {
         Iterator<Map.Entry<UserProfile, UserCredentials>> iterator =
                 testUsers.entrySet().iterator();
 
-        Map<UserProfile, UserCredentials> currentPartition = new HashMap();
+        Map<UserProfile, UserCredentials> currentPartition = new HashMap<>();
 
         while (iterator.hasNext()) {
             Map.Entry<UserProfile, UserCredentials> entry = iterator.next();
             if (currentPartition.size() == maxBatchWriteUsersToBothTables) {
                 partitions.add(currentPartition);
-                currentPartition = new HashMap();
+                currentPartition = new HashMap<>();
             }
             currentPartition.put(entry.getKey(), entry.getValue());
         }
@@ -509,8 +509,9 @@ public class DynamoService implements AuthenticationService {
         for (Thread thread : dbWriterThreads) {
             try {
                 thread.join();
-            } catch (Exception e) {
-                LOG.error("Thread failed to write to DB {}", e);
+            } catch (InterruptedException e) {
+                LOG.error("Thread failed to write to DB");
+                Thread.currentThread().interrupt();
             }
         }
     }
@@ -526,23 +527,23 @@ public class DynamoService implements AuthenticationService {
         public void run() {
             writeTestUserBatchPartitionToDb(partitionsToWrite);
         }
-    }
 
-    private void writeTestUserBatchPartitionToDb(
-            List<Map<UserProfile, UserCredentials>> testUserBatchPartitions) {
-        for (Map<UserProfile, UserCredentials> testUserBatch : testUserBatchPartitions) {
-            TransactWriteItemsEnhancedRequest.Builder insertItemsRequestBuilder =
-                    TransactWriteItemsEnhancedRequest.builder();
+        private void writeTestUserBatchPartitionToDb(
+                List<Map<UserProfile, UserCredentials>> testUserBatchPartitions) {
+            for (Map<UserProfile, UserCredentials> testUserBatch : testUserBatchPartitions) {
+                TransactWriteItemsEnhancedRequest.Builder insertItemsRequestBuilder =
+                        TransactWriteItemsEnhancedRequest.builder();
 
-            testUserBatch.forEach(
-                    (key, value) ->
-                            insertItemsRequestBuilder
-                                    .addPutItem(dynamoUserProfileTable, key)
-                                    .addPutItem(dynamoUserCredentialsTable, value));
+                testUserBatch.forEach(
+                        (key, value) ->
+                                insertItemsRequestBuilder
+                                        .addPutItem(dynamoUserProfileTable, key)
+                                        .addPutItem(dynamoUserCredentialsTable, value));
 
-            var insertItemsBatchRequest = insertItemsRequestBuilder.build();
+                var insertItemsBatchRequest = insertItemsRequestBuilder.build();
 
-            dynamoDbEnhancedClient.transactWriteItems(insertItemsBatchRequest);
+                dynamoDbEnhancedClient.transactWriteItems(insertItemsBatchRequest);
+            }
         }
     }
 

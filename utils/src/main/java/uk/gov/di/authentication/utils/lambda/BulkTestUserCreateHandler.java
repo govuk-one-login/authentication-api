@@ -83,7 +83,7 @@ public class BulkTestUserCreateHandler implements RequestHandler<S3Event, Void> 
                                 batch.add(line.strip());
                             }
 
-                            if (batch.size() % 500 == 0 && batch.size() > 0) {
+                            if (batch.size() % 500 == 0 && !batch.isEmpty()) {
                                 final List<String> finalBatch = batch;
                                 segmentedFunctionCall(
                                         "dbWriteFullBatch", () -> addTestUsersBatch(finalBatch));

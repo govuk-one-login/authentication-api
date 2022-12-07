@@ -15,10 +15,6 @@ public class BulkTestUserDeleteHandler implements RequestHandler<String, Void> {
     private static final Logger LOG = LogManager.getLogger(BulkTestUserDeleteHandler.class);
     private final DynamoService dynamoService;
 
-    public BulkTestUserDeleteHandler(DynamoService dynamoService) {
-        this.dynamoService = dynamoService;
-    }
-
     public BulkTestUserDeleteHandler(ConfigurationService configurationService) {
         this.dynamoService = new DynamoService(configurationService);
     }
@@ -39,7 +35,7 @@ public class BulkTestUserDeleteHandler implements RequestHandler<String, Void> {
 
         List<String> batch = new ArrayList<>();
 
-        while (allTestUsers.size() > 0) {
+        while (!allTestUsers.isEmpty()) {
 
             String testUserEmailAddress = allTestUsers.remove(0).getEmail();
             batch.add(testUserEmailAddress);

@@ -19,7 +19,7 @@ public class BulkTestUserS3Extension extends S3Extension {
                     CreateBucketRequest.builder().bucket(BULK_TEST_USER_BUCKET).build());
         }
 
-        addTestFileToCommonPasswordsBucket();
+        addTestFileToBulkTestUsersBucket();
     }
 
     @Override
@@ -31,7 +31,7 @@ public class BulkTestUserS3Extension extends S3Extension {
         }
     }
 
-    private void addTestFileToCommonPasswordsBucket() throws URISyntaxException {
+    private void addTestFileToBulkTestUsersBucket() throws URISyntaxException {
         URL testFileUrl =
                 Thread.currentThread()
                         .getContextClassLoader()
