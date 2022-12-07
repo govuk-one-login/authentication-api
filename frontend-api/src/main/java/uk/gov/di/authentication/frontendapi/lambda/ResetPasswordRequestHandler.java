@@ -7,13 +7,12 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.exception.SdkClientException;
-import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordRequest;
-import uk.gov.di.authentication.frontendapi.services.ResetPasswordService;
+import uk.gov.di.authentication.frontendapi.helpers.TestClientHelper;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
+import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
@@ -31,8 +30,9 @@ import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Optional;
 
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PASSWORD_RESET_REQUESTED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PASSWORD_RESET_REQUESTED_FOR_TEST_CLIENT;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1001;
-import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -49,7 +49,6 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
     private final CodeGeneratorService codeGeneratorService;
     private final CodeStorageService codeStorageService;
     private final AuditService auditService;
-    private final ResetPasswordService resetPasswordService;
 
     public ResetPasswordRequestHandler(
             ConfigurationService configurationService,
@@ -60,8 +59,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
             AwsSqsClient sqsClient,
             CodeGeneratorService codeGeneratorService,
             CodeStorageService codeStorageService,
-            AuditService auditService,
-            ResetPasswordService resetPasswordService) {
+            AuditService auditService) {
         super(
                 ResetPasswordRequest.class,
                 configurationService,
@@ -73,7 +71,6 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         this.codeGeneratorService = codeGeneratorService;
         this.codeStorageService = codeStorageService;
         this.auditService = auditService;
-        this.resetPasswordService = resetPasswordService;
     }
 
     public ResetPasswordRequestHandler() {
@@ -90,7 +87,6 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         this.codeGeneratorService = new CodeGeneratorService();
         this.codeStorageService = new CodeStorageService(configurationService);
         this.auditService = new AuditService(configurationService);
-        this.resetPasswordService = new ResetPasswordService(configurationService);
     }
 
     @Override
@@ -106,10 +102,13 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
             if (!userContext.getSession().validateSession(request.getEmail())) {
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
             }
-            String persistentSessionId =
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
+            var isTestClient =
+                    TestClientHelper.isTestClientWithAllowedEmail(
+                            userContext, configurationService);
             auditService.submitAuditEvent(
-                    FrontendAuditableEvent.PASSWORD_RESET_REQUESTED,
+                    isTestClient
+                            ? PASSWORD_RESET_REQUESTED_FOR_TEST_CLIENT
+                            : PASSWORD_RESET_REQUESTED,
                     userContext.getClientSessionId(),
                     userContext.getSession().getSessionId(),
                     userContext
@@ -119,75 +118,55 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                     AuditService.UNKNOWN,
                     request.getEmail(),
                     IpAddressHelper.extractIpAddress(input),
-                    AuditService.UNKNOWN,
-                    persistentSessionId);
+                    authenticationService.getPhoneNumber(request.getEmail()).orElse(null),
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
-            Optional<ErrorResponse> errorResponse =
-                    validatePasswordResetCount(request.getEmail(), userContext);
-            if (errorResponse.isPresent()) {
-                return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
-            }
-            return processPasswordResetRequest(request, userContext, persistentSessionId);
-
+            return validatePasswordResetCount(request.getEmail(), userContext)
+                    .map(t -> generateApiGatewayProxyErrorResponse(400, t))
+                    .orElse(processPasswordResetRequest(request, userContext, isTestClient));
         } catch (SdkClientException ex) {
             LOG.error("Error sending message to queue", ex);
             return generateApiGatewayProxyResponse(500, "Error sending message to queue");
         } catch (JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
+        } catch (ClientNotFoundException e) {
+            LOG.warn("Client not found");
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
         }
     }
 
     private APIGatewayProxyResponseEvent processPasswordResetRequest(
             ResetPasswordRequest resetPasswordRequest,
             UserContext userContext,
-            String persistentSessionId)
-            throws JsonException {
-        String subjectId =
-                authenticationService
-                        .getSubjectFromEmail(resetPasswordRequest.getEmail())
-                        .getValue();
-        String code;
-        String notifyText;
-        NotificationType notificationType;
-        if (resetPasswordRequest.isUseCodeFlow()) {
-            notificationType = RESET_PASSWORD_WITH_CODE;
-
-            code =
-                    codeStorageService
-                            .getOtpCode(resetPasswordRequest.getEmail(), notificationType)
-                            .orElseGet(
-                                    () -> {
-                                        String newCode = codeGeneratorService.sixDigitCode();
-                                        codeStorageService.saveOtpCode(
-                                                resetPasswordRequest.getEmail(),
-                                                newCode,
-                                                configurationService.getDefaultOtpCodeExpiry(),
-                                                notificationType);
-                                        return newCode;
-                                    });
-
-            notifyText = code;
-
-        } else {
-            code = codeGeneratorService.twentyByteEncodedRandomCode();
-            notifyText =
-                    resetPasswordService.buildResetPasswordLink(
-                            code, userContext.getSession().getSessionId(), persistentSessionId);
-            notificationType = RESET_PASSWORD;
-            codeStorageService.savePasswordResetCode(
-                    subjectId,
-                    code,
-                    configurationService.getDefaultOtpCodeExpiry(),
-                    notificationType);
-        }
-        NotifyRequest notifyRequest =
-                new NotifyRequest(
-                        resetPasswordRequest.getEmail(),
-                        notificationType,
-                        notifyText,
-                        userContext.getUserLanguage());
+            boolean isTestClient)
+            throws JsonException, ClientNotFoundException {
+        var code =
+                codeStorageService
+                        .getOtpCode(resetPasswordRequest.getEmail(), RESET_PASSWORD_WITH_CODE)
+                        .orElseGet(
+                                () -> {
+                                    var newCode = codeGeneratorService.sixDigitCode();
+                                    codeStorageService.saveOtpCode(
+                                            resetPasswordRequest.getEmail(),
+                                            newCode,
+                                            configurationService.getDefaultOtpCodeExpiry(),
+                                            RESET_PASSWORD_WITH_CODE);
+                                    return newCode;
+                                });
         sessionService.save(userContext.getSession().incrementPasswordResetCount());
-        sqsClient.send(serialiseRequest(notifyRequest));
+
+        if (!isTestClient) {
+            LOG.info("Placing message on queue");
+            var notifyRequest =
+                    new NotifyRequest(
+                            resetPasswordRequest.getEmail(),
+                            RESET_PASSWORD_WITH_CODE,
+                            code,
+                            userContext.getUserLanguage());
+            sqsClient.send(serialiseRequest(notifyRequest));
+        } else {
+            LOG.info("User is a TestClient so will NOT place message on queue");
+        }
         LOG.info("Successfully processed request");
         return generateEmptySuccessApiGatewayResponse();
     }

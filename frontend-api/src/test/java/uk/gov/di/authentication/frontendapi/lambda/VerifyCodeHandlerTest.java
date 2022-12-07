@@ -58,6 +58,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
+import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
@@ -485,6 +486,25 @@ class VerifyCodeHandlerTest {
                         TEST_CLIENT_ID);
 
         verify(codeStorageService).deleteOtpCode(TEST_CLIENT_EMAIL, VERIFY_EMAIL);
+        assertThat(result, hasStatus(204));
+    }
+
+    @Test
+    void shouldReturn204ForValidResetPasswordRequestUsingTestClient() {
+        when(configurationService.isTestClientsEnabled()).thenReturn(true);
+        when(configurationService.getCodeMaxRetries()).thenReturn(5);
+        when(configurationService.getTestClientVerifyPhoneNumberOTP())
+                .thenReturn(Optional.of(TEST_CLIENT_CODE));
+        when(codeStorageService.getOtpCode(TEST_CLIENT_EMAIL, RESET_PASSWORD_WITH_CODE))
+                .thenReturn(Optional.of(CODE));
+        APIGatewayProxyResponseEvent result =
+                makeCallWithCode(
+                        TEST_CLIENT_CODE,
+                        RESET_PASSWORD_WITH_CODE.toString(),
+                        Optional.of(testClientSession),
+                        TEST_CLIENT_ID);
+
+        verify(codeStorageService).deleteOtpCode(TEST_CLIENT_EMAIL, RESET_PASSWORD_WITH_CODE);
         assertThat(result, hasStatus(204));
     }
 

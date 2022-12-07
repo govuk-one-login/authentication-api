@@ -8,10 +8,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.MfaRequest;
+import uk.gov.di.authentication.frontendapi.helpers.TestClientHelper;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
@@ -204,11 +204,15 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                     new NotifyRequest(
                             phoneNumber, notificationType, code, userContext.getUserLanguage());
             AuditableEvent auditableEvent;
-            if (!isTestClientAndAllowedEmail(userContext, notificationType)) {
+            if (TestClientHelper.isTestClientWithAllowedEmail(userContext, configurationService)) {
+                LOG.info(
+                        "MfaHandler not sending message with NotificationType {}",
+                        notificationType);
+                auditableEvent = FrontendAuditableEvent.MFA_CODE_SENT_FOR_TEST_CLIENT;
+            } else {
+                LOG.info("Placing message on queue with NotificationType {}", notificationType);
                 sqsClient.send(objectMapper.writeValueAsString(notifyRequest));
                 auditableEvent = FrontendAuditableEvent.MFA_CODE_SENT;
-            } else {
-                auditableEvent = FrontendAuditableEvent.MFA_CODE_SENT_FOR_TEST_CLIENT;
             }
             auditService.submitAuditEvent(
                     auditableEvent,
@@ -255,33 +259,5 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             return Optional.of(ErrorResponse.ERROR_1027);
         }
         return Optional.empty();
-    }
-
-    private boolean isTestClientAndAllowedEmail(
-            UserContext userContext, NotificationType notificationType)
-            throws ClientNotFoundException {
-        if (configurationService.isTestClientsEnabled()) {
-            LOG.warn("TestClients are ENABLED");
-        } else {
-            return false;
-        }
-        String emailAddress = userContext.getSession().getEmailAddress();
-        return userContext
-                .getClient()
-                .map(
-                        clientRegistry -> {
-                            if (clientRegistry.isTestClient()
-                                    && clientRegistry
-                                            .getTestClientEmailAllowlist()
-                                            .contains(emailAddress)) {
-                                LOG.info(
-                                        "MfaHandler not sending message with NotificationType {}",
-                                        notificationType);
-                                return true;
-                            } else {
-                                return false;
-                            }
-                        })
-                .orElseThrow(() -> new ClientNotFoundException(userContext.getSession()));
     }
 }

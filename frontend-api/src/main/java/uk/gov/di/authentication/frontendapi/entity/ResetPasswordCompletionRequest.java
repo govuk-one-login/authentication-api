@@ -6,10 +6,6 @@ import uk.gov.di.authentication.shared.validation.Required;
 
 public class ResetPasswordCompletionRequest {
 
-    @SerializedName(value = "code")
-    @Expose
-    private String code;
-
     @SerializedName("password")
     @Expose
     @Required
@@ -17,13 +13,8 @@ public class ResetPasswordCompletionRequest {
 
     public ResetPasswordCompletionRequest() {}
 
-    public ResetPasswordCompletionRequest(String code, String password) {
-        this.code = code;
+    public ResetPasswordCompletionRequest(String password) {
         this.password = password;
-    }
-
-    public String getCode() {
-        return code;
     }
 
     public String getPassword() {

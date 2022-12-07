@@ -8,11 +8,13 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordCompletionRequest;
+import uk.gov.di.authentication.frontendapi.helpers.TestClientHelper;
+import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
-import uk.gov.di.authentication.shared.entity.UserCredentials;
+import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.Argon2MatcherHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -31,9 +33,9 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.shared.validation.PasswordValidator;
 
+import java.util.Objects;
 import java.util.Optional;
 
-import static java.util.Objects.nonNull;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 
@@ -108,48 +110,39 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                 LOG.info("Error message: {}", passwordValidationError.get().getMessage());
                 return generateApiGatewayProxyErrorResponse(400, passwordValidationError.get());
             }
-            UserCredentials userCredentials;
-            if (nonNull(request.getCode())) {
-                Optional<String> subject =
-                        codeStorageService.getSubjectWithPasswordResetCode(request.getCode());
-                if (subject.isEmpty()) {
-                    return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1021);
-                }
-                userCredentials =
-                        authenticationService.getUserCredentialsFromSubject(subject.get());
-            } else {
-                userCredentials =
-                        authenticationService.getUserCredentialsFromEmail(
-                                userContext.getSession().getEmailAddress());
-            }
+            var userCredentials =
+                    authenticationService.getUserCredentialsFromEmail(
+                            userContext.getSession().getEmailAddress());
 
-            if (userCredentials.getPassword() != null) {
+            if (Objects.nonNull(userCredentials.getPassword())) {
                 if (verifyPassword(userCredentials.getPassword(), request.getPassword())) {
                     return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1024);
                 }
             } else {
                 LOG.info("Resetting password for migrated user");
             }
-            if (nonNull(request.getCode())) {
-                codeStorageService.deleteSubjectWithPasswordResetCode(request.getCode());
-            }
             authenticationService.updatePassword(userCredentials.getEmail(), request.getPassword());
 
-            int incorrectPasswordCount =
+            var incorrectPasswordCount =
                     codeStorageService.getIncorrectPasswordCount(userCredentials.getEmail());
             if (incorrectPasswordCount != 0) {
                 codeStorageService.deleteIncorrectPasswordCount(userCredentials.getEmail());
             }
-
-            NotifyRequest notifyRequest =
-                    new NotifyRequest(
-                            userCredentials.getEmail(),
-                            NotificationType.PASSWORD_RESET_CONFIRMATION,
-                            userContext.getUserLanguage());
-            LOG.info("Placing message on queue");
-            sqsClient.send(serialiseRequest(notifyRequest));
+            AuditableEvent auditableEvent;
+            if (TestClientHelper.isTestClientWithAllowedEmail(userContext, configurationService)) {
+                auditableEvent = FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL_FOR_TEST_CLIENT;
+            } else {
+                var notifyRequest =
+                        new NotifyRequest(
+                                userCredentials.getEmail(),
+                                NotificationType.PASSWORD_RESET_CONFIRMATION,
+                                userContext.getUserLanguage());
+                auditableEvent = FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL;
+                LOG.info("Placing message on queue");
+                sqsClient.send(serialiseRequest(notifyRequest));
+            }
             auditService.submitAuditEvent(
-                    FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
+                    auditableEvent,
                     userContext.getClientSessionId(),
                     userContext.getSession().getSessionId(),
                     userContext
@@ -161,15 +154,21 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                     IpAddressHelper.extractIpAddress(input),
                     AuditService.UNKNOWN,
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
-        } catch (JsonException e) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+        } catch (ClientNotFoundException e) {
+            LOG.warn("Client not found");
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
         }
         LOG.info("Generating successful response");
         return generateEmptySuccessApiGatewayResponse();
     }
 
-    private String serialiseRequest(Object request) throws JsonException {
-        return objectMapper.writeValueAsString(request);
+    private String serialiseRequest(NotifyRequest request) {
+        try {
+            return objectMapper.writeValueAsString(request);
+        } catch (JsonException e) {
+            LOG.error("Unable to serialize NotifyRequest");
+            throw new RuntimeException("Unable to serialize NotifyRequest");
+        }
     }
 
     private static boolean verifyPassword(String hashedPassword, String password) {
