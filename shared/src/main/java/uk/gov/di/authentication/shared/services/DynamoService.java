@@ -475,7 +475,8 @@ public class DynamoService implements AuthenticationService {
 
         partitions.add(currentPartition);
 
-        LOG.info("Partitions: {} of max size {}", partitions, maxBatchWriteUsersToBothTables);
+        LOG.info(
+                "Partitions: {} of max size {}", partitions.size(), maxBatchWriteUsersToBothTables);
 
         int numberOfThreadsForPartitionWrite = 4;
         int indexOfFinalPartition = partitions.size() - 1;
