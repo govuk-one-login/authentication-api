@@ -4,11 +4,7 @@ data "aws_iam_policy_document" "user_profile_dynamo_write_access" {
     effect = "Allow"
 
     actions = [
-      "dynamodb:BatchGet*",
       "dynamodb:DescribeTable",
-      "dynamodb:Get*",
-      "dynamodb:Query",
-      "dynamodb:Scan",
       "dynamodb:BatchWrite*",
       "dynamodb:Update*",
       "dynamodb:PutItem"
@@ -33,11 +29,7 @@ data "aws_iam_policy_document" "user_credentials_dynamo_write_access" {
     effect = "Allow"
 
     actions = [
-      "dynamodb:BatchGet*",
       "dynamodb:DescribeTable",
-      "dynamodb:Get*",
-      "dynamodb:Query",
-      "dynamodb:Scan",
       "dynamodb:BatchWrite*",
       "dynamodb:Update*",
       "dynamodb:PutItem"

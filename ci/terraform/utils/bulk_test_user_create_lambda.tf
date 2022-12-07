@@ -25,6 +25,10 @@ resource "aws_lambda_function" "bulk_test_user_create_lambda" {
   s3_key            = aws_s3_object.utils_release_zip.key
   s3_object_version = aws_s3_object.utils_release_zip.version_id
 
+  tracing_config {
+    mode = "Active"
+  }
+
   environment {
     variables = merge({
       ENVIRONMENT = var.environment

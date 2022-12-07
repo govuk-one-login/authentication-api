@@ -30,6 +30,10 @@ resource "aws_lambda_function" "bulk_test_user_delete_lambda" {
     })
   }
 
+  tracing_config {
+    mode = "Active"
+  }
+
   tags = local.default_tags
 }
 

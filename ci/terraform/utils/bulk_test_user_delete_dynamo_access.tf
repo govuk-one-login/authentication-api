@@ -4,10 +4,7 @@ data "aws_iam_policy_document" "user_profile_dynamo_delete_access" {
     effect = "Allow"
 
     actions = [
-      "dynamodb:BatchGet*",
       "dynamodb:DescribeTable",
-      "dynamodb:Get*",
-      "dynamodb:Query",
       "dynamodb:Scan",
       "dynamodb:Delete*"
     ]
@@ -35,10 +32,7 @@ data "aws_iam_policy_document" "user_credentials_dynamo_delete_access" {
     effect = "Allow"
 
     actions = [
-      "dynamodb:BatchGet*",
       "dynamodb:DescribeTable",
-      "dynamodb:Get*",
-      "dynamodb:Query",
       "dynamodb:Scan",
       "dynamodb:Delete*"
     ]
