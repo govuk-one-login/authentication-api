@@ -11,6 +11,7 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
@@ -34,6 +35,7 @@ import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.net.URI;
@@ -49,7 +51,11 @@ import java.util.stream.Stream;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 
@@ -69,11 +75,59 @@ class StartServiceTest {
 
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
+    private final SessionService sessionService = mock(SessionService.class);
     private StartService startService;
 
     @BeforeEach
     void setup() {
-        startService = new StartService(dynamoClientService, dynamoService);
+        startService = new StartService(dynamoClientService, dynamoService, sessionService);
+    }
+
+    @Test
+    void shouldReturnUnauthenticatedSessionIfUserIsAuthenticatedButNoUserProfileIsFound() {
+        when(dynamoService.getUserProfileByEmailMaybe(EMAIL)).thenReturn(Optional.empty());
+        var currentClientSessionId = "some-client-session-id";
+        SESSION.setAuthenticated(true);
+        SESSION.addClientSession("previous-session-client-session-id");
+        SESSION.setNewAccount(Session.AccountState.EXISTING);
+        SESSION.setVerifiedMfaMethodType(MFAMethodType.AUTH_APP);
+        SESSION.setCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL);
+        var session = startService.validateSession(SESSION, currentClientSessionId);
+
+        assertFalse(session.isAuthenticated());
+        assertThat(session.getCurrentCredentialStrength(), equalTo(null));
+        assertThat(session.isNewAccount(), equalTo(Session.AccountState.UNKNOWN));
+        assertThat(session.getVerifiedMfaMethodType(), equalTo(null));
+        assertTrue(session.getClientSessions().contains("some-client-session-id"));
+        assertFalse(session.getClientSessions().contains("previous-session-client-session-id"));
+        verify(sessionService).save(session);
+    }
+
+    @Test
+    void shouldReturnAuthenticatedSessionIfUserIsAuthenticatedAndUserProfileIsFound() {
+        when(dynamoService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(
+                        Optional.of(
+                                new UserProfile()
+                                        .withEmail(EMAIL)
+                                        .withSubjectID(new Subject().getValue())));
+        var currentClientSessionId = "some-client-session-id";
+        SESSION.setAuthenticated(true);
+        SESSION.addClientSession(currentClientSessionId);
+        SESSION.addClientSession("previous-session-client-session-id");
+        SESSION.setNewAccount(Session.AccountState.EXISTING);
+        SESSION.setVerifiedMfaMethodType(MFAMethodType.AUTH_APP);
+        SESSION.setCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL);
+        var session = startService.validateSession(SESSION, currentClientSessionId);
+
+        assertTrue(session.isAuthenticated());
+        assertThat(
+                session.getCurrentCredentialStrength(), equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
+        assertThat(session.isNewAccount(), equalTo(Session.AccountState.EXISTING));
+        assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.AUTH_APP));
+        assertTrue(session.getClientSessions().contains("some-client-session-id"));
+        assertTrue(session.getClientSessions().contains("previous-session-client-session-id"));
+        verifyNoInteractions(sessionService);
     }
 
     @Test
@@ -131,7 +185,10 @@ class StartServiceTest {
                         null,
                         rpSupportsIdentity,
                         isAuthenticated,
-                        Optional.empty(),
+                        Optional.of(
+                                new UserProfile()
+                                        .withSubjectID(new Subject().getValue())
+                                        .withEmail(EMAIL)),
                         Optional.empty(),
                         false);
         var userStartInfo =

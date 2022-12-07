@@ -26,6 +26,8 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.util.NoSuchElementException;
+import java.util.Objects;
+import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
@@ -35,6 +37,7 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFie
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class StartHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -66,7 +69,8 @@ public class StartHandler
         this.startService =
                 new StartService(
                         new DynamoClientService(configurationService),
-                        new DynamoService(configurationService));
+                        new DynamoService(configurationService),
+                        sessionService);
         this.configurationService = configurationService;
     }
 
@@ -78,11 +82,11 @@ public class StartHandler
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         LOG.info("Start request received");
-        var session = sessionService.getSessionFromRequestHeaders(input.getHeaders());
-        if (session.isEmpty()) {
+        var session = sessionService.getSessionFromRequestHeaders(input.getHeaders()).orElse(null);
+        if (Objects.isNull(session)) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
         } else {
-            attachSessionIdToLogs(session.get());
+            attachSessionIdToLogs(session);
             LOG.info("Start session retrieved");
         }
         attachLogFieldToLogs(
@@ -95,7 +99,14 @@ public class StartHandler
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1018);
         }
         try {
-            var userContext = startService.buildUserContext(session.get(), clientSession.get());
+            session =
+                    startService.validateSession(
+                            session,
+                            getHeaderValueFromHeaders(
+                                    input.getHeaders(),
+                                    CLIENT_SESSION_ID_HEADER,
+                                    configurationService.getHeadersCaseInsensitive()));
+            var userContext = startService.buildUserContext(session, clientSession.get());
             var clientStartInfo = startService.buildClientStartInfo(userContext);
 
             var cookieConsent =
@@ -130,19 +141,34 @@ public class StartHandler
 
             var startResponse = new StartResponse(userStartInfo, clientStartInfo);
 
+            String internalSubjectId = AuditService.UNKNOWN;
+            String internalCommonSubjectIdentifier = AuditService.UNKNOWN;
+            if (userStartInfo.isAuthenticated()) {
+                LOG.info(
+                        "User is authenticated. Setting internalCommonSubjectId and internalSubjectId");
+                internalCommonSubjectIdentifier =
+                        Optional.ofNullable(session.getInternalCommonSubjectIdentifier())
+                                .orElse(AuditService.UNKNOWN);
+                internalSubjectId =
+                        userContext
+                                .getUserProfile()
+                                .map(UserProfile::getSubjectID)
+                                .orElse(AuditService.UNKNOWN);
+            }
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.START_INFO_FOUND,
                     clientSessionId,
-                    session.get().getSessionId(),
+                    session.getSessionId(),
                     userContext.getClient().get().getClientID(),
-                    AuditService.UNKNOWN,
+                    internalCommonSubjectIdentifier,
                     userContext
                             .getUserProfile()
                             .map(UserProfile::getEmail)
                             .orElse(AuditService.UNKNOWN),
                     IpAddressHelper.extractIpAddress(input),
                     AuditService.UNKNOWN,
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                    pair("internalSubjectId", internalSubjectId));
 
             return generateApiGatewayProxyResponse(200, startResponse);
 

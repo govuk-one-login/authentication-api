@@ -22,6 +22,7 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.net.URI;
@@ -40,15 +41,35 @@ public class StartService {
 
     private final ClientService clientService;
     private final DynamoService dynamoService;
+    private final SessionService sessionService;
     private static final String CLIENT_ID_PARAM = "client_id";
     public static final String COOKIE_CONSENT_ACCEPT = "accept";
     public static final String COOKIE_CONSENT_REJECT = "reject";
     public static final String COOKIE_CONSENT_NOT_ENGAGED = "not-engaged";
     private static final Logger LOG = LogManager.getLogger(StartService.class);
 
-    public StartService(ClientService clientService, DynamoService dynamoService) {
+    public StartService(
+            ClientService clientService,
+            DynamoService dynamoService,
+            SessionService sessionService) {
         this.clientService = clientService;
         this.dynamoService = dynamoService;
+        this.sessionService = sessionService;
+    }
+
+    public Session validateSession(Session session, String clientSessionId) {
+        LOG.info("Validating session");
+        Optional<UserProfile> userProfile =
+                Optional.ofNullable(session.getEmailAddress())
+                        .flatMap(dynamoService::getUserProfileByEmailMaybe);
+        if (session.isAuthenticated() && userProfile.isEmpty()) {
+            LOG.info(
+                    "Session is authenticated but user profile is empty. Creating new session with existing sessionID");
+            session = new Session(session.getSessionId());
+            session.addClientSession(clientSessionId);
+            sessionService.save(session);
+        }
+        return session;
     }
 
     public UserContext buildUserContext(Session session, ClientSession clientSession) {
@@ -148,9 +169,11 @@ public class StartService {
             mfaMethodType = MFAMethodType.AUTH_APP;
         }
 
+        var userIsAuthenticated = !docCheckingAppUser && userContext.getSession().isAuthenticated();
+
         LOG.info(
                 "Found UserStartInfo for Authenticated: {} ConsentRequired: {} UpliftRequired: {} IdentityRequired: {}. CookieConsent: {}. GATrackingId: {}. DocCheckingAppUser: {}",
-                userContext.getSession().isAuthenticated(),
+                userIsAuthenticated,
                 consentRequired,
                 uplift,
                 identityRequired,
@@ -162,7 +185,7 @@ public class StartService {
                 consentRequired,
                 uplift,
                 identityRequired,
-                docCheckingAppUser ? false : userContext.getSession().isAuthenticated(),
+                userIsAuthenticated,
                 cookieConsent,
                 gaTrackingId,
                 docCheckingAppUser,

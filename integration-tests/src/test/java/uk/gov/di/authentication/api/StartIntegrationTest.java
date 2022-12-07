@@ -58,6 +58,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
     public static final String CLIENT_SESSION_ID = "a-client-session-id";
     public static final String TEST_CLIENT_NAME = "test-client-name";
+    private static final State STATE = new State();
 
     @BeforeEach
     void setup() {
@@ -81,6 +82,8 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             boolean isAuthenticated)
             throws Json.JsonException {
         String sessionId = redis.createSession(isAuthenticated);
+        userStore.signUp(EMAIL, "password");
+        redis.addEmailToSession(sessionId, EMAIL);
         var state = new State();
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
@@ -94,7 +97,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         redis.createClientSession(CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
 
-        registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR(), ClientType.WEB);
+        registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR(), ClientType.WEB, true);
 
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", sessionId);
@@ -112,7 +115,9 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(startResponse.getUser().isUpliftRequired(), equalTo(false));
         assertThat(startResponse.getUser().getMfaMethodType(), equalTo(null));
         assertThat(startResponse.getClient().getClientName(), equalTo(TEST_CLIENT_NAME));
-        assertThat(startResponse.getClient().getServiceType(), equalTo("MANDATORY"));
+        assertThat(
+                startResponse.getClient().getServiceType(),
+                equalTo(ServiceType.MANDATORY.toString()));
         assertThat(startResponse.getClient().getCookieConsentShared(), equalTo(false));
         assertThat(startResponse.getClient().getScopes(), equalTo(scope.toStringList()));
         assertThat(startResponse.getClient().getRedirectUri(), equalTo(REDIRECT_URI));
@@ -130,7 +135,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @ParameterizedTest
     @MethodSource("mfaMethodTypes")
-    void shouldReturn200WithSMSMfaMethodTypeWhenTheseIsAnExistingSession(
+    void shouldReturn200WithCorrectMfaMethodTypeWhenTheseIsAnExistingSession(
             MFAMethodType mfaMethodType) throws Json.JsonException {
         var userEmail = "joe.bloggs+3@digital.cabinet-office.gov.uk";
         var sessionId = redis.createSession(true);
@@ -158,7 +163,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         redis.createClientSession(CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
 
-        registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR(), ClientType.WEB);
+        registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR(), ClientType.WEB, true);
 
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", sessionId);
@@ -176,7 +181,9 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(startResponse.getUser().isUpliftRequired(), equalTo(false));
         assertThat(startResponse.getUser().getMfaMethodType(), equalTo(mfaMethodType));
         assertThat(startResponse.getClient().getClientName(), equalTo(TEST_CLIENT_NAME));
-        assertThat(startResponse.getClient().getServiceType(), equalTo("MANDATORY"));
+        assertThat(
+                startResponse.getClient().getServiceType(),
+                equalTo(ServiceType.MANDATORY.toString()));
         assertThat(startResponse.getClient().getCookieConsentShared(), equalTo(false));
         assertThat(startResponse.getClient().getScopes(), equalTo(scope.toStringList()));
         assertThat(startResponse.getClient().getRedirectUri(), equalTo(REDIRECT_URI));
@@ -218,7 +225,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .build();
         redis.createClientSession(CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
 
-        registerClient(keyPair, ClientType.APP);
+        registerClient(keyPair, ClientType.APP, true);
 
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", sessionId);
@@ -239,7 +246,9 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertTrue(startResponse.getUser().isDocCheckingAppUser());
 
         assertThat(startResponse.getClient().getClientName(), equalTo(TEST_CLIENT_NAME));
-        assertThat(startResponse.getClient().getServiceType(), equalTo("MANDATORY"));
+        assertThat(
+                startResponse.getClient().getServiceType(),
+                equalTo(ServiceType.MANDATORY.toString()));
         assertFalse(startResponse.getClient().getCookieConsentShared());
         assertThat(startResponse.getClient().getScopes(), equalTo(scope.toStringList()));
         assertThat(startResponse.getClient().getRedirectUri(), equalTo(REDIRECT_URI));
@@ -252,7 +261,53 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(START_INFO_FOUND));
     }
 
-    private void registerClient(KeyPair keyPair, ClientType clientType) {
+    @Test
+    void userShouldNotComeBackAsAuthenticatedWhenSessionIsAuthenticatedButNoUserProfileExists()
+            throws Json.JsonException {
+        var scope = new Scope(OIDCScopeValue.OPENID);
+        var authRequest =
+                new AuthenticationRequest.Builder(
+                                ResponseType.CODE, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
+                        .nonce(new Nonce())
+                        .state(STATE)
+                        .customParameter("vtr", "[\"Cl.Cm\"]")
+                        .build();
+        redis.createClientSession(CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
+        var userEmail = "joe.bloggs+3@digital.cabinet-office.gov.uk";
+        var sessionId = redis.createSession(true);
+        redis.addEmailToSession(sessionId, userEmail);
+        redis.addClientSessionIdToSession(CLIENT_SESSION_ID, sessionId);
+        registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR(), ClientType.WEB, false);
+
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Session-Id", sessionId);
+        headers.put("Client-Session-Id", CLIENT_SESSION_ID);
+        headers.put("X-API-Key", FRONTEND_API_KEY);
+        var response = makeRequest(Optional.empty(), headers, Map.of());
+
+        assertThat(response, hasStatus(200));
+        assertThat(redis.getSession(sessionId).isAuthenticated(), equalTo(false));
+        var startResponse = objectMapper.readValue(response.getBody(), StartResponse.class);
+        assertThat(startResponse.getUser().isIdentityRequired(), equalTo(false));
+        assertThat(startResponse.getUser().isConsentRequired(), equalTo(false));
+        assertThat(startResponse.getUser().isUpliftRequired(), equalTo(false));
+        assertThat(startResponse.getUser().getMfaMethodType(), equalTo(null));
+        assertThat(startResponse.getClient().getClientName(), equalTo(TEST_CLIENT_NAME));
+        assertThat(
+                startResponse.getClient().getServiceType(),
+                equalTo(ServiceType.MANDATORY.toString()));
+        assertThat(startResponse.getClient().getCookieConsentShared(), equalTo(false));
+        assertThat(startResponse.getClient().getScopes(), equalTo(scope.toStringList()));
+        assertThat(startResponse.getClient().getRedirectUri(), equalTo(REDIRECT_URI));
+        assertThat(startResponse.getClient().getState().getValue(), equalTo(STATE.getValue()));
+        assertThat(startResponse.getUser().getCookieConsent(), equalTo(null));
+        assertThat(startResponse.getUser().getGaCrossDomainTrackingId(), equalTo(null));
+        assertThat(startResponse.getUser().isAuthenticated(), equalTo(false));
+
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(START_INFO_FOUND));
+    }
+
+    private void registerClient(KeyPair keyPair, ClientType clientType, boolean consentRequired) {
         clientStore.registerClient(
                 CLIENT_ID,
                 TEST_CLIENT_NAME,
@@ -265,7 +320,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "public",
-                true,
+                consentRequired,
                 clientType,
                 true);
     }
