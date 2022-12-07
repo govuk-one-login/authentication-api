@@ -9,6 +9,7 @@ import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3Configuration;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.sharedtest.basetest.HandlerIntegrationTest;
@@ -49,6 +50,8 @@ class BulkTestUserCreateIntegrationTest extends HandlerIntegrationTest<S3Event, 
                 S3Client.builder()
                         .endpointOverride(URI.create(S3_ENDPOINT))
                         .region(Region.of(REGION))
+                        .serviceConfiguration(
+                                S3Configuration.builder().pathStyleAccessEnabled(true).build())
                         .credentialsProvider(StaticCredentialsProvider.create(mockS3Credentials))
                         .build();
         handler = new BulkTestUserCreateHandler(TEST_CONFIGURATION_SERVICE, testS3Client);

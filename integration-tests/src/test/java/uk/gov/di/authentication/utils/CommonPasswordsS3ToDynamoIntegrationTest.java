@@ -9,6 +9,7 @@ import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3Configuration;
 import uk.gov.di.authentication.sharedtest.basetest.HandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.CommonPasswordsS3Extension;
 import uk.gov.di.authentication.sharedtest.helper.S3TestEventHelper;
@@ -53,6 +54,8 @@ class CommonPasswordsS3ToDynamoIntegrationTest extends HandlerIntegrationTest<S3
                 S3Client.builder()
                         .endpointOverride(URI.create(S3_ENDPOINT))
                         .region(Region.of(REGION))
+                        .serviceConfiguration(
+                                S3Configuration.builder().pathStyleAccessEnabled(true).build())
                         .credentialsProvider(StaticCredentialsProvider.create(mockS3Credentials))
                         .build();
         handler = new S3ToDynamoDbHandler(TEST_CONFIGURATION_SERVICE, testS3Client);
