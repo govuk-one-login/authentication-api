@@ -30,7 +30,10 @@ import java.util.NoSuchElementException;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
 
 public class StartHandler
@@ -82,6 +85,8 @@ public class StartHandler
             attachSessionIdToLogs(session.get());
             LOG.info("Start session retrieved");
         }
+        attachLogFieldToLogs(
+                PERSISTENT_SESSION_ID, extractPersistentIdFromHeaders(input.getHeaders()));
 
         var clientSession =
                 clientSessionService.getClientSessionFromRequestHeaders(input.getHeaders());
