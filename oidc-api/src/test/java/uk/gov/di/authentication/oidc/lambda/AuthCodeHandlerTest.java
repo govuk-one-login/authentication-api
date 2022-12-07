@@ -194,8 +194,12 @@ class AuthCodeHandlerTest {
                         authRequest.getState(),
                         null,
                         authRequest.getResponseMode());
-        when(dynamoService.getUserProfileByEmail(EMAIL))
-                .thenReturn(new UserProfile().withEmail(EMAIL).withSubjectID(SUBJECT.getValue()));
+        when(dynamoService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(
+                        Optional.of(
+                                new UserProfile()
+                                        .withEmail(EMAIL)
+                                        .withSubjectID(SUBJECT.getValue())));
         when(authorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
                 .thenReturn(true);
         when(authorisationCodeService.generateAuthorisationCode(
@@ -307,7 +311,8 @@ class AuthCodeHandlerTest {
                         AuditService.UNKNOWN,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
+                        PERSISTENT_SESSION_ID,
+                        pair("internalSubjectId", AuditService.UNKNOWN));
 
         var expectedDimensions =
                 Map.of(
