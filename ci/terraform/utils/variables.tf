@@ -27,6 +27,11 @@ variable "use_localstack" {
   default = false
 }
 
+variable "allow_bulk_test_users" {
+  type    = bool
+  default = false
+}
+
 variable "utils_release_zip_file" {
   default     = "../../../utils/build/distributions/utils.zip"
   description = "Location of the Utils distribution ZIP file"
