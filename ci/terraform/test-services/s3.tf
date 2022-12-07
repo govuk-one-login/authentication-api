@@ -1,5 +1,5 @@
 resource "aws_s3_bucket" "source_bucket" {
-  bucket_prefix = "${var.environment}-test-services-lambda-source-"
+  bucket_prefix = "${var.environment}-test-services-lam-src"
 }
 
 resource "aws_s3_bucket_versioning" "source_bucket_versioning" {
