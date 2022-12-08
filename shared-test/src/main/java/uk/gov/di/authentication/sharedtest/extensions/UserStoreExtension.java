@@ -15,6 +15,7 @@ import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
+import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.sharedtest.basetest.DynamoTestConfiguration;
@@ -22,6 +23,7 @@ import uk.gov.di.authentication.sharedtest.basetest.DynamoTestConfiguration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public class UserStoreExtension extends DynamoExtension implements AfterEachCallback {
@@ -33,10 +35,12 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
     public static final String PUBLIC_SUBJECT_ID_FIELD = "PublicSubjectID";
 
     public static final String ACCOUNT_VERIFIED_FIELD = "accountVerified";
+    public static final String TEST_USER_FIELD = "testUser";
     public static final String SUBJECT_ID_INDEX = "SubjectIDIndex";
     public static final String PUBLIC_SUBJECT_ID_INDEX = "PublicSubjectIDIndex";
 
     public static final String VERIFIED_ACCOUNT_ID_INDEX = "VerifiedAccountIndex";
+    public static final String TEST_USER_INDEX = "TestUserIndex";
 
     private DynamoService dynamoService;
 
@@ -70,10 +74,22 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
     }
 
     public String signUp(String email, String password, Subject subject) {
+        return signUp(email, password, subject, false);
+    }
+
+    public String signUp(String email, String password, Subject subject, boolean isTestUser) {
         TermsAndConditions termsAndConditions =
                 new TermsAndConditions("1.0", LocalDateTime.now(ZoneId.of("UTC")).toString());
-        dynamoService.signUp(email, password, subject, termsAndConditions);
+        dynamoService.signUp(email, password, subject, termsAndConditions, isTestUser);
         return dynamoService.getUserProfileByEmail(email).getPublicSubjectID();
+    }
+
+    public void createBulkTestUsers(Map<UserProfile, UserCredentials> testUsers) {
+        dynamoService.createBatchTestUsers(testUsers);
+    }
+
+    public List<UserProfile> getAllTestUsers() {
+        return dynamoService.getAllTestUsers();
     }
 
     public void updateConsent(String email, ClientConsent clientConsent) {
@@ -169,6 +185,10 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
                                 AttributeDefinition.builder()
                                         .attributeName(SUBJECT_ID_FIELD)
                                         .attributeType(ScalarAttributeType.S)
+                                        .build(),
+                                AttributeDefinition.builder()
+                                        .attributeName(TEST_USER_FIELD)
+                                        .attributeType(ScalarAttributeType.N)
                                         .build())
                         .globalSecondaryIndexes(
                                 GlobalSecondaryIndex.builder()
@@ -176,6 +196,20 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
                                         .keySchema(
                                                 KeySchemaElement.builder()
                                                         .attributeName(SUBJECT_ID_FIELD)
+                                                        .keyType(KeyType.HASH)
+                                                        .build())
+                                        .projection(t -> t.projectionType(ProjectionType.ALL))
+                                        .build(),
+                                GlobalSecondaryIndex.builder()
+                                        .indexName(TEST_USER_INDEX)
+                                        .keySchema(
+                                                KeySchemaElement.builder()
+                                                        .attributeName(SUBJECT_ID_FIELD)
+                                                        .keyType(KeyType.HASH)
+                                                        .build())
+                                        .keySchema(
+                                                KeySchemaElement.builder()
+                                                        .attributeName(TEST_USER_FIELD)
                                                         .keyType(KeyType.HASH)
                                                         .build())
                                         .projection(t -> t.projectionType(ProjectionType.ALL))
@@ -210,6 +244,10 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
                                 AttributeDefinition.builder()
                                         .attributeName(ACCOUNT_VERIFIED_FIELD)
                                         .attributeType(ScalarAttributeType.N)
+                                        .build(),
+                                AttributeDefinition.builder()
+                                        .attributeName(TEST_USER_FIELD)
+                                        .attributeType(ScalarAttributeType.N)
                                         .build())
                         .globalSecondaryIndexes(
                                 GlobalSecondaryIndex.builder()
@@ -240,6 +278,20 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
                                         .keySchema(
                                                 KeySchemaElement.builder()
                                                         .attributeName(ACCOUNT_VERIFIED_FIELD)
+                                                        .keyType(KeyType.HASH)
+                                                        .build())
+                                        .projection(t -> t.projectionType(ProjectionType.KEYS_ONLY))
+                                        .build(),
+                                GlobalSecondaryIndex.builder()
+                                        .indexName(TEST_USER_INDEX)
+                                        .keySchema(
+                                                KeySchemaElement.builder()
+                                                        .attributeName(SUBJECT_ID_FIELD)
+                                                        .keyType(KeyType.HASH)
+                                                        .build())
+                                        .keySchema(
+                                                KeySchemaElement.builder()
+                                                        .attributeName(TEST_USER_FIELD)
                                                         .keyType(KeyType.HASH)
                                                         .build())
                                         .projection(t -> t.projectionType(ProjectionType.KEYS_ONLY))

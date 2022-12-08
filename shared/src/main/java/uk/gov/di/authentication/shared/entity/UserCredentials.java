@@ -141,6 +141,7 @@ public class UserCredentials {
     }
 
     @DynamoDbAttribute(ATTRIBUTE_TEST_USER)
+    @DynamoDbSecondaryPartitionKey(indexNames = {"TestUserIndex"})
     public int getTestUser() {
         return testUser;
     }

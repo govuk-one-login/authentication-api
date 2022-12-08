@@ -11,7 +11,9 @@ dependencies {
             configurations.s3,
             configurations.dynamodb
 
-    implementation project(":shared")
+    implementation project(":shared"),
+            configurations.nimbus,
+            configurations.xray
 
     runtimeOnly configurations.logging_runtime
 
@@ -42,6 +44,8 @@ task buildZip(type: Zip) {
 }
 
 build.dependsOn buildZip
+
+clean.dependsOn ":composeDown"
 
 jacocoTestReport {
     reports {

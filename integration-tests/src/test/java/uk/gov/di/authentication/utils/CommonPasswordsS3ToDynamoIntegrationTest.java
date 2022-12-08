@@ -54,6 +54,8 @@ class CommonPasswordsS3ToDynamoIntegrationTest extends HandlerIntegrationTest<S3
                 S3Client.builder()
                         .endpointOverride(URI.create(S3_ENDPOINT))
                         .region(Region.of(REGION))
+                        .serviceConfiguration(
+                                S3Configuration.builder().pathStyleAccessEnabled(true).build())
                         .credentialsProvider(StaticCredentialsProvider.create(mockS3Credentials))
                         .serviceConfiguration(
                                 S3Configuration.builder().pathStyleAccessEnabled(true).build())

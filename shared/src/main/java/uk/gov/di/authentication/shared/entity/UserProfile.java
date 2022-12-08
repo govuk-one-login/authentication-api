@@ -242,6 +242,7 @@ public class UserProfile {
     }
 
     @DynamoDbAttribute(ATTRIBUTE_TEST_USER)
+    @DynamoDbSecondaryPartitionKey(indexNames = {"TestUserIndex"})
     public int getTestUser() {
         return testUser;
     }
