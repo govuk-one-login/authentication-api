@@ -145,7 +145,7 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
                     clientSessionId,
                     userContext.getSession().getSessionId(),
                     clientId.orElse(AuditService.UNKNOWN),
-                    AuditService.UNKNOWN,
+                    userContext.getSession().getInternalCommonSubjectIdentifier(),
                     request.getEmail(),
                     IpAddressHelper.extractIpAddress(input),
                     AuditService.UNKNOWN,
