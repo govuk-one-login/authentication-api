@@ -39,8 +39,10 @@ import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -106,7 +108,9 @@ public class IPVAuthorisationHandlerTest {
     private static final URI IPV_AUTHORISATION_URI = URI.create("http://localhost/ipv/authorize");
     private static final String EMAIL_ADDRESS = "test@test.com";
     private static final String INTERNAL_SECTOR_URI = "https://ipv.account.gov.uk";
-
+    private final String expectedCommonSubject =
+            ClientSubjectHelper.calculatePairwiseIdentifier(
+                    SUBJECT_ID, "test.account.gov.uk", SaltHelper.generateNewSalt());
     private final IPVAuthorisationService authorisationService =
             mock(IPVAuthorisationService.class);
     private final ClaimsSetRequest.Entry nameEntry =
@@ -119,7 +123,10 @@ public class IPVAuthorisationHandlerTest {
 
     private IPVAuthorisationHandler handler;
 
-    private final Session session = new Session(SESSION_ID).setEmailAddress(EMAIL_ADDRESS);
+    private final Session session =
+            new Session(SESSION_ID)
+                    .setEmailAddress(EMAIL_ADDRESS)
+                    .setInternalCommonSubjectIdentifier(expectedCommonSubject);
 
     @BeforeEach
     void setup() {
@@ -191,7 +198,7 @@ public class IPVAuthorisationHandlerTest {
                         CLIENT_SESSION_ID,
                         SESSION_ID,
                         CLIENT_ID,
-                        AuditService.UNKNOWN,
+                        expectedCommonSubject,
                         EMAIL_ADDRESS,
                         "123.123.123.123",
                         AuditService.UNKNOWN,

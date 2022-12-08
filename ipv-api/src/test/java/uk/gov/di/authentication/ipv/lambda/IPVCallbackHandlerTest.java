@@ -46,6 +46,7 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
+import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
@@ -120,8 +121,14 @@ class IPVCallbackHandlerTest {
     private final byte[] salt = "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw=".getBytes();
     private final ClientRegistry clientRegistry = generateClientRegistry();
     private final UserProfile userProfile = generateUserProfile();
+    private final String expectedCommonSubject =
+            ClientSubjectHelper.calculatePairwiseIdentifier(
+                    SUBJECT.getValue(), "test.account.gov.uk", SaltHelper.generateNewSalt());
 
-    private final Session session = new Session(SESSION_ID).setEmailAddress(TEST_EMAIL_ADDRESS);
+    private final Session session =
+            new Session(SESSION_ID)
+                    .setEmailAddress(TEST_EMAIL_ADDRESS)
+                    .setInternalCommonSubjectIdentifier(expectedCommonSubject);
 
     private final ClientSession clientSession =
             new ClientSession(generateAuthRequest().toParameters(), null, null, CLIENT_NAME);
@@ -498,7 +505,7 @@ class IPVCallbackHandlerTest {
                         CLIENT_SESSION_ID,
                         SESSION_ID,
                         CLIENT_ID.getValue(),
-                        userProfile.getSubjectID(),
+                        expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         AuditService.UNKNOWN,
                         userProfile.getPhoneNumber(),
@@ -510,7 +517,7 @@ class IPVCallbackHandlerTest {
                         CLIENT_SESSION_ID,
                         SESSION_ID,
                         CLIENT_ID.getValue(),
-                        userProfile.getSubjectID(),
+                        expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         AuditService.UNKNOWN,
                         userProfile.getPhoneNumber(),
@@ -584,7 +591,7 @@ class IPVCallbackHandlerTest {
                         CLIENT_SESSION_ID,
                         SESSION_ID,
                         CLIENT_ID.getValue(),
-                        userProfile.getSubjectID(),
+                        expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         AuditService.UNKNOWN,
                         userProfile.getPhoneNumber(),

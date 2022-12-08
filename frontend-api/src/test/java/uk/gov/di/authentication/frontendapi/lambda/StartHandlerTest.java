@@ -53,6 +53,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -113,6 +114,7 @@ class StartHandlerTest {
     void shouldReturn200WithStartResponse(String cookieConsentValue, String gaTrackingId)
             throws ParseException, Json.JsonException {
         var userStartInfo = getUserStartInfo(cookieConsentValue, gaTrackingId);
+        when(startService.validateSession(session, CLIENT_SESSION_ID)).thenReturn(session);
         when(startService.buildUserContext(session, clientSession)).thenReturn(userContext);
         when(startService.buildClientStartInfo(userContext)).thenReturn(getClientStartInfo());
         when(startService.getGATrackingId(anyMap())).thenReturn(gaTrackingId);
@@ -168,13 +170,15 @@ class StartHandlerTest {
                         AuditService.UNKNOWN,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID);
+                        PERSISTENT_ID,
+                        pair("internalSubjectId", AuditService.UNKNOWN));
     }
 
     @Test
     void shouldReturn200WhenDocCheckingAppUserIsPresent()
             throws ParseException, Json.JsonException {
         when(configurationService.getDocAppDomain()).thenReturn(URI.create("https://doc-app"));
+        when(startService.validateSession(session, CLIENT_SESSION_ID)).thenReturn(session);
         var userStartInfo = new UserStartInfo(false, false, false, false, null, null, true, null);
         when(startService.buildUserContext(session, clientSession)).thenReturn(userContext);
         var scope = new Scope(OIDCScopeValue.OPENID, CustomScopeValue.DOC_CHECKING_APP);
@@ -233,7 +237,8 @@ class StartHandlerTest {
                         AuditService.UNKNOWN,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PERSISTENT_ID);
+                        PERSISTENT_ID,
+                        pair("internalSubjectId", AuditService.UNKNOWN));
     }
 
     @Test
@@ -274,6 +279,7 @@ class StartHandlerTest {
     @Test
     void shouldReturn400WhenBuildClientStartInfoThrowsException()
             throws ParseException, Json.JsonException {
+        when(startService.validateSession(session, CLIENT_SESSION_ID)).thenReturn(session);
         when(startService.buildUserContext(session, clientSession)).thenReturn(userContext);
         when(startService.buildClientStartInfo(userContext))
                 .thenThrow(new ParseException("Unable to parse authentication request"));
