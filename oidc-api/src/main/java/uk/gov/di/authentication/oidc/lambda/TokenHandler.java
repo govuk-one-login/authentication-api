@@ -52,6 +52,7 @@ import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.addA
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.updateAttachedLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.RequestBodyHelper.parseRequestBody;
@@ -205,6 +206,8 @@ public class TokenHandler
                     400, OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
         }
         updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, authCodeExchangeData.getClientSessionId());
+        updateAttachedLogFieldToLogs(
+                GOVUK_SIGNIN_JOURNEY_ID, authCodeExchangeData.getClientSessionId());
         ClientSession clientSession = authCodeExchangeData.getClientSession();
         AuthenticationRequest authRequest;
         try {

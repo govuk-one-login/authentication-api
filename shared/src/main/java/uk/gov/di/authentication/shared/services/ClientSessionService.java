@@ -15,6 +15,7 @@ import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.headersContainValidHeader;
@@ -75,6 +76,7 @@ public class ClientSessionService {
 
     public Optional<ClientSession> getClientSession(String clientSessionId) {
         attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
+        attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
 
         try {
             if (redisConnectionService.keyExists(CLIENT_SESSION_PREFIX.concat(clientSessionId))) {
@@ -95,6 +97,7 @@ public class ClientSessionService {
 
     public void saveClientSession(String clientSessionId, ClientSession clientSession) {
         attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
+        attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
 
         try {
             redisConnectionService.saveWithExpiry(
