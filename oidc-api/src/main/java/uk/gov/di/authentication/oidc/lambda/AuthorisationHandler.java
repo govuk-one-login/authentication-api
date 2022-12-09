@@ -250,8 +250,8 @@ public class AuthorisationHandler
 
         session.addClientSession(clientSessionId);
         updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
-        updateAttachedLogFieldToLogs(CLIENT_ID, authenticationRequest.getClientID().getValue());
         updateAttachedLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
+        updateAttachedLogFieldToLogs(CLIENT_ID, authenticationRequest.getClientID().getValue());
         sessionService.save(session);
         LOG.info("Session saved successfully");
         return redirect(session, clientSessionId, authenticationRequest, persistentSessionId);

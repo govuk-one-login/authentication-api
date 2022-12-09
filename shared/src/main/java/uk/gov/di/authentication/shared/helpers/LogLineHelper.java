@@ -13,11 +13,11 @@ public class LogLineHelper {
     public enum LogFieldName {
         SESSION_ID("sessionId", true),
         CLIENT_SESSION_ID("clientSessionId", true),
+        GOVUK_SIGNIN_JOURNEY_ID("govukSigninJourneyId", true),
         PERSISTENT_SESSION_ID("persistentSessionId", true),
         AWS_REQUEST_ID("awsRequestId", false),
         CLIENT_ID("clientId", true),
-        CLIENT_NAME("clientName", false),
-        GOVUK_SIGNIN_JOURNEY_ID("govuk_signin_journey_id", true);
+        CLIENT_NAME("clientName", false);
 
         private final String logFieldName;
         private boolean isBase64;
