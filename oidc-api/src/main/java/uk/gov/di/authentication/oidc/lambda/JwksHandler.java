@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKSet;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -11,6 +12,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.JwksService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -53,16 +55,19 @@ public class JwksHandler
         try {
             LOG.info("JWKs request received");
 
-            JWKSet jwkSet;
+            List<JWK> signingKeys = new ArrayList<>();
+
+            signingKeys.add(jwksService.getPublicTokenJwkWithOpaqueId());
+
             if (configurationService.isDocAppApiEnabled()) {
-                jwkSet =
-                        new JWKSet(
-                                List.of(
-                                        jwksService.getPublicTokenJwkWithOpaqueId(),
-                                        jwksService.getPublicDocAppSigningJwkWithOpaqueId()));
-            } else {
-                jwkSet = new JWKSet(jwksService.getPublicTokenJwkWithOpaqueId());
+                signingKeys.add(jwksService.getPublicDocAppSigningJwkWithOpaqueId());
             }
+
+            if (configurationService.isRsaSigningAvailable()) {
+                signingKeys.add(jwksService.getPublicTokenRsaJwkWithOpaqueId());
+            }
+
+            JWKSet jwkSet = new JWKSet(signingKeys);
 
             LOG.info("Generating JWKs successful response");
 
