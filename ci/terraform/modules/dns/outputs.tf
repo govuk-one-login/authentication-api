@@ -41,5 +41,3 @@ output "account_management_api_fqdn" {
 output "account_management_api_url" {
   value = var.is_localstack ? "http://${local.account_management_api_fqdn}/" : "https://${local.account_management_api_fqdn}/"
 }
-
-

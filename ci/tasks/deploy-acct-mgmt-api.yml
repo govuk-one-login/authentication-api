@@ -5,7 +5,7 @@ image_resource:
     repository: hashicorp/terraform
     tag: 1.0.4
     username: ((docker-hub-username))
-    password: ((docker-hub-password))    
+    password: ((docker-hub-password))
 params:
   DEPLOYER_ROLE_ARN: ((deployer-role-arn-non-prod))
   DEPLOY_ENVIRONMENT: build
