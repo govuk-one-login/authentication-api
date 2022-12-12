@@ -19,6 +19,7 @@ module "jwks" {
   environment     = var.environment
 
   handler_environment_variables = {
+    ENVIRONMENT                     = var.environment
     DOC_APP_API_ENABLED             = var.doc_app_api_enabled
     DOC_APP_TOKEN_SIGNING_KEY_ALIAS = local.doc_app_auth_key_alias_name
     LOCALSTACK_ENDPOINT             = var.use_localstack ? var.localstack_endpoint : null
