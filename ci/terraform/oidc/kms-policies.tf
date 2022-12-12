@@ -2,10 +2,13 @@
 
 data "aws_iam_policy_document" "kms_policy_document" {
   statement {
-    sid       = "AllowAccessToKmsSigningKey"
-    effect    = "Allow"
-    actions   = ["kms:GetPublicKey"]
-    resources = [local.id_token_signing_key_arn]
+    sid     = "AllowAccessToKmsSigningKey"
+    effect  = "Allow"
+    actions = ["kms:GetPublicKey"]
+    resources = [
+      local.id_token_signing_key_arn,
+      aws_kms_key.id_token_signing_key_rsa.arn
+    ]
   }
 }
 
