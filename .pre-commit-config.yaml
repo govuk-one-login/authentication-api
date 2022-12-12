@@ -14,3 +14,15 @@ repos:
         entry: ./gradlew spotlessApply
         files: ^.*(gradle|java)$
         pass_filenames: false
+      - id: terraform-format
+        name: Run Terraform Format
+        language: docker_image
+        entry: hashicorp/terraform:1.0.4 fmt -recursive
+        files: ^.*(.tf|.tfvars)$
+        pass_filenames: false
+      - id: terraform-validate
+        name: Run Terraform Validate
+        language: script
+        entry: ci/terraform/precommit-validate.sh
+        files: ^.*(.tf|.tfvars)$
+        pass_filenames: true
