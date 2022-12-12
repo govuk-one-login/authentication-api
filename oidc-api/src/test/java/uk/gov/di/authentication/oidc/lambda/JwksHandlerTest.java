@@ -6,6 +6,7 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
+import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -32,6 +33,7 @@ class JwksHandlerTest {
     public void setUp() {
         handler = new JwksHandler(configurationService, jwksService);
         when(configurationService.isDocAppApiEnabled()).thenReturn(false);
+        when(configurationService.isRsaSigningAvailable()).thenReturn(false);
     }
 
     @Test
@@ -48,6 +50,25 @@ class JwksHandlerTest {
         var result = handler.handleRequest(event, context);
 
         var expectedJWKSet = new JWKSet(List.of(tokenSigningKey, docAppSigningKey));
+
+        assertThat(result, hasStatus(200));
+        assertThat(result, hasBody(expectedJWKSet.toString(true)));
+    }
+
+    @Test
+    void shouldReturnMultipleJwksWhenRsaSigningIsEnabled() throws JOSEException {
+        when(configurationService.isRsaSigningAvailable()).thenReturn(true);
+        var tokenSigningKey =
+                new ECKeyGenerator(Curve.P_256).keyID(UUID.randomUUID().toString()).generate();
+        var rsaTokenSigningKey =
+                new RSAKeyGenerator(2048).keyID(UUID.randomUUID().toString()).generate();
+        when(jwksService.getPublicTokenJwkWithOpaqueId()).thenReturn(tokenSigningKey);
+        when(jwksService.getPublicTokenRsaJwkWithOpaqueId()).thenReturn(rsaTokenSigningKey);
+
+        var event = new APIGatewayProxyRequestEvent();
+        var result = handler.handleRequest(event, context);
+
+        var expectedJWKSet = new JWKSet(List.of(tokenSigningKey, rsaTokenSigningKey));
 
         assertThat(result, hasStatus(200));
         assertThat(result, hasBody(expectedJWKSet.toString(true)));

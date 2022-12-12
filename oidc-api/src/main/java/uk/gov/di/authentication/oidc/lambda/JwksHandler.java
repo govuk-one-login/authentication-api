@@ -63,6 +63,10 @@ public class JwksHandler
                 signingKeys.add(jwksService.getPublicDocAppSigningJwkWithOpaqueId());
             }
 
+            if (configurationService.isRsaSigningAvailable()) {
+                signingKeys.add(jwksService.getPublicTokenRsaJwkWithOpaqueId());
+            }
+
             JWKSet jwkSet = new JWKSet(signingKeys);
 
             LOG.info("Generating JWKs successful response");
