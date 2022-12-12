@@ -87,4 +87,3 @@ jacocoTestReport {
         xml.enabled true
     }
 }
-

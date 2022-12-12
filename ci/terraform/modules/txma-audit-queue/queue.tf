@@ -50,4 +50,3 @@ resource "aws_sqs_queue_policy" "txma_audit_queue_subscription" {
     }]
   })
 }
-

@@ -357,4 +357,3 @@ jacocoTestReport {
     }
     dependsOn "test"
 }
-

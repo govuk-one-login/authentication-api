@@ -86,7 +86,7 @@ resource "aws_iam_policy" "ipv_public_encryption_key_parameter_policy" {
   name_prefix = "ipv-public-encryption-key-parameter-store-policy"
 }
 
-## SPOT  
+## SPOT
 
 resource "aws_ssm_parameter" "spot_account_number" {
   name  = "${var.environment}-spot-account-number"

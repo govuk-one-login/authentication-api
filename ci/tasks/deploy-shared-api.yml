@@ -30,7 +30,7 @@ run:
       else
         TEST_USERS="[]"
       fi
-  
+
       cd "api-terraform-src/ci/terraform/shared"
       terraform init -input=false \
         -backend-config "role_arn=${DEPLOYER_ROLE_ARN}" \

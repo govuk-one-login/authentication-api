@@ -122,4 +122,3 @@ resource "aws_cloudwatch_log_subscription_filter" "log_subscription" {
     create_before_destroy = false
   }
 }
-
