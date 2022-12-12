@@ -407,6 +407,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("TOKEN_SIGNING_KEY_ALIAS");
     }
 
+    public String getTokenSigningKeyRsaAlias() {
+        return System.getenv("TOKEN_SIGNING_KEY_RSA_ALIAS");
+    }
+
     public String getAuditStorageS3Bucket() {
         return System.getenv("AUDIT_STORAGE_S3_BUCKET");
     }

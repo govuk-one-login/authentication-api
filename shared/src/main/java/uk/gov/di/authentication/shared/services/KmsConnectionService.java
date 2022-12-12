@@ -3,18 +3,14 @@ package uk.gov.di.authentication.shared.services;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
-import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.kms.KmsClient;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
-import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
-import software.amazon.awssdk.services.kms.model.VerifyRequest;
 
 import java.net.URI;
-import java.nio.ByteBuffer;
 import java.util.Optional;
 
 public class KmsConnectionService {
@@ -52,19 +48,6 @@ public class KmsConnectionService {
     public GetPublicKeyResponse getPublicKey(GetPublicKeyRequest getPublicKeyRequest) {
         LOG.info("Retrieving public key from KMS with KeyID {}", getPublicKeyRequest.keyId());
         return kmsClient.getPublicKey(getPublicKeyRequest);
-    }
-
-    public boolean validateSignature(
-            ByteBuffer signature, ByteBuffer content, String signingKeyId) {
-        var verifyRequest =
-                VerifyRequest.builder()
-                        .message(SdkBytes.fromByteBuffer(content))
-                        .signature(SdkBytes.fromByteBuffer(signature))
-                        .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
-                        .keyId(signingKeyId)
-                        .build();
-
-        return kmsClient.verify(verifyRequest).signatureValid();
     }
 
     public SignResponse sign(SignRequest signRequest) {
