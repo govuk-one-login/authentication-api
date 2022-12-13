@@ -157,7 +157,11 @@ public class TokenHandler
                     400, OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString());
         }
 
-        var signingAlgorithm = JWSAlgorithm.ES256;
+        var signingAlgorithm =
+                configurationService.isRsaSigningAvailable()
+                                && "RSA256".equals(client.getIdTokenSigningAlgorithm())
+                        ? JWSAlgorithm.RS256
+                        : JWSAlgorithm.ES256;
 
         String baseUrl =
                 configurationService
@@ -193,7 +197,8 @@ public class TokenHandler
                                     requestBody,
                                     client.getScopes(),
                                     new RefreshToken(requestBody.get("refresh_token")),
-                                    clientID));
+                                    clientID,
+                                    signingAlgorithm));
         }
         AuthCodeExchangeData authCodeExchangeData;
         try {
@@ -306,7 +311,8 @@ public class TokenHandler
             Map<String, String> requestBody,
             List<String> clientScopes,
             RefreshToken currentRefreshToken,
-            String clientId) {
+            String clientId,
+            JWSAlgorithm signingAlgorithm) {
         boolean refreshTokenSignatureValid =
                 tokenValidationService.validateRefreshTokenSignatureAndExpiry(currentRefreshToken);
         if (!refreshTokenSignatureValid) {
@@ -365,7 +371,7 @@ public class TokenHandler
                         new Subject(tokenStore.getInternalSubjectId()),
                         scopes,
                         subject,
-                        JWSAlgorithm.ES256);
+                        signingAlgorithm);
         LOG.info("Generating successful RefreshToken response");
         return generateApiGatewayProxyResponse(200, tokenResponse.toJSONObject().toJSONString());
     }

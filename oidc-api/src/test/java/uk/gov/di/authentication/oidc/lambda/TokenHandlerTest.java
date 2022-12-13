@@ -5,10 +5,13 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSSigner;
 import com.nimbusds.jose.crypto.ECDSASigner;
+import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
+import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
@@ -234,6 +237,81 @@ public class TokenHandlerTest {
     }
 
     @ParameterizedTest
+    @MethodSource("validVectorValues")
+    public void shouldReturn200ForSuccessfulTokenRequestWithRsaSigning(
+            String vectorValue,
+            boolean clientRegistryConsent,
+            boolean expectedConsentRequired,
+            boolean clientIdInHeader)
+            throws JOSEException {
+        when(configurationService.isRsaSigningAvailable()).thenReturn(true);
+
+        KeyPair keyPair = generateRsaKeyPair();
+        UserProfile userProfile = generateUserProfile();
+        SignedJWT signedJWT =
+                generateIDToken(
+                        CLIENT_ID,
+                        PUBLIC_SUBJECT,
+                        "issuer-url",
+                        new RSAKeyGenerator(2048).algorithm(JWSAlgorithm.RS256).generate());
+        OIDCTokenResponse tokenResponse =
+                new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
+        PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
+        ClientRegistry clientRegistry =
+                generateClientRegistry(keyPair, clientRegistryConsent)
+                        .withIdTokenSigningAlgorithm("RSA256");
+
+        when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
+        when(clientService.getClient(eq(CLIENT_ID))).thenReturn(Optional.of(clientRegistry));
+        when(tokenService.getClientIDFromPrivateKeyJWT(anyString()))
+                .thenReturn(Optional.of(CLIENT_ID));
+        when(tokenService.validatePrivateKeyJWT(
+                        anyString(),
+                        eq(clientRegistry.getPublicKey()),
+                        eq(BASE_URI),
+                        eq(CLIENT_ID)))
+                .thenReturn(Optional.empty());
+        String authCode = new AuthorizationCode().toString();
+        AuthenticationRequest authenticationRequest =
+                generateAuthRequest(JsonArrayHelper.jsonArrayOf(vectorValue));
+        VectorOfTrust vtr =
+                VectorOfTrust.parseFromAuthRequestAttribute(
+                        authenticationRequest.getCustomParameter("vtr"));
+        when(authorisationCodeService.getExchangeDataForCode(authCode))
+                .thenReturn(
+                        Optional.of(
+                                new AuthCodeExchangeData()
+                                        .setEmail(TEST_EMAIL)
+                                        .setClientSessionId(CLIENT_SESSION_ID)
+                                        .setClientSession(
+                                                new ClientSession(
+                                                        authenticationRequest.toParameters(),
+                                                        LocalDateTime.now(),
+                                                        vtr,
+                                                        CLIENT_NAME))));
+        when(dynamoService.getUserProfileByEmail(eq(TEST_EMAIL))).thenReturn(userProfile);
+        when(tokenService.generateTokenResponse(
+                        CLIENT_ID,
+                        INTERNAL_SUBJECT,
+                        SCOPES,
+                        Map.of("nonce", NONCE),
+                        PUBLIC_SUBJECT,
+                        vtr.retrieveVectorOfTrustForToken(),
+                        userProfile.getClientConsent(),
+                        expectedConsentRequired,
+                        null,
+                        false,
+                        JWSAlgorithm.RS256))
+                .thenReturn(tokenResponse);
+
+        APIGatewayProxyResponseEvent result =
+                generateApiGatewayRequest(privateKeyJWT, authCode, CLIENT_ID, clientIdInHeader);
+        assertThat(result, hasStatus(200));
+        assertTrue(result.getBody().contains(refreshToken.getValue()));
+        assertTrue(result.getBody().contains(accessToken.getValue()));
+    }
+
+    @ParameterizedTest
     @NullSource
     @ValueSource(strings = {CLIENT_ID})
     public void shouldReturn200ForSuccessfulRefreshTokenRequest(String clientId)
@@ -275,6 +353,60 @@ public class TokenHandlerTest {
                         eq(SCOPES.toStringList()),
                         eq(PUBLIC_SUBJECT),
                         eq(JWSAlgorithm.ES256)))
+                .thenReturn(tokenResponse);
+
+        APIGatewayProxyResponseEvent result =
+                generateApiGatewayRefreshRequest(privateKeyJWT, refreshToken.getValue(), clientId);
+        assertThat(result, hasStatus(200));
+        assertTrue(result.getBody().contains(refreshToken.getValue()));
+        assertTrue(result.getBody().contains(accessToken.getValue()));
+    }
+
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(strings = {CLIENT_ID})
+    public void shouldReturn200ForSuccessfulRefreshTokenRequestWithRsaSigning(String clientId)
+            throws JOSEException, ParseException, Json.JsonException {
+        when(configurationService.isRsaSigningAvailable()).thenReturn(true);
+
+        SignedJWT signedRefreshToken = createSignedRsaRefreshToken();
+        KeyPair keyPair = generateRsaKeyPair();
+        RefreshToken refreshToken = new RefreshToken(signedRefreshToken.serialize());
+        OIDCTokenResponse tokenResponse =
+                new OIDCTokenResponse(new OIDCTokens(accessToken, refreshToken));
+        PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
+        ClientRegistry clientRegistry =
+                generateClientRegistry(keyPair, false).withIdTokenSigningAlgorithm("RSA256");
+
+        when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
+        when(clientService.getClient(eq(CLIENT_ID))).thenReturn(Optional.of(clientRegistry));
+        when(tokenService.getClientIDFromPrivateKeyJWT(anyString()))
+                .thenReturn(Optional.of(CLIENT_ID));
+        when(tokenService.validatePrivateKeyJWT(
+                        anyString(),
+                        eq(clientRegistry.getPublicKey()),
+                        eq(BASE_URI),
+                        eq(CLIENT_ID)))
+                .thenReturn(Optional.empty());
+        when(tokenValidationService.validateRefreshTokenSignatureAndExpiry(refreshToken))
+                .thenReturn(true);
+        when(tokenValidationService.validateRefreshTokenScopes(
+                        SCOPES.toStringList(), SCOPES.toStringList()))
+                .thenReturn(true);
+        RefreshTokenStore tokenStore =
+                new RefreshTokenStore(refreshToken.getValue(), INTERNAL_SUBJECT.getValue());
+        String tokenStoreString = objectMapper.writeValueAsString(tokenStore);
+        when(redisConnectionService.popValue(
+                        REFRESH_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT.getValue()))
+                .thenReturn(null);
+        String redisKey = REFRESH_TOKEN_PREFIX + signedRefreshToken.getJWTClaimsSet().getJWTID();
+        when(redisConnectionService.popValue(redisKey)).thenReturn(tokenStoreString);
+        when(tokenService.generateRefreshTokenResponse(
+                        eq(CLIENT_ID),
+                        eq(INTERNAL_SUBJECT),
+                        eq(SCOPES.toStringList()),
+                        eq(PUBLIC_SUBJECT),
+                        eq(JWSAlgorithm.RS256)))
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result =
@@ -490,6 +622,14 @@ public class TokenHandlerTest {
                         .algorithm(JWSAlgorithm.ES256)
                         .generate();
         ECDSASigner signer = new ECDSASigner(ecSigningKey);
+        return TokenGeneratorHelper.generateSignedToken(
+                CLIENT_ID, BASE_URI, SCOPES.toStringList(), signer, PUBLIC_SUBJECT, "KEY_ID");
+    }
+
+    private SignedJWT createSignedRsaRefreshToken() throws JOSEException {
+        JWSSigner signer =
+                new RSASSASigner(
+                        new RSAKeyGenerator(2048).algorithm(JWSAlgorithm.RS256).generate());
         return TokenGeneratorHelper.generateSignedToken(
                 CLIENT_ID, BASE_URI, SCOPES.toStringList(), signer, PUBLIC_SUBJECT, "KEY_ID");
     }
