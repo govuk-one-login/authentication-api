@@ -312,7 +312,8 @@ public class TokenService {
         }
 
         try {
-            return generateSignedJWT(idTokenClaims.toJWTClaimsSet(), Optional.empty());
+            return generateSignedJWT(
+                    idTokenClaims.toJWTClaimsSet(), Optional.empty(), JWSAlgorithm.ES256);
         } catch (com.nimbusds.oauth2.sdk.ParseException e) {
             LOG.error("Error when trying to parse IDTokenClaims to JWTClaimSet", e);
             throw new RuntimeException(e);
@@ -354,7 +355,8 @@ public class TokenService {
             LOG.info("No identity claims to populate in access token");
         }
 
-        SignedJWT signedJWT = generateSignedJWT(claimSetBuilder.build(), Optional.empty());
+        SignedJWT signedJWT =
+                generateSignedJWT(claimSetBuilder.build(), Optional.empty(), JWSAlgorithm.ES256);
         AccessToken accessToken =
                 new BearerAccessToken(
                         signedJWT.serialize(), configService.getAccessTokenExpiry(), null);
@@ -388,7 +390,7 @@ public class TokenService {
                         .subject(subject.getValue())
                         .jwtID(jwtId)
                         .build();
-        SignedJWT signedJWT = generateSignedJWT(claimsSet, Optional.empty());
+        SignedJWT signedJWT = generateSignedJWT(claimsSet, Optional.empty(), JWSAlgorithm.ES256);
         RefreshToken refreshToken = new RefreshToken(signedJWT.serialize());
 
         String redisKey = REFRESH_TOKEN_PREFIX + jwtId;
@@ -405,21 +407,28 @@ public class TokenService {
         return refreshToken;
     }
 
-    public SignedJWT generateSignedJWT(JWTClaimsSet claimsSet, Optional<String> type) {
+    public SignedJWT generateSignedJWT(
+            JWTClaimsSet claimsSet, Optional<String> type, JWSAlgorithm algorithm) {
+
+        var signingKey =
+                algorithm == JWSAlgorithm.ES256
+                        ? configService.getTokenSigningKeyAlias()
+                        : configService.getTokenSigningKeyRsaAlias();
 
         var signingKeyId =
                 kmsConnectionService
-                        .getPublicKey(
-                                GetPublicKeyRequest.builder()
-                                        .keyId(configService.getTokenSigningKeyAlias())
-                                        .build())
+                        .getPublicKey(GetPublicKeyRequest.builder().keyId(signingKey).build())
                         .keyId();
 
         try {
-            var jwsHeader =
-                    new JWSHeader.Builder(TOKEN_ALGORITHM).keyID(hashSha256String(signingKeyId));
+            var jwsHeader = new JWSHeader.Builder(algorithm).keyID(hashSha256String(signingKeyId));
 
             type.map(JOSEObjectType::new).ifPresent(jwsHeader::type);
+
+            var signingAlgorithm =
+                    algorithm == JWSAlgorithm.ES256
+                            ? SigningAlgorithmSpec.ECDSA_SHA_256
+                            : SigningAlgorithmSpec.RSASSA_PKCS1_V1_5_SHA_256;
 
             Base64URL encodedHeader = jwsHeader.build().toBase64URL();
             Base64URL encodedClaims = Base64URL.encode(claimsSet.toString());
@@ -427,8 +436,8 @@ public class TokenService {
             SignRequest signRequest =
                     SignRequest.builder()
                             .message(SdkBytes.fromByteArray(message.getBytes()))
-                            .keyId(configService.getTokenSigningKeyAlias())
-                            .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
+                            .keyId(signingKeyId)
+                            .signingAlgorithm(signingAlgorithm)
                             .build();
             SignResponse signResult = kmsConnectionService.sign(signRequest);
             LOG.info("Token has been signed successfully");
@@ -436,7 +445,7 @@ public class TokenService {
                     Base64URL.encode(
                                     ECDSA.transcodeSignatureToConcat(
                                             signResult.signature().asByteArray(),
-                                            ECDSA.getSignatureByteArrayLength(TOKEN_ALGORITHM)))
+                                            ECDSA.getSignatureByteArrayLength(algorithm)))
                             .toString();
             return SignedJWT.parse(message + "." + signature);
         } catch (java.text.ParseException | JOSEException e) {
