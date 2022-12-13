@@ -31,6 +31,7 @@ public class ClientRegistry {
     private boolean identityVerificationSupported = false;
 
     private boolean oneLoginService = false;
+    private String idTokenSigningAlgorithm = "ES256";
 
     public ClientRegistry() {}
 
@@ -299,6 +300,20 @@ public class ClientRegistry {
 
     public ClientRegistry withOneLoginService(boolean oneLoginService) {
         this.oneLoginService = oneLoginService;
+        return this;
+    }
+
+    @DynamoDbAttribute("IdTokenSigningAlgorithm")
+    public String getIdTokenSigningAlgorithm() {
+        return idTokenSigningAlgorithm;
+    }
+
+    public void setIdTokenSigningAlgorithm(String algorithm) {
+        this.idTokenSigningAlgorithm = algorithm;
+    }
+
+    public ClientRegistry withIdTokenSigningAlgorithm(String algorithm) {
+        this.idTokenSigningAlgorithm = algorithm;
         return this;
     }
 }
