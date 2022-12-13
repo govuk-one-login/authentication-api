@@ -127,7 +127,13 @@ public class TokenGeneratorHelper {
                             .collect(Collectors.toList()));
         }
 
-        JWSHeader jwsHeader = new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(keyId).build();
+        JWSHeader jwsHeader =
+                new JWSHeader.Builder(
+                                signer instanceof RSASSASigner
+                                        ? JWSAlgorithm.RS256
+                                        : JWSAlgorithm.ES256)
+                        .keyID(keyId)
+                        .build();
 
         var signedJWT = new SignedJWT(jwsHeader, claimsBuilder.build());
 
