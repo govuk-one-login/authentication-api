@@ -29,6 +29,8 @@ public class ClientRegistry {
     private List<String> claims = new ArrayList<>();
     private String clientType;
     private boolean identityVerificationSupported = false;
+    private String tokenAuthMethod;
+    private String clientSecret;
 
     private boolean oneLoginService = false;
     private String idTokenSigningAlgorithm = "ES256";
@@ -314,6 +316,34 @@ public class ClientRegistry {
 
     public ClientRegistry withIdTokenSigningAlgorithm(String algorithm) {
         this.idTokenSigningAlgorithm = algorithm;
+        return this;
+    }
+
+    @DynamoDbAttribute("TokenAuthMethod")
+    public String getTokenAuthMethod() {
+        return tokenAuthMethod;
+    }
+
+    public void setTokenAuthMethod(String tokenAuthMethod) {
+        this.tokenAuthMethod = tokenAuthMethod;
+    }
+
+    public ClientRegistry withTokenAuthMethod(String tokenAuthMethod) {
+        this.tokenAuthMethod = tokenAuthMethod;
+        return this;
+    }
+
+    @DynamoDbAttribute("ClientSecret")
+    public String getClientSecret() {
+        return clientSecret;
+    }
+
+    public void setClientSecret(String clientSecret) {
+        this.clientSecret = clientSecret;
+    }
+
+    public ClientRegistry withClientSecret(String clientSecret) {
+        this.clientSecret = clientSecret;
         return this;
     }
 }

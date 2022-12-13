@@ -175,6 +175,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("HEADERS_CASE_INSENSITIVE", "false").equals("true");
     }
 
+    public boolean isClientSecretSupported() {
+        return List.of("build", "staging", "local").contains(getEnvironment());
+    }
+
     public boolean isIdentityEnabled() {
         return System.getenv().getOrDefault("IDENTITY_ENABLED", "false").equals("true");
     }
