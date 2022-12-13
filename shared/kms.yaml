@@ -53,6 +53,7 @@ Resources:
   IdTokenSigningKey:
     Type: AWS::KMS::Key
     DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Description: KMS signing key for ID tokens
       Enabled: true
@@ -78,6 +79,7 @@ Resources:
   IdTokenSigningKeyAlias:
     Type: AWS::KMS::Alias
     DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       AliasName: !Sub "alias/${Environment}-id-token-signing-key-alias"
       TargetKeyId: !Ref IdTokenSigningKey
@@ -85,6 +87,7 @@ Resources:
   IpvAuthSigningKey:
     Type: AWS::KMS::Key
     DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Description: KMS signing key for authentication to the IPV token endpoint
       Enabled: true
@@ -110,6 +113,7 @@ Resources:
   IpvAuthSigningKeyAlias:
     Type: AWS::KMS::Alias
     DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       AliasName: !Sub "alias/${Environment}-ipv-token-auth-kms-key-alias"
       TargetKeyId: !Ref IpvAuthSigningKey
@@ -117,6 +121,7 @@ Resources:
   DocAppAuthSigningKey:
     Type: AWS::KMS::Key
     DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Description: KMS signing key for authentication to the Doc Checking App
       Enabled: true
@@ -142,6 +147,7 @@ Resources:
   DocAppAuthSigningKeyAlias:
     Type: AWS::KMS::Alias
     DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       AliasName: !Sub "alias/${Environment}-doc-app-auth-kms-key-alias"
       TargetKeyId: !Ref DocAppAuthSigningKey
@@ -149,6 +155,7 @@ Resources:
   CloudWatchLogEncryptionKey:
     Type: AWS::KMS::Key
     DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Description: KMS key for Cloudwatch logs
       Enabled: true
@@ -186,6 +193,7 @@ Resources:
   LambdaEnvironmentVariableEncryptionKey:
     Type: AWS::KMS::Key
     DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       Description: KMS encryption key for lambda environment variables
       Enabled: true
@@ -211,6 +219,7 @@ Resources:
   LambdaEnvironmentVariableEncryptionKeyAlias:
     Type: AWS::KMS::Alias
     DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       AliasName: !Sub "alias/${Environment}-lambda-env-vars-encryption-key-alias"
       TargetKeyId: !Ref LambdaEnvironmentVariableEncryptionKey
