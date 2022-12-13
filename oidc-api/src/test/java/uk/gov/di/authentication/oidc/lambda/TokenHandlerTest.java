@@ -21,6 +21,7 @@ import com.nimbusds.oauth2.sdk.GrantType;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
+import com.nimbusds.oauth2.sdk.auth.ClientAuthenticationMethod;
 import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
@@ -49,9 +50,9 @@ import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
+import uk.gov.di.authentication.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -59,6 +60,8 @@ import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.TokenService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
+import uk.gov.di.authentication.shared.validation.TokenClientAuthValidator;
+import uk.gov.di.authentication.shared.validation.TokenClientAuthValidatorFactory;
 import uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
@@ -84,6 +87,7 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -122,9 +126,12 @@ public class TokenHandlerTest {
     private final DynamoService dynamoService = mock(DynamoService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final TokenService tokenService = mock(TokenService.class);
-    private final ClientService clientService = mock(ClientService.class);
     private final TokenValidationService tokenValidationService =
             mock(TokenValidationService.class);
+    private final TokenClientAuthValidatorFactory tokenClientAuthValidatorFactory =
+            mock(TokenClientAuthValidatorFactory.class);
+    private final TokenClientAuthValidator tokenClientAuthValidator =
+            mock(TokenClientAuthValidator.class);
     private final AuthorisationCodeService authorisationCodeService =
             mock(AuthorisationCodeService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
@@ -134,19 +141,19 @@ public class TokenHandlerTest {
     private final Json objectMapper = SerializationService.getInstance();
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of(BASE_URI));
         when(configurationService.getSessionExpiry()).thenReturn(1234L);
         handler =
                 new TokenHandler(
-                        clientService,
                         tokenService,
                         dynamoService,
                         configurationService,
                         authorisationCodeService,
                         clientSessionService,
                         tokenValidationService,
-                        redisConnectionService);
+                        redisConnectionService,
+                        tokenClientAuthValidatorFactory);
     }
 
     private static Stream<Arguments> validVectorValues() {
@@ -167,12 +174,12 @@ public class TokenHandlerTest {
 
     @ParameterizedTest
     @MethodSource("validVectorValues")
-    public void shouldReturn200ForSuccessfulTokenRequest(
+    void shouldReturn200ForSuccessfulTokenRequest(
             String vectorValue,
             boolean clientRegistryConsent,
             boolean expectedConsentRequired,
             boolean clientIdInHeader)
-            throws JOSEException {
+            throws JOSEException, TokenAuthInvalidException {
         KeyPair keyPair = generateRsaKeyPair();
         UserProfile userProfile = generateUserProfile();
         SignedJWT signedJWT =
@@ -184,18 +191,15 @@ public class TokenHandlerTest {
         OIDCTokenResponse tokenResponse =
                 new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
         PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
-        ClientRegistry clientRegistry = generateClientRegistry(keyPair, clientRegistryConsent);
+        ClientRegistry clientRegistry =
+                generateClientRegistry(keyPair, clientRegistryConsent, CLIENT_ID);
 
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
-        when(clientService.getClient(eq(CLIENT_ID))).thenReturn(Optional.of(clientRegistry));
-        when(tokenService.getClientIDFromPrivateKeyJWT(anyString()))
-                .thenReturn(Optional.of(CLIENT_ID));
-        when(tokenService.validatePrivateKeyJWT(
-                        anyString(),
-                        eq(clientRegistry.getPublicKey()),
-                        eq(BASE_URI),
-                        eq(CLIENT_ID)))
-                .thenReturn(Optional.empty());
+        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(anyString(), any()))
+                .thenReturn(Optional.of(tokenClientAuthValidator));
+        when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
+                        anyString(), any()))
+                .thenReturn(clientRegistry);
         String authCode = new AuthorizationCode().toString();
         AuthenticationRequest authenticationRequest =
                 generateAuthRequest(JsonArrayHelper.jsonArrayOf(vectorValue));
@@ -238,12 +242,12 @@ public class TokenHandlerTest {
 
     @ParameterizedTest
     @MethodSource("validVectorValues")
-    public void shouldReturn200ForSuccessfulTokenRequestWithRsaSigning(
+    void shouldReturn200ForSuccessfulTokenRequestWithRsaSigning(
             String vectorValue,
             boolean clientRegistryConsent,
             boolean expectedConsentRequired,
             boolean clientIdInHeader)
-            throws JOSEException {
+            throws JOSEException, TokenAuthInvalidException {
         when(configurationService.isRsaSigningAvailable()).thenReturn(true);
 
         KeyPair keyPair = generateRsaKeyPair();
@@ -258,19 +262,15 @@ public class TokenHandlerTest {
                 new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
         PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
         ClientRegistry clientRegistry =
-                generateClientRegistry(keyPair, clientRegistryConsent)
+                generateClientRegistry(keyPair, clientRegistryConsent, CLIENT_ID)
                         .withIdTokenSigningAlgorithm("RSA256");
 
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
-        when(clientService.getClient(eq(CLIENT_ID))).thenReturn(Optional.of(clientRegistry));
-        when(tokenService.getClientIDFromPrivateKeyJWT(anyString()))
-                .thenReturn(Optional.of(CLIENT_ID));
-        when(tokenService.validatePrivateKeyJWT(
-                        anyString(),
-                        eq(clientRegistry.getPublicKey()),
-                        eq(BASE_URI),
-                        eq(CLIENT_ID)))
-                .thenReturn(Optional.empty());
+        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(anyString(), any()))
+                .thenReturn(Optional.of(tokenClientAuthValidator));
+        when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
+                        anyString(), any()))
+                .thenReturn(clientRegistry);
         String authCode = new AuthorizationCode().toString();
         AuthenticationRequest authenticationRequest =
                 generateAuthRequest(JsonArrayHelper.jsonArrayOf(vectorValue));
@@ -314,26 +314,23 @@ public class TokenHandlerTest {
     @ParameterizedTest
     @NullSource
     @ValueSource(strings = {CLIENT_ID})
-    public void shouldReturn200ForSuccessfulRefreshTokenRequest(String clientId)
-            throws JOSEException, ParseException, Json.JsonException {
+    void shouldReturn200ForSuccessfulRefreshTokenRequest(String clientId)
+            throws JOSEException, ParseException, Json.JsonException, TokenAuthInvalidException {
         SignedJWT signedRefreshToken = createSignedRefreshToken();
         KeyPair keyPair = generateRsaKeyPair();
         RefreshToken refreshToken = new RefreshToken(signedRefreshToken.serialize());
         OIDCTokenResponse tokenResponse =
                 new OIDCTokenResponse(new OIDCTokens(accessToken, refreshToken));
         PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
-        ClientRegistry clientRegistry = generateClientRegistry(keyPair, false);
+        ClientRegistry clientRegistry = generateClientRegistry(keyPair, false, CLIENT_ID);
 
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
-        when(clientService.getClient(eq(CLIENT_ID))).thenReturn(Optional.of(clientRegistry));
-        when(tokenService.getClientIDFromPrivateKeyJWT(anyString()))
-                .thenReturn(Optional.of(CLIENT_ID));
-        when(tokenService.validatePrivateKeyJWT(
-                        anyString(),
-                        eq(clientRegistry.getPublicKey()),
-                        eq(BASE_URI),
-                        eq(CLIENT_ID)))
-                .thenReturn(Optional.empty());
+        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(anyString(), any()))
+                .thenReturn(Optional.of(tokenClientAuthValidator));
+        when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
+                        anyString(), any()))
+                .thenReturn(clientRegistry);
+
         when(tokenValidationService.validateRefreshTokenSignatureAndExpiry(refreshToken))
                 .thenReturn(true);
         when(tokenValidationService.validateRefreshTokenScopes(
@@ -365,8 +362,8 @@ public class TokenHandlerTest {
     @ParameterizedTest
     @NullSource
     @ValueSource(strings = {CLIENT_ID})
-    public void shouldReturn200ForSuccessfulRefreshTokenRequestWithRsaSigning(String clientId)
-            throws JOSEException, ParseException, Json.JsonException {
+    void shouldReturn200ForSuccessfulRefreshTokenRequestWithRsaSigning(String clientId)
+            throws JOSEException, ParseException, Json.JsonException, TokenAuthInvalidException {
         when(configurationService.isRsaSigningAvailable()).thenReturn(true);
 
         SignedJWT signedRefreshToken = createSignedRsaRefreshToken();
@@ -376,18 +373,16 @@ public class TokenHandlerTest {
                 new OIDCTokenResponse(new OIDCTokens(accessToken, refreshToken));
         PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
         ClientRegistry clientRegistry =
-                generateClientRegistry(keyPair, false).withIdTokenSigningAlgorithm("RSA256");
+                generateClientRegistry(keyPair, false, CLIENT_ID)
+                        .withIdTokenSigningAlgorithm("RSA256");
 
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
-        when(clientService.getClient(eq(CLIENT_ID))).thenReturn(Optional.of(clientRegistry));
-        when(tokenService.getClientIDFromPrivateKeyJWT(anyString()))
-                .thenReturn(Optional.of(CLIENT_ID));
-        when(tokenService.validatePrivateKeyJWT(
-                        anyString(),
-                        eq(clientRegistry.getPublicKey()),
-                        eq(BASE_URI),
-                        eq(CLIENT_ID)))
-                .thenReturn(Optional.empty());
+        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(anyString(), any()))
+                .thenReturn(Optional.of(tokenClientAuthValidator));
+        when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
+                        anyString(), any()))
+                .thenReturn(clientRegistry);
+
         when(tokenValidationService.validateRefreshTokenSignatureAndExpiry(refreshToken))
                 .thenReturn(true);
         when(tokenValidationService.validateRefreshTokenScopes(
@@ -417,11 +412,20 @@ public class TokenHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfClientIsNotValid() throws JOSEException {
+    void shouldReturn400IfClientIsNotValid() throws JOSEException, TokenAuthInvalidException {
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
-        when(clientService.getClient(eq(CLIENT_ID))).thenReturn(Optional.empty());
         KeyPair keyPair = generateRsaKeyPair();
         PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
+        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(anyString(), any()))
+                .thenReturn(Optional.of(tokenClientAuthValidator));
+        when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
+                        anyString(), any()))
+                .thenThrow(
+                        new TokenAuthInvalidException(
+                                OAuth2Error.INVALID_CLIENT,
+                                ClientAuthenticationMethod.PRIVATE_KEY_JWT,
+                                "unknown"));
+
         APIGatewayProxyResponseEvent result =
                 generateApiGatewayRequest(
                         privateKeyJWT, new AuthorizationCode().toString(), CLIENT_ID, true);
@@ -431,7 +435,7 @@ public class TokenHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfClientIdIsNotValid() {
+    void shouldReturn400IfClientIdIsNotValid() {
         ErrorObject error =
                 new ErrorObject(
                         OAuth2Error.INVALID_REQUEST_CODE, "Request is missing client_id parameter");
@@ -446,43 +450,50 @@ public class TokenHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfSignatureOfPrivateKeyJWTCantBeVerified() throws JOSEException {
-        KeyPair keyPairOne = generateRsaKeyPair();
-        KeyPair keyPairTwo = generateRsaKeyPair();
-        ClientRegistry clientRegistry = generateClientRegistry(keyPairTwo, false);
-        PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPairOne.getPrivate());
-        when(clientService.getClient(eq(CLIENT_ID))).thenReturn(Optional.of(clientRegistry));
-        when(tokenService.validatePrivateKeyJWT(
-                        anyString(),
-                        eq(clientRegistry.getPublicKey()),
-                        eq(TOKEN_URI),
-                        eq(CLIENT_ID)))
-                .thenReturn(Optional.of(OAuth2Error.INVALID_CLIENT));
+    void shouldReturn400IfSignatureOfPrivateKeyJWTCantBeVerified()
+            throws JOSEException, TokenAuthInvalidException {
+        var privateKeyJWT = generatePrivateKeyJWT(generateRsaKeyPair().getPrivate());
 
-        APIGatewayProxyResponseEvent result =
+        when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
+        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(anyString(), any()))
+                .thenReturn(Optional.of(tokenClientAuthValidator));
+        when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
+                        anyString(), any()))
+                .thenThrow(
+                        new TokenAuthInvalidException(
+                                new ErrorObject(
+                                        OAuth2Error.INVALID_CLIENT_CODE,
+                                        "Invalid signature in private_key_jwt"),
+                                ClientAuthenticationMethod.PRIVATE_KEY_JWT,
+                                "unknown"));
+
+        var result =
                 generateApiGatewayRequest(
                         privateKeyJWT, new AuthorizationCode().toString(), CLIENT_ID, true);
 
         assertThat(result, hasStatus(400));
-        assertThat(result, hasBody(OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString()));
+        assertThat(
+                result,
+                hasBody(
+                        new ErrorObject(
+                                        OAuth2Error.INVALID_CLIENT_CODE,
+                                        "Invalid signature in private_key_jwt")
+                                .toJSONObject()
+                                .toJSONString()));
     }
 
     @Test
-    public void shouldReturn400IfAuthCodeIsNotFound() throws JOSEException {
+    void shouldReturn400IfAuthCodeIsNotFound() throws JOSEException, TokenAuthInvalidException {
         KeyPair keyPair = generateRsaKeyPair();
         PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
-        ClientRegistry clientRegistry = generateClientRegistry(keyPair, false);
+        ClientRegistry clientRegistry = generateClientRegistry(keyPair, false, CLIENT_ID);
 
+        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(anyString(), any()))
+                .thenReturn(Optional.of(tokenClientAuthValidator));
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
-        when(clientService.getClient(eq(CLIENT_ID))).thenReturn(Optional.of(clientRegistry));
-        when(tokenService.getClientIDFromPrivateKeyJWT(anyString()))
-                .thenReturn(Optional.of(CLIENT_ID));
-        when(tokenService.validatePrivateKeyJWT(
-                        anyString(),
-                        eq(clientRegistry.getPublicKey()),
-                        eq(BASE_URI),
-                        eq(CLIENT_ID)))
-                .thenReturn(Optional.empty());
+        when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
+                        anyString(), any()))
+                .thenReturn(clientRegistry);
         String authCode = new AuthorizationCode().toString();
         when(authorisationCodeService.getExchangeDataForCode(authCode))
                 .thenReturn(Optional.empty());
@@ -494,21 +505,17 @@ public class TokenHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfRedirectUriDoesNotMatchRedirectUriFromAuthRequest()
-            throws JOSEException {
+    void shouldReturn400IfRedirectUriDoesNotMatchRedirectUriFromAuthRequest()
+            throws JOSEException, TokenAuthInvalidException {
         KeyPair keyPair = generateRsaKeyPair();
         PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
-        ClientRegistry clientRegistry = generateClientRegistry(keyPair, false);
+        ClientRegistry clientRegistry = generateClientRegistry(keyPair, false, CLIENT_ID);
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
-        when(clientService.getClient(eq(CLIENT_ID))).thenReturn(Optional.of(clientRegistry));
-        when(tokenService.getClientIDFromPrivateKeyJWT(anyString()))
-                .thenReturn(Optional.of(CLIENT_ID));
-        when(tokenService.validatePrivateKeyJWT(
-                        anyString(),
-                        eq(clientRegistry.getPublicKey()),
-                        eq(BASE_URI),
-                        eq(CLIENT_ID)))
-                .thenReturn(Optional.empty());
+        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(anyString(), any()))
+                .thenReturn(Optional.of(tokenClientAuthValidator));
+        when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
+                        anyString(), any()))
+                .thenReturn(clientRegistry);
         String authCode = new AuthorizationCode().toString();
         when(authorisationCodeService.getExchangeDataForCode(authCode))
                 .thenReturn(
@@ -531,7 +538,8 @@ public class TokenHandlerTest {
     }
 
     @Test
-    void shouldReturn200ForSuccessfulDocAppJourneyTokenRequest() throws JOSEException {
+    void shouldReturn200ForSuccessfulDocAppJourneyTokenRequest()
+            throws JOSEException, TokenAuthInvalidException {
         KeyPair keyPair = generateRsaKeyPair();
         UserProfile userProfile = generateUserProfile();
         SignedJWT signedJWT =
@@ -543,19 +551,15 @@ public class TokenHandlerTest {
         OIDCTokenResponse tokenResponse =
                 new OIDCTokenResponse(new OIDCTokens(signedJWT, accessToken, refreshToken));
         PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
-        ClientRegistry clientRegistry = generateClientRegistry(keyPair, false);
+        ClientRegistry clientRegistry =
+                generateClientRegistry(keyPair, false, DOC_APP_CLIENT_ID.getValue());
 
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
-        when(clientService.getClient(DOC_APP_CLIENT_ID.getValue()))
-                .thenReturn(Optional.of(clientRegistry));
-        when(tokenService.getClientIDFromPrivateKeyJWT(anyString()))
-                .thenReturn(Optional.of(DOC_APP_CLIENT_ID.getValue()));
-        when(tokenService.validatePrivateKeyJWT(
-                        anyString(),
-                        eq(clientRegistry.getPublicKey()),
-                        eq(BASE_URI),
-                        eq(DOC_APP_CLIENT_ID.getValue())))
-                .thenReturn(Optional.empty());
+        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(anyString(), any()))
+                .thenReturn(Optional.of(tokenClientAuthValidator));
+        when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
+                        anyString(), any()))
+                .thenReturn(clientRegistry);
         String authCode = new AuthorizationCode().toString();
         AuthorizationRequest authenticationRequest = generateRequestObjectAuthRequest();
         VectorOfTrust vtr =
@@ -644,9 +648,10 @@ public class TokenHandlerTest {
                 null);
     }
 
-    private ClientRegistry generateClientRegistry(KeyPair keyPair, boolean consentRequired) {
+    private ClientRegistry generateClientRegistry(
+            KeyPair keyPair, boolean consentRequired, String clientID) {
         return new ClientRegistry()
-                .withClientID(CLIENT_ID)
+                .withClientID(clientID)
                 .withConsentRequired(consentRequired)
                 .withClientName("test-client")
                 .withRedirectUrls(singletonList(REDIRECT_URI))

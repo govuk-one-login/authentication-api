@@ -22,11 +22,11 @@ import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
-import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
@@ -37,6 +37,7 @@ import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.TokenService;
 import uk.gov.di.authentication.shared.services.TokenValidationService;
+import uk.gov.di.authentication.shared.validation.TokenClientAuthValidatorFactory;
 
 import java.util.HashMap;
 import java.util.List;
@@ -48,13 +49,10 @@ import java.util.Optional;
 import static java.lang.String.format;
 import static uk.gov.di.authentication.shared.conditions.DocAppUserHelper.isDocCheckingAppUserWithSubjectId;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.addAnnotation;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.updateAttachedLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.RequestBodyHelper.parseRequestBody;
 
@@ -63,7 +61,6 @@ public class TokenHandler
 
     private static final Logger LOG = LogManager.getLogger(TokenHandler.class);
 
-    private final ClientService clientService;
     private final TokenService tokenService;
     private final DynamoService dynamoService;
     private final ConfigurationService configurationService;
@@ -71,21 +68,20 @@ public class TokenHandler
     private final ClientSessionService clientSessionService;
     private final TokenValidationService tokenValidationService;
     private final RedisConnectionService redisConnectionService;
+    private final TokenClientAuthValidatorFactory tokenClientAuthValidatorFactory;
     private final Json objectMapper = SerializationService.getInstance();
 
-    private static final String TOKEN_PATH = "token";
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
 
     public TokenHandler(
-            ClientService clientService,
             TokenService tokenService,
             DynamoService dynamoService,
             ConfigurationService configurationService,
             AuthorisationCodeService authorisationCodeService,
             ClientSessionService clientSessionService,
             TokenValidationService tokenValidationService,
-            RedisConnectionService redisConnectionService) {
-        this.clientService = clientService;
+            RedisConnectionService redisConnectionService,
+            TokenClientAuthValidatorFactory tokenClientAuthValidatorFactory) {
         this.tokenService = tokenService;
         this.dynamoService = dynamoService;
         this.configurationService = configurationService;
@@ -93,6 +89,7 @@ public class TokenHandler
         this.clientSessionService = clientSessionService;
         this.tokenValidationService = tokenValidationService;
         this.redisConnectionService = redisConnectionService;
+        this.tokenClientAuthValidatorFactory = tokenClientAuthValidatorFactory;
     }
 
     public TokenHandler(ConfigurationService configurationService) {
@@ -100,8 +97,6 @@ public class TokenHandler
 
         this.configurationService = configurationService;
         this.redisConnectionService = new RedisConnectionService(configurationService);
-
-        this.clientService = new DynamoClientService(configurationService);
         this.tokenService =
                 new TokenService(configurationService, this.redisConnectionService, kms);
         this.dynamoService = new DynamoService(configurationService);
@@ -112,6 +107,9 @@ public class TokenHandler
                 new ClientSessionService(configurationService, redisConnectionService);
         this.tokenValidationService =
                 new TokenValidationService(new JwksService(configurationService, kms));
+        this.tokenClientAuthValidatorFactory =
+                new TokenClientAuthValidatorFactory(
+                        configurationService, new DynamoClientService(configurationService));
     }
 
     public TokenHandler() {
@@ -142,66 +140,44 @@ public class TokenHandler
 
         Map<String, String> requestBody = parseRequestBody(input.getBody());
         addAnnotation("grant_type", requestBody.get("grant_type"));
-
-        String clientID;
-        ClientRegistry client;
-        try {
-            clientID = tokenService.getClientIDFromPrivateKeyJWT(input.getBody()).orElseThrow();
-
-            attachLogFieldToLogs(CLIENT_ID, clientID);
-            addAnnotation("client_id", clientID);
-            client = clientService.getClient(clientID).orElseThrow();
-        } catch (NoSuchElementException e) {
-            LOG.warn("Invalid client or client not found in Client Registry");
-            return generateApiGatewayProxyResponse(
-                    400, OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString());
-        }
-
-        var signingAlgorithm =
-                configurationService.isRsaSigningAvailable()
-                                && "RSA256".equals(client.getIdTokenSigningAlgorithm())
-                        ? JWSAlgorithm.RS256
-                        : JWSAlgorithm.ES256;
-
-        String baseUrl =
-                configurationService
-                        .getOidcApiBaseURL()
-                        .orElseThrow(
-                                () -> {
-                                    LOG.error("Application was not configured with baseURL");
-                                    return new RuntimeException(
-                                            "Application was not configured with baseURL");
-                                });
-        String tokenUrl = buildURI(baseUrl, TOKEN_PATH).toString();
-        Optional<ErrorObject> invalidPrivateKeyJwtError =
-                segmentedFunctionCall(
-                        "validatePrivateKeyJWT",
-                        () ->
-                                tokenService.validatePrivateKeyJWT(
-                                        input.getBody(),
-                                        client.getPublicKey(),
-                                        tokenUrl,
-                                        clientID));
-        if (invalidPrivateKeyJwtError.isPresent()) {
-            LOG.warn("Private Key JWT is not valid for Client ID: {}", clientID);
-            return generateApiGatewayProxyResponse(
-                    400, invalidPrivateKeyJwtError.get().toJSONObject().toJSONString());
-        }
-
-        if (requestBody.get("grant_type").equals(GrantType.REFRESH_TOKEN.getValue())) {
-            LOG.info("Processing refresh token request");
-            return segmentedFunctionCall(
-                    "processRefreshTokenRequest",
-                    () ->
-                            processRefreshTokenRequest(
-                                    requestBody,
-                                    client.getScopes(),
-                                    new RefreshToken(requestBody.get("refresh_token")),
-                                    clientID,
-                                    signingAlgorithm));
-        }
+        ClientRegistry clientRegistry;
         AuthCodeExchangeData authCodeExchangeData;
+        JWSAlgorithm signingAlgorithm;
         try {
+            var tokenAuthenticationValidator =
+                    tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(
+                            input.getBody(), input.getHeaders());
+            if (tokenAuthenticationValidator.isEmpty()) {
+                LOG.warn("Unsupported token authentication method used");
+                return generateApiGatewayProxyResponse(
+                        400,
+                        new ErrorObject(
+                                        OAuth2Error.INVALID_REQUEST_CODE,
+                                        "Invalid token authentication method used")
+                                .toJSONObject()
+                                .toJSONString());
+            }
+            clientRegistry =
+                    tokenAuthenticationValidator
+                            .get()
+                            .validateTokenAuthAndReturnClientRegistryIfValid(
+                                    input.getBody(), input.getHeaders());
+            signingAlgorithm =
+                    configurationService.isRsaSigningAvailable()
+                                    && "RSA256".equals(clientRegistry.getIdTokenSigningAlgorithm())
+                            ? JWSAlgorithm.RS256
+                            : JWSAlgorithm.ES256;
+            if (requestBody.get("grant_type").equals(GrantType.REFRESH_TOKEN.getValue())) {
+                LOG.info("Processing refresh token request");
+                return segmentedFunctionCall(
+                        "processRefreshTokenRequest",
+                        () ->
+                                processRefreshTokenRequest(
+                                        clientRegistry.getScopes(),
+                                        new RefreshToken(requestBody.get("refresh_token")),
+                                        clientRegistry.getClientID(),
+                                        signingAlgorithm));
+            }
             authCodeExchangeData =
                     segmentedFunctionCall(
                             "authorisationCodeService",
@@ -209,20 +185,26 @@ public class TokenHandler
                                     authorisationCodeService
                                             .getExchangeDataForCode(requestBody.get("code"))
                                             .orElseThrow());
+            updateAttachedLogFieldToLogs(
+                    CLIENT_SESSION_ID, authCodeExchangeData.getClientSessionId());
+            updateAttachedLogFieldToLogs(
+                    GOVUK_SIGNIN_JOURNEY_ID, authCodeExchangeData.getClientSessionId());
+        } catch (TokenAuthInvalidException e) {
+            LOG.warn("Unable to validate token auth method", e);
+            return generateApiGatewayProxyResponse(
+                    400, e.getErrorObject().toJSONObject().toJSONString());
         } catch (NoSuchElementException e) {
-            LOG.warn("Could not retrieve client session ID from code", e);
+            LOG.warn("Could not retrieve clientRegistry session ID from code", e);
             return generateApiGatewayProxyResponse(
                     400, OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
         }
-        updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, authCodeExchangeData.getClientSessionId());
-        updateAttachedLogFieldToLogs(
-                GOVUK_SIGNIN_JOURNEY_ID, authCodeExchangeData.getClientSessionId());
+
         ClientSession clientSession = authCodeExchangeData.getClientSession();
         AuthenticationRequest authRequest;
         try {
             authRequest = AuthenticationRequest.parse(clientSession.getAuthRequestParams());
         } catch (ParseException e) {
-            LOG.warn("Could not parse authentication request from client session", e);
+            LOG.warn("Could not parse authentication request from clientRegistry session", e);
             throw new RuntimeException(
                     format(
                             "Unable to parse Auth Request\n Auth Request Params: %s \n Exception: %s",
@@ -251,7 +233,7 @@ public class TokenHandler
             claimsRequest = authRequest.getOIDCClaims();
         }
         var isConsentRequired =
-                client.isConsentRequired()
+                clientRegistry.isConsentRequired()
                         && !clientSession.getEffectiveVectorOfTrust().containsLevelOfConfidence();
         final OIDCClaimsRequest finalClaimsRequest = claimsRequest;
         OIDCTokenResponse tokenResponse;
@@ -261,7 +243,7 @@ public class TokenHandler
                             "generateTokenResponse",
                             () ->
                                     tokenService.generateTokenResponse(
-                                            clientID,
+                                            clientRegistry.getClientID(),
                                             clientSession.getDocAppSubjectId(),
                                             authRequest.getScope(),
                                             additionalTokenClaims,
@@ -278,7 +260,7 @@ public class TokenHandler
             Subject subject =
                     ClientSubjectHelper.getSubject(
                             userProfile,
-                            client,
+                            clientRegistry,
                             dynamoService,
                             configurationService.getInternalSectorUri());
             tokenResponse =
@@ -286,7 +268,7 @@ public class TokenHandler
                             "generateTokenResponse",
                             () ->
                                     tokenService.generateTokenResponse(
-                                            clientID,
+                                            clientRegistry.getClientID(),
                                             new Subject(userProfile.getSubjectID()),
                                             authRequest.getScope(),
                                             additionalTokenClaims,
@@ -308,7 +290,6 @@ public class TokenHandler
     }
 
     private APIGatewayProxyResponseEvent processRefreshTokenRequest(
-            Map<String, String> requestBody,
             List<String> clientScopes,
             RefreshToken currentRefreshToken,
             String clientId,

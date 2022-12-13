@@ -7,9 +7,11 @@ import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.UpdateClientConfigRequest;
+import uk.gov.di.authentication.shared.helpers.Argon2EncoderHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Predicate;
 
@@ -58,7 +60,9 @@ public class DynamoClientService implements ClientService {
             boolean consentRequired,
             List<String> claims,
             String clientType,
-            boolean identityVerificationSupported) {
+            boolean identityVerificationSupported,
+            String clientSecret,
+            String tokenAuthMethod) {
         var clientRegistry =
                 new ClientRegistry()
                         .withClientID(clientID)
@@ -75,7 +79,11 @@ public class DynamoClientService implements ClientService {
                         .withConsentRequired(consentRequired)
                         .withClaims(claims)
                         .withClientType(clientType)
-                        .withIdentityVerificationSupported(identityVerificationSupported);
+                        .withIdentityVerificationSupported(identityVerificationSupported)
+                        .withTokenAuthMethod(tokenAuthMethod);
+        if (Objects.nonNull(clientSecret)) {
+            clientRegistry.withClientSecret(Argon2EncoderHelper.argon2Hash(clientSecret));
+        }
         dynamoClientRegistryTable.putItem(clientRegistry);
     }
 

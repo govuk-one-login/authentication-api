@@ -15,10 +15,6 @@ import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.GrantType;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.Scope;
-import com.nimbusds.oauth2.sdk.auth.JWTAuthenticationClaimsSet;
-import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
-import com.nimbusds.oauth2.sdk.id.Audience;
-import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.RefreshToken;
 import com.nimbusds.oauth2.sdk.util.JSONArrayUtils;
@@ -34,8 +30,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
@@ -55,15 +49,10 @@ import uk.gov.di.authentication.sharedtest.helper.SubjectHelper;
 import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
-import java.security.PrivateKey;
 import java.text.ParseException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
-import java.util.Base64;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -71,7 +60,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -114,7 +102,6 @@ public class TokenServiceTest {
     private static final String CLIENT_ID = "client-id";
     private static final String AUTH_CODE = new AuthorizationCode().toString();
     private static final String REDIRECT_URI = "http://localhost/redirect";
-    private static final String TOKEN_URI = "http://localhost/token";
     private static final String BASE_URL = "https://example.com";
     private static final String KEY_ID = "14342354354353";
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
@@ -127,8 +114,7 @@ public class TokenServiceTest {
 
     @BeforeEach
     void setUp() {
-        Optional<String> baseUrl = Optional.of(BASE_URL);
-        when(configurationService.getOidcApiBaseURL()).thenReturn(baseUrl);
+        when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of(BASE_URL));
         when(configurationService.getAccessTokenExpiry()).thenReturn(300L);
         when(configurationService.getIDTokenExpiry()).thenReturn(120L);
         when(configurationService.getSessionExpiry()).thenReturn(300L);
@@ -355,80 +341,6 @@ public class TokenServiceTest {
         assertNull(tokenResponse.getOIDCTokens().getRefreshToken());
     }
 
-    private static Stream<JWSAlgorithm> supportedAlgorithms() {
-        return Stream.of(
-                JWSAlgorithm.RS256,
-                JWSAlgorithm.RS384,
-                JWSAlgorithm.RS512,
-                JWSAlgorithm.PS256,
-                JWSAlgorithm.PS384,
-                JWSAlgorithm.PS512);
-    }
-
-    @ParameterizedTest
-    @MethodSource("supportedAlgorithms")
-    void shouldSuccessfullyValidatePrivateKeyJWT(JWSAlgorithm algorithm) throws JOSEException {
-        KeyPair keyPair = generateRsaKeyPair();
-        String publicKey = Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded());
-        Date expiryDate = NowHelper.nowPlus(5, ChronoUnit.MINUTES);
-        String requestParams =
-                generateSerialisedPrivateKeyJWT(
-                        algorithm, keyPair.getPrivate(), expiryDate.getTime());
-        assertThat(
-                tokenService.validatePrivateKeyJWT(requestParams, publicKey, TOKEN_URI, CLIENT_ID),
-                equalTo(Optional.empty()));
-    }
-
-    @Test
-    void shouldFailToValidatePrivateKeyJWTIfExpired() throws JOSEException {
-        KeyPair keyPair = generateRsaKeyPair();
-        String publicKey = Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded());
-        Date expiryDate = NowHelper.nowMinus(2, ChronoUnit.MINUTES);
-        String requestParams =
-                generateSerialisedPrivateKeyJWT(keyPair.getPrivate(), expiryDate.getTime());
-        assertThat(
-                tokenService.validatePrivateKeyJWT(requestParams, publicKey, TOKEN_URI, CLIENT_ID),
-                equalTo(Optional.of(OAuth2Error.INVALID_GRANT)));
-    }
-
-    @Test
-    void shouldFailToValidatePrivateKeyJWTIfInvalidClientId() throws JOSEException {
-        KeyPair keyPair = generateRsaKeyPair();
-        String publicKey = Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded());
-        Date expiryDate = NowHelper.nowPlus(5, ChronoUnit.MINUTES);
-        String requestParams =
-                generateSerialisedPrivateKeyJWT(keyPair.getPrivate(), expiryDate.getTime());
-        assertThat(
-                tokenService.validatePrivateKeyJWT(
-                        requestParams, publicKey, TOKEN_URI, "wrong-client-id"),
-                equalTo(Optional.of(OAuth2Error.INVALID_CLIENT)));
-    }
-
-    @Test
-    void shouldReturnErrorIfUnableToValidatePrivateKeyJWTSignature() throws JOSEException {
-        KeyPair keyPair = generateRsaKeyPair();
-        KeyPair keyPairTwo = generateRsaKeyPair();
-        String publicKey =
-                Base64.getMimeEncoder().encodeToString(keyPairTwo.getPublic().getEncoded());
-        Date expiryDate = NowHelper.nowPlus(5, ChronoUnit.MINUTES);
-        String requestParams =
-                generateSerialisedPrivateKeyJWT(keyPair.getPrivate(), expiryDate.getTime());
-        assertThat(
-                tokenService.validatePrivateKeyJWT(requestParams, publicKey, TOKEN_URI, CLIENT_ID),
-                equalTo(Optional.of(OAuth2Error.INVALID_CLIENT)));
-    }
-
-    @Test
-    void shouldSuccessfullyGetClientFromPrivateKeyJWT() throws JOSEException {
-        KeyPair keyPair = generateRsaKeyPair();
-        Date expiryDate = NowHelper.nowPlus(5, ChronoUnit.MINUTES);
-        String requestParams =
-                generateSerialisedPrivateKeyJWT(keyPair.getPrivate(), expiryDate.getTime());
-        assertThat(
-                tokenService.getClientIDFromPrivateKeyJWT(requestParams),
-                equalTo(Optional.of(CLIENT_ID)));
-    }
-
     @Test
     void shouldSuccessfullyValidateTokenRequest() {
         Map<String, List<String>> customParams = new HashMap<>();
@@ -545,23 +457,6 @@ public class TokenServiceTest {
         assertTrue(errorObject.isPresent());
     }
 
-    private String generateSerialisedPrivateKeyJWT(PrivateKey privateKey, long expiryTime)
-            throws JOSEException {
-        return generateSerialisedPrivateKeyJWT(JWSAlgorithm.RS256, privateKey, expiryTime);
-    }
-
-    private String generateSerialisedPrivateKeyJWT(
-            JWSAlgorithm algorithm, PrivateKey privateKey, long expiryTime) throws JOSEException {
-
-        JWTAuthenticationClaimsSet claimsSet =
-                new JWTAuthenticationClaimsSet(new ClientID(CLIENT_ID), new Audience(TOKEN_URI));
-        claimsSet.getExpirationTime().setTime(expiryTime);
-        PrivateKeyJWT privateKeyJWT =
-                new PrivateKeyJWT(claimsSet, algorithm, privateKey, null, null);
-        Map<String, List<String>> privateKeyParams = privateKeyJWT.toParameters();
-        return URLUtils.serializeParameters(privateKeyParams);
-    }
-
     private void createSignedIdToken() throws JOSEException {
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256)
@@ -612,17 +507,6 @@ public class TokenServiceTest {
                         .build();
 
         when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(accessTokenResult);
-    }
-
-    private KeyPair generateRsaKeyPair() {
-        KeyPairGenerator kpg;
-        try {
-            kpg = KeyPairGenerator.getInstance("RSA");
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        }
-        kpg.initialize(2048);
-        return kpg.generateKeyPair();
     }
 
     private void assertSuccessfulTokenResponse(OIDCTokenResponse tokenResponse)
