@@ -107,7 +107,8 @@ public class TokenService {
             List<ClientConsent> clientConsents,
             boolean isConsentRequired,
             OIDCClaimsRequest claimsRequest,
-            boolean isDocAppJourney) {
+            boolean isDocAppJourney,
+            JWSAlgorithm signingAlgorithm) {
         List<String> scopesForToken;
         if (isConsentRequired) {
             scopesForToken = calculateScopesForToken(clientConsents, clientID, authRequestScopes);
@@ -123,7 +124,8 @@ public class TokenService {
                                         internalSubject,
                                         scopesForToken,
                                         subject,
-                                        claimsRequest));
+                                        claimsRequest,
+                                        signingAlgorithm));
         AccessTokenHash accessTokenHash =
                 segmentedFunctionCall(
                         "AccessTokenHash.compute",
@@ -142,14 +144,19 @@ public class TokenService {
                                         accessTokenHash,
                                         vot,
                                         isDocAppJourney,
-                                        requiresResourceId));
+                                        requiresResourceId,
+                                        signingAlgorithm));
         if (scopesForToken.contains(OIDCScopeValue.OFFLINE_ACCESS.getValue())) {
             RefreshToken refreshToken =
                     segmentedFunctionCall(
                             "generateAndStoreRefreshToken",
                             () ->
                                     generateAndStoreRefreshToken(
-                                            clientID, internalSubject, scopesForToken, subject));
+                                            clientID,
+                                            internalSubject,
+                                            scopesForToken,
+                                            subject,
+                                            signingAlgorithm));
             return new OIDCTokenResponse(new OIDCTokens(idToken, accessToken, refreshToken));
         } else {
             return new OIDCTokenResponse(new OIDCTokens(idToken, accessToken, null));
@@ -157,11 +164,17 @@ public class TokenService {
     }
 
     public OIDCTokenResponse generateRefreshTokenResponse(
-            String clientID, Subject internalSubject, List<String> scopes, Subject subject) {
+            String clientID,
+            Subject internalSubject,
+            List<String> scopes,
+            Subject subject,
+            JWSAlgorithm signingAlgorithm) {
         AccessToken accessToken =
-                generateAndStoreAccessToken(clientID, internalSubject, scopes, subject, null);
+                generateAndStoreAccessToken(
+                        clientID, internalSubject, scopes, subject, null, signingAlgorithm);
         RefreshToken refreshToken =
-                generateAndStoreRefreshToken(clientID, internalSubject, scopes, subject);
+                generateAndStoreRefreshToken(
+                        clientID, internalSubject, scopes, subject, signingAlgorithm);
         return new OIDCTokenResponse(new OIDCTokens(accessToken, refreshToken));
     }
 
@@ -288,7 +301,8 @@ public class TokenService {
             AccessTokenHash accessTokenHash,
             String vot,
             boolean isDocAppJourney,
-            boolean requiresResourceId) {
+            boolean requiresResourceId,
+            JWSAlgorithm signingAlgorithm) {
 
         LOG.info("Generating IdToken");
         URI trustMarkUri = buildURI(configService.getOidcApiBaseURL().get(), "/trustmark");
@@ -313,7 +327,7 @@ public class TokenService {
 
         try {
             return generateSignedJWT(
-                    idTokenClaims.toJWTClaimsSet(), Optional.empty(), JWSAlgorithm.ES256);
+                    idTokenClaims.toJWTClaimsSet(), Optional.empty(), signingAlgorithm);
         } catch (com.nimbusds.oauth2.sdk.ParseException e) {
             LOG.error("Error when trying to parse IDTokenClaims to JWTClaimSet", e);
             throw new RuntimeException(e);
@@ -325,7 +339,8 @@ public class TokenService {
             Subject internalSubject,
             List<String> scopes,
             Subject subject,
-            OIDCClaimsRequest claimsRequest) {
+            OIDCClaimsRequest claimsRequest,
+            JWSAlgorithm signingAlgorithm) {
 
         LOG.info("Generating AccessToken");
         Date expiryDate =
@@ -356,7 +371,7 @@ public class TokenService {
         }
 
         SignedJWT signedJWT =
-                generateSignedJWT(claimSetBuilder.build(), Optional.empty(), JWSAlgorithm.ES256);
+                generateSignedJWT(claimSetBuilder.build(), Optional.empty(), signingAlgorithm);
         AccessToken accessToken =
                 new BearerAccessToken(
                         signedJWT.serialize(), configService.getAccessTokenExpiry(), null);
@@ -376,7 +391,11 @@ public class TokenService {
     }
 
     private RefreshToken generateAndStoreRefreshToken(
-            String clientId, Subject internalSubject, List<String> scopes, Subject subject) {
+            String clientId,
+            Subject internalSubject,
+            List<String> scopes,
+            Subject subject,
+            JWSAlgorithm signingAlgorithm) {
         LOG.info("Generating RefreshToken");
         Date expiryDate = NowHelper.nowPlus(configService.getSessionExpiry(), ChronoUnit.SECONDS);
         var jwtId = IdGenerator.generate();
@@ -390,7 +409,7 @@ public class TokenService {
                         .subject(subject.getValue())
                         .jwtID(jwtId)
                         .build();
-        SignedJWT signedJWT = generateSignedJWT(claimsSet, Optional.empty(), JWSAlgorithm.ES256);
+        SignedJWT signedJWT = generateSignedJWT(claimsSet, Optional.empty(), signingAlgorithm);
         RefreshToken refreshToken = new RefreshToken(signedJWT.serialize());
 
         String redisKey = REFRESH_TOKEN_PREFIX + jwtId;
