@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.GrantType;
@@ -155,6 +156,9 @@ public class TokenHandler
             return generateApiGatewayProxyResponse(
                     400, OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString());
         }
+
+        var signingAlgorithm = JWSAlgorithm.ES256;
+
         String baseUrl =
                 configurationService
                         .getOidcApiBaseURL()
@@ -261,7 +265,8 @@ public class TokenHandler
                                             null,
                                             false,
                                             finalClaimsRequest,
-                                            true));
+                                            true,
+                                            signingAlgorithm));
         } else {
             UserProfile userProfile =
                     dynamoService.getUserProfileByEmail(authCodeExchangeData.getEmail());
@@ -285,7 +290,8 @@ public class TokenHandler
                                             userProfile.getClientConsent(),
                                             isConsentRequired,
                                             finalClaimsRequest,
-                                            false));
+                                            false,
+                                            signingAlgorithm));
         }
 
         clientSessionService.saveClientSession(
@@ -355,7 +361,11 @@ public class TokenHandler
 
         OIDCTokenResponse tokenResponse =
                 tokenService.generateRefreshTokenResponse(
-                        clientId, new Subject(tokenStore.getInternalSubjectId()), scopes, subject);
+                        clientId,
+                        new Subject(tokenStore.getInternalSubjectId()),
+                        scopes,
+                        subject,
+                        JWSAlgorithm.ES256);
         LOG.info("Generating successful RefreshToken response");
         return generateApiGatewayProxyResponse(200, tokenResponse.toJSONObject().toJSONString());
     }

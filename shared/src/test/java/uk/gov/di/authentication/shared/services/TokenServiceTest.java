@@ -169,7 +169,8 @@ public class TokenServiceTest {
                                         LocalDateTime.now(ZoneId.of("UTC")).toString())),
                         false,
                         null,
-                        false);
+                        false,
+                        JWSAlgorithm.ES256);
 
         assertSuccessfulTokenResponse(tokenResponse);
 
@@ -226,7 +227,8 @@ public class TokenServiceTest {
                                         LocalDateTime.now(ZoneId.of("UTC")).toString())),
                         false,
                         null,
-                        false);
+                        false,
+                        JWSAlgorithm.ES256);
 
         assertSuccessfulTokenResponse(tokenResponse);
 
@@ -267,7 +269,8 @@ public class TokenServiceTest {
                                         LocalDateTime.now(ZoneId.of("UTC")).toString())),
                         false,
                         oidcClaimsRequest,
-                        false);
+                        false,
+                        JWSAlgorithm.ES256);
 
         assertSuccessfulTokenResponse(tokenResponse);
 
@@ -340,7 +343,8 @@ public class TokenServiceTest {
                                         LocalDateTime.now(ZoneId.of("UTC")).toString())),
                         false,
                         null,
-                        false);
+                        false,
+                        JWSAlgorithm.ES256);
 
         assertSuccessfulTokenResponse(tokenResponse);
 

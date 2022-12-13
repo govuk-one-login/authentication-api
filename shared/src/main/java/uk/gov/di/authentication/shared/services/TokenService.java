@@ -107,7 +107,8 @@ public class TokenService {
             List<ClientConsent> clientConsents,
             boolean isConsentRequired,
             OIDCClaimsRequest claimsRequest,
-            boolean isDocAppJourney) {
+            boolean isDocAppJourney,
+            JWSAlgorithm signingAlgorithm) {
         List<String> scopesForToken;
         if (isConsentRequired) {
             scopesForToken = calculateScopesForToken(clientConsents, clientID, authRequestScopes);
@@ -123,7 +124,8 @@ public class TokenService {
                                         internalSubject,
                                         scopesForToken,
                                         subject,
-                                        claimsRequest));
+                                        claimsRequest,
+                                        signingAlgorithm));
         AccessTokenHash accessTokenHash =
                 segmentedFunctionCall(
                         "AccessTokenHash.compute",
@@ -142,14 +144,19 @@ public class TokenService {
                                         accessTokenHash,
                                         vot,
                                         isDocAppJourney,
-                                        requiresResourceId));
+                                        requiresResourceId,
+                                        signingAlgorithm));
         if (scopesForToken.contains(OIDCScopeValue.OFFLINE_ACCESS.getValue())) {
             RefreshToken refreshToken =
                     segmentedFunctionCall(
                             "generateAndStoreRefreshToken",
                             () ->
                                     generateAndStoreRefreshToken(
-                                            clientID, internalSubject, scopesForToken, subject));
+                                            clientID,
+                                            internalSubject,
+                                            scopesForToken,
+                                            subject,
+                                            signingAlgorithm));
             return new OIDCTokenResponse(new OIDCTokens(idToken, accessToken, refreshToken));
         } else {
             return new OIDCTokenResponse(new OIDCTokens(idToken, accessToken, null));
@@ -157,11 +164,17 @@ public class TokenService {
     }
 
     public OIDCTokenResponse generateRefreshTokenResponse(
-            String clientID, Subject internalSubject, List<String> scopes, Subject subject) {
+            String clientID,
+            Subject internalSubject,
+            List<String> scopes,
+            Subject subject,
+            JWSAlgorithm signingAlgorithm) {
         AccessToken accessToken =
-                generateAndStoreAccessToken(clientID, internalSubject, scopes, subject, null);
+                generateAndStoreAccessToken(
+                        clientID, internalSubject, scopes, subject, null, signingAlgorithm);
         RefreshToken refreshToken =
-                generateAndStoreRefreshToken(clientID, internalSubject, scopes, subject);
+                generateAndStoreRefreshToken(
+                        clientID, internalSubject, scopes, subject, signingAlgorithm);
         return new OIDCTokenResponse(new OIDCTokens(accessToken, refreshToken));
     }
 
@@ -288,7 +301,8 @@ public class TokenService {
             AccessTokenHash accessTokenHash,
             String vot,
             boolean isDocAppJourney,
-            boolean requiresResourceId) {
+            boolean requiresResourceId,
+            JWSAlgorithm signingAlgorithm) {
 
         LOG.info("Generating IdToken");
         URI trustMarkUri = buildURI(configService.getOidcApiBaseURL().get(), "/trustmark");
@@ -312,7 +326,8 @@ public class TokenService {
         }
 
         try {
-            return generateSignedJWT(idTokenClaims.toJWTClaimsSet(), Optional.empty());
+            return generateSignedJWT(
+                    idTokenClaims.toJWTClaimsSet(), Optional.empty(), signingAlgorithm);
         } catch (com.nimbusds.oauth2.sdk.ParseException e) {
             LOG.error("Error when trying to parse IDTokenClaims to JWTClaimSet", e);
             throw new RuntimeException(e);
@@ -324,7 +339,8 @@ public class TokenService {
             Subject internalSubject,
             List<String> scopes,
             Subject subject,
-            OIDCClaimsRequest claimsRequest) {
+            OIDCClaimsRequest claimsRequest,
+            JWSAlgorithm signingAlgorithm) {
 
         LOG.info("Generating AccessToken");
         Date expiryDate =
@@ -354,7 +370,8 @@ public class TokenService {
             LOG.info("No identity claims to populate in access token");
         }
 
-        SignedJWT signedJWT = generateSignedJWT(claimSetBuilder.build(), Optional.empty());
+        SignedJWT signedJWT =
+                generateSignedJWT(claimSetBuilder.build(), Optional.empty(), signingAlgorithm);
         AccessToken accessToken =
                 new BearerAccessToken(
                         signedJWT.serialize(), configService.getAccessTokenExpiry(), null);
@@ -374,7 +391,11 @@ public class TokenService {
     }
 
     private RefreshToken generateAndStoreRefreshToken(
-            String clientId, Subject internalSubject, List<String> scopes, Subject subject) {
+            String clientId,
+            Subject internalSubject,
+            List<String> scopes,
+            Subject subject,
+            JWSAlgorithm signingAlgorithm) {
         LOG.info("Generating RefreshToken");
         Date expiryDate = NowHelper.nowPlus(configService.getSessionExpiry(), ChronoUnit.SECONDS);
         var jwtId = IdGenerator.generate();
@@ -388,7 +409,7 @@ public class TokenService {
                         .subject(subject.getValue())
                         .jwtID(jwtId)
                         .build();
-        SignedJWT signedJWT = generateSignedJWT(claimsSet, Optional.empty());
+        SignedJWT signedJWT = generateSignedJWT(claimsSet, Optional.empty(), signingAlgorithm);
         RefreshToken refreshToken = new RefreshToken(signedJWT.serialize());
 
         String redisKey = REFRESH_TOKEN_PREFIX + jwtId;
@@ -405,21 +426,28 @@ public class TokenService {
         return refreshToken;
     }
 
-    public SignedJWT generateSignedJWT(JWTClaimsSet claimsSet, Optional<String> type) {
+    public SignedJWT generateSignedJWT(
+            JWTClaimsSet claimsSet, Optional<String> type, JWSAlgorithm algorithm) {
+
+        var signingKey =
+                algorithm == JWSAlgorithm.ES256
+                        ? configService.getTokenSigningKeyAlias()
+                        : configService.getTokenSigningKeyRsaAlias();
 
         var signingKeyId =
                 kmsConnectionService
-                        .getPublicKey(
-                                GetPublicKeyRequest.builder()
-                                        .keyId(configService.getTokenSigningKeyAlias())
-                                        .build())
+                        .getPublicKey(GetPublicKeyRequest.builder().keyId(signingKey).build())
                         .keyId();
 
         try {
-            var jwsHeader =
-                    new JWSHeader.Builder(TOKEN_ALGORITHM).keyID(hashSha256String(signingKeyId));
+            var jwsHeader = new JWSHeader.Builder(algorithm).keyID(hashSha256String(signingKeyId));
 
             type.map(JOSEObjectType::new).ifPresent(jwsHeader::type);
+
+            var signingAlgorithm =
+                    algorithm == JWSAlgorithm.ES256
+                            ? SigningAlgorithmSpec.ECDSA_SHA_256
+                            : SigningAlgorithmSpec.RSASSA_PKCS1_V1_5_SHA_256;
 
             Base64URL encodedHeader = jwsHeader.build().toBase64URL();
             Base64URL encodedClaims = Base64URL.encode(claimsSet.toString());
@@ -427,8 +455,8 @@ public class TokenService {
             SignRequest signRequest =
                     SignRequest.builder()
                             .message(SdkBytes.fromByteArray(message.getBytes()))
-                            .keyId(configService.getTokenSigningKeyAlias())
-                            .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
+                            .keyId(signingKeyId)
+                            .signingAlgorithm(signingAlgorithm)
                             .build();
             SignResponse signResult = kmsConnectionService.sign(signRequest);
             LOG.info("Token has been signed successfully");
@@ -436,7 +464,7 @@ public class TokenService {
                     Base64URL.encode(
                                     ECDSA.transcodeSignatureToConcat(
                                             signResult.signature().asByteArray(),
-                                            ECDSA.getSignatureByteArrayLength(TOKEN_ALGORITHM)))
+                                            ECDSA.getSignatureByteArrayLength(algorithm)))
                             .toString();
             return SignedJWT.parse(message + "." + signature);
         } catch (java.text.ParseException | JOSEException e) {

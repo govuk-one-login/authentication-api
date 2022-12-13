@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage;
+import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jwt.JWTClaimsSet;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -81,7 +82,10 @@ public class BackChannelLogoutRequestHandler implements RequestHandler<SQSEvent,
             var claims = generateClaims(payload);
 
             var body =
-                    tokenService.generateSignedJWT(claims, Optional.of("logout+jwt")).serialize();
+                    tokenService
+                            .generateSignedJWT(
+                                    claims, Optional.of("logout+jwt"), JWSAlgorithm.ES256)
+                            .serialize();
 
             httpRequestService.post(URI.create(payload.getLogoutUri()), "logout_token=" + body);
 

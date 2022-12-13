@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static com.nimbusds.jose.JWSAlgorithm.*;
 import static java.time.Clock.fixed;
 import static java.time.ZoneId.systemDefault;
 import static java.util.Collections.emptyList;
@@ -55,7 +56,8 @@ class BackChannelLogoutRequestHandlerTest {
     void shouldDoNothingIfPayloadIsInvalid() {
         handler.handleRequest(inputEvent(null), null);
 
-        verify(tokenService, never()).generateSignedJWT(any(), eq(Optional.of("logout+jwt")));
+        verify(tokenService, never())
+                .generateSignedJWT(any(), eq(Optional.of("logout+jwt")), eq(ES256));
         verify(request, never()).post(any(), any());
     }
 
@@ -71,7 +73,8 @@ class BackChannelLogoutRequestHandlerTest {
 
         when(configuration.getOidcApiBaseURL())
                 .thenReturn(Optional.of("https://base-url.account.gov.uk"));
-        when(tokenService.generateSignedJWT(any(JWTClaimsSet.class), eq(Optional.of("logout+jwt"))))
+        when(tokenService.generateSignedJWT(
+                        any(JWTClaimsSet.class), eq(Optional.of("logout+jwt")), eq(ES256)))
                 .thenReturn(jwt);
 
         handler.handleRequest(inputEvent(input), null);
