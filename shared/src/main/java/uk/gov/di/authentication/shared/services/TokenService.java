@@ -397,7 +397,13 @@ public class TokenService {
                             .signingAlgorithm(signingAlgorithm)
                             .build();
             SignResponse signResult = kmsConnectionService.sign(signRequest);
-            LOG.info("Token has been signed successfully");
+            LOG.info("Token has been signed successfully using {}", algorithm.getName());
+
+            if (algorithm == JWSAlgorithm.RS256) {
+                return SignedJWT.parse(
+                        message + "." + Base64URL.encode(signResult.signature().asByteArray()));
+            }
+
             String signature =
                     Base64URL.encode(
                                     ECDSA.transcodeSignatureToConcat(
