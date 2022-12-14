@@ -3,9 +3,11 @@ package uk.gov.di.authentication.shared.services;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSSigner;
 import com.nimbusds.jose.crypto.ECDSASigner;
+import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
+import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
@@ -63,6 +65,20 @@ class TokenValidationServiceTest {
     @Test
     void shouldSuccessfullyValidateAccessToken() {
         SignedJWT signedAccessToken = createSignedAccessToken(signer);
+        assertTrue(
+                tokenValidationService.validateAccessTokenSignature(
+                        new BearerAccessToken(signedAccessToken.serialize())));
+    }
+
+    @Test
+    void shouldSuccessfullyValidateRsaSignedAccessToken() throws JOSEException {
+        var rsaKey = new RSAKeyGenerator(2048).generate();
+        var rsaSigner = new RSASSASigner(rsaKey);
+
+        when(configurationService.isRsaSigningAvailable()).thenReturn(true);
+        when(jwksService.getPublicTokenRsaJwkWithOpaqueId()).thenReturn(rsaKey);
+
+        SignedJWT signedAccessToken = createSignedAccessToken(rsaSigner);
         assertTrue(
                 tokenValidationService.validateAccessTokenSignature(
                         new BearerAccessToken(signedAccessToken.serialize())));
