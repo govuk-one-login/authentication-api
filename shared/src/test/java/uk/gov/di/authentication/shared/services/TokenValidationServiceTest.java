@@ -27,8 +27,9 @@ import static org.mockito.Mockito.when;
 class TokenValidationServiceTest {
 
     private final JwksService jwksService = mock(JwksService.class);
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final TokenValidationService tokenValidationService =
-            new TokenValidationService(jwksService);
+            new TokenValidationService(jwksService, configurationService);
     private static final Subject SUBJECT = new Subject("some-subject");
     private static final List<String> SCOPES = List.of("openid", "email", "phone");
     private static final List<String> REFRESH_SCOPES = List.of("openid", "email", "offline_access");

@@ -106,7 +106,8 @@ public class TokenHandler
         this.clientSessionService =
                 new ClientSessionService(configurationService, redisConnectionService);
         this.tokenValidationService =
-                new TokenValidationService(new JwksService(configurationService, kms));
+                new TokenValidationService(
+                        new JwksService(configurationService, kms), configurationService);
         this.tokenClientAuthValidatorFactory =
                 new TokenClientAuthValidatorFactory(
                         configurationService, new DynamoClientService(configurationService));

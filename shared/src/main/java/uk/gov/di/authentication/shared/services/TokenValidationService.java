@@ -19,10 +19,12 @@ import java.util.List;
 public class TokenValidationService {
 
     private final JwksService jwksService;
+    private final ConfigurationService configuration;
     private static final Logger LOG = LogManager.getLogger(TokenValidationService.class);
 
-    public TokenValidationService(JwksService jwksService) {
+    public TokenValidationService(JwksService jwksService, ConfigurationService configuration) {
         this.jwksService = jwksService;
+        this.configuration = configuration;
     }
 
     public boolean validateAccessTokenSignature(AccessToken accessToken) {

@@ -67,7 +67,8 @@ public class LogoutHandler
                 new TokenValidationService(
                         new JwksService(
                                 configurationService,
-                                new KmsConnectionService(configurationService)));
+                                new KmsConnectionService(configurationService)),
+                        configurationService);
         this.auditService = new AuditService(configurationService);
         this.backChannelLogoutService = new BackChannelLogoutService(configurationService);
         this.cookieHelper = new CookieHelper();

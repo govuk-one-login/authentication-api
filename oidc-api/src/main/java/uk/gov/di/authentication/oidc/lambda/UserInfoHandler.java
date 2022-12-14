@@ -72,7 +72,8 @@ public class UserInfoHandler
                         new TokenValidationService(
                                 new JwksService(
                                         configurationService,
-                                        new KmsConnectionService(configurationService))));
+                                        new KmsConnectionService(configurationService)),
+                                configurationService));
         this.auditService = new AuditService(configurationService);
     }
 
