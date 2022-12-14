@@ -79,7 +79,8 @@ public class AuthorizationService {
                 authRequest.getResponseMode());
     }
 
-    public Optional<AuthRequestError> validateAuthRequest(AuthenticationRequest authRequest) {
+    public Optional<AuthRequestError> validateAuthRequest(
+            AuthenticationRequest authRequest, boolean isNonceRequired) {
         var clientId = authRequest.getClientID().toString();
 
         attachLogFieldToLogs(CLIENT_ID, clientId);
@@ -127,7 +128,7 @@ public class AuthorizationService {
                                     "Request contains invalid claims"),
                             redirectURI));
         }
-        if (authRequest.getNonce() == null) {
+        if (authRequest.getNonce() == null && isNonceRequired) {
             LOG.error("Nonce is missing from authRequest");
             return Optional.of(
                     new AuthRequestError(

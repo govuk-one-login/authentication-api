@@ -167,7 +167,9 @@ public class AuthorisationHandler
             LOG.info("RequestObject auth request received");
             authRequestError = requestObjectService.validateRequestObject(authRequest);
         } else {
-            authRequestError = authorizationService.validateAuthRequest(authRequest);
+            authRequestError =
+                    authorizationService.validateAuthRequest(
+                            authRequest, configurationService.isNonceRequired());
         }
 
         if (authRequestError.isPresent()) {
