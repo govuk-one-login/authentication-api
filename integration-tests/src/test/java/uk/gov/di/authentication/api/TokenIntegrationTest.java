@@ -7,13 +7,18 @@ import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
+import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.GrantType;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.TokenResponse;
+import com.nimbusds.oauth2.sdk.auth.ClientAuthenticationMethod;
+import com.nimbusds.oauth2.sdk.auth.ClientSecretBasic;
+import com.nimbusds.oauth2.sdk.auth.ClientSecretPost;
 import com.nimbusds.oauth2.sdk.auth.JWTAuthenticationClaimsSet;
 import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
+import com.nimbusds.oauth2.sdk.auth.Secret;
 import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
@@ -28,6 +33,7 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
+import com.nimbusds.openid.connect.sdk.SubjectType;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
@@ -38,6 +44,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.oidc.lambda.TokenHandler;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
+import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
@@ -53,6 +60,7 @@ import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 import java.net.URI;
 import java.security.KeyPair;
 import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
@@ -106,15 +114,18 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @ParameterizedTest
     @MethodSource("validVectorValues")
-    void shouldCallTokenResourceAndReturnAccessAndRefreshToken(
+    void shouldCallTokenResourceAndReturnAccessAndRefreshTokenWhenAuthenticatingWithPrivateKeyJwt(
             Optional<String> vtr, String expectedVotClaim, Optional<String> clientId)
             throws Exception {
         KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         Scope scope =
                 new Scope(
                         OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
-        setUpDynamo(keyPair, scope, new Subject());
-        var response = generateTokenRequest(keyPair, scope, vtr, Optional.empty(), clientId);
+        registerUser(scope, new Subject());
+        registerClientWithPrivateKeyJwtAuthentication(
+                keyPair.getPublic(), scope, SubjectType.PAIRWISE);
+        var baseTokenRequest = constructBaseTokenRequest(scope, vtr, Optional.empty(), clientId);
+        var response = makeTokenRequestWithPrivateKeyJWT(baseTokenRequest, keyPair.getPrivate());
 
         assertThat(response, hasStatus(200));
         JSONObject jsonResponse = JSONObjectUtils.parse(response.getBody());
@@ -141,22 +152,110 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
+    void
+            shouldCallTokenResourceAndReturnAccessAndRefreshTokenWhenAuthenticatingWithClientSecretBasic()
+                    throws Exception {
+        var clientSecret = new Secret();
+        var scope =
+                new Scope(
+                        OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
+        registerUser(scope, new Subject());
+        registerClientSecretClient(
+                clientSecret.getValue(), ClientAuthenticationMethod.CLIENT_SECRET_BASIC, scope);
+        var baseTokenRequest =
+                constructBaseTokenRequest(
+                        scope, Optional.of("Cl.Cm"), Optional.empty(), Optional.of(CLIENT_ID));
+        var response = makeTokenRequestWithClientSecretBasic(baseTokenRequest, clientSecret);
+
+        assertThat(response, hasStatus(200));
+        var jsonResponse = JSONObjectUtils.parse(response.getBody());
+        assertNotNull(
+                TokenResponse.parse(jsonResponse)
+                        .toSuccessResponse()
+                        .getTokens()
+                        .getRefreshToken());
+        assertNotNull(
+                TokenResponse.parse(jsonResponse)
+                        .toSuccessResponse()
+                        .getTokens()
+                        .getBearerAccessToken());
+
+        assertThat(
+                OIDCTokenResponse.parse(jsonResponse)
+                        .getOIDCTokens()
+                        .getIDToken()
+                        .getJWTClaimsSet()
+                        .getClaim(VOT.getValue()),
+                equalTo("Cl.Cm"));
+
+        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
+    }
+
+    @Test
+    void
+            shouldCallTokenResourceAndReturnAccessAndRefreshTokenWhenAuthenticatingWithClientSecretPost()
+                    throws Exception {
+        var clientSecret = new Secret();
+        var scope =
+                new Scope(
+                        OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
+        registerUser(scope, new Subject());
+        registerClientSecretClient(
+                clientSecret.getValue(), ClientAuthenticationMethod.CLIENT_SECRET_POST, scope);
+        var baseTokenRequest =
+                constructBaseTokenRequest(
+                        scope, Optional.of("Cl.Cm"), Optional.empty(), Optional.of(CLIENT_ID));
+        var response = makeTokenRequestWithClientSecretPost(baseTokenRequest, clientSecret);
+
+        assertThat(response, hasStatus(200));
+        var jsonResponse = JSONObjectUtils.parse(response.getBody());
+        assertNotNull(
+                TokenResponse.parse(jsonResponse)
+                        .toSuccessResponse()
+                        .getTokens()
+                        .getRefreshToken());
+        assertNotNull(
+                TokenResponse.parse(jsonResponse)
+                        .toSuccessResponse()
+                        .getTokens()
+                        .getBearerAccessToken());
+
+        assertThat(
+                OIDCTokenResponse.parse(jsonResponse)
+                        .getOIDCTokens()
+                        .getIDToken()
+                        .getJWTClaimsSet()
+                        .getClaim(VOT.getValue()),
+                equalTo("Cl.Cm"));
+
+        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
+    }
+
+    @Test
     void shouldCallTokenResourceAndReturn400WhenClientIdParameterDoesNotMatch() throws Exception {
         KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         Scope scope =
                 new Scope(
                         OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
-        setUpDynamo(keyPair, scope, new Subject());
-        var response =
-                generateTokenRequest(
-                        keyPair,
+        registerUser(scope, new Subject());
+        registerClientWithPrivateKeyJwtAuthentication(
+                keyPair.getPublic(), scope, SubjectType.PAIRWISE);
+        var baseTokenRequest =
+                constructBaseTokenRequest(
                         scope,
                         Optional.of("Cl.Cm"),
                         Optional.empty(),
                         Optional.of(DIFFERENT_CLIENT_ID));
 
+        var response = makeTokenRequestWithPrivateKeyJWT(baseTokenRequest, keyPair.getPrivate());
+
         assertThat(response, hasStatus(400));
-        assertThat(response, hasBody(OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString()));
+        assertThat(
+                response,
+                hasBody(
+                        new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Invalid private_key_jwt")
+                                .toJSONObject()
+                                .toJSONString()));
     }
 
     @Test
@@ -165,10 +264,14 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         Scope scope =
                 new Scope(
                         OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
-        setUpDynamo(keyPair, scope, new Subject());
-        var response =
-                generateTokenRequest(
-                        keyPair, scope, Optional.empty(), Optional.empty(), Optional.of(CLIENT_ID));
+        registerUser(scope, new Subject());
+        registerClientWithPrivateKeyJwtAuthentication(
+                keyPair.getPublic(), scope, SubjectType.PUBLIC);
+        var baseTokenRequest =
+                constructBaseTokenRequest(
+                        scope, Optional.empty(), Optional.empty(), Optional.of(CLIENT_ID));
+
+        var response = makeTokenRequestWithPrivateKeyJWT(baseTokenRequest, keyPair.getPrivate());
 
         assertThat(response, hasStatus(200));
         JSONObject jsonResponse = JSONObjectUtils.parse(response.getBody());
@@ -199,11 +302,14 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         Scope scope =
                 new Scope(
                         OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
-        setUpDynamo(keyPair, scope, new Subject(), "pairwise");
-        var response =
-                generateTokenRequest(
-                        keyPair, scope, Optional.empty(), Optional.empty(), Optional.of(CLIENT_ID));
+        registerUser(scope, new Subject());
+        registerClientWithPrivateKeyJwtAuthentication(
+                keyPair.getPublic(), scope, SubjectType.PAIRWISE);
+        var baseTokenRequest =
+                constructBaseTokenRequest(
+                        scope, Optional.empty(), Optional.empty(), Optional.of(CLIENT_ID));
 
+        var response = makeTokenRequestWithPrivateKeyJWT(baseTokenRequest, keyPair.getPrivate());
         assertThat(response, hasStatus(200));
         JSONObject jsonResponse = JSONObjectUtils.parse(response.getBody());
         assertNotNull(
@@ -233,14 +339,17 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         Scope scope = new Scope(OIDCScopeValue.OPENID.getValue());
         var claimsSetRequest = new ClaimsSetRequest().add("nickname").add("birthdate");
         var oidcClaimsRequest = new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
-        setUpDynamo(keyPair, scope, new Subject());
-        var response =
-                generateTokenRequest(
-                        keyPair,
+        registerUser(scope, new Subject());
+        registerClientWithPrivateKeyJwtAuthentication(
+                keyPair.getPublic(), scope, SubjectType.PAIRWISE);
+        var baseTokenRequest =
+                constructBaseTokenRequest(
                         scope,
                         Optional.of("P2.Cl.Cm"),
                         Optional.of(oidcClaimsRequest),
                         Optional.of(CLIENT_ID));
+
+        var response = makeTokenRequestWithPrivateKeyJWT(baseTokenRequest, keyPair.getPrivate());
 
         assertThat(response, hasStatus(200));
         JSONObject jsonResponse = JSONObjectUtils.parse(response.getBody());
@@ -277,10 +386,14 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             throws Exception {
         KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         Scope scope = new Scope(OIDCScopeValue.OPENID.getValue());
-        setUpDynamo(keyPair, scope, new Subject());
-        var response =
-                generateTokenRequest(
-                        keyPair, scope, Optional.empty(), Optional.empty(), Optional.of(CLIENT_ID));
+        registerUser(scope, new Subject());
+        registerClientWithPrivateKeyJwtAuthentication(
+                keyPair.getPublic(), scope, SubjectType.PAIRWISE);
+        var baseTokenRequest =
+                constructBaseTokenRequest(
+                        scope, Optional.empty(), Optional.empty(), Optional.of(CLIENT_ID));
+
+        var response = makeTokenRequestWithPrivateKeyJWT(baseTokenRequest, keyPair.getPrivate());
 
         assertThat(response, hasStatus(200));
         JSONObject jsonResponse = JSONObjectUtils.parse(response.getBody());
@@ -306,7 +419,9 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         Subject publicSubject = new Subject();
         Subject internalSubject = new Subject();
         KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
-        setUpDynamo(keyPair, scope, internalSubject);
+        registerUser(scope, internalSubject);
+        registerClientWithPrivateKeyJwtAuthentication(
+                keyPair.getPublic(), scope, SubjectType.PAIRWISE);
         SignedJWT signedJWT = generateSignedRefreshToken(scope, publicSubject);
         RefreshToken refreshToken = new RefreshToken(signedJWT.serialize());
         RefreshTokenStore tokenStore =
@@ -365,25 +480,51 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         return tokenSigner.signJwt(claimsSet);
     }
 
-    private void setUpDynamo(KeyPair keyPair, Scope scope, Subject internalSubject) {
-        setUpDynamo(keyPair, scope, internalSubject, "public");
-    }
-
-    private void setUpDynamo(
-            KeyPair keyPair, Scope scope, Subject internalSubject, String subjectType) {
+    private void registerClientWithPrivateKeyJwtAuthentication(
+            PublicKey publicKey, Scope scope, SubjectType subjectType) {
         clientStore.registerClient(
                 CLIENT_ID,
                 "test-client",
                 singletonList(REDIRECT_URI),
                 singletonList(TEST_EMAIL),
                 scope.toStringList(),
-                Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()),
-                singletonList("http://localhost/post-logout-redirect"),
-                "http://example.com",
+                Base64.getMimeEncoder().encodeToString(publicKey.getEncoded()),
+                singletonList("https://localhost/post-logout-redirect"),
+                "https://example.com",
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
-                subjectType,
-                true);
+                subjectType.toString(),
+                true,
+                ClientType.WEB,
+                true,
+                null,
+                ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue());
+    }
+
+    private void registerClientSecretClient(
+            String clientSecret,
+            ClientAuthenticationMethod clientAuthenticationMethod,
+            Scope scope) {
+        clientStore.registerClient(
+                CLIENT_ID,
+                "test-client",
+                singletonList(REDIRECT_URI),
+                singletonList(TEST_EMAIL),
+                scope.toStringList(),
+                null,
+                singletonList("https://localhost/post-logout-redirect"),
+                "https://example.com",
+                String.valueOf(ServiceType.MANDATORY),
+                "https://test.com",
+                "pairwise",
+                true,
+                ClientType.WEB,
+                true,
+                clientSecret,
+                clientAuthenticationMethod.getValue());
+    }
+
+    private void registerUser(Scope scope, Subject internalSubject) {
         userStore.signUp(TEST_EMAIL, "password-1", internalSubject);
         Set<String> claims = ValidScopes.getClaimsForListOfScopes(scope.toStringList());
         ClientConsent clientConsent =
@@ -411,21 +552,47 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         return builder.build();
     }
 
-    private APIGatewayProxyResponseEvent generateTokenRequest(
-            KeyPair keyPair,
+    private APIGatewayProxyResponseEvent makeTokenRequestWithPrivateKeyJWT(
+            Map<String, List<String>> requestParams, PrivateKey privateKey) throws JOSEException {
+        var expiryDate = NowHelper.nowPlus(5, ChronoUnit.MINUTES);
+        var claimsSet =
+                new JWTAuthenticationClaimsSet(
+                        new ClientID(CLIENT_ID), new Audience(ROOT_RESOURCE_URL + TOKEN_ENDPOINT));
+        claimsSet.getExpirationTime().setTime(expiryDate.getTime());
+        var privateKeyJWT =
+                new PrivateKeyJWT(claimsSet, JWSAlgorithm.RS256, privateKey, null, null);
+        requestParams.putAll(privateKeyJWT.toParameters());
+
+        var requestBody = URLUtils.serializeParameters(requestParams);
+        return makeRequest(Optional.of(requestBody), Map.of(), Map.of());
+    }
+
+    private APIGatewayProxyResponseEvent makeTokenRequestWithClientSecretBasic(
+            Map<String, List<String>> requestParams, Secret clientSecret) {
+        var clientSecretBasic = new ClientSecretBasic(new ClientID(CLIENT_ID), clientSecret);
+
+        var requestBody = URLUtils.serializeParameters(requestParams);
+        return makeRequest(
+                Optional.of(requestBody),
+                Map.of("Authorization", clientSecretBasic.toHTTPAuthorizationHeader()),
+                Map.of());
+    }
+
+    private APIGatewayProxyResponseEvent makeTokenRequestWithClientSecretPost(
+            Map<String, List<String>> requestParams, Secret clientSecret) {
+        var clientSecretPost = new ClientSecretPost(new ClientID(CLIENT_ID), clientSecret);
+        clientSecretPost.toParameters();
+        requestParams.putAll(clientSecretPost.toParameters());
+        var requestBody = URLUtils.serializeParameters(requestParams);
+        return makeRequest(Optional.of(requestBody), Map.of(), Map.of());
+    }
+
+    private Map<String, List<String>> constructBaseTokenRequest(
             Scope scope,
             Optional<String> vtr,
             Optional<OIDCClaimsRequest> oidcClaimsRequest,
             Optional<String> clientId)
-            throws JOSEException, Json.JsonException {
-        PrivateKey privateKey = keyPair.getPrivate();
-        Date expiryDate = NowHelper.nowPlus(5, ChronoUnit.MINUTES);
-        JWTAuthenticationClaimsSet claimsSet =
-                new JWTAuthenticationClaimsSet(
-                        new ClientID(CLIENT_ID), new Audience(ROOT_RESOURCE_URL + TOKEN_ENDPOINT));
-        claimsSet.getExpirationTime().setTime(expiryDate.getTime());
-        PrivateKeyJWT privateKeyJWT =
-                new PrivateKeyJWT(claimsSet, JWSAlgorithm.RS256, privateKey, null, null);
+            throws Json.JsonException {
         String code = new AuthorizationCode().toString();
         VectorOfTrust vectorOfTrust = VectorOfTrust.getDefaults();
         if (vtr.isPresent()) {
@@ -446,10 +613,6 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         clientId.map(cid -> customParams.put("client_id", Collections.singletonList(cid)));
         customParams.put("code", Collections.singletonList(code));
         customParams.put("redirect_uri", Collections.singletonList(REDIRECT_URI));
-        Map<String, List<String>> privateKeyParams = privateKeyJWT.toParameters();
-        privateKeyParams.putAll(customParams);
-
-        String requestParams = URLUtils.serializeParameters(privateKeyParams);
-        return makeRequest(Optional.of(requestParams), Map.of(), Map.of());
+        return customParams;
     }
 }

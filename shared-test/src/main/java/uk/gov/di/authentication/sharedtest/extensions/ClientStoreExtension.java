@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.sharedtest.extensions;
 
+import com.nimbusds.oauth2.sdk.auth.ClientAuthenticationMethod;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
@@ -100,6 +101,43 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
             String subjectType,
             boolean consentRequired,
             ClientType clientType,
+            boolean identityVerificationSupported,
+            String clientSecret,
+            String clientAuthMethod) {
+        dynamoClientService.addClient(
+                clientID,
+                clientName,
+                redirectUris,
+                contacts,
+                scopes,
+                publicKey,
+                postLogoutRedirectUris,
+                backChannelLogoutUri,
+                serviceType,
+                sectorIdentifierUri,
+                subjectType,
+                consentRequired,
+                Collections.emptyList(),
+                clientType.getValue(),
+                identityVerificationSupported,
+                clientSecret,
+                clientAuthMethod);
+    }
+
+    public void registerClient(
+            String clientID,
+            String clientName,
+            List<String> redirectUris,
+            List<String> contacts,
+            List<String> scopes,
+            String publicKey,
+            List<String> postLogoutRedirectUris,
+            String backChannelLogoutUri,
+            String serviceType,
+            String sectorIdentifierUri,
+            String subjectType,
+            boolean consentRequired,
+            ClientType clientType,
             boolean identityVerificationSupported) {
         dynamoClientService.addClient(
                 clientID,
@@ -116,7 +154,9 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 consentRequired,
                 Collections.emptyList(),
                 clientType.getValue(),
-                identityVerificationSupported);
+                identityVerificationSupported,
+                null,
+                ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue());
     }
 
     public boolean clientExists(String clientID) {

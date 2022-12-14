@@ -26,7 +26,9 @@ public interface ClientService {
             boolean consentRequired,
             List<String> claims,
             String clientType,
-            boolean identityVerificationSupported);
+            boolean identityVerificationSupported,
+            String clientSecret,
+            String tokenAuthMethod);
 
     Optional<ClientRegistry> getClient(String clientId);
 

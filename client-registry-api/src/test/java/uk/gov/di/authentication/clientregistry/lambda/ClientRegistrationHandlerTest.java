@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
+import com.nimbusds.oauth2.sdk.auth.ClientAuthenticationMethod;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -118,7 +119,9 @@ class ClientRegistrationHandlerTest {
                         true,
                         emptyList(),
                         ClientType.WEB.getValue(),
-                        false);
+                        false,
+                        null,
+                        ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue());
     }
 
     @Test
@@ -159,7 +162,9 @@ class ClientRegistrationHandlerTest {
                         false,
                         emptyList(),
                         ClientType.WEB.getValue(),
-                        true);
+                        true,
+                        null,
+                        ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue());
     }
 
     @Test
@@ -192,7 +197,9 @@ class ClientRegistrationHandlerTest {
                         true,
                         emptyList(),
                         ClientType.WEB.getValue(),
-                        false);
+                        false,
+                        null,
+                        ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue());
     }
 
     @Test

@@ -8,20 +8,11 @@ import com.nimbusds.jose.crypto.impl.ECDSA;
 import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
-import com.nimbusds.jwt.util.DateUtils;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.GrantType;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
-import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.Scope;
-import com.nimbusds.oauth2.sdk.auth.ClientAuthenticationMethod;
-import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
-import com.nimbusds.oauth2.sdk.auth.Secret;
-import com.nimbusds.oauth2.sdk.auth.verifier.ClientAuthenticationVerifier;
-import com.nimbusds.oauth2.sdk.auth.verifier.ClientCredentialsSelector;
-import com.nimbusds.oauth2.sdk.auth.verifier.InvalidClientException;
 import com.nimbusds.oauth2.sdk.id.Audience;
-import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.Issuer;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
@@ -53,14 +44,7 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 
 import java.net.URI;
-import java.security.KeyFactory;
-import java.security.NoSuchAlgorithmException;
-import java.security.PublicKey;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.X509EncodedKeySpec;
 import java.time.temporal.ChronoUnit;
-import java.util.Base64;
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -206,52 +190,6 @@ public class TokenService {
             return validateRefreshRequestParams(requestBody);
         }
         return Optional.empty();
-    }
-
-    public Optional<ErrorObject> validatePrivateKeyJWT(
-            String requestString, String publicKey, String tokenUrl, String clientID) {
-        PrivateKeyJWT privateKeyJWT;
-        try {
-            privateKeyJWT = PrivateKeyJWT.parse(requestString);
-        } catch (ParseException e) {
-            LOG.warn("Could not parse Private Key JWT");
-            return Optional.of(OAuth2Error.INVALID_CLIENT);
-        }
-        if (hasPrivateKeyJwtExpired(privateKeyJWT.getClientAssertion())) {
-            LOG.warn("PrivateKeyJWT has expired");
-            return Optional.of(OAuth2Error.INVALID_GRANT);
-        }
-        if (Objects.isNull(privateKeyJWT.getClientID())
-                || !privateKeyJWT.getClientID().toString().equals(clientID)) {
-            LOG.warn("Invalid ClientID in PrivateKeyJWT");
-            return Optional.of(OAuth2Error.INVALID_CLIENT);
-        }
-        ClientAuthenticationVerifier<?> authenticationVerifier =
-                new ClientAuthenticationVerifier<>(
-                        generateClientCredentialsSelector(publicKey),
-                        Collections.singleton(new Audience(tokenUrl)));
-        try {
-            authenticationVerifier.verify(privateKeyJWT, null, null);
-        } catch (InvalidClientException | JOSEException e) {
-            LOG.warn("Unable to Verify Signature of Private Key JWT", e);
-            return Optional.of(OAuth2Error.INVALID_CLIENT);
-        }
-        return Optional.empty();
-    }
-
-    public Optional<String> getClientIDFromPrivateKeyJWT(String requestString) {
-        PrivateKeyJWT privateKeyJWT;
-        try {
-            privateKeyJWT = PrivateKeyJWT.parse(requestString);
-        } catch (ParseException e) {
-            LOG.warn("Could not parse Private Key JWT", e);
-            return Optional.empty();
-        }
-        if (Objects.isNull(privateKeyJWT.getClientID())) {
-            LOG.warn("Invalid ClientID in PrivateKeyJWT");
-            return Optional.empty();
-        }
-        return Optional.of(privateKeyJWT.getClientID().toString());
     }
 
     private List<String> calculateScopesForToken(
@@ -471,54 +409,5 @@ public class TokenService {
             LOG.error("Exception thrown when trying to parse SignedJWT or JWTClaimSet", e);
             throw new RuntimeException(e);
         }
-    }
-
-    private boolean hasPrivateKeyJwtExpired(SignedJWT signedJWT) {
-        try {
-            JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
-            Date currentDateTime = NowHelper.now();
-            if (DateUtils.isBefore(claimsSet.getExpirationTime(), currentDateTime, 30)) {
-                LOG.warn(
-                        "PrivateKeyJWT has expired. Expiration time: {}. Current time: {}",
-                        claimsSet.getExpirationTime(),
-                        currentDateTime);
-                return true;
-            }
-        } catch (java.text.ParseException e) {
-            LOG.warn("Unable to parse PrivateKeyJwt when checking if expired", e);
-            return true;
-        }
-        return false;
-    }
-
-    private ClientCredentialsSelector<?> generateClientCredentialsSelector(String publicKey) {
-        return new ClientCredentialsSelector<>() {
-            @Override
-            public List<Secret> selectClientSecrets(
-                    ClientID claimedClientID,
-                    ClientAuthenticationMethod authMethod,
-                    com.nimbusds.oauth2.sdk.auth.verifier.Context context) {
-                return null;
-            }
-
-            @Override
-            public List<PublicKey> selectPublicKeys(
-                    ClientID claimedClientID,
-                    ClientAuthenticationMethod authMethod,
-                    JWSHeader jwsHeader,
-                    boolean forceRefresh,
-                    com.nimbusds.oauth2.sdk.auth.verifier.Context context) {
-
-                byte[] decodedKey = Base64.getMimeDecoder().decode(publicKey);
-                try {
-                    X509EncodedKeySpec x509publicKey = new X509EncodedKeySpec(decodedKey);
-                    KeyFactory kf = KeyFactory.getInstance("RSA");
-                    return Collections.singletonList(kf.generatePublic(x509publicKey));
-                } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
-                    LOG.warn("Exception when selecting public key", e);
-                    throw new RuntimeException(e);
-                }
-            }
-        };
     }
 }
