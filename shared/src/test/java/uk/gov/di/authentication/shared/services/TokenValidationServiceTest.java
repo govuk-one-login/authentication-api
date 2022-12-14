@@ -3,9 +3,11 @@ package uk.gov.di.authentication.shared.services;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSSigner;
 import com.nimbusds.jose.crypto.ECDSASigner;
+import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
+import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
@@ -27,8 +29,9 @@ import static org.mockito.Mockito.when;
 class TokenValidationServiceTest {
 
     private final JwksService jwksService = mock(JwksService.class);
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final TokenValidationService tokenValidationService =
-            new TokenValidationService(jwksService);
+            new TokenValidationService(jwksService, configurationService);
     private static final Subject SUBJECT = new Subject("some-subject");
     private static final List<String> SCOPES = List.of("openid", "email", "phone");
     private static final List<String> REFRESH_SCOPES = List.of("openid", "email", "offline_access");
@@ -62,6 +65,20 @@ class TokenValidationServiceTest {
     @Test
     void shouldSuccessfullyValidateAccessToken() {
         SignedJWT signedAccessToken = createSignedAccessToken(signer);
+        assertTrue(
+                tokenValidationService.validateAccessTokenSignature(
+                        new BearerAccessToken(signedAccessToken.serialize())));
+    }
+
+    @Test
+    void shouldSuccessfullyValidateRsaSignedAccessToken() throws JOSEException {
+        var rsaKey = new RSAKeyGenerator(2048).generate();
+        var rsaSigner = new RSASSASigner(rsaKey);
+
+        when(configurationService.isRsaSigningAvailable()).thenReturn(true);
+        when(jwksService.getPublicTokenRsaJwkWithOpaqueId()).thenReturn(rsaKey);
+
+        SignedJWT signedAccessToken = createSignedAccessToken(rsaSigner);
         assertTrue(
                 tokenValidationService.validateAccessTokenSignature(
                         new BearerAccessToken(signedAccessToken.serialize())));

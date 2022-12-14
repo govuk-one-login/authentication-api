@@ -50,7 +50,8 @@ public class AuthoriseAccessTokenHandler
                 new TokenValidationService(
                         new JwksService(
                                 configurationService,
-                                new KmsConnectionService(configurationService)));
+                                new KmsConnectionService(configurationService)),
+                        configurationService);
         clientService = new DynamoClientService(configurationService);
     }
 
@@ -60,7 +61,8 @@ public class AuthoriseAccessTokenHandler
                 new TokenValidationService(
                         new JwksService(
                                 configurationService,
-                                new KmsConnectionService(configurationService)));
+                                new KmsConnectionService(configurationService)),
+                        configurationService);
         clientService = new DynamoClientService(configurationService);
     }
 
