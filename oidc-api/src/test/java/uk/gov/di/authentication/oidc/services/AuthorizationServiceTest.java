@@ -145,7 +145,7 @@ class AuthorizationServiceTest {
                         scope,
                         jsonArrayOf("P2.Cl.Cm"),
                         Optional.empty());
-        var errorObject = authorizationService.validateAuthRequest(authRequest);
+        var errorObject = authorizationService.validateAuthRequest(authRequest, true);
 
         assertThat(errorObject, equalTo(Optional.empty()));
     }
@@ -167,7 +167,7 @@ class AuthorizationServiceTest {
                         scope,
                         jsonArrayOf("Cm.Cl.P1", "P1.Cl"),
                         Optional.empty());
-        var errorObject = authorizationService.validateAuthRequest(authRequest);
+        var errorObject = authorizationService.validateAuthRequest(authRequest, true);
 
         assertTrue(errorObject.isPresent());
 
@@ -190,7 +190,28 @@ class AuthorizationServiceTest {
                                         REDIRECT_URI.toString(), CLIENT_ID.toString())));
         var errorObject =
                 authorizationService.validateAuthRequest(
-                        generateAuthRequest(REDIRECT_URI.toString(), responseType, scope));
+                        generateAuthRequest(REDIRECT_URI.toString(), responseType, scope), true);
+
+        assertTrue(errorObject.isEmpty());
+    }
+
+    @Test
+    void
+            shouldSuccessfullyValidateAuthRequestWhenNonceIsNotIncludedButOptionalButGivenEnvironment() {
+        when(dynamoClientService.getClient(CLIENT_ID.toString()))
+                .thenReturn(
+                        Optional.of(
+                                generateClientRegistry(
+                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
+        var authRequest =
+                new AuthenticationRequest.Builder(
+                                new ResponseType(ResponseType.Value.CODE),
+                                new Scope(OIDCScopeValue.OPENID),
+                                CLIENT_ID,
+                                URI.create(REDIRECT_URI.toString()))
+                        .state(STATE)
+                        .build();
+        var errorObject = authorizationService.validateAuthRequest(authRequest, false);
 
         assertTrue(errorObject.isEmpty());
     }
@@ -221,7 +242,7 @@ class AuthorizationServiceTest {
                         scope,
                         jsonArrayOf("Cl.Cm", "Cl"),
                         Optional.of(oidcClaimsRequest));
-        var errorObject = authorizationService.validateAuthRequest(authRequest);
+        var errorObject = authorizationService.validateAuthRequest(authRequest, true);
 
         assertTrue(errorObject.isEmpty());
     }
@@ -245,7 +266,7 @@ class AuthorizationServiceTest {
                         scope,
                         jsonArrayOf("Cl.Cm", "Cl"),
                         Optional.of(oidcClaimsRequest));
-        var errorObject = authorizationService.validateAuthRequest(authRequest);
+        var errorObject = authorizationService.validateAuthRequest(authRequest, true);
 
         assertTrue(errorObject.isPresent());
         assertThat(
@@ -269,7 +290,7 @@ class AuthorizationServiceTest {
                                         List.of("openid", "am"))));
         var errorObject =
                 authorizationService.validateAuthRequest(
-                        generateAuthRequest(REDIRECT_URI.toString(), responseType, scope));
+                        generateAuthRequest(REDIRECT_URI.toString(), responseType, scope), true);
 
         assertTrue(errorObject.isEmpty());
     }
@@ -285,7 +306,7 @@ class AuthorizationServiceTest {
                                         REDIRECT_URI.toString(), CLIENT_ID.toString())));
         var errorObject =
                 authorizationService.validateAuthRequest(
-                        generateAuthRequest(REDIRECT_URI.toString(), responseType, scope));
+                        generateAuthRequest(REDIRECT_URI.toString(), responseType, scope), true);
 
         assertTrue(errorObject.isPresent());
         assertThat(errorObject.get().getErrorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
@@ -304,7 +325,8 @@ class AuthorizationServiceTest {
                         () ->
                                 authorizationService.validateAuthRequest(
                                         generateAuthRequest(
-                                                REDIRECT_URI.toString(), responseType, scope)),
+                                                REDIRECT_URI.toString(), responseType, scope),
+                                        true),
                         "Expected to throw exception");
 
         assertThat(runtimeException.getMessage(), equalTo("No Client found with given ClientID"));
@@ -323,7 +345,7 @@ class AuthorizationServiceTest {
                                         REDIRECT_URI.toString(), CLIENT_ID.toString())));
         var errorObject =
                 authorizationService.validateAuthRequest(
-                        generateAuthRequest(REDIRECT_URI.toString(), responseType, scope));
+                        generateAuthRequest(REDIRECT_URI.toString(), responseType, scope), true);
 
         assertTrue(errorObject.isPresent());
         assertThat(
@@ -343,7 +365,7 @@ class AuthorizationServiceTest {
                                         REDIRECT_URI.toString(), CLIENT_ID.toString())));
         var errorObject =
                 authorizationService.validateAuthRequest(
-                        generateAuthRequest(REDIRECT_URI.toString(), responseType, scope));
+                        generateAuthRequest(REDIRECT_URI.toString(), responseType, scope), true);
 
         assertTrue(errorObject.isPresent());
         assertThat(errorObject.get().getErrorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
@@ -364,7 +386,7 @@ class AuthorizationServiceTest {
                                 responseType, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
                         .nonce(new Nonce())
                         .build();
-        var errorObject = authorizationService.validateAuthRequest(authRequest);
+        var errorObject = authorizationService.validateAuthRequest(authRequest, true);
 
         assertTrue(errorObject.isPresent());
         assertThat(
@@ -390,7 +412,7 @@ class AuthorizationServiceTest {
                                 responseType, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
                         .state(new State())
                         .build();
-        var errorObject = authorizationService.validateAuthRequest(authRequest);
+        var errorObject = authorizationService.validateAuthRequest(authRequest, true);
 
         assertTrue(errorObject.isPresent());
         assertThat(
@@ -417,7 +439,7 @@ class AuthorizationServiceTest {
                         .nonce(new Nonce())
                         .customParameter("vtr", jsonArrayOf("Cm"))
                         .build();
-        var errorObject = authorizationService.validateAuthRequest(authRequest);
+        var errorObject = authorizationService.validateAuthRequest(authRequest, true);
 
         assertTrue(errorObject.isPresent());
         assertThat(
@@ -443,7 +465,7 @@ class AuthorizationServiceTest {
                         .nonce(new Nonce())
                         .customParameter("vtr", jsonArrayOf("P2.Cl.Cm"))
                         .build();
-        var errorObject = authorizationService.validateAuthRequest(authRequest);
+        var errorObject = authorizationService.validateAuthRequest(authRequest, true);
 
         assertTrue(errorObject.isPresent());
         assertThat(
@@ -470,7 +492,7 @@ class AuthorizationServiceTest {
                         .nonce(new Nonce())
                         .customParameter("vtr", jsonArrayOf("P2.Cl.Cm"))
                         .build();
-        var errorObject = authorizationService.validateAuthRequest(authRequest);
+        var errorObject = authorizationService.validateAuthRequest(authRequest, true);
 
         assertTrue(errorObject.isEmpty());
     }
@@ -492,7 +514,8 @@ class AuthorizationServiceTest {
                         RuntimeException.class,
                         () ->
                                 authorizationService.validateAuthRequest(
-                                        generateAuthRequest(redirectURi, responseType, scope)),
+                                        generateAuthRequest(redirectURi, responseType, scope),
+                                        true),
                         "Expected to throw exception");
         assertThat(
                 exception.getMessage(),
@@ -528,7 +551,8 @@ class AuthorizationServiceTest {
                         .requestURI(URI.create("https://localhost/redirect-uri"))
                         .build();
 
-        var authRequestError = authorizationService.validateAuthRequest(authenticationRequest);
+        var authRequestError =
+                authorizationService.validateAuthRequest(authenticationRequest, true);
 
         assertTrue(authRequestError.isPresent());
         assertThat(
@@ -552,7 +576,8 @@ class AuthorizationServiceTest {
                         .requestObject(new PlainJWT(new JWTClaimsSet.Builder().build()))
                         .build();
 
-        var authRequestError = authorizationService.validateAuthRequest(authenticationRequest);
+        var authRequestError =
+                authorizationService.validateAuthRequest(authenticationRequest, true);
 
         assertTrue(authRequestError.isPresent());
         assertThat(

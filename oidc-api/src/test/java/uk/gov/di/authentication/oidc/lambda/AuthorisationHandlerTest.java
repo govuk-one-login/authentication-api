@@ -62,6 +62,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
@@ -119,7 +120,8 @@ class AuthorisationHandlerTest {
         when(configService.getSessionCookieAttributes()).thenReturn("Secure; HttpOnly;");
         when(configService.getSessionCookieMaxAge()).thenReturn(3600);
         when(configService.getPersistentCookieMaxAge()).thenReturn(34190000);
-        when(authorizationService.validateAuthRequest(any(AuthenticationRequest.class)))
+        when(authorizationService.validateAuthRequest(
+                        any(AuthenticationRequest.class), anyBoolean()))
                 .thenReturn(Optional.empty());
         when(authorizationService.getExistingOrCreateNewPersistentSessionId(any()))
                 .thenReturn(PERSISTENT_SESSION_ID);
@@ -425,7 +427,8 @@ class AuthorisationHandlerTest {
 
     @Test
     void shouldReturn400WhenAuthorisationRequestContainsInvalidScope() {
-        when(authorizationService.validateAuthRequest(any(AuthenticationRequest.class)))
+        when(authorizationService.validateAuthRequest(
+                        any(AuthenticationRequest.class), anyBoolean()))
                 .thenReturn(
                         Optional.of(
                                 new AuthRequestError(
