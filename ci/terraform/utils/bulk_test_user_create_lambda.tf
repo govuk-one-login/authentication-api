@@ -31,7 +31,8 @@ resource "aws_lambda_function" "bulk_test_user_create_lambda" {
 
   environment {
     variables = merge({
-      ENVIRONMENT = var.environment
+      ENVIRONMENT              = var.environment
+      TERMS_CONDITIONS_VERSION = var.terms_and_conditions
     })
   }
 
