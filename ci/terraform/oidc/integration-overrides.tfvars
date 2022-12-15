@@ -19,7 +19,6 @@ internal_sector_uri            = "https://identity.integration.account.gov.uk"
 spot_enabled                   = true
 identity_trace_logging_enabled = true
 language_cy_enabled            = true
-extended_feature_flags_enabled = true
 
 ipv_auth_public_encryption_key = <<-EOT
 -----BEGIN PUBLIC KEY-----
