@@ -438,6 +438,11 @@ variable "notify_template_per_language" {
   type    = bool
 }
 
+variable "extended_feature_flags_enabled" {
+  default = false
+  type    = bool
+}
+
 locals {
   default_performance_parameters = {
     memory          = var.endpoint_memory_size

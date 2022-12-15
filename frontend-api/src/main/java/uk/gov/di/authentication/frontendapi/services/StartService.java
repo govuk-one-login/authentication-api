@@ -7,6 +7,7 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.ClientStartInfo;
+import uk.gov.di.authentication.frontendapi.entity.Features;
 import uk.gov.di.authentication.frontendapi.entity.UserStartInfo;
 import uk.gov.di.authentication.shared.conditions.ConsentHelper;
 import uk.gov.di.authentication.shared.conditions.DocAppUserHelper;
@@ -36,6 +37,7 @@ import java.util.Optional;
 import static java.util.function.Predicate.not;
 import static uk.gov.di.authentication.frontendapi.entity.RequestParameters.COOKIE_CONSENT;
 import static uk.gov.di.authentication.frontendapi.entity.RequestParameters.GA;
+import static uk.gov.di.authentication.frontendapi.features.FeatureStrategies.fiftyFiftyStrategy;
 
 public class StartService {
 
@@ -240,5 +242,11 @@ public class StartService {
                 && authRequestParameters.get(COOKIE_CONSENT).get(0) != null
                 && List.of(COOKIE_CONSENT_ACCEPT, COOKIE_CONSENT_REJECT, COOKIE_CONSENT_NOT_ENGAGED)
                         .contains(authRequestParameters.get(COOKIE_CONSENT).get(0));
+    }
+
+    public Features getSessionFeatures() {
+        Features features = new Features();
+        features.setUpdatePasswordHintTextVersion(fiftyFiftyStrategy() ? "1" : "2");
+        return features;
     }
 }
