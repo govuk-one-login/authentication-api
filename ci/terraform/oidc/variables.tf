@@ -439,7 +439,7 @@ variable "notify_template_per_language" {
 }
 
 variable "extended_feature_flags_enabled" {
-  default = false
+  default = true
   type    = bool
 }
 
