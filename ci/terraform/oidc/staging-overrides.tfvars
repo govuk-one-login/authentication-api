@@ -18,7 +18,9 @@ internal_sector_uri                = "https://identity.staging.account.gov.uk"
 spot_enabled                       = true
 identity_trace_logging_enabled     = true
 language_cy_enabled                = true
-ipv_auth_public_encryption_key     = <<-EOT
+extended_feature_flags_enabled     = true
+
+ipv_auth_public_encryption_key = <<-EOT
 -----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyB5V0Tc9KEV5/zGUHLu0
 ZVX0xbDhCyaNwWjJILV0pJE+HmAUc8Azc42MY9mAm0D3LYF8PcWsBa1cIgJF6z7j
