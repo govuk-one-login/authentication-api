@@ -17,6 +17,7 @@ Resources:
   UserCredentials:
     # checkov:skip=CKV_AWS_119: "Ensure DynamoDB Tables are encrypted using a KMS Customer Managed CMK"
     DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Type: "AWS::DynamoDB::Table"
     Properties:
       AttributeDefinitions:
@@ -49,6 +50,7 @@ Resources:
   UserProfile:
     # checkov:skip=CKV_AWS_119: "Ensure DynamoDB Tables are encrypted using a KMS Customer Managed CMK"
     DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Type: "AWS::DynamoDB::Table"
     Properties:
       AttributeDefinitions:
@@ -109,6 +111,7 @@ Resources:
   IdentityCredentials:
     # checkov:skip=CKV_AWS_119: "Ensure DynamoDB Tables are encrypted using a KMS Customer Managed CMK"
     DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Type: "AWS::DynamoDB::Table"
     Properties:
       AttributeDefinitions:
@@ -135,6 +138,7 @@ Resources:
   DocAppCredentials:
     # checkov:skip=CKV_AWS_119: "Ensure DynamoDB Tables are encrypted using a KMS Customer Managed CMK"
     DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Type: "AWS::DynamoDB::Table"
     Properties:
       AttributeDefinitions:
