@@ -139,7 +139,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
             ResetPasswordRequest resetPasswordRequest,
             UserContext userContext,
             boolean isTestClient)
-            throws JsonException, ClientNotFoundException {
+            throws JsonException {
         var code =
                 codeStorageService
                         .getOtpCode(resetPasswordRequest.getEmail(), RESET_PASSWORD_WITH_CODE)

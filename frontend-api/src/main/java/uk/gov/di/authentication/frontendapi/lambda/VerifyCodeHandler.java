@@ -320,15 +320,14 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 metadataPairs);
     }
 
-    private Optional<String> getOtpCodeForTestClient(NotificationType notificationType)
-            throws ClientNotFoundException {
+    private Optional<String> getOtpCodeForTestClient(NotificationType notificationType) {
         LOG.info("Using TestClient with NotificationType {}", notificationType);
         switch (notificationType) {
             case VERIFY_EMAIL:
+            case RESET_PASSWORD_WITH_CODE:
                 return configurationService.getTestClientVerifyEmailOTP();
             case VERIFY_PHONE_NUMBER:
             case MFA_SMS:
-            case RESET_PASSWORD_WITH_CODE:
                 return configurationService.getTestClientVerifyPhoneNumberOTP();
             default:
                 LOG.error(

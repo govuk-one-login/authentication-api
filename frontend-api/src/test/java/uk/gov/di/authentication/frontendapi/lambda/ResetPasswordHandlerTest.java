@@ -151,7 +151,7 @@ class ResetPasswordHandlerTest {
     }
 
     @Test
-    public void shouldReturn204ForSuccessfulRequestWithNoCode() throws Json.JsonException {
+    void shouldReturn204ForSuccessfulRequestWithNoCode() throws Json.JsonException {
         when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                 .thenReturn(generateUserCredentials());
         usingValidSession();
@@ -186,7 +186,7 @@ class ResetPasswordHandlerTest {
     }
 
     @Test
-    public void shouldReturn204ForSuccessfulMigratedUserRequest() throws Json.JsonException {
+    void shouldReturn204ForSuccessfulMigratedUserRequest() throws Json.JsonException {
         when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                 .thenReturn(generateMigratedUserCredentials());
         usingValidSession();
@@ -220,7 +220,7 @@ class ResetPasswordHandlerTest {
     }
 
     @Test
-    public void shouldReturn400ForRequestIsMissingPassword() {
+    void shouldReturn400ForRequestIsMissingPassword() {
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody("{ }");
@@ -233,7 +233,7 @@ class ResetPasswordHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfPasswordFailsValidation() {
+    void shouldReturn400IfPasswordFailsValidation() {
         usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(format("{ \"password\": \"%s\"}", "password"));
@@ -247,7 +247,7 @@ class ResetPasswordHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfNewPasswordEqualsExistingPassword() throws Json.JsonException {
+    void shouldReturn400IfNewPasswordEqualsExistingPassword() throws Json.JsonException {
         usingValidSession();
         when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                 .thenReturn(generateUserCredentials(Argon2EncoderHelper.argon2Hash(NEW_PASSWORD)));
@@ -267,7 +267,7 @@ class ResetPasswordHandlerTest {
     }
 
     @Test
-    public void shouldDeleteIncorrectPasswordCountOnSuccessfulRequest() {
+    void shouldDeleteIncorrectPasswordCountOnSuccessfulRequest() {
         usingValidSession();
         when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                 .thenReturn(generateUserCredentials());
@@ -299,7 +299,7 @@ class ResetPasswordHandlerTest {
     }
 
     @Test
-    public void shouldReturn400WhenUserHasInvalidSession() {
+    void shouldReturn400WhenUserHasInvalidSession() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"password\": \"%s\"}", NEW_PASSWORD));

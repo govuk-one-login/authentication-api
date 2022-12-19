@@ -29,7 +29,6 @@ import java.util.Map;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
-import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.services.AuthorisationCodeService.AUTH_CODE_PREFIX;
@@ -188,11 +187,6 @@ public class RedisExtension
         codeStorageService.saveOtpCode(email, code, codeExpiryTime, VERIFY_EMAIL);
 
         return code;
-    }
-
-    public void generateAndSavePasswordResetCode(
-            String subjectId, String code, long codeExpiryTime) {
-        codeStorageService.savePasswordResetCode(subjectId, code, codeExpiryTime, RESET_PASSWORD);
     }
 
     public String generateAndSavePhoneNumberCode(String email, long codeExpiryTime) {

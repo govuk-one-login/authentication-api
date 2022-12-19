@@ -493,7 +493,7 @@ class VerifyCodeHandlerTest {
     void shouldReturn204ForValidResetPasswordRequestUsingTestClient() {
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
-        when(configurationService.getTestClientVerifyPhoneNumberOTP())
+        when(configurationService.getTestClientVerifyEmailOTP())
                 .thenReturn(Optional.of(TEST_CLIENT_CODE));
         when(codeStorageService.getOtpCode(TEST_CLIENT_EMAIL, RESET_PASSWORD_WITH_CODE))
                 .thenReturn(Optional.of(CODE));
