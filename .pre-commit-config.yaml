@@ -16,6 +16,6 @@ repos:
   - repo: https://github.com/alphagov/di-pre-commit-hooks.git
     rev: 0.0.1
     hooks:
-      - id: spotless-check
+      - id: gradle-spotless-apply
       - id: terraform-format
       - id: terraform-validate
