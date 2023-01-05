@@ -25,7 +25,6 @@ import java.util.Map;
 import static uk.gov.di.authentication.shared.entity.NotificationType.ACCOUNT_CREATED_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION;
-import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
@@ -125,18 +124,6 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                                     notifyRequest.getDestination(),
                                     notifyPersonalisation,
                                     MFA_SMS,
-                                    notifyRequest.getLanguage());
-                            break;
-                        case RESET_PASSWORD:
-                            notifyPersonalisation.put(
-                                    "reset-password-link", notifyRequest.getCode());
-                            notifyPersonalisation.put(
-                                    "contact-us-link",
-                                    buildContactUsUrl("passwordResetRequestEmail"));
-                            notificationService.sendEmail(
-                                    notifyRequest.getDestination(),
-                                    notifyPersonalisation,
-                                    RESET_PASSWORD,
                                     notifyRequest.getLanguage());
                             break;
                         case PASSWORD_RESET_CONFIRMATION:

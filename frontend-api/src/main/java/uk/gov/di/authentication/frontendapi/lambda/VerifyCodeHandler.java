@@ -8,6 +8,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.VerifyCodeRequest;
+import uk.gov.di.authentication.frontendapi.helpers.TestClientHelper;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
@@ -115,10 +116,12 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 return generateApiGatewayProxyErrorResponse(400, errorResponse);
             }
 
+            var isTestClient =
+                    TestClientHelper.isTestClientWithAllowedEmail(
+                            userContext, configurationService);
             var code =
-                    configurationService.isTestClientsEnabled()
-                            ? getOtpCodeForTestClient(
-                                    userContext, codeRequest.getNotificationType())
+                    isTestClient
+                            ? getOtpCodeForTestClient(codeRequest.getNotificationType())
                             : codeStorageService.getOtpCode(
                                     session.getEmailAddress(), codeRequest.getNotificationType());
 
@@ -317,44 +320,19 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 metadataPairs);
     }
 
-    private Optional<String> getOtpCodeForTestClient(
-            UserContext userContext, NotificationType notificationType)
-            throws ClientNotFoundException {
-        LOG.warn("TestClients are ENABLED");
-        final String emailAddress = userContext.getSession().getEmailAddress();
-        final Optional<String> generatedOTPCode =
-                codeStorageService.getOtpCode(emailAddress, notificationType);
-
-        return userContext
-                .getClient()
-                .map(
-                        clientRegistry -> {
-                            if (clientRegistry.isTestClient()
-                                    && clientRegistry
-                                            .getTestClientEmailAllowlist()
-                                            .contains(emailAddress)) {
-                                LOG.info(
-                                        "Using TestClient with NotificationType {}",
-                                        notificationType);
-                                switch (notificationType) {
-                                    case VERIFY_EMAIL:
-                                        return configurationService.getTestClientVerifyEmailOTP();
-                                    case VERIFY_PHONE_NUMBER:
-                                        return configurationService
-                                                .getTestClientVerifyPhoneNumberOTP();
-                                    case MFA_SMS:
-                                        return configurationService
-                                                .getTestClientVerifyPhoneNumberOTP();
-                                    default:
-                                        LOG.info(
-                                                "Returning the generated OTP for NotificationType {}",
-                                                notificationType);
-                                        return generatedOTPCode;
-                                }
-                            } else {
-                                return generatedOTPCode;
-                            }
-                        })
-                .orElseThrow(() -> new ClientNotFoundException(userContext.getSession()));
+    private Optional<String> getOtpCodeForTestClient(NotificationType notificationType) {
+        LOG.info("Using TestClient with NotificationType {}", notificationType);
+        switch (notificationType) {
+            case VERIFY_EMAIL:
+            case RESET_PASSWORD_WITH_CODE:
+                return configurationService.getTestClientVerifyEmailOTP();
+            case VERIFY_PHONE_NUMBER:
+            case MFA_SMS:
+                return configurationService.getTestClientVerifyPhoneNumberOTP();
+            default:
+                LOG.error(
+                        "Invalid NotificationType: {} configured for TestClient", notificationType);
+                throw new RuntimeException("Invalid NotificationType for use with TestClient");
+        }
     }
 }

@@ -6,20 +6,16 @@ import uk.gov.di.authentication.frontendapi.lambda.NotificationHandler;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.serialization.Json;
-import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.sharedtest.basetest.NotifyIntegrationTest;
 
 import java.security.SecureRandom;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.startsWith;
 import static org.mockito.Mockito.mock;
 import static uk.gov.di.authentication.shared.entity.NotificationType.ACCOUNT_CREATED_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
-import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.sharedtest.matchers.JsonMatcher.hasField;
@@ -99,32 +95,6 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
                 personalisation,
                 hasFieldWithValue(
                         "validation-code", withLength(equalTo(VERIFICATION_CODE_LENGTH))));
-    }
-
-    @Test
-    void shouldCallNotifyWhenValidResetPasswordRequestIsAddedToQueue() throws Json.JsonException {
-        String code = new CodeGeneratorService().twentyByteEncodedRandomCode();
-        String resetPasswordLink = "http://localhost:3000/reset-password?code=" + code;
-
-        handler.handleRequest(
-                createSqsEvent(
-                        new NotifyRequest(
-                                TEST_EMAIL_ADDRESS,
-                                RESET_PASSWORD,
-                                resetPasswordLink,
-                                SupportedLanguage.EN)),
-                mock(Context.class));
-
-        var request = notifyStub.waitForRequest(60);
-
-        assertThat(request, hasFieldWithValue("email_address", equalTo(TEST_EMAIL_ADDRESS)));
-        assertThat(request, hasField("personalisation"));
-
-        var personalisation = request.getAsJsonObject().get("personalisation");
-        assertThat(
-                personalisation,
-                hasFieldWithValue("reset-password-link", startsWith(resetPasswordLink)));
-        assertThat(personalisation, hasFieldWithValue("reset-password-link", containsString(code)));
     }
 
     @Test

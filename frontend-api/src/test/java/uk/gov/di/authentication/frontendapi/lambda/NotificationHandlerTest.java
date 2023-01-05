@@ -33,7 +33,6 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.entity.NotificationType.ACCOUNT_CREATED_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION;
-import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
@@ -108,31 +107,6 @@ public class NotificationHandlerTest {
                         personalisation,
                         PASSWORD_RESET_CONFIRMATION,
                         SupportedLanguage.EN);
-    }
-
-    @Test
-    void shouldSuccessfullyProcessResetPasswordEmailFromSQSQueue()
-            throws Json.JsonException, NotificationClientException {
-        NotifyRequest notifyRequest =
-                new NotifyRequest(
-                        TEST_EMAIL_ADDRESS,
-                        RESET_PASSWORD,
-                        TEST_RESET_PASSWORD_LINK,
-                        SupportedLanguage.EN);
-        String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
-        SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
-        var contactUsLinkUrl =
-                "https://localhost:8080/frontend/contact-us?referer=passwordResetRequestEmail";
-
-        handler.handleRequest(sqsEvent, context);
-
-        Map<String, Object> personalisation = new HashMap<>();
-        personalisation.put("reset-password-link", TEST_RESET_PASSWORD_LINK);
-        personalisation.put("contact-us-link", contactUsLinkUrl);
-
-        verify(notificationService)
-                .sendEmail(
-                        TEST_EMAIL_ADDRESS, personalisation, RESET_PASSWORD, SupportedLanguage.EN);
     }
 
     @Test

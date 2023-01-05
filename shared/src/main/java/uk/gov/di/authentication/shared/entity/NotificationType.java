@@ -14,9 +14,6 @@ public enum NotificationType implements TemplateAware {
             "VERIFY_PHONE_NUMBER_TEMPLATE_ID",
             Map.of(SupportedLanguage.CY, "VERIFY_PHONE_NUMBER_TEMPLATE_ID_CY")),
     MFA_SMS("MFA_SMS_TEMPLATE_ID", Map.of(SupportedLanguage.CY, "MFA_SMS_TEMPLATE_ID_CY")),
-    RESET_PASSWORD(
-            "RESET_PASSWORD_TEMPLATE_ID",
-            Map.of(SupportedLanguage.CY, "RESET_PASSWORD_TEMPLATE_ID_CY")),
     PASSWORD_RESET_CONFIRMATION(
             "PASSWORD_RESET_CONFIRMATION_TEMPLATE_ID",
             Map.of(SupportedLanguage.CY, "PASSWORD_RESET_CONFIRMATION_TEMPLATE_ID_CY")),

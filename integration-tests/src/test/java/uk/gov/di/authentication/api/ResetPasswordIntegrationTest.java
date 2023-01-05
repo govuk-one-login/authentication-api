@@ -28,7 +28,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
     private static final String EMAIL_ADDRESS = "test@test.com";
     private static final String PASSWORD = "Pa55word";
-    private static final String CODE = "0123456789";
+    private static final Subject SUBJECT = new Subject();
 
     @BeforeEach
     public void setUp() {
@@ -37,39 +37,14 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
     }
 
     @Test
-    public void shouldUpdatePasswordAndReturn204ForRequestWithCode() throws Json.JsonException {
-        String subject = "new-subject";
+    public void shouldUpdatePasswordAndReturn204() throws Json.JsonException {
         String sessionId = redis.createSession();
-        userStore.signUp(EMAIL_ADDRESS, "password-1", new Subject(subject));
-        redis.generateAndSavePasswordResetCode(subject, CODE, 900l);
-
-        var response =
-                makeRequest(
-                        Optional.of(new ResetPasswordCompletionRequest(CODE, PASSWORD)),
-                        constructFrontendHeaders(sessionId),
-                        Map.of());
-
-        assertThat(response, hasStatus(204));
-
-        List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
-
-        assertThat(requests, hasSize(1));
-        assertThat(requests.get(0).getDestination(), equalTo(EMAIL_ADDRESS));
-        assertThat(requests.get(0).getNotificationType(), equalTo(PASSWORD_RESET_CONFIRMATION));
-
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(PASSWORD_RESET_SUCCESSFUL));
-    }
-
-    @Test
-    public void shouldUpdatePasswordAndReturn204ForRequestWithNoCode() throws Json.JsonException {
-        String subject = "new-subject";
-        String sessionId = redis.createSession();
-        userStore.signUp(EMAIL_ADDRESS, "password-1", new Subject(subject));
+        userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
 
         var response =
                 makeRequest(
-                        Optional.of(new ResetPasswordCompletionRequest(null, PASSWORD)),
+                        Optional.of(new ResetPasswordCompletionRequest(PASSWORD)),
                         constructFrontendHeaders(sessionId),
                         Map.of());
 
@@ -86,16 +61,15 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
     @Test
     void shouldReturn400ForRequestWithCommonPassword() throws Json.JsonException {
-        String subject = "new-subject";
         String sessionId = redis.createSession();
-        userStore.signUp(EMAIL_ADDRESS, "password-1", new Subject(subject));
+        userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
 
         var response =
                 makeRequest(
                         Optional.of(
                                 new ResetPasswordCompletionRequest(
-                                        null, CommonPasswordsExtension.TEST_COMMON_PASSWORD)),
+                                        CommonPasswordsExtension.TEST_COMMON_PASSWORD)),
                         constructFrontendHeaders(sessionId),
                         Map.of());
 
