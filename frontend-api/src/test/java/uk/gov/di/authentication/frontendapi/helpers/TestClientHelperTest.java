@@ -2,6 +2,7 @@ package uk.gov.di.authentication.frontendapi.helpers;
 
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -10,14 +11,18 @@ import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
+import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.util.Collections;
 import java.util.List;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.everyItem;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 class TestClientHelperTest {
 
@@ -29,6 +34,10 @@ class TestClientHelperTest {
                     "^(.+)@digital.cabinet-office.gov.uk$",
                     "^(.+)@interwebs.org$",
                     "testclient.user2@internet.com");
+
+    @RegisterExtension
+    public final CaptureLoggingExtension logging =
+            new CaptureLoggingExtension(TestClientHelper.class);
 
     @Test
     void shouldReturnTrueIfTestClientWithAllowedEmailAddress() throws ClientNotFoundException {
@@ -97,6 +106,19 @@ class TestClientHelperTest {
             })
     void emailShouldNotMatchRegexAllowlist(String email) {
         assertFalse(TestClientHelper.emailMatchesAllowlist(email, ALLOWLIST));
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "testclient.user1@digital.cabinet-office.gov.uk",
+                "abc@digital.cabinet-office.gov.uk",
+                "abc.def@digital.cabinet-office.gov.uk",
+                "user.one1@interwebs.org",
+            })
+    void emailShouldNotMatchRegexAllowlistWithInvalidRegex(String email) {
+        assertFalse(TestClientHelper.emailMatchesAllowlist(email, List.of("$^", "[", "*")));
+        assertThat(logging.events(), everyItem(withMessageContaining("PatternSyntaxException")));
     }
 
     private UserContext buildUserContext(boolean isTestClient, List<String> allowedEmails) {

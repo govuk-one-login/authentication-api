@@ -8,6 +8,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.List;
 import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 public class TestClientHelper {
     private static final Logger LOG = LogManager.getLogger(TestClientHelper.class);
@@ -43,8 +44,12 @@ public class TestClientHelper {
 
     public static boolean emailMatchesAllowlist(String emailAddress, List<String> regexAllowList) {
         for (String regex : regexAllowList) {
-            if (Pattern.matches(regex, emailAddress)) {
-                return true;
+            try {
+                if (Pattern.matches(regex, emailAddress)) {
+                    return true;
+                }
+            } catch (PatternSyntaxException e) {
+                LOG.warn("PatternSyntaxException for: {}", regex);
             }
         }
         return false;
