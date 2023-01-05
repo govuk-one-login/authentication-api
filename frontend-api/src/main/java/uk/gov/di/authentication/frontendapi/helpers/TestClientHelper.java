@@ -43,7 +43,7 @@ public class TestClientHelper {
 
     public static boolean emailMatchesAllowlist(String emailAddress, List<String> regexAllowList) {
         for (String regex : regexAllowList) {
-            if (Pattern.compile(regex).matcher(emailAddress).find()) {
+            if (Pattern.matches(regex, emailAddress)) {
                 return true;
             }
         }
