@@ -8,7 +8,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.VerifyCodeRequest;
-import uk.gov.di.authentication.frontendapi.helpers.TestClientHelper;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
@@ -37,6 +36,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import static java.util.Map.entry;
+import static uk.gov.di.authentication.frontendapi.helpers.TestClientHelper.isTestClientWithAllowedEmail;
 import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.NONE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
@@ -116,9 +116,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 return generateApiGatewayProxyErrorResponse(400, errorResponse);
             }
 
-            var isTestClient =
-                    TestClientHelper.isTestClientWithAllowedEmail(
-                            userContext, configurationService);
+            var isTestClient = isTestClientWithAllowedEmail(userContext, configurationService);
             var code =
                     isTestClient
                             ? getOtpCodeForTestClient(codeRequest.getNotificationType())
