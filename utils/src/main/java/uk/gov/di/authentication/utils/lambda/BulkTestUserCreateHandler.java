@@ -180,7 +180,7 @@ public class BulkTestUserCreateHandler implements RequestHandler<S3Event, Void> 
         userCredentials.setTestUser(1);
 
         if (isAuthAppSecondAuthFactor) {
-            String authAppSecret = testUser[4];
+            String authAppSecret = testUser[5];
             List<MFAMethod> mfaMethods = new ArrayList<>();
             var authAppMfaMethod =
                     new MFAMethod(
