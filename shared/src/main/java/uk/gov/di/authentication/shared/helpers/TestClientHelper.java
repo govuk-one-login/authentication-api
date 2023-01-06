@@ -43,13 +43,17 @@ public class TestClientHelper {
     }
 
     public static boolean emailMatchesAllowlist(String emailAddress, List<String> regexAllowList) {
-        for (String regex : regexAllowList) {
+        for (String allowedEmailEntry : regexAllowList) {
             try {
-                if (Pattern.matches(regex, emailAddress)) {
+                if (allowedEmailEntry.startsWith("^") && allowedEmailEntry.endsWith("$")) {
+                    if (Pattern.matches(allowedEmailEntry, emailAddress)) {
+                        return true;
+                    }
+                } else if (emailAddress.equals(allowedEmailEntry)) {
                     return true;
                 }
             } catch (PatternSyntaxException e) {
-                LOG.warn("PatternSyntaxException for: {}", regex);
+                LOG.warn("PatternSyntaxException for: {}", allowedEmailEntry);
             }
         }
         return false;

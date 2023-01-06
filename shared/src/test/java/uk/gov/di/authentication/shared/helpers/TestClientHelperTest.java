@@ -30,6 +30,7 @@ class TestClientHelperTest {
     private static final List<String> ALLOWLIST =
             List.of(
                     "testclient.user1@digital.cabinet-office.gov.uk",
+                    "testclient.user1+1@hello.cabinet-office.gov.uk",
                     "^(.+)@digital.cabinet-office.gov.uk$",
                     "^(.+)@interwebs.org$",
                     "testclient.user2@internet.com");
@@ -83,6 +84,7 @@ class TestClientHelperTest {
     @ValueSource(
             strings = {
                 "testclient.user1@digital.cabinet-office.gov.uk",
+                "testclient.user1+1@hello.cabinet-office.gov.uk",
                 "abc@digital.cabinet-office.gov.uk",
                 "abc.def@digital.cabinet-office.gov.uk",
                 "user.one1@interwebs.org",
