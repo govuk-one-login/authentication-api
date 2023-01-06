@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.frontendapi.helpers;
+package uk.gov.di.authentication.shared.helpers;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
