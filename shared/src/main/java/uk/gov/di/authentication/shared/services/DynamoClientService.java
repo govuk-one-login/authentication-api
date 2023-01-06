@@ -16,6 +16,7 @@ import java.util.Optional;
 import java.util.function.Predicate;
 
 import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.createDynamoEnhancedClient;
+import static uk.gov.di.authentication.shared.helpers.TestClientHelper.emailMatchesAllowlist;
 
 public class DynamoClientService implements ClientService {
 
@@ -126,7 +127,7 @@ public class DynamoClientService implements ClientService {
 
         return client.map(ClientRegistry::getTestClientEmailAllowlist)
                 .filter(Predicate.not(List::isEmpty))
-                .map(list -> list.contains(emailAddress))
+                .map(list -> emailMatchesAllowlist(emailAddress, list))
                 .orElse(false);
     }
 
