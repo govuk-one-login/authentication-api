@@ -36,11 +36,18 @@ class DynamoClientServiceTest {
         var client =
                 generateClientRegistry(CLIENT_ID.toString())
                         .withTestClient(true)
-                        .withTestClientEmailAllowlist(List.of("test@test.com"));
+                        .withTestClientEmailAllowlist(
+                                List.of("test@test.com", "^(.+)@digital.cabinet-office.gov.uk$"));
 
         doReturn(Optional.of(client)).when(dynamoClientService).getClient(CLIENT_ID.toString());
 
         assertTrue(dynamoClientService.isTestJourney(CLIENT_ID.toString(), "test@test.com"));
+        assertTrue(
+                dynamoClientService.isTestJourney(
+                        CLIENT_ID.toString(), "a.user1@digital.cabinet-office.gov.uk"));
+        assertFalse(
+                dynamoClientService.isTestJourney(
+                        CLIENT_ID.toString(), "a.user1@digital1.cabinet-office.gov.uk"));
     }
 
     @Test

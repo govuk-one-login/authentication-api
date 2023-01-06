@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
@@ -115,7 +116,10 @@ class VerifyCodeHandlerTest {
                     .withTestClient(true)
                     .withClientID(TEST_CLIENT_ID)
                     .withTestClientEmailAllowlist(
-                            List.of("testclient.user1@digital.cabinet-office.gov.uk"));
+                            List.of(
+                                    "testclient.user1@digital.cabinet-office.gov.uk",
+                                    "^(.+)@digital.cabinet-office.gov.uk$",
+                                    "testclient.user2@internet.com"));
 
     private VerifyCodeHandler handler;
 
@@ -470,14 +474,21 @@ class VerifyCodeHandlerTest {
         verify(codeStorageService, never()).getOtpCode(session.getEmailAddress(), MFA_SMS);
     }
 
-    @Test
-    void shouldReturn204ForValidVerifyEmailRequestUsingTestClient() {
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "testclient.user1@digital.cabinet-office.gov.uk",
+                "abc@digital.cabinet-office.gov.uk",
+                "abc.def@digital.cabinet-office.gov.uk",
+                "testclient.user2@internet.com",
+            })
+    void shouldReturn204ForValidVerifyEmailRequestUsingTestClient(String email) {
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(configurationService.getTestClientVerifyEmailOTP())
                 .thenReturn(Optional.of(TEST_CLIENT_CODE));
-        when(codeStorageService.getOtpCode(TEST_CLIENT_EMAIL, VERIFY_EMAIL))
-                .thenReturn(Optional.of(CODE));
+        when(codeStorageService.getOtpCode(email, VERIFY_EMAIL)).thenReturn(Optional.of(CODE));
+        testClientSession.setEmailAddress(email);
         APIGatewayProxyResponseEvent result =
                 makeCallWithCode(
                         TEST_CLIENT_CODE,
@@ -485,7 +496,35 @@ class VerifyCodeHandlerTest {
                         Optional.of(testClientSession),
                         TEST_CLIENT_ID);
 
-        verify(codeStorageService).deleteOtpCode(TEST_CLIENT_EMAIL, VERIFY_EMAIL);
+        verify(codeStorageService).deleteOtpCode(email, VERIFY_EMAIL);
+        assertThat(result, hasStatus(204));
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "testclient.user1@digital1.cabinet-office.gov.uk",
+                "abc@digital1.cabinet-office.gov.uk",
+                "abc.def@digital1.cabinet-office.gov.uk",
+                "testclient.user3@internet.com",
+            })
+    void
+            shouldReturn200AndUseDefaultCodeForVerifyEmailRequestUsingTestClientWhenEmailDoesNotMatchAllowlist(
+                    String email) {
+        when(configurationService.isTestClientsEnabled()).thenReturn(true);
+        when(configurationService.getCodeMaxRetries()).thenReturn(5);
+        when(configurationService.getTestClientVerifyEmailOTP())
+                .thenReturn(Optional.of(TEST_CLIENT_CODE));
+        when(codeStorageService.getOtpCode(email, VERIFY_EMAIL)).thenReturn(Optional.of(CODE));
+        testClientSession.setEmailAddress(email);
+        APIGatewayProxyResponseEvent result =
+                makeCallWithCode(
+                        CODE,
+                        VERIFY_EMAIL.toString(),
+                        Optional.of(testClientSession),
+                        TEST_CLIENT_ID);
+
+        verify(codeStorageService).deleteOtpCode(email, VERIFY_EMAIL);
         assertThat(result, hasStatus(204));
     }
 
