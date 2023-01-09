@@ -28,7 +28,7 @@ public class BulkTestUserDeleteHandler implements RequestHandler<String, Void> {
         LOG.info("Commencing deletion of all test users");
 
         long startTime = System.nanoTime();
-        List<UserProfile> allTestUsers = dynamoService.getAllTestUsers();
+        List<UserProfile> allTestUsers = dynamoService.getAllBulkTestUsers();
         long endTime = System.nanoTime();
         long durationInMilliseconds = (endTime - startTime) / 1000000;
         LOG.info("{} records found in {} ms", allTestUsers.size(), durationInMilliseconds);
