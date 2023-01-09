@@ -7,11 +7,14 @@ import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbIndex;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.enhanced.dynamodb.Expression;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryEnhancedRequest;
+import software.amazon.awssdk.enhanced.dynamodb.model.ScanEnhancedRequest;
 import software.amazon.awssdk.enhanced.dynamodb.model.TransactWriteItemsEnhancedRequest;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
@@ -446,10 +449,22 @@ public class DynamoService implements AuthenticationService {
                         .withAccountVerified(1));
     }
 
-    public List<UserProfile> getAllTestUsers() {
+    public List<UserProfile> getAllBulkTestUsers() {
+        Expression filterExpression =
+                Expression.builder()
+                        .expression("#testUser = :isTestUser")
+                        .putExpressionName("#testUser", "testUser")
+                        .putExpressionValue(":isTestUser", AttributeValue.fromN("1"))
+                        .build();
+
+        ScanEnhancedRequest scanRequest =
+                ScanEnhancedRequest.builder().filterExpression(filterExpression).build();
+
         DynamoDbIndex<UserProfile> testUserIndex =
                 dynamoUserProfileTable.index(TEST_USER_INDEX_NAME);
-        var results = testUserIndex.scan();
+
+        var results = testUserIndex.scan(scanRequest);
+
         return results.stream()
                 .flatMap(userProfilePage -> userProfilePage.items().stream())
                 .collect(Collectors.toList());

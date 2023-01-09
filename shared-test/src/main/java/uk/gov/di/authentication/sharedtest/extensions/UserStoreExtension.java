@@ -89,7 +89,7 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
     }
 
     public List<UserProfile> getAllTestUsers() {
-        return dynamoService.getAllTestUsers();
+        return dynamoService.getAllBulkTestUsers();
     }
 
     public void updateConsent(String email, ClientConsent clientConsent) {
