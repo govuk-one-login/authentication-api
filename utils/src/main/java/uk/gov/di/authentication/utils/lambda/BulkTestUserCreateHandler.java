@@ -104,7 +104,6 @@ public class BulkTestUserCreateHandler implements RequestHandler<S3Event, Void> 
 
     private void addTestUsersBatch(List<String> batchOfIndividualUsersAsRawCsv) {
         String dateTime = LocalDateTime.now().toString();
-        String subjectId = new Subject().getValue();
         Map<UserProfile, UserCredentials> testUsers = new HashMap<>();
 
         segmentedFunctionCall(
@@ -113,6 +112,7 @@ public class BulkTestUserCreateHandler implements RequestHandler<S3Event, Void> 
                         batchOfIndividualUsersAsRawCsv.forEach(
                                 rawCsvUserString -> {
                                     String[] testUserCsvAsArray = rawCsvUserString.split(",", -1);
+                                    String subjectId = new Subject().getValue();
 
                                     var userProfile =
                                             getUserProfileFromTestUserArrayList(
