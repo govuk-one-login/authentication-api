@@ -12,6 +12,7 @@ import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 
+import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -30,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -38,7 +40,7 @@ class ClientSubjectHelperTest {
     private static final String TEST_EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String PHONE_NUMBER = "01234567890";
     private static final String REDIRECT_URI = "http://localhost/redirect";
-    private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
+    private static final String INTERNAL_SECTOR_URI = "https://identity.integration.account.gov.uk";
     private static final Subject INTERNAL_SUBJECT = new Subject();
     private static final Subject PUBLIC_SUBJECT = new Subject();
     private static final String CLIENT_ID = "test-id";
@@ -159,9 +161,22 @@ class ClientSubjectHelperTest {
                         "https://test.com",
                         false);
 
+        UserProfile mockDivya = mock(UserProfile.class);
+
+        when(mockDivya.getSubjectID()).thenReturn("Veaqg9qo-cbQZ8r7kGA2hpUWJC6vNOQDCnK66i5VHp0");
+
+        when(authenticationService.getOrGenerateSalt(any(UserProfile.class)))
+                .thenReturn("Y+tO6y7UcmsSOQZPwvt99cvcPWyRIF88BhL33/i4/xU=".getBytes(StandardCharsets.UTF_8));
+
+        //System.out.println(Arrays.toString("Y+tO6y7UcmsSOQZPwvt99cvcPWyRIF88BhL33/i4/xU=".getBytes(StandardCharsets.UTF_8)));
+
+
         var subject =
                 ClientSubjectHelper.getSubject(
-                        userProfile, clientRegistry1, authenticationService, INTERNAL_SECTOR_URI);
+                        mockDivya, clientRegistry1, authenticationService, INTERNAL_SECTOR_URI);
+
+        System.out.println(subject);
+
         var subject2 =
                 ClientSubjectHelper.getSubject(
                         userProfile, clientRegistry2, authenticationService, INTERNAL_SECTOR_URI);
