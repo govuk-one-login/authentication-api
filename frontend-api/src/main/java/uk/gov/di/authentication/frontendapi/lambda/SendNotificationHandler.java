@@ -44,6 +44,7 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
+import static uk.gov.di.authentication.shared.helpers.TestClientHelper.isTestClientWithAllowedEmail;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 
@@ -114,7 +115,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                                 request.getEmail(),
                                 ACCOUNT_CREATED_CONFIRMATION,
                                 userContext.getUserLanguage());
-                if (notTestClientWithValidTestEmail(userContext, ACCOUNT_CREATED_CONFIRMATION)) {
+                if (!isTestClientWithAllowedEmail(userContext, configurationService)) {
                     sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
                     LOG.info("AccountCreatedConfirmation email placed on queue");
                 }
@@ -183,7 +184,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                         destination, notificationType, code, userContext.getUserLanguage());
 
         sessionService.save(session.incrementCodeRequestCount());
-        if (notTestClientWithValidTestEmail(userContext, notificationType)) {
+        if (!isTestClientWithAllowedEmail(userContext, configurationService)) {
 
             if (notificationType == VERIFY_PHONE_NUMBER) {
                 METRICS.putEmbeddedValue(
@@ -271,33 +272,5 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 LOG.error("Invalid NotificationType sent");
                 throw new RuntimeException("Invalid NotificationType sent");
         }
-    }
-
-    private boolean notTestClientWithValidTestEmail(
-            UserContext userContext, NotificationType notificationType)
-            throws ClientNotFoundException {
-        if (configurationService.isTestClientsEnabled()) {
-            LOG.warn("TestClients are ENABLED");
-        } else {
-            return true;
-        }
-        String emailAddress = userContext.getSession().getEmailAddress();
-        return userContext
-                .getClient()
-                .map(
-                        clientRegistry -> {
-                            if (clientRegistry.isTestClient()
-                                    && clientRegistry
-                                            .getTestClientEmailAllowlist()
-                                            .contains(emailAddress)) {
-                                LOG.info(
-                                        "SendNotificationHandler not sending message on TestClientEmailAllowlist with NotificationType {}",
-                                        notificationType);
-                                return false;
-                            } else {
-                                return true;
-                            }
-                        })
-                .orElseThrow(() -> new ClientNotFoundException(userContext.getSession()));
     }
 }
