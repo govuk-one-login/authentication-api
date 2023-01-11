@@ -427,7 +427,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public boolean isRsaSigningAvailable() {
-        return List.of("build", "staging").contains(getEnvironment());
+        return List.of("build", "staging", "integration", "production").contains(getEnvironment());
     }
 
     public String getAuditStorageS3Bucket() {
