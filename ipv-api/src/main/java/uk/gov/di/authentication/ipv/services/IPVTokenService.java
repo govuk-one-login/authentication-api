@@ -77,7 +77,16 @@ public class IPVTokenService {
 
     public TokenResponse sendTokenRequest(TokenRequest tokenRequest) {
         try {
-            return TokenResponse.parse(tokenRequest.toHTTPRequest().send());
+            int count = 0;
+            int maxTries = 2;
+            TokenResponse tokenResponse;
+            do {
+                if (count > 0) LOG.warn("Retrying IPV access token request");
+                count++;
+                tokenResponse = TokenResponse.parse(tokenRequest.toHTTPRequest().send());
+            } while (!tokenResponse.indicatesSuccess() && count < maxTries);
+
+            return tokenResponse;
         } catch (IOException e) {
             LOG.error("Error whilst sending TokenRequest", e);
             throw new RuntimeException(e);
@@ -89,8 +98,16 @@ public class IPVTokenService {
 
     public UserInfo sendIpvUserIdentityRequest(UserInfoRequest userInfoRequest) {
         try {
-            var userIdentityResponse =
-                    UserInfoResponse.parse(userInfoRequest.toHTTPRequest().send());
+            int count = 0;
+            int maxTries = 2;
+            UserInfoResponse userIdentityResponse;
+            do {
+                if (count > 0) LOG.warn("Retrying IPV user identity request");
+                count++;
+                userIdentityResponse =
+                        UserInfoResponse.parse(userInfoRequest.toHTTPRequest().send());
+            } while (!userIdentityResponse.indicatesSuccess() && count < maxTries);
+
             if (!userIdentityResponse.indicatesSuccess()) {
                 LOG.error("Response from user-identity does not indicate success");
                 throw new RuntimeException(userIdentityResponse.toErrorResponse().toString());

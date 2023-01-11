@@ -39,9 +39,12 @@ import static com.nimbusds.common.contenttype.ContentType.APPLICATION_JSON;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.entity.IdentityClaims.VOT;
 import static uk.gov.di.authentication.shared.entity.IdentityClaims.VTM;
@@ -53,13 +56,32 @@ class IPVTokenServiceTest {
     private final ConfigurationService configService = mock(ConfigurationService.class);
     private final KmsConnectionService kmsService = mock(KmsConnectionService.class);
     private final UserInfoRequest userInfoRequest = mock(UserInfoRequest.class);
-    private final HTTPRequest userInfoHTTPRequest = mock(HTTPRequest.class);
+    private final HTTPRequest httpRequest = mock(HTTPRequest.class);
+    private final TokenRequest tokenRequest = mock(TokenRequest.class);
 
     private static final URI IPV_URI = URI.create("http://ipv/");
     private static final URI REDIRECT_URI = URI.create("http://redirect");
     private static final ClientID CLIENT_ID = new ClientID("some-client-id");
     private static final String KEY_ID = "14342354354353";
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
+    private static final String SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT =
+            "{"
+                    + " \"sub\": \"urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6\","
+                    + " \"vot\": \"P2\","
+                    + " \"vtm\": \"<trust mark>\","
+                    + " \"https://vocab.account.gov.uk/v1/credentialJWT\": ["
+                    + "     \"<JWT-encoded VC 1>\","
+                    + "     \"<JWT-encoded VC 2>\""
+                    + "],"
+                    + " \"https://vocab.account.gov.uk/v1/coreIdentity\": {"
+                    + "     \"name\": ["
+                    + "         { } "
+                    + "     ],"
+                    + "     \"birthDate\": [ "
+                    + "         { } "
+                    + "     ]"
+                    + " }"
+                    + "}";
     private IPVTokenService ipvTokenService;
 
     @BeforeEach
@@ -92,31 +114,45 @@ class IPVTokenServiceTest {
     }
 
     @Test
-    void shouldCallIPVUserIdentityRequestAndParseCorrectly() throws IOException {
-        var userInfoHTTPResponseContent =
-                "{"
-                        + " \"sub\": \"urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6\","
-                        + " \"vot\": \"P2\","
-                        + " \"vtm\": \"<trust mark>\","
-                        + " \"https://vocab.account.gov.uk/v1/credentialJWT\": ["
-                        + "     \"<JWT-encoded VC 1>\","
-                        + "     \"<JWT-encoded VC 2>\""
-                        + "],"
-                        + " \"https://vocab.account.gov.uk/v1/coreIdentity\": {"
-                        + "     \"name\": ["
-                        + "         { } "
-                        + "     ],"
-                        + "     \"birthDate\": [ "
-                        + "         { } "
-                        + "     ]"
-                        + " }"
-                        + "}";
+    void shouldCallTokenEndpointAndReturn200() throws IOException {
+        when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
+        when(tokenRequest.toHTTPRequest().send()).thenReturn(getSuccessfulTokenHttpResponse());
 
+        var tokenResponse = ipvTokenService.sendTokenRequest(tokenRequest);
+
+        assertThat(tokenResponse.indicatesSuccess(), equalTo(true));
+    }
+
+    @Test
+    void shouldRetryTokenEndpointOnceAndParseSuccessFulSecondResponse() throws IOException {
+        when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
+        when(tokenRequest.toHTTPRequest().send())
+                .thenReturn(new HTTPResponse(500))
+                .thenReturn(getSuccessfulTokenHttpResponse());
+
+        var tokenResponse = ipvTokenService.sendTokenRequest(tokenRequest);
+
+        assertThat(tokenResponse.indicatesSuccess(), equalTo(true));
+    }
+
+    @Test
+    void shouldReturnUnsuccessfulResponseIfTwoCallsToIPVTokenEndpointFail() throws IOException {
+        when(tokenRequest.toHTTPRequest()).thenReturn(httpRequest);
+        when(tokenRequest.toHTTPRequest().send()).thenReturn(new HTTPResponse(500));
+
+        var tokenResponse = ipvTokenService.sendTokenRequest(tokenRequest);
+
+        assertThat(tokenResponse.indicatesSuccess(), equalTo(false));
+        verify(tokenRequest.toHTTPRequest(), times(2)).send();
+    }
+
+    @Test
+    void shouldCallIPVUserIdentityRequestAndParseCorrectly() throws IOException {
         var userInfoHTTPResponse = new HTTPResponse(200);
         userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
-        userInfoHTTPResponse.setContent(userInfoHTTPResponseContent);
-        when(userInfoHTTPRequest.send()).thenReturn(userInfoHTTPResponse);
-        when(userInfoRequest.toHTTPRequest()).thenReturn(userInfoHTTPRequest);
+        userInfoHTTPResponse.setContent(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT);
+        when(httpRequest.send()).thenReturn(userInfoHTTPResponse);
+        when(userInfoRequest.toHTTPRequest()).thenReturn(httpRequest);
 
         var userIdentityUserInfo = ipvTokenService.sendIpvUserIdentityRequest(userInfoRequest);
         assertThat(
@@ -140,6 +176,39 @@ class IPVTokenServiceTest {
         assertTrue(
                 ((HashMap) userIdentityUserInfo.getClaim(IdentityClaims.CORE_IDENTITY.getValue()))
                         .containsKey("birthDate"));
+    }
+
+    @Test
+    void shouldRetryCallToIPVUserIdentityOnceAndParseSuccessFulSecondResponse() throws IOException {
+        var userInfoHTTPResponse = new HTTPResponse(200);
+        userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
+        userInfoHTTPResponse.setContent(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT);
+        when(userInfoRequest.toHTTPRequest()).thenReturn(httpRequest);
+
+        when(httpRequest.send()).thenReturn(new HTTPResponse(500)).thenReturn(userInfoHTTPResponse);
+
+        var userIdentityUserInfo = ipvTokenService.sendIpvUserIdentityRequest(userInfoRequest);
+        assertThat(
+                userIdentityUserInfo.getSubject().getValue(),
+                equalTo("urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6"));
+    }
+
+    @Test
+    void shouldReturnUnsuccessfulResponseIfTwoCallsToIPVUserIdentityFail() throws IOException {
+        var userInfoHTTPResponse = new HTTPResponse(200);
+        userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
+        userInfoHTTPResponse.setContent(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT);
+        when(userInfoRequest.toHTTPRequest()).thenReturn(httpRequest);
+
+        when(httpRequest.send()).thenReturn(new HTTPResponse(500));
+
+        assertThrows(
+                RuntimeException.class,
+                () -> {
+                    ipvTokenService.sendIpvUserIdentityRequest(userInfoRequest);
+                });
+
+        verify(userInfoRequest.toHTTPRequest(), times(2)).send();
     }
 
     private void signJWTWithKMS() throws JOSEException {
@@ -171,5 +240,20 @@ class IPVTokenServiceTest {
                         .build();
 
         when(kmsService.sign(any(SignRequest.class))).thenReturn(signResult);
+    }
+
+    public HTTPResponse getSuccessfulTokenHttpResponse() {
+        var tokenResponseContent =
+                "{"
+                        + "  \"access_token\": \"740e5834-3a29-46b4-9a6f-16142fde533a\","
+                        + "  \"token_type\": \"bearer\","
+                        + "  \"expires_in\": \"3600\","
+                        + "  \"uri\": \"https://localhost\""
+                        + "}";
+        var tokenHTTPResponse = new HTTPResponse(200);
+        tokenHTTPResponse.setEntityContentType(APPLICATION_JSON);
+        tokenHTTPResponse.setContent(tokenResponseContent);
+
+        return tokenHTTPResponse;
     }
 }
