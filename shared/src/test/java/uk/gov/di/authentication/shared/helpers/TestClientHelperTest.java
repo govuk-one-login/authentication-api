@@ -122,6 +122,12 @@ class TestClientHelperTest {
         assertThat(logging.events(), everyItem(withMessageContaining("PatternSyntaxException")));
     }
 
+    @Test
+    void emailShouldNotMatchRegexAllowlistWhenEmailIsNull() {
+        assertFalse(TestClientHelper.emailMatchesAllowlist(null, List.of("$^", "[", "*")));
+        assertThat(logging.events(), everyItem(withMessageContaining("PatternSyntaxException")));
+    }
+
     private UserContext buildUserContext(boolean isTestClient, List<String> allowedEmails) {
         var clientRegistry =
                 new ClientRegistry()

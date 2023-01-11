@@ -7,6 +7,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -49,7 +50,7 @@ public class TestClientHelper {
                     if (Pattern.matches(allowedEmailEntry, emailAddress)) {
                         return true;
                     }
-                } else if (emailAddress.equals(allowedEmailEntry)) {
+                } else if (Objects.equals(emailAddress, allowedEmailEntry)) {
                     return true;
                 }
             } catch (PatternSyntaxException e) {
