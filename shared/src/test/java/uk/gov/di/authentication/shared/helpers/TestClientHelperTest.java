@@ -124,7 +124,7 @@ class TestClientHelperTest {
 
     @Test
     void emailShouldNotMatchRegexAllowlistWhenEmailIsNull() {
-        assertFalse(TestClientHelper.emailMatchesAllowlist(null, List.of("$^", "[", "*")));
+        assertFalse(TestClientHelper.emailMatchesAllowlist(null, List.of("^$", "[", "*")));
         assertThat(logging.events(), everyItem(withMessageContaining("PatternSyntaxException")));
     }
 
