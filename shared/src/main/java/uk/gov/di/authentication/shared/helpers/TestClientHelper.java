@@ -44,6 +44,9 @@ public class TestClientHelper {
     }
 
     public static boolean emailMatchesAllowlist(String emailAddress, List<String> regexAllowList) {
+        if (Objects.isNull(emailAddress)) {
+            return false;
+        }
         for (String allowedEmailEntry : regexAllowList) {
             try {
                 if (allowedEmailEntry.startsWith("^") && allowedEmailEntry.endsWith("$")) {
