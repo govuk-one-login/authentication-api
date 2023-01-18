@@ -1,2 +1,2 @@
-redis_node_size  = "cache.t2.small"
+redis_node_size  = "cache.m4.xlarge"
 provision_dynamo = false
