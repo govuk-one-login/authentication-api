@@ -34,4 +34,22 @@ stub_rp_clients = [
       "doc-checking-app",
     ]
   },
+  {
+    client_name = "di-auth-stub-relying-party-staging-t1"
+    callback_urls = [
+      "https://di-auth-stub-relying-party-staging-t1.london.cloudapps.digital/oidc/authorization-code/callback",
+    ]
+    logout_urls = [
+      "https://di-auth-stub-relying-party-staging-t1.london.cloudapps.digital/signed-out",
+    ]
+    test_client                     = "1"
+    consent_required                = "0"
+    identity_verification_supported = "1"
+    client_type                     = "web"
+    scopes = [
+      "openid",
+      "email",
+      "phone",
+    ]
+  },
 ]
