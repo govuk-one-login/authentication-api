@@ -28,6 +28,7 @@ module "ipv-callback" {
   environment     = var.environment
 
   handler_environment_variables = {
+    CUSTOM_DOC_APP_CLAIM_ENABLED   = var.custom_doc_app_claim_enabled
     DYNAMO_ENDPOINT                = var.use_localstack ? var.lambda_dynamo_endpoint : null
     TXMA_AUDIT_QUEUE_URL           = module.oidc_txma_audit.queue_url
     ENVIRONMENT                    = var.environment

@@ -5,7 +5,6 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.ParseException;
-import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
@@ -14,10 +13,9 @@ import uk.gov.di.authentication.frontendapi.entity.StartResponse;
 import uk.gov.di.authentication.frontendapi.services.StartService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.authentication.shared.helpers.DocAppSubjectIdHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
-import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -130,13 +128,12 @@ public class StartHandler
                             configurationService.getHeadersCaseInsensitive());
             if (userStartInfo.isDocCheckingAppUser()) {
                 var docAppSubjectId =
-                        ClientSubjectHelper.calculatePairwiseIdentifier(
-                                new Subject().getValue(),
-                                configurationService.getDocAppDomain(),
-                                SaltHelper.generateNewSalt());
+                        DocAppSubjectIdHelper.calculateDocAppSubjectId(
+                                userContext.getClientSession(),
+                                configurationService.isCustomDocAppClaimEnabled(),
+                                configurationService.getDocAppDomain());
                 clientSessionService.saveClientSession(
-                        clientSessionId,
-                        clientSession.get().setDocAppSubjectId(new Subject(docAppSubjectId)));
+                        clientSessionId, clientSession.get().setDocAppSubjectId(docAppSubjectId));
                 LOG.info("Subject saved to ClientSession for DocCheckingAppUser");
             }
 

@@ -114,6 +114,10 @@ variable "aws_dynamodb_endpoint" {
   default = null
 }
 
+variable "custom_doc_app_claim_enabled" {
+  default = false
+}
+
 variable "lambda_dynamo_endpoint" {
   type        = string
   default     = "http://dynamodb:8000"
