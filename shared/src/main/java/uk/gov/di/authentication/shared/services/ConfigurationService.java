@@ -104,6 +104,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Integer.parseInt(System.getenv().getOrDefault("PASSWORD_MAX_RETRIES", "5"));
     }
 
+    public boolean isCustomDocAppClaimEnabled() {
+        return System.getenv().getOrDefault("CUSTOM_DOC_APP_CLAIM_ENABLED", "false").equals("true");
+    }
+
     public URI getDefaultLogoutURI() {
         return URI.create(System.getenv("DEFAULT_LOGOUT_URI"));
     }
