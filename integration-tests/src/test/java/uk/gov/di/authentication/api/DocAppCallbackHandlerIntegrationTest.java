@@ -5,6 +5,7 @@ import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
+import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -44,6 +45,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import static java.util.Collections.emptyList;
+import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.endsWith;
@@ -55,6 +58,7 @@ import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.DOC_APP_S
 import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.DOC_APP_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED;
 import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.helper.QueryParamHelper.splitQuery;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -150,6 +154,41 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
         var docAppCredential = documentAppCredentialStore.getCredential(docAppSubjectId.getValue());
         assertTrue(docAppCredential.isPresent());
         assertThat(docAppCredential.get().getCredential().size(), equalTo(1));
+    }
+
+    @Test
+    void shouldRedirectToRPWhenCustomClaimIsEnabledAndCustomErrorIsPresent() {
+        clientStore.registerClient(
+                CLIENT_ID,
+                "test-client",
+                singletonList(REDIRECT_URI),
+                emptyList(),
+                singletonList("openid"),
+                null,
+                emptyList(),
+                null,
+                String.valueOf(ServiceType.MANDATORY),
+                "https://test.com",
+                "pairwise",
+                true,
+                ClientType.APP);
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        emptyMap(),
+                        Map.of(
+                                "error",
+                                OAuth2Error.ACCESS_DENIED_CODE,
+                                "error_description",
+                                "Missing Context"));
+
+        assertThat(response, hasStatus(302));
+        assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), startsWith(REDIRECT_URI));
+        var queryParameters = splitQuery(response.getHeaders().get(ResponseHeaders.LOCATION));
+        assertTrue(queryParameters.containsKey("error"));
+        assertTrue(queryParameters.containsKey("error_description"));
+        assertThat(queryParameters.get("error"), equalTo(OAuth2Error.ACCESS_DENIED_CODE));
+        assertThat(queryParameters.get("error_description"), equalTo("Missing Context"));
     }
 
     @Test
@@ -322,6 +361,16 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
         @Override
         public String getTxmaAuditQueueUrl() {
             return txmaAuditQueue.getQueueUrl();
+        }
+
+        @Override
+        public boolean isCustomDocAppClaimEnabled() {
+            return true;
+        }
+
+        @Override
+        public String getDocAppRPClientId() {
+            return CLIENT_ID;
         }
     }
 }

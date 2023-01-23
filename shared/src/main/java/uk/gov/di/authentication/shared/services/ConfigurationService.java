@@ -152,6 +152,17 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return URI.create(System.getenv("DOC_APP_DOMAIN"));
     }
 
+    public String getDocAppRPClientId() {
+        var paramName = format("{0}-doc-app-rp-client-id", getEnvironment());
+        try {
+            var request = GetParameterRequest.builder().name(paramName).build();
+            return getSsmClient().getParameter(request).parameter().value();
+        } catch (ParameterNotFoundException e) {
+            LOG.error("No parameter exists with name: {}", paramName);
+            throw new RuntimeException(e);
+        }
+    }
+
     public String getDomainName() {
         return System.getenv("DOMAIN_NAME");
     }

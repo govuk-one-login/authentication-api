@@ -30,6 +30,7 @@ import uk.gov.di.authentication.app.exception.UnsuccesfulCredentialResponseExcep
 import uk.gov.di.authentication.app.services.DocAppAuthorisationService;
 import uk.gov.di.authentication.app.services.DocAppCriService;
 import uk.gov.di.authentication.app.services.DynamoDocAppService;
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -37,6 +38,7 @@ import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
@@ -75,6 +77,7 @@ class DocAppCallbackHandlerTest {
     private final AuditService auditService = mock(AuditService.class);
     private final DynamoDocAppService dynamoDocAppService = mock(DynamoDocAppService.class);
     private final CookieHelper cookieHelper = mock(CookieHelper.class);
+    private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
 
     private static final URI LOGIN_URL = URI.create("https://example.com");
     private static final String OIDC_BASE_URL = "https://base-url.com";
@@ -112,7 +115,8 @@ class DocAppCallbackHandlerTest {
                         clientSessionService,
                         auditService,
                         dynamoDocAppService,
-                        cookieHelper);
+                        cookieHelper,
+                        dynamoClientService);
         when(configService.getLoginURI()).thenReturn(LOGIN_URL);
         when(configService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_BASE_URL));
         when(configService.isSpotEnabled()).thenReturn(true);
@@ -298,6 +302,48 @@ class DocAppCallbackHandlerTest {
                 DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED);
 
         verifyNoMoreInteractions(auditService);
+        verifyNoInteractions(dynamoDocAppService);
+    }
+
+    @Test
+    void shouldRedirectToRPWhenCustomClaimIsEnabledAndCustomErrorIsPresent() {
+        when(configService.isCustomDocAppClaimEnabled()).thenReturn(true);
+        when(configService.getDocAppRPClientId()).thenReturn(CLIENT_ID.getValue());
+        when(dynamoClientService.getClient(CLIENT_ID.getValue()))
+                .thenReturn(
+                        Optional.of(
+                                new ClientRegistry()
+                                        .withClientID(CLIENT_ID.getValue())
+                                        .withRedirectUrls(
+                                                Collections.singletonList(
+                                                        REDIRECT_URI.toString()))));
+
+        Map<String, String> responseHeaders = new HashMap<>();
+        responseHeaders.put("error", OAuth2Error.ACCESS_DENIED_CODE);
+        responseHeaders.put("error_description", "Missing Context");
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setQueryStringParameters(responseHeaders);
+
+        var expectedErrorObject =
+                new ErrorObject(OAuth2Error.ACCESS_DENIED_CODE, "Missing Context");
+
+        var expectedURI =
+                new AuthenticationErrorResponse(
+                                URI.create(REDIRECT_URI.toString()),
+                                expectedErrorObject,
+                                null,
+                                null)
+                        .toURI()
+                        .toString();
+
+        var response = handler.handleRequest(event, context);
+
+        assertThat(response, hasStatus(302));
+        assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), equalTo(expectedURI));
+
+        verifyNoInteractions(tokenService);
+        verifyNoInteractions(auditService);
         verifyNoInteractions(dynamoDocAppService);
     }
 

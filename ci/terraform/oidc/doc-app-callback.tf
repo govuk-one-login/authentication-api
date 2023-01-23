@@ -11,6 +11,7 @@ module "doc_app_callback_role" {
     aws_iam_policy.doc_app_auth_kms_policy.arn,
     aws_iam_policy.dynamo_doc_app_write_access_policy.arn,
     aws_iam_policy.dynamo_doc_app_read_access_policy.arn,
+    aws_iam_policy.dynamo_client_registry_read_access_policy.arn,
     aws_iam_policy.doc_app_rp_client_id_parameter_policy.arn,
     module.oidc_txma_audit.access_policy_arn
   ]
@@ -31,6 +32,7 @@ module "doc-app-callback" {
     LOGIN_URI                          = module.dns.frontend_url
     REDIS_KEY                          = local.redis_key
     DYNAMO_ENDPOINT                    = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    CUSTOM_DOC_APP_CLAIM_ENABLED       = var.custom_doc_app_claim_enabled
     DOC_APP_AUTHORISATION_CALLBACK_URI = var.doc_app_authorisation_callback_uri
     DOC_APP_AUTHORISATION_CLIENT_ID    = var.doc_app_authorisation_client_id
     DOC_APP_TOKEN_SIGNING_KEY_ALIAS    = local.doc_app_auth_key_alias_name

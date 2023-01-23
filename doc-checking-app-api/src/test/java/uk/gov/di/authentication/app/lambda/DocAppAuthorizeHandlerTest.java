@@ -46,11 +46,8 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.net.URI;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -65,6 +62,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.sharedtest.helper.QueryParamHelper.splitQuery;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -226,20 +224,6 @@ class DocAppAuthorizeHandlerTest {
                         new Payload(signedJWT));
         jweObject.encrypt(new RSAEncrypter(rsaEncryptionKey));
         return EncryptedJWT.parse(jweObject.serialize());
-    }
-
-    public static Map<String, String> splitQuery(String stringUrl) {
-        var uri = URI.create(stringUrl);
-        Map<String, String> query_pairs = new LinkedHashMap<>();
-        var query = uri.getQuery();
-        var pairs = query.split("&");
-        for (String pair : pairs) {
-            int idx = pair.indexOf("=");
-            query_pairs.put(
-                    URLDecoder.decode(pair.substring(0, idx), StandardCharsets.UTF_8),
-                    URLDecoder.decode(pair.substring(idx + 1), StandardCharsets.UTF_8));
-        }
-        return query_pairs;
     }
 
     private AuthenticationRequest generateAuthRequest() {
