@@ -14,6 +14,7 @@ params:
   DNS_DEPLOYER_ROLE_ARN: ((deployer-role-arn-production))
   DNS_STATE_BUCKET: ((dns-state-bucket))
   DNS_STATE_KEY: ((dns-state-key))
+  DOC_APP_RP_CLIENT_ID: ((build-doc-app-rp-client-id))
   STATE_BUCKET: digital-identity-dev-tfstate
   TEST_CLIENT_VERIFY_EMAIL_OTP: ((test-client-verify-email-otp))
   TEST_CLIENT_VERIFY_PHONE_NUMBER_OTP: ((test-client-verify-phone-number-otp))
@@ -52,6 +53,7 @@ run:
         -var "client_registry_api_lambda_zip_file=$(ls -1 ../../../../client-registry-api-release/*.zip)" \
         -var "ipv_api_lambda_zip_file=$(ls -1 ../../../../ipv-api-release/*.zip)" \
         -var "doc_checking_app_api_lambda_zip_file=$(ls -1 ../../../../doc-checking-app-api-release/*.zip)" \
+        -var "doc_app_rp_client_id=${DOC_APP_RP_CLIENT_ID}" \
         -var "lambda_warmer_zip_file=$(ls -1 ../../../../lambda-warmer-release/*.zip)" \
         -var "deployer_role_arn=${DEPLOYER_ROLE_ARN}" \
         -var "notify_api_key=${NOTIFY_API_KEY}" \

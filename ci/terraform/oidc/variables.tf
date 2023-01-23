@@ -385,6 +385,11 @@ variable "doc_app_jwks_endpoint" {
   default = "undefined"
 }
 
+variable "doc_app_rp_client_id" {
+  type    = string
+  default = "undefined"
+}
+
 variable "spot_account_number" {
   type        = string
   default     = "undefined"

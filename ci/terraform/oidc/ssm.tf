@@ -105,3 +105,33 @@ resource "aws_ssm_parameter" "spot_response_queue_kms_arn" {
   type  = "String"
   value = var.spot_response_queue_kms_arn
 }
+
+## DCMAW
+
+resource "aws_ssm_parameter" "doc_app_rp_client_id" {
+  name  = "${var.environment}-doc-app-rp-client-id"
+  type  = "String"
+  value = var.doc_app_rp_client_id
+}
+
+data "aws_iam_policy_document" "doc_app_rp_client_id_parameter_policy_document" {
+  statement {
+    sid    = "AllowGetParameters"
+    effect = "Allow"
+
+    actions = [
+      "ssm:GetParameter",
+      "ssm:GetParameters",
+    ]
+
+    resources = [
+      aws_ssm_parameter.doc_app_rp_client_id.arn
+    ]
+  }
+}
+
+resource "aws_iam_policy" "doc_app_rp_client_id_parameter_policy" {
+  policy      = data.aws_iam_policy_document.doc_app_rp_client_id_parameter_policy_document.json
+  path        = "/${var.environment}/lambda-parameters/"
+  name_prefix = "doc-app-rp-client-id-parameter-store-policy"
+}
