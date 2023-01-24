@@ -34,7 +34,6 @@ import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.authentication.shared.entity.AccessTokenStore;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
-import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
@@ -115,8 +114,6 @@ public class TokenService {
                         "AccessTokenHash.compute",
                         () -> AccessTokenHash.compute(accessToken, TOKEN_ALGORITHM, null));
 
-        var requiresResourceId = scopesForToken.contains(CustomScopeValue.RESOURCE_ID.getValue());
-
         SignedJWT idToken =
                 segmentedFunctionCall(
                         "generateIDToken",
@@ -128,7 +125,6 @@ public class TokenService {
                                         accessTokenHash,
                                         vot,
                                         isDocAppJourney,
-                                        requiresResourceId,
                                         signingAlgorithm));
         if (scopesForToken.contains(OIDCScopeValue.OFFLINE_ACCESS.getValue())) {
             RefreshToken refreshToken =
@@ -239,7 +235,6 @@ public class TokenService {
             AccessTokenHash accessTokenHash,
             String vot,
             boolean isDocAppJourney,
-            boolean requiresResourceId,
             JWSAlgorithm signingAlgorithm) {
 
         LOG.info("Generating IdToken");
@@ -258,10 +253,6 @@ public class TokenService {
             idTokenClaims.setClaim("vot", vot);
         }
         idTokenClaims.setClaim("vtm", trustMarkUri.toString());
-        if (requiresResourceId && configService.isResourceIdScopeEnabled()) {
-            idTokenClaims.setClaim(
-                    CustomScopeValue.RESOURCE_ID.getValue(), subject.getValue().split(":")[4]);
-        }
 
         try {
             return generateSignedJWT(
