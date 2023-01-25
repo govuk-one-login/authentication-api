@@ -58,7 +58,6 @@ module "token" {
     TOKEN_SIGNING_KEY_RSA_ALIAS = aws_kms_alias.id_token_signing_key_alias.name
     LOCALSTACK_ENDPOINT         = var.use_localstack ? var.localstack_endpoint : null
     HEADERS_CASE_INSENSITIVE    = var.use_localstack ? "true" : "false"
-    RESOURCE_ID_SCOPE_ENABLED   = var.environment == "integration" ? "true" : false
     INTERNAl_SECTOR_URI         = var.internal_sector_uri
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.TokenHandler::handleRequest"
