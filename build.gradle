@@ -110,7 +110,7 @@ subprojects {
                 "org.glassfish.jersey.media:jersey-media-json-jackson:${dependencyVersions.glassfish_version}",
                 "jakarta.activation:jakarta.activation-api:2.1.1"
 
-        govuk_notify "uk.gov.service.notify:notifications-java-client:3.17.3-RELEASE"
+        govuk_notify "uk.gov.service.notify:notifications-java-client:3.19.0-RELEASE"
 
         gson "com.google.code.gson:gson:${dependencyVersions.gson}"
 
