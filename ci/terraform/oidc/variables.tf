@@ -258,6 +258,12 @@ variable "waf_alarm_blocked_reqeuest_threshold" {
   description = "The number of blocked requests caught by the WAF before a Cloudwatch alarm is generated"
 }
 
+variable "frontend_waf_rate_limit" {
+  default     = 3600
+  type        = number
+  description = "Rate limit per 300s for the Frontend API WAF"
+}
+
 variable "test_client_verify_email_otp" {
   type = string
 }
