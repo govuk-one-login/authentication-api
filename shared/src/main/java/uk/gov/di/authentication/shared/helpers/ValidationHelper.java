@@ -46,8 +46,7 @@ public class ValidationHelper {
             String phoneNumberInput, String environment) {
         if (ALLOWED_TEST_NUMBERS.contains(phoneNumberInput)
                 && !Objects.equals(environment, "production")) return Optional.empty();
-        if ((!phoneNumberInput.startsWith("+"))
-                && ((!phoneNumberInput.matches("[0-9]+")) || (phoneNumberInput.length() < 10))) {
+        if ((phoneNumberInput.length() < 5) || (phoneNumberInput.length() > 25)) {
             return Optional.of(ErrorResponse.ERROR_1012);
         }
         var phoneUtil = PhoneNumberUtil.getInstance();
