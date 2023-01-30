@@ -11,6 +11,7 @@ params:
   DEPLOY_ENVIRONMENT: build
   STATE_BUCKET: digital-identity-dev-tfstate
   SYNTHETICS_USERS: ""
+  TXMA_ACCOUNT_ID: ((build-txma-account-id))
 
 inputs:
   - name: shared-terraform-outputs
@@ -39,6 +40,7 @@ run:
         -var 'logging_endpoint_arn=arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prod' \
         -var 'logging_endpoint_arns=["arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prod"]' \
         -var "synthetics_users=${SYNTHETICS_USERS}" \
+        -var "txma_account_id=${TXMA_ACCOUNT_ID}" \
         -var-file "${DEPLOY_ENVIRONMENT}-overrides.tfvars" \
 
       terraform output --json > ../../../../terraform-outputs/${DEPLOY_ENVIRONMENT}-terraform-outputs.json

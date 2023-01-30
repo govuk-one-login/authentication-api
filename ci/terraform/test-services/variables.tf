@@ -90,3 +90,8 @@ variable "endpoint_memory_size" {
 variable "synthetics_users" {
   type = string
 }
+
+variable "txma_account_id" {
+  default = ""
+  type    = string
+}
