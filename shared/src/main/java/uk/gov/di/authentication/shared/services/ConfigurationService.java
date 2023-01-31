@@ -433,10 +433,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("AUDIT_STORAGE_S3_BUCKET");
     }
 
-    public int getWarmupDelayMillis() {
-        return Integer.parseInt(System.getenv().getOrDefault("WARMER_DELAY", "75"));
-    }
-
     public String getAuditHmacSecret() {
         return System.getenv("AUDIT_HMAC_SECRET");
     }

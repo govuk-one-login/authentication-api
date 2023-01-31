@@ -83,6 +83,7 @@ variable "security_group_ids" {
 variable "warmer_security_group_ids" {
   type        = list(string)
   description = "The list of security group IDs to apply to the warmer lambda"
+  default     = null
 }
 
 variable "subnet_id" {
@@ -124,7 +125,7 @@ variable "default_tags" {
 
 variable "keep_lambda_warm" {
   type    = bool
-  default = true
+  default = false
 }
 
 variable "warmer_lambda_zip_file" {

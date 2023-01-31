@@ -38,12 +38,10 @@ module "delete_account" {
   max_provisioned_concurrency = lookup(var.performance_tuning, "delete-account", local.default_performance_parameters).max_concurrency
   scaling_trigger             = lookup(var.performance_tuning, "delete-account", local.default_performance_parameters).scaling_trigger
 
-  source_bucket                  = aws_s3_bucket.source_bucket.bucket
-  lambda_zip_file                = aws_s3_bucket_object.account_management_api_release_zip.key
-  lambda_zip_file_version        = aws_s3_bucket_object.account_management_api_release_zip.version_id
-  warmer_lambda_zip_file         = aws_s3_bucket_object.warmer_release_zip.key
-  warmer_lambda_zip_file_version = aws_s3_bucket_object.warmer_release_zip.version_id
-  code_signing_config_arn        = local.lambda_code_signing_configuration_arn
+  source_bucket           = aws_s3_bucket.source_bucket.bucket
+  lambda_zip_file         = aws_s3_bucket_object.account_management_api_release_zip.key
+  lambda_zip_file_version = aws_s3_bucket_object.account_management_api_release_zip.version_id
+  code_signing_config_arn = local.lambda_code_signing_configuration_arn
 
   authentication_vpc_arn = local.vpc_arn
   security_group_ids = [
@@ -60,10 +58,4 @@ module "delete_account" {
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
 
-  keep_lambda_warm             = var.keep_lambdas_warm
-  warmer_handler_function_name = "uk.gov.di.lambdawarmer.lambda.LambdaWarmerHandler::handleRequest"
-  warmer_security_group_ids    = [local.allow_aws_service_access_security_group_id]
-  warmer_handler_environment_variables = {
-    LAMBDA_MIN_CONCURRENCY = var.lambda_min_concurrency
-  }
 }
