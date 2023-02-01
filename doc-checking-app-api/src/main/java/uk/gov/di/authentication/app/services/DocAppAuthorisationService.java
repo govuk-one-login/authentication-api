@@ -235,11 +235,10 @@ public class DocAppAuthorisationService {
     private RSAPublicKey getPublicEncryptionKey() {
         try {
             LOG.info("Getting Doc App Auth Encryption Public Key via JWKS endpoint");
-            var publicJwkSet =
-                    jwksService.retrieveJwkSetFromURL(
-                            configurationService.getDocAppJwksUri().toURL());
             var encryptionJWK =
-                    publicJwkSet.getKeyByKeyId(configurationService.getDocAppEncryptionKeyID());
+                    jwksService.retrieveJwkFromURLWithKeyId(
+                            configurationService.getDocAppJwksUri().toURL(),
+                            configurationService.getDocAppEncryptionKeyID());
             return new RSAKey.Builder((RSAKey) encryptionJWK).build().toRSAPublicKey();
         } catch (JOSEException e) {
             LOG.error("Error parsing the public key to RSAPublicKey", e);
