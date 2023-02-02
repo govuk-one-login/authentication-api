@@ -289,10 +289,6 @@ module "dashboard" {
   use_localstack   = var.use_localstack
 }
 
-data "aws_ssm_parameter" "smoke_test_client_id" {
-  name = "${var.environment}-smoke-test-client-id"
-}
-
 resource "aws_wafv2_web_acl" "wafregional_web_acl_oidc_api" {
   count = var.use_localstack ? 0 : 1
   name  = "${var.environment}-oidc-waf-web-acl"
