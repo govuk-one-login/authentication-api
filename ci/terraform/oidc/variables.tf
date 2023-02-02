@@ -28,12 +28,6 @@ variable "doc_checking_app_api_lambda_zip_file" {
   type        = string
 }
 
-variable "lambda_warmer_zip_file" {
-  default     = "../../../lambda-warmer/build/distributions/lambda-warmer.zip"
-  description = "Location of the Lambda Warmer ZIP file"
-  type        = string
-}
-
 variable "ipv_p1_alarm_error_threshold" {
   type        = number
   description = "The number of IPV errors raised before generating a Cloudwatch alarm"
@@ -181,11 +175,6 @@ variable "stub_rp_clients" {
 
 variable "aws_region" {
   default = "eu-west-2"
-}
-
-variable "keep_lambdas_warm" {
-  default = false
-  type    = bool
 }
 
 variable "reset_password_route" {

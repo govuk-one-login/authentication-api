@@ -18,7 +18,6 @@ params:
 inputs:
   - name: api-terraform-src
   - name: api-release
-  - name: lambda-warmer-release
 outputs:
   - name: terraform-outputs
 run:
@@ -41,7 +40,6 @@ run:
         -var 'logging_endpoint_arn=arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prod' \
         -var 'logging_endpoint_arns=["arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prod"]' \
         -var "lambda_zip_file=$(ls -1 ../../../../api-release/*.zip)" \
-        -var "lambda_warmer_zip_file=$(ls -1 ../../../../lambda-warmer-release/*.zip)" \
         -var "common_state_bucket=${STATE_BUCKET}" \
         -var "dns_state_bucket=${DNS_STATE_BUCKET}" \
         -var "dns_state_key=${DNS_STATE_KEY}" \

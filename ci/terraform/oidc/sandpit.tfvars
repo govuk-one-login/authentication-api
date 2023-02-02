@@ -16,7 +16,6 @@ spot_enabled                                 = false
 
 lambda_max_concurrency = 0
 lambda_min_concurrency = 0
-keep_lambdas_warm      = false
 endpoint_memory_size   = 1024
 
 blocked_email_duration                    = 30

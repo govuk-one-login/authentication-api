@@ -30,7 +30,6 @@ inputs:
   - name: client-registry-api-release
   - name: ipv-api-release
   - name: doc-checking-app-api-release
-  - name: lambda-warmer-release
   - name: shared-terraform-outputs
 outputs:
   - name: terraform-outputs
@@ -54,7 +53,6 @@ run:
         -var "ipv_api_lambda_zip_file=$(ls -1 ../../../../ipv-api-release/*.zip)" \
         -var "doc_checking_app_api_lambda_zip_file=$(ls -1 ../../../../doc-checking-app-api-release/*.zip)" \
         -var "doc_app_rp_client_id=${DOC_APP_RP_CLIENT_ID}" \
-        -var "lambda_warmer_zip_file=$(ls -1 ../../../../lambda-warmer-release/*.zip)" \
         -var "deployer_role_arn=${DEPLOYER_ROLE_ARN}" \
         -var "notify_api_key=${NOTIFY_API_KEY}" \
         -var "environment=${DEPLOY_ENVIRONMENT}" \

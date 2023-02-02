@@ -33,15 +33,6 @@ resource "aws_s3_bucket_object" "frontend_api_release_zip" {
   source_hash            = filemd5(var.frontend_api_lambda_zip_file)
 }
 
-resource "aws_s3_bucket_object" "warmer_release_zip" {
-  bucket = aws_s3_bucket.source_bucket.bucket
-  key    = "warmer-release.zip"
-
-  server_side_encryption = "AES256"
-  source                 = var.lambda_warmer_zip_file
-  source_hash            = filemd5(var.lambda_warmer_zip_file)
-}
-
 resource "aws_s3_bucket_object" "ipv_api_release_zip" {
   bucket = aws_s3_bucket.source_bucket.bucket
   key    = "ipv-api-release.zip"

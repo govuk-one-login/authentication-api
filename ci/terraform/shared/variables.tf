@@ -103,11 +103,6 @@ variable "aws_region" {
   default = "eu-west-2"
 }
 
-variable "keep_lambdas_warm" {
-  default = true
-  type    = bool
-}
-
 variable "redis_node_size" {
   default = "cache.t2.small"
 }
