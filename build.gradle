@@ -275,7 +275,6 @@ task sharedTerraform (type: Terraform) {
     if (terraformEnvironment == "localstack") {
         dependsOn "composeUp"
     }
-    dependsOn ":lambda-warmer:buildZip"
 }
 
 task oidcTerraform (type: Terraform) {
