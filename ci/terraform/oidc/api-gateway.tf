@@ -389,7 +389,7 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_oidc_api" {
     name     = "${var.environment}-smoke-test-client-exception"
 
     dynamic "statement" {
-      for_each = var.environment != "integration" ? ["1"] : []
+      for_each = var.environment == "production" || var.environment == "sandpit" ? ["1"] : []
       content {
         and_statement {
           statement {
