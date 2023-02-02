@@ -10,11 +10,6 @@ variable "lambda_zip_file" {
   type        = string
 }
 
-variable "keep_lambdas_warm" {
-  default = true
-  type    = bool
-}
-
 variable "lambda_min_concurrency" {
   default     = 10
   type        = number

@@ -137,17 +137,6 @@ variable "redis_node_size" {
   default = "cache.t2.small"
 }
 
-variable "keep_lambdas_warm" {
-  default = true
-  type    = bool
-}
-
-variable "lambda_warmer_zip_file" {
-  default     = "../../../lambda-warmer/build/distributions/lambda-warmer.zip"
-  description = "Location of the Lambda Warmer ZIP file"
-  type        = string
-}
-
 variable "common_state_bucket" {
   type = string
 }
@@ -238,7 +227,7 @@ variable "email_acct_creation_otp_code_ttl_duration" {
 locals {
   default_performance_parameters = {
     memory          = var.endpoint_memory_size
-    concurrency     = var.keep_lambdas_warm ? 0 : var.lambda_min_concurrency
+    concurrency     = var.lambda_min_concurrency
     max_concurrency = var.lambda_max_concurrency
     scaling_trigger = var.scaling_trigger
   }

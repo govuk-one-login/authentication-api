@@ -2,7 +2,6 @@ environment           = "local"
 aws_endpoint          = "http://localhost:45678"
 aws_dynamodb_endpoint = "http://localhost:8000"
 use_localstack        = true
-keep_lambdas_warm     = false
 common_state_bucket   = "terraform-state"
 dns_state_bucket      = null
 dns_state_key         = null

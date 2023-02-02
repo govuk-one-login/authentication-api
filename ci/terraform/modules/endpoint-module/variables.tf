@@ -80,12 +80,6 @@ variable "security_group_ids" {
   description = "The list of security group IDs to apply to the lambda"
 }
 
-variable "warmer_security_group_ids" {
-  type        = list(string)
-  description = "The list of security group IDs to apply to the warmer lambda"
-  default     = null
-}
-
 variable "subnet_id" {
   type        = list(string)
   description = "The id of the subnets for the lambda"
@@ -121,46 +115,6 @@ variable "default_tags" {
   default     = {}
   type        = map(string)
   description = "Default tags to apply to all resources"
-}
-
-variable "keep_lambda_warm" {
-  type    = bool
-  default = false
-}
-
-variable "warmer_lambda_zip_file" {
-  type    = string
-  default = null
-}
-
-variable "warmer_lambda_zip_file_version" {
-  type    = string
-  default = null
-}
-
-variable "warmer_handler_function_name" {
-  type    = string
-  default = null
-}
-
-variable "warmer_handler_environment_variables" {
-  type    = map(string)
-  default = null
-}
-
-variable "warmer_handler_runtime" {
-  type    = string
-  default = "java11"
-}
-
-variable "warmer_run_minutes" {
-  type    = number
-  default = 5
-}
-
-variable "warmer_delay_millis" {
-  type    = number
-  default = 200
 }
 
 variable "authorizer_id" {
