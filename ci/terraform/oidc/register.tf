@@ -40,12 +40,10 @@ module "register" {
   max_provisioned_concurrency = lookup(var.performance_tuning, "register", local.default_performance_parameters).max_concurrency
   scaling_trigger             = lookup(var.performance_tuning, "register", local.default_performance_parameters).scaling_trigger
 
-  source_bucket                  = aws_s3_bucket.source_bucket.bucket
-  lambda_zip_file                = aws_s3_bucket_object.client_api_release_zip.key
-  lambda_zip_file_version        = aws_s3_bucket_object.client_api_release_zip.version_id
-  warmer_lambda_zip_file         = aws_s3_bucket_object.warmer_release_zip.key
-  warmer_lambda_zip_file_version = aws_s3_bucket_object.warmer_release_zip.version_id
-  code_signing_config_arn        = local.lambda_code_signing_configuration_arn
+  source_bucket           = aws_s3_bucket.source_bucket.bucket
+  lambda_zip_file         = aws_s3_bucket_object.client_api_release_zip.key
+  lambda_zip_file_version = aws_s3_bucket_object.client_api_release_zip.version_id
+  code_signing_config_arn = local.lambda_code_signing_configuration_arn
 
   security_group_ids                     = [local.authentication_security_group_id]
   subnet_id                              = local.authentication_subnet_ids
@@ -56,13 +54,6 @@ module "register" {
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
   default_tags                           = local.default_tags
-
-  keep_lambda_warm             = var.keep_lambdas_warm
-  warmer_handler_function_name = "uk.gov.di.lambdawarmer.lambda.LambdaWarmerHandler::handleRequest"
-  warmer_security_group_ids    = [local.authentication_security_group_id]
-  warmer_handler_environment_variables = {
-    LAMBDA_MIN_CONCURRENCY = var.lambda_min_concurrency
-  }
 
   use_localstack = var.use_localstack
 

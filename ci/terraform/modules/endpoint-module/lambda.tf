@@ -22,7 +22,6 @@ resource "aws_lambda_function" "endpoint_lambda" {
   }
   environment {
     variables = merge(var.handler_environment_variables, {
-      WARMER_DELAY      = var.warmer_delay_millis
       JAVA_TOOL_OPTIONS = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1"
     })
   }

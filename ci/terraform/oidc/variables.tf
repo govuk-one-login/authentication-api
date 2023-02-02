@@ -184,7 +184,7 @@ variable "aws_region" {
 }
 
 variable "keep_lambdas_warm" {
-  default = true
+  default = false
   type    = bool
 }
 
@@ -455,7 +455,7 @@ variable "extended_feature_flags_enabled" {
 locals {
   default_performance_parameters = {
     memory          = var.endpoint_memory_size
-    concurrency     = var.keep_lambdas_warm ? 0 : var.lambda_min_concurrency
+    concurrency     = var.lambda_min_concurrency
     max_concurrency = var.lambda_max_concurrency
     scaling_trigger = var.scaling_trigger
   }

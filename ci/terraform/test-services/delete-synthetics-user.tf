@@ -30,20 +30,16 @@ module "delete-synthetics-user" {
   execution_arn    = aws_api_gateway_rest_api.di_authentication_test_services_api.execution_arn
   memory_size      = var.endpoint_memory_size
 
-  source_bucket                  = aws_s3_bucket.source_bucket.bucket
-  lambda_zip_file                = aws_s3_object.test_services_api_release_zip.key
-  lambda_zip_file_version        = aws_s3_object.test_services_api_release_zip.version_id
-  warmer_lambda_zip_file         = null
-  warmer_lambda_zip_file_version = null
-  code_signing_config_arn        = local.lambda_code_signing_configuration_arn
+  source_bucket           = aws_s3_bucket.source_bucket.bucket
+  lambda_zip_file         = aws_s3_object.test_services_api_release_zip.key
+  lambda_zip_file_version = aws_s3_object.test_services_api_release_zip.version_id
+  code_signing_config_arn = local.lambda_code_signing_configuration_arn
 
   authentication_vpc_arn = local.authentication_vpc_arn
   security_group_ids = [
     local.authentication_security_group_id,
   ]
   subnet_id = local.authentication_subnet_ids
-
-  warmer_security_group_ids = null
 
   lambda_role_arn                        = module.test_services_api_delete-synthetics-user_role.arn
   logging_endpoint_arns                  = var.logging_endpoint_arns
@@ -52,8 +48,6 @@ module "delete-synthetics-user" {
   lambda_env_vars_encryption_kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
   default_tags                           = local.default_tags
   api_key_required                       = true
-
-  keep_lambda_warm = false
 
   use_localstack = var.use_localstack
 
