@@ -407,7 +407,7 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_oidc_api" {
                     type     = "NONE"
                   }
                   positional_constraint = "EXACTLY"
-                  search_string         = data.aws_ssm_parameter.smoke_test_client_id.value
+                  search_string         = data.aws_ssm_parameter.smoke_test_client_id[0].value
                   field_to_match {
                     single_query_argument {
                       name = "client_id"
