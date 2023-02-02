@@ -340,14 +340,16 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_oidc_api" {
           name = "NoUserAgent_HEADER"
         }
 
-        excluded_rule {
-          name = "EC2MetaDataSSRF_QUERYARGUMENTS"
-        }
-
         dynamic "excluded_rule" {
           for_each = var.environment != "production" ? ["1"] : []
           content {
             name = "EC2MetaDataSSRF_BODY"
+          }
+        }
+        dynamic "excluded_rule" {
+          for_each = var.environment != "production" ? ["1"] : []
+          content {
+            name = "EC2MetaDataSSRF_QUERYARGUMENTS"
           }
         }
       }
@@ -380,54 +382,6 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_oidc_api" {
       sampled_requests_enabled   = true
     }
   }
-
-  rule {
-    action {
-      block {}
-    }
-    priority = 4
-    name     = "${var.environment}-smoke-test-client-exception"
-
-    dynamic "statement" {
-      for_each = var.environment == "production" || var.environment == "sandpit" ? ["1"] : []
-      content {
-        and_statement {
-          statement {
-            label_match_statement {
-              key   = "awswaf:managed:aws:core-rule-set:EC2MetaDataSSRF_QueryArguments"
-              scope = "LABEL"
-            }
-          }
-          statement {
-            not_statement {
-              statement {
-                byte_match_statement {
-                  text_transformation {
-                    priority = 0
-                    type     = "NONE"
-                  }
-                  positional_constraint = "EXACTLY"
-                  search_string         = data.aws_ssm_parameter.smoke_test_client_id[0].value
-                  field_to_match {
-                    single_query_argument {
-                      name = "client_id"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-
-    visibility_config {
-      cloudwatch_metrics_enabled = true
-      metric_name                = "${replace(var.environment, "-", "")}SmokeTestClientExceptionRule"
-      sampled_requests_enabled   = true
-    }
-  }
-
 
   visibility_config {
     cloudwatch_metrics_enabled = true
