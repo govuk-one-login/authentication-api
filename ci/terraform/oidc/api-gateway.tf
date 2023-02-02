@@ -345,7 +345,7 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_oidc_api" {
         }
 
         dynamic "excluded_rule" {
-          for_each = var.environment != "production" ? ["1"] : []
+          for_each = var.environment != "production" || var.environment != "sandpit" ? ["1"] : []
           content {
             name = "EC2MetaDataSSRF_BODY"
           }
@@ -381,16 +381,16 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_oidc_api" {
     }
   }
 
-  rule {
-    action {
-      block {}
-    }
-    priority = 4
-    name     = "${var.environment}-smoke-test-client-exception"
+  dynamic "rule" {
+    for_each = var.environment == "production" || var.environment == "sandpit" ? ["1"] : []
+    content {
+      action {
+        block {}
+      }
+      priority = 4
+      name     = "${var.environment}-smoke-test-client-exception"
 
-    dynamic "statement" {
-      for_each = var.environment == "production" || var.environment == "sandpit" ? ["1"] : []
-      content {
+      statement {
         and_statement {
           statement {
             label_match_statement {
@@ -419,12 +419,12 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_oidc_api" {
           }
         }
       }
-    }
 
-    visibility_config {
-      cloudwatch_metrics_enabled = true
-      metric_name                = "${replace(var.environment, "-", "")}SmokeTestClientExceptionRule"
-      sampled_requests_enabled   = true
+      visibility_config {
+        cloudwatch_metrics_enabled = true
+        metric_name                = "${replace(var.environment, "-", "")}SmokeTestClientExceptionRule"
+        sampled_requests_enabled   = true
+      }
     }
   }
 
