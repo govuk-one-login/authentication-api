@@ -7,7 +7,6 @@ import com.nimbusds.jose.crypto.ECDSASigner;
 import com.nimbusds.jose.crypto.RSADecrypter;
 import com.nimbusds.jose.crypto.impl.ECDSA;
 import com.nimbusds.jose.jwk.Curve;
-import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
@@ -113,7 +112,8 @@ class DocAppAuthorisationServiceTest {
                         .keyUse(KeyUse.ENCRYPTION)
                         .keyID(ENCRYPTION_KID)
                         .build();
-        when(jwksService.retrieveJwkSetFromURL(JWKS_URL.toURL())).thenReturn(new JWKSet(rsaKey));
+        when(jwksService.retrieveJwkFromURLWithKeyId(JWKS_URL.toURL(), ENCRYPTION_KID))
+                .thenReturn(rsaKey);
         when(configurationService.getDocAppEncryptionKeyID()).thenReturn(ENCRYPTION_KID);
     }
 
