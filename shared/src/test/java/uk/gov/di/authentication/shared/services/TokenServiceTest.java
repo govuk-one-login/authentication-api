@@ -116,6 +116,7 @@ public class TokenServiceTest {
         when(configurationService.getAccessTokenExpiry()).thenReturn(300L);
         when(configurationService.getIDTokenExpiry()).thenReturn(120L);
         when(configurationService.getSessionExpiry()).thenReturn(300L);
+        when(configurationService.getEnvironment()).thenReturn("test");
         when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class)))
                 .thenReturn(GetPublicKeyResponse.builder().keyId("789789789789789").build());
 
@@ -154,7 +155,8 @@ public class TokenServiceTest {
                         false,
                         null,
                         false,
-                        JWSAlgorithm.ES256);
+                        JWSAlgorithm.ES256,
+                        "client-session-id");
 
         assertSuccessfulTokenResponse(tokenResponse);
 
@@ -208,7 +210,8 @@ public class TokenServiceTest {
                         false,
                         oidcClaimsRequest,
                         false,
-                        JWSAlgorithm.ES256);
+                        JWSAlgorithm.ES256,
+                        "client-session-id");
 
         assertSuccessfulTokenResponse(tokenResponse);
 
@@ -278,7 +281,8 @@ public class TokenServiceTest {
                         false,
                         null,
                         false,
-                        JWSAlgorithm.ES256);
+                        JWSAlgorithm.ES256,
+                        "client-session-id");
 
         assertSuccessfulTokenResponse(tokenResponse);
 
@@ -493,5 +497,9 @@ public class TokenServiceTest {
                                         JWSAlgorithm.ES256,
                                         null)
                                 .toString()));
+
+        assertThat(
+                tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getStringClaim("sid"),
+                is("client-session-id"));
     }
 }

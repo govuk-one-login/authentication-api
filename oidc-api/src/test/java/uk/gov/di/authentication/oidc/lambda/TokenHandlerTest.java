@@ -230,7 +230,8 @@ public class TokenHandlerTest {
                         expectedConsentRequired,
                         null,
                         false,
-                        JWSAlgorithm.ES256))
+                        JWSAlgorithm.ES256,
+                        CLIENT_SESSION_ID))
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result =
@@ -301,7 +302,8 @@ public class TokenHandlerTest {
                         expectedConsentRequired,
                         null,
                         false,
-                        JWSAlgorithm.RS256))
+                        JWSAlgorithm.RS256,
+                        CLIENT_SESSION_ID))
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result =
@@ -591,7 +593,8 @@ public class TokenHandlerTest {
                         false,
                         null,
                         true,
-                        JWSAlgorithm.ES256))
+                        JWSAlgorithm.ES256,
+                        CLIENT_SESSION_ID))
                 .thenReturn(tokenResponse);
 
         var result =
