@@ -135,3 +135,8 @@ resource "aws_iam_policy" "doc_app_rp_client_id_parameter_policy" {
   path        = "/${var.environment}/lambda-parameters/"
   name_prefix = "doc-app-rp-client-id-parameter-store-policy"
 }
+
+data "aws_ssm_parameter" "smoke_test_client_id" {
+  count = var.environment == "production" || var.environment == "sandpit" ? 1 : 0
+  name  = "${var.environment}-smoke-test-client-id"
+}
