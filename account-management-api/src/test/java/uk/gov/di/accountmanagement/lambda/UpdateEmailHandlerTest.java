@@ -55,7 +55,7 @@ class UpdateEmailHandlerTest {
     private UpdateEmailHandler handler;
     private static final String EXISTING_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String NEW_EMAIL_ADDRESS = "bloggs.joe@digital.cabinet-office.gov.uk";
-    private static final String INVALID_EMAIL_ADDRESS = "igital.cabinet-office.gov.uk";
+    private static final String INVALID_EMAIL_ADDRESS = "digital.cabinet-office.gov.uk";
     private static final String PERSISTENT_ID = "some-persistent-session-id";
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private static final String OTP = "123456";
@@ -97,9 +97,13 @@ class UpdateEmailHandlerTest {
 
         assertThat(result, hasStatus(204));
         verify(dynamoService).updateEmail(EXISTING_EMAIL_ADDRESS, NEW_EMAIL_ADDRESS);
-        NotifyRequest notifyRequest =
+        NotifyRequest notifyExistingEmailAddressRequest =
+                new NotifyRequest(EXISTING_EMAIL_ADDRESS, EMAIL_UPDATED, SupportedLanguage.EN);
+        verify(sqsClient).send(objectMapper.writeValueAsString(notifyExistingEmailAddressRequest));
+
+        NotifyRequest notifyNewEmailAddressRequest =
                 new NotifyRequest(NEW_EMAIL_ADDRESS, EMAIL_UPDATED, SupportedLanguage.EN);
-        verify(sqsClient).send(objectMapper.writeValueAsString(notifyRequest));
+        verify(sqsClient).send(objectMapper.writeValueAsString(notifyNewEmailAddressRequest));
 
         verify(auditService)
                 .submitAuditEvent(

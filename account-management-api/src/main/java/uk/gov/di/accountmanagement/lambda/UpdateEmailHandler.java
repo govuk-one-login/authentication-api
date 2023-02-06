@@ -140,13 +140,19 @@ public class UpdateEmailHandler
             dynamoService.updateEmail(
                     updateInfoRequest.getExistingEmailAddress(),
                     updateInfoRequest.getReplacementEmailAddress());
-            LOG.info("Email has successfully been updated. Adding message to SQS queue");
-            NotifyRequest notifyRequest =
-                    new NotifyRequest(
-                            updateInfoRequest.getReplacementEmailAddress(),
-                            NotificationType.EMAIL_UPDATED,
-                            userLanguage);
-            sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
+            LOG.info(
+                    "Email has successfully been updated. Adding message to SQS queue (x2 - notification will be sent to current and previous email addresses)");
+
+            String[] emailUpdateNotificationDestinations = {
+                updateInfoRequest.getExistingEmailAddress(),
+                updateInfoRequest.getReplacementEmailAddress()
+            };
+            for (String emailAddress : emailUpdateNotificationDestinations) {
+                NotifyRequest notifyEmailAddressUpdateRequest =
+                        new NotifyRequest(
+                                emailAddress, NotificationType.EMAIL_UPDATED, userLanguage);
+                sqsClient.send(objectMapper.writeValueAsString((notifyEmailAddressUpdateRequest)));
+            }
 
             LOG.info("Calculating internal common subject identifier");
             var internalCommonSubjectIdentifier =
