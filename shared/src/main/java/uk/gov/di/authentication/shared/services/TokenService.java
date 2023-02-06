@@ -24,6 +24,7 @@ import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import com.nimbusds.openid.connect.sdk.claims.AccessTokenHash;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import com.nimbusds.openid.connect.sdk.claims.IDTokenClaimsSet;
+import com.nimbusds.openid.connect.sdk.claims.SessionID;
 import com.nimbusds.openid.connect.sdk.token.OIDCTokens;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -91,7 +92,8 @@ public class TokenService {
             boolean isConsentRequired,
             OIDCClaimsRequest claimsRequest,
             boolean isDocAppJourney,
-            JWSAlgorithm signingAlgorithm) {
+            JWSAlgorithm signingAlgorithm,
+            String journeyId) {
         List<String> scopesForToken;
         if (isConsentRequired) {
             scopesForToken = calculateScopesForToken(clientConsents, clientID, authRequestScopes);
@@ -125,7 +127,8 @@ public class TokenService {
                                         accessTokenHash,
                                         vot,
                                         isDocAppJourney,
-                                        signingAlgorithm));
+                                        signingAlgorithm,
+                                        journeyId));
         if (scopesForToken.contains(OIDCScopeValue.OFFLINE_ACCESS.getValue())) {
             RefreshToken refreshToken =
                     segmentedFunctionCall(
@@ -235,7 +238,8 @@ public class TokenService {
             AccessTokenHash accessTokenHash,
             String vot,
             boolean isDocAppJourney,
-            JWSAlgorithm signingAlgorithm) {
+            JWSAlgorithm signingAlgorithm,
+            String journeyId) {
 
         LOG.info("Generating IdToken");
         URI trustMarkUri = buildURI(configService.getOidcApiBaseURL().get(), "/trustmark");
@@ -248,6 +252,11 @@ public class TokenService {
                         expiryDate,
                         NowHelper.now());
         idTokenClaims.setAccessTokenHash(accessTokenHash);
+
+        if (!List.of("integration", "production").contains(configService.getEnvironment())) {
+            idTokenClaims.setSessionID(new SessionID(journeyId));
+        }
+
         idTokenClaims.putAll(additionalTokenClaims);
         if (!isDocAppJourney) {
             idTokenClaims.setClaim("vot", vot);
