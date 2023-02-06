@@ -59,7 +59,10 @@ class UpdateEmailIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertNotificationsReceived(
                 notificationsQueue,
-                List.of(new NotifyRequest(NEW_EMAIL_ADDRESS, EMAIL_UPDATED, SupportedLanguage.EN)));
+                List.of(
+                        new NotifyRequest(
+                                EXISTING_EMAIL_ADDRESS, EMAIL_UPDATED, SupportedLanguage.EN),
+                        new NotifyRequest(NEW_EMAIL_ADDRESS, EMAIL_UPDATED, SupportedLanguage.EN)));
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(UPDATE_EMAIL));
     }
