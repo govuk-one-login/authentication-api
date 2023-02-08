@@ -140,7 +140,7 @@ public class NotifyCallbackHandler
                 .map(DeliveryReceiptsNotificationType::getTemplateAlias)
                 .orElseThrow(
                         () -> {
-                            LOG.error("No template found with template ID: {}", templateID);
+                            LOG.warn("No template found with template ID: {}", templateID);
                             throw new RuntimeException("No template found with template ID");
                         });
     }
