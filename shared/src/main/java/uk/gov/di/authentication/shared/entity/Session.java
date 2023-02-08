@@ -10,6 +10,7 @@ public class Session {
     public enum AccountState {
         NEW,
         EXISTING,
+        EXISTING_DOC_APP_JOURNEY,
         UNKNOWN
     }
 

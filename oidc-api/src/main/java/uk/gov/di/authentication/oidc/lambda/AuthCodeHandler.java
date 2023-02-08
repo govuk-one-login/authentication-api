@@ -42,6 +42,7 @@ import static java.util.Objects.isNull;
 import static uk.gov.di.authentication.shared.conditions.DocAppUserHelper.isDocCheckingAppUserWithSubjectId;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.Session.AccountState.EXISTING;
+import static uk.gov.di.authentication.shared.entity.Session.AccountState.EXISTING_DOC_APP_JOURNEY;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.addAnnotation;
@@ -239,7 +240,6 @@ public class AuthCodeHandler
                 }
                 dimensions.put("MfaRequired", mfaNotRequired ? "No" : "Yes");
                 dimensions.put("RequestedLevelOfConfidence", levelOfConfidence);
-                sessionService.save(session.setAuthenticated(true).setNewAccount(EXISTING));
                 internalCommonPairwiseSubjectId = session.getInternalCommonSubjectIdentifier();
                 internalSubjectId =
                         Objects.isNull(session.getEmailAddress())
@@ -262,7 +262,8 @@ public class AuthCodeHandler
                     IpAddressHelper.extractIpAddress(input),
                     AuditService.UNKNOWN,
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                    pair("internalSubjectId", internalSubjectId));
+                    pair("internalSubjectId", internalSubjectId),
+                    pair("isNewAccount", session.isNewAccount()));
 
             cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
             cloudwatchMetricsService.incrementSignInByClient(
@@ -270,6 +271,12 @@ public class AuthCodeHandler
                     authenticationRequest.getClientID().getValue(),
                     clientSession.getClientName(),
                     isTestJourney);
+
+            if (docAppJourney) {
+                sessionService.save(session.setNewAccount(EXISTING_DOC_APP_JOURNEY));
+            } else {
+                sessionService.save(session.setAuthenticated(true).setNewAccount(EXISTING));
+            }
 
             return generateResponse(
                     new AuthCodeResponse(authenticationResponse.toURI().toString()));
