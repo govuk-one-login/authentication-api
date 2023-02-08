@@ -74,7 +74,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -82,8 +81,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.oidc.helper.RequestObjectTestHelper.generateSignedJWT;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
-import static uk.gov.di.authentication.shared.entity.Session.AccountState.NEW;
-import static uk.gov.di.authentication.shared.entity.Session.AccountState.UNKNOWN;
+import static uk.gov.di.authentication.shared.entity.Session.AccountState;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
@@ -182,7 +180,7 @@ class AuthCodeHandlerTest {
         var authorizationCode = new AuthorizationCode();
         var authRequest = generateValidSessionAndAuthRequest(requestedLevel, false);
         session.setCurrentCredentialStrength(initialLevel)
-                .setNewAccount(NEW)
+                .setNewAccount(AccountState.NEW)
                 .setEmailAddress(EMAIL)
                 .setVerifiedMfaMethodType(mfaMethodType);
         var authSuccessResponse =
@@ -233,7 +231,8 @@ class AuthCodeHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_SESSION_ID,
-                        pair("internalSubjectId", SUBJECT.getValue()));
+                        pair("internalSubjectId", SUBJECT.getValue()),
+                        pair("isNewAccount", AccountState.NEW));
 
         var dimensions =
                 Map.of(
@@ -269,7 +268,7 @@ class AuthCodeHandlerTest {
             throws Json.JsonException, ClientNotFoundException, JOSEException {
         var authorizationCode = new AuthorizationCode();
         var authRequest = generateValidSessionAndAuthRequest(requestedLevel, true);
-        session.setNewAccount(UNKNOWN);
+        session.setNewAccount(AccountState.UNKNOWN);
         var authSuccessResponse =
                 new AuthenticationSuccessResponse(
                         authRequest.getRedirectionURI(),
@@ -300,7 +299,7 @@ class AuthCodeHandlerTest {
         assertThat(authCodeResponse.getLocation(), equalTo(authSuccessResponse.toURI().toString()));
         assertThat(session.getCurrentCredentialStrength(), equalTo(requestedLevel));
         assertFalse(session.isAuthenticated());
-        verify(sessionService, never()).save(session);
+        verify(sessionService, times(1)).save(session);
         verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.AUTH_CODE_ISSUED,
@@ -312,7 +311,8 @@ class AuthCodeHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_SESSION_ID,
-                        pair("internalSubjectId", AuditService.UNKNOWN));
+                        pair("internalSubjectId", AuditService.UNKNOWN),
+                        pair("isNewAccount", AccountState.UNKNOWN));
 
         var expectedDimensions =
                 Map.of(
