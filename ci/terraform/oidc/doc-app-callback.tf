@@ -69,6 +69,7 @@ module "doc-app-callback" {
   lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
   default_tags                           = local.default_tags
   api_key_required                       = false
+  lambda_log_alarm_threshold             = 10
 
   use_localstack = var.use_localstack
 
