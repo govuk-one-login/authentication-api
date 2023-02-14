@@ -7,6 +7,7 @@ module "test_services_api_delete-synthetics-user_role" {
   policies_to_attach = [
     aws_iam_policy.dynamo_test_services_user_read_access_policy.arn,
     aws_iam_policy.dynamo_test_services_user_delete_access_policy.arn,
+    module.test_services_txma_audit.access_policy_arn,
   ]
 }
 
