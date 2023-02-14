@@ -19,9 +19,10 @@ module "delete-synthetics-user" {
   environment     = var.environment
 
   handler_environment_variables = {
-    ENVIRONMENT         = var.environment
-    LOCALSTACK_ENDPOINT = var.use_localstack ? var.localstack_endpoint : null
-    SYNTHETICS_USERS    = var.synthetics_users
+    ENVIRONMENT          = var.environment
+    LOCALSTACK_ENDPOINT  = var.use_localstack ? var.localstack_endpoint : null
+    SYNTHETICS_USERS     = var.synthetics_users
+    TXMA_AUDIT_QUEUE_URL = module.test_services_txma_audit.queue_url
   }
   handler_function_name = "uk.gov.di.authentication.testservices.lambda.DeleteSyntheticsUserHandler::handleRequest"
 
