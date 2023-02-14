@@ -9,8 +9,10 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.testservices.domain.TestServicesAuditableEvent;
 import uk.gov.di.authentication.testservices.lambda.DeleteSyntheticsUserHandler;
 
 import java.util.Map;
@@ -22,6 +24,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -35,10 +38,13 @@ class DeleteSyntheticsUserHandlerTest {
     private final Context context = mock(Context.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final AuditService auditService = mock(AuditService.class);
 
     @BeforeEach
     public void setUp() {
-        handler = new DeleteSyntheticsUserHandler(authenticationService, configurationService);
+        handler =
+                new DeleteSyntheticsUserHandler(
+                        authenticationService, configurationService, auditService);
     }
 
     @Test
@@ -55,6 +61,17 @@ class DeleteSyntheticsUserHandlerTest {
 
         assertThat(result, hasStatus(204));
         verify(authenticationService).removeAccount(EMAIL);
+        verify(auditService)
+                .submitAuditEvent(
+                        TestServicesAuditableEvent.SYNTHETICS_USER_DELETED,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        userProfile.getEmail(),
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN);
     }
 
     @Test
@@ -78,10 +95,23 @@ class DeleteSyntheticsUserHandlerTest {
         verify(authenticationService, never()).removeAccount(EMAIL);
         assertThat(result, hasStatus(404));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1010));
+
+        verify(auditService)
+                .submitAuditEvent(
+                        TestServicesAuditableEvent.SYNTHETICS_USER_NOT_FOUND_FOR_DELETION,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        EMAIL,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN);
     }
 
     private APIGatewayProxyRequestEvent generateApiGatewayEvent() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         event.setBody(format("{\"email\": \"%s\" }", EMAIL));
         event.setHeaders(Map.of(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID));
 
