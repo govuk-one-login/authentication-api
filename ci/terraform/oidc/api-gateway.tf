@@ -64,6 +64,18 @@ resource "aws_api_gateway_rest_api" "di_authentication_api" {
   tags = local.default_tags
 }
 
+resource "aws_api_gateway_api_key" "client_registry_api_key" {
+  count = var.client_registry_api_enabled ? 1 : 0
+  name  = "${var.environment}-client-registry-api-key"
+}
+
+resource "aws_api_gateway_usage_plan_key" "client_registry_usage_plan_key" {
+  count         = var.client_registry_api_enabled ? 1 : 0
+  key_id        = aws_api_gateway_api_key.client_registry_api_key[0].id
+  key_type      = "API_KEY"
+  usage_plan_id = aws_api_gateway_usage_plan.di_auth_usage_plan.id
+}
+
 resource "aws_api_gateway_usage_plan" "di_auth_usage_plan" {
   name = "${var.environment}-di-auth-usage-plan"
 
