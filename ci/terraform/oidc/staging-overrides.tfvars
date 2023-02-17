@@ -1,4 +1,3 @@
-client_registry_api_enabled        = false
 doc_app_api_enabled                = true
 ipv_capacity_allowed               = true
 ipv_api_enabled                    = true
