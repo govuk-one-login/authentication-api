@@ -43,7 +43,7 @@ class ValidationHelperTest {
     void shouldReturnErrorIfMobileNumberIsInvalid(String phoneNumber) {
         assertEquals(
                 Optional.of(ErrorResponse.ERROR_1012),
-                ValidationHelper.validatePhoneNumber(phoneNumber, PRODUCTION));
+                ValidationHelper.validatePhoneNumber(phoneNumber, PRODUCTION, false));
     }
 
     private static Stream<String> internationalPhoneNumbers() {
@@ -62,15 +62,31 @@ class ValidationHelperTest {
     @MethodSource("internationalPhoneNumbers")
     void shouldAcceptValidInternationPhoneNumbers(String phoneNumber) {
         assertThat(
-                ValidationHelper.validatePhoneNumber(phoneNumber, PRODUCTION),
+                ValidationHelper.validatePhoneNumber(phoneNumber, PRODUCTION, false),
                 equalTo(Optional.empty()));
     }
 
     @Test
     void shouldAcceptValidBritishPhoneNumbers() {
         assertThat(
-                ValidationHelper.validatePhoneNumber("+4407911123456", PRODUCTION),
+                ValidationHelper.validatePhoneNumber("+4407911123456", PRODUCTION, false),
                 equalTo(Optional.empty()));
+    }
+
+    @ParameterizedTest
+    @MethodSource("testPhoneNumbers")
+    void shouldAcceptTestNumberForSmokeTest(String testPhoneNumber) {
+        assertThat(
+                ValidationHelper.validatePhoneNumber(testPhoneNumber, PRODUCTION, true),
+                equalTo(Optional.empty()));
+    }
+
+    @ParameterizedTest
+    @MethodSource("testPhoneNumbers")
+    void shouldRejectTestNumberWhenNotSmokeTest(String testPhoneNumber) {
+        assertThat(
+                ValidationHelper.validatePhoneNumber(testPhoneNumber, PRODUCTION, false),
+                equalTo(Optional.of(ErrorResponse.ERROR_1012)));
     }
 
     private static Stream<Arguments> invalidPasswords() {

@@ -2,6 +2,8 @@ package uk.gov.di.authentication.shared.helpers;
 
 import com.google.i18n.phonenumbers.NumberParseException;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
@@ -15,6 +17,7 @@ import java.util.regex.Pattern;
 import static com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType.MOBILE;
 
 public class ValidationHelper {
+    private static final Logger LOG = LogManager.getLogger(ValidationHelper.class);
     private static final Pattern PASSWORD_REGEX = Pattern.compile(".*\\d.*");
     private static final Pattern EMAIL_NOTIFY_REGEX =
             Pattern.compile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~\\-]+@([^.@][^@\\s]+)$");
@@ -39,27 +42,40 @@ public class ValidationHelper {
                 && currentPhoneNumber.equals(PhoneNumberHelper.formatPhoneNumber(newPhoneNumber))) {
             return Optional.of(ErrorResponse.ERROR_1044);
         }
-        return validatePhoneNumber(newPhoneNumber, environment);
+        return validatePhoneNumber(newPhoneNumber, environment, false);
     }
 
     public static Optional<ErrorResponse> validatePhoneNumber(
-            String phoneNumberInput, String environment) {
+            String phoneNumberInput, String environment, boolean isSmokeTest) {
         if (ALLOWED_TEST_NUMBERS.contains(phoneNumberInput)
-                && !Objects.equals(environment, "production")) return Optional.empty();
+                && !Objects.equals(environment, "production")) {
+            LOG.info("Allowed test number: non-prod");
+            return Optional.empty();
+        }
+        if (ALLOWED_TEST_NUMBERS.contains(phoneNumberInput)
+                && Objects.equals(environment, "production")
+                && isSmokeTest) {
+            LOG.info("Allowed test number: prod smoke test");
+            return Optional.empty();
+        }
         if ((phoneNumberInput.length() < 5) || (phoneNumberInput.length() > 25)) {
+            LOG.warn("Invalid phone number: length check");
             return Optional.of(ErrorResponse.ERROR_1012);
         }
         var phoneUtil = PhoneNumberUtil.getInstance();
         try {
             var phoneNumber = phoneUtil.parse(phoneNumberInput, "GB");
             if (!phoneUtil.getNumberType(phoneNumber).equals(MOBILE)) {
+                LOG.warn("Invalid phone number: not a mobile number");
                 return Optional.of(ErrorResponse.ERROR_1012);
             }
             if (phoneUtil.isValidNumber(phoneNumber)) {
                 return Optional.empty();
             }
+            LOG.warn("Invalid phone number: failed isValidNumber check");
             return Optional.of(ErrorResponse.ERROR_1012);
         } catch (NumberParseException e) {
+            LOG.warn("Invalid phone number: parsing failure");
             return Optional.of(ErrorResponse.ERROR_1012);
         }
     }

@@ -15,6 +15,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
@@ -41,6 +44,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -138,10 +142,27 @@ class UpdateProfileHandlerTest {
                         clientService);
     }
 
-    @Test
-    void shouldReturn204WhenUpdatingPhoneNumber() {
+    private static Stream<Arguments> updateNumberDetailsSuccess() {
+        return Stream.of(
+                Arguments.of(PHONE_NUMBER, "production", false),
+                Arguments.of(PHONE_NUMBER, "production", true),
+                Arguments.of("07700900000", "production", true),
+                Arguments.of("07700900000", "integration", true),
+                Arguments.of("07700900000", "integration", false),
+                Arguments.of("+447700900111", "production", true),
+                Arguments.of("+447700900111", "integration", true),
+                Arguments.of("+447700900111", "integration", false));
+    }
+
+    @ParameterizedTest
+    @MethodSource("updateNumberDetailsSuccess")
+    void shouldReturn204WhenUpdatingPhoneNumber(
+            String phoneNumber, String environment, boolean isSmokeTest) {
         usingValidSession();
         usingValidClientSession();
+        when(clientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.of(clientRegistry));
+        when(clientRegistry.isSmokeTest()).thenReturn(isSmokeTest);
+        when(configurationService.getEnvironment()).thenReturn(environment);
 
         String persistentId = "some-persistent-id-value";
         Map<String, String> headers = new HashMap<>();
@@ -153,10 +174,10 @@ class UpdateProfileHandlerTest {
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"updateProfileType\": \"%s\", \"profileInformation\": \"%s\" }",
-                        TEST_EMAIL_ADDRESS, ADD_PHONE_NUMBER, PHONE_NUMBER));
+                        TEST_EMAIL_ADDRESS, ADD_PHONE_NUMBER, phoneNumber));
         APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
 
-        verify(authenticationService).updatePhoneNumber(eq(TEST_EMAIL_ADDRESS), eq(PHONE_NUMBER));
+        verify(authenticationService).updatePhoneNumber(TEST_EMAIL_ADDRESS, phoneNumber);
 
         assertThat(result, hasStatus(204));
 
@@ -169,18 +190,30 @@ class UpdateProfileHandlerTest {
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "",
-                        PHONE_NUMBER,
+                        phoneNumber,
                         persistentId);
     }
 
-    @Test
-    void shouldReturn400WhenPhoneNumberFailsValidation() {
+    private static Stream<Arguments> updateNumberDetailsFails() {
+        return Stream.of(
+                Arguments.of("0123456789A", "production", false),
+                Arguments.of("0123456789A", "production", true),
+                Arguments.of("07700900000", "production", false),
+                Arguments.of("+447700900111", "production", false));
+    }
+
+    @ParameterizedTest
+    @MethodSource("updateNumberDetailsFails")
+    void shouldReturn400WhenPhoneNumberFailsValidation(
+            String phoneNumber, String environment, boolean isSmokeTest) {
         usingValidSession();
         usingValidClientSession();
         when(authenticationService.getUserProfileFromEmail(TEST_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(generateUserProfileWithConsent()));
         when(clientRegistry.getClientID()).thenReturn(CLIENT_ID.getValue());
         when(clientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.of(clientRegistry));
+        when(clientRegistry.isSmokeTest()).thenReturn(isSmokeTest);
+        when(configurationService.getEnvironment()).thenReturn(environment);
 
         Map<String, String> headers = new HashMap<>();
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_SESSION_ID);
@@ -191,11 +224,10 @@ class UpdateProfileHandlerTest {
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"updateProfileType\": \"%s\", \"profileInformation\": \"%s\" }",
-                        TEST_EMAIL_ADDRESS, ADD_PHONE_NUMBER, "0123456789A"));
+                        TEST_EMAIL_ADDRESS, ADD_PHONE_NUMBER, phoneNumber));
         APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
 
-        verify(authenticationService, never())
-                .updatePhoneNumber(eq(TEST_EMAIL_ADDRESS), eq("0123456789A"));
+        verify(authenticationService, never()).updatePhoneNumber(TEST_EMAIL_ADDRESS, phoneNumber);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1012));
