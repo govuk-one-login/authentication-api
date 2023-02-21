@@ -65,8 +65,12 @@ public class ValidationHelper {
         var phoneUtil = PhoneNumberUtil.getInstance();
         try {
             var phoneNumber = phoneUtil.parse(phoneNumberInput, "GB");
-            if (!phoneUtil.getNumberType(phoneNumber).equals(MOBILE)) {
-                LOG.warn("Invalid phone number: not a mobile number");
+            var phoneNumberType = phoneUtil.getNumberType(phoneNumber);
+            if (!MOBILE.equals(phoneNumberType)) {
+                LOG.warn(
+                        "Invalid phone number: not a mobile number.  NumberType {} CountryCode {}",
+                        phoneNumberType,
+                        phoneNumber.getCountryCode());
                 return Optional.of(ErrorResponse.ERROR_1012);
             }
             if (phoneUtil.isValidNumber(phoneNumber)) {

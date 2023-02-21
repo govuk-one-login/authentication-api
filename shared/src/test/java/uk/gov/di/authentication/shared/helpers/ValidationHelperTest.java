@@ -35,7 +35,12 @@ class ValidationHelperTest {
 
     private static Stream<String> invalidPhoneNumbers() {
         return Stream.of(
-                "0123456789A", "0123456789", "012345678999", "01234567891", "202-456-1111");
+                "0123456789A",
+                "0123456789",
+                "012345678999",
+                "01234567891",
+                "202-456-1111",
+                "02079460000");
     }
 
     @ParameterizedTest
