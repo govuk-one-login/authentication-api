@@ -156,6 +156,8 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                         .getClient()
                         .map(ClientRegistry::getClientID)
                         .orElse(AuditService.UNKNOWN);
+        boolean isSmokeTest =
+                userContext.getClient().map(ClientRegistry::isSmokeTest).orElse(false);
         switch (request.getUpdateProfileType()) {
             case ADD_PHONE_NUMBER:
                 {
@@ -164,7 +166,9 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                                     request.getProfileInformation());
                     Optional<ErrorResponse> errorResponse =
                             ValidationHelper.validatePhoneNumber(
-                                    phoneNumber, configurationService.getEnvironment());
+                                    phoneNumber,
+                                    configurationService.getEnvironment(),
+                                    isSmokeTest);
                     if (errorResponse.isPresent()) {
                         return generateErrorResponse(
                                 errorResponse.get(),
@@ -175,6 +179,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                                 persistentSessionId,
                                 session.getInternalCommonSubjectIdentifier());
                     }
+                    if (isSmokeTest) LOG.info("Accepting test number as valid for smoke test");
                     authenticationService.updatePhoneNumber(
                             request.getEmail(), request.getProfileInformation());
                     auditableEvent = UPDATE_PROFILE_PHONE_NUMBER;

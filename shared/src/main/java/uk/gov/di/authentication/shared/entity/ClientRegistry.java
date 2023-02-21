@@ -34,6 +34,7 @@ public class ClientRegistry {
 
     private boolean oneLoginService = false;
     private String idTokenSigningAlgorithm = "ES256";
+    private boolean smokeTest = false;
 
     public ClientRegistry() {}
 
@@ -344,6 +345,20 @@ public class ClientRegistry {
 
     public ClientRegistry withClientSecret(String clientSecret) {
         this.clientSecret = clientSecret;
+        return this;
+    }
+
+    @DynamoDbAttribute("SmokeTest")
+    public boolean isSmokeTest() {
+        return smokeTest;
+    }
+
+    public void setSmokeTest(boolean smokeTest) {
+        this.smokeTest = smokeTest;
+    }
+
+    public ClientRegistry withSmokeTest(boolean smokeTest) {
+        this.smokeTest = smokeTest;
         return this;
     }
 }
