@@ -19,6 +19,7 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.service.notify.NotificationClient;
 import uk.gov.service.notify.NotificationClientException;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -192,7 +193,9 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                         PutObjectRequest.builder().bucket(bucketName).key(destination).build();
                 s3Client.putObject(putObjectRequest, RequestBody.fromString(otp));
             } catch (Exception e) {
-                LOG.error("Exception thrown when writing to S3 bucket: {}", e.getMessage());
+                LOG.error(
+                        "Exception thrown when writing to S3 bucket: {}",
+                        Arrays.toString(e.getStackTrace()));
             }
         }
     }
