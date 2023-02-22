@@ -192,7 +192,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                         PutObjectRequest.builder().bucket(bucketName).key(destination).build();
                 s3Client.putObject(putObjectRequest, RequestBody.fromString(otp));
             } catch (Exception e) {
-                LOG.error("Exception thrown when writing to S3 bucket");
+                LOG.error("Exception thrown when writing to S3 bucket: {}", e.getMessage());
             }
         }
     }
