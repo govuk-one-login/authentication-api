@@ -1,0 +1,72 @@
+name: Build modules
+env:
+  DEPLOYER_ROLE: arn:aws:iam::114407264696:role/deployers/github-actions-publish-to-s3-for-code-signing
+  SOURCE_BUCKET: di-auth-lambda-source-20220215170204376700000003
+  DESTINATION_BUCKET: di-auth-lambda-signed-20220215170204376200000002
+  SIGNING_PROFILE: di_auth_lambda_signing_20220215170204371800000001
+
+on:
+  push:
+    branches:
+    - main
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        module:
+        - oidc-api
+        - account-management-api
+        - client-registry-api
+        - frontend-api
+        - ipv-api
+        - doc-checking-app-api
+        - audit-processors
+        - utils
+        - test-services-api
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Set up AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1-node16
+      with:
+        role-to-assume: ${{ env.DEPLOYER_ROLE }}
+        aws-region: eu-west-2
+
+    - name: Set up JDK 11
+      uses: actions/setup-java@v3
+      with:
+        java-version: '11'
+        distribution: 'adopt'
+        cache: gradle
+
+    - name: Set up Gradle 7.0.2
+      uses: gradle/gradle-build-action@v2
+      with:
+        gradle-version: 7.0.2
+    
+    - name: Build ${{ matrix.module }}
+      run: ./gradlew --no-daemon :${{ matrix.module }}:buildZip
+    
+    - name: Upload ${{ matrix.module }} to source bucket
+      working-directory: ${{ matrix.module }}/build/distributions
+      run: |
+        S3_RESPONSE=`aws s3api put-object \
+          --bucket $SOURCE_BUCKET \
+          --key ${{ matrix.module }}/${{ github.sha }}.zip \
+          --body ${{ matrix.module }}.zip`
+        VERSION=`echo $S3_RESPONSE | jq .VersionId -r`
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+    
+    - name: Start signing job for ${{ matrix.module }}
+      run: |
+        aws signer start-signing-job \
+          --profile-name "${SIGNING_PROFILE}" \
+          --source "s3={bucketName=${SOURCE_BUCKET},key=${{ matrix.module }}/${{ github.sha }}.zip,version=$VERSION}" \
+          --destination "s3={bucketName=${DESTINATION_BUCKET},prefix=signed-${{ matrix.module }}-${{ github.sha }}-}"
