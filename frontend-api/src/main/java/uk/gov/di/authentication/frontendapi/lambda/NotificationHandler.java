@@ -22,6 +22,7 @@ import uk.gov.service.notify.NotificationClientException;
 
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static uk.gov.di.authentication.shared.entity.NotificationType.ACCOUNT_CREATED_CONFIRMATION;
@@ -187,17 +188,15 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
     }
 
     void writeTestClientOtpToS3(NotificationType notificationType, String otp, String destination) {
-        Boolean isNotifyDestination =
+        var isNotifyDestination =
                 configurationService.getNotifyTestDestinations().contains(destination);
-        Boolean isOTPNotificationType =
-                VERIFY_EMAIL.equals(notificationType)
-                        || VERIFY_PHONE_NUMBER.equals(notificationType)
-                        || MFA_SMS.equals(notificationType)
-                        || RESET_PASSWORD_WITH_CODE.equals(notificationType);
+        var isOTPNotificationType =
+                List.of(VERIFY_EMAIL, MFA_SMS, VERIFY_PHONE_NUMBER, RESET_PASSWORD_WITH_CODE)
+                        .contains(notificationType);
         if (isNotifyDestination && isOTPNotificationType) {
             LOG.info(
                     "Notify Test Destination used in request. Writing to S3 bucket for notification type {}",
-                    notificationType.name());
+                    notificationType);
             String bucketName = configurationService.getSmoketestBucketName();
             try {
                 var putObjectRequest =
