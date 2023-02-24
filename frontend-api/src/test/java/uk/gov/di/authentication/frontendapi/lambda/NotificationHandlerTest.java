@@ -28,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.entity.NotificationType.ACCOUNT_CREATED_CONFIRMATION;
@@ -36,6 +37,7 @@ import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_R
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
+import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 
 public class NotificationHandlerTest {
 
@@ -43,10 +45,9 @@ public class NotificationHandlerTest {
     private static final String TEST_PHONE_NUMBER = "01234567891";
     private static final String NOTIFY_PHONE_NUMBER = "01234567899";
     private static final String BUCKET_NAME = "test-s3-bucket";
-    private static final String TEST_RESET_PASSWORD_LINK =
-            "https://localhost:8080/frontend?reset-password?code=123456.54353464565";
     private static final String FRONTEND_BASE_URL = "https://localhost:8080/frontend";
     private static final String CONTACT_US_LINK_ROUTE = "contact-us";
+    private static final URI GOV_UK_ACCOUNTS_URL = URI.create("gov-uk-accounts-url");
     private final Context context = mock(Context.class);
     private final NotificationService notificationService = mock(NotificationService.class);
     private final ConfigurationService configService = mock(ConfigurationService.class);
@@ -60,6 +61,7 @@ public class NotificationHandlerTest {
         when(configService.getSmoketestBucketName()).thenReturn(BUCKET_NAME);
         when(configService.getFrontendBaseUrl()).thenReturn(FRONTEND_BASE_URL);
         when(configService.getContactUsLinkRoute()).thenReturn(CONTACT_US_LINK_ROUTE);
+        when(configService.getGovUKAccountsURL()).thenReturn(GOV_UK_ACCOUNTS_URL);
         handler = new NotificationHandler(notificationService, configService, s3Client);
     }
 
@@ -305,6 +307,34 @@ public class NotificationHandlerTest {
     }
 
     @Test
+    void
+            shouldSuccessfullyProcessAccountConfirmationRequestFromSQSQueueAndNotWriteOTPToS3WhenTestClient()
+                    throws Json.JsonException, NotificationClientException {
+        NotifyRequest notifyRequest =
+                new NotifyRequest(
+                        TEST_EMAIL_ADDRESS, ACCOUNT_CREATED_CONFIRMATION, SupportedLanguage.EN);
+
+        String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
+        SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
+
+        handler.handleRequest(sqsEvent, context);
+
+        Map<String, Object> personalisation = new HashMap<>();
+        personalisation.put("contact-us-link", buildContactUsUrl("accountCreatedEmail"));
+        personalisation.put("gov-uk-accounts-url", GOV_UK_ACCOUNTS_URL.toString());
+
+        verify(notificationService)
+                .sendEmail(
+                        notifyRequest.getDestination(),
+                        personalisation,
+                        ACCOUNT_CREATED_CONFIRMATION,
+                        SupportedLanguage.EN);
+        var putObjectRequest =
+                PutObjectRequest.builder().bucket(BUCKET_NAME).key(NOTIFY_PHONE_NUMBER).build();
+        verify(s3Client, times(0)).putObject(eq(putObjectRequest), any(RequestBody.class));
+    }
+
+    @Test
     void shouldSuccessfullyProcessPasswordResetWithCodeMessageFromSQSQueue()
             throws Json.JsonException, NotificationClientException {
         NotifyRequest notifyRequest =
@@ -331,6 +361,15 @@ public class NotificationHandlerTest {
                         personalisation,
                         RESET_PASSWORD_WITH_CODE,
                         SupportedLanguage.EN);
+    }
+
+    private String buildContactUsUrl(String referer) {
+        var queryParam = Map.of("referer", referer);
+        return buildURI(
+                        configService.getFrontendBaseUrl(),
+                        configService.getContactUsLinkRoute(),
+                        queryParam)
+                .toString();
     }
 
     private SQSEvent generateSQSEvent(String messageBody) {

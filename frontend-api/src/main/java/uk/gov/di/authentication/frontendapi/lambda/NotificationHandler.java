@@ -10,6 +10,7 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
@@ -21,6 +22,7 @@ import uk.gov.service.notify.NotificationClientException;
 
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static uk.gov.di.authentication.shared.entity.NotificationType.ACCOUNT_CREATED_CONFIRMATION;
@@ -153,7 +155,10 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                                     notifyRequest.getLanguage());
                             break;
                     }
-                    writeTestClientOtpToS3(notifyRequest.getCode(), notifyRequest.getDestination());
+                    writeTestClientOtpToS3(
+                            notifyRequest.getNotificationType(),
+                            notifyRequest.getCode(),
+                            notifyRequest.getDestination());
                 } catch (NotificationClientException e) {
                     LOG.error(
                             "Error sending with Notify using NotificationType: {}",
@@ -182,11 +187,16 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                 .toString();
     }
 
-    private void writeTestClientOtpToS3(String otp, String destination) {
-        Boolean isNotifyDestination =
+    void writeTestClientOtpToS3(NotificationType notificationType, String otp, String destination) {
+        var isNotifyDestination =
                 configurationService.getNotifyTestDestinations().contains(destination);
-        if (isNotifyDestination) {
-            LOG.info("Notify Test Destination used in request. Writing to S3 bucket");
+        var isOTPNotificationType =
+                List.of(VERIFY_EMAIL, MFA_SMS, VERIFY_PHONE_NUMBER, RESET_PASSWORD_WITH_CODE)
+                        .contains(notificationType);
+        if (isNotifyDestination && isOTPNotificationType) {
+            LOG.info(
+                    "Notify Test Destination used in request. Writing to S3 bucket for notification type {}",
+                    notificationType);
             String bucketName = configurationService.getSmoketestBucketName();
             try {
                 var putObjectRequest =
