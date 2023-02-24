@@ -70,11 +70,11 @@ public class ValidationHelper {
             var phoneNumberType = phoneUtil.getNumberType(phoneNumber);
             if (!isAcceptedPhoneNumberType(phoneNumberType)) {
                 LOG.warn(
-                        "Invalid phone number: not a mobile number.  NumberType {} CountryCode {}",
-                        phoneNumberType,
-                        phoneNumber.getCountryCode());
+                        "Invalid phone number: not a mobile number.  NumberType {}",
+                        phoneNumberType);
                 return Optional.of(ErrorResponse.ERROR_1012);
             }
+            LOG.info("Accepted phone NumberType {}", phoneNumberType);
             if (phoneUtil.isValidNumber(phoneNumber)) {
                 return Optional.empty();
             }
