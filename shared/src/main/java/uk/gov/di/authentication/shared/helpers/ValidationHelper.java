@@ -2,6 +2,7 @@ package uk.gov.di.authentication.shared.helpers;
 
 import com.google.i18n.phonenumbers.NumberParseException;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
+import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -14,6 +15,7 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType.FIXED_LINE_OR_MOBILE;
 import static com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType.MOBILE;
 
 public class ValidationHelper {
@@ -66,7 +68,7 @@ public class ValidationHelper {
         try {
             var phoneNumber = phoneUtil.parse(phoneNumberInput, "GB");
             var phoneNumberType = phoneUtil.getNumberType(phoneNumber);
-            if (!MOBILE.equals(phoneNumberType)) {
+            if (!isAcceptedPhoneNumberType(phoneNumberType)) {
                 LOG.warn(
                         "Invalid phone number: not a mobile number.  NumberType {} CountryCode {}",
                         phoneNumberType,
@@ -82,6 +84,10 @@ public class ValidationHelper {
             LOG.warn("Invalid phone number: parsing failure");
             return Optional.of(ErrorResponse.ERROR_1012);
         }
+    }
+
+    static boolean isAcceptedPhoneNumberType(PhoneNumberType phoneNumberType) {
+        return MOBILE.equals(phoneNumberType) || FIXED_LINE_OR_MOBILE.equals(phoneNumberType);
     }
 
     public static Optional<ErrorResponse> validatePassword(String password) {

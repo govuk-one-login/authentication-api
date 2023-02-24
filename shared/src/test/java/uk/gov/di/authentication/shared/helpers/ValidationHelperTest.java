@@ -11,9 +11,13 @@ import uk.gov.di.authentication.shared.services.CodeStorageService;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import static com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType.FIXED_LINE;
+import static com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType.FIXED_LINE_OR_MOBILE;
+import static com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType.MOBILE;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.Mockito.mock;
@@ -363,6 +367,13 @@ class ValidationHelperTest {
         assertThat(
                 ValidationHelper.validatePhoneNumber("+447911123456", "07911123456", PRODUCTION),
                 equalTo(Optional.of(ErrorResponse.ERROR_1044)));
+    }
+
+    @Test
+    void shouldAcceptSupportedPhoneNumberTypes() {
+        assertTrue(ValidationHelper.isAcceptedPhoneNumberType(MOBILE));
+        assertTrue(ValidationHelper.isAcceptedPhoneNumberType(FIXED_LINE_OR_MOBILE));
+        assertFalse(ValidationHelper.isAcceptedPhoneNumberType(FIXED_LINE));
     }
 
     @ParameterizedTest
