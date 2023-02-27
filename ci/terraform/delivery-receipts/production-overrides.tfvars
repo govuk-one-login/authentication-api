@@ -12,6 +12,8 @@ notify_template_map = {
   PASSWORD_UPDATED_TEMPLATE_ID             = "ebf3730c-0769-462b-ab39-7d9a7439bac1,435cf040-2dfc-4d1c-838d-2f349c8d11f1"
   VERIFY_PHONE_NUMBER_TEMPLATE_ID          = "8babad52-0e2e-443a-8a5a-c296dc1696cc,4bbc0a5c-833a-490e-89c6-5e286a030ac6"
   MFA_SMS_TEMPLATE_ID                      = "31e48dbf-6db6-4864-9710-081b72746698,044a2369-420c-4518-85ca-3fe1b9a93244"
+  AM_VERIFY_EMAIL_TEMPLATE_ID              = "98fdb807-d0d8-41c8-a1d7-7d0abff06b3c"
+  AM_VERIFY_PHONE_NUMBER_TEMPLATE_ID       = "b1b3935d-ffdc-4853-a3cd-a9fce09dbff5"
 }
 
 logging_endpoint_arns = [
