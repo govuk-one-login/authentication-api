@@ -145,6 +145,7 @@ public class DocAppAuthorizeHandler
 
             var authorisationRequest = authRequestBuilder.build();
             authorisationService.storeState(session.getSessionId(), state);
+            authorisationService.storeClientSessionIdAgainstState(clientSessionId, state);
             auditService.submitAuditEvent(
                     DocAppAuditableEvent.DOC_APP_AUTHORISATION_REQUESTED,
                     clientSessionId,
