@@ -233,7 +233,7 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_frontend_api" {
     name     = "${var.environment}-frontend-waf-rate-based-rule"
     statement {
       rate_based_statement {
-        limit              = 3600
+        limit              = 7200
         aggregate_key_type = "IP"
       }
     }
