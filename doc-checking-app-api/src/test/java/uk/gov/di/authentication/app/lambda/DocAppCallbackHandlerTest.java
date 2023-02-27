@@ -301,6 +301,110 @@ class DocAppCallbackHandlerTest {
         verifyNoInteractions(dynamoDocAppService);
     }
 
+    @Test
+    void shouldRedirectToRPWhenNoSessionCookieAndAccessDeniedErrorResponseIsPresent() {
+        when(configService.isCustomDocAppClaimEnabled()).thenReturn(true);
+        usingValidSession();
+        usingValidClientSession();
+        when(responseService.getClientSessionIdFromState(STATE))
+                .thenReturn(Optional.of(CLIENT_SESSION_ID));
+        var errorObject = OAuth2Error.ACCESS_DENIED;
+
+        Map<String, String> responseHeaders = new HashMap<>();
+        responseHeaders.put("state", STATE.getValue());
+        responseHeaders.put("error", errorObject.toString());
+        when(responseService.validateResponse(responseHeaders, SESSION_ID))
+                .thenReturn(Optional.of(errorObject));
+
+        var event = new APIGatewayProxyRequestEvent();
+        event.setQueryStringParameters(responseHeaders);
+
+        var expectedURI =
+                new AuthenticationErrorResponse(
+                                URI.create(REDIRECT_URI.toString()),
+                                OAuth2Error.ACCESS_DENIED,
+                                RP_STATE,
+                                null)
+                        .toURI()
+                        .toString();
+
+        var response = handler.handleRequest(event, context);
+
+        assertThat(response, hasStatus(302));
+        assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), equalTo(expectedURI));
+
+        verifyNoInteractions(tokenService);
+        verifyNoInteractions(auditService);
+        verifyNoInteractions(dynamoDocAppService);
+    }
+
+    @Test
+    void shouldRedirectToErrorScreenWhenNoSessionCookieButAccessDeniedErrorResponseIsNotPresent()
+            throws URISyntaxException {
+        when(configService.isCustomDocAppClaimEnabled()).thenReturn(true);
+        usingValidSession();
+        usingValidClientSession();
+
+        var errorObject = OAuth2Error.UNAUTHORIZED_CLIENT;
+        Map<String, String> responseHeaders = new HashMap<>();
+        responseHeaders.put("state", STATE.getValue());
+        responseHeaders.put("error", errorObject.toString());
+        when(responseService.validateResponse(responseHeaders, SESSION_ID))
+                .thenReturn(Optional.of(errorObject));
+
+        var event = new APIGatewayProxyRequestEvent();
+        event.setQueryStringParameters(responseHeaders);
+
+        var response = handler.handleRequest(event, context);
+
+        assertThat(response, hasStatus(302));
+        var expectedRedirectURI = new URIBuilder(LOGIN_URL).setPath("error").build();
+        assertThat(response.getHeaders().get("Location"), equalTo(expectedRedirectURI.toString()));
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                "Session Cookie not present and access_denied or state param missing from error response")));
+
+        verifyNoInteractions(tokenService);
+        verifyNoInteractions(auditService);
+        verifyNoInteractions(dynamoDocAppService);
+    }
+
+    @Test
+    void
+            shouldRedirectToErrorScreenWhenNoSessionCookieAndAccessDeniedErrorResponseIsPresentButNoClientSessionFoundUsingStateParam()
+                    throws URISyntaxException {
+        when(configService.isCustomDocAppClaimEnabled()).thenReturn(true);
+        usingValidSession();
+        usingValidClientSession();
+
+        var errorObject = OAuth2Error.ACCESS_DENIED;
+        Map<String, String> responseHeaders = new HashMap<>();
+        responseHeaders.put("state", STATE.getValue());
+        responseHeaders.put("error", errorObject.toString());
+        when(responseService.validateResponse(responseHeaders, SESSION_ID))
+                .thenReturn(Optional.of(errorObject));
+
+        var event = new APIGatewayProxyRequestEvent();
+        event.setQueryStringParameters(responseHeaders);
+
+        var response = handler.handleRequest(event, context);
+
+        assertThat(response, hasStatus(302));
+        var expectedRedirectURI = new URIBuilder(LOGIN_URL).setPath("error").build();
+        assertThat(response.getHeaders().get("Location"), equalTo(expectedRedirectURI.toString()));
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                "ClientSessionId could not be found using state param")));
+
+        verifyNoInteractions(tokenService);
+        verifyNoInteractions(auditService);
+        verifyNoInteractions(dynamoDocAppService);
+    }
+
     private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {
         return handler.handleRequest(event, context);
     }

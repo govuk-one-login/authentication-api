@@ -118,6 +118,11 @@ public class DocAppAuthorisationService {
         }
     }
 
+    public Optional<String> getClientSessionIdFromState(State state) {
+        LOG.info("Getting clientSessionId using state");
+        return Optional.ofNullable(redisConnectionService.getValue(STATE_STORAGE_PREFIX + state.getValue()));
+    }
+
     private boolean isStateValid(String sessionId, String responseState) {
         var value =
                 Optional.ofNullable(

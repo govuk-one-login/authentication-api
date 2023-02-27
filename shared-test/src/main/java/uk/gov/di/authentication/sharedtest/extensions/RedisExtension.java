@@ -101,6 +101,10 @@ public class RedisExtension
         redis.saveWithExpiry("state:" + sessionId, objectMapper.writeValueAsString(state), 3600);
     }
 
+    public void addClientSessionAndStateToRedis(State state, String clientSessionId) {
+        redis.saveWithExpiry("state:" + state.getValue(), clientSessionId, 3600);
+    }
+
     public void addClientSessionIdToSession(String clientSessionId, String sessionId)
             throws Json.JsonException {
         Session session = objectMapper.readValue(redis.getValue(sessionId), Session.class);
