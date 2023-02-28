@@ -21,6 +21,7 @@ import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.JwksService;
@@ -28,6 +29,7 @@ import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 
@@ -53,6 +55,7 @@ public class DocAppAuthorizeHandler
     private final ConfigurationService configurationService;
     private final AuditService auditService;
     private final ClientService clientService;
+    private final CloudwatchMetricsService cloudwatchMetricsService;
 
     public DocAppAuthorizeHandler() {
         this(ConfigurationService.getInstance());
@@ -71,6 +74,7 @@ public class DocAppAuthorizeHandler
                         new JwksService(configurationService, kmsConnectionService));
         this.auditService = new AuditService(configurationService);
         this.clientService = new DynamoClientService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
     }
 
     public DocAppAuthorizeHandler(
@@ -79,13 +83,15 @@ public class DocAppAuthorizeHandler
             DocAppAuthorisationService authorisationService,
             ConfigurationService configurationService,
             AuditService auditService,
-            ClientService clientService) {
+            ClientService clientService,
+            CloudwatchMetricsService cloudwatchMetricsService) {
         this.sessionService = sessionService;
         this.clientSessionService = clientSessionService;
         this.authorisationService = authorisationService;
         this.configurationService = configurationService;
         this.auditService = auditService;
         this.clientService = clientService;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
     }
 
     @Override
@@ -160,6 +166,8 @@ public class DocAppAuthorizeHandler
                     "DocAppAuthorizeHandler successfully processed request, redirect URI {}",
                     authorisationRequest.toURI().toString());
 
+            cloudwatchMetricsService.incrementCounter(
+                    "DocAppHandoff", Map.of("Environment", configurationService.getEnvironment()));
             return generateApiGatewayProxyResponse(
                     200, new DocAppAuthorisationResponse(authorisationRequest.toURI().toString()));
 

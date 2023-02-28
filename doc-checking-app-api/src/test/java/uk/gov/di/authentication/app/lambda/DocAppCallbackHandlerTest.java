@@ -36,6 +36,7 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
@@ -71,6 +72,8 @@ class DocAppCallbackHandlerTest {
             mock(DocAppAuthorisationService.class);
     private final DocAppCriService tokenService = mock(DocAppCriService.class);
     private final SessionService sessionService = mock(SessionService.class);
+    private final CloudwatchMetricsService cloudwatchMetricsService =
+            mock(CloudwatchMetricsService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final DynamoDocAppService dynamoDocAppService = mock(DynamoDocAppService.class);
@@ -79,6 +82,7 @@ class DocAppCallbackHandlerTest {
     private static final URI LOGIN_URL = URI.create("https://example.com");
     private static final String OIDC_BASE_URL = "https://base-url.com";
     private static final URI CRI_URI = URI.create("http://cri/");
+    private static final String ENVIRONMENT = "test-environment";
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
     private static final String COOKIE = "Cookie";
     private static final String SESSION_ID = "a-session-id";
@@ -112,13 +116,15 @@ class DocAppCallbackHandlerTest {
                         clientSessionService,
                         auditService,
                         dynamoDocAppService,
-                        cookieHelper);
+                        cookieHelper,
+                        cloudwatchMetricsService);
         when(configService.getLoginURI()).thenReturn(LOGIN_URL);
         when(configService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_BASE_URL));
         when(configService.isSpotEnabled()).thenReturn(true);
         when(configService.getDocAppBackendURI()).thenReturn(CRI_URI);
         when(context.getAwsRequestId()).thenReturn(REQUEST_ID);
         when(cookieHelper.parseSessionCookie(anyMap())).thenCallRealMethod();
+        when(configService.getEnvironment()).thenReturn(ENVIRONMENT);
     }
 
     @Test
@@ -156,6 +162,10 @@ class DocAppCallbackHandlerTest {
         verify(dynamoDocAppService)
                 .addDocAppCredential(
                         PAIRWISE_SUBJECT_ID.getValue(), List.of("a-verifiable-credential"));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "DocAppCallback",
+                        Map.of("Environment", ENVIRONMENT, "Successful", Boolean.toString(true)));
     }
 
     @Test
@@ -170,6 +180,7 @@ class DocAppCallbackHandlerTest {
 
         verifyNoInteractions(auditService);
         verifyNoInteractions(dynamoDocAppService);
+        verifyNoInteractions(cloudwatchMetricsService);
     }
 
     @Test
@@ -185,6 +196,7 @@ class DocAppCallbackHandlerTest {
 
         verifyNoInteractions(auditService);
         verifyNoInteractions(dynamoDocAppService);
+        verifyNoInteractions(cloudwatchMetricsService);
     }
 
     @Test
@@ -225,6 +237,18 @@ class DocAppCallbackHandlerTest {
         verifyNoInteractions(tokenService);
         verifyNoInteractions(auditService);
         verifyNoInteractions(dynamoDocAppService);
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "DocAppCallback",
+                        Map.of(
+                                "Environment",
+                                ENVIRONMENT,
+                                "Successful",
+                                Boolean.toString(false),
+                                "NoSessionError",
+                                Boolean.toString(false),
+                                "Error",
+                                OAuth2Error.ACCESS_DENIED_CODE));
     }
 
     @Test
@@ -260,6 +284,18 @@ class DocAppCallbackHandlerTest {
 
         verifyNoMoreInteractions(auditService);
         verifyNoInteractions(dynamoDocAppService);
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "DocAppCallback",
+                        Map.of(
+                                "Environment",
+                                ENVIRONMENT,
+                                "Successful",
+                                Boolean.toString(false),
+                                "NoSessionError",
+                                Boolean.toString(false),
+                                "Error",
+                                "UnsuccessfulTokenResponse"));
     }
 
     @Test
@@ -299,25 +335,36 @@ class DocAppCallbackHandlerTest {
 
         verifyNoMoreInteractions(auditService);
         verifyNoInteractions(dynamoDocAppService);
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "DocAppCallback",
+                        Map.of(
+                                "Environment",
+                                ENVIRONMENT,
+                                "Successful",
+                                Boolean.toString(false),
+                                "NoSessionError",
+                                Boolean.toString(false),
+                                "Error",
+                                "UnsuccessfulCredentialResponse"));
     }
 
     @Test
     void shouldRedirectToRPWhenNoSessionCookieAndAccessDeniedErrorResponseIsPresent() {
-        when(configService.isCustomDocAppClaimEnabled()).thenReturn(true);
         usingValidSession();
         usingValidClientSession();
+        when(configService.isCustomDocAppClaimEnabled()).thenReturn(true);
         when(responseService.getClientSessionIdFromState(STATE))
                 .thenReturn(Optional.of(CLIENT_SESSION_ID));
-        var errorObject = OAuth2Error.ACCESS_DENIED;
 
         Map<String, String> responseHeaders = new HashMap<>();
         responseHeaders.put("state", STATE.getValue());
-        responseHeaders.put("error", errorObject.toString());
-        when(responseService.validateResponse(responseHeaders, SESSION_ID))
-                .thenReturn(Optional.of(errorObject));
-
-        var event = new APIGatewayProxyRequestEvent();
-        event.setQueryStringParameters(responseHeaders);
+        responseHeaders.put("error", OAuth2Error.ACCESS_DENIED_CODE);
+        var response =
+                handler.handleRequest(
+                        new APIGatewayProxyRequestEvent()
+                                .withQueryStringParameters(responseHeaders),
+                        context);
 
         var expectedURI =
                 new AuthenticationErrorResponse(
@@ -327,15 +374,22 @@ class DocAppCallbackHandlerTest {
                                 null)
                         .toURI()
                         .toString();
-
-        var response = handler.handleRequest(event, context);
-
         assertThat(response, hasStatus(302));
         assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), equalTo(expectedURI));
-
         verifyNoInteractions(tokenService);
         verifyNoInteractions(auditService);
-        verifyNoInteractions(dynamoDocAppService);
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "DocAppCallback",
+                        Map.of(
+                                "Environment",
+                                ENVIRONMENT,
+                                "Successful",
+                                Boolean.toString(false),
+                                "NoSessionError",
+                                Boolean.toString(true),
+                                "Error",
+                                "access_denied"));
     }
 
     @Test
@@ -345,17 +399,14 @@ class DocAppCallbackHandlerTest {
         usingValidSession();
         usingValidClientSession();
 
-        var errorObject = OAuth2Error.UNAUTHORIZED_CLIENT;
         Map<String, String> responseHeaders = new HashMap<>();
         responseHeaders.put("state", STATE.getValue());
-        responseHeaders.put("error", errorObject.toString());
-        when(responseService.validateResponse(responseHeaders, SESSION_ID))
-                .thenReturn(Optional.of(errorObject));
-
-        var event = new APIGatewayProxyRequestEvent();
-        event.setQueryStringParameters(responseHeaders);
-
-        var response = handler.handleRequest(event, context);
+        responseHeaders.put("error", OAuth2Error.UNAUTHORIZED_CLIENT_CODE);
+        var response =
+                handler.handleRequest(
+                        new APIGatewayProxyRequestEvent()
+                                .withQueryStringParameters(responseHeaders),
+                        context);
 
         assertThat(response, hasStatus(302));
         var expectedRedirectURI = new URIBuilder(LOGIN_URL).setPath("error").build();
@@ -365,7 +416,6 @@ class DocAppCallbackHandlerTest {
                 hasItem(
                         withMessageContaining(
                                 "Session Cookie not present and access_denied or state param missing from error response")));
-
         verifyNoInteractions(tokenService);
         verifyNoInteractions(auditService);
         verifyNoInteractions(dynamoDocAppService);
@@ -379,17 +429,14 @@ class DocAppCallbackHandlerTest {
         usingValidSession();
         usingValidClientSession();
 
-        var errorObject = OAuth2Error.ACCESS_DENIED;
         Map<String, String> responseHeaders = new HashMap<>();
         responseHeaders.put("state", STATE.getValue());
-        responseHeaders.put("error", errorObject.toString());
-        when(responseService.validateResponse(responseHeaders, SESSION_ID))
-                .thenReturn(Optional.of(errorObject));
-
-        var event = new APIGatewayProxyRequestEvent();
-        event.setQueryStringParameters(responseHeaders);
-
-        var response = handler.handleRequest(event, context);
+        responseHeaders.put("error", OAuth2Error.ACCESS_DENIED_CODE);
+        var response =
+                handler.handleRequest(
+                        new APIGatewayProxyRequestEvent()
+                                .withQueryStringParameters(responseHeaders),
+                        context);
 
         assertThat(response, hasStatus(302));
         var expectedRedirectURI = new URIBuilder(LOGIN_URL).setPath("error").build();
@@ -399,7 +446,6 @@ class DocAppCallbackHandlerTest {
                 hasItem(
                         withMessageContaining(
                                 "ClientSessionId could not be found using state param")));
-
         verifyNoInteractions(tokenService);
         verifyNoInteractions(auditService);
         verifyNoInteractions(dynamoDocAppService);
