@@ -9,8 +9,8 @@ import java.util.Map;
 
 public enum NotificationType implements TemplateAware {
     VERIFY_EMAIL(
-            "VERIFY_EMAIL_TEMPLATE_ID",
-            new EnumMap<>(Map.of(SupportedLanguage.CY, "VERIFY_EMAIL_TEMPLATE_ID_CY"))),
+            "AM_VERIFY_EMAIL_TEMPLATE_ID",
+            new EnumMap<>(Map.of(SupportedLanguage.CY, "AM_VERIFY_EMAIL_TEMPLATE_ID_CY"))),
     EMAIL_UPDATED(
             "EMAIL_UPDATED_TEMPLATE_ID",
             new EnumMap<>(Map.of(SupportedLanguage.CY, "EMAIL_UPDATED_TEMPLATE_ID_CY"))),
@@ -21,8 +21,8 @@ public enum NotificationType implements TemplateAware {
             "PHONE_NUMBER_UPDATED_TEMPLATE_ID",
             new EnumMap<>(Map.of(SupportedLanguage.CY, "PHONE_NUMBER_UPDATED_TEMPLATE_ID_CY"))),
     VERIFY_PHONE_NUMBER(
-            "VERIFY_PHONE_NUMBER_TEMPLATE_ID",
-            new EnumMap<>(Map.of(SupportedLanguage.CY, "VERIFY_PHONE_NUMBER_TEMPLATE_ID_CY"))),
+            "AM_VERIFY_PHONE_NUMBER_TEMPLATE_ID",
+            new EnumMap<>(Map.of(SupportedLanguage.CY, "AM_VERIFY_PHONE_NUMBER_TEMPLATE_ID_CY"))),
     PASSWORD_UPDATED(
             "PASSWORD_UPDATED_TEMPLATE_ID",
             new EnumMap<>(Map.of(SupportedLanguage.CY, "PASSWORD_UPDATED_TEMPLATE_ID_CY")));

@@ -17,9 +17,9 @@ class NotificationTypeTest {
 
     @Test
     void shouldReturnDefaultTemplateForVerifyEmailWhenLanguageEN() {
-        when(configurationService.getNotifyTemplateId("VERIFY_EMAIL_TEMPLATE_ID_CY"))
+        when(configurationService.getNotifyTemplateId("AM_VERIFY_EMAIL_TEMPLATE_ID_CY"))
                 .thenReturn("67890");
-        when(configurationService.getNotifyTemplateId("VERIFY_EMAIL_TEMPLATE_ID"))
+        when(configurationService.getNotifyTemplateId("AM_VERIFY_EMAIL_TEMPLATE_ID"))
                 .thenReturn("12345");
         assertThat(
                 VERIFY_EMAIL.getTemplateId(SupportedLanguage.EN, configurationService),
@@ -28,9 +28,9 @@ class NotificationTypeTest {
 
     @Test
     void shouldReturnDefaultTemplateForVerifyEmailWhenLanguageCYAndSingleTemplatePerLanguage() {
-        when(configurationService.getNotifyTemplateId("VERIFY_EMAIL_TEMPLATE_ID_CY"))
+        when(configurationService.getNotifyTemplateId("AM_VERIFY_EMAIL_TEMPLATE_ID_CY"))
                 .thenReturn("67890");
-        when(configurationService.getNotifyTemplateId("VERIFY_EMAIL_TEMPLATE_ID"))
+        when(configurationService.getNotifyTemplateId("AM_VERIFY_EMAIL_TEMPLATE_ID"))
                 .thenReturn("12345");
         when(configurationService.isNotifyTemplatePerLanguage()).thenReturn(true);
         assertThat(
@@ -40,9 +40,9 @@ class NotificationTypeTest {
 
     @Test
     void shouldReturnDefaultTemplateForVerifyEmailWhenLanguageCYAndNotSingleTemplatePerLanguage() {
-        when(configurationService.getNotifyTemplateId("VERIFY_EMAIL_TEMPLATE_ID_CY"))
+        when(configurationService.getNotifyTemplateId("AM_VERIFY_EMAIL_TEMPLATE_ID_CY"))
                 .thenReturn("67890");
-        when(configurationService.getNotifyTemplateId("VERIFY_EMAIL_TEMPLATE_ID"))
+        when(configurationService.getNotifyTemplateId("AM_VERIFY_EMAIL_TEMPLATE_ID"))
                 .thenReturn("12345");
         when(configurationService.isNotifyTemplatePerLanguage()).thenReturn(false);
         assertThat(
@@ -77,9 +77,9 @@ class NotificationTypeTest {
 
     @Test
     void shouldReturnDefaultTemplateForVerifyEmailWhenLanguageCYButTemplateMissing() {
-        when(configurationService.getNotifyTemplateId("VERIFY_EMAIL_TEMPLATE_ID_CY"))
+        when(configurationService.getNotifyTemplateId("AM_VERIFY_EMAIL_TEMPLATE_ID_CY"))
                 .thenReturn("");
-        when(configurationService.getNotifyTemplateId("VERIFY_EMAIL_TEMPLATE_ID"))
+        when(configurationService.getNotifyTemplateId("AM_VERIFY_EMAIL_TEMPLATE_ID"))
                 .thenReturn("12345");
         assertThat(
                 VERIFY_EMAIL.getTemplateId(SupportedLanguage.CY, configurationService),
