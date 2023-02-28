@@ -5,11 +5,13 @@ import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
+import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
@@ -62,7 +64,8 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
     public static final String SESSION_ID = "some-session-id";
     public static final String CLIENT_SESSION_ID = "some-client-session-id";
     public static final Scope SCOPE = new Scope(OIDCScopeValue.OPENID);
-    public static final State STATE = new State();
+    public static final State RP_STATE = new State();
+    public static final State DOC_APP_STATE = new State();
     private static final String SIGNING_KEY_ID = UUID.randomUUID().toString();
     public static Subject docAppSubjectId;
     private static final ECKey privateKey;
@@ -238,6 +241,34 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                         DOC_APP_UNSUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED));
     }
 
+    @Test
+    void shouldRedirectToRPWhenNoSessionCookieAndAccessDeniedErrorIsPresent()
+            throws Json.JsonException {
+        setupSession();
+        redis.addClientSessionAndStateToRedis(DOC_APP_STATE, CLIENT_SESSION_ID);
+
+        var queryStringParameters =
+                new HashMap<>(
+                        Map.of(
+                                "state",
+                                DOC_APP_STATE.getValue(),
+                                "error",
+                                OAuth2Error.ACCESS_DENIED_CODE));
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(Optional.empty()),
+                        queryStringParameters);
+
+        var expectedURI =
+                new AuthenticationErrorResponse(
+                                URI.create(REDIRECT_URI), OAuth2Error.ACCESS_DENIED, RP_STATE, null)
+                        .toURI()
+                        .toString();
+        assertThat(response, hasStatus(302));
+        assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), equalTo(expectedURI));
+    }
+
     private void setupSession() throws Json.JsonException {
         var authRequestBuilder =
                 new AuthenticationRequest.Builder(
@@ -245,7 +276,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                                 SCOPE,
                                 new ClientID(CLIENT_ID),
                                 URI.create(REDIRECT_URI))
-                        .state(STATE)
+                        .state(RP_STATE)
                         .nonce(new Nonce());
         redis.createSession(SESSION_ID);
         var clientSession =
@@ -256,13 +287,17 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                         CLIENT_NAME);
         clientSession.setDocAppSubjectId(docAppSubjectId);
         redis.createClientSession(CLIENT_SESSION_ID, clientSession);
-        redis.addStateToRedis(STATE, SESSION_ID);
+        redis.addStateToRedis(DOC_APP_STATE, SESSION_ID);
     }
 
     private Map<String, String> constructQueryStringParameters() {
         final Map<String, String> queryStringParameters = new HashMap<>();
         queryStringParameters.putAll(
-                Map.of("state", STATE.getValue(), "code", new AuthorizationCode().getValue()));
+                Map.of(
+                        "state",
+                        DOC_APP_STATE.getValue(),
+                        "code",
+                        new AuthorizationCode().getValue()));
         return queryStringParameters;
     }
 
@@ -322,6 +357,11 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
         @Override
         public String getTxmaAuditQueueUrl() {
             return txmaAuditQueue.getQueueUrl();
+        }
+
+        @Override
+        public boolean isCustomDocAppClaimEnabled() {
+            return true;
         }
     }
 }

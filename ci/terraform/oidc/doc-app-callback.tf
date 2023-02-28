@@ -25,19 +25,20 @@ module "doc-app-callback" {
   environment     = var.environment
 
   handler_environment_variables = {
-    ENVIRONMENT                        = var.environment
-    TXMA_AUDIT_QUEUE_URL               = module.oidc_txma_audit.queue_url
-    LOCALSTACK_ENDPOINT                = var.use_localstack ? var.localstack_endpoint : null
-    LOGIN_URI                          = module.dns.frontend_url
-    REDIS_KEY                          = local.redis_key
-    DYNAMO_ENDPOINT                    = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    CUSTOM_DOC_APP_CLAIM_ENABLED       = var.custom_doc_app_claim_enabled
     DOC_APP_AUTHORISATION_CALLBACK_URI = var.doc_app_authorisation_callback_uri
     DOC_APP_AUTHORISATION_CLIENT_ID    = var.doc_app_authorisation_client_id
     DOC_APP_TOKEN_SIGNING_KEY_ALIAS    = local.doc_app_auth_key_alias_name
     DOC_APP_BACKEND_URI                = var.doc_app_backend_uri
     DOC_APP_CRI_DATA_ENDPOINT          = var.doc_app_cri_data_endpoint
     DOC_APP_JWKS_URL                   = var.doc_app_jwks_endpoint
+    DYNAMO_ENDPOINT                    = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    ENVIRONMENT                        = var.environment
     INTERNAl_SECTOR_URI                = var.internal_sector_uri
+    LOCALSTACK_ENDPOINT                = var.use_localstack ? var.localstack_endpoint : null
+    LOGIN_URI                          = module.dns.frontend_url
+    REDIS_KEY                          = local.redis_key
+    TXMA_AUDIT_QUEUE_URL               = module.oidc_txma_audit.queue_url
   }
   handler_function_name = "uk.gov.di.authentication.app.lambda.DocAppCallbackHandler::handleRequest"
 

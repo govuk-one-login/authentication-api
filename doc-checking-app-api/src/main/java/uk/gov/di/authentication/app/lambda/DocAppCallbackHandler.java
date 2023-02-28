@@ -5,8 +5,10 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.ErrorObject;
+import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.http.HTTPRequest;
+import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.apache.logging.log4j.LogManager;
@@ -31,6 +33,8 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 
 import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.POST;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -112,13 +116,11 @@ public class DocAppCallbackHandler
         LOG.info("Request received to DocAppCallbackHandler");
         try {
             var sessionCookiesIds =
-                    cookieHelper
-                            .parseSessionCookie(input.getHeaders())
-                            .orElseThrow(
-                                    () -> {
-                                        throw new DocAppCallbackException(
-                                                "No session cookie present");
-                                    });
+                    cookieHelper.parseSessionCookie(input.getHeaders()).orElse(null);
+            if (Objects.isNull(sessionCookiesIds)) {
+                LOG.warn("No session cookie present. Attempt to find session using state");
+                return generateNoSessionErrorResponse(input.getQueryStringParameters());
+            }
             var session =
                     sessionService
                             .readSessionFromRedis(sessionCookiesIds.getSessionId())
@@ -286,5 +288,56 @@ public class DocAppCallbackHandler
                                         ERROR_PAGE_REDIRECT_PATH)
                                 .toString()),
                 null);
+    }
+
+    private APIGatewayProxyResponseEvent generateNoSessionErrorResponse(
+            Map<String, String> queryStringParameters)
+            throws ParseException, DocAppCallbackException {
+        LOG.info(
+                "Attempting to generate error response using state. CustomDocAppClaimEnabled: {}",
+                configurationService.isCustomDocAppClaimEnabled());
+        if (isAccessDeniedErrorAndStatePresent(queryStringParameters)) {
+            LOG.info("access_denied error and state param are both present");
+            var clientSessionId =
+                    authorisationService
+                            .getClientSessionIdFromState(
+                                    State.parse(queryStringParameters.get("state")))
+                            .orElseThrow(
+                                    () ->
+                                            new DocAppCallbackException(
+                                                    "ClientSessionId could not be found using state param"));
+            LOG.info("ClientSessionID found using state");
+            attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
+            attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
+            var clientSession =
+                    clientSessionService
+                            .getClientSession(clientSessionId)
+                            .orElseThrow(
+                                    () ->
+                                            new DocAppCallbackException(
+                                                    "No client session found with given client sessionId"));
+            LOG.info("ClientSession found using clientSessionId");
+            var authenticationRequest =
+                    AuthenticationRequest.parse(clientSession.getAuthRequestParams());
+            var errorDescription =
+                    Optional.ofNullable(queryStringParameters.get("error_description"))
+                            .orElse(OAuth2Error.ACCESS_DENIED.getDescription());
+            var errorObject = new ErrorObject(queryStringParameters.get("error"), errorDescription);
+            LOG.info(
+                    "ErrorObject created for session cookie not present. Generating error response back to RP");
+            return generateAuthenticationErrorResponse(authenticationRequest, errorObject);
+        } else {
+            LOG.warn(
+                    "Session Cookie not present and access_denied or state param missing from error response");
+            throw new DocAppCallbackException(
+                    "Session Cookie not present and access_denied or state param missing from error response");
+        }
+    }
+
+    private boolean isAccessDeniedErrorAndStatePresent(Map<String, String> queryStringParameters) {
+        return configurationService.isCustomDocAppClaimEnabled()
+                && queryStringParameters.containsKey("error")
+                && queryStringParameters.get("error").equals(OAuth2Error.ACCESS_DENIED.getCode())
+                && queryStringParameters.containsKey("state");
     }
 }

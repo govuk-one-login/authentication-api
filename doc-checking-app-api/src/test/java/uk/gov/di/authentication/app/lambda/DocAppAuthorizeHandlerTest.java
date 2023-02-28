@@ -142,6 +142,8 @@ class DocAppAuthorizeHandlerTest {
                 splitQuery(body.getRedirectUri()).get("request"),
                 equalTo(encryptedJWT.serialize()));
         verify(authorisationService).storeState(eq(session.getSessionId()), any(State.class));
+        verify(authorisationService)
+                .storeClientSessionIdAgainstState(eq(CLIENT_SESSION_ID), any(State.class));
         verify(auditService)
                 .submitAuditEvent(
                         DocAppAuditableEvent.DOC_APP_AUTHORISATION_REQUESTED,
