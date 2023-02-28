@@ -356,7 +356,8 @@ public class DocAppCallbackHandler
         return configurationService.isCustomDocAppClaimEnabled()
                 && queryStringParameters.containsKey("error")
                 && queryStringParameters.get("error").equals(OAuth2Error.ACCESS_DENIED.getCode())
-                && queryStringParameters.containsKey("state");
+                && queryStringParameters.containsKey("state")
+                && Boolean.FALSE.equals(queryStringParameters.get("state").isEmpty());
     }
 
     private void incrementDocAppCallbackErrorCounter(boolean noSessionError, String error) {

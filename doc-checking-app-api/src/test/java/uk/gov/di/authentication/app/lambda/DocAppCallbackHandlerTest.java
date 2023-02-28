@@ -393,6 +393,70 @@ class DocAppCallbackHandlerTest {
     }
 
     @Test
+    void
+            shouldRedirectToFrontendErrorPageWhenNoSessionCookieAndAccessDeniedErrorResponseIsPresentButNoStateParamPresent()
+                    throws URISyntaxException {
+        usingValidSession();
+        usingValidClientSession();
+        when(configService.isCustomDocAppClaimEnabled()).thenReturn(true);
+        when(responseService.getClientSessionIdFromState(STATE))
+                .thenReturn(Optional.of(CLIENT_SESSION_ID));
+
+        Map<String, String> responseHeaders = Map.of("error", OAuth2Error.ACCESS_DENIED_CODE);
+
+        var response =
+                handler.handleRequest(
+                        new APIGatewayProxyRequestEvent()
+                                .withQueryStringParameters(responseHeaders),
+                        context);
+
+        var expectedRedirectURI = new URIBuilder(LOGIN_URL).setPath("error").build();
+        assertThat(response, hasStatus(302));
+        assertThat(response.getHeaders().get("Location"), equalTo(expectedRedirectURI.toString()));
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                "Session Cookie not present and access_denied or state param missing from error response")));
+        verifyNoInteractions(tokenService);
+        verifyNoInteractions(auditService);
+        verifyNoInteractions(dynamoDocAppService);
+    }
+
+    @Test
+    void
+            shouldRedirectToFrontendErrorPageWhenNoSessionCookieAndAccessDeniedErrorResponseIsPresentButStateContainsNoValue()
+                    throws URISyntaxException {
+        usingValidSession();
+        usingValidClientSession();
+        when(configService.isCustomDocAppClaimEnabled()).thenReturn(true);
+        when(responseService.getClientSessionIdFromState(STATE))
+                .thenReturn(Optional.of(CLIENT_SESSION_ID));
+
+        Map<String, String> responseHeaders = new HashMap<>();
+        responseHeaders.put("error", OAuth2Error.ACCESS_DENIED_CODE);
+        responseHeaders.put("state", "");
+        var response =
+                handler.handleRequest(
+                        new APIGatewayProxyRequestEvent()
+                                .withQueryStringParameters(responseHeaders),
+                        context);
+
+        var expectedRedirectURI = new URIBuilder(LOGIN_URL).setPath("error").build();
+        assertThat(response, hasStatus(302));
+        assertThat(response.getHeaders().get("Location"), equalTo(expectedRedirectURI.toString()));
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                "Session Cookie not present and access_denied or state param missing from error response")));
+
+        verifyNoInteractions(tokenService);
+        verifyNoInteractions(auditService);
+        verifyNoInteractions(dynamoDocAppService);
+    }
+
+    @Test
     void shouldRedirectToErrorScreenWhenNoSessionCookieButAccessDeniedErrorResponseIsNotPresent()
             throws URISyntaxException {
         when(configService.isCustomDocAppClaimEnabled()).thenReturn(true);
