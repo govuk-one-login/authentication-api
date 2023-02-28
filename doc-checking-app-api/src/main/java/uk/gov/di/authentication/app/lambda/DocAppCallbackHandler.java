@@ -296,10 +296,7 @@ public class DocAppCallbackHandler
         LOG.info(
                 "Attempting to generate error response using state. CustomDocAppClaimEnabled: {}",
                 configurationService.isCustomDocAppClaimEnabled());
-        if (configurationService.isCustomDocAppClaimEnabled()
-                && queryStringParameters.containsKey("error")
-                && queryStringParameters.get("error").equals(OAuth2Error.ACCESS_DENIED.getCode())
-                && queryStringParameters.containsKey("state")) {
+        if (isAccessDeniedErrorAndStatePresent(queryStringParameters)) {
             LOG.info("access_denied error and state param are both present");
             var clientSessionId =
                     authorisationService
@@ -335,5 +332,12 @@ public class DocAppCallbackHandler
             throw new DocAppCallbackException(
                     "Session Cookie not present and access_denied or state param missing from error response");
         }
+    }
+
+    private boolean isAccessDeniedErrorAndStatePresent(Map<String, String> queryStringParameters) {
+        return configurationService.isCustomDocAppClaimEnabled()
+                && queryStringParameters.containsKey("error")
+                && queryStringParameters.get("error").equals(OAuth2Error.ACCESS_DENIED.getCode())
+                && queryStringParameters.containsKey("state");
     }
 }
