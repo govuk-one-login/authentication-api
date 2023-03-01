@@ -55,6 +55,7 @@ import static uk.gov.di.authentication.shared.entity.IdentityClaims.VTM;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ClientSubjectHelper.getSectorIdentifierForClient;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
@@ -172,6 +173,7 @@ public class IPVCallbackHandler
             if (Objects.isNull(clientRegistry)) {
                 throw new IpvCallbackException("Client registry not found with given clientId");
             }
+            attachLogFieldToLogs(CLIENT_ID, clientId);
 
             var errorObject =
                     ipvAuthorisationService.validateResponse(
