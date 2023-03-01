@@ -41,6 +41,7 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
@@ -77,6 +78,7 @@ class DocAppAuthorizeHandlerTest {
             URI.create("http://localhost/doc-app/authorize");
     private static final String DOC_APP_CLIENT_ID = "doc-app-client-id";
     private static final URI REDIRECT_URI = URI.create("http://localhost/oidc/redirect");
+    private static final String ENVIRONMENT = "test-environment";
     private static final String CLIENT_SESSION_ID = "client-session-v1";
     private static final String SESSION_ID = "a-session-id";
     private static final String PERSISTENT_SESSION_ID = "a-persistent-session-id";
@@ -91,6 +93,8 @@ class DocAppAuthorizeHandlerTest {
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final DocAppAuthorisationService authorisationService =
             mock(DocAppAuthorisationService.class);
+    private final CloudwatchMetricsService cloudwatchMetricsService =
+            mock(CloudwatchMetricsService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final ClientRegistry clientRegistry = mock(ClientRegistry.class);
@@ -108,12 +112,14 @@ class DocAppAuthorizeHandlerTest {
                         authorisationService,
                         configurationService,
                         auditService,
-                        clientService);
+                        clientService,
+                        cloudwatchMetricsService);
         when(configurationService.getDocAppAuthorisationClientId()).thenReturn(DOC_APP_CLIENT_ID);
         when(configurationService.getDocAppAuthorisationCallbackURI())
                 .thenReturn(DOC_APP_CALLBACK_URI);
         when(configurationService.getDocAppAuthorisationURI())
                 .thenReturn(DOC_APP_AUTHORISATION_URI);
+        when(configurationService.getEnvironment()).thenReturn(ENVIRONMENT);
         when(clientSession.getDocAppSubjectId()).thenReturn(DOC_APP_SUBJECT_ID);
     }
 
@@ -155,6 +161,8 @@ class DocAppAuthorizeHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_SESSION_ID);
+        verify(cloudwatchMetricsService)
+                .incrementCounter("DocAppHandoff", Map.of("Environment", ENVIRONMENT));
     }
 
     @Test
@@ -166,6 +174,7 @@ class DocAppAuthorizeHandlerTest {
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1000));
         verifyNoInteractions(authorisationService);
         verifyNoInteractions(auditService);
+        verifyNoInteractions(cloudwatchMetricsService);
     }
 
     @Test
@@ -178,6 +187,7 @@ class DocAppAuthorizeHandlerTest {
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1018));
         verifyNoInteractions(authorisationService);
         verifyNoInteractions(auditService);
+        verifyNoInteractions(cloudwatchMetricsService);
     }
 
     private void usingValidSession() {

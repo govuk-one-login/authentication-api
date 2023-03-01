@@ -25,6 +25,7 @@ import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.JwksService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
@@ -32,6 +33,7 @@ import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -57,6 +59,7 @@ public class DocAppCallbackHandler
     private final ClientSessionService clientSessionService;
     private final AuditService auditService;
     private final DynamoDocAppService dynamoDocAppService;
+    private final CloudwatchMetricsService cloudwatchMetricsService;
     private final CookieHelper cookieHelper;
     protected final Json objectMapper = SerializationService.getInstance();
     private static final String REDIRECT_PATH = "doc-app-callback";
@@ -75,7 +78,8 @@ public class DocAppCallbackHandler
             ClientSessionService clientSessionService,
             AuditService auditService,
             DynamoDocAppService dynamoDocAppService,
-            CookieHelper cookieHelper) {
+            CookieHelper cookieHelper,
+            CloudwatchMetricsService cloudwatchMetricsService) {
         this.configurationService = configurationService;
         this.authorisationService = responseService;
         this.tokenService = tokenService;
@@ -84,6 +88,7 @@ public class DocAppCallbackHandler
         this.auditService = auditService;
         this.dynamoDocAppService = dynamoDocAppService;
         this.cookieHelper = cookieHelper;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
     }
 
     public DocAppCallbackHandler(ConfigurationService configurationService) {
@@ -101,6 +106,7 @@ public class DocAppCallbackHandler
         this.auditService = new AuditService(configurationService);
         this.dynamoDocAppService = new DynamoDocAppService(configurationService);
         this.cookieHelper = new CookieHelper();
+        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
     }
 
     @Override
@@ -153,7 +159,7 @@ public class DocAppCallbackHandler
 
             if (errorObject.isPresent()) {
                 return generateAuthenticationErrorResponse(
-                        authenticationRequest, errorObject.get());
+                        authenticationRequest, errorObject.get(), false);
             }
 
             auditService.submitAuditEvent(
@@ -187,6 +193,7 @@ public class DocAppCallbackHandler
                 LOG.error(
                         "Doc App TokenResponse was not successful: {}",
                         tokenResponse.toErrorResponse().toJSONObject());
+                incrementDocAppCallbackErrorCounter(false, "UnsuccessfulTokenResponse");
                 auditService.submitAuditEvent(
                         DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                         clientSessionId,
@@ -234,10 +241,17 @@ public class DocAppCallbackHandler
                         ConstructUriHelper.buildURI(
                                 configurationService.getLoginURI().toString(), REDIRECT_PATH);
                 LOG.info("Redirecting to frontend");
+                var dimensions =
+                        new HashMap<>(
+                                Map.of(
+                                        "Environment", configurationService.getEnvironment(),
+                                        "Successful", Boolean.toString(true)));
+                cloudwatchMetricsService.incrementCounter("DocAppCallback", dimensions);
                 return generateApiGatewayProxyResponse(
                         302, "", Map.of(ResponseHeaders.LOCATION, redirectURI.toString()), null);
 
             } catch (UnsuccesfulCredentialResponseException e) {
+                incrementDocAppCallbackErrorCounter(false, "UnsuccessfulCredentialResponse");
                 auditService.submitAuditEvent(
                         DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED,
                         clientSessionId,
@@ -261,11 +275,15 @@ public class DocAppCallbackHandler
     }
 
     private APIGatewayProxyResponseEvent generateAuthenticationErrorResponse(
-            AuthenticationRequest authenticationRequest, ErrorObject errorObject) {
+            AuthenticationRequest authenticationRequest,
+            ErrorObject errorObject,
+            boolean noSessionErrorResponse) {
         LOG.warn(
-                "Error in Doc App AuthorisationResponse. ErrorCode: {}. ErrorDescription: {}",
+                "Error in Doc App AuthorisationResponse. ErrorCode: {}. ErrorDescription: {}. No Session Error: {}",
                 errorObject.getCode(),
-                errorObject.getDescription());
+                errorObject.getDescription(),
+                noSessionErrorResponse);
+        incrementDocAppCallbackErrorCounter(noSessionErrorResponse, errorObject.getCode());
         var errorResponse =
                 new AuthenticationErrorResponse(
                         authenticationRequest.getRedirectionURI(),
@@ -325,7 +343,7 @@ public class DocAppCallbackHandler
             var errorObject = new ErrorObject(queryStringParameters.get("error"), errorDescription);
             LOG.info(
                     "ErrorObject created for session cookie not present. Generating error response back to RP");
-            return generateAuthenticationErrorResponse(authenticationRequest, errorObject);
+            return generateAuthenticationErrorResponse(authenticationRequest, errorObject, true);
         } else {
             LOG.warn(
                     "Session Cookie not present and access_denied or state param missing from error response");
@@ -338,6 +356,19 @@ public class DocAppCallbackHandler
         return configurationService.isCustomDocAppClaimEnabled()
                 && queryStringParameters.containsKey("error")
                 && queryStringParameters.get("error").equals(OAuth2Error.ACCESS_DENIED.getCode())
-                && queryStringParameters.containsKey("state");
+                && queryStringParameters.containsKey("state")
+                && Boolean.FALSE.equals(queryStringParameters.get("state").isEmpty());
+    }
+
+    private void incrementDocAppCallbackErrorCounter(boolean noSessionError, String error) {
+        var dimensions =
+                new HashMap<>(
+                        Map.of(
+                                "Environment", configurationService.getEnvironment(),
+                                "NoSessionError", Boolean.toString(noSessionError),
+                                "Successful", Boolean.toString(false),
+                                "Error", error));
+
+        cloudwatchMetricsService.incrementCounter("DocAppCallback", dimensions);
     }
 }
