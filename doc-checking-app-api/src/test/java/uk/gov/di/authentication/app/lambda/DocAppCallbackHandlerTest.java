@@ -235,7 +235,8 @@ class DocAppCallbackHandlerTest {
         assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), equalTo(expectedURI));
 
         verifyNoInteractions(tokenService);
-        verifyNoInteractions(auditService);
+        verifyAuditServiceEvent(
+                DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED);
         verifyNoInteractions(dynamoDocAppService);
         verify(cloudwatchMetricsService)
                 .incrementCounter(
@@ -377,7 +378,17 @@ class DocAppCallbackHandlerTest {
         assertThat(response, hasStatus(302));
         assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), equalTo(expectedURI));
         verifyNoInteractions(tokenService);
-        verifyNoInteractions(auditService);
+        verify(auditService)
+                .submitAuditEvent(
+                        DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED,
+                        CLIENT_SESSION_ID,
+                        AuditService.UNKNOWN,
+                        CLIENT_ID.getValue(),
+                        PAIRWISE_SUBJECT_ID.getValue(),
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN);
         verify(cloudwatchMetricsService)
                 .incrementCounter(
                         "DocAppCallback",

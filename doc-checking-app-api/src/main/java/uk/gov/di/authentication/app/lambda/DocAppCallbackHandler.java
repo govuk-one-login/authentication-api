@@ -159,7 +159,13 @@ public class DocAppCallbackHandler
 
             if (errorObject.isPresent()) {
                 return generateAuthenticationErrorResponse(
-                        authenticationRequest, errorObject.get(), false);
+                        authenticationRequest,
+                        errorObject.get(),
+                        false,
+                        clientId,
+                        clientSessionId,
+                        session.getSessionId(),
+                        clientSession.getDocAppSubjectId().getValue());
             }
 
             auditService.submitAuditEvent(
@@ -277,13 +283,27 @@ public class DocAppCallbackHandler
     private APIGatewayProxyResponseEvent generateAuthenticationErrorResponse(
             AuthenticationRequest authenticationRequest,
             ErrorObject errorObject,
-            boolean noSessionErrorResponse) {
+            boolean noSessionErrorResponse,
+            String clientId,
+            String clientSessionId,
+            String sessionId,
+            String docAppSubjectId) {
         LOG.warn(
                 "Error in Doc App AuthorisationResponse. ErrorCode: {}. ErrorDescription: {}. No Session Error: {}",
                 errorObject.getCode(),
                 errorObject.getDescription(),
                 noSessionErrorResponse);
         incrementDocAppCallbackErrorCounter(noSessionErrorResponse, errorObject.getCode());
+        auditService.submitAuditEvent(
+                DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED,
+                clientSessionId,
+                sessionId,
+                clientId,
+                docAppSubjectId,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN);
         var errorResponse =
                 new AuthenticationErrorResponse(
                         authenticationRequest.getRedirectionURI(),
@@ -343,7 +363,14 @@ public class DocAppCallbackHandler
             var errorObject = new ErrorObject(queryStringParameters.get("error"), errorDescription);
             LOG.info(
                     "ErrorObject created for session cookie not present. Generating error response back to RP");
-            return generateAuthenticationErrorResponse(authenticationRequest, errorObject, true);
+            return generateAuthenticationErrorResponse(
+                    authenticationRequest,
+                    errorObject,
+                    true,
+                    authenticationRequest.getClientID().getValue(),
+                    clientSessionId,
+                    AuditService.UNKNOWN,
+                    clientSession.getDocAppSubjectId().getValue());
         } else {
             LOG.warn(
                     "Session Cookie not present and access_denied or state param missing from error response");
