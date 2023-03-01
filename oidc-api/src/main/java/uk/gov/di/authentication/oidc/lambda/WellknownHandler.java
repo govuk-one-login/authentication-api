@@ -32,28 +32,14 @@ public class WellknownHandler
 
     private static final Logger LOG = LogManager.getLogger(WellknownHandler.class);
 
-    private final ConfigurationService configService;
-    private final String baseUrl;
-    private OIDCProviderMetadata providerMetadata;
+    private final String providerMetadata;
 
     public WellknownHandler(ConfigurationService configService) {
-        this.configService = configService;
-        baseUrl = configService.getOidcApiBaseURL().orElseThrow();
-        providerMetadata =
-                new OIDCProviderMetadata(
-                        new Issuer(baseUrl),
-                        List.of(SubjectType.PUBLIC, SubjectType.PAIRWISE),
-                        buildURI(baseUrl, "/.well-known/jwks.json"));
+        providerMetadata = constructProviderMetadata(configService);
     }
 
     public WellknownHandler() {
-        this.configService = ConfigurationService.getInstance();
-        baseUrl = configService.getOidcApiBaseURL().orElseThrow();
-        providerMetadata =
-                new OIDCProviderMetadata(
-                        new Issuer(configService.getOidcApiBaseURL().get()),
-                        List.of(SubjectType.PUBLIC, SubjectType.PAIRWISE),
-                        buildURI(baseUrl, "/.well-known/jwks.json"));
+        providerMetadata = constructProviderMetadata(ConfigurationService.getInstance());
     }
 
     @Override
@@ -66,30 +52,40 @@ public class WellknownHandler
 
     public APIGatewayProxyResponseEvent wellknownRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
+        LOG.info("Wellknown request received");
+        return generateApiGatewayProxyResponse(200, providerMetadata);
+    }
+
+    private String constructProviderMetadata(ConfigurationService configService) {
         try {
-            LOG.info("Wellknown request received");
-            providerMetadata.setTokenEndpointURI(buildURI(baseUrl, "/token"));
-            providerMetadata.setUserInfoEndpointURI(buildURI(baseUrl, "/userinfo"));
-            providerMetadata.setAuthorizationEndpointURI(buildURI(baseUrl, "/authorize"));
-            providerMetadata.setRegistrationEndpointURI(buildURI(baseUrl, "/connect/register"));
-            providerMetadata.setTokenEndpointAuthMethods(
+            var baseUrl = configService.getOidcApiBaseURL().orElseThrow();
+            var oidcMetadata =
+                    new OIDCProviderMetadata(
+                            new Issuer(baseUrl),
+                            List.of(SubjectType.PUBLIC, SubjectType.PAIRWISE),
+                            buildURI(baseUrl, "/.well-known/jwks.json"));
+            oidcMetadata.setTokenEndpointURI(buildURI(baseUrl, "/token"));
+            oidcMetadata.setUserInfoEndpointURI(buildURI(baseUrl, "/userinfo"));
+            oidcMetadata.setAuthorizationEndpointURI(buildURI(baseUrl, "/authorize"));
+            oidcMetadata.setRegistrationEndpointURI(buildURI(baseUrl, "/connect/register"));
+            oidcMetadata.setTokenEndpointAuthMethods(
                     List.of(ClientAuthenticationMethod.PRIVATE_KEY_JWT));
-            providerMetadata.setScopes(new Scope(ValidScopes.getScopesForWellKnownHandler()));
-            providerMetadata.setResponseTypes(List.of(new ResponseType("code")));
-            providerMetadata.setGrantTypes(List.of(GrantType.AUTHORIZATION_CODE));
-            providerMetadata.setClaimTypes(List.of(ClaimType.NORMAL));
-            providerMetadata.setClaims(
+            oidcMetadata.setScopes(new Scope(ValidScopes.getScopesForWellKnownHandler()));
+            oidcMetadata.setResponseTypes(List.of(new ResponseType("code")));
+            oidcMetadata.setGrantTypes(List.of(GrantType.AUTHORIZATION_CODE));
+            oidcMetadata.setClaimTypes(List.of(ClaimType.NORMAL));
+            oidcMetadata.setClaims(
                     List.of(
                             "sub",
                             "email",
                             "email_verified",
                             "phone_number",
                             "phone_number_verified"));
-            providerMetadata.setIDTokenJWSAlgs(
+            oidcMetadata.setIDTokenJWSAlgs(
                     configService.isRsaSigningAvailable()
                             ? List.of(JWSAlgorithm.ES256, JWSAlgorithm.RS256)
                             : List.of(JWSAlgorithm.ES256));
-            providerMetadata.setTokenEndpointJWSAlgs(
+            oidcMetadata.setTokenEndpointJWSAlgs(
                     List.of(
                             JWSAlgorithm.RS256,
                             JWSAlgorithm.RS384,
@@ -97,16 +93,15 @@ public class WellknownHandler
                             JWSAlgorithm.PS256,
                             JWSAlgorithm.PS384,
                             JWSAlgorithm.PS512));
-            providerMetadata.setServiceDocsURI(new URI("https://docs.sign-in.service.gov.uk/"));
-            providerMetadata.setEndSessionEndpointURI(buildURI(baseUrl, "/logout"));
-            providerMetadata.setSupportsBackChannelLogout(true);
-            providerMetadata.setCustomParameter(
+            oidcMetadata.setServiceDocsURI(new URI("https://docs.sign-in.service.gov.uk/"));
+            oidcMetadata.setEndSessionEndpointURI(buildURI(baseUrl, "/logout"));
+            oidcMetadata.setSupportsBackChannelLogout(true);
+            oidcMetadata.setCustomParameter(
                     "trustmarks", buildURI(baseUrl, "/trustmark").toString());
-
-            return generateApiGatewayProxyResponse(200, providerMetadata.toString());
+            return oidcMetadata.toString();
         } catch (URISyntaxException | NoSuchElementException e) {
             LOG.error("Exception encountered in WellKnownHandler", e);
-            return generateApiGatewayProxyResponse(500, "Service not configured");
+            throw new RuntimeException(e);
         }
     }
 }

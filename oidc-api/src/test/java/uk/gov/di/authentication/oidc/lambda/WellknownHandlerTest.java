@@ -12,7 +12,6 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.net.URI;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -36,7 +35,6 @@ class WellknownHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         URI expectedRegistrationURI = URI.create("http://localhost:8080/connect/register");
-        String expectedIdentityURI = "http://localhost:8080/identity";
         String expectedTrustMarkURI = "http://localhost:8080/trustmark";
 
         assertThat(result, hasStatus(200));
@@ -63,9 +61,14 @@ class WellknownHandlerTest {
     void shouldThrowExceptionWhenBaseUrlIsMissing() {
         when(configService.getOidcApiBaseURL()).thenReturn(Optional.empty());
 
-        assertThrows(
-                NoSuchElementException.class,
-                () -> new WellknownHandler(configService),
-                "Expected to throw exception");
+        var expectedException =
+                assertThrows(
+                        RuntimeException.class,
+                        () -> new WellknownHandler(configService),
+                        "Expected to throw exception");
+
+        assertThat(
+                expectedException.getMessage(),
+                equalTo("java.util.NoSuchElementException: No value present"));
     }
 }
