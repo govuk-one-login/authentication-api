@@ -47,6 +47,7 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.addAnnotation;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
@@ -162,6 +163,8 @@ public class AuthCodeHandler
             LOG.warn("Authentication request could not be parsed", e);
             return generateResponse(new AuthCodeResponse(errorResponse.toURI().toString()));
         }
+
+        attachLogFieldToLogs(CLIENT_ID, authenticationRequest.getClientID().getValue());
         addAnnotation(
                 "client_id", String.valueOf(clientSession.getAuthRequestParams().get("client_id")));
 
