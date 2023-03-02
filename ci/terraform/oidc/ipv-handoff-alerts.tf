@@ -1,6 +1,10 @@
 data "aws_cloudwatch_log_group" "ipv_authorize_lambda_log_group" {
   count = var.use_localstack ? 0 : 1
   name  = replace("/aws/lambda/${var.environment}-ipv-authorize-lambda", ".", "")
+
+  depends_on = [
+    module.ipv-authorize
+  ]
 }
 
 resource "aws_cloudwatch_log_metric_filter" "ipv_authorize_metric_filter" {

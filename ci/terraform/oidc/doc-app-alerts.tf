@@ -1,11 +1,19 @@
 data "aws_cloudwatch_log_group" "doc_app_callback_lambda_log_group" {
   count = var.use_localstack ? 0 : 1
   name  = replace("/aws/lambda/${var.environment}-doc-app-callback-lambda", ".", "")
+
+  depends_on = [
+    module.doc-app-callback
+  ]
 }
 
 data "aws_cloudwatch_log_group" "doc_app_authorize_lambda_log_group" {
   count = var.use_localstack ? 0 : 1
   name  = replace("/aws/lambda/${var.environment}-doc-app-authorize-lambda", ".", "")
+
+  depends_on = [
+    module.doc-app-authorize
+  ]
 }
 
 resource "aws_cloudwatch_log_metric_filter" "doc_app_callback_metric_filter" {

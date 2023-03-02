@@ -1,16 +1,27 @@
 data "aws_cloudwatch_log_group" "ipv_callback_lambda_log_group" {
   count = var.use_localstack ? 0 : 1
   name  = replace("/aws/lambda/${var.environment}-ipv-callback-lambda", ".", "")
+
+  depends_on = [
+    module.ipv-callback
+  ]
 }
 
 data "aws_cloudwatch_log_group" "spot_response_lambda_log_group" {
   count = var.use_localstack ? 0 : 1
   name  = replace("/aws/lambda/${var.environment}-spot-response-lambda", ".", "")
+  depends_on = [
+    module.ipv_spot_response_role
+  ]
 }
 
 data "aws_cloudwatch_log_group" "processing_identity_lambda_log_group" {
   count = var.use_localstack ? 0 : 1
   name  = replace("/aws/lambda/${var.environment}-processing-identity-lambda", ".", "")
+
+  depends_on = [
+    module.processing-identity
+  ]
 }
 
 resource "aws_cloudwatch_log_metric_filter" "ipv_callback_metric_filter" {
