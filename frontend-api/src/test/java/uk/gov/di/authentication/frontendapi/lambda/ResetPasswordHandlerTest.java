@@ -20,6 +20,7 @@ import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.Argon2EncoderHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
@@ -77,6 +78,7 @@ class ResetPasswordHandlerTest {
     private static final String TEST_CLIENT_ID = "test-client-id";
     private static final String NEW_PASSWORD = "Pa55word!";
     private static final String SUBJECT = "some-subject";
+    private static final String TEST_PHONE_NUMBER = "01234567890";
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String PERSISTENT_ID = "some-persistent-id-value";
     private static final Json objectMapper = SerializationService.getInstance();
@@ -151,7 +153,10 @@ class ResetPasswordHandlerTest {
     }
 
     @Test
-    void shouldReturn204ForSuccessfulRequestWithNoCode() throws Json.JsonException {
+    void shouldReturn204ForSuccessfulRequestAndDontSendConfirmationToSMSWhenPhoneNumberNotVerified()
+            throws Json.JsonException {
+        when(authenticationService.getUserProfileByEmail(EMAIL))
+                .thenReturn(generateUserProfile(false));
         when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                 .thenReturn(generateUserCredentials());
         usingValidSession();
@@ -170,6 +175,59 @@ class ResetPasswordHandlerTest {
 
         assertThat(result, hasStatus(204));
         verify(sqsClient, times(1)).send(objectMapper.writeValueAsString(notifyRequest));
+        verify(sqsClient, never())
+                .send(
+                        objectMapper.writeValueAsString(
+                                new NotifyRequest(
+                                        TEST_PHONE_NUMBER,
+                                        NotificationType.PASSWORD_RESET_CONFIRMATION_SMS,
+                                        SupportedLanguage.EN)));
+        verify(authenticationService, times(1)).updatePassword(EMAIL, NEW_PASSWORD);
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        EMAIL,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_ID);
+    }
+
+    @Test
+    void shouldReturn204ForSuccessfulRequestWithAndSendConfirmationToSMS()
+            throws Json.JsonException {
+        when(authenticationService.getUserCredentialsFromEmail(EMAIL))
+                .thenReturn(generateUserCredentials());
+        when(authenticationService.getUserProfileByEmail(EMAIL))
+                .thenReturn(generateUserProfile(true));
+        usingValidSession();
+        Map<String, String> headers = new HashMap<>();
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
+        headers.put("Session-Id", session.getSessionId());
+        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(headers);
+        event.setBody(format("{ \"password\": \"%s\"}", NEW_PASSWORD));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(204));
+
+        var expectedEmailNotifyRequest =
+                new NotifyRequest(
+                        EMAIL, NotificationType.PASSWORD_RESET_CONFIRMATION, SupportedLanguage.EN);
+        verify(sqsClient, times(1))
+                .send(objectMapper.writeValueAsString(expectedEmailNotifyRequest));
+        var expectedSmsNotifyRequest =
+                new NotifyRequest(
+                        TEST_PHONE_NUMBER,
+                        NotificationType.PASSWORD_RESET_CONFIRMATION_SMS,
+                        SupportedLanguage.EN);
+        verify(sqsClient, times(1)).send(objectMapper.writeValueAsString(expectedSmsNotifyRequest));
         verify(authenticationService, times(1)).updatePassword(EMAIL, NEW_PASSWORD);
 
         verify(auditService)
@@ -189,6 +247,8 @@ class ResetPasswordHandlerTest {
     void shouldReturn204ForSuccessfulMigratedUserRequest() throws Json.JsonException {
         when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                 .thenReturn(generateMigratedUserCredentials());
+        when(authenticationService.getUserProfileByEmail(EMAIL))
+                .thenReturn(generateUserProfile(false));
         usingValidSession();
         NotifyRequest notifyRequest =
                 new NotifyRequest(
@@ -269,6 +329,8 @@ class ResetPasswordHandlerTest {
     @Test
     void shouldDeleteIncorrectPasswordCountOnSuccessfulRequest() {
         usingValidSession();
+        when(authenticationService.getUserProfileByEmail(EMAIL))
+                .thenReturn(generateUserProfile(false));
         when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                 .thenReturn(generateUserCredentials());
         when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(2);
@@ -332,6 +394,13 @@ class ResetPasswordHandlerTest {
 
     private UserCredentials generateUserCredentials(String password) {
         return new UserCredentials().withEmail(EMAIL).withPassword(password).withSubjectID(SUBJECT);
+    }
+
+    private UserProfile generateUserProfile(boolean isPhoneNumberVerified) {
+        return new UserProfile()
+                .withEmail(EMAIL)
+                .withPhoneNumber(TEST_PHONE_NUMBER)
+                .withPhoneNumberVerified(isPhoneNumberVerified);
     }
 
     private UserCredentials generateMigratedUserCredentials() {

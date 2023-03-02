@@ -13,6 +13,7 @@ import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.Argon2MatcherHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
@@ -132,14 +133,29 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             if (TestClientHelper.isTestClientWithAllowedEmail(userContext, configurationService)) {
                 auditableEvent = FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL_FOR_TEST_CLIENT;
             } else {
-                var notifyRequest =
+                var emailNotifyRequest =
                         new NotifyRequest(
                                 userCredentials.getEmail(),
                                 NotificationType.PASSWORD_RESET_CONFIRMATION,
                                 userContext.getUserLanguage());
+                var userProfile =
+                        authenticationService.getUserProfileByEmail(
+                                userContext.getSession().getEmailAddress());
                 auditableEvent = FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL;
-                LOG.info("Placing message on queue");
-                sqsClient.send(serialiseRequest(notifyRequest));
+                LOG.info("Placing message on queue to send password reset confirmation to Email");
+                sqsClient.send(serialiseRequest(emailNotifyRequest));
+
+                authenticationService.getUserProfileByEmail(
+                        userContext.getSession().getEmailAddress());
+                if (shouldSendConfirmationToSms(userProfile)) {
+                    var smsNotifyRequest =
+                            new NotifyRequest(
+                                    userProfile.getPhoneNumber(),
+                                    NotificationType.PASSWORD_RESET_CONFIRMATION_SMS,
+                                    userContext.getUserLanguage());
+                    LOG.info("Placing message on queue to send password reset confirmation to SMS");
+                    sqsClient.send(serialiseRequest(smsNotifyRequest));
+                }
             }
             auditService.submitAuditEvent(
                     auditableEvent,
@@ -169,6 +185,10 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             LOG.error("Unable to serialize NotifyRequest");
             throw new RuntimeException("Unable to serialize NotifyRequest");
         }
+    }
+
+    private boolean shouldSendConfirmationToSms(UserProfile userProfile) {
+        return Objects.nonNull(userProfile.getPhoneNumber()) && userProfile.isPhoneNumberVerified();
     }
 
     private static boolean verifyPassword(String hashedPassword, String password) {
