@@ -34,6 +34,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.entity.NotificationType.ACCOUNT_CREATED_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION;
+import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
@@ -88,7 +89,7 @@ public class NotificationHandlerTest {
     }
 
     @Test
-    void shouldSuccessfullyProcessResetPasswordConfirmationFromSQSQueue()
+    void shouldSuccessfullyProcessResetPasswordConfirmationEmailFromSQSQueue()
             throws Json.JsonException, NotificationClientException {
         NotifyRequest notifyRequest =
                 new NotifyRequest(
@@ -108,6 +109,28 @@ public class NotificationHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         personalisation,
                         PASSWORD_RESET_CONFIRMATION,
+                        SupportedLanguage.EN);
+    }
+
+    @Test
+    void shouldSuccessfullyProcessResetPasswordConfirmationSMSFromSQSQueue()
+            throws Json.JsonException, NotificationClientException {
+        var notifyRequest =
+                new NotifyRequest(
+                        TEST_PHONE_NUMBER, PASSWORD_RESET_CONFIRMATION_SMS, SupportedLanguage.EN);
+        var sqsEvent = generateSQSEvent(objectMapper.writeValueAsString(notifyRequest));
+        var contactUsLinkUrl =
+                "https://localhost:8080/frontend/contact-us?referer=passwordResetConfirmationSms";
+
+        handler.handleRequest(sqsEvent, context);
+
+        Map<String, Object> personalisation = Map.of("contact-us-link", contactUsLinkUrl);
+
+        verify(notificationService)
+                .sendText(
+                        TEST_PHONE_NUMBER,
+                        personalisation,
+                        PASSWORD_RESET_CONFIRMATION_SMS,
                         SupportedLanguage.EN);
     }
 
