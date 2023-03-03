@@ -36,6 +36,7 @@ import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
+import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
@@ -383,6 +384,32 @@ public class NotificationHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         personalisation,
                         RESET_PASSWORD_WITH_CODE,
+                        SupportedLanguage.EN);
+    }
+
+    @Test
+    void shouldSuccessfullyProcessVerifyChangeHowGetSecurityCodesMessageFromSQSQueue()
+            throws Json.JsonException, NotificationClientException {
+        NotifyRequest notifyRequest =
+                new NotifyRequest(
+                        TEST_EMAIL_ADDRESS,
+                        VERIFY_CHANGE_HOW_GET_SECURITY_CODES,
+                        "654321",
+                        SupportedLanguage.EN);
+        String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
+        SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
+
+        handler.handleRequest(sqsEvent, context);
+
+        Map<String, Object> personalisation = new HashMap<>();
+        personalisation.put("validation-code", "654321");
+        personalisation.put("email-address", notifyRequest.getDestination());
+
+        verify(notificationService)
+                .sendEmail(
+                        TEST_EMAIL_ADDRESS,
+                        personalisation,
+                        VERIFY_CHANGE_HOW_GET_SECURITY_CODES,
                         SupportedLanguage.EN);
     }
 

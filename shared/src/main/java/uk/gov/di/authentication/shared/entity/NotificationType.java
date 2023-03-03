@@ -25,7 +25,10 @@ public enum NotificationType implements TemplateAware {
             Map.of(SupportedLanguage.CY, "ACCOUNT_CREATED_CONFIRMATION_TEMPLATE_ID_CY")),
     RESET_PASSWORD_WITH_CODE(
             "RESET_PASSWORD_WITH_CODE_TEMPLATE_ID",
-            Map.of(SupportedLanguage.CY, "RESET_PASSWORD_WITH_CODE_TEMPLATE_ID_CY"));
+            Map.of(SupportedLanguage.CY, "RESET_PASSWORD_WITH_CODE_TEMPLATE_ID_CY")),
+    VERIFY_CHANGE_HOW_GET_SECURITY_CODES(
+            "VERIFY_CHANGE_HOW_GET_SECURITY_CODES_TEMPLATE_ID",
+            Map.of(SupportedLanguage.CY, "VERIFY_CHANGE_HOW_GET_SECURITY_CODES_TEMPLATE_ID_CY"));
 
     private final String templateName;
 
