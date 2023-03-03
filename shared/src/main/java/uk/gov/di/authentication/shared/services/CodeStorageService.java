@@ -28,6 +28,9 @@ public class CodeStorageService {
     private static final String RESET_PASSWORD_KEY_PREFIX = "reset-password-code:";
     private static final String MULTIPLE_INCORRECT_PASSWORDS_PREFIX =
             "multiple-incorrect-passwords:";
+
+    private static final String VERIFY_CHANGE_HOW_GET_SECURITY_CODES_KEY_PREFIX =
+            "change-how-get-security-codes";
     private static final long MFA_ATTEMPTS_COUNTER_TIME_TO_LIVE_SECONDS = 900;
 
     public CodeStorageService(ConfigurationService configurationService) {
@@ -139,17 +142,6 @@ public class CodeStorageService {
         }
     }
 
-    public void savePasswordResetCode(
-            String subjectId, String code, long codeExpiryTime, NotificationType notificationType) {
-        String prefix = getPrefixForNotificationType(notificationType);
-        String key = prefix + code;
-        try {
-            redisConnectionService.saveWithExpiry(key, subjectId, codeExpiryTime);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     public Optional<String> getSubjectWithPasswordResetCode(String code) {
         return Optional.ofNullable(
                 redisConnectionService.getValue(RESET_PASSWORD_KEY_PREFIX + code));
@@ -201,6 +193,8 @@ public class CodeStorageService {
                 return MFA_KEY_PREFIX;
             case RESET_PASSWORD_WITH_CODE:
                 return RESET_PASSWORD_KEY_PREFIX;
+            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
+                return VERIFY_CHANGE_HOW_GET_SECURITY_CODES_KEY_PREFIX;
         }
         throw new RuntimeException(
                 String.format("No redis prefix key configured for %s", notificationType));

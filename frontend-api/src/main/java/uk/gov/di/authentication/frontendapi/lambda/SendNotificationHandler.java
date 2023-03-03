@@ -35,6 +35,7 @@ import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1001;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1002;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1011;
 import static uk.gov.di.authentication.shared.entity.NotificationType.ACCOUNT_CREATED_CONFIRMATION;
+import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -131,6 +132,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             }
             switch (request.getNotificationType()) {
                 case VERIFY_EMAIL:
+                case VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
                     return handleNotificationRequest(
                             request.getEmail(),
                             request.getNotificationType(),
@@ -209,6 +211,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 email,
                 newCode,
                 notificationType.equals(VERIFY_PHONE_NUMBER)
+                                || notificationType.equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES)
                         ? configurationService.getDefaultOtpCodeExpiry()
                         : configurationService.getEmailAccountCreationOtpCodeExpiry(),
                 notificationType);
@@ -244,6 +247,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 return ErrorResponse.ERROR_1029;
             case VERIFY_PHONE_NUMBER:
                 return ErrorResponse.ERROR_1030;
+            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
+                return ErrorResponse.ERROR_1046;
             default:
                 LOG.error("Invalid NotificationType sent");
                 throw new RuntimeException("Invalid NotificationType sent");
@@ -256,6 +261,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 return ErrorResponse.ERROR_1031;
             case VERIFY_PHONE_NUMBER:
                 return ErrorResponse.ERROR_1032;
+            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
+                return ErrorResponse.ERROR_1047;
             default:
                 LOG.error("Invalid NotificationType sent");
                 throw new RuntimeException("Invalid NotificationType sent");
@@ -268,6 +275,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 return ErrorResponse.ERROR_1033;
             case VERIFY_PHONE_NUMBER:
                 return ErrorResponse.ERROR_1034;
+            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
+                return ErrorResponse.ERROR_1048;
             default:
                 LOG.error("Invalid NotificationType sent");
                 throw new RuntimeException("Invalid NotificationType sent");

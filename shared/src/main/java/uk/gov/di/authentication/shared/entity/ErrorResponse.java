@@ -50,7 +50,17 @@ public enum ErrorResponse {
     ERROR_1042(1042, "User entered invalid authenticator app verification code too many times"),
     ERROR_1043(1043, "User entered invalid authenticator app code"),
     ERROR_1044(1044, "New phone number is the same as current phone number"),
-    ERROR_1045(1045, "User account is temporarily locked from sign in");
+    ERROR_1045(1045, "User account is temporarily locked from sign in"),
+    ERROR_1046(
+            1046,
+            "System has sent too many email verification codes for changing how to receive security codes"),
+    ERROR_1047(
+            1047,
+            "System is blocked from sending any email verification codes for changing how to receive security codes"),
+    ERROR_1048(
+            1048,
+            "User entered invalid email verification code for changing how to receive security codes too many times"),
+    ;
 
     private int code;
 
