@@ -188,6 +188,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("IDENTITY_ENABLED", "false").equals("true");
     }
 
+    public boolean isResetPasswordConfirmationSmsEnabled() {
+        return List.of("build", "staging", "integration", "local").contains(getEnvironment());
+    }
+
     public boolean isSpotEnabled() {
         return System.getenv().getOrDefault("SPOT_ENABLED", "false").equals("true");
     }
