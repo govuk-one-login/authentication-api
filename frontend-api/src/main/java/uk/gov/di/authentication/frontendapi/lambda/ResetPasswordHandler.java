@@ -147,7 +147,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
 
                 authenticationService.getUserProfileByEmail(
                         userContext.getSession().getEmailAddress());
-                if (shouldSendConfirmationToSms(userProfile)) {
+                if (shouldSendConfirmationToSms(userProfile, configurationService)) {
                     var smsNotifyRequest =
                             new NotifyRequest(
                                     userProfile.getPhoneNumber(),
@@ -187,8 +187,11 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
         }
     }
 
-    private boolean shouldSendConfirmationToSms(UserProfile userProfile) {
-        return Objects.nonNull(userProfile.getPhoneNumber()) && userProfile.isPhoneNumberVerified();
+    private boolean shouldSendConfirmationToSms(
+            UserProfile userProfile, ConfigurationService configurationService) {
+        return Objects.nonNull(userProfile.getPhoneNumber())
+                && userProfile.isPhoneNumberVerified()
+                && configurationService.isResetPasswordConfirmationSmsEnabled();
     }
 
     private static boolean verifyPassword(String hashedPassword, String password) {

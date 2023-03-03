@@ -102,6 +102,7 @@ class ResetPasswordHandlerTest {
                 .when(passwordValidator)
                 .validate("password");
         when(clientService.getClient(TEST_CLIENT_ID)).thenReturn(Optional.of(testClientRegistry));
+        when(configurationService.isResetPasswordConfirmationSmsEnabled()).thenReturn(true);
 
         handler =
                 new ResetPasswordHandler(
