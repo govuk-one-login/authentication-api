@@ -43,6 +43,7 @@ import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
@@ -99,6 +100,8 @@ class DocAppAuthorizeHandlerTest {
     private final AuditService auditService = mock(AuditService.class);
     private final ClientRegistry clientRegistry = mock(ClientRegistry.class);
     private final ClientService clientService = mock(ClientService.class);
+    private final NoSessionOrchestrationService noSessionOrchestrationService =
+            mock(NoSessionOrchestrationService.class);
 
     private DocAppAuthorizeHandler handler;
     private final Session session = new Session(SESSION_ID);
@@ -113,7 +116,8 @@ class DocAppAuthorizeHandlerTest {
                         configurationService,
                         auditService,
                         clientService,
-                        cloudwatchMetricsService);
+                        cloudwatchMetricsService,
+                        noSessionOrchestrationService);
         when(configurationService.getDocAppAuthorisationClientId()).thenReturn(DOC_APP_CLIENT_ID);
         when(configurationService.getDocAppAuthorisationCallbackURI())
                 .thenReturn(DOC_APP_CALLBACK_URI);
@@ -148,7 +152,7 @@ class DocAppAuthorizeHandlerTest {
                 splitQuery(body.getRedirectUri()).get("request"),
                 equalTo(encryptedJWT.serialize()));
         verify(authorisationService).storeState(eq(session.getSessionId()), any(State.class));
-        verify(authorisationService)
+        verify(noSessionOrchestrationService)
                 .storeClientSessionIdAgainstState(eq(CLIENT_SESSION_ID), any(State.class));
         verify(auditService)
                 .submitAuditEvent(
