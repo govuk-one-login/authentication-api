@@ -21,6 +21,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION;
+import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION_SMS;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -37,7 +38,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
     }
 
     @Test
-    public void shouldUpdatePasswordAndReturn204() throws Json.JsonException {
+    void shouldUpdatePasswordAndReturn204() throws Json.JsonException {
         String sessionId = redis.createSession();
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
@@ -55,6 +56,33 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
         assertThat(requests, hasSize(1));
         assertThat(requests.get(0).getDestination(), equalTo(EMAIL_ADDRESS));
         assertThat(requests.get(0).getNotificationType(), equalTo(PASSWORD_RESET_CONFIRMATION));
+
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(PASSWORD_RESET_SUCCESSFUL));
+    }
+
+    @Test
+    void shouldUpdatePasswordSendSMSAndReturn204() throws Json.JsonException {
+        String sessionId = redis.createSession();
+        var phoneNumber = "+441234567890";
+        userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
+        userStore.addPhoneNumber(EMAIL_ADDRESS, phoneNumber);
+        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+
+        var response =
+                makeRequest(
+                        Optional.of(new ResetPasswordCompletionRequest(PASSWORD)),
+                        constructFrontendHeaders(sessionId),
+                        Map.of());
+
+        assertThat(response, hasStatus(204));
+
+        List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
+
+        assertThat(requests, hasSize(2));
+        assertThat(requests.get(0).getDestination(), equalTo(EMAIL_ADDRESS));
+        assertThat(requests.get(0).getNotificationType(), equalTo(PASSWORD_RESET_CONFIRMATION));
+        assertThat(requests.get(1).getDestination(), equalTo(phoneNumber));
+        assertThat(requests.get(1).getNotificationType(), equalTo(PASSWORD_RESET_CONFIRMATION_SMS));
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(PASSWORD_RESET_SUCCESSFUL));
     }
