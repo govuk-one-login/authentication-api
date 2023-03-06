@@ -21,6 +21,7 @@ doc_app_encryption_key_id          = "7958938d-eea0-4e6d-9ea1-ec0b9d421f77"
 
 cloudwatch_log_retention       = 5
 client_registry_api_enabled    = false
+language_cy_enabled            = true
 spot_enabled                   = true
 ipv_api_enabled                = true
 ipv_capacity_allowed           = true
