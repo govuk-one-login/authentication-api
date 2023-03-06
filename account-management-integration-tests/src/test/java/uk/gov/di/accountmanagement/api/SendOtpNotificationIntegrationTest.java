@@ -16,6 +16,7 @@ import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType.MOBILE;
@@ -30,6 +31,7 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String TEST_EMAIL = "joe.bloggs+3@digital.cabinet-office.gov.uk";
+    private static final String TEST_TESTER_CLIENT_ID = "tester-client-id";
     private static final String TEST_PHONE_NUMBER =
             Long.toString(
                     PhoneNumberUtil.getInstance()
@@ -50,7 +52,9 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                                 new SendNotificationRequest(
                                         TEST_EMAIL, VERIFY_EMAIL, TEST_PHONE_NUMBER)),
                         Collections.emptyMap(),
-                        Collections.emptyMap());
+                        Collections.emptyMap(),
+                        Collections.emptyMap(),
+                        Map.of("clientId", TEST_TESTER_CLIENT_ID));
 
         assertThat(response, hasStatus(HttpStatus.SC_NO_CONTENT));
 
@@ -72,7 +76,9 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                                 new SendNotificationRequest(
                                         TEST_EMAIL, VERIFY_EMAIL, TEST_PHONE_NUMBER)),
                         Collections.emptyMap(),
-                        Collections.emptyMap());
+                        Collections.emptyMap(),
+                        Collections.emptyMap(),
+                        Map.of("clientId", TEST_TESTER_CLIENT_ID));
 
         assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
         assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1009)));
@@ -90,7 +96,9 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                                 new SendNotificationRequest(
                                         TEST_EMAIL, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER)),
                         Collections.emptyMap(),
-                        Collections.emptyMap());
+                        Collections.emptyMap(),
+                        Collections.emptyMap(),
+                        Map.of("clientId", TEST_TESTER_CLIENT_ID));
 
         assertThat(response, hasStatus(HttpStatus.SC_NO_CONTENT));
 
@@ -115,7 +123,9 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                                         VERIFY_PHONE_NUMBER,
                                         TEST_PHONE_NUMBER)),
                         Collections.emptyMap(),
-                        Collections.emptyMap());
+                        Collections.emptyMap(),
+                        Collections.emptyMap(),
+                        Map.of("clientId", TEST_TESTER_CLIENT_ID));
 
         assertThat(response, hasStatus(HttpStatus.SC_NO_CONTENT));
 
@@ -139,7 +149,8 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                                         TEST_EMAIL, VERIFY_PHONE_NUMBER, badPhoneNumber)),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
-                        Collections.emptyMap());
+                        Collections.emptyMap(),
+                        Map.of("clientId", TEST_TESTER_CLIENT_ID));
 
         assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
         assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1012)));
@@ -161,7 +172,8 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
                                         TEST_EMAIL, VERIFY_PHONE_NUMBER, "07755551084")),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
-                        Collections.emptyMap());
+                        Collections.emptyMap(),
+                        Map.of("clientId", TEST_TESTER_CLIENT_ID));
 
         assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
         assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1044)));
