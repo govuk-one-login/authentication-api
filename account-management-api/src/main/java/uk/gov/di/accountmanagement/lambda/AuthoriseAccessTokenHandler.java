@@ -22,6 +22,7 @@ import uk.gov.di.authentication.shared.services.TokenValidationService;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 import static uk.gov.di.accountmanagement.entity.AuthPolicy.PolicyDocument.getAllowAllPolicy;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -70,10 +71,10 @@ public class AuthoriseAccessTokenHandler
     public AuthPolicy handleRequest(TokenAuthorizerContext input, Context context) {
         return segmentedFunctionCall(
                 "account-management-api::" + getClass().getSimpleName(),
-                () -> authoriseAccessTokenHandler(input, context));
+                () -> authoriseAccessTokenHandler(input));
     }
 
-    public AuthPolicy authoriseAccessTokenHandler(TokenAuthorizerContext input, Context context) {
+    public AuthPolicy authoriseAccessTokenHandler(TokenAuthorizerContext input) {
         LOG.info("Request received in AuthoriseAccessTokenHandler");
         try {
             String token = input.getAuthorizationToken();
@@ -127,9 +128,13 @@ public class AuthoriseAccessTokenHandler
             String[] apiGatewayArnPartials = arnPartials[5].split("/");
             String restApiId = apiGatewayArnPartials[0];
             String stage = apiGatewayArnPartials[1];
+
+            LOG.info("Generating context");
+            Map<String, Object> context = Map.of("clientId", clientId);
+
             LOG.info("Generating AuthPolicy");
             return new AuthPolicy(
-                    subject, getAllowAllPolicy(region, awsAccountId, restApiId, stage));
+                    subject, getAllowAllPolicy(region, awsAccountId, restApiId, stage), context);
         } catch (ParseException | java.text.ParseException e) {
             LOG.warn("Unable to parse Access Token");
             throw new RuntimeException("Unauthorized");

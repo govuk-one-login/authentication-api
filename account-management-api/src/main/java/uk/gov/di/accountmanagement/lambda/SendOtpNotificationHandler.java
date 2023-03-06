@@ -8,8 +8,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
+import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.entity.SendNotificationRequest;
+import uk.gov.di.accountmanagement.exceptions.MissingConfigurationParameterException;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -22,12 +24,15 @@ import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
+import java.util.Objects;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
@@ -52,8 +57,11 @@ public class SendOtpNotificationHandler
     private final CodeGeneratorService codeGeneratorService;
     private final CodeStorageService codeStorageService;
     private final DynamoService dynamoService;
+    private final ClientService clientService;
     private final Json objectMapper = SerializationService.getInstance();
     private final AuditService auditService;
+
+    private static final String GENERIC_500_ERROR_MESSAGE = "Internal server error";
 
     public SendOtpNotificationHandler(
             ConfigurationService configurationService,
@@ -61,13 +69,15 @@ public class SendOtpNotificationHandler
             CodeGeneratorService codeGeneratorService,
             CodeStorageService codeStorageService,
             DynamoService dynamoService,
-            AuditService auditService) {
+            AuditService auditService,
+            ClientService clientService) {
         this.configurationService = configurationService;
         this.sqsClient = sqsClient;
         this.codeGeneratorService = codeGeneratorService;
         this.codeStorageService = codeStorageService;
         this.dynamoService = dynamoService;
         this.auditService = auditService;
+        this.clientService = clientService;
     }
 
     public SendOtpNotificationHandler(ConfigurationService configurationService) {
@@ -82,6 +92,7 @@ public class SendOtpNotificationHandler
                 new CodeStorageService(new RedisConnectionService(configurationService));
         this.dynamoService = new DynamoService(configurationService);
         this.auditService = new AuditService(configurationService);
+        this.clientService = new DynamoClientService(configurationService);
     }
 
     public SendOtpNotificationHandler() {
@@ -102,13 +113,45 @@ public class SendOtpNotificationHandler
                 RequestHeaderHelper.getHeaderValueOrElse(input.getHeaders(), SESSION_ID_HEADER, "");
         attachSessionIdToLogs(sessionId);
         LOG.info("Request received in SendOtp Lambda");
+
+        SendNotificationRequest sendNotificationRequest;
+        boolean isTestUserRequest;
+
+        try {
+            String clientIdFromApiGateway =
+                    (String)
+                            Objects.requireNonNull(
+                                    input.getRequestContext().getAuthorizer().get("clientId"),
+                                    "'clientId' key does not exist in map");
+            sendNotificationRequest =
+                    objectMapper.readValue(input.getBody(), SendNotificationRequest.class);
+            isTestUserRequest =
+                    clientService.isTestJourney(
+                            clientIdFromApiGateway, sendNotificationRequest.getEmail());
+        } catch (JsonException e) {
+            LOG.error("Error parsing sendNotificationRequest", e);
+            return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
+        } catch (NullPointerException e) {
+            LOG.error("Error reading Client ID from context (passed from API Gateway)", e);
+            return generateApiGatewayProxyResponse(500, GENERIC_500_ERROR_MESSAGE);
+        } catch (Exception e) {
+            LOG.error(
+                    "Error initialising required variables for Account Management Send OTP Handler",
+                    e);
+            return generateApiGatewayProxyResponse(500, GENERIC_500_ERROR_MESSAGE);
+        }
+
+        if (isTestUserRequest && !configurationService.isTestClientsEnabled()) {
+            LOG.warn(
+                    "Test user journey attempted, but test clients are not enabled in this environment");
+            return generateApiGatewayProxyResponse(500, GENERIC_500_ERROR_MESSAGE);
+        }
+
         SupportedLanguage userLanguage =
                 matchSupportedLanguage(
                         getUserLanguageFromRequestHeaders(
                                 input.getHeaders(), configurationService));
         try {
-            SendNotificationRequest sendNotificationRequest =
-                    objectMapper.readValue(input.getBody(), SendNotificationRequest.class);
             switch (sendNotificationRequest.getNotificationType()) {
                 case VERIFY_EMAIL:
                     LOG.info("NotificationType is VERIFY_EMAIL");
@@ -122,6 +165,7 @@ public class SendOtpNotificationHandler
                         return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1009);
                     }
                     return handleNotificationRequest(
+                            isTestUserRequest,
                             sendNotificationRequest.getEmail(),
                             sendNotificationRequest,
                             input,
@@ -144,6 +188,7 @@ public class SendOtpNotificationHandler
                                 400, phoneNumberValidationError.get());
                     }
                     return handleNotificationRequest(
+                            isTestUserRequest,
                             sendNotificationRequest.getPhoneNumber(),
                             sendNotificationRequest,
                             input,
@@ -160,6 +205,7 @@ public class SendOtpNotificationHandler
     }
 
     private APIGatewayProxyResponseEvent handleNotificationRequest(
+            boolean isTestUserRequest,
             String destination,
             SendNotificationRequest sendNotificationRequest,
             APIGatewayProxyRequestEvent input,
@@ -167,20 +213,31 @@ public class SendOtpNotificationHandler
             SupportedLanguage language)
             throws JsonException {
 
-        String code = codeGeneratorService.sixDigitCode();
         var notificationType = sendNotificationRequest.getNotificationType();
+        String code =
+                isTestUserRequest
+                        ? getOtpCodeForTestClient(notificationType)
+                        : codeGeneratorService.sixDigitCode();
 
         NotifyRequest notifyRequest =
                 new NotifyRequest(destination, notificationType, code, language);
+
         codeStorageService.saveOtpCode(
                 sendNotificationRequest.getEmail(),
                 code,
                 configurationService.getDefaultOtpCodeExpiry(),
                 sendNotificationRequest.getNotificationType());
-        LOG.info(
-                "Sending message to SQS queue for notificationType: {}",
-                sendNotificationRequest.getNotificationType());
-        sqsClient.send(serialiseRequest(notifyRequest));
+
+        if (isTestUserRequest) {
+            LOG.info(
+                    "Test user journey for notificationType: {}. Code saved in code storage service, but no notification will be sent via SQS",
+                    sendNotificationRequest.getNotificationType());
+        } else {
+            LOG.info(
+                    "Sending message to SQS queue for notificationType: {}",
+                    sendNotificationRequest.getNotificationType());
+            sqsClient.send(serialiseRequest(notifyRequest));
+        }
 
         auditService.submitAuditEvent(
                 AccountManagementAuditableEvent.SEND_OTP,
@@ -192,7 +249,8 @@ public class SendOtpNotificationHandler
                 IpAddressHelper.extractIpAddress(input),
                 sendNotificationRequest.getPhoneNumber(),
                 PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                pair("notification-type", sendNotificationRequest.getNotificationType()));
+                pair("notification-type", sendNotificationRequest.getNotificationType()),
+                pair("test-user", isTestUserRequest));
 
         LOG.info("Generating successful API response");
         return generateEmptySuccessApiGatewayResponse();
@@ -200,5 +258,20 @@ public class SendOtpNotificationHandler
 
     private String serialiseRequest(Object request) throws JsonException {
         return objectMapper.writeValueAsString(request);
+    }
+
+    private String getOtpCodeForTestClient(NotificationType notificationType) {
+        LOG.info("Using TestClient with NotificationType {}", notificationType);
+        switch (notificationType) {
+            case VERIFY_EMAIL:
+                return configurationService.getTestClientVerifyEmailOTP().orElse("");
+            case VERIFY_PHONE_NUMBER:
+                return configurationService.getTestClientVerifyPhoneNumberOTP().orElse("");
+            default:
+                LOG.error(
+                        "Invalid NotificationType: {} configured for TestClient", notificationType);
+                throw new MissingConfigurationParameterException(
+                        "Invalid NotificationType for use with TestClient");
+        }
     }
 }

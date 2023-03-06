@@ -35,6 +35,7 @@ class AuthoriseAccessTokenIntegrationTest
         extends HandlerIntegrationTest<TokenAuthorizerContext, AuthPolicy> {
 
     private static final ClientID CLIENT_ID = new ClientID();
+    private static final String REQUEST_CONTEXT_OBJECT_CLIENT_ID_KEY = "clientId";
     private static final Subject PUBLIC_SUBJECT = new Subject();
     private Date validDate;
 
@@ -68,6 +69,9 @@ class AuthoriseAccessTokenIntegrationTest
         var authPolicy = makeRequest(accessToken.toAuthorizationHeader());
 
         assertThat(authPolicy.getPrincipalId(), equalTo(PUBLIC_SUBJECT.getValue()));
+        assertThat(
+                authPolicy.getContext().get(REQUEST_CONTEXT_OBJECT_CLIENT_ID_KEY),
+                equalTo(CLIENT_ID.getValue()));
     }
 
     @Test

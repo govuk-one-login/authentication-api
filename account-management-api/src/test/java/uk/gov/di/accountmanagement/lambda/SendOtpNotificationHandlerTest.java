@@ -18,6 +18,7 @@ import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.CodeGeneratorService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -48,7 +49,11 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 class SendOtpNotificationHandlerTest {
 
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
+    private static final String TEST_TEST_USER_EMAIL_ADDRESS =
+            "tester.joe.bloggs@digital.cabinet-office.gov.uk";
+    private static final String TEST_CLIENT_ID = "tester-client-id";
     private static final String TEST_SIX_DIGIT_CODE = "123456";
+    private static final String TEST_CLIENT_AND_USER_SIX_DIGIT_CODE = "654321";
     private static final String TEST_PHONE_NUMBER = "07755551084";
     private static final long CODE_EXPIRY_TIME = 900;
 
@@ -59,7 +64,9 @@ class SendOtpNotificationHandlerTest {
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
     private final Context context = mock(Context.class);
+    private final ClientService clientService = mock(ClientService.class);
     private final AuditService auditService = mock(AuditService.class);
+    private APIGatewayProxyRequestEvent.ProxyRequestContext eventContext;
 
     private final SendOtpNotificationHandler handler =
             new SendOtpNotificationHandler(
@@ -68,12 +75,23 @@ class SendOtpNotificationHandlerTest {
                     codeGeneratorService,
                     codeStorageService,
                     dynamoService,
-                    auditService);
+                    auditService,
+                    clientService);
 
     @BeforeEach
     void setup() {
         when(configurationService.getDefaultOtpCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
         when(codeGeneratorService.sixDigitCode()).thenReturn(TEST_SIX_DIGIT_CODE);
+        when(configurationService.getTestClientVerifyEmailOTP())
+                .thenReturn(Optional.of(TEST_CLIENT_AND_USER_SIX_DIGIT_CODE));
+        when(configurationService.getTestClientVerifyPhoneNumberOTP())
+                .thenReturn(Optional.of(TEST_CLIENT_AND_USER_SIX_DIGIT_CODE));
+        when(clientService.isTestJourney(TEST_CLIENT_ID, TEST_TEST_USER_EMAIL_ADDRESS))
+                .thenReturn(true);
+
+        eventContext = contextWithSourceIp("123.123.123.123");
+        Map<String, Object> authorizer = Map.of("clientId", TEST_CLIENT_ID);
+        eventContext.setAuthorizer(authorizer);
     }
 
     @Test
@@ -89,7 +107,7 @@ class SendOtpNotificationHandlerTest {
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentIdValue));
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setRequestContext(eventContext);
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
@@ -114,7 +132,8 @@ class SendOtpNotificationHandlerTest {
                         "123.123.123.123",
                         null,
                         persistentIdValue,
-                        pair("notification-type", VERIFY_EMAIL));
+                        pair("notification-type", VERIFY_EMAIL),
+                        pair("test-user", false));
     }
 
     @Test
@@ -130,7 +149,7 @@ class SendOtpNotificationHandlerTest {
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of());
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setRequestContext(eventContext);
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\"  }",
@@ -158,7 +177,69 @@ class SendOtpNotificationHandlerTest {
                         "123.123.123.123",
                         TEST_PHONE_NUMBER,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("notification-type", VERIFY_PHONE_NUMBER));
+                        pair("notification-type", VERIFY_PHONE_NUMBER),
+                        pair("test-user", false));
+    }
+
+    @Test
+    void shouldReturn204AndNotPutMessageOnQueueForAValidEmailRequestFromTestUser() {
+        when(configurationService.isTestClientsEnabled()).thenReturn(true);
+
+        String persistentIdValue = "some-persistent-session-id";
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentIdValue));
+        event.setRequestContext(eventContext);
+        event.setBody(
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
+                        TEST_TEST_USER_EMAIL_ADDRESS, VERIFY_EMAIL));
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertEquals(204, result.getStatusCode());
+
+        verifyNoInteractions(awsSqsClient);
+        verify(codeStorageService)
+                .saveOtpCode(
+                        TEST_TEST_USER_EMAIL_ADDRESS,
+                        TEST_CLIENT_AND_USER_SIX_DIGIT_CODE,
+                        CODE_EXPIRY_TIME,
+                        VERIFY_EMAIL);
+
+        verify(auditService)
+                .submitAuditEvent(
+                        AccountManagementAuditableEvent.SEND_OTP,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        TEST_TEST_USER_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        null,
+                        persistentIdValue,
+                        pair("notification-type", VERIFY_EMAIL),
+                        pair("test-user", true));
+    }
+
+    @Test
+    void shouldReturn500OnRequestFromTestUserIfTestClientsNotEnabled() {
+        when(configurationService.isTestClientsEnabled()).thenReturn(false);
+        String persistentIdValue = "some-persistent-session-id";
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentIdValue));
+        event.setRequestContext(eventContext);
+        event.setBody(
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
+                        TEST_TEST_USER_EMAIL_ADDRESS, VERIFY_EMAIL));
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertEquals(500, result.getStatusCode());
+
+        verifyNoInteractions(awsSqsClient, codeStorageService, auditService);
     }
 
     @Test
@@ -166,6 +247,7 @@ class SendOtpNotificationHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of());
         event.setBody("{ }");
+        event.setRequestContext(eventContext);
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
@@ -178,6 +260,7 @@ class SendOtpNotificationHandlerTest {
     void shouldReturn400IfEmailAddressIsInvalid() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of());
+        event.setRequestContext(eventContext);
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
@@ -195,6 +278,7 @@ class SendOtpNotificationHandlerTest {
     void shouldReturn400IfPhoneNumberIsInvalid() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of());
+        event.setRequestContext(eventContext);
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\" }",
@@ -219,6 +303,7 @@ class SendOtpNotificationHandlerTest {
                                         .withPhoneNumberVerified(true)));
         var event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of());
+        event.setRequestContext(eventContext);
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\" }",
@@ -244,6 +329,7 @@ class SendOtpNotificationHandlerTest {
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of());
+        event.setRequestContext(eventContext);
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
@@ -260,6 +346,7 @@ class SendOtpNotificationHandlerTest {
     void shouldReturn400WhenInvalidNotificationType() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of());
+        event.setRequestContext(eventContext);
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
@@ -282,6 +369,7 @@ class SendOtpNotificationHandlerTest {
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of());
+        event.setRequestContext(eventContext);
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
