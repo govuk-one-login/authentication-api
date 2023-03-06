@@ -30,6 +30,7 @@ import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
+import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
@@ -166,6 +167,16 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                                     RESET_PASSWORD_WITH_CODE,
                                     notifyRequest.getLanguage());
                             break;
+                        case VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
+                            notifyPersonalisation.put("validation-code", notifyRequest.getCode());
+                            notifyPersonalisation.put(
+                                    "email-address", notifyRequest.getDestination());
+                            notificationService.sendEmail(
+                                    notifyRequest.getDestination(),
+                                    notifyPersonalisation,
+                                    VERIFY_CHANGE_HOW_GET_SECURITY_CODES,
+                                    notifyRequest.getLanguage());
+                            break;
                     }
                     writeTestClientOtpToS3(
                             notifyRequest.getNotificationType(),
@@ -203,7 +214,12 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
         var isNotifyDestination =
                 configurationService.getNotifyTestDestinations().contains(destination);
         var isOTPNotificationType =
-                List.of(VERIFY_EMAIL, MFA_SMS, VERIFY_PHONE_NUMBER, RESET_PASSWORD_WITH_CODE)
+                List.of(
+                                VERIFY_EMAIL,
+                                MFA_SMS,
+                                VERIFY_PHONE_NUMBER,
+                                RESET_PASSWORD_WITH_CODE,
+                                VERIFY_CHANGE_HOW_GET_SECURITY_CODES)
                         .contains(notificationType);
         if (isNotifyDestination && isOTPNotificationType) {
             LOG.info(
