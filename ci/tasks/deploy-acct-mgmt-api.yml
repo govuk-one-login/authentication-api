@@ -15,6 +15,9 @@ params:
   NOTIFY_API_KEY: ((build-notify-api-key))
   STATE_BUCKET: digital-identity-dev-tfstate
   TXMA_ACCOUNT_ID: ((build-txma-account-id))
+  TEST_CLIENT_VERIFY_EMAIL_OTP: ((test-client-verify-email-otp))
+  TEST_CLIENT_VERIFY_PHONE_NUMBER_OTP: ((test-client-verify-phone-number-otp))
+  TEST_CLIENTS_ENABLED: false
 inputs:
   - name: api-terraform-src
   - name: api-release
@@ -45,6 +48,9 @@ run:
         -var "dns_state_key=${DNS_STATE_KEY}" \
         -var "dns_state_role=${DNS_DEPLOYER_ROLE_ARN}" \
         -var "txma_account_id=${TXMA_ACCOUNT_ID}" \
+        -var "test_client_verify_email_otp=${TEST_CLIENT_VERIFY_EMAIL_OTP}" \
+        -var "test_client_verify_phone_number_otp=${TEST_CLIENT_VERIFY_PHONE_NUMBER_OTP}" \
+        -var "test_clients_enabled=${TEST_CLIENTS_ENABLED}" \
         -var-file "${DEPLOY_ENVIRONMENT}-overrides.tfvars" \
         -var-file ${DEPLOY_ENVIRONMENT}-sizing.tfvars \
 

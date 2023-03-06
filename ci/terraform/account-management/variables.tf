@@ -217,6 +217,19 @@ variable "email_acct_creation_otp_code_ttl_duration" {
   default = 7200
 }
 
+variable "test_client_verify_email_otp" {
+  type = string
+}
+
+variable "test_client_verify_phone_number_otp" {
+  type = string
+}
+
+variable "test_clients_enabled" {
+  type    = string
+  default = "false"
+}
+
 locals {
   default_performance_parameters = {
     memory          = var.endpoint_memory_size
