@@ -110,10 +110,7 @@ public class DocAppCallbackHandler
         this.cookieHelper = new CookieHelper();
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.noSessionOrchestrationService =
-                new NoSessionOrchestrationService(
-                        new RedisConnectionService(configurationService),
-                        clientSessionService,
-                        configurationService);
+                new NoSessionOrchestrationService(configurationService);
     }
 
     @Override
