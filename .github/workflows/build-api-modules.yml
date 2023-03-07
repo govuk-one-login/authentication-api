@@ -46,10 +46,8 @@ jobs:
         distribution: 'temurin'
         cache: gradle
 
-    - name: Set up Gradle 7.0.2
+    - name: Set up Gradle
       uses: gradle/gradle-build-action@v2
-      with:
-        gradle-version: 7.0.2
     
     - name: Build ${{ matrix.module }}
       run: ./gradlew --no-daemon :${{ matrix.module }}:buildZip
