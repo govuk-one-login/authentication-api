@@ -31,6 +31,7 @@ import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
+import uk.gov.di.authentication.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
@@ -53,6 +54,7 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
 
     private final AuditService auditService;
     private final IPVAuthorisationService authorisationService;
+    private final NoSessionOrchestrationService noSessionOrchestrationService;
 
     public IPVAuthorisationHandler(
             ConfigurationService configurationService,
@@ -61,7 +63,8 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
             ClientService clientService,
             AuthenticationService authenticationService,
             AuditService auditService,
-            IPVAuthorisationService authorisationService) {
+            IPVAuthorisationService authorisationService,
+            NoSessionOrchestrationService noSessionOrchestrationService) {
         super(
                 IPVAuthorisationRequest.class,
                 configurationService,
@@ -71,6 +74,7 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
                 authenticationService);
         this.auditService = auditService;
         this.authorisationService = authorisationService;
+        this.noSessionOrchestrationService = noSessionOrchestrationService;
     }
 
     public IPVAuthorisationHandler() {
@@ -85,6 +89,8 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
                         configurationService,
                         new RedisConnectionService(configurationService),
                         new KmsConnectionService(configurationService));
+        this.noSessionOrchestrationService =
+                new NoSessionOrchestrationService(configurationService);
     }
 
     @Override
@@ -140,6 +146,7 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
 
             var ipvAuthorisationRequest = authRequestBuilder.build();
             authorisationService.storeState(userContext.getSession().getSessionId(), state);
+            noSessionOrchestrationService.storeClientSessionIdAgainstState(clientSessionId, state);
             auditService.submitAuditEvent(
                     IPVAuditableEvent.IPV_AUTHORISATION_REQUESTED,
                     clientSessionId,
