@@ -5,10 +5,8 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.ErrorObject;
-import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.http.HTTPRequest;
-import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.apache.logging.log4j.LogManager;
@@ -20,6 +18,7 @@ import uk.gov.di.authentication.app.services.DocAppAuthorisationService;
 import uk.gov.di.authentication.app.services.DocAppCriService;
 import uk.gov.di.authentication.app.services.DynamoDocAppService;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
+import uk.gov.di.authentication.shared.exceptions.NoSessionException;
 import uk.gov.di.authentication.shared.helpers.ConstructUriHelper;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -29,6 +28,7 @@ import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.JwksService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
+import uk.gov.di.authentication.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
@@ -36,7 +36,6 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 
 import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.POST;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -60,6 +59,7 @@ public class DocAppCallbackHandler
     private final AuditService auditService;
     private final DynamoDocAppService dynamoDocAppService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final NoSessionOrchestrationService noSessionOrchestrationService;
     private final CookieHelper cookieHelper;
     protected final Json objectMapper = SerializationService.getInstance();
     private static final String REDIRECT_PATH = "doc-app-callback";
@@ -79,7 +79,8 @@ public class DocAppCallbackHandler
             AuditService auditService,
             DynamoDocAppService dynamoDocAppService,
             CookieHelper cookieHelper,
-            CloudwatchMetricsService cloudwatchMetricsService) {
+            CloudwatchMetricsService cloudwatchMetricsService,
+            NoSessionOrchestrationService noSessionOrchestrationService) {
         this.configurationService = configurationService;
         this.authorisationService = responseService;
         this.tokenService = tokenService;
@@ -89,6 +90,7 @@ public class DocAppCallbackHandler
         this.dynamoDocAppService = dynamoDocAppService;
         this.cookieHelper = cookieHelper;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.noSessionOrchestrationService = noSessionOrchestrationService;
     }
 
     public DocAppCallbackHandler(ConfigurationService configurationService) {
@@ -107,6 +109,11 @@ public class DocAppCallbackHandler
         this.dynamoDocAppService = new DynamoDocAppService(configurationService);
         this.cookieHelper = new CookieHelper();
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.noSessionOrchestrationService =
+                new NoSessionOrchestrationService(
+                        new RedisConnectionService(configurationService),
+                        clientSessionService,
+                        configurationService);
     }
 
     @Override
@@ -125,7 +132,20 @@ public class DocAppCallbackHandler
                     cookieHelper.parseSessionCookie(input.getHeaders()).orElse(null);
             if (Objects.isNull(sessionCookiesIds)) {
                 LOG.warn("No session cookie present. Attempt to find session using state");
-                return generateNoSessionErrorResponse(input.getQueryStringParameters());
+                var noSessionEntity =
+                        noSessionOrchestrationService.generateNoSessionOrchestrationEntity(
+                                input.getQueryStringParameters(),
+                                configurationService.isCustomDocAppClaimEnabled());
+                var authRequest =
+                        AuthenticationRequest.parse(
+                                noSessionEntity.getClientSession().getAuthRequestParams());
+                return generateAuthenticationErrorResponse(
+                        authRequest,
+                        noSessionEntity.getErrorObject(),
+                        true,
+                        noSessionEntity.getClientSessionId(),
+                        AuditService.UNKNOWN,
+                        noSessionEntity.getClientSession().getDocAppSubjectId().getValue());
             }
             var session =
                     sessionService
@@ -162,7 +182,6 @@ public class DocAppCallbackHandler
                         authenticationRequest,
                         errorObject.get(),
                         false,
-                        clientId,
                         clientSessionId,
                         session.getSessionId(),
                         clientSession.getDocAppSubjectId().getValue());
@@ -271,7 +290,7 @@ public class DocAppCallbackHandler
                 LOG.error("Doc App sendCriDataRequest was not successful: {}", e.getMessage());
                 return redirectToFrontendErrorPage();
             }
-        } catch (DocAppCallbackException e) {
+        } catch (DocAppCallbackException | NoSessionException e) {
             LOG.warn(e.getMessage());
             return redirectToFrontendErrorPage();
         } catch (ParseException e) {
@@ -284,7 +303,6 @@ public class DocAppCallbackHandler
             AuthenticationRequest authenticationRequest,
             ErrorObject errorObject,
             boolean noSessionErrorResponse,
-            String clientId,
             String clientSessionId,
             String sessionId,
             String docAppSubjectId) {
@@ -298,7 +316,7 @@ public class DocAppCallbackHandler
                 DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED,
                 clientSessionId,
                 sessionId,
-                clientId,
+                authenticationRequest.getClientID().getValue(),
                 docAppSubjectId,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
@@ -326,65 +344,6 @@ public class DocAppCallbackHandler
                                         ERROR_PAGE_REDIRECT_PATH)
                                 .toString()),
                 null);
-    }
-
-    private APIGatewayProxyResponseEvent generateNoSessionErrorResponse(
-            Map<String, String> queryStringParameters)
-            throws ParseException, DocAppCallbackException {
-        LOG.info(
-                "Attempting to generate error response using state. CustomDocAppClaimEnabled: {}",
-                configurationService.isCustomDocAppClaimEnabled());
-        if (isAccessDeniedErrorAndStatePresent(queryStringParameters)) {
-            LOG.info("access_denied error and state param are both present");
-            var clientSessionId =
-                    authorisationService
-                            .getClientSessionIdFromState(
-                                    State.parse(queryStringParameters.get("state")))
-                            .orElseThrow(
-                                    () ->
-                                            new DocAppCallbackException(
-                                                    "ClientSessionId could not be found using state param"));
-            LOG.info("ClientSessionID found using state");
-            attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
-            attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
-            var clientSession =
-                    clientSessionService
-                            .getClientSession(clientSessionId)
-                            .orElseThrow(
-                                    () ->
-                                            new DocAppCallbackException(
-                                                    "No client session found with given client sessionId"));
-            LOG.info("ClientSession found using clientSessionId");
-            var authenticationRequest =
-                    AuthenticationRequest.parse(clientSession.getAuthRequestParams());
-            var errorDescription =
-                    Optional.ofNullable(queryStringParameters.get("error_description"))
-                            .orElse(OAuth2Error.ACCESS_DENIED.getDescription());
-            var errorObject = new ErrorObject(queryStringParameters.get("error"), errorDescription);
-            LOG.info(
-                    "ErrorObject created for session cookie not present. Generating error response back to RP");
-            return generateAuthenticationErrorResponse(
-                    authenticationRequest,
-                    errorObject,
-                    true,
-                    authenticationRequest.getClientID().getValue(),
-                    clientSessionId,
-                    AuditService.UNKNOWN,
-                    clientSession.getDocAppSubjectId().getValue());
-        } else {
-            LOG.warn(
-                    "Session Cookie not present and access_denied or state param missing from error response");
-            throw new DocAppCallbackException(
-                    "Session Cookie not present and access_denied or state param missing from error response");
-        }
-    }
-
-    private boolean isAccessDeniedErrorAndStatePresent(Map<String, String> queryStringParameters) {
-        return configurationService.isCustomDocAppClaimEnabled()
-                && queryStringParameters.containsKey("error")
-                && queryStringParameters.get("error").equals(OAuth2Error.ACCESS_DENIED.getCode())
-                && queryStringParameters.containsKey("state")
-                && Boolean.FALSE.equals(queryStringParameters.get("state").isEmpty());
     }
 
     private void incrementDocAppCallbackErrorCounter(boolean noSessionError, String error) {

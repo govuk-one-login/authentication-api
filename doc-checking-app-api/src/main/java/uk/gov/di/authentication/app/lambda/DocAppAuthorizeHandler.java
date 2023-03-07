@@ -26,6 +26,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.JwksService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
+import uk.gov.di.authentication.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
@@ -56,6 +57,7 @@ public class DocAppAuthorizeHandler
     private final AuditService auditService;
     private final ClientService clientService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final NoSessionOrchestrationService noSessionOrchestrationService;
 
     public DocAppAuthorizeHandler() {
         this(ConfigurationService.getInstance());
@@ -75,6 +77,11 @@ public class DocAppAuthorizeHandler
         this.auditService = new AuditService(configurationService);
         this.clientService = new DynamoClientService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.noSessionOrchestrationService =
+                new NoSessionOrchestrationService(
+                        new RedisConnectionService(configurationService),
+                        clientSessionService,
+                        configurationService);
     }
 
     public DocAppAuthorizeHandler(
@@ -84,7 +91,8 @@ public class DocAppAuthorizeHandler
             ConfigurationService configurationService,
             AuditService auditService,
             ClientService clientService,
-            CloudwatchMetricsService cloudwatchMetricsService) {
+            CloudwatchMetricsService cloudwatchMetricsService,
+            NoSessionOrchestrationService noSessionOrchestrationService) {
         this.sessionService = sessionService;
         this.clientSessionService = clientSessionService;
         this.authorisationService = authorisationService;
@@ -92,6 +100,7 @@ public class DocAppAuthorizeHandler
         this.auditService = auditService;
         this.clientService = clientService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.noSessionOrchestrationService = noSessionOrchestrationService;
     }
 
     @Override
@@ -151,7 +160,7 @@ public class DocAppAuthorizeHandler
 
             var authorisationRequest = authRequestBuilder.build();
             authorisationService.storeState(session.getSessionId(), state);
-            authorisationService.storeClientSessionIdAgainstState(clientSessionId, state);
+            noSessionOrchestrationService.storeClientSessionIdAgainstState(clientSessionId, state);
             auditService.submitAuditEvent(
                     DocAppAuditableEvent.DOC_APP_AUTHORISATION_REQUESTED,
                     clientSessionId,
