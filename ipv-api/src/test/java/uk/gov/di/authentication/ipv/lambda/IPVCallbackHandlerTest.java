@@ -27,6 +27,7 @@ import net.minidev.json.JSONObject;
 import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -40,10 +41,12 @@ import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.IdentityClaims;
 import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
+import uk.gov.di.authentication.shared.entity.NoSessionEntity;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
+import uk.gov.di.authentication.shared.exceptions.NoSessionException;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
@@ -55,8 +58,10 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoIdentityService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -71,8 +76,10 @@ import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -82,6 +89,7 @@ import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.ADDRES
 import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.CORE_IDENTITY_CLAIM;
 import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.CREDENTIAL_JWT_CLAIM;
 import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.PASSPORT_CLAIM;
+import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class IPVCallbackHandlerTest {
@@ -96,6 +104,8 @@ class IPVCallbackHandlerTest {
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final DynamoIdentityService dynamoIdentityService = mock(DynamoIdentityService.class);
+    private final NoSessionOrchestrationService noSessionOrchestrationService =
+            mock(NoSessionOrchestrationService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final AwsSqsClient awsSqsClient = mock(AwsSqsClient.class);
     private static final URI LOGIN_URL = URI.create("https://example.com");
@@ -125,6 +135,10 @@ class IPVCallbackHandlerTest {
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     SUBJECT.getValue(), "test.account.gov.uk", SaltHelper.generateNewSalt());
 
+    @RegisterExtension
+    private final CaptureLoggingExtension logging =
+            new CaptureLoggingExtension(IPVCallbackHandler.class);
+
     private final Session session =
             new Session(SESSION_ID)
                     .setEmailAddress(TEST_EMAIL_ADDRESS)
@@ -149,7 +163,8 @@ class IPVCallbackHandlerTest {
                         auditService,
                         awsSqsClient,
                         dynamoIdentityService,
-                        cookieHelper);
+                        cookieHelper,
+                        noSessionOrchestrationService);
         when(configService.getLoginURI()).thenReturn(LOGIN_URL);
         when(configService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_BASE_URL));
         when(configService.isSpotEnabled()).thenReturn(true);
@@ -162,19 +177,6 @@ class IPVCallbackHandlerTest {
     @Test
     void shouldRedirectToFrontendErrorPageWhenIdentityIsNotEnabled() throws URISyntaxException {
         when(configService.isIdentityEnabled()).thenReturn(false);
-        usingValidSession();
-        usingValidClientSession();
-
-        var event = getApiGatewayProxyRequestEvent(null);
-
-        assertDoesRedirectToFrontendErrorPage(event);
-
-        verifyNoInteractions(auditService);
-    }
-
-    @Test
-    void shouldRedirectToFrontendErrorPageWhenNoSessionCookie() throws URISyntaxException {
-        when(cookieHelper.parseSessionCookie(anyMap())).thenReturn(Optional.empty());
         usingValidSession();
         usingValidClientSession();
 
@@ -428,9 +430,19 @@ class IPVCallbackHandlerTest {
 
         assertThat(response, hasStatus(302));
         assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), equalTo(expectedURI));
+        verify(auditService)
+                .submitAuditEvent(
+                        IPVAuditableEvent.IPV_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED,
+                        CLIENT_SESSION_ID,
+                        SESSION_ID,
+                        CLIENT_ID.getValue(),
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN);
 
         verifyNoInteractions(ipvTokenService);
-        verifyNoInteractions(auditService);
         verifyNoInteractions(dynamoIdentityService);
     }
 
@@ -524,6 +536,92 @@ class IPVCallbackHandlerTest {
                         PERSISTENT_SESSION_ID);
 
         verifyNoMoreInteractions(auditService);
+        verifyNoInteractions(dynamoIdentityService);
+    }
+
+    @Test
+    void
+            shouldRedirectToRPWhenNoSessionCookieAndCallToNoSessionOrchestrationServiceReturnsNoSessionEntity()
+                    throws NoSessionException {
+        usingValidSession();
+        usingValidClientSession();
+        when(configService.isIPVNoSessionResponseEnabled()).thenReturn(true);
+
+        Map<String, String> queryParameters = new HashMap<>();
+        queryParameters.put("state", STATE.getValue());
+        queryParameters.put("error", OAuth2Error.ACCESS_DENIED_CODE);
+        queryParameters.put("error_description", OAuth2Error.ACCESS_DENIED.getDescription());
+        when(noSessionOrchestrationService.generateNoSessionOrchestrationEntity(
+                        queryParameters, true))
+                .thenReturn(
+                        new NoSessionEntity(
+                                CLIENT_SESSION_ID, OAuth2Error.ACCESS_DENIED, clientSession));
+
+        var response =
+                handler.handleRequest(
+                        new APIGatewayProxyRequestEvent()
+                                .withQueryStringParameters(queryParameters),
+                        context);
+
+        var expectedURI =
+                new AuthenticationErrorResponse(
+                                URI.create(REDIRECT_URI.toString()),
+                                OAuth2Error.ACCESS_DENIED,
+                                RP_STATE,
+                                null)
+                        .toURI()
+                        .toString();
+        assertThat(response, hasStatus(302));
+        assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), equalTo(expectedURI));
+        verifyNoInteractions(ipvTokenService);
+        verifyNoInteractions(dynamoIdentityService);
+        verify(auditService)
+                .submitAuditEvent(
+                        IPVAuditableEvent.IPV_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED,
+                        CLIENT_SESSION_ID,
+                        AuditService.UNKNOWN,
+                        CLIENT_ID.getValue(),
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN);
+    }
+
+    @Test
+    void
+            shouldRedirectToFrontendErrorPageWhenNoSessionCookieButCallToNoSessionOrchestrationServiceThrowsException()
+                    throws NoSessionException, URISyntaxException {
+        usingValidSession();
+        usingValidClientSession();
+
+        Map<String, String> queryParameters = new HashMap<>();
+        queryParameters.put("error", OAuth2Error.ACCESS_DENIED_CODE);
+        queryParameters.put("state", STATE.getValue());
+
+        doThrow(
+                        new NoSessionException(
+                                "Session Cookie not present and access_denied or state param missing from error response. NoSessionResponseEnabled: false"))
+                .when(noSessionOrchestrationService)
+                .generateNoSessionOrchestrationEntity(queryParameters, false);
+
+        var response =
+                handler.handleRequest(
+                        new APIGatewayProxyRequestEvent()
+                                .withQueryStringParameters(queryParameters),
+                        context);
+
+        var expectedRedirectURI = new URIBuilder(LOGIN_URL).setPath("error").build();
+        assertThat(response, hasStatus(302));
+        assertThat(response.getHeaders().get("Location"), equalTo(expectedRedirectURI.toString()));
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                "Session Cookie not present and access_denied or state param missing from error response. NoSessionResponseEnabled: false")));
+
+        verifyNoInteractions(ipvTokenService);
+        verifyNoInteractions(auditService);
         verifyNoInteractions(dynamoIdentityService);
     }
 

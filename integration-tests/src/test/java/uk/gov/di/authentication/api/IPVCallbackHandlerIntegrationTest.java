@@ -2,11 +2,13 @@ package uk.gov.di.authentication.api;
 
 import com.google.gson.internal.LinkedTreeMap;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
+import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
@@ -41,6 +43,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static java.lang.String.format;
+import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -50,6 +53,7 @@ import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_AUTHORIS
 import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_SPOT_REQUESTED;
 import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED;
 import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED;
+import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED;
 import static uk.gov.di.authentication.shared.entity.IdentityClaims.VOT;
 import static uk.gov.di.authentication.shared.entity.IdentityClaims.VTM;
 import static uk.gov.di.authentication.shared.helpers.ClientSubjectHelper.calculatePairwiseIdentifier;
@@ -76,6 +80,9 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
     private static final Subject INTERNAL_SUBJECT = new Subject();
     public static final String CLIENT_NAME = "test-client-name";
+    public static final String CLIENT_SESSION_ID = "some-client-session-id";
+    public static final State RP_STATE = new State();
+    public static final State ORCHESTRATION_STATE = new State();
 
     @BeforeEach
     void setup() {
@@ -87,7 +94,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
     @Test
     void shouldRedirectToLoginWhenSuccessfullyProcessedIpvResponse() throws Json.JsonException {
         var sessionId = "some-session-id";
-        var clientSessionId = "some-client-session-id";
         var persistentSessionId = "persistent-id-value";
         var sectorId = "test.com";
         var scope = new Scope(OIDCScopeValue.OPENID);
@@ -97,15 +103,15 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 scope,
                                 new ClientID(CLIENT_ID),
                                 URI.create(REDIRECT_URI))
-                        .nonce(new Nonce());
-        var state = new State();
+                        .nonce(new Nonce())
+                        .state(RP_STATE);
         redis.createSession(sessionId);
         redis.createClientSession(
-                clientSessionId, CLIENT_NAME, authRequestBuilder.build().toParameters());
-        redis.addStateToRedis(state, sessionId);
+                CLIENT_SESSION_ID, CLIENT_NAME, authRequestBuilder.build().toParameters());
+        redis.addStateToRedis(ORCHESTRATION_STATE, sessionId);
         redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
         setUpDynamo();
-        var salt = addSalt();
+        var salt = userStore.addSalt(TEST_EMAIL_ADDRESS);
 
         var response =
                 makeRequest(
@@ -114,8 +120,13 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 "Cookie",
                                 format(
                                         "gs=%s.%s;di-persistent-session-id=%s",
-                                        sessionId, clientSessionId, persistentSessionId)),
-                        constructQueryStringParameters(state));
+                                        sessionId, CLIENT_SESSION_ID, persistentSessionId)),
+                        new HashMap<>(
+                                Map.of(
+                                        "state",
+                                        ORCHESTRATION_STATE.getValue(),
+                                        "code",
+                                        new AuthorizationCode().getValue())));
 
         assertThat(response, hasStatus(302));
         assertThat(
@@ -149,7 +160,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                         persistentSessionId,
                                         "request-i",
                                         CLIENT_ID,
-                                        clientSessionId),
+                                        CLIENT_SESSION_ID),
                                 CLIENT_ID)));
 
         var identityCredentials = identityStore.getIdentityCredentials(pairwiseIdentifier);
@@ -199,6 +210,78 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         assertThat(((LinkedTreeMap) drivingPermit.get(0)).size(), equalTo(6));
     }
 
+    @Test
+    void
+            shouldRedirectToRPWhenNoSessionCookieAndCallToNoSessionOrchestrationServiceReturnsNoSessionEntity()
+                    throws Json.JsonException {
+        var scope = new Scope(OIDCScopeValue.OPENID);
+        var authRequestBuilder =
+                new AuthenticationRequest.Builder(
+                                ResponseType.CODE,
+                                scope,
+                                new ClientID(CLIENT_ID),
+                                URI.create(REDIRECT_URI))
+                        .nonce(new Nonce())
+                        .state(RP_STATE);
+        redis.createClientSession(
+                CLIENT_SESSION_ID, CLIENT_NAME, authRequestBuilder.build().toParameters());
+        redis.addClientSessionAndStateToRedis(ORCHESTRATION_STATE, CLIENT_SESSION_ID);
+
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        emptyMap(),
+                        new HashMap<>(
+                                Map.of(
+                                        "state",
+                                        ORCHESTRATION_STATE.getValue(),
+                                        "error",
+                                        "access_denied")));
+
+        var expectedURI =
+                new AuthenticationErrorResponse(
+                                URI.create(REDIRECT_URI), OAuth2Error.ACCESS_DENIED, RP_STATE, null)
+                        .toURI()
+                        .toString();
+        assertThat(response, hasStatus(302));
+        assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), equalTo(expectedURI));
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue, singletonList(IPV_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED));
+    }
+
+    @Test
+    void
+            shouldRedirectToFrontendErrorPageWhenNoSessionCookieButClientSessionNotFoundWithGivenState()
+                    throws Json.JsonException {
+        var scope = new Scope(OIDCScopeValue.OPENID);
+        var authRequestBuilder =
+                new AuthenticationRequest.Builder(
+                                ResponseType.CODE,
+                                scope,
+                                new ClientID(CLIENT_ID),
+                                URI.create(REDIRECT_URI))
+                        .nonce(new Nonce())
+                        .state(RP_STATE);
+        redis.createClientSession(
+                CLIENT_SESSION_ID, CLIENT_NAME, authRequestBuilder.build().toParameters());
+
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        emptyMap(),
+                        new HashMap<>(
+                                Map.of(
+                                        "state",
+                                        ORCHESTRATION_STATE.getValue(),
+                                        "error",
+                                        "access_denied")));
+
+        assertThat(response, hasStatus(302));
+        assertThat(
+                response.getHeaders().get(ResponseHeaders.LOCATION),
+                startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+    }
+
     private void setUpDynamo() {
         userStore.signUp(TEST_EMAIL_ADDRESS, "password", INTERNAL_SUBJECT);
         clientStore.registerClient(
@@ -214,17 +297,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                 "https://test.com",
                 "pairwise",
                 true);
-    }
-
-    private byte[] addSalt() {
-        return userStore.addSalt(TEST_EMAIL_ADDRESS);
-    }
-
-    private Map<String, String> constructQueryStringParameters(State state) {
-        final Map<String, String> queryStringParameters = new HashMap<>();
-        queryStringParameters.putAll(
-                Map.of("state", state.getValue(), "code", new AuthorizationCode().getValue()));
-        return queryStringParameters;
     }
 
     protected static class TestConfigurationService extends IntegrationTestConfigurationService {
@@ -296,6 +368,11 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         @Override
         public String getTxmaAuditQueueUrl() {
             return txmaAuditQueue.getQueueUrl();
+        }
+
+        @Override
+        public boolean isIPVNoSessionResponseEnabled() {
+            return true;
         }
     }
 }

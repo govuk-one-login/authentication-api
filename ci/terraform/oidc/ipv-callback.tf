@@ -28,24 +28,25 @@ module "ipv-callback" {
   environment     = var.environment
 
   handler_environment_variables = {
-    DYNAMO_ENDPOINT                = var.use_localstack ? var.lambda_dynamo_endpoint : null
-    TXMA_AUDIT_QUEUE_URL           = module.oidc_txma_audit.queue_url
-    ENVIRONMENT                    = var.environment
-    IDENTITY_ENABLED               = var.ipv_api_enabled
-    IDENTITY_TRACE_LOGGING_ENABLED = var.identity_trace_logging_enabled
-    IPV_TOKEN_SIGNING_KEY_ALIAS    = local.ipv_token_auth_key_alias_name
-    IPV_AUTHORISATION_CLIENT_ID    = var.ipv_authorisation_client_id
-    IPV_AUTHORISATION_CALLBACK_URI = var.ipv_authorisation_callback_uri
-    IPV_AUTHORISATION_URI          = var.ipv_authorisation_uri
-    IPV_BACKEND_URI                = var.ipv_backend_uri
-    IPV_AUDIENCE                   = var.ipv_audience
-    LOGIN_URI                      = module.dns.frontend_url
-    LOCALSTACK_ENDPOINT            = var.use_localstack ? var.localstack_endpoint : null
-    OIDC_API_BASE_URL              = local.api_base_url
-    REDIS_KEY                      = local.redis_key
-    SPOT_ENABLED                   = tostring(var.spot_enabled)
-    SPOT_QUEUE_URL                 = aws_sqs_queue.spot_request_queue.id
-    INTERNAl_SECTOR_URI            = var.internal_sector_uri
+    DYNAMO_ENDPOINT                 = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    TXMA_AUDIT_QUEUE_URL            = module.oidc_txma_audit.queue_url
+    ENVIRONMENT                     = var.environment
+    IDENTITY_ENABLED                = var.ipv_api_enabled
+    IDENTITY_TRACE_LOGGING_ENABLED  = var.identity_trace_logging_enabled
+    IPV_TOKEN_SIGNING_KEY_ALIAS     = local.ipv_token_auth_key_alias_name
+    IPV_AUTHORISATION_CLIENT_ID     = var.ipv_authorisation_client_id
+    IPV_AUTHORISATION_CALLBACK_URI  = var.ipv_authorisation_callback_uri
+    IPV_AUTHORISATION_URI           = var.ipv_authorisation_uri
+    IPV_BACKEND_URI                 = var.ipv_backend_uri
+    IPV_AUDIENCE                    = var.ipv_audience
+    IPV_NO_SESSION_RESPONSE_ENABLED = var.ipv_no_session_response_enabled
+    LOGIN_URI                       = module.dns.frontend_url
+    LOCALSTACK_ENDPOINT             = var.use_localstack ? var.localstack_endpoint : null
+    OIDC_API_BASE_URL               = local.api_base_url
+    REDIS_KEY                       = local.redis_key
+    SPOT_ENABLED                    = tostring(var.spot_enabled)
+    SPOT_QUEUE_URL                  = aws_sqs_queue.spot_request_queue.id
+    INTERNAl_SECTOR_URI             = var.internal_sector_uri
   }
   handler_function_name = "uk.gov.di.authentication.ipv.lambda.IPVCallbackHandler::handleRequest"
 

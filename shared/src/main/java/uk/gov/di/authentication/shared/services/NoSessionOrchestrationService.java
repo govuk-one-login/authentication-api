@@ -33,6 +33,13 @@ public class NoSessionOrchestrationService {
         this.configurationService = configurationService;
     }
 
+    public NoSessionOrchestrationService(ConfigurationService configurationService) {
+        this(
+                new RedisConnectionService(configurationService),
+                new ClientSessionService(configurationService),
+                configurationService);
+    }
+
     public NoSessionEntity generateNoSessionOrchestrationEntity(
             Map<String, String> queryStringParameters, boolean noSessionResponseEnabled)
             throws NoSessionException {

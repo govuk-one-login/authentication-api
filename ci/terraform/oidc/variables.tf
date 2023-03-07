@@ -291,6 +291,11 @@ variable "ipv_backend_uri" {
   default = "undefined"
 }
 
+variable "ipv_no_session_response_enabled" {
+  type    = bool
+  default = false
+}
+
 variable "internal_sector_uri" {
   type    = string
   default = "undefined"
