@@ -64,7 +64,9 @@ jobs:
     
     - name: Start signing job for ${{ matrix.module }}
       run: |
-        aws signer start-signing-job \
+        SIGNER_RESPONSE=`aws signer start-signing-job \
           --profile-name "${SIGNING_PROFILE}" \
           --source "s3={bucketName=${SOURCE_BUCKET},key=${{ matrix.module }}/${{ github.sha }}.zip,version=$VERSION}" \
-          --destination "s3={bucketName=${DESTINATION_BUCKET},prefix=signed-${{ matrix.module }}-${{ github.sha }}-}"
+          --destination "s3={bucketName=${DESTINATION_BUCKET},prefix=signed-${{ matrix.module }}-${{ github.sha }}-}"`
+        JOB_ID=`echo $SIGNER_RESPONSE | jq .jobId -r`
+        aws signer wait successful-signing-job --job-id $JOB_ID
