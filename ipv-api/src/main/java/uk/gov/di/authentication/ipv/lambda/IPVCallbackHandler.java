@@ -26,6 +26,7 @@ import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
+import uk.gov.di.authentication.shared.exceptions.NoSessionException;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.ConstructUriHelper;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
@@ -40,6 +41,7 @@ import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoIdentityService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
+import uk.gov.di.authentication.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
@@ -76,6 +78,7 @@ public class IPVCallbackHandler
     private final AuditService auditService;
     private final AwsSqsClient sqsClient;
     private final DynamoIdentityService dynamoIdentityService;
+    private final NoSessionOrchestrationService noSessionOrchestrationService;
     protected final Json objectMapper = SerializationService.getInstance();
     private static final String REDIRECT_PATH = "ipv-callback";
     private static final String ERROR_PAGE_REDIRECT_PATH = "error";
@@ -96,7 +99,8 @@ public class IPVCallbackHandler
             AuditService auditService,
             AwsSqsClient sqsClient,
             DynamoIdentityService dynamoIdentityService,
-            CookieHelper cookieHelper) {
+            CookieHelper cookieHelper,
+            NoSessionOrchestrationService noSessionOrchestrationService) {
         this.configurationService = configurationService;
         this.ipvAuthorisationService = responseService;
         this.ipvTokenService = ipvTokenService;
@@ -108,6 +112,7 @@ public class IPVCallbackHandler
         this.sqsClient = sqsClient;
         this.dynamoIdentityService = dynamoIdentityService;
         this.cookieHelper = cookieHelper;
+        this.noSessionOrchestrationService = noSessionOrchestrationService;
     }
 
     public IPVCallbackHandler(ConfigurationService configurationService) {
@@ -131,6 +136,8 @@ public class IPVCallbackHandler
                         configurationService.getSqsEndpointUri());
         this.dynamoIdentityService = new DynamoIdentityService(configurationService);
         this.cookieHelper = new CookieHelper();
+        this.noSessionOrchestrationService =
+                new NoSessionOrchestrationService(configurationService);
     }
 
     @Override
@@ -142,12 +149,23 @@ public class IPVCallbackHandler
                 throw new IpvCallbackException("Identity is not enabled");
             }
             var sessionCookiesIds =
-                    cookieHelper
-                            .parseSessionCookie(input.getHeaders())
-                            .orElseThrow(
-                                    () -> {
-                                        throw new IpvCallbackException("No session cookie present");
-                                    });
+                    cookieHelper.parseSessionCookie(input.getHeaders()).orElse(null);
+            if (Objects.isNull(sessionCookiesIds)) {
+                var noSessionEntity =
+                        noSessionOrchestrationService.generateNoSessionOrchestrationEntity(
+                                input.getQueryStringParameters(),
+                                configurationService.isIPVNoSessionResponseEnabled());
+                var authRequest =
+                        AuthenticationRequest.parse(
+                                noSessionEntity.getClientSession().getAuthRequestParams());
+                attachLogFieldToLogs(CLIENT_ID, authRequest.getClientID().getValue());
+                return generateAuthenticationErrorResponse(
+                        authRequest,
+                        noSessionEntity.getErrorObject(),
+                        true,
+                        noSessionEntity.getClientSessionId(),
+                        AuditService.UNKNOWN);
+            }
             var session =
                     sessionService
                             .readSessionFromRedis(sessionCookiesIds.getSessionId())
@@ -179,22 +197,12 @@ public class IPVCallbackHandler
                     ipvAuthorisationService.validateResponse(
                             input.getQueryStringParameters(), session.getSessionId());
             if (errorObject.isPresent()) {
-                LOG.error(
-                        "Error in IPV AuthorisationResponse. ErrorCode: {}. ErrorDescription: {}",
-                        errorObject.get().getCode(),
-                        errorObject.get().getDescription());
-                var errorResponse =
-                        new AuthenticationErrorResponse(
-                                authRequest.getRedirectionURI(),
-                                new ErrorObject(
-                                        ACCESS_DENIED_CODE, errorObject.get().getDescription()),
-                                authRequest.getState(),
-                                authRequest.getResponseMode());
-                return generateApiGatewayProxyResponse(
-                        302,
-                        "",
-                        Map.of(ResponseHeaders.LOCATION, errorResponse.toURI().toString()),
-                        null);
+                return generateAuthenticationErrorResponse(
+                        authRequest,
+                        new ErrorObject(ACCESS_DENIED_CODE, errorObject.get().getDescription()),
+                        false,
+                        clientSessionId,
+                        session.getSessionId());
             }
             var userProfile =
                     dynamoService.getUserProfileFromEmail(session.getEmailAddress()).orElse(null);
@@ -341,7 +349,7 @@ public class IPVCallbackHandler
                             configurationService.getLoginURI().toString(), REDIRECT_PATH);
             return generateApiGatewayProxyResponse(
                     302, "", Map.of(ResponseHeaders.LOCATION, redirectURI.toString()), null);
-        } catch (IpvCallbackException e) {
+        } catch (IpvCallbackException | NoSessionException e) {
             LOG.warn(e.getMessage());
             return redirectToFrontendErrorPage();
         } catch (ParseException e) {
@@ -454,5 +462,36 @@ public class IPVCallbackHandler
                                         ERROR_PAGE_REDIRECT_PATH)
                                 .toString()),
                 null);
+    }
+
+    private APIGatewayProxyResponseEvent generateAuthenticationErrorResponse(
+            AuthenticationRequest authenticationRequest,
+            ErrorObject errorObject,
+            boolean noSessionErrorResponse,
+            String clientSessionId,
+            String sessionId) {
+        LOG.warn(
+                "Error in IPV AuthorisationResponse. ErrorCode: {}. ErrorDescription: {}. No Session Error: {}",
+                errorObject.getCode(),
+                errorObject.getDescription(),
+                noSessionErrorResponse);
+        auditService.submitAuditEvent(
+                IPVAuditableEvent.IPV_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED,
+                clientSessionId,
+                sessionId,
+                authenticationRequest.getClientID().getValue(),
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN);
+        var errorResponse =
+                new AuthenticationErrorResponse(
+                        authenticationRequest.getRedirectionURI(),
+                        errorObject,
+                        authenticationRequest.getState(),
+                        authenticationRequest.getResponseMode());
+        return generateApiGatewayProxyResponse(
+                302, "", Map.of(ResponseHeaders.LOCATION, errorResponse.toURI().toString()), null);
     }
 }

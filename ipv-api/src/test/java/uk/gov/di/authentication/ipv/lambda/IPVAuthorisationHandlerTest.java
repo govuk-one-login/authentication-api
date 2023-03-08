@@ -49,6 +49,7 @@ import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
@@ -89,6 +90,8 @@ public class IPVAuthorisationHandlerTest {
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final ClientService clientService = mock(ClientService.class);
     private final AuditService auditService = mock(AuditService.class);
+    private final NoSessionOrchestrationService noSessionOrchestrationService =
+            mock(NoSessionOrchestrationService.class);
 
     private static final String CLIENT_SESSION_ID = "client-session-v1";
     private static final String SESSION_ID = "a-session-id";
@@ -139,7 +142,8 @@ public class IPVAuthorisationHandlerTest {
                         clientService,
                         authenticationService,
                         auditService,
-                        authorisationService);
+                        authorisationService,
+                        noSessionOrchestrationService);
         when(configService.getIPVAuthorisationClientId()).thenReturn(IPV_CLIENT_ID);
         when(configService.getIPVAuthorisationCallbackURI()).thenReturn(IPV_CALLBACK_URI);
         when(configService.getIPVAuthorisationURI()).thenReturn(IPV_AUTHORISATION_URI);
@@ -192,6 +196,8 @@ public class IPVAuthorisationHandlerTest {
                 splitQuery(body.getRedirectUri()).get("request"),
                 equalTo(encryptedJWT.serialize()));
         verify(authorisationService).storeState(eq(session.getSessionId()), any(State.class));
+        verify(noSessionOrchestrationService)
+                .storeClientSessionIdAgainstState(eq(CLIENT_SESSION_ID), any(State.class));
         verify(auditService)
                 .submitAuditEvent(
                         IPVAuditableEvent.IPV_AUTHORISATION_REQUESTED,

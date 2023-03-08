@@ -188,6 +188,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("IDENTITY_ENABLED", "false").equals("true");
     }
 
+    public boolean isIPVNoSessionResponseEnabled() {
+        return System.getenv()
+                .getOrDefault("IPV_NO_SESSION_RESPONSE_ENABLED", "false")
+                .equals("true");
+    }
+
     public boolean isResetPasswordConfirmationSmsEnabled() {
         return List.of("build", "staging", "integration", "local").contains(getEnvironment());
     }
