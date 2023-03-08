@@ -195,7 +195,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public boolean isResetPasswordConfirmationSmsEnabled() {
-        return List.of("build", "staging", "integration", "local").contains(getEnvironment());
+        return List.of("build", "staging", "integration", "local", "production")
+                .contains(getEnvironment());
     }
 
     public boolean isSpotEnabled() {
