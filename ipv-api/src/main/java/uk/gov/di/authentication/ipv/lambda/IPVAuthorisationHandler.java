@@ -20,6 +20,7 @@ import uk.gov.di.authentication.ipv.entity.IPVAuthorisationResponse;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -137,7 +138,8 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
                             authRequest.getScope(),
                             pairwiseSubject,
                             claimsSetRequest,
-                            Optional.ofNullable(clientSessionId).orElse("unknown"));
+                            Optional.ofNullable(clientSessionId).orElse("unknown"),
+                            userContext.getUserProfile().map(UserProfile::getEmail).orElseThrow());
             var authRequestBuilder =
                     new AuthorizationRequest.Builder(
                                     new ResponseType(ResponseType.Value.CODE), clientID)
