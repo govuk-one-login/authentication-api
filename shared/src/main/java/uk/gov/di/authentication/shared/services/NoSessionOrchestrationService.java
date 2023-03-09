@@ -65,10 +65,10 @@ public class NoSessionOrchestrationService {
                                             new NoSessionException(
                                                     "No client session found with given client sessionId"));
             LOG.info("ClientSession found using clientSessionId");
-            var errorDescription =
-                    Optional.ofNullable(queryStringParameters.get("error_description"))
-                            .orElse(OAuth2Error.ACCESS_DENIED.getDescription());
-            var errorObject = new ErrorObject(queryStringParameters.get("error"), errorDescription);
+            var errorObject =
+                    new ErrorObject(
+                            OAuth2Error.ACCESS_DENIED_CODE,
+                            "Access denied for security reasons, a new authentication request may be successful");
             LOG.info(
                     "ErrorObject created for session cookie not present. Generating NoSessionEntity in preparation for response to RP");
             return new NoSessionEntity(clientSessionId, errorObject, clientSession);

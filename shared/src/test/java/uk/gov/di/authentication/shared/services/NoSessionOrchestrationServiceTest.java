@@ -68,7 +68,8 @@ class NoSessionOrchestrationServiceTest {
                 equalTo(OAuth2Error.ACCESS_DENIED_CODE));
         assertThat(
                 noSessionEntity.getErrorObject().getDescription(),
-                equalTo(OAuth2Error.ACCESS_DENIED.getDescription()));
+                equalTo(
+                        "Access denied for security reasons, a new authentication request may be successful"));
         assertThat(noSessionEntity.getClientSessionId(), equalTo(CLIENT_SESSION_ID));
 
         var authenticationRequest =

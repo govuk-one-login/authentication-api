@@ -5,6 +5,7 @@ import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
+import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
@@ -260,9 +261,12 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                         constructHeaders(Optional.empty()),
                         queryStringParameters);
 
+        var error =
+                new ErrorObject(
+                        OAuth2Error.ACCESS_DENIED_CODE,
+                        "Access denied for security reasons, a new authentication request may be successful");
         var expectedURI =
-                new AuthenticationErrorResponse(
-                                URI.create(REDIRECT_URI), OAuth2Error.ACCESS_DENIED, RP_STATE, null)
+                new AuthenticationErrorResponse(URI.create(REDIRECT_URI), error, RP_STATE, null)
                         .toURI()
                         .toString();
         assertThat(response, hasStatus(302));
