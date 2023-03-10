@@ -73,6 +73,7 @@ import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -180,7 +181,8 @@ public class IPVAuthorisationHandlerTest {
                         any(Scope.class),
                         any(Subject.class),
                         any(),
-                        eq(CLIENT_SESSION_ID)))
+                        eq(CLIENT_SESSION_ID),
+                        anyString()))
                 .thenReturn(encryptedJWT);
         usingValidSession();
         usingValidClientSession();
