@@ -47,6 +47,7 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.exceptions.NoSessionException;
+import uk.gov.di.authentication.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
@@ -167,7 +168,6 @@ class IPVCallbackHandlerTest {
                         noSessionOrchestrationService);
         when(configService.getLoginURI()).thenReturn(LOGIN_URL);
         when(configService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_BASE_URL));
-        when(configService.isSpotEnabled()).thenReturn(true);
         when(configService.getIPVBackendURI()).thenReturn(IPV_URI);
         when(configService.isIdentityEnabled()).thenReturn(true);
         when(context.getAwsRequestId()).thenReturn(REQUEST_ID);
@@ -175,7 +175,8 @@ class IPVCallbackHandlerTest {
     }
 
     @Test
-    void shouldRedirectToFrontendErrorPageWhenIdentityIsNotEnabled() throws URISyntaxException {
+    void shouldRedirectToFrontendErrorPageWhenIdentityIsNotEnabled()
+            throws URISyntaxException, UnsuccessfulCredentialResponseException {
         when(configService.isIdentityEnabled()).thenReturn(false);
         usingValidSession();
         usingValidClientSession();
@@ -188,7 +189,8 @@ class IPVCallbackHandlerTest {
     }
 
     @Test
-    void shouldNotInvokeSPOTAndReturnAccessDeniedErrorToRPWhenP0() {
+    void shouldNotInvokeSPOTAndReturnAccessDeniedErrorToRPWhenP0()
+            throws UnsuccessfulCredentialResponseException {
         usingValidSession();
         usingValidClientSession();
         var userIdentityUserInfo =
@@ -235,7 +237,8 @@ class IPVCallbackHandlerTest {
     @ParameterizedTest
     @MethodSource("additionalClaims")
     void shouldInvokeSPOTAndRedirectToFrontendCallbackForSuccessfulResponseAtP2(
-            Map<String, String> additionalClaims) throws URISyntaxException, Json.JsonException {
+            Map<String, String> additionalClaims)
+            throws URISyntaxException, Json.JsonException, UnsuccessfulCredentialResponseException {
         usingValidSession();
         usingValidClientSession();
 
@@ -312,7 +315,7 @@ class IPVCallbackHandlerTest {
 
     @Test
     void shouldNotInvokeSPOTAndShouldRedirectToFrontendErrorPageWhenVTMMismatch()
-            throws URISyntaxException {
+            throws URISyntaxException, UnsuccessfulCredentialResponseException {
         usingValidSession();
         usingValidClientSession();
         var userIdentityUserInfo =
@@ -341,8 +344,9 @@ class IPVCallbackHandlerTest {
         event.setQueryStringParameters(Collections.emptyMap());
         event.setHeaders(Map.of(COOKIE, buildCookieString()));
 
-        assertDoesRedirectToFrontendErrorPage(event);
+        when(sessionService.readSessionFromRedis(SESSION_ID)).thenReturn(Optional.empty());
 
+        assertDoesRedirectToFrontendErrorPage(event);
         verifyNoInteractions(auditService);
     }
 
@@ -371,7 +375,8 @@ class IPVCallbackHandlerTest {
     }
 
     @Test
-    void shouldRedirectToFrontendErrorPageWhenUserIdentityRequestFails() throws URISyntaxException {
+    void shouldRedirectToFrontendErrorPageWhenUserIdentityRequestFails()
+            throws URISyntaxException, UnsuccessfulCredentialResponseException {
         usingValidSession();
         usingValidClientSession();
 
@@ -391,9 +396,11 @@ class IPVCallbackHandlerTest {
 
         var event = getApiGatewayProxyRequestEvent(new UserInfo(new JSONObject(claims)));
 
-        when(ipvTokenService.sendIpvUserIdentityRequest(any(UserInfoRequest.class)))
-                .thenReturn(null);
-
+        doThrow(
+                        new UnsuccessfulCredentialResponseException(
+                                "Error when attempting to parse http response to UserInfoResponse"))
+                .when(ipvTokenService)
+                .sendIpvUserIdentityRequest(any(UserInfoRequest.class));
         assertDoesRedirectToFrontendErrorPage(event);
     }
 
@@ -466,7 +473,8 @@ class IPVCallbackHandlerTest {
     }
 
     @Test
-    void shouldRedirectToFrontendErrorPageWhenClientRegistryIsNotFound() throws URISyntaxException {
+    void shouldRedirectToFrontendErrorPageWhenClientRegistryIsNotFound()
+            throws URISyntaxException, UnsuccessfulCredentialResponseException {
         usingValidSession();
         usingValidClientSession();
 
@@ -697,7 +705,7 @@ class IPVCallbackHandlerTest {
     }
 
     private APIGatewayProxyRequestEvent getApiGatewayProxyRequestEvent(
-            UserInfo userIdentityUserInfo) {
+            UserInfo userIdentityUserInfo) throws UnsuccessfulCredentialResponseException {
         var successfulTokenResponse =
                 new AccessTokenResponse(new Tokens(new BearerAccessToken(), null));
         var tokenRequest = mock(TokenRequest.class);

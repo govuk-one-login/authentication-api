@@ -32,7 +32,6 @@ module "ipv-callback" {
     TXMA_AUDIT_QUEUE_URL            = module.oidc_txma_audit.queue_url
     ENVIRONMENT                     = var.environment
     IDENTITY_ENABLED                = var.ipv_api_enabled
-    IDENTITY_TRACE_LOGGING_ENABLED  = var.identity_trace_logging_enabled
     IPV_TOKEN_SIGNING_KEY_ALIAS     = local.ipv_token_auth_key_alias_name
     IPV_AUTHORISATION_CLIENT_ID     = var.ipv_authorisation_client_id
     IPV_AUTHORISATION_CALLBACK_URI  = var.ipv_authorisation_callback_uri
@@ -44,7 +43,6 @@ module "ipv-callback" {
     LOCALSTACK_ENDPOINT             = var.use_localstack ? var.localstack_endpoint : null
     OIDC_API_BASE_URL               = local.api_base_url
     REDIS_KEY                       = local.redis_key
-    SPOT_ENABLED                    = tostring(var.spot_enabled)
     SPOT_QUEUE_URL                  = aws_sqs_queue.spot_request_queue.id
     INTERNAl_SECTOR_URI             = var.internal_sector_uri
   }

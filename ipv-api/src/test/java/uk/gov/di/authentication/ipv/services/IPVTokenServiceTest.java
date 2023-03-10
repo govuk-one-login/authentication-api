@@ -25,6 +25,7 @@ import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.authentication.shared.entity.IdentityClaims;
+import uk.gov.di.authentication.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
@@ -147,7 +148,8 @@ class IPVTokenServiceTest {
     }
 
     @Test
-    void shouldCallIPVUserIdentityRequestAndParseCorrectly() throws IOException {
+    void shouldCallIPVUserIdentityRequestAndParseCorrectly()
+            throws IOException, UnsuccessfulCredentialResponseException {
         var userInfoHTTPResponse = new HTTPResponse(200);
         userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
         userInfoHTTPResponse.setContent(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT);
@@ -179,7 +181,8 @@ class IPVTokenServiceTest {
     }
 
     @Test
-    void shouldRetryCallToIPVUserIdentityOnceAndParseSuccessFulSecondResponse() throws IOException {
+    void shouldRetryCallToIPVUserIdentityOnceAndParseSuccessFulSecondResponse()
+            throws IOException, UnsuccessfulCredentialResponseException {
         var userInfoHTTPResponse = new HTTPResponse(200);
         userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
         userInfoHTTPResponse.setContent(SUCCESSFUL_USER_INFO_HTTP_RESPONSE_CONTENT);
@@ -203,7 +206,7 @@ class IPVTokenServiceTest {
         when(httpRequest.send()).thenReturn(new HTTPResponse(500));
 
         assertThrows(
-                RuntimeException.class,
+                UnsuccessfulCredentialResponseException.class,
                 () -> {
                     ipvTokenService.sendIpvUserIdentityRequest(userInfoRequest);
                 });

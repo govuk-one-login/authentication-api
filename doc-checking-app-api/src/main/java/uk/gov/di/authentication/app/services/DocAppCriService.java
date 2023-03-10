@@ -25,7 +25,7 @@ import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
-import uk.gov.di.authentication.shared.exceptions.UnsuccesfulCredentialResponseException;
+import uk.gov.di.authentication.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
@@ -108,7 +108,7 @@ public class DocAppCriService {
     }
 
     public List<String> sendCriDataRequest(HTTPRequest request, String docAppSubjectId)
-            throws UnsuccesfulCredentialResponseException {
+            throws UnsuccessfulCredentialResponseException {
         try {
             LOG.info("Sending userinfo request");
             int count = 0;
@@ -120,7 +120,7 @@ public class DocAppCriService {
                 response = request.send();
             } while (!response.indicatesSuccess() && count < maxTries);
             if (!response.indicatesSuccess()) {
-                throw new UnsuccesfulCredentialResponseException(
+                throw new UnsuccessfulCredentialResponseException(
                         format(
                                 "Error %s when attempting to call CRI data endpoint: %s",
                                 response.getStatusCode(), response.getContent()));
@@ -128,7 +128,7 @@ public class DocAppCriService {
 
             if (!response.getContentAsJSONObject().get("sub").equals(docAppSubjectId)
                     && !configurationService.getEnvironment().equals("build")) {
-                throw new UnsuccesfulCredentialResponseException(
+                throw new UnsuccessfulCredentialResponseException(
                         "Sub in CRI response does not match docAppSubjectId in client session");
             }
 
@@ -136,19 +136,20 @@ public class DocAppCriService {
             LOG.info("Received successful userinfo response");
             return signedJWTS.stream().map(JWSObject::serialize).collect(Collectors.toList());
         } catch (IOException e) {
-            throw new UnsuccesfulCredentialResponseException(
+            throw new UnsuccessfulCredentialResponseException(
                     "Error when attempting to call CRI data endpoint", e);
         } catch (ParseException e) {
-            throw new UnsuccesfulCredentialResponseException("Error parsing HTTP response", e);
+            throw new UnsuccessfulCredentialResponseException("Error parsing HTTP response", e);
         }
     }
 
     private List<SignedJWT> parseResponse(HTTPResponse response)
-            throws UnsuccesfulCredentialResponseException {
+            throws UnsuccessfulCredentialResponseException {
         try {
             var contentAsJSONObject = response.getContentAsJSONObject();
             if (Objects.isNull(contentAsJSONObject.get(CREDENTIAL_JWT.getValue()))) {
-                throw new UnsuccesfulCredentialResponseException("No Credential JWT claim present");
+                throw new UnsuccessfulCredentialResponseException(
+                        "No Credential JWT claim present");
             }
             var serializedSignedJWTs =
                     (List<String>) contentAsJSONObject.get(CREDENTIAL_JWT.getValue());
@@ -158,9 +159,9 @@ public class DocAppCriService {
             }
             return signedJWTs;
         } catch (ParseException e) {
-            throw new UnsuccesfulCredentialResponseException("Error parsing CRI response", e);
+            throw new UnsuccessfulCredentialResponseException("Error parsing CRI response", e);
         } catch (java.text.ParseException e) {
-            throw new UnsuccesfulCredentialResponseException("Error parsing JWT", e);
+            throw new UnsuccessfulCredentialResponseException("Error parsing JWT", e);
         }
     }
 

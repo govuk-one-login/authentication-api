@@ -27,6 +27,7 @@ import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.exceptions.NoSessionException;
+import uk.gov.di.authentication.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.ConstructUriHelper;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
@@ -169,10 +170,7 @@ public class IPVCallbackHandler
             var session =
                     sessionService
                             .readSessionFromRedis(sessionCookiesIds.getSessionId())
-                            .orElseThrow(
-                                    () -> {
-                                        throw new IpvCallbackException("Session not found");
-                                    });
+                            .orElseThrow(() -> new IpvCallbackException("Session not found"));
 
             attachSessionIdToLogs(session);
             var persistentId =
@@ -181,10 +179,10 @@ public class IPVCallbackHandler
             var clientSessionId = sessionCookiesIds.getClientSessionId();
             attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
             attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
-            var clientSession = clientSessionService.getClientSession(clientSessionId).orElse(null);
-            if (Objects.isNull(clientSession)) {
-                throw new IpvCallbackException("ClientSession not found");
-            }
+            var clientSession =
+                    clientSessionService
+                            .getClientSession(clientSessionId)
+                            .orElseThrow(() -> new IpvCallbackException("ClientSession not found"));
 
             var authRequest = AuthenticationRequest.parse(clientSession.getAuthRequestParams());
             var clientId = authRequest.getClientID().getValue();
@@ -263,15 +261,7 @@ public class IPVCallbackHandler
                             clientRegistry,
                             dynamoService,
                             configurationService.getInternalSectorUri());
-            if (configurationService.isIdentityTraceLoggingEnabled()) {
-                LOG.info(
-                        "Sending UserInfo request with accessToken {}",
-                        tokenResponse
-                                .toSuccessResponse()
-                                .getTokens()
-                                .getBearerAccessToken()
-                                .getValue());
-            }
+
             var userIdentityUserInfo =
                     ipvTokenService.sendIpvUserIdentityRequest(
                             new UserInfoRequest(
@@ -282,14 +272,7 @@ public class IPVCallbackHandler
                                             .toSuccessResponse()
                                             .getTokens()
                                             .getBearerAccessToken()));
-            if (Objects.isNull(userIdentityUserInfo)) {
-                throw new IpvCallbackException("IPV UserIdentityRequest failed");
-            }
-            if (configurationService.isIdentityTraceLoggingEnabled()) {
-                LOG.info(
-                        "IPV UserIdentityRequest succeeded: {}",
-                        userIdentityUserInfo.toJSONObject().toJSONString());
-            }
+
             auditService.submitAuditEvent(
                     IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED,
                     clientSessionId,
@@ -301,59 +284,59 @@ public class IPVCallbackHandler
                     userProfile.getPhoneNumber(),
                     persistentId);
 
-            if (configurationService.isSpotEnabled()) {
-                Optional<ErrorObject> userIdentityError =
-                        validateUserIdentityResponse(userIdentityUserInfo);
-                if (userIdentityError.isEmpty()) {
-                    LOG.info("SPOT will be invoked.");
-                    var logIds =
-                            new LogIds(
-                                    session.getSessionId(),
-                                    persistentId,
-                                    context.getAwsRequestId(),
-                                    clientId,
-                                    clientSessionId);
-                    queueSPOTRequest(
-                            logIds,
-                            getSectorIdentifierForClient(
-                                    clientRegistry, configurationService.getInternalSectorUri()),
-                            userProfile,
-                            pairwiseSubject,
-                            userIdentityUserInfo,
-                            clientId);
-
-                    auditService.submitAuditEvent(
-                            IPVAuditableEvent.IPV_SPOT_REQUESTED,
-                            clientSessionId,
-                            session.getSessionId(),
-                            clientId,
-                            session.getInternalCommonSubjectIdentifier(),
-                            userProfile.getEmail(),
-                            AuditService.UNKNOWN,
-                            userProfile.getPhoneNumber(),
-                            persistentId);
-                } else {
-                    LOG.warn("SPOT will not be invoked. Returning Error to RP");
-                    var errorResponse =
-                            new AuthenticationErrorResponse(
-                                    authRequest.getRedirectionURI(),
-                                    userIdentityError.get(),
-                                    authRequest.getState(),
-                                    authRequest.getResponseMode());
-                    return generateApiGatewayProxyResponse(
-                            302,
-                            "",
-                            Map.of(ResponseHeaders.LOCATION, errorResponse.toURI().toString()),
-                            null);
-                }
+            var userIdentityError = validateUserIdentityResponse(userIdentityUserInfo);
+            if (userIdentityError.isPresent()) {
+                LOG.warn("SPOT will not be invoked. Returning Error to RP");
+                var errorResponse =
+                        new AuthenticationErrorResponse(
+                                authRequest.getRedirectionURI(),
+                                userIdentityError.get(),
+                                authRequest.getState(),
+                                authRequest.getResponseMode());
+                return generateApiGatewayProxyResponse(
+                        302,
+                        "",
+                        Map.of(ResponseHeaders.LOCATION, errorResponse.toURI().toString()),
+                        null);
             }
+
+            LOG.info("SPOT will be invoked.");
+            var logIds =
+                    new LogIds(
+                            session.getSessionId(),
+                            persistentId,
+                            context.getAwsRequestId(),
+                            clientId,
+                            clientSessionId);
+            queueSPOTRequest(
+                    logIds,
+                    getSectorIdentifierForClient(
+                            clientRegistry, configurationService.getInternalSectorUri()),
+                    userProfile,
+                    pairwiseSubject,
+                    userIdentityUserInfo,
+                    clientId);
+
+            auditService.submitAuditEvent(
+                    IPVAuditableEvent.IPV_SPOT_REQUESTED,
+                    clientSessionId,
+                    session.getSessionId(),
+                    clientId,
+                    session.getInternalCommonSubjectIdentifier(),
+                    userProfile.getEmail(),
+                    AuditService.UNKNOWN,
+                    userProfile.getPhoneNumber(),
+                    persistentId);
             saveIdentityClaimsToDynamo(pairwiseSubject, userIdentityUserInfo);
             var redirectURI =
                     ConstructUriHelper.buildURI(
                             configurationService.getLoginURI().toString(), REDIRECT_PATH);
+            LOG.info("Successful IPV callback. Redirecting to frontend");
             return generateApiGatewayProxyResponse(
                     302, "", Map.of(ResponseHeaders.LOCATION, redirectURI.toString()), null);
-        } catch (IpvCallbackException | NoSessionException e) {
+        } catch (IpvCallbackException
+                | NoSessionException
+                | UnsuccessfulCredentialResponseException e) {
             LOG.warn(e.getMessage());
             return redirectToFrontendErrorPage();
         } catch (ParseException e) {
@@ -389,18 +372,21 @@ public class IPVCallbackHandler
                 userIdentityUserInfo.getClaim(IdentityClaims.CORE_IDENTITY.getValue()).toString());
     }
 
-    private Optional<ErrorObject> validateUserIdentityResponse(UserInfo userIdentityUserInfo) {
+    private Optional<ErrorObject> validateUserIdentityResponse(UserInfo userIdentityUserInfo)
+            throws IpvCallbackException {
+        LOG.info("Validating userinfo response");
         if (!LevelOfConfidence.MEDIUM_LEVEL
                 .getValue()
                 .equals(userIdentityUserInfo.getClaim(VOT.getValue()))) {
             LOG.warn("IPV missing vot or vot not P2.");
             return Optional.of(OAuth2Error.ACCESS_DENIED);
         }
-        var trustmark =
+        var trustmarkURL =
                 buildURI(configurationService.getOidcApiBaseURL().orElseThrow(), "/trustmark")
                         .toString();
 
-        if (!trustmark.equals(userIdentityUserInfo.getClaim(VTM.getValue()))) {
+        if (!trustmarkURL.equals(userIdentityUserInfo.getClaim(VTM.getValue()))) {
+            LOG.warn("VTM does not contain expected trustmark URL");
             throw new IpvCallbackException("IPV trustmark is invalid");
         }
         return Optional.empty();
@@ -414,7 +400,7 @@ public class IPVCallbackHandler
             UserInfo userIdentityUserInfo,
             String clientId)
             throws JsonException {
-
+        LOG.info("Constructing SPOT request ready to queue");
         var spotClaimsBuilder =
                 SPOTClaims.builder()
                         .withClaim(VOT.getValue(), userIdentityUserInfo.getClaim(VOT.getValue()))
@@ -447,11 +433,7 @@ public class IPVCallbackHandler
                         clientId);
         var spotRequestString = objectMapper.writeValueAsString(spotRequest);
         sqsClient.send(spotRequestString);
-        if (configurationService.isIdentityTraceLoggingEnabled()) {
-            LOG.info("SPOT request placed on queue: {}", spotRequestString);
-        } else {
-            LOG.info("SPOT request placed on queue");
-        }
+        LOG.info("SPOT request placed on queue");
     }
 
     private APIGatewayProxyResponseEvent redirectToFrontendErrorPage() {
