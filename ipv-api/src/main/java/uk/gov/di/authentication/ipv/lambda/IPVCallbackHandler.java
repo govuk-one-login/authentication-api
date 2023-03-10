@@ -170,10 +170,7 @@ public class IPVCallbackHandler
             var session =
                     sessionService
                             .readSessionFromRedis(sessionCookiesIds.getSessionId())
-                            .orElseThrow(
-                                    () -> {
-                                        throw new IpvCallbackException("Session not found");
-                                    });
+                            .orElseThrow(() -> new IpvCallbackException("Session not found"));
 
             attachSessionIdToLogs(session);
             var persistentId =
@@ -182,10 +179,7 @@ public class IPVCallbackHandler
             var clientSessionId = sessionCookiesIds.getClientSessionId();
             attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
             attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
-            var clientSession = clientSessionService.getClientSession(clientSessionId).orElse(null);
-            if (Objects.isNull(clientSession)) {
-                throw new IpvCallbackException("ClientSession not found");
-            }
+            var clientSession = clientSessionService.getClientSession(clientSessionId).orElseThrow(() -> new IpvCallbackException("ClientSession not found"));
 
             var authRequest = AuthenticationRequest.parse(clientSession.getAuthRequestParams());
             var clientId = authRequest.getClientID().getValue();
@@ -390,7 +384,8 @@ public class IPVCallbackHandler
                 userIdentityUserInfo.getClaim(IdentityClaims.CORE_IDENTITY.getValue()).toString());
     }
 
-    private Optional<ErrorObject> validateUserIdentityResponse(UserInfo userIdentityUserInfo) {
+    private Optional<ErrorObject> validateUserIdentityResponse(UserInfo userIdentityUserInfo)
+            throws IpvCallbackException {
         if (!LevelOfConfidence.MEDIUM_LEVEL
                 .getValue()
                 .equals(userIdentityUserInfo.getClaim(VOT.getValue()))) {

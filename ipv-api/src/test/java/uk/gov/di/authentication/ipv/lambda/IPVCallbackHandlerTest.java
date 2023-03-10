@@ -345,8 +345,9 @@ class IPVCallbackHandlerTest {
         event.setQueryStringParameters(Collections.emptyMap());
         event.setHeaders(Map.of(COOKIE, buildCookieString()));
 
-        assertDoesRedirectToFrontendErrorPage(event);
+        when(sessionService.readSessionFromRedis(SESSION_ID)).thenReturn(Optional.empty());
 
+        assertDoesRedirectToFrontendErrorPage(event);
         verifyNoInteractions(auditService);
     }
 
