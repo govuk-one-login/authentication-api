@@ -51,6 +51,7 @@ public class IPVTokenService {
     }
 
     public TokenRequest constructTokenRequest(String authCode) {
+        LOG.info("Constructing IPV token request");
         var codeGrant =
                 new AuthorizationCodeGrant(
                         new AuthorizationCode(authCode),
@@ -78,6 +79,7 @@ public class IPVTokenService {
 
     public TokenResponse sendTokenRequest(TokenRequest tokenRequest) {
         try {
+            LOG.info("Sending IPV token request");
             int count = 0;
             int maxTries = 2;
             TokenResponse tokenResponse;
@@ -100,6 +102,7 @@ public class IPVTokenService {
     public UserInfo sendIpvUserIdentityRequest(UserInfoRequest userInfoRequest)
             throws UnsuccessfulCredentialResponseException {
         try {
+            LOG.info("Sending IPV userinfo request");
             int count = 0;
             int maxTries = 2;
             UserInfoResponse userIdentityResponse;

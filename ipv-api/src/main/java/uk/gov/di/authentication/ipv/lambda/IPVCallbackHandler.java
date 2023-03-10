@@ -179,7 +179,10 @@ public class IPVCallbackHandler
             var clientSessionId = sessionCookiesIds.getClientSessionId();
             attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
             attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
-            var clientSession = clientSessionService.getClientSession(clientSessionId).orElseThrow(() -> new IpvCallbackException("ClientSession not found"));
+            var clientSession =
+                    clientSessionService
+                            .getClientSession(clientSessionId)
+                            .orElseThrow(() -> new IpvCallbackException("ClientSession not found"));
 
             var authRequest = AuthenticationRequest.parse(clientSession.getAuthRequestParams());
             var clientId = authRequest.getClientID().getValue();
@@ -344,6 +347,7 @@ public class IPVCallbackHandler
             var redirectURI =
                     ConstructUriHelper.buildURI(
                             configurationService.getLoginURI().toString(), REDIRECT_PATH);
+            LOG.info("Successful IPV callback. Redirecting to frontend");
             return generateApiGatewayProxyResponse(
                     302, "", Map.of(ResponseHeaders.LOCATION, redirectURI.toString()), null);
         } catch (IpvCallbackException
@@ -386,17 +390,19 @@ public class IPVCallbackHandler
 
     private Optional<ErrorObject> validateUserIdentityResponse(UserInfo userIdentityUserInfo)
             throws IpvCallbackException {
+        LOG.info("Validating userinfo response");
         if (!LevelOfConfidence.MEDIUM_LEVEL
                 .getValue()
                 .equals(userIdentityUserInfo.getClaim(VOT.getValue()))) {
             LOG.warn("IPV missing vot or vot not P2.");
             return Optional.of(OAuth2Error.ACCESS_DENIED);
         }
-        var trustmark =
+        var trustmarkURL =
                 buildURI(configurationService.getOidcApiBaseURL().orElseThrow(), "/trustmark")
                         .toString();
 
-        if (!trustmark.equals(userIdentityUserInfo.getClaim(VTM.getValue()))) {
+        if (!trustmarkURL.equals(userIdentityUserInfo.getClaim(VTM.getValue()))) {
+            LOG.warn("VTM does not contain expected trustmark URL");
             throw new IpvCallbackException("IPV trustmark is invalid");
         }
         return Optional.empty();
@@ -410,7 +416,7 @@ public class IPVCallbackHandler
             UserInfo userIdentityUserInfo,
             String clientId)
             throws JsonException {
-
+        LOG.info("Constructing SPOT request ready to queue");
         var spotClaimsBuilder =
                 SPOTClaims.builder()
                         .withClaim(VOT.getValue(), userIdentityUserInfo.getClaim(VOT.getValue()))
