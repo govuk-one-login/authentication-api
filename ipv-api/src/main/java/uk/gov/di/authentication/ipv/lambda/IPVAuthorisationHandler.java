@@ -29,6 +29,7 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.NoSessionOrchestrationService;
@@ -36,6 +37,7 @@ import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import java.util.Map;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
@@ -55,6 +57,7 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
     private final AuditService auditService;
     private final IPVAuthorisationService authorisationService;
     private final NoSessionOrchestrationService noSessionOrchestrationService;
+    private final CloudwatchMetricsService cloudwatchMetricsService;
 
     public IPVAuthorisationHandler(
             ConfigurationService configurationService,
@@ -64,7 +67,8 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
             AuthenticationService authenticationService,
             AuditService auditService,
             IPVAuthorisationService authorisationService,
-            NoSessionOrchestrationService noSessionOrchestrationService) {
+            NoSessionOrchestrationService noSessionOrchestrationService,
+            CloudwatchMetricsService cloudwatchMetricsService) {
         super(
                 IPVAuthorisationRequest.class,
                 configurationService,
@@ -75,6 +79,7 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
         this.auditService = auditService;
         this.authorisationService = authorisationService;
         this.noSessionOrchestrationService = noSessionOrchestrationService;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
     }
 
     public IPVAuthorisationHandler() {
@@ -91,6 +96,7 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
                         new KmsConnectionService(configurationService));
         this.noSessionOrchestrationService =
                 new NoSessionOrchestrationService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
     }
 
     @Override
@@ -161,7 +167,8 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
             LOG.info(
                     "IPVAuthorisationHandler successfully processed request, redirect URI {}",
                     ipvAuthorisationRequest.toURI().toString());
-
+            cloudwatchMetricsService.incrementCounter(
+                    "IPVHandoff", Map.of("Environment", configurationService.getEnvironment()));
             return generateApiGatewayProxyResponse(
                     200, new IPVAuthorisationResponse(ipvAuthorisationRequest.toURI().toString()));
 
