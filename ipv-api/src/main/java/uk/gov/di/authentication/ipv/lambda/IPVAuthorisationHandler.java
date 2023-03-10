@@ -49,6 +49,7 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.UNKNOWN;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisationRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -114,8 +115,8 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
             var persistentId =
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
             attachLogFieldToLogs(PERSISTENT_SESSION_ID, persistentId);
-            var clientId = userContext.getClient().map(ClientRegistry::getClientID);
-            attachLogFieldToLogs(CLIENT_ID, clientId.orElse(UNKNOWN));
+            var rpClientID = userContext.getClient().map(ClientRegistry::getClientID);
+            attachLogFieldToLogs(CLIENT_ID, rpClientID.orElse(UNKNOWN));
             LOG.info("IPVAuthorisationHandler received request");
             var authRequest =
                     AuthenticationRequest.parse(
@@ -125,7 +126,6 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
                             userContext.getUserProfile().orElseThrow(),
                             configurationService.getInternalSectorUri(),
                             authenticationService);
-            var clientID = new ClientID(configurationService.getIPVAuthorisationClientId());
             var state = new State();
             var claimsSetRequest =
                     buildIpvClaimsRequest(authRequest)
@@ -148,7 +148,9 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
                             userContext.getUserProfile().map(UserProfile::getEmail).orElseThrow());
             var authRequestBuilder =
                     new AuthorizationRequest.Builder(
-                                    new ResponseType(ResponseType.Value.CODE), clientID)
+                                    new ResponseType(ResponseType.Value.CODE),
+                                    new ClientID(
+                                            configurationService.getIPVAuthorisationClientId()))
                             .endpointURI(configurationService.getIPVAuthorisationURI())
                             .requestObject(encryptedJWT);
 
@@ -159,12 +161,18 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
                     IPVAuditableEvent.IPV_AUTHORISATION_REQUESTED,
                     clientSessionId,
                     userContext.getSession().getSessionId(),
-                    clientId.orElse(AuditService.UNKNOWN),
+                    rpClientID.orElse(AuditService.UNKNOWN),
                     userContext.getSession().getInternalCommonSubjectIdentifier(),
                     request.getEmail(),
                     IpAddressHelper.extractIpAddress(input),
                     AuditService.UNKNOWN,
-                    persistentId);
+                    persistentId,
+                    pair(
+                            "clientLandingPageUrl",
+                            userContext
+                                    .getClient()
+                                    .map(ClientRegistry::getLandingPageUrl)
+                                    .orElse(AuditService.UNKNOWN)));
 
             LOG.info(
                     "IPVAuthorisationHandler successfully processed request, redirect URI {}",

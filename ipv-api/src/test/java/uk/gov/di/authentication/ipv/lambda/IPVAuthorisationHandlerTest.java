@@ -80,6 +80,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -109,6 +110,7 @@ public class IPVAuthorisationHandlerTest {
     private static final Date UPDATED_DATE_TIME = NowHelper.now();
     private static final String LEGACY_SUBJECT_ID = new Subject("legacy-subject-id-1").getValue();
     private static final String PUBLIC_SUBJECT_ID = new Subject("public-subject-id-2").getValue();
+    private static final String LANDING_PAGE_URL = "https//test.account.gov.uk/landingPage";
     private static final String SUBJECT_ID = new Subject("subject-id-3").getValue();
     private static final ByteBuffer SALT =
             ByteBuffer.wrap("a-test-salt".getBytes(StandardCharsets.UTF_8));
@@ -218,7 +220,8 @@ public class IPVAuthorisationHandlerTest {
                         EMAIL_ADDRESS,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
+                        PERSISTENT_SESSION_ID,
+                        pair("clientLandingPageUrl", LANDING_PAGE_URL));
         verify(cloudwatchMetricsService)
                 .incrementCounter("IPVHandoff", Map.of("Environment", ENVIRONMENT));
     }
@@ -285,7 +288,8 @@ public class IPVAuthorisationHandlerTest {
                 .withSectorIdentifierUri("http://sector-identifier")
                 .withScopes(singletonList("openid"))
                 .withCookieConsentShared(true)
-                .withSubjectType("pairwise");
+                .withSubjectType("pairwise")
+                .withLandingPageUrl(LANDING_PAGE_URL);
     }
 
     private UserProfile generateUserProfile() {
