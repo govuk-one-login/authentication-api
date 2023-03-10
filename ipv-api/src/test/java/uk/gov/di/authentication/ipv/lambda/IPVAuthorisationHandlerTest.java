@@ -48,6 +48,7 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
@@ -77,6 +78,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -93,6 +95,8 @@ public class IPVAuthorisationHandlerTest {
     private final AuditService auditService = mock(AuditService.class);
     private final NoSessionOrchestrationService noSessionOrchestrationService =
             mock(NoSessionOrchestrationService.class);
+    private final CloudwatchMetricsService cloudwatchMetricsService =
+            mock(CloudwatchMetricsService.class);
 
     private static final String CLIENT_SESSION_ID = "client-session-v1";
     private static final String SESSION_ID = "a-session-id";
@@ -100,6 +104,7 @@ public class IPVAuthorisationHandlerTest {
     private static final String CLIENT_ID = "test-client-id";
     private static final String IPV_CLIENT_ID = "ipv-client-id";
     private static final String PHONE_NUMBER = "01234567890";
+    private static final String ENVIRONMENT = "test-environment";
     private static final Date CREATED_DATE_TIME = NowHelper.nowMinus(30, ChronoUnit.SECONDS);
     private static final Date UPDATED_DATE_TIME = NowHelper.now();
     private static final String LEGACY_SUBJECT_ID = new Subject("legacy-subject-id-1").getValue();
@@ -144,7 +149,8 @@ public class IPVAuthorisationHandlerTest {
                         authenticationService,
                         auditService,
                         authorisationService,
-                        noSessionOrchestrationService);
+                        noSessionOrchestrationService,
+                        cloudwatchMetricsService);
         when(configService.getIPVAuthorisationClientId()).thenReturn(IPV_CLIENT_ID);
         when(configService.getIPVAuthorisationCallbackURI()).thenReturn(IPV_CALLBACK_URI);
         when(configService.getIPVAuthorisationURI()).thenReturn(IPV_AUTHORISATION_URI);
@@ -155,6 +161,7 @@ public class IPVAuthorisationHandlerTest {
         when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT.array());
         when(configService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         when(configService.isIdentityEnabled()).thenReturn(true);
+        when(configService.getEnvironment()).thenReturn(ENVIRONMENT);
     }
 
     @Test
@@ -170,6 +177,7 @@ public class IPVAuthorisationHandlerTest {
                         "Expected to throw exception");
 
         assertThat(exception.getMessage(), equalTo("Identity is not enabled"));
+        verifyNoInteractions(cloudwatchMetricsService);
     }
 
     @Test
@@ -211,6 +219,8 @@ public class IPVAuthorisationHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_SESSION_ID);
+        verify(cloudwatchMetricsService)
+                .incrementCounter("IPVHandoff", Map.of("Environment", ENVIRONMENT));
     }
 
     private APIGatewayProxyResponseEvent makeHandlerRequest() {

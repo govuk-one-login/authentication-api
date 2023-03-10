@@ -26,7 +26,7 @@ import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
-import uk.gov.di.authentication.app.exception.UnsuccesfulCredentialResponseException;
+import uk.gov.di.authentication.shared.exceptions.UnsuccesfulCredentialResponseException;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
@@ -145,7 +145,8 @@ class DocAppCriServiceTest {
 
     @Test
     void shouldCallUserInfoEndpointAndReturn200()
-            throws IOException, JOSEException, NoSuchAlgorithmException {
+            throws IOException, JOSEException, NoSuchAlgorithmException,
+                    UnsuccesfulCredentialResponseException {
         var keyPair = KeyPairGenerator.getInstance("EC").generateKeyPair();
         var signedJwtOne = generateSignedJWT(new JWTClaimsSet.Builder().build(), keyPair);
         var signedJwtTwo = generateSignedJWT(new JWTClaimsSet.Builder().build(), keyPair);
@@ -175,7 +176,8 @@ class DocAppCriServiceTest {
 
     @Test
     void shouldRetryCallToUserInfoAndReturn200IfFirstCallFails()
-            throws NoSuchAlgorithmException, JOSEException, IOException {
+            throws NoSuchAlgorithmException, JOSEException, IOException,
+                    UnsuccesfulCredentialResponseException {
         var keyPair = KeyPairGenerator.getInstance("EC").generateKeyPair();
         var signedJwtOne = generateSignedJWT(new JWTClaimsSet.Builder().build(), keyPair);
         var signedJwtTwo = generateSignedJWT(new JWTClaimsSet.Builder().build(), keyPair);
