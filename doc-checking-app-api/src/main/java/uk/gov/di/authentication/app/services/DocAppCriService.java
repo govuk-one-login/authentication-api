@@ -25,7 +25,7 @@ import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
-import uk.gov.di.authentication.app.exception.UnsuccesfulCredentialResponseException;
+import uk.gov.di.authentication.shared.exceptions.UnsuccesfulCredentialResponseException;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
@@ -107,7 +107,8 @@ public class DocAppCriService {
         }
     }
 
-    public List<String> sendCriDataRequest(HTTPRequest request, String docAppSubjectId) {
+    public List<String> sendCriDataRequest(HTTPRequest request, String docAppSubjectId)
+            throws UnsuccesfulCredentialResponseException {
         try {
             LOG.info("Sending userinfo request");
             int count = 0;
@@ -142,7 +143,8 @@ public class DocAppCriService {
         }
     }
 
-    private List<SignedJWT> parseResponse(HTTPResponse response) {
+    private List<SignedJWT> parseResponse(HTTPResponse response)
+            throws UnsuccesfulCredentialResponseException {
         try {
             var contentAsJSONObject = response.getContentAsJSONObject();
             if (Objects.isNull(contentAsJSONObject.get(CREDENTIAL_JWT.getValue()))) {

@@ -1,6 +1,6 @@
-package uk.gov.di.authentication.app.exception;
+package uk.gov.di.authentication.shared.exceptions;
 
-public class UnsuccesfulCredentialResponseException extends RuntimeException {
+public class UnsuccesfulCredentialResponseException extends Exception {
     public UnsuccesfulCredentialResponseException(String message) {
         super(message);
     }

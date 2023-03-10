@@ -27,7 +27,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mockito;
 import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
-import uk.gov.di.authentication.app.exception.UnsuccesfulCredentialResponseException;
 import uk.gov.di.authentication.app.services.DocAppAuthorisationService;
 import uk.gov.di.authentication.app.services.DocAppCriService;
 import uk.gov.di.authentication.app.services.DynamoDocAppService;
@@ -36,6 +35,7 @@ import uk.gov.di.authentication.shared.entity.NoSessionEntity;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.exceptions.NoSessionException;
+import uk.gov.di.authentication.shared.exceptions.UnsuccesfulCredentialResponseException;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -135,7 +135,8 @@ class DocAppCallbackHandlerTest {
     }
 
     @Test
-    void shouldRedirectToFrontendCallbackForSuccessfulResponse() throws URISyntaxException {
+    void shouldRedirectToFrontendCallbackForSuccessfulResponse()
+            throws URISyntaxException, UnsuccesfulCredentialResponseException {
         usingValidSession();
         usingValidClientSession();
         var successfulTokenResponse =
@@ -293,7 +294,7 @@ class DocAppCallbackHandlerTest {
 
     @Test
     void shouldRedirectToFrontendErrorPageWhenCRIRequestIsNotSuccessful()
-            throws URISyntaxException {
+            throws URISyntaxException, UnsuccesfulCredentialResponseException {
         usingValidSession();
         usingValidClientSession();
         var successfulTokenResponse =
