@@ -27,6 +27,7 @@ import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.exceptions.NoSessionException;
+import uk.gov.di.authentication.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.ConstructUriHelper;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
@@ -282,9 +283,7 @@ public class IPVCallbackHandler
                                             .toSuccessResponse()
                                             .getTokens()
                                             .getBearerAccessToken()));
-            if (Objects.isNull(userIdentityUserInfo)) {
-                throw new IpvCallbackException("IPV UserIdentityRequest failed");
-            }
+
             if (configurationService.isIdentityTraceLoggingEnabled()) {
                 LOG.info(
                         "IPV UserIdentityRequest succeeded: {}",
@@ -353,7 +352,9 @@ public class IPVCallbackHandler
                             configurationService.getLoginURI().toString(), REDIRECT_PATH);
             return generateApiGatewayProxyResponse(
                     302, "", Map.of(ResponseHeaders.LOCATION, redirectURI.toString()), null);
-        } catch (IpvCallbackException | NoSessionException e) {
+        } catch (IpvCallbackException
+                | NoSessionException
+                | UnsuccessfulCredentialResponseException e) {
             LOG.warn(e.getMessage());
             return redirectToFrontendErrorPage();
         } catch (ParseException e) {

@@ -35,7 +35,7 @@ import uk.gov.di.authentication.shared.entity.NoSessionEntity;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.exceptions.NoSessionException;
-import uk.gov.di.authentication.shared.exceptions.UnsuccesfulCredentialResponseException;
+import uk.gov.di.authentication.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -136,7 +136,7 @@ class DocAppCallbackHandlerTest {
 
     @Test
     void shouldRedirectToFrontendCallbackForSuccessfulResponse()
-            throws URISyntaxException, UnsuccesfulCredentialResponseException {
+            throws URISyntaxException, UnsuccessfulCredentialResponseException {
         usingValidSession();
         usingValidClientSession();
         var successfulTokenResponse =
@@ -294,7 +294,7 @@ class DocAppCallbackHandlerTest {
 
     @Test
     void shouldRedirectToFrontendErrorPageWhenCRIRequestIsNotSuccessful()
-            throws URISyntaxException, UnsuccesfulCredentialResponseException {
+            throws URISyntaxException, UnsuccessfulCredentialResponseException {
         usingValidSession();
         usingValidClientSession();
         var successfulTokenResponse =
@@ -308,7 +308,7 @@ class DocAppCallbackHandlerTest {
         when(tokenService.constructTokenRequest(AUTH_CODE.getValue())).thenReturn(tokenRequest);
         when(tokenService.sendTokenRequest(tokenRequest)).thenReturn(successfulTokenResponse);
         when(tokenService.sendCriDataRequest(any(HTTPRequest.class), any(String.class)))
-                .thenThrow(UnsuccesfulCredentialResponseException.class);
+                .thenThrow(UnsuccessfulCredentialResponseException.class);
 
         var event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(responseHeaders);

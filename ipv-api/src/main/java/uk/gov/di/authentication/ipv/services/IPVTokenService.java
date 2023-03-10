@@ -24,6 +24,7 @@ import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
+import uk.gov.di.authentication.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.authentication.shared.helpers.ConstructUriHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -96,7 +97,8 @@ public class IPVTokenService {
         }
     }
 
-    public UserInfo sendIpvUserIdentityRequest(UserInfoRequest userInfoRequest) {
+    public UserInfo sendIpvUserIdentityRequest(UserInfoRequest userInfoRequest)
+            throws UnsuccessfulCredentialResponseException {
         try {
             int count = 0;
             int maxTries = 2;
@@ -104,19 +106,24 @@ public class IPVTokenService {
             do {
                 if (count > 0) LOG.warn("Retrying IPV user identity request");
                 count++;
-                userIdentityResponse =
-                        UserInfoResponse.parse(userInfoRequest.toHTTPRequest().send());
+                var httpResponse = userInfoRequest.toHTTPRequest().send();
+                userIdentityResponse = UserInfoResponse.parse(httpResponse);
             } while (!userIdentityResponse.indicatesSuccess() && count < maxTries);
 
             if (!userIdentityResponse.indicatesSuccess()) {
                 LOG.error("Response from user-identity does not indicate success");
-                throw new RuntimeException(userIdentityResponse.toErrorResponse().toString());
+                throw new UnsuccessfulCredentialResponseException(
+                        userIdentityResponse.toErrorResponse().toString());
             } else {
                 return userIdentityResponse.toSuccessResponse().getUserInfo();
             }
-        } catch (IOException | ParseException e) {
+        } catch (ParseException e) {
+            LOG.error("Error when attempting to parse HTTPResponse to UserInfoResponse");
+            throw new UnsuccessfulCredentialResponseException(
+                    "Error when attempting to parse http response to UserInfoResponse");
+        } catch (IOException e) {
             LOG.error("Error when attempting to call IPV user-identity endpoint", e);
-            throw new RuntimeException();
+            throw new RuntimeException(e);
         }
     }
 

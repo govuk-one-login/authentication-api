@@ -26,7 +26,7 @@ import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
-import uk.gov.di.authentication.shared.exceptions.UnsuccesfulCredentialResponseException;
+import uk.gov.di.authentication.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
@@ -146,7 +146,7 @@ class DocAppCriServiceTest {
     @Test
     void shouldCallUserInfoEndpointAndReturn200()
             throws IOException, JOSEException, NoSuchAlgorithmException,
-                    UnsuccesfulCredentialResponseException {
+                    UnsuccessfulCredentialResponseException {
         var keyPair = KeyPairGenerator.getInstance("EC").generateKeyPair();
         var signedJwtOne = generateSignedJWT(new JWTClaimsSet.Builder().build(), keyPair);
         var signedJwtTwo = generateSignedJWT(new JWTClaimsSet.Builder().build(), keyPair);
@@ -177,7 +177,7 @@ class DocAppCriServiceTest {
     @Test
     void shouldRetryCallToUserInfoAndReturn200IfFirstCallFails()
             throws NoSuchAlgorithmException, JOSEException, IOException,
-                    UnsuccesfulCredentialResponseException {
+                    UnsuccessfulCredentialResponseException {
         var keyPair = KeyPairGenerator.getInstance("EC").generateKeyPair();
         var signedJwtOne = generateSignedJWT(new JWTClaimsSet.Builder().build(), keyPair);
         var signedJwtTwo = generateSignedJWT(new JWTClaimsSet.Builder().build(), keyPair);
@@ -229,9 +229,9 @@ class DocAppCriServiceTest {
         userInfoHTTPResponse.setContent(userInfoHTTPResponseContent);
         when(httpRequest.send()).thenReturn(userInfoHTTPResponse);
 
-        UnsuccesfulCredentialResponseException thrown =
+        UnsuccessfulCredentialResponseException thrown =
                 assertThrows(
-                        UnsuccesfulCredentialResponseException.class,
+                        UnsuccessfulCredentialResponseException.class,
                         () -> docAppCriService.sendCriDataRequest(httpRequest, "different-id"));
 
         assertEquals(

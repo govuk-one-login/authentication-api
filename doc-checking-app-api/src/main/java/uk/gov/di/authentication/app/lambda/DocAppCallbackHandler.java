@@ -18,7 +18,7 @@ import uk.gov.di.authentication.app.services.DocAppCriService;
 import uk.gov.di.authentication.app.services.DynamoDocAppService;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.exceptions.NoSessionException;
-import uk.gov.di.authentication.shared.exceptions.UnsuccesfulCredentialResponseException;
+import uk.gov.di.authentication.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.authentication.shared.helpers.ConstructUriHelper;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -272,7 +272,7 @@ public class DocAppCallbackHandler
                 return generateApiGatewayProxyResponse(
                         302, "", Map.of(ResponseHeaders.LOCATION, redirectURI.toString()), null);
 
-            } catch (UnsuccesfulCredentialResponseException e) {
+            } catch (UnsuccessfulCredentialResponseException e) {
                 incrementDocAppCallbackErrorCounter(false, "UnsuccessfulCredentialResponse");
                 auditService.submitAuditEvent(
                         DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED,
