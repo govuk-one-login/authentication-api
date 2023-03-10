@@ -173,25 +173,29 @@ public class IPVCallbackHandler
                                     () -> {
                                         throw new IpvCallbackException("Session not found");
                                     });
+
             attachSessionIdToLogs(session);
             var persistentId =
                     PersistentIdHelper.extractPersistentIdFromCookieHeader(input.getHeaders());
             attachLogFieldToLogs(PERSISTENT_SESSION_ID, persistentId);
             var clientSessionId = sessionCookiesIds.getClientSessionId();
+            attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
+            attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
             var clientSession = clientSessionService.getClientSession(clientSessionId).orElse(null);
             if (Objects.isNull(clientSession)) {
                 throw new IpvCallbackException("ClientSession not found");
             }
-            attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
-            attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
-            var authRequest = AuthenticationRequest.parse(clientSession.getAuthRequestParams());
 
+            var authRequest = AuthenticationRequest.parse(clientSession.getAuthRequestParams());
             var clientId = authRequest.getClientID().getValue();
-            var clientRegistry = dynamoClientService.getClient(clientId).orElse(null);
-            if (Objects.isNull(clientRegistry)) {
-                throw new IpvCallbackException("Client registry not found with given clientId");
-            }
             attachLogFieldToLogs(CLIENT_ID, clientId);
+            var clientRegistry =
+                    dynamoClientService
+                            .getClient(clientId)
+                            .orElseThrow(
+                                    () ->
+                                            new IpvCallbackException(
+                                                    "Client registry not found with given clientId"));
 
             var errorObject =
                     ipvAuthorisationService.validateResponse(
@@ -205,10 +209,12 @@ public class IPVCallbackHandler
                         session.getSessionId());
             }
             var userProfile =
-                    dynamoService.getUserProfileFromEmail(session.getEmailAddress()).orElse(null);
-            if (Objects.isNull(userProfile)) {
-                throw new IpvCallbackException("Email from session does not have a user profile");
-            }
+                    dynamoService
+                            .getUserProfileFromEmail(session.getEmailAddress())
+                            .orElseThrow(
+                                    () ->
+                                            new IpvCallbackException(
+                                                    "Email from session does not have a user profile"));
 
             auditService.submitAuditEvent(
                     IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED,
@@ -225,18 +231,7 @@ public class IPVCallbackHandler
                     ipvTokenService.constructTokenRequest(
                             input.getQueryStringParameters().get("code"));
             var tokenResponse = ipvTokenService.sendTokenRequest(tokenRequest);
-            if (tokenResponse.indicatesSuccess()) {
-                auditService.submitAuditEvent(
-                        IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
-                        clientSessionId,
-                        session.getSessionId(),
-                        clientId,
-                        session.getInternalCommonSubjectIdentifier(),
-                        userProfile.getEmail(),
-                        AuditService.UNKNOWN,
-                        userProfile.getPhoneNumber(),
-                        persistentId);
-            } else {
+            if (!tokenResponse.indicatesSuccess()) {
                 LOG.error(
                         "IPV TokenResponse was not successful: {}",
                         tokenResponse.toErrorResponse().toJSONObject());
@@ -252,6 +247,16 @@ public class IPVCallbackHandler
                         persistentId);
                 return redirectToFrontendErrorPage();
             }
+            auditService.submitAuditEvent(
+                    IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
+                    clientSessionId,
+                    session.getSessionId(),
+                    clientId,
+                    session.getInternalCommonSubjectIdentifier(),
+                    userProfile.getEmail(),
+                    AuditService.UNKNOWN,
+                    userProfile.getPhoneNumber(),
+                    persistentId);
             var pairwiseSubject =
                     ClientSubjectHelper.getSubject(
                             userProfile,
@@ -277,7 +282,6 @@ public class IPVCallbackHandler
                                             .toSuccessResponse()
                                             .getTokens()
                                             .getBearerAccessToken()));
-            LOG.info(userIdentityUserInfo);
             if (Objects.isNull(userIdentityUserInfo)) {
                 throw new IpvCallbackException("IPV UserIdentityRequest failed");
             }
