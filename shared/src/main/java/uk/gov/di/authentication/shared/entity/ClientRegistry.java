@@ -31,6 +31,7 @@ public class ClientRegistry {
     private boolean identityVerificationSupported = false;
     private String tokenAuthMethod;
     private String clientSecret;
+    private String landingPageUrl;
 
     private boolean oneLoginService = false;
     private String idTokenSigningAlgorithm = "ES256";
@@ -359,6 +360,20 @@ public class ClientRegistry {
 
     public ClientRegistry withSmokeTest(boolean smokeTest) {
         this.smokeTest = smokeTest;
+        return this;
+    }
+
+    @DynamoDbAttribute("LandingPageUrl")
+    public String getLandingPageUrl() {
+        return landingPageUrl;
+    }
+
+    public void setLandingPageUrl(String landingPageUrl) {
+        this.landingPageUrl = landingPageUrl;
+    }
+
+    public ClientRegistry withLandingPageUrl(String landingPageUrl) {
+        this.landingPageUrl = landingPageUrl;
         return this;
     }
 }
