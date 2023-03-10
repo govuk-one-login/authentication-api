@@ -59,7 +59,6 @@ test {
     environment "HEADERS_CASE_INSENSITIVE", "true"
     environment "DOC_APP_API_ENABLED", "true"
     environment "IDENTITY_ENABLED", "false"
-    environment "SPOT_ENABLED", "true"
     environment "TRACING_ENABLED", "false"
     environment "INTERNAl_SECTOR_URI", "https://test.account.gov.uk"
 

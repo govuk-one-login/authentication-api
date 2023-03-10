@@ -284,52 +284,49 @@ public class IPVCallbackHandler
                     userProfile.getPhoneNumber(),
                     persistentId);
 
-            if (configurationService.isSpotEnabled()) {
-                Optional<ErrorObject> userIdentityError =
-                        validateUserIdentityResponse(userIdentityUserInfo);
-                if (userIdentityError.isEmpty()) {
-                    LOG.info("SPOT will be invoked.");
-                    var logIds =
-                            new LogIds(
-                                    session.getSessionId(),
-                                    persistentId,
-                                    context.getAwsRequestId(),
-                                    clientId,
-                                    clientSessionId);
-                    queueSPOTRequest(
-                            logIds,
-                            getSectorIdentifierForClient(
-                                    clientRegistry, configurationService.getInternalSectorUri()),
-                            userProfile,
-                            pairwiseSubject,
-                            userIdentityUserInfo,
-                            clientId);
-
-                    auditService.submitAuditEvent(
-                            IPVAuditableEvent.IPV_SPOT_REQUESTED,
-                            clientSessionId,
-                            session.getSessionId(),
-                            clientId,
-                            session.getInternalCommonSubjectIdentifier(),
-                            userProfile.getEmail(),
-                            AuditService.UNKNOWN,
-                            userProfile.getPhoneNumber(),
-                            persistentId);
-                } else {
-                    LOG.warn("SPOT will not be invoked. Returning Error to RP");
-                    var errorResponse =
-                            new AuthenticationErrorResponse(
-                                    authRequest.getRedirectionURI(),
-                                    userIdentityError.get(),
-                                    authRequest.getState(),
-                                    authRequest.getResponseMode());
-                    return generateApiGatewayProxyResponse(
-                            302,
-                            "",
-                            Map.of(ResponseHeaders.LOCATION, errorResponse.toURI().toString()),
-                            null);
-                }
+            var userIdentityError = validateUserIdentityResponse(userIdentityUserInfo);
+            if (userIdentityError.isPresent()) {
+                LOG.warn("SPOT will not be invoked. Returning Error to RP");
+                var errorResponse =
+                        new AuthenticationErrorResponse(
+                                authRequest.getRedirectionURI(),
+                                userIdentityError.get(),
+                                authRequest.getState(),
+                                authRequest.getResponseMode());
+                return generateApiGatewayProxyResponse(
+                        302,
+                        "",
+                        Map.of(ResponseHeaders.LOCATION, errorResponse.toURI().toString()),
+                        null);
             }
+
+            LOG.info("SPOT will be invoked.");
+            var logIds =
+                    new LogIds(
+                            session.getSessionId(),
+                            persistentId,
+                            context.getAwsRequestId(),
+                            clientId,
+                            clientSessionId);
+            queueSPOTRequest(
+                    logIds,
+                    getSectorIdentifierForClient(
+                            clientRegistry, configurationService.getInternalSectorUri()),
+                    userProfile,
+                    pairwiseSubject,
+                    userIdentityUserInfo,
+                    clientId);
+
+            auditService.submitAuditEvent(
+                    IPVAuditableEvent.IPV_SPOT_REQUESTED,
+                    clientSessionId,
+                    session.getSessionId(),
+                    clientId,
+                    session.getInternalCommonSubjectIdentifier(),
+                    userProfile.getEmail(),
+                    AuditService.UNKNOWN,
+                    userProfile.getPhoneNumber(),
+                    persistentId);
             saveIdentityClaimsToDynamo(pairwiseSubject, userIdentityUserInfo);
             var redirectURI =
                     ConstructUriHelper.buildURI(

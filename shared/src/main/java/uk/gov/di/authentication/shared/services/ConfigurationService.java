@@ -199,10 +199,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 .contains(getEnvironment());
     }
 
-    public boolean isSpotEnabled() {
-        return System.getenv().getOrDefault("SPOT_ENABLED", "false").equals("true");
-    }
-
     public boolean isExtendedFeatureFlagsEnabled() {
         return System.getenv()
                 .getOrDefault("EXTENDED_FEATURE_FLAGS_ENABLED", "false")
