@@ -209,12 +209,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 .equals("true");
     }
 
-    public boolean isIdentityTraceLoggingEnabled() {
-        return System.getenv()
-                .getOrDefault("IDENTITY_TRACE_LOGGING_ENABLED", "false")
-                .equals("true");
-    }
-
     public boolean isLanguageEnabled(SupportedLanguage supportedLanguage) {
         if (supportedLanguage.equals(SupportedLanguage.EN)) {
             return true;

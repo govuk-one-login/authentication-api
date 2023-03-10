@@ -261,15 +261,7 @@ public class IPVCallbackHandler
                             clientRegistry,
                             dynamoService,
                             configurationService.getInternalSectorUri());
-            if (configurationService.isIdentityTraceLoggingEnabled()) {
-                LOG.info(
-                        "Sending UserInfo request with accessToken {}",
-                        tokenResponse
-                                .toSuccessResponse()
-                                .getTokens()
-                                .getBearerAccessToken()
-                                .getValue());
-            }
+
             var userIdentityUserInfo =
                     ipvTokenService.sendIpvUserIdentityRequest(
                             new UserInfoRequest(
@@ -281,11 +273,6 @@ public class IPVCallbackHandler
                                             .getTokens()
                                             .getBearerAccessToken()));
 
-            if (configurationService.isIdentityTraceLoggingEnabled()) {
-                LOG.info(
-                        "IPV UserIdentityRequest succeeded: {}",
-                        userIdentityUserInfo.toJSONObject().toJSONString());
-            }
             auditService.submitAuditEvent(
                     IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED,
                     clientSessionId,
@@ -449,11 +436,7 @@ public class IPVCallbackHandler
                         clientId);
         var spotRequestString = objectMapper.writeValueAsString(spotRequest);
         sqsClient.send(spotRequestString);
-        if (configurationService.isIdentityTraceLoggingEnabled()) {
-            LOG.info("SPOT request placed on queue: {}", spotRequestString);
-        } else {
-            LOG.info("SPOT request placed on queue");
-        }
+        LOG.info("SPOT request placed on queue");
     }
 
     private APIGatewayProxyResponseEvent redirectToFrontendErrorPage() {
