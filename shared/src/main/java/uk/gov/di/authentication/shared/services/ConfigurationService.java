@@ -62,6 +62,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("ACCOUNT_MANAGEMENT_URI");
     }
 
+    public Long getAccountRecoveryBlockTTL() {
+        return Long.parseLong(System.getenv().getOrDefault("ACCOUNT_RECOVERY_BLOCK_TTL", "172800"));
+    }
+
     public long getAuthCodeExpiry() {
         return Long.parseLong(System.getenv().getOrDefault("AUTH_CODE_EXPIRY", "300"));
     }
