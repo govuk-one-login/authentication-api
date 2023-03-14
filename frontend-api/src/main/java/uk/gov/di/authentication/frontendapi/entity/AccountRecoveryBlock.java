@@ -8,7 +8,7 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbParti
 public class AccountRecoveryBlock {
 
     private String email;
-    private long timeToExist;
+    private Long timeToExist;
 
     public AccountRecoveryBlock() {}
 
@@ -28,11 +28,11 @@ public class AccountRecoveryBlock {
     }
 
     @DynamoDbAttribute("TimeToExist")
-    public long getTimeToExist() {
+    public Long getTimeToExist() {
         return timeToExist;
     }
 
-    public void setTimeToExist(long timeToExist) {
+    public void setTimeToExist(Long timeToExist) {
         this.timeToExist = timeToExist;
     }
 
