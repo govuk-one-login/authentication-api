@@ -5,7 +5,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.entity.AccountRecoveryResponse;
-import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.frontendapi.services.DynamoAccountRecoveryBlockService;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -39,7 +39,8 @@ class AccountRecoveryHandlerTest {
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
-    private final ClientSession clientSession = mock(ClientSession.class);
+    private final DynamoAccountRecoveryBlockService dynamoAccountRecoveryBlockService =
+            mock(DynamoAccountRecoveryBlockService.class);
     private final ClientService clientService = mock(ClientService.class);
     private AccountRecoveryHandler handler;
 
@@ -53,11 +54,13 @@ class AccountRecoveryHandlerTest {
                         sessionService,
                         clientSessionService,
                         clientService,
-                        authenticationService);
+                        authenticationService,
+                        dynamoAccountRecoveryBlockService);
     }
 
     @Test
-    void shouldNotBePermittedForAccountRecoveryAndReturn200() {
+    void shouldNotBePermittedForAccountRecoveryWhenBlockIsPresentAndReturn200() {
+        when(dynamoAccountRecoveryBlockService.blockIsPresent(EMAIL)).thenReturn(true);
         usingValidSession();
         Map<String, String> headers = new HashMap<>();
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
@@ -70,6 +73,27 @@ class AccountRecoveryHandlerTest {
         event.setBody(format("{ \"email\": \"%s\" }", EMAIL.toUpperCase()));
 
         var expectedResponse = new AccountRecoveryResponse(false);
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+        assertThat(result, hasJsonBody(expectedResponse));
+    }
+
+    @Test
+    void shouldBePermittedForAccountRecoveryWhenNoBlockIsPresentAndReturn200() {
+        when(dynamoAccountRecoveryBlockService.blockIsPresent(EMAIL)).thenReturn(false);
+        usingValidSession();
+        Map<String, String> headers = new HashMap<>();
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
+        headers.put("Session-Id", session.getSessionId());
+        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
+
+        var event = new APIGatewayProxyRequestEvent();
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setHeaders(headers);
+        event.setBody(format("{ \"email\": \"%s\" }", EMAIL.toUpperCase()));
+
+        var expectedResponse = new AccountRecoveryResponse(true);
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));

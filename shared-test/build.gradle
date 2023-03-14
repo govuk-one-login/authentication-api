@@ -23,6 +23,7 @@ dependencies {
             "com.google.code.gson:gson:2.10.1"
 
     implementation project(":shared")
+    implementation project(":frontend-api")
     implementation project(":doc-checking-app-api")
 }
 
