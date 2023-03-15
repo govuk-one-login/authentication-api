@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.frontendapi.services;
 
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
 import uk.gov.di.authentication.frontendapi.entity.AccountRecoveryBlock;
@@ -38,6 +39,10 @@ public class DynamoAccountRecoveryBlockService {
                                         .toInstant()
                                         .getEpochSecond());
         dynamoAccountRecoveryBlockTable.putItem(accountRecoveryBlock);
+    }
+
+    public void deleteBlock(String email) {
+        dynamoAccountRecoveryBlockTable.deleteItem(Key.builder().partitionValue(email).build());
     }
 
     public void addBlockWithNoTTL(String email) {
