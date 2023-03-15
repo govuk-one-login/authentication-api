@@ -9,11 +9,13 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.frontendapi.entity.AccountRecoveryResponse;
 import uk.gov.di.authentication.frontendapi.lambda.AccountRecoveryHandler;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.extensions.AccountRecoveryStoreExtension;
 
 import java.net.URI;
 import java.time.LocalDateTime;
@@ -23,6 +25,7 @@ import java.util.Optional;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class AccountRecoveryIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -37,7 +40,44 @@ public class AccountRecoveryIntegrationTest extends ApiGatewayHandlerIntegration
     }
 
     @Test
-    void shouldNotBePermittedForAccountRecoveryAndReturn200() throws Json.JsonException {
+    void shouldNotBePermittedForAccountRecoveryWhenBlockIsPresentWithTTL()
+            throws Json.JsonException {
+        var sessionId = redis.createSession();
+        accountRecoveryStore.addBlockWithTTL(EMAIL);
+        redis.addEmailToSession(sessionId, EMAIL);
+        redis.createClientSession(CLIENT_SESSION_ID, createClientSession());
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Session-Id", sessionId);
+        headers.put("X-API-Key", FRONTEND_API_KEY);
+        headers.put("Client-Session-Id", CLIENT_SESSION_ID);
+        var response =
+                makeRequest(Optional.of(format("{ \"email\": \"%s\"}", EMAIL)), headers, Map.of());
+
+        assertThat(response, hasStatus(200));
+        assertThat(response, hasJsonBody(new AccountRecoveryResponse(false)));
+    }
+
+    @Test
+    void shouldNotBePermittedForAccountRecoveryWhenBlockIsPresentWithNoTTL()
+            throws Json.JsonException {
+        var sessionId = redis.createSession();
+        accountRecoveryStore.addBlockWithoutTTL(EMAIL);
+        redis.addEmailToSession(sessionId, EMAIL);
+        redis.createClientSession(CLIENT_SESSION_ID, createClientSession());
+
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Session-Id", sessionId);
+        headers.put("X-API-Key", FRONTEND_API_KEY);
+        headers.put("Client-Session-Id", CLIENT_SESSION_ID);
+        var response =
+                makeRequest(Optional.of(format("{ \"email\": \"%s\"}", EMAIL)), headers, Map.of());
+
+        assertThat(response, hasStatus(200));
+        assertThat(response, hasJsonBody(new AccountRecoveryResponse(false)));
+    }
+
+    @Test
+    void shouldBePermittedForAccountRecoveryWhenNoBlockIsPresent() throws Json.JsonException {
         var sessionId = redis.createSession();
         redis.addEmailToSession(sessionId, EMAIL);
         redis.createClientSession(CLIENT_SESSION_ID, createClientSession());
@@ -50,6 +90,27 @@ public class AccountRecoveryIntegrationTest extends ApiGatewayHandlerIntegration
                 makeRequest(Optional.of(format("{ \"email\": \"%s\"}", EMAIL)), headers, Map.of());
 
         assertThat(response, hasStatus(200));
+        assertThat(response, hasJsonBody(new AccountRecoveryResponse(true)));
+    }
+
+    @Test
+    void shouldBePermittedForAccountRecoveryWhenBlockIsPresentButGonePastTTL()
+            throws Json.JsonException {
+        var accountRecoveryStore = new AccountRecoveryStoreExtension(-10);
+        accountRecoveryStore.addBlockWithTTL(EMAIL);
+        var sessionId = redis.createSession();
+        redis.addEmailToSession(sessionId, EMAIL);
+        redis.createClientSession(CLIENT_SESSION_ID, createClientSession());
+
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Session-Id", sessionId);
+        headers.put("X-API-Key", FRONTEND_API_KEY);
+        headers.put("Client-Session-Id", CLIENT_SESSION_ID);
+        var response =
+                makeRequest(Optional.of(format("{ \"email\": \"%s\"}", EMAIL)), headers, Map.of());
+
+        assertThat(response, hasStatus(200));
+        assertThat(response, hasJsonBody(new AccountRecoveryResponse(true)));
     }
 
     private ClientSession createClientSession() {

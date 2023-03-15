@@ -26,6 +26,7 @@ public class DynamoAccountRecoveryBlockService {
         dynamoAccountRecoveryBlockTable =
                 dynamoDbEnhancedClient.table(
                         tableName, TableSchema.fromBean(AccountRecoveryBlock.class));
+        warmUp();
     }
 
     public void addBlockWithTTL(String email) {
@@ -61,5 +62,9 @@ public class DynamoAccountRecoveryBlockService {
                                         || t.getTimeToExist()
                                                 > NowHelper.now().toInstant().getEpochSecond())
                 .isPresent();
+    }
+
+    private void warmUp() {
+        dynamoAccountRecoveryBlockTable.describeTable();
     }
 }

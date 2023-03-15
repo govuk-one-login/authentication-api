@@ -7,6 +7,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.AccountRecoveryRequest;
 import uk.gov.di.authentication.frontendapi.entity.AccountRecoveryResponse;
+import uk.gov.di.authentication.frontendapi.services.DynamoAccountRecoveryBlockService;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -21,13 +22,15 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 public class AccountRecoveryHandler extends BaseFrontendHandler<AccountRecoveryRequest> {
 
     private static final Logger LOG = LogManager.getLogger(AccountRecoveryHandler.class);
+    private final DynamoAccountRecoveryBlockService dynamoAccountRecoveryService;
 
     protected AccountRecoveryHandler(
             ConfigurationService configurationService,
             SessionService sessionService,
             ClientSessionService clientSessionService,
             ClientService clientService,
-            AuthenticationService authenticationService) {
+            AuthenticationService authenticationService,
+            DynamoAccountRecoveryBlockService dynamoAccountRecoveryBlockService) {
         super(
                 AccountRecoveryRequest.class,
                 configurationService,
@@ -35,10 +38,13 @@ public class AccountRecoveryHandler extends BaseFrontendHandler<AccountRecoveryR
                 clientSessionService,
                 clientService,
                 authenticationService);
+        this.dynamoAccountRecoveryService = dynamoAccountRecoveryBlockService;
     }
 
     public AccountRecoveryHandler(ConfigurationService configurationService) {
         super(AccountRecoveryRequest.class, configurationService);
+        this.dynamoAccountRecoveryService =
+                new DynamoAccountRecoveryBlockService(configurationService);
     }
 
     public AccountRecoveryHandler() {
@@ -53,8 +59,11 @@ public class AccountRecoveryHandler extends BaseFrontendHandler<AccountRecoveryR
             UserContext userContext) {
         try {
             LOG.info("Request received to AccountRecoveryHandler");
-
-            var accountRecoveryResponse = new AccountRecoveryResponse(false);
+            LOG.info("Checking if block is present");
+            var accountRecoveryPermitted =
+                    !dynamoAccountRecoveryService.blockIsPresent(request.getEmail());
+            LOG.info("Account recovery is permitted: {}", accountRecoveryPermitted);
+            var accountRecoveryResponse = new AccountRecoveryResponse(accountRecoveryPermitted);
             LOG.info("Returning response back to frontend");
             return generateApiGatewayProxyResponse(200, accountRecoveryResponse);
         } catch (JsonException e) {
