@@ -13,6 +13,10 @@ module "frontend_api_account_recovery_role" {
     aws_iam_policy.dynamo_account_recovery_block_read_access_policy.arn,
     module.oidc_txma_audit.access_policy_arn
   ]
+
+  depends_on = [
+    aws_iam_policy.dynamo_account_recovery_block_read_access_policy
+  ]
 }
 
 

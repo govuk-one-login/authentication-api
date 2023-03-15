@@ -296,7 +296,7 @@ resource "aws_iam_policy" "dynamo_common_passwords_read_access_policy" {
 }
 
 resource "aws_iam_policy" "dynamo_account_recovery_block_read_access_policy" {
-  name_prefix = "dynamo-access-policy"
+  name_prefix = "dynamo-account-recovery-read"
   path        = "/${var.environment}/oidc-default/"
   description = "IAM policy for managing read permissions to the Dynamo Account Recovery Block table"
 
