@@ -3,9 +3,12 @@ package uk.gov.di.authentication.api;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordCompletionRequest;
 import uk.gov.di.authentication.frontendapi.lambda.ResetPasswordHandler;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
@@ -14,6 +17,7 @@ import uk.gov.di.authentication.sharedtest.extensions.CommonPasswordsExtension;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -39,7 +43,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
     @Test
     void shouldUpdatePasswordAndReturn204() throws Json.JsonException {
-        String sessionId = redis.createSession();
+        var sessionId = redis.createSession();
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
 
@@ -61,8 +65,9 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
     }
 
     @Test
-    void shouldUpdatePasswordSendSMSAndReturn204() throws Json.JsonException {
-        String sessionId = redis.createSession();
+    void shouldUpdatePasswordSendSMSAndWriteToAccountRecoveryTableWhenUserHasVerifiedPhoneNumber()
+            throws Json.JsonException {
+        var sessionId = redis.createSession();
         var phoneNumber = "+441234567890";
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
         userStore.addPhoneNumber(EMAIL_ADDRESS, phoneNumber);
@@ -89,7 +94,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
     @Test
     void shouldReturn400ForRequestWithCommonPassword() throws Json.JsonException {
-        String sessionId = redis.createSession();
+        var sessionId = redis.createSession();
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
 
@@ -103,5 +108,77 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
         assertThat(response, hasStatus(400));
         assertTrue(response.getBody().contains(ErrorResponse.ERROR_1040.getMessage()));
+    }
+
+    private static Stream<Boolean> phoneNumberVerified() {
+        return Stream.of(true, false);
+    }
+
+    @ParameterizedTest
+    @MethodSource("phoneNumberVerified")
+    void shouldUpdatePasswordAndWriteToAccountRecoveryTableWithIfUserHasVerifiedPhoneNumber(
+            boolean phoneNumberVerified) throws Json.JsonException {
+        var sessionId = redis.createSession();
+        var phoneNumber = "+441234567890";
+        userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
+        userStore.addPhoneNumber(EMAIL_ADDRESS, phoneNumber);
+        userStore.setPhoneNumberVerified(EMAIL_ADDRESS, phoneNumberVerified);
+        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+
+        var response =
+                makeRequest(
+                        Optional.of(new ResetPasswordCompletionRequest(PASSWORD)),
+                        constructFrontendHeaders(sessionId),
+                        Map.of());
+
+        assertThat(response, hasStatus(204));
+
+        List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
+
+        assertThat(requests, hasSize(phoneNumberVerified ? 2 : 1));
+        assertThat(requests.get(0).getDestination(), equalTo(EMAIL_ADDRESS));
+        assertThat(requests.get(0).getNotificationType(), equalTo(PASSWORD_RESET_CONFIRMATION));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(PASSWORD_RESET_SUCCESSFUL));
+        assertThat(
+                accountRecoveryStore.isBlockPresent(EMAIL_ADDRESS), equalTo(phoneNumberVerified));
+
+        if (phoneNumberVerified) {
+            assertThat(requests.get(1).getDestination(), equalTo(phoneNumber));
+            assertThat(
+                    requests.get(1).getNotificationType(),
+                    equalTo(PASSWORD_RESET_CONFIRMATION_SMS));
+        }
+    }
+
+    private static Stream<Boolean> authAppVerified() {
+        return Stream.of(true, false);
+    }
+
+    @ParameterizedTest
+    @MethodSource("authAppVerified")
+    void shouldUpdatePasswordAndWriteToAccountRecoveryTableWithIfUserHasVerifiedAuthApp(
+            boolean authAppVerified) throws Json.JsonException {
+        var sessionId = redis.createSession();
+        userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
+        userStore.addMfaMethod(
+                EMAIL_ADDRESS, MFAMethodType.AUTH_APP, authAppVerified, true, "credential");
+        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+
+        var response =
+                makeRequest(
+                        Optional.of(new ResetPasswordCompletionRequest(PASSWORD)),
+                        constructFrontendHeaders(sessionId),
+                        Map.of());
+
+        assertThat(response, hasStatus(204));
+
+        List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
+
+        assertThat(requests, hasSize(1));
+        assertThat(requests.get(0).getDestination(), equalTo(EMAIL_ADDRESS));
+        assertThat(requests.get(0).getNotificationType(), equalTo(PASSWORD_RESET_CONFIRMATION));
+        assertThat(accountRecoveryStore.isBlockPresent(EMAIL_ADDRESS), equalTo(authAppVerified));
+
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(PASSWORD_RESET_SUCCESSFUL));
     }
 }

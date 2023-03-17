@@ -48,6 +48,10 @@ public class AccountRecoveryStoreExtension extends DynamoExtension implements Af
         dynamoAccountRecoveryService.addBlockWithTTL(email);
     }
 
+    public boolean isBlockPresent(String email) {
+        return dynamoAccountRecoveryService.blockIsPresent(email);
+    }
+
     public void addBlockWithoutTTL(String email) {
         dynamoAccountRecoveryService.addBlockWithNoTTL(email);
     }

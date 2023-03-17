@@ -13,9 +13,12 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
+import uk.gov.di.authentication.frontendapi.services.DynamoAccountRecoveryBlockService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.MFAMethod;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -24,6 +27,7 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.Argon2EncoderHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -39,6 +43,7 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.validation.PasswordValidator;
 
 import java.net.URI;
+import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -70,6 +75,8 @@ class ResetPasswordHandlerTest {
     private final ClientService clientService = mock(ClientService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ClientSession clientSession = mock(ClientSession.class);
+    private final DynamoAccountRecoveryBlockService accountRecoveryBlockService =
+            mock(DynamoAccountRecoveryBlockService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final CommonPasswordsService commonPasswordsService =
             mock(CommonPasswordsService.class);
@@ -82,6 +89,14 @@ class ResetPasswordHandlerTest {
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String PERSISTENT_ID = "some-persistent-id-value";
     private static final Json objectMapper = SerializationService.getInstance();
+    private static final NotifyRequest EXPECTED_SMS_NOTIFY_REQUEST =
+            new NotifyRequest(
+                    TEST_PHONE_NUMBER,
+                    NotificationType.PASSWORD_RESET_CONFIRMATION_SMS,
+                    SupportedLanguage.EN);
+    private static final NotifyRequest EXPECTED_EMAIL_NOTIFY_REQUEST =
+            new NotifyRequest(
+                    EMAIL, NotificationType.PASSWORD_RESET_CONFIRMATION, SupportedLanguage.EN);
 
     private ResetPasswordHandler handler;
     private final Session session = new Session(IdGenerator.generate()).setEmailAddress(EMAIL);
@@ -103,7 +118,9 @@ class ResetPasswordHandlerTest {
                 .validate("password");
         when(clientService.getClient(TEST_CLIENT_ID)).thenReturn(Optional.of(testClientRegistry));
         when(configurationService.isResetPasswordConfirmationSmsEnabled()).thenReturn(true);
-
+        when(configurationService.isAccountRecoveryBlockEnabled()).thenReturn(true);
+        usingValidSession();
+        usingValidClientSession();
         handler =
                 new ResetPasswordHandler(
                         authenticationService,
@@ -115,7 +132,8 @@ class ResetPasswordHandlerTest {
                         clientService,
                         auditService,
                         commonPasswordsService,
-                        passwordValidator);
+                        passwordValidator,
+                        accountRecoveryBlockService);
     }
 
     @Test
@@ -123,23 +141,14 @@ class ResetPasswordHandlerTest {
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
         when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                 .thenReturn(generateUserCredentials());
-        usingValidSession();
-        usingValidClientSession();
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(headers);
-        event.setBody(format("{ \"password\": \"%s\"}", NEW_PASSWORD));
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        when(authenticationService.getUserProfileByEmail(EMAIL))
+                .thenReturn(generateUserProfile(false));
 
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        var result = generateRequest(NEW_PASSWORD);
 
         assertThat(result, hasStatus(204));
         verifyNoInteractions(sqsClient);
         verify(authenticationService, times(1)).updatePassword(EMAIL, NEW_PASSWORD);
-
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL_FOR_TEST_CLIENT,
@@ -160,37 +169,22 @@ class ResetPasswordHandlerTest {
                 .thenReturn(generateUserProfile(false));
         when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                 .thenReturn(generateUserCredentials());
-        usingValidSession();
-        NotifyRequest notifyRequest =
-                new NotifyRequest(
-                        EMAIL, NotificationType.PASSWORD_RESET_CONFIRMATION, SupportedLanguage.EN);
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(headers);
-        event.setBody(format("{ \"password\": \"%s\"}", NEW_PASSWORD));
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        var result = generateRequest(NEW_PASSWORD);
 
         assertThat(result, hasStatus(204));
-        verify(sqsClient, times(1)).send(objectMapper.writeValueAsString(notifyRequest));
+        verify(sqsClient, times(1))
+                .send(objectMapper.writeValueAsString(EXPECTED_EMAIL_NOTIFY_REQUEST));
         verify(sqsClient, never())
-                .send(
-                        objectMapper.writeValueAsString(
-                                new NotifyRequest(
-                                        TEST_PHONE_NUMBER,
-                                        NotificationType.PASSWORD_RESET_CONFIRMATION_SMS,
-                                        SupportedLanguage.EN)));
+                .send(objectMapper.writeValueAsString(EXPECTED_SMS_NOTIFY_REQUEST));
         verify(authenticationService, times(1)).updatePassword(EMAIL, NEW_PASSWORD);
-
+        verifyNoInteractions(accountRecoveryBlockService);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        AuditService.UNKNOWN,
+                        TEST_CLIENT_ID,
                         AuditService.UNKNOWN,
                         EMAIL,
                         "123.123.123.123",
@@ -199,44 +193,30 @@ class ResetPasswordHandlerTest {
     }
 
     @Test
-    void shouldReturn204ForSuccessfulRequestWithAndSendConfirmationToSMS()
-            throws Json.JsonException {
+    void
+            shouldReturn204ForSuccessfulPasswordResetSendConfirmationToSMSAndUpdateAccountRecoveryTableWithTTL()
+                    throws Json.JsonException {
         when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                 .thenReturn(generateUserCredentials());
         when(authenticationService.getUserProfileByEmail(EMAIL))
                 .thenReturn(generateUserProfile(true));
-        usingValidSession();
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(headers);
-        event.setBody(format("{ \"password\": \"%s\"}", NEW_PASSWORD));
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        var result = generateRequest(NEW_PASSWORD);
 
         assertThat(result, hasStatus(204));
-
-        var expectedEmailNotifyRequest =
-                new NotifyRequest(
-                        EMAIL, NotificationType.PASSWORD_RESET_CONFIRMATION, SupportedLanguage.EN);
         verify(sqsClient, times(1))
-                .send(objectMapper.writeValueAsString(expectedEmailNotifyRequest));
-        var expectedSmsNotifyRequest =
-                new NotifyRequest(
-                        TEST_PHONE_NUMBER,
-                        NotificationType.PASSWORD_RESET_CONFIRMATION_SMS,
-                        SupportedLanguage.EN);
-        verify(sqsClient, times(1)).send(objectMapper.writeValueAsString(expectedSmsNotifyRequest));
+                .send(objectMapper.writeValueAsString(EXPECTED_EMAIL_NOTIFY_REQUEST));
+        verify(sqsClient, times(1))
+                .send(objectMapper.writeValueAsString(EXPECTED_SMS_NOTIFY_REQUEST));
         verify(authenticationService, times(1)).updatePassword(EMAIL, NEW_PASSWORD);
-
+        verify(accountRecoveryBlockService).addBlockWithTTL(EMAIL);
+        verify(accountRecoveryBlockService, never()).addBlockWithNoTTL(EMAIL);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        AuditService.UNKNOWN,
+                        TEST_CLIENT_ID,
                         AuditService.UNKNOWN,
                         EMAIL,
                         "123.123.123.123",
@@ -245,34 +225,57 @@ class ResetPasswordHandlerTest {
     }
 
     @Test
-    void shouldReturn204ForSuccessfulMigratedUserRequest() throws Json.JsonException {
-        when(authenticationService.getUserCredentialsFromEmail(EMAIL))
-                .thenReturn(generateMigratedUserCredentials());
+    void shouldNotWriteToAccountRecoveryTableWhenNoVerifiedMFAMethodIsPresent()
+            throws Json.JsonException {
         when(authenticationService.getUserProfileByEmail(EMAIL))
                 .thenReturn(generateUserProfile(false));
-        usingValidSession();
-        NotifyRequest notifyRequest =
-                new NotifyRequest(
-                        EMAIL, NotificationType.PASSWORD_RESET_CONFIRMATION, SupportedLanguage.EN);
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setBody(format("{ \"password\": \"%s\"}", NEW_PASSWORD));
-        event.setHeaders(headers);
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        when(authenticationService.getUserCredentialsFromEmail(EMAIL))
+                .thenReturn(generateUserCredentials());
+
+        var result = generateRequest(NEW_PASSWORD);
 
         assertThat(result, hasStatus(204));
-        verify(sqsClient, times(1)).send(objectMapper.writeValueAsString(notifyRequest));
+        verify(sqsClient, times(1))
+                .send(objectMapper.writeValueAsString(EXPECTED_EMAIL_NOTIFY_REQUEST));
+        verify(sqsClient, never())
+                .send(objectMapper.writeValueAsString(EXPECTED_SMS_NOTIFY_REQUEST));
         verify(authenticationService, times(1)).updatePassword(EMAIL, NEW_PASSWORD);
+        verifyNoInteractions(accountRecoveryBlockService);
+
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
+                        TEST_CLIENT_ID,
                         AuditService.UNKNOWN,
+                        EMAIL,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_ID);
+    }
+
+    @Test
+    void shouldReturn204ForSuccessfulMigratedUserRequestAndNoVerifiedMFAMethodIsPresent()
+            throws Json.JsonException {
+        when(authenticationService.getUserCredentialsFromEmail(EMAIL))
+                .thenReturn(generateMigratedUserCredentials());
+        when(authenticationService.getUserProfileByEmail(EMAIL))
+                .thenReturn(generateUserProfile(false));
+
+        var result = generateRequest(NEW_PASSWORD);
+
+        assertThat(result, hasStatus(204));
+        verify(sqsClient, times(1))
+                .send(objectMapper.writeValueAsString(EXPECTED_EMAIL_NOTIFY_REQUEST));
+        verify(authenticationService, times(1)).updatePassword(EMAIL, NEW_PASSWORD);
+        verifyNoInteractions(accountRecoveryBlockService);
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        TEST_CLIENT_ID,
                         AuditService.UNKNOWN,
                         EMAIL,
                         "123.123.123.123",
@@ -282,7 +285,6 @@ class ResetPasswordHandlerTest {
 
     @Test
     void shouldReturn400ForRequestIsMissingPassword() {
-        usingValidSession();
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody("{ }");
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
@@ -291,69 +293,58 @@ class ResetPasswordHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
         verifyNoInteractions(auditService);
+        verifyNoInteractions(accountRecoveryBlockService);
     }
 
     @Test
     void shouldReturn400IfPasswordFailsValidation() {
-        usingValidSession();
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setBody(format("{ \"password\": \"%s\"}", "password"));
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        APIGatewayProxyResponseEvent result = generateRequest("password");
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1007));
         verify(authenticationService, never()).updatePassword(EMAIL, NEW_PASSWORD);
         verifyNoInteractions(auditService);
+        verifyNoInteractions(accountRecoveryBlockService);
     }
 
     @Test
-    void shouldReturn400IfNewPasswordEqualsExistingPassword() throws Json.JsonException {
-        usingValidSession();
+    void shouldReturn400IfNewPasswordEqualsExistingPassword() {
         when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                 .thenReturn(generateUserCredentials(Argon2EncoderHelper.argon2Hash(NEW_PASSWORD)));
-        NotifyRequest notifyRequest =
-                new NotifyRequest(
-                        EMAIL, NotificationType.PASSWORD_RESET_CONFIRMATION, SupportedLanguage.EN);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setBody(format("{ \"password\": \"%s\"}", NEW_PASSWORD));
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        var result = generateRequest(NEW_PASSWORD);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1024));
-        verify(sqsClient, never()).send(objectMapper.writeValueAsString(notifyRequest));
         verify(authenticationService, never()).updatePassword(EMAIL, NEW_PASSWORD);
+        verifyNoInteractions(accountRecoveryBlockService);
+        verifyNoInteractions(sqsClient);
         verifyNoInteractions(auditService);
     }
 
     @Test
-    void shouldDeleteIncorrectPasswordCountOnSuccessfulRequest() {
-        usingValidSession();
+    void shouldDeleteIncorrectPasswordCountOnSuccessfulRequest() throws Json.JsonException {
         when(authenticationService.getUserProfileByEmail(EMAIL))
                 .thenReturn(generateUserProfile(false));
         when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                 .thenReturn(generateUserCredentials());
         when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(2);
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setBody(format("{ \"password\": \"%s\"}", NEW_PASSWORD));
-        event.setHeaders(headers);
-        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
 
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        var result = generateRequest(NEW_PASSWORD);
 
         assertThat(result, hasStatus(204));
+        verify(authenticationService, times(1)).updatePassword(EMAIL, NEW_PASSWORD);
         verify(codeStorageService, times(1)).deleteIncorrectPasswordCount(EMAIL);
+        verify(sqsClient, times(1))
+                .send(objectMapper.writeValueAsString(EXPECTED_EMAIL_NOTIFY_REQUEST));
+        verify(sqsClient, never())
+                .send(objectMapper.writeValueAsString(EXPECTED_SMS_NOTIFY_REQUEST));
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
-                        AuditService.UNKNOWN,
+                        TEST_CLIENT_ID,
                         AuditService.UNKNOWN,
                         EMAIL,
                         "123.123.123.123",
@@ -363,6 +354,7 @@ class ResetPasswordHandlerTest {
 
     @Test
     void shouldReturn400WhenUserHasInvalidSession() {
+        when(sessionService.getSessionFromRequestHeaders(anyMap())).thenReturn(Optional.empty());
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"password\": \"%s\"}", NEW_PASSWORD));
@@ -372,6 +364,83 @@ class ResetPasswordHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1000));
         verify(authenticationService, never()).updatePassword(EMAIL, NEW_PASSWORD);
         verifyNoInteractions(auditService);
+        verifyNoInteractions(accountRecoveryBlockService);
+    }
+
+    @Test
+    void shouldNotUpdateAccountRecoveryTableWhenPasswordResetSuccessfullyButFeatureIsDisabled()
+            throws Json.JsonException {
+        when(configurationService.isAccountRecoveryBlockEnabled()).thenReturn(false);
+        when(authenticationService.getUserProfileByEmail(EMAIL))
+                .thenReturn(generateUserProfile(false));
+        when(authenticationService.getUserCredentialsFromEmail(EMAIL))
+                .thenReturn(generateUserCredentialsWithVerifiedAuthApp());
+
+        var result = generateRequest(NEW_PASSWORD);
+
+        assertThat(result, hasStatus(204));
+        verify(authenticationService, times(1)).updatePassword(EMAIL, NEW_PASSWORD);
+        verifyNoInteractions(accountRecoveryBlockService);
+        verify(sqsClient, times(1))
+                .send(objectMapper.writeValueAsString(EXPECTED_EMAIL_NOTIFY_REQUEST));
+        verify(sqsClient, never())
+                .send(objectMapper.writeValueAsString(EXPECTED_SMS_NOTIFY_REQUEST));
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        TEST_CLIENT_ID,
+                        AuditService.UNKNOWN,
+                        EMAIL,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_ID);
+    }
+
+    @Test
+    void
+            shouldUpdateAccountRecoveryTableWithNoTTLWhenPasswordResetSuccessfullyAndVerifiedAuthAppIsPresent()
+                    throws Json.JsonException {
+        when(authenticationService.getUserProfileByEmail(EMAIL))
+                .thenReturn(generateUserProfile(false));
+        when(authenticationService.getUserCredentialsFromEmail(EMAIL))
+                .thenReturn(generateUserCredentialsWithVerifiedAuthApp());
+
+        var result = generateRequest(NEW_PASSWORD);
+
+        assertThat(result, hasStatus(204));
+        verify(authenticationService, times(1)).updatePassword(EMAIL, NEW_PASSWORD);
+        verify(accountRecoveryBlockService).addBlockWithNoTTL(EMAIL);
+        verify(accountRecoveryBlockService, never()).addBlockWithTTL(EMAIL);
+        verify(sqsClient, times(1))
+                .send(objectMapper.writeValueAsString(EXPECTED_EMAIL_NOTIFY_REQUEST));
+        verify(sqsClient, never())
+                .send(objectMapper.writeValueAsString(EXPECTED_SMS_NOTIFY_REQUEST));
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        TEST_CLIENT_ID,
+                        AuditService.UNKNOWN,
+                        EMAIL,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_ID);
+    }
+
+    private APIGatewayProxyResponseEvent generateRequest(String password) {
+        Map<String, String> headers = new HashMap<>();
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
+        headers.put("Session-Id", session.getSessionId());
+        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setBody(format("{ \"password\": \"%s\"}", password));
+        event.setHeaders(headers);
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+
+        return handler.handleRequest(event, context);
     }
 
     private void usingValidClientSession() {
@@ -395,6 +464,17 @@ class ResetPasswordHandlerTest {
 
     private UserCredentials generateUserCredentials(String password) {
         return new UserCredentials().withEmail(EMAIL).withPassword(password).withSubjectID(SUBJECT);
+    }
+
+    private UserCredentials generateUserCredentialsWithVerifiedAuthApp() {
+        return generateUserCredentials()
+                .setMfaMethod(
+                        new MFAMethod(
+                                MFAMethodType.AUTH_APP.getValue(),
+                                "auth-app-credential",
+                                true,
+                                true,
+                                NowHelper.nowMinus(50, ChronoUnit.DAYS).toString()));
     }
 
     private UserProfile generateUserProfile(boolean isPhoneNumberVerified) {
