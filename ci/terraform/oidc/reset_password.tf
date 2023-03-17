@@ -27,6 +27,7 @@ module "reset_password" {
   environment     = var.environment
 
   handler_environment_variables = {
+    ACCOUNT_RECOVERY_BLOCK_ENABLED         = var.account_recovery_block_enabled
     DYNAMO_ENDPOINT                        = var.use_localstack ? var.lambda_dynamo_endpoint : null
     LOCALSTACK_ENDPOINT                    = var.use_localstack ? var.localstack_endpoint : null
     EMAIL_QUEUE_URL                        = aws_sqs_queue.email_queue.id
