@@ -92,6 +92,10 @@ variable "environment" {
   type = string
 }
 
+variable "account_recovery_block_enabled" {
+  default = false
+}
+
 variable "aws_endpoint" {
   type    = string
   default = null

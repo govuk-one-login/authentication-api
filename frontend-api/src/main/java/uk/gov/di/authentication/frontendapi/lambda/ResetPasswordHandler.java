@@ -8,11 +8,14 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordCompletionRequest;
+import uk.gov.di.authentication.frontendapi.services.DynamoAccountRecoveryBlockService;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
+import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.Argon2MatcherHelper;
@@ -34,6 +37,7 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.shared.validation.PasswordValidator;
 
+import java.util.Collections;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -49,6 +53,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
     private final AuditService auditService;
     private final CommonPasswordsService commonPasswordsService;
     private final PasswordValidator passwordValidator;
+    private final DynamoAccountRecoveryBlockService accountRecoveryBlockService;
 
     private static final Logger LOG = LogManager.getLogger(ResetPasswordHandler.class);
 
@@ -62,7 +67,8 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             ClientService clientService,
             AuditService auditService,
             CommonPasswordsService commonPasswordsService,
-            PasswordValidator passwordValidator) {
+            PasswordValidator passwordValidator,
+            DynamoAccountRecoveryBlockService accountRecoveryBlockService) {
         super(
                 ResetPasswordCompletionRequest.class,
                 configurationService,
@@ -76,6 +82,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
         this.auditService = auditService;
         this.commonPasswordsService = commonPasswordsService;
         this.passwordValidator = passwordValidator;
+        this.accountRecoveryBlockService = accountRecoveryBlockService;
     }
 
     public ResetPasswordHandler() {
@@ -94,6 +101,8 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
         this.auditService = new AuditService(configurationService);
         this.commonPasswordsService = new CommonPasswordsService(configurationService);
         this.passwordValidator = new PasswordValidator(commonPasswordsService);
+        this.accountRecoveryBlockService =
+                new DynamoAccountRecoveryBlockService(configurationService);
     }
 
     @Override
@@ -123,6 +132,14 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                 LOG.info("Resetting password for migrated user");
             }
             authenticationService.updatePassword(userCredentials.getEmail(), request.getPassword());
+            var userProfile =
+                    authenticationService.getUserProfileByEmail(
+                            userContext.getSession().getEmailAddress());
+
+            updateAccountRecoveryBlockTable(
+                    configurationService.isAccountRecoveryBlockEnabled(),
+                    userProfile,
+                    userCredentials);
 
             var incorrectPasswordCount =
                     codeStorageService.getIncorrectPasswordCount(userCredentials.getEmail());
@@ -138,15 +155,9 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                                 userCredentials.getEmail(),
                                 NotificationType.PASSWORD_RESET_CONFIRMATION,
                                 userContext.getUserLanguage());
-                var userProfile =
-                        authenticationService.getUserProfileByEmail(
-                                userContext.getSession().getEmailAddress());
                 auditableEvent = FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL;
                 LOG.info("Placing message on queue to send password reset confirmation to Email");
                 sqsClient.send(serialiseRequest(emailNotifyRequest));
-
-                authenticationService.getUserProfileByEmail(
-                        userContext.getSession().getEmailAddress());
                 if (shouldSendConfirmationToSms(userProfile, configurationService)) {
                     var smsNotifyRequest =
                             new NotifyRequest(
@@ -196,5 +207,33 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
 
     private static boolean verifyPassword(String hashedPassword, String password) {
         return Argon2MatcherHelper.matchRawStringWithEncoded(password, hashedPassword);
+    }
+
+    private void updateAccountRecoveryBlockTable(
+            boolean accountRecoveryBlockEnabled,
+            UserProfile userProfile,
+            UserCredentials userCredentials) {
+        LOG.info("AccountRecoveryBlock enabled: {}", accountRecoveryBlockEnabled);
+        var authAppVerified =
+                Optional.ofNullable(userCredentials.getMfaMethods())
+                        .orElseGet(Collections::emptyList)
+                        .stream()
+                        .anyMatch(
+                                t ->
+                                        t.getMfaMethodType()
+                                                        .equals(MFAMethodType.AUTH_APP.getValue())
+                                                && t.isMethodVerified());
+        var phoneNumberVerified = userProfile.isPhoneNumberVerified();
+        LOG.info(
+                "AuthAppVerified: {}. PhoneNumberVerified: {}",
+                authAppVerified,
+                phoneNumberVerified);
+        if (accountRecoveryBlockEnabled && phoneNumberVerified) {
+            LOG.info("Adding block with TTL to account recovery table");
+            accountRecoveryBlockService.addBlockWithTTL(userProfile.getEmail());
+        } else if (accountRecoveryBlockEnabled && authAppVerified) {
+            LOG.info("Adding block with NO TTL to account recovery table");
+            accountRecoveryBlockService.addBlockWithNoTTL(userProfile.getEmail());
+        }
     }
 }
