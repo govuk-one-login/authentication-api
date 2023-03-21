@@ -19,6 +19,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.VerifyMfaCodeRequest;
+import uk.gov.di.authentication.frontendapi.services.DynamoAccountRecoveryBlockService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
@@ -91,6 +92,8 @@ class VerifyMfaCodeHandlerTest {
     private final SessionService sessionService = mock(SessionService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final DynamoAccountRecoveryBlockService accountRecoveryBlockService =
+            mock(DynamoAccountRecoveryBlockService.class);
     private final MfaCodeValidatorFactory mfaCodeValidatorFactory =
             mock(MfaCodeValidatorFactory.class);
     private final AuthAppCodeValidator authAppCodeValidator = mock(AuthAppCodeValidator.class);
@@ -135,7 +138,8 @@ class VerifyMfaCodeHandlerTest {
                         codeStorageService,
                         auditService,
                         mfaCodeValidatorFactory,
-                        cloudwatchMetricsService);
+                        cloudwatchMetricsService,
+                        accountRecoveryBlockService);
     }
 
     @AfterEach
@@ -178,6 +182,7 @@ class VerifyMfaCodeHandlerTest {
         verify(codeStorageService, never())
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
+        verify(accountRecoveryBlockService).deleteBlockIfPresent(TEST_EMAIL_ADDRESS);
 
         verify(auditService)
                 .submitAuditEvent(
@@ -248,6 +253,7 @@ class VerifyMfaCodeHandlerTest {
         verifyNoInteractions(auditService);
         verifyNoInteractions(authAppCodeValidator);
         verifyNoInteractions(codeStorageService);
+        verifyNoInteractions(accountRecoveryBlockService);
     }
 
     private static Stream<Boolean> registration() {
@@ -275,6 +281,7 @@ class VerifyMfaCodeHandlerTest {
                 .setMFAMethodVerifiedTrue(TEST_EMAIL_ADDRESS, MFAMethodType.AUTH_APP);
         verify(authenticationService, never()).setAccountVerified(TEST_EMAIL_ADDRESS);
         verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
+        verifyNoInteractions(accountRecoveryBlockService);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
@@ -310,6 +317,7 @@ class VerifyMfaCodeHandlerTest {
                 .setMFAMethodVerifiedTrue(TEST_EMAIL_ADDRESS, MFAMethodType.AUTH_APP);
         verify(authenticationService, never()).setAccountVerified(TEST_EMAIL_ADDRESS);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
+        verifyNoInteractions(accountRecoveryBlockService);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.INVALID_CODE_SENT,

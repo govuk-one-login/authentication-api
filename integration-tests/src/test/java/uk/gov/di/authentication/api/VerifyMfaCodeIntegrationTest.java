@@ -27,6 +27,7 @@ import java.util.Optional;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_VERIFIED;
@@ -78,6 +79,26 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(204));
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList(CODE_VERIFIED));
+        assertThat(accountRecoveryStore.isBlockPresent(EMAIL_ADDRESS), equalTo(false));
+    }
+
+    @Test
+    void whenValidAuthAppCodeReturn204AndClearAccountRecoveryBlockWhenPresent() {
+        accountRecoveryStore.addBlockWithTTL(EMAIL_ADDRESS);
+        userStore.addMfaMethod(
+                EMAIL_ADDRESS, MFAMethodType.AUTH_APP, true, true, AUTH_APP_SECRET_BASE_32);
+        var code = AUTH_APP_STUB.getAuthAppOneTimeCode(AUTH_APP_SECRET_BASE_32);
+        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, code, true);
+
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
+        assertThat(response, hasStatus(204));
+
+        assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList(CODE_VERIFIED));
+        assertThat(accountRecoveryStore.isBlockPresent(EMAIL_ADDRESS), equalTo(false));
     }
 
     @Test
@@ -85,9 +106,8 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         userStore.addMfaMethod(
                 EMAIL_ADDRESS, MFAMethodType.AUTH_APP, true, true, AUTH_APP_SECRET_BASE_32);
         long oneMinuteAgo = NowHelper.nowMinus(2, ChronoUnit.MINUTES).getTime();
-        String code = AUTH_APP_STUB.getAuthAppOneTimeCode(AUTH_APP_SECRET_BASE_32, oneMinuteAgo);
-        VerifyMfaCodeRequest codeRequest =
-                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, code, true);
+        var code = AUTH_APP_STUB.getAuthAppOneTimeCode(AUTH_APP_SECRET_BASE_32, oneMinuteAgo);
+        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, code, true);
 
         var response =
                 makeRequest(
@@ -135,6 +155,27 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1043));
         assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList(INVALID_CODE_SENT));
+    }
+
+    @Test
+    void whenWrongSecretUsedByAuthAppReturn400AndNotClearAccountRecoveryBlockWhenPresent() {
+        accountRecoveryStore.addBlockWithTTL(EMAIL_ADDRESS);
+        userStore.addMfaMethod(
+                EMAIL_ADDRESS, MFAMethodType.AUTH_APP, true, true, AUTH_APP_SECRET_BASE_32);
+        String invalidCode = AUTH_APP_STUB.getAuthAppOneTimeCode("O5ZG63THFVZWKY3SMV2A====");
+        VerifyMfaCodeRequest codeRequest =
+                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, invalidCode, true);
+
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
+
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1043));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList(INVALID_CODE_SENT));
+        assertThat(accountRecoveryStore.isBlockPresent(EMAIL_ADDRESS), equalTo(true));
     }
 
     @Test
