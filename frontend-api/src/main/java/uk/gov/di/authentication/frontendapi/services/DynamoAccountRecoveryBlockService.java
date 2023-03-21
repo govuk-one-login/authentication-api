@@ -41,8 +41,10 @@ public class DynamoAccountRecoveryBlockService {
         dynamoAccountRecoveryBlockTable.putItem(accountRecoveryBlock);
     }
 
-    public void deleteBlock(String email) {
-        dynamoAccountRecoveryBlockTable.deleteItem(Key.builder().partitionValue(email).build());
+    public void deleteBlockIfPresent(String email) {
+        if (blockIsPresent(email)) {
+            dynamoAccountRecoveryBlockTable.deleteItem(Key.builder().partitionValue(email).build());
+        }
     }
 
     public void addBlockWithNoTTL(String email) {
