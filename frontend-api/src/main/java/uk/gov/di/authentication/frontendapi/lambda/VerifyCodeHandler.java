@@ -8,6 +8,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.VerifyCodeRequest;
+import uk.gov.di.authentication.frontendapi.services.DynamoAccountRecoveryBlockService;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
@@ -59,6 +60,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     private final CodeStorageService codeStorageService;
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final DynamoAccountRecoveryBlockService accountRecoveryBlockService;
 
     protected VerifyCodeHandler(
             ConfigurationService configurationService,
@@ -68,7 +70,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             AuthenticationService authenticationService,
             CodeStorageService codeStorageService,
             AuditService auditService,
-            CloudwatchMetricsService cloudwatchMetricsService) {
+            CloudwatchMetricsService cloudwatchMetricsService,
+            DynamoAccountRecoveryBlockService accountRecoveryBlockService) {
         super(
                 VerifyCodeRequest.class,
                 configurationService,
@@ -79,6 +82,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         this.codeStorageService = codeStorageService;
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.accountRecoveryBlockService = accountRecoveryBlockService;
     }
 
     public VerifyCodeHandler() {
@@ -90,6 +94,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         this.codeStorageService = new CodeStorageService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
+        this.accountRecoveryBlockService =
+                new DynamoAccountRecoveryBlockService(configurationService);
     }
 
     @Override
@@ -248,6 +254,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                         pair("notification-type", notificationType.name()),
                         pair("mfa-type", MFAMethodType.SMS.getValue())
                     };
+            accountRecoveryBlockService.deleteBlockIfPresent(session.getEmailAddress());
             cloudwatchMetricsService.incrementAuthenticationSuccess(
                     session.isNewAccount(),
                     clientId,

@@ -8,6 +8,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.VerifyMfaCodeRequest;
+import uk.gov.di.authentication.frontendapi.services.DynamoAccountRecoveryBlockService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -36,14 +37,12 @@ import static java.util.Map.entry;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_VERIFIED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.INVALID_CODE_SENT;
-import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.NONE;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
-import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 
@@ -55,6 +54,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     private final AuditService auditService;
     private final MfaCodeValidatorFactory mfaCodeValidatorFactory;
     private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final DynamoAccountRecoveryBlockService accountRecoveryBlockService;
 
     public VerifyMfaCodeHandler(
             ConfigurationService configurationService,
@@ -65,7 +65,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             CodeStorageService codeStorageService,
             AuditService auditService,
             MfaCodeValidatorFactory mfaCodeValidatorFactory,
-            CloudwatchMetricsService cloudwatchMetricsService) {
+            CloudwatchMetricsService cloudwatchMetricsService,
+            DynamoAccountRecoveryBlockService accountRecoveryBlockService) {
         super(
                 VerifyMfaCodeRequest.class,
                 configurationService,
@@ -77,6 +78,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         this.auditService = auditService;
         this.mfaCodeValidatorFactory = mfaCodeValidatorFactory;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.accountRecoveryBlockService = accountRecoveryBlockService;
     }
 
     public VerifyMfaCodeHandler() {
@@ -93,6 +95,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         codeStorageService,
                         new DynamoService(configurationService));
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.accountRecoveryBlockService =
+                new DynamoAccountRecoveryBlockService(configurationService);
     }
 
     @Override
@@ -102,11 +106,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             VerifyMfaCodeRequest codeRequest,
             UserContext userContext) {
 
-        var clientSessionId =
-                getHeaderValueFromHeaders(
-                        input.getHeaders(),
-                        CLIENT_SESSION_ID_HEADER,
-                        configurationService.getHeadersCaseInsensitive());
         attachLogFieldToLogs(
                 PERSISTENT_SESSION_ID, extractPersistentIdFromHeaders(input.getHeaders()));
         attachLogFieldToLogs(
@@ -158,6 +157,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                                         "MFA code has been successfully verified for MFA type: {}. RegistrationJourney: {}",
                                         MFAMethodType.AUTH_APP.getValue(),
                                         codeRequest.isRegistration());
+                                accountRecoveryBlockService.deleteBlockIfPresent(
+                                        session.getEmailAddress());
                                 sessionService.save(
                                         session.setCurrentCredentialStrength(
                                                         CredentialTrustLevel.MEDIUM_LEVEL)

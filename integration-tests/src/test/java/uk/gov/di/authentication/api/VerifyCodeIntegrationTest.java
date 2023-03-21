@@ -258,23 +258,20 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     }
 
     @Test
-    void shouldReturn204WhenUserHasAcceptedCurrentTermsAndConditions() throws Exception {
-        String sessionId = redis.createSession();
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-        scope.add(OIDCScopeValue.EMAIL);
-        scope.add(OIDCScopeValue.PHONE);
+    void shouldReturn204WhenUserEntersValidMfaSmsCode() throws Exception {
+        var sessionId = redis.createSession();
+        var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.PHONE);
         setUpTestWithoutClientConsent(sessionId, withScope());
         userStore.updateTermsAndConditions(EMAIL_ADDRESS, "1.0");
-        ClientConsent clientConsent =
+        var clientConsent =
                 new ClientConsent(
                         CLIENT_ID,
                         ValidScopes.getClaimsForListOfScopes(scope.toStringList()),
                         LocalDateTime.now().toString());
         userStore.updateConsent(EMAIL_ADDRESS, clientConsent);
 
-        String code = redis.generateAndSaveMfaCode(EMAIL_ADDRESS, 900);
-        VerifyCodeRequest codeRequest = new VerifyCodeRequest(NotificationType.MFA_SMS, code);
+        var code = redis.generateAndSaveMfaCode(EMAIL_ADDRESS, 900);
+        var codeRequest = new VerifyCodeRequest(NotificationType.MFA_SMS, code);
 
         var response =
                 makeRequest(
@@ -283,7 +280,66 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         Map.of());
 
         assertThat(response, hasStatus(204));
+        assertThat(accountRecoveryStore.isBlockPresent(EMAIL_ADDRESS), equalTo(false));
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_VERIFIED));
+    }
+
+    @Test
+    void shouldReturn204WhenUserEntersValidMfaSmsCodeAndClearAccountRecoveryBlockWhenPresent()
+            throws Exception {
+        accountRecoveryStore.addBlockWithTTL(EMAIL_ADDRESS);
+        var sessionId = redis.createSession();
+        var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.PHONE);
+        setUpTestWithoutClientConsent(sessionId, withScope());
+        userStore.updateTermsAndConditions(EMAIL_ADDRESS, "1.0");
+        var clientConsent =
+                new ClientConsent(
+                        CLIENT_ID,
+                        ValidScopes.getClaimsForListOfScopes(scope.toStringList()),
+                        LocalDateTime.now().toString());
+        userStore.updateConsent(EMAIL_ADDRESS, clientConsent);
+
+        var code = redis.generateAndSaveMfaCode(EMAIL_ADDRESS, 900);
+        var codeRequest = new VerifyCodeRequest(NotificationType.MFA_SMS, code);
+
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
+
+        assertThat(response, hasStatus(204));
+        assertThat(accountRecoveryStore.isBlockPresent(EMAIL_ADDRESS), equalTo(false));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_VERIFIED));
+    }
+
+    @Test
+    void shouldReturn400WhenInvalidMfaSmsCodeIsEnteredAndNotClearAccountRecoveryBlockWhenPresent()
+            throws Json.JsonException {
+        accountRecoveryStore.addBlockWithTTL(EMAIL_ADDRESS);
+        var sessionId = redis.createSession();
+        var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.PHONE);
+        setUpTestWithoutClientConsent(sessionId, withScope());
+        userStore.updateTermsAndConditions(EMAIL_ADDRESS, "1.0");
+        var clientConsent =
+                new ClientConsent(
+                        CLIENT_ID,
+                        ValidScopes.getClaimsForListOfScopes(scope.toStringList()),
+                        LocalDateTime.now().toString());
+        userStore.updateConsent(EMAIL_ADDRESS, clientConsent);
+
+        redis.generateAndSaveMfaCode(EMAIL_ADDRESS, 900);
+        var codeRequest = new VerifyCodeRequest(NotificationType.MFA_SMS, "123456");
+
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
+
+        assertThat(response, hasStatus(400));
+        assertThat(accountRecoveryStore.isBlockPresent(EMAIL_ADDRESS), equalTo(true));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(INVALID_CODE_SENT));
     }
 
     private void setUpTestWithoutSignUp(String sessionId, Scope scope) throws Json.JsonException {
