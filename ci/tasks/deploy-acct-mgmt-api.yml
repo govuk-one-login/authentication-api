@@ -14,7 +14,6 @@ params:
   DNS_STATE_KEY: ((dns-state-key))
   NOTIFY_API_KEY: ((build-notify-api-key))
   STATE_BUCKET: digital-identity-dev-tfstate
-  STATE_LOCKING_TABLE: digital-identity-dev-tfstate-locking
   TXMA_ACCOUNT_ID: ((build-txma-account-id))
   TEST_CLIENT_VERIFY_EMAIL_OTP: ((test-client-verify-email-otp))
   TEST_CLIENT_VERIFY_PHONE_NUMBER_OTP: ((test-client-verify-phone-number-otp))
@@ -35,8 +34,7 @@ run:
         -backend-config "bucket=${STATE_BUCKET}" \
         -backend-config "key=${DEPLOY_ENVIRONMENT}-account-managment-api-terraform.tfstate" \
         -backend-config "encrypt=true" \
-        -backend-config "region=eu-west-2" \
-        -backend-config "dynamodb_table=${STATE_LOCKING_TABLE}"
+        -backend-config "region=eu-west-2"
 
       terraform apply -auto-approve \
         -var "deployer_role_arn=${DEPLOYER_ROLE_ARN}" \
