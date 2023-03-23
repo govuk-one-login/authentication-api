@@ -41,5 +41,6 @@ run:
         -var 'logging_endpoint_arn=arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prod' \
         -var 'logging_endpoint_arns=["arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prod"]' \
         -var-file "${DEPLOY_ENVIRONMENT}-overrides.tfvars" \
+        -lock=$([[ "$STATE_LOCKING_TABLE" == "" ]] && echo "false" || echo "true")
 
       terraform output --json > ../../../../terraform-outputs/${DEPLOY_ENVIRONMENT}-terraform-outputs.json

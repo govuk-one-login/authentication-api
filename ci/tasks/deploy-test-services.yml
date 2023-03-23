@@ -10,6 +10,7 @@ params:
   DEPLOYER_ROLE_ARN: ((deployer-role-arn-non-prod))
   DEPLOY_ENVIRONMENT: build
   STATE_BUCKET: digital-identity-dev-tfstate
+  STATE_LOCKING_TABLE: digital-identity-dev-tfstate-locking
   SYNTHETICS_USERS: ""
   TXMA_ACCOUNT_ID: ((build-txma-account-id))
 
@@ -43,5 +44,6 @@ run:
         -var "synthetics_users=${SYNTHETICS_USERS}" \
         -var "txma_account_id=${TXMA_ACCOUNT_ID}" \
         -var-file "${DEPLOY_ENVIRONMENT}-overrides.tfvars" \
+        -lock=$([[ "$STATE_LOCKING_TABLE" == "" ]] && echo "false" || echo "true")
 
       terraform output --json > ../../../../terraform-outputs/${DEPLOY_ENVIRONMENT}-terraform-outputs.json
