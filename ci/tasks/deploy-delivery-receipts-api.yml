@@ -10,6 +10,7 @@ params:
   DEPLOYER_ROLE_ARN: ((deployer-role-arn-non-prod))
   DEPLOY_ENVIRONMENT: build
   STATE_BUCKET: digital-identity-dev-tfstate
+  STATE_LOCKING_TABLE: digital-identity-dev-tfstate-locking
 inputs:
   - name: api-terraform-src
   - name: delivery-receipts-api-release
@@ -20,13 +21,20 @@ run:
   args:
     - -euc
     - |
+      if [[ "${DEPLOY_ENVIRONMENT}" == "build" ]]; then
+        ENABLE_STATE_LOCKING=true
+      else
+        ENABLE_STATE_LOCKING=false
+      fi
+
       cd "api-terraform-src/ci/terraform/delivery-receipts"
       terraform init -input=false \
         -backend-config "role_arn=${DEPLOYER_ROLE_ARN}" \
         -backend-config "bucket=${STATE_BUCKET}" \
         -backend-config "key=${DEPLOY_ENVIRONMENT}-delivery-receipts-api-terraform.tfstate" \
         -backend-config "encrypt=true" \
-        -backend-config "region=eu-west-2"
+        -backend-config "region=eu-west-2" \
+        -backend-config "dynamodb_table=${STATE_LOCKING_TABLE}"
 
       terraform apply -auto-approve \
         -var "deployer_role_arn=${DEPLOYER_ROLE_ARN}" \
@@ -36,5 +44,6 @@ run:
         -var "lambda_zip_file=$(ls -1 ../../../../delivery-receipts-api-release/*.zip)" \
         -var "common_state_bucket=${STATE_BUCKET}" \
         -var-file "${DEPLOY_ENVIRONMENT}-overrides.tfvars" \
+        -lock "${ENABLE_STATE_LOCKING}"
 
       terraform output --json > ../../../../terraform-outputs/${DEPLOY_ENVIRONMENT}-delivery-receipts-api-terraform-outputs.json

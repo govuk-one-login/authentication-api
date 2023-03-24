@@ -10,6 +10,7 @@ params:
   DEPLOYER_ROLE_ARN: ((deployer-role-arn-non-prod))
   DEPLOY_ENVIRONMENT: build
   STATE_BUCKET: digital-identity-dev-tfstate
+  STATE_LOCKING_TABLE: digital-identity-dev-tfstate-locking
   AUDIT_STORE_EXPIRY_DAYS: 7
   TXMA_OBFUSCATION_SECRET_ARN: ""
   TXMA_OBFUSCATION_SECRET_KMS_KEY_ARN: ""
@@ -24,13 +25,20 @@ run:
   args:
     - -euc
     - |
+      if [[ "${DEPLOY_ENVIRONMENT}" == "build" ]]; then
+        ENABLE_STATE_LOCKING=true
+      else
+        ENABLE_STATE_LOCKING=false
+      fi
+
       cd "api-terraform-src/ci/terraform/audit-processors"
       terraform init -input=false \
         -backend-config "role_arn=${DEPLOYER_ROLE_ARN}" \
         -backend-config "bucket=${STATE_BUCKET}" \
         -backend-config "key=${DEPLOY_ENVIRONMENT}-audit-terraform.tfstate" \
         -backend-config "encrypt=true" \
-        -backend-config "region=eu-west-2"
+        -backend-config "region=eu-west-2" \
+        -backend-config "dynamodb_table=${STATE_LOCKING_TABLE}"
 
       terraform apply -auto-approve \
         -var "lambda_zip_file=$(ls -1 ../../../../audit-processors-release/*.zip)" \
@@ -43,5 +51,6 @@ run:
         -var "txma_obfuscation_secret_arn=${TXMA_OBFUSCATION_SECRET_ARN}" \
         -var "txma_obfuscation_secret_kms_key_arn=${TXMA_OBFUSCATION_SECRET_KMS_KEY_ARN}" \
         -var-file "${DEPLOY_ENVIRONMENT}-overrides.tfvars" \
+        -lock "${ENABLE_STATE_LOCKING}"
 
       terraform output --json > ../../../../terraform-outputs/${DEPLOY_ENVIRONMENT}-terraform-outputs.json

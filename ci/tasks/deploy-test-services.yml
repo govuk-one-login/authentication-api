@@ -10,6 +10,7 @@ params:
   DEPLOYER_ROLE_ARN: ((deployer-role-arn-non-prod))
   DEPLOY_ENVIRONMENT: build
   STATE_BUCKET: digital-identity-dev-tfstate
+  STATE_LOCKING_TABLE: digital-identity-dev-tfstate-locking
   SYNTHETICS_USERS: ""
   TXMA_ACCOUNT_ID: ((build-txma-account-id))
 
@@ -24,13 +25,20 @@ run:
   args:
     - -euc
     - |
+      if [[ "${DEPLOY_ENVIRONMENT}" == "build" ]]; then
+        ENABLE_STATE_LOCKING=true
+      else
+        ENABLE_STATE_LOCKING=false
+      fi
+
       cd "api-terraform-src/ci/terraform/test-services"
       terraform init -input=false \
         -backend-config "role_arn=${DEPLOYER_ROLE_ARN}" \
         -backend-config "bucket=${STATE_BUCKET}" \
         -backend-config "key=${DEPLOY_ENVIRONMENT}-test-services-terraform.tfstate" \
         -backend-config "encrypt=true" \
-        -backend-config "region=eu-west-2"
+        -backend-config "region=eu-west-2" \
+        -backend-config "dynamodb_table=${STATE_LOCKING_TABLE}"
 
       terraform apply -auto-approve \
         -var "test_services-api-lambda_zip_file=$(ls -1 ../../../../test-services-release/*.zip)" \
@@ -42,5 +50,6 @@ run:
         -var "synthetics_users=${SYNTHETICS_USERS}" \
         -var "txma_account_id=${TXMA_ACCOUNT_ID}" \
         -var-file "${DEPLOY_ENVIRONMENT}-overrides.tfvars" \
+        -lock "${ENABLE_STATE_LOCKING}"
 
       terraform output --json > ../../../../terraform-outputs/${DEPLOY_ENVIRONMENT}-terraform-outputs.json
