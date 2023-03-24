@@ -173,6 +173,7 @@ public class ValidationHelper {
             switch (type) {
                 case MFA_SMS:
                 case VERIFY_EMAIL:
+                case VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
                 case VERIFY_PHONE_NUMBER:
                 case RESET_PASSWORD_WITH_CODE:
                     return Optional.empty();
@@ -187,6 +188,7 @@ public class ValidationHelper {
                 case MFA_SMS:
                     return Optional.of(ErrorResponse.ERROR_1027);
                 case VERIFY_EMAIL:
+                case VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
                     return Optional.of(ErrorResponse.ERROR_1033);
                 case VERIFY_PHONE_NUMBER:
                     return Optional.of(ErrorResponse.ERROR_1034);
@@ -199,6 +201,7 @@ public class ValidationHelper {
             case MFA_SMS:
                 return Optional.of(ErrorResponse.ERROR_1035);
             case VERIFY_EMAIL:
+            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
                 return Optional.of(ErrorResponse.ERROR_1036);
             case VERIFY_PHONE_NUMBER:
                 return Optional.of(ErrorResponse.ERROR_1037);

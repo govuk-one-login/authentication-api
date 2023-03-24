@@ -9,6 +9,8 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.frontendapi.entity.VerifyCodeRequest;
 import uk.gov.di.authentication.frontendapi.lambda.VerifyCodeHandler;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
@@ -26,12 +28,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_VERIFIED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.INVALID_CODE_SENT;
+import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -51,12 +55,18 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         txmaAuditQueue.clear();
     }
 
-    @Test
-    void shouldCallVerifyCodeEndpointToVerifyEmailCodeAndReturn204() throws Json.JsonException {
+    private static Stream<NotificationType> emailNotificationTypes() {
+        return Stream.of(VERIFY_EMAIL, VERIFY_CHANGE_HOW_GET_SECURITY_CODES);
+    }
+
+    @ParameterizedTest
+    @MethodSource("emailNotificationTypes")
+    void shouldCallVerifyCodeEndpointToVerifyEmailCodeAndReturn204(
+            NotificationType emailNotificationType) throws Json.JsonException {
         String sessionId = redis.createSession();
         setUpTestWithoutSignUp(sessionId, withScope());
-        String code = redis.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
-        VerifyCodeRequest codeRequest = new VerifyCodeRequest(VERIFY_EMAIL, code);
+        String code = redis.generateAndSaveEmailCode(EMAIL_ADDRESS, 900, emailNotificationType);
+        VerifyCodeRequest codeRequest = new VerifyCodeRequest(emailNotificationType, code);
 
         var response =
                 makeRequest(
@@ -68,16 +78,17 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_VERIFIED));
     }
 
-    @Test
-    void shouldResetCodeRequestCountWhenSuccessfulEmailCodeAndReturn204()
-            throws Json.JsonException {
+    @ParameterizedTest
+    @MethodSource("emailNotificationTypes")
+    void shouldResetCodeRequestCountWhenSuccessfulEmailCodeAndReturn204(
+            NotificationType emailNotificationType) throws Json.JsonException {
         var sessionId = redis.createSession();
         redis.incrementSessionCodeRequestCount(sessionId);
         redis.incrementSessionCodeRequestCount(sessionId);
         redis.incrementSessionCodeRequestCount(sessionId);
         setUpTestWithoutSignUp(sessionId, withScope());
-        String code = redis.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
-        VerifyCodeRequest codeRequest = new VerifyCodeRequest(VERIFY_EMAIL, code);
+        String code = redis.generateAndSaveEmailCode(EMAIL_ADDRESS, 900, emailNotificationType);
+        VerifyCodeRequest codeRequest = new VerifyCodeRequest(emailNotificationType, code);
 
         var response =
                 makeRequest(
@@ -90,14 +101,16 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_VERIFIED));
     }
 
-    @Test
-    void shouldCallVerifyCodeEndpointAndReturn400WhenEmailCodeHasExpired()
+    @ParameterizedTest
+    @MethodSource("emailNotificationTypes")
+    void shouldCallVerifyCodeEndpointAndReturn400WhenEmailCodeHasExpired(
+            NotificationType emailNotificationType)
             throws InterruptedException, Json.JsonException {
         String sessionId = redis.createSession();
         setUpTestWithoutSignUp(sessionId, withScope());
 
-        String code = redis.generateAndSaveEmailCode(EMAIL_ADDRESS, 2);
-        VerifyCodeRequest codeRequest = new VerifyCodeRequest(VERIFY_EMAIL, code);
+        String code = redis.generateAndSaveEmailCode(EMAIL_ADDRESS, 2, emailNotificationType);
+        VerifyCodeRequest codeRequest = new VerifyCodeRequest(emailNotificationType, code);
 
         TimeUnit.SECONDS.sleep(3);
 
@@ -113,13 +126,14 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(INVALID_CODE_SENT));
     }
 
-    @Test
-    void shouldReturn400WithErrorWhenUserTriesEmailCodeThatTheyHaveAlreadyUsed()
-            throws Json.JsonException {
+    @ParameterizedTest
+    @MethodSource("emailNotificationTypes")
+    void shouldReturn400WithErrorWhenUserTriesEmailCodeThatTheyHaveAlreadyUsed(
+            NotificationType emailNotificationType) throws Json.JsonException {
         String sessionId = redis.createSession();
         setUpTestWithoutSignUp(sessionId, withScope());
-        String code = redis.generateAndSaveEmailCode(EMAIL_ADDRESS, 900);
-        VerifyCodeRequest codeRequest = new VerifyCodeRequest(VERIFY_EMAIL, code);
+        String code = redis.generateAndSaveEmailCode(EMAIL_ADDRESS, 900, emailNotificationType);
+        VerifyCodeRequest codeRequest = new VerifyCodeRequest(emailNotificationType, code);
 
         var response =
                 makeRequest(
@@ -141,13 +155,15 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_VERIFIED, INVALID_CODE_SENT));
     }
 
-    @Test
-    void shouldReturnMaxCodesReachedIfEmailCodeIsBlocked() throws Json.JsonException {
+    @ParameterizedTest
+    @MethodSource("emailNotificationTypes")
+    void shouldReturnMaxCodesReachedIfEmailCodeIsBlocked(NotificationType emailNotificationType)
+            throws Json.JsonException {
         String sessionId = redis.createSession();
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
         redis.blockMfaCodesForEmail(EMAIL_ADDRESS);
 
-        VerifyCodeRequest codeRequest = new VerifyCodeRequest(VERIFY_EMAIL, "123456");
+        VerifyCodeRequest codeRequest = new VerifyCodeRequest(emailNotificationType, "123456");
 
         var response =
                 makeRequest(
