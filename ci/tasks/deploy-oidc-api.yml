@@ -16,6 +16,7 @@ params:
   DNS_STATE_KEY: ((dns-state-key))
   DOC_APP_RP_CLIENT_ID: ((build-doc-app-rp-client-id))
   STATE_BUCKET: digital-identity-dev-tfstate
+  STATE_LOCKING_TABLE: digital-identity-dev-tfstate-locking
   TEST_CLIENT_VERIFY_EMAIL_OTP: ((test-client-verify-email-otp))
   TEST_CLIENT_VERIFY_PHONE_NUMBER_OTP: ((test-client-verify-phone-number-otp))
   SPOT_ACCOUNT_NUMBER: ((staging-spot-account-number))
@@ -38,13 +39,20 @@ run:
   args:
     - -euc
     - |
+      if [[ "${DEPLOY_ENVIRONMENT}" == "build" ]]; then
+        ENABLE_STATE_LOCKING=true
+      else
+        ENABLE_STATE_LOCKING=false
+      fi
+
       cd "api-terraform-src/ci/terraform/oidc"
       terraform init -input=false \
         -backend-config "role_arn=${DEPLOYER_ROLE_ARN}" \
         -backend-config "bucket=${STATE_BUCKET}" \
         -backend-config "key=${DEPLOY_ENVIRONMENT}-terraform.tfstate" \
         -backend-config "encrypt=true" \
-        -backend-config "region=eu-west-2"
+        -backend-config "region=eu-west-2" \
+        -backend-config "dynamodb_table=${STATE_LOCKING_TABLE}"
 
       terraform apply -auto-approve \
         -var "oidc_api_lambda_zip_file=$(ls -1 ../../../../oidc-api-release/*.zip)" \
@@ -71,5 +79,6 @@ run:
         -var "spot_response_queue_kms_arn=${SPOT_RESPONSE_QUEUE_KMS_ARN}" \
         -var "txma_account_id=${TXMA_ACCOUNT_ID}" \
         -var-file "${DEPLOY_ENVIRONMENT}-overrides.tfvars" \
+        -lock "${ENABLE_STATE_LOCKING}"
 
       terraform output --json > ../../../../terraform-outputs/${DEPLOY_ENVIRONMENT}-terraform-outputs.json
