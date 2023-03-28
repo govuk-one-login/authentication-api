@@ -8,15 +8,19 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.authentication.frontendapi.entity.SendNotificationRequest;
+import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
+import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -31,6 +35,15 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import java.util.Map;
 import java.util.Optional;
 
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_EMAIL_CODE_SENT;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_EMAIL_CODE_SENT_FOR_TEST_CLIENT;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.EMAIL_CODE_SENT;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.EMAIL_CODE_SENT_FOR_TEST_CLIENT;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.EMAIL_INVALID_CODE_REQUEST;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PHONE_CODE_SENT;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PHONE_CODE_SENT_FOR_TEST_CLIENT;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PHONE_INVALID_CODE_REQUEST;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1001;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1002;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1011;
@@ -58,6 +71,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
     private final AwsSqsClient sqsClient;
     private final CodeGeneratorService codeGeneratorService;
     private final CodeStorageService codeStorageService;
+    private final AuditService auditService;
 
     public SendNotificationHandler(
             ConfigurationService configurationService,
@@ -67,7 +81,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             AuthenticationService authenticationService,
             AwsSqsClient sqsClient,
             CodeGeneratorService codeGeneratorService,
-            CodeStorageService codeStorageService) {
+            CodeStorageService codeStorageService,
+            AuditService auditService) {
         super(
                 SendNotificationRequest.class,
                 configurationService,
@@ -78,6 +93,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         this.sqsClient = sqsClient;
         this.codeGeneratorService = codeGeneratorService;
         this.codeStorageService = codeStorageService;
+        this.auditService = auditService;
     }
 
     public SendNotificationHandler() {
@@ -89,6 +105,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                         configurationService.getSqsEndpointUri());
         this.codeGeneratorService = new CodeGeneratorService();
         this.codeStorageService = new CodeStorageService(configurationService);
+        this.auditService = new AuditService(configurationService);
     }
 
     @Override
@@ -128,6 +145,19 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                             userContext.getSession(),
                             request.getNotificationType());
             if (codeRequestValid.isPresent()) {
+                auditService.submitAuditEvent(
+                        getInvalidCodeAuditEventFromNotificationType(request.getNotificationType()),
+                        userContext.getClientSessionId(),
+                        userContext.getSession().getSessionId(),
+                        userContext
+                                .getClient()
+                                .map(ClientRegistry::getClientID)
+                                .orElse(AuditService.UNKNOWN),
+                        userContext.getSession().getInternalCommonSubjectIdentifier(),
+                        request.getEmail(),
+                        IpAddressHelper.extractIpAddress(input),
+                        Optional.ofNullable(request.getPhoneNumber()).orElse(AuditService.UNKNOWN),
+                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
                 return generateApiGatewayProxyErrorResponse(400, codeRequestValid.get());
             }
             switch (request.getNotificationType()) {
@@ -138,7 +168,9 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                             request.getNotificationType(),
                             userContext.getSession(),
                             userContext,
-                            request.isRequestNewCode());
+                            request.isRequestNewCode(),
+                            request,
+                            input);
                 case VERIFY_PHONE_NUMBER:
                     if (request.getPhoneNumber() == null) {
                         return generateApiGatewayProxyResponse(400, ERROR_1011);
@@ -149,7 +181,9 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                             request.getNotificationType(),
                             userContext.getSession(),
                             userContext,
-                            request.isRequestNewCode());
+                            request.isRequestNewCode(),
+                            request,
+                            input);
             }
             return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
         } catch (SdkClientException ex) {
@@ -167,7 +201,9 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             NotificationType notificationType,
             Session session,
             UserContext userContext,
-            Boolean requestNewCode)
+            Boolean requestNewCode,
+            SendNotificationRequest request,
+            APIGatewayProxyRequestEvent input)
             throws JsonException, ClientNotFoundException {
 
         String code =
@@ -186,7 +222,9 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                         destination, notificationType, code, userContext.getUserLanguage());
 
         sessionService.save(session.incrementCodeRequestCount());
-        if (!isTestClientWithAllowedEmail(userContext, configurationService)) {
+        var testClientWithAllowedEmail =
+                isTestClientWithAllowedEmail(userContext, configurationService);
+        if (!testClientWithAllowedEmail) {
 
             if (notificationType == VERIFY_PHONE_NUMBER) {
                 METRICS.putEmbeddedValue(
@@ -202,6 +240,20 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
             LOG.info("Successfully processed request");
         }
+        auditService.submitAuditEvent(
+                getSuccessfulAuditEventFromNotificationType(
+                        notificationType, testClientWithAllowedEmail),
+                userContext.getClientSessionId(),
+                userContext.getSession().getSessionId(),
+                userContext
+                        .getClient()
+                        .map(ClientRegistry::getClientID)
+                        .orElse(AuditService.UNKNOWN),
+                userContext.getSession().getInternalCommonSubjectIdentifier(),
+                request.getEmail(),
+                IpAddressHelper.extractIpAddress(input),
+                Optional.ofNullable(request.getPhoneNumber()).orElse(AuditService.UNKNOWN),
+                PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
         return generateEmptySuccessApiGatewayResponse();
     }
 
@@ -280,6 +332,44 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             default:
                 LOG.error("Invalid NotificationType sent");
                 throw new RuntimeException("Invalid NotificationType sent");
+        }
+    }
+
+    private AuditableEvent getSuccessfulAuditEventFromNotificationType(
+            NotificationType notificationType, boolean isTestClient) {
+        switch (notificationType) {
+            case VERIFY_EMAIL:
+                return isTestClient ? EMAIL_CODE_SENT_FOR_TEST_CLIENT : EMAIL_CODE_SENT;
+            case VERIFY_PHONE_NUMBER:
+                return isTestClient ? PHONE_CODE_SENT_FOR_TEST_CLIENT : PHONE_CODE_SENT;
+            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
+                return isTestClient
+                        ? ACCOUNT_RECOVERY_EMAIL_CODE_SENT_FOR_TEST_CLIENT
+                        : ACCOUNT_RECOVERY_EMAIL_CODE_SENT;
+            default:
+                LOG.error(
+                        "No successful Audit event configured for NotificationType: {}",
+                        notificationType);
+                throw new RuntimeException(
+                        "No Successful Audit event configured for NotificationType");
+        }
+    }
+
+    private AuditableEvent getInvalidCodeAuditEventFromNotificationType(
+            NotificationType notificationType) {
+        switch (notificationType) {
+            case VERIFY_EMAIL:
+                return EMAIL_INVALID_CODE_REQUEST;
+            case VERIFY_PHONE_NUMBER:
+                return PHONE_INVALID_CODE_REQUEST;
+            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
+                return ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST;
+            default:
+                LOG.error(
+                        "No invalid code request Audit event configured for NotificationType: {}",
+                        notificationType);
+                throw new RuntimeException(
+                        "No Invalid Code Audit event configured for NotificationType");
         }
     }
 }
