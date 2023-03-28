@@ -79,6 +79,6 @@ run:
         -var "spot_response_queue_kms_arn=${SPOT_RESPONSE_QUEUE_KMS_ARN}" \
         -var "txma_account_id=${TXMA_ACCOUNT_ID}" \
         -var-file "${DEPLOY_ENVIRONMENT}-overrides.tfvars" \
-        -lock "${ENABLE_STATE_LOCKING}"
+        -lock="${ENABLE_STATE_LOCKING}"
 
       terraform output --json > ../../../../terraform-outputs/${DEPLOY_ENVIRONMENT}-terraform-outputs.json

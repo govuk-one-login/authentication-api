@@ -51,6 +51,6 @@ run:
         -var "txma_obfuscation_secret_arn=${TXMA_OBFUSCATION_SECRET_ARN}" \
         -var "txma_obfuscation_secret_kms_key_arn=${TXMA_OBFUSCATION_SECRET_KMS_KEY_ARN}" \
         -var-file "${DEPLOY_ENVIRONMENT}-overrides.tfvars" \
-        -lock "${ENABLE_STATE_LOCKING}"
+        -lock="${ENABLE_STATE_LOCKING}"
 
       terraform output --json > ../../../../terraform-outputs/${DEPLOY_ENVIRONMENT}-terraform-outputs.json
