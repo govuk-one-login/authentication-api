@@ -7,6 +7,7 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
@@ -18,15 +19,20 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.Mockito;
 import software.amazon.awssdk.core.exception.SdkClientException;
+import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -39,6 +45,7 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -52,18 +59,30 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyMap;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_EMAIL_CODE_SENT;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_EMAIL_CODE_SENT_FOR_TEST_CLIENT;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.EMAIL_CODE_SENT;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.EMAIL_CODE_SENT_FOR_TEST_CLIENT;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.EMAIL_INVALID_CODE_REQUEST;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PHONE_CODE_SENT;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PHONE_INVALID_CODE_REQUEST;
+import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
+import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.PERSISTENT_ID;
 import static uk.gov.di.authentication.shared.entity.NotificationType.ACCOUNT_CREATED_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
+import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -75,6 +94,9 @@ class SendNotificationHandlerTest {
     private static final String TEST_SIX_DIGIT_CODE = "123456";
     private static final long CODE_EXPIRY_TIME = 900;
     private static final long BLOCKED_EMAIL_DURATION = 799;
+    private final String expectedCommonSubject =
+            ClientSubjectHelper.calculatePairwiseIdentifier(
+                    new Subject().getValue(), "test.account.gov.uk", SaltHelper.generateNewSalt());
     private static final String CLIENT_ID = "client-id";
     private static final String TEST_CLIENT_ID = "test-client-id";
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
@@ -86,6 +108,7 @@ class SendNotificationHandlerTest {
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ClientService clientService = mock(ClientService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
+    private final AuditService auditService = mock(AuditService.class);
     private final ClientSession clientSession = mock(ClientSession.class);
     private final ClientRegistry clientRegistry =
             new ClientRegistry().withTestClient(false).withClientID(CLIENT_ID);
@@ -102,7 +125,9 @@ class SendNotificationHandlerTest {
     private static final Json objectMapper = SerializationService.getInstance();
 
     private final Session session =
-            new Session(IdGenerator.generate()).setEmailAddress(TEST_EMAIL_ADDRESS);
+            new Session(IdGenerator.generate())
+                    .setEmailAddress(TEST_EMAIL_ADDRESS)
+                    .setInternalCommonSubjectIdentifier(expectedCommonSubject);
 
     private final SendNotificationHandler handler =
             new SendNotificationHandler(
@@ -113,7 +138,8 @@ class SendNotificationHandlerTest {
                     authenticationService,
                     awsSqsClient,
                     codeGeneratorService,
-                    codeStorageService);
+                    codeStorageService,
+                    auditService);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging =
@@ -152,29 +178,27 @@ class SendNotificationHandlerTest {
     @EnumSource(
             value = NotificationType.class,
             names = {"VERIFY_EMAIL", "VERIFY_CHANGE_HOW_GET_SECURITY_CODES"})
-    void shouldReturn204AndPutMessageOnQueueForAValidVerifyEmailRequest(
-            NotificationType notificationType) throws Json.JsonException {
-        NotifyRequest notifyRequest =
-                new NotifyRequest(
-                        TEST_EMAIL_ADDRESS,
-                        notificationType,
-                        TEST_SIX_DIGIT_CODE,
-                        SupportedLanguage.EN);
-        String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
-
+    void shouldReturn204ForValidVerifyEmailRequest(NotificationType notificationType)
+            throws Json.JsonException {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                        TEST_EMAIL_ADDRESS, notificationType));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        var result =
+                sendRequest(
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS, notificationType));
 
         assertEquals(204, result.getStatusCode());
-
-        verify(awsSqsClient).send(serialisedRequest);
+        verify(awsSqsClient)
+                .send(
+                        objectMapper.writeValueAsString(
+                                new NotifyRequest(
+                                        TEST_EMAIL_ADDRESS,
+                                        notificationType,
+                                        TEST_SIX_DIGIT_CODE,
+                                        SupportedLanguage.EN)));
+        verify(codeGeneratorService).sixDigitCode();
         verify(codeStorageService).getOtpCode(TEST_EMAIL_ADDRESS, notificationType);
         verify(codeStorageService)
                 .saveOtpCode(
@@ -183,68 +207,37 @@ class SendNotificationHandlerTest {
                         CODE_EXPIRY_TIME,
                         notificationType);
         verify(sessionService).save(argThat(this::isSessionWithEmailSent));
-    }
-
-    @Test
-    void shouldUseExistingOtpCodeIfOneExists() throws Json.JsonException {
-        usingValidSession();
-        usingValidClientSession(CLIENT_ID);
-
-        when(codeStorageService.getOtpCode(any(String.class), any(NotificationType.class)))
-                .thenReturn(Optional.of(TEST_SIX_DIGIT_CODE));
-
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\" }",
-                        TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-        var notifyRequest =
-                new NotifyRequest(
-                        TEST_PHONE_NUMBER,
-                        VERIFY_PHONE_NUMBER,
-                        TEST_SIX_DIGIT_CODE,
-                        SupportedLanguage.EN);
-        verify(awsSqsClient).send(objectMapper.writeValueAsString(notifyRequest));
-        String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
-
-        verify(codeGeneratorService, never()).sixDigitCode();
-        verify(codeStorageService, never())
-                .saveOtpCode(
-                        any(String.class),
-                        any(String.class),
-                        anyLong(),
-                        any(NotificationType.class));
-        verify(awsSqsClient).send(serialisedRequest);
-        assertThat(result, hasStatus(204));
+        verify(auditService)
+                .submitAuditEvent(
+                        notificationType.equals(VERIFY_EMAIL)
+                                ? EMAIL_CODE_SENT
+                                : ACCOUNT_RECOVERY_EMAIL_CODE_SENT,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        CLIENT_ID,
+                        expectedCommonSubject,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_ID);
     }
 
     @ParameterizedTest
     @EnumSource(
             value = NotificationType.class,
             names = {"VERIFY_EMAIL", "VERIFY_CHANGE_HOW_GET_SECURITY_CODES"})
-    void shouldGenerateNewOtpCodeIfOneExistsWhenNewCodeRequested(NotificationType notificationType)
-            throws Json.JsonException {
+    void shouldReturn204AndGenerateNewOtpCodeIfOneExistsWhenNewCodeRequested(
+            NotificationType notificationType) throws Json.JsonException {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"requestNewCode\": \"%s\" }",
-                        TEST_EMAIL_ADDRESS, notificationType, true));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-        var notifyRequest =
-                new NotifyRequest(
-                        TEST_EMAIL_ADDRESS,
-                        notificationType,
-                        TEST_SIX_DIGIT_CODE,
-                        SupportedLanguage.EN);
-        verify(awsSqsClient).send(objectMapper.writeValueAsString(notifyRequest));
-        String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
+        var result =
+                sendRequest(
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"requestNewCode\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS, notificationType, true));
 
+        assertThat(result, hasStatus(204));
         verify(codeGeneratorService).sixDigitCode();
         verify(codeStorageService, never()).getOtpCode(any(), any());
         verify(codeStorageService)
@@ -253,8 +246,70 @@ class SendNotificationHandlerTest {
                         TEST_SIX_DIGIT_CODE,
                         CODE_EXPIRY_TIME,
                         notificationType);
-        verify(awsSqsClient).send(serialisedRequest);
+        verify(awsSqsClient)
+                .send(
+                        objectMapper.writeValueAsString(
+                                new NotifyRequest(
+                                        TEST_EMAIL_ADDRESS,
+                                        notificationType,
+                                        TEST_SIX_DIGIT_CODE,
+                                        SupportedLanguage.EN)));
+        verify(auditService)
+                .submitAuditEvent(
+                        notificationType.equals(VERIFY_EMAIL)
+                                ? EMAIL_CODE_SENT
+                                : ACCOUNT_RECOVERY_EMAIL_CODE_SENT,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        CLIENT_ID,
+                        expectedCommonSubject,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_ID);
+    }
+
+    @Test
+    void shouldReturn204AndUseExistingOtpCodeIfOneExistsForVerifyPhoneRequest()
+            throws Json.JsonException {
+        usingValidSession();
+        usingValidClientSession(CLIENT_ID);
+        when(codeStorageService.getOtpCode(any(String.class), any(NotificationType.class)))
+                .thenReturn(Optional.of(TEST_SIX_DIGIT_CODE));
+
+        var result =
+                sendRequest(
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER));
+
         assertThat(result, hasStatus(204));
+        verify(codeGeneratorService, never()).sixDigitCode();
+        verify(codeStorageService, never())
+                .saveOtpCode(
+                        any(String.class),
+                        any(String.class),
+                        anyLong(),
+                        any(NotificationType.class));
+        verify(awsSqsClient)
+                .send(
+                        objectMapper.writeValueAsString(
+                                new NotifyRequest(
+                                        TEST_PHONE_NUMBER,
+                                        VERIFY_PHONE_NUMBER,
+                                        TEST_SIX_DIGIT_CODE,
+                                        SupportedLanguage.EN)));
+        verify(auditService)
+                .submitAuditEvent(
+                        PHONE_CODE_SENT,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        CLIENT_ID,
+                        expectedCommonSubject,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        TEST_PHONE_NUMBER,
+                        PERSISTENT_ID);
     }
 
     @ParameterizedTest
@@ -262,29 +317,19 @@ class SendNotificationHandlerTest {
             value = NotificationType.class,
             names = {"VERIFY_EMAIL", "VERIFY_CHANGE_HOW_GET_SECURITY_CODES"})
     void shouldReturn204AndNotPutMessageOnQueueForAValidRequestUsingTestClientWithAllowedEmail(
-            NotificationType notificationType) throws Json.JsonException {
-        when(configurationService.isTestClientsEnabled()).thenReturn(true);
-        NotifyRequest notifyRequest =
-                new NotifyRequest(
-                        TEST_EMAIL_ADDRESS,
-                        notificationType,
-                        TEST_SIX_DIGIT_CODE,
-                        SupportedLanguage.EN);
-        String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
-
+            NotificationType notificationType) {
         usingValidSession();
         usingValidClientSession(TEST_CLIENT_ID);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                        TEST_EMAIL_ADDRESS, notificationType));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        when(configurationService.isTestClientsEnabled()).thenReturn(true);
+
+        var result =
+                sendRequest(
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS, notificationType));
 
         assertEquals(204, result.getStatusCode());
-
-        verify(awsSqsClient, never()).send(serialisedRequest);
+        verifyNoInteractions(awsSqsClient);
         verify(codeStorageService).getOtpCode(TEST_EMAIL_ADDRESS, notificationType);
         verify(codeStorageService)
                 .saveOtpCode(
@@ -293,6 +338,19 @@ class SendNotificationHandlerTest {
                         CODE_EXPIRY_TIME,
                         notificationType);
         verify(sessionService).save(argThat(this::isSessionWithEmailSent));
+        verify(auditService)
+                .submitAuditEvent(
+                        notificationType.equals(VERIFY_EMAIL)
+                                ? EMAIL_CODE_SENT_FOR_TEST_CLIENT
+                                : ACCOUNT_RECOVERY_EMAIL_CODE_SENT_FOR_TEST_CLIENT,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        TEST_CLIENT_ID,
+                        expectedCommonSubject,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_ID);
     }
 
     @ParameterizedTest
@@ -300,31 +358,31 @@ class SendNotificationHandlerTest {
             value = NotificationType.class,
             names = {"VERIFY_EMAIL", "VERIFY_CHANGE_HOW_GET_SECURITY_CODES"})
     void shouldReturn400IfInvalidSessionProvided(NotificationType notificationType) {
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                        TEST_EMAIL_ADDRESS, notificationType));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        var result =
+                sendRequest(
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS, notificationType));
 
         assertEquals(400, result.getStatusCode());
-
-        verify(awsSqsClient, never()).send(anyString());
-        verify(codeStorageService, never())
-                .saveOtpCode(anyString(), anyString(), anyLong(), any(NotificationType.class));
+        verifyNoInteractions(awsSqsClient);
+        verifyNoInteractions(codeStorageService);
         verify(sessionService, never()).save(argThat(this::isSessionWithEmailSent));
+        verifyNoInteractions(auditService);
     }
 
     @Test
     void shouldReturn400IfRequestIsMissingEmail() {
         usingValidSession();
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody("{ }");
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        usingValidClientSession(CLIENT_ID);
+
+        var result = sendRequest("{ }");
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+        verifyNoInteractions(awsSqsClient);
+        verifyNoInteractions(codeStorageService);
+        verifyNoInteractions(auditService);
     }
 
     @ParameterizedTest
@@ -333,76 +391,104 @@ class SendNotificationHandlerTest {
             names = {"VERIFY_EMAIL", "VERIFY_CHANGE_HOW_GET_SECURITY_CODES"})
     void shouldReturn500IfMessageCannotBeSentToQueue(NotificationType notificationType)
             throws Json.JsonException {
-        NotifyRequest notifyRequest =
-                new NotifyRequest(
-                        TEST_EMAIL_ADDRESS,
-                        notificationType,
-                        TEST_SIX_DIGIT_CODE,
-                        SupportedLanguage.EN);
-        String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
-        Mockito.doThrow(SdkClientException.class).when(awsSqsClient).send(serialisedRequest);
-
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                        TEST_EMAIL_ADDRESS, notificationType));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        Mockito.doThrow(SdkClientException.class)
+                .when(awsSqsClient)
+                .send(
+                        objectMapper.writeValueAsString(
+                                new NotifyRequest(
+                                        TEST_EMAIL_ADDRESS,
+                                        notificationType,
+                                        TEST_SIX_DIGIT_CODE,
+                                        SupportedLanguage.EN)));
+
+        var result =
+                sendRequest(
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS, notificationType));
 
         assertEquals(500, result.getStatusCode());
         assertTrue(result.getBody().contains("Error sending message to queue"));
+        verifyNoInteractions(auditService);
     }
 
     @Test
     void shouldReturn400WhenInvalidNotificationType() {
         usingValidSession();
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                        TEST_EMAIL_ADDRESS, "VERIFY_PASSWORD"));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        usingValidClientSession(CLIENT_ID);
+
+        var result =
+                sendRequest(
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS, "VERIFY_PASSWORD"));
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
 
-        verify(awsSqsClient, never()).send(anyString());
-        verify(codeStorageService, never())
-                .saveOtpCode(anyString(), anyString(), anyLong(), any(NotificationType.class));
+        verifyNoInteractions(awsSqsClient);
+        verifyNoInteractions(auditService);
+        verifyNoInteractions(codeStorageService);
     }
 
     @Test
-    void shouldReturn204AndPutMessageOnQueueForAValidVerifyPhoneNumberRequest() {
+    void shouldReturn204ForValidVerifyPhoneNumberRequest() throws Json.JsonException {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\" }",
-                        TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        var result =
+                sendRequest(
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER));
 
         assertEquals(204, result.getStatusCode());
+        verify(codeGeneratorService).sixDigitCode();
+        verify(codeStorageService).getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER);
+        verify(codeStorageService)
+                .saveOtpCode(
+                        TEST_EMAIL_ADDRESS,
+                        TEST_SIX_DIGIT_CODE,
+                        CODE_EXPIRY_TIME,
+                        VERIFY_PHONE_NUMBER);
+        verify(awsSqsClient)
+                .send(
+                        objectMapper.writeValueAsString(
+                                new NotifyRequest(
+                                        TEST_PHONE_NUMBER,
+                                        VERIFY_PHONE_NUMBER,
+                                        TEST_SIX_DIGIT_CODE,
+                                        SupportedLanguage.EN)));
+        verify(auditService)
+                .submitAuditEvent(
+                        PHONE_CODE_SENT,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        CLIENT_ID,
+                        expectedCommonSubject,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        TEST_PHONE_NUMBER,
+                        PERSISTENT_ID);
     }
 
     @Test
-    void shouldReturn400WhenVerifyTypeIsVerifyPhoneNumberButRequestIsMissingNumber() {
+    void shouldReturn400ForVerifyPhoneNumberRequestWhenPhoneNumberIsMissing() {
         usingValidSession();
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                        TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        usingValidClientSession(CLIENT_ID);
+
+        var result =
+                sendRequest(
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER));
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1011));
+        verifyNoInteractions(awsSqsClient);
+        verifyNoInteractions(auditService);
     }
 
     @ParameterizedTest
@@ -413,21 +499,22 @@ class SendNotificationHandlerTest {
             NotificationType notificationType) {
         maxOutCodeRequestCount();
         usingValidSession();
+        usingValidClientSession(CLIENT_ID);
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                        TEST_EMAIL_ADDRESS, notificationType));
-
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        var result =
+                sendRequest(
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS, notificationType));
 
         assertEquals(400, result.getStatusCode());
+        FrontendAuditableEvent expectedAuditableEvent = null;
         if (VERIFY_EMAIL.equals(notificationType)) {
             assertThat(result, hasJsonBody(ErrorResponse.ERROR_1029));
+            expectedAuditableEvent = EMAIL_INVALID_CODE_REQUEST;
         } else if (VERIFY_CHANGE_HOW_GET_SECURITY_CODES.equals(notificationType)) {
             assertThat(result, hasJsonBody(ErrorResponse.ERROR_1046));
+            expectedAuditableEvent = ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST;
         }
         verify(codeStorageService)
                 .saveBlockedForEmail(
@@ -440,21 +527,31 @@ class SendNotificationHandlerTest {
                         TEST_SIX_DIGIT_CODE,
                         CODE_EXPIRY_TIME,
                         notificationType);
+        verifyNoInteractions(awsSqsClient);
+        verify(auditService)
+                .submitAuditEvent(
+                        expectedAuditableEvent,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        CLIENT_ID,
+                        expectedCommonSubject,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_ID);
     }
 
     @Test
     void shouldReturn400IfUserHasReachedThePhoneCodeRequestLimit() {
         maxOutCodeRequestCount();
         usingValidSession();
+        usingValidClientSession(CLIENT_ID);
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                        TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER));
-
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        var result =
+                sendRequest(
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\",  \"phoneNumber\": \"%s\"  }",
+                                TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER));
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1030));
@@ -469,34 +566,90 @@ class SendNotificationHandlerTest {
                         TEST_SIX_DIGIT_CODE,
                         CODE_EXPIRY_TIME,
                         VERIFY_PHONE_NUMBER);
+        verifyNoInteractions(awsSqsClient);
+        verify(auditService)
+                .submitAuditEvent(
+                        PHONE_INVALID_CODE_REQUEST,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        CLIENT_ID,
+                        expectedCommonSubject,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        TEST_PHONE_NUMBER,
+                        PERSISTENT_ID);
     }
 
     @ParameterizedTest
     @EnumSource(
             value = NotificationType.class,
             names = {"VERIFY_EMAIL", "VERIFY_CHANGE_HOW_GET_SECURITY_CODES"})
-    void shouldReturn400IfUserIsBlockedFromRequestingAnyMoreOtpCodes(
+    void shouldReturn400IfUserIsBlockedFromRequestingAnyMoreEmailOtpCodes(
             NotificationType notificationType) {
         when(codeStorageService.isBlockedForEmail(
                         TEST_EMAIL_ADDRESS, CODE_REQUEST_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
         usingValidSession();
+        usingValidClientSession(CLIENT_ID);
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                        TEST_EMAIL_ADDRESS, notificationType));
-
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        var result =
+                sendRequest(
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS, notificationType));
 
         assertEquals(400, result.getStatusCode());
+        FrontendAuditableEvent expectedAuditableEvent = null;
         if (VERIFY_EMAIL.equals(notificationType)) {
             assertThat(result, hasJsonBody(ErrorResponse.ERROR_1031));
+            expectedAuditableEvent = EMAIL_INVALID_CODE_REQUEST;
         } else if (VERIFY_CHANGE_HOW_GET_SECURITY_CODES.equals(notificationType)) {
             assertThat(result, hasJsonBody(ErrorResponse.ERROR_1047));
+            expectedAuditableEvent = ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST;
         }
+        verifyNoInteractions(awsSqsClient);
+        verify(auditService)
+                .submitAuditEvent(
+                        expectedAuditableEvent,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        CLIENT_ID,
+                        expectedCommonSubject,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_ID);
+    }
+
+    @Test
+    void shouldReturn400IfUserIsBlockedFromRequestingAnyMorePhoneOtpCodes() {
+        when(codeStorageService.isBlockedForEmail(
+                        TEST_EMAIL_ADDRESS, CODE_REQUEST_BLOCKED_KEY_PREFIX))
+                .thenReturn(true);
+        usingValidSession();
+        usingValidClientSession(CLIENT_ID);
+
+        var result =
+                sendRequest(
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\",  \"phoneNumber\": \"%s\"  }",
+                                TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER));
+
+        assertEquals(400, result.getStatusCode());
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1032));
+
+        verifyNoInteractions(awsSqsClient);
+        verify(auditService)
+                .submitAuditEvent(
+                        PHONE_INVALID_CODE_REQUEST,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        CLIENT_ID,
+                        expectedCommonSubject,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        TEST_PHONE_NUMBER,
+                        PERSISTENT_ID);
     }
 
     @ParameterizedTest
@@ -505,18 +658,16 @@ class SendNotificationHandlerTest {
             names = {"VERIFY_EMAIL", "VERIFY_CHANGE_HOW_GET_SECURITY_CODES"})
     void shouldReturn400IfUserIsBlockedFromEnteringEmailOtpCodes(
             NotificationType notificationType) {
+        usingValidSession();
+        usingValidClientSession(CLIENT_ID);
         when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
-        usingValidSession();
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                        TEST_EMAIL_ADDRESS, notificationType));
-
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        var result =
+                sendRequest(
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS, notificationType));
 
         assertEquals(400, result.getStatusCode());
         if (VERIFY_EMAIL.equals(notificationType)) {
@@ -524,6 +675,22 @@ class SendNotificationHandlerTest {
         } else if (VERIFY_CHANGE_HOW_GET_SECURITY_CODES.equals(notificationType)) {
             assertThat(result, hasJsonBody(ErrorResponse.ERROR_1048));
         }
+        var expectedAuditableEvent =
+                notificationType.equals(VERIFY_EMAIL)
+                        ? EMAIL_INVALID_CODE_REQUEST
+                        : ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST;
+        verifyNoInteractions(awsSqsClient);
+        verify(auditService)
+                .submitAuditEvent(
+                        expectedAuditableEvent,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        CLIENT_ID,
+                        expectedCommonSubject,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_ID);
     }
 
     @Test
@@ -531,59 +698,80 @@ class SendNotificationHandlerTest {
         when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
         usingValidSession();
+        usingValidClientSession(CLIENT_ID);
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                        TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER));
-
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        var result =
+                sendRequest(
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER));
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1034));
+        verifyNoInteractions(awsSqsClient);
+        verify(auditService)
+                .submitAuditEvent(
+                        PHONE_INVALID_CODE_REQUEST,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        CLIENT_ID,
+                        expectedCommonSubject,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_ID);
     }
 
     @Test
     void shouldReturn204WhenSendingAccountCreationEmail() throws Json.JsonException {
         usingValidSession();
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        usingValidClientSession(CLIENT_ID);
+        var event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
                         TEST_EMAIL_ADDRESS, ACCOUNT_CREATED_CONFIRMATION));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        var result = handler.handleRequest(event, context);
 
-        NotifyRequest notifyRequest =
+        var notifyRequest =
                 new NotifyRequest(
                         TEST_EMAIL_ADDRESS, ACCOUNT_CREATED_CONFIRMATION, SupportedLanguage.EN);
         verify(awsSqsClient).send(objectMapper.writeValueAsString(notifyRequest));
+        verifyNoInteractions(codeStorageService);
+        verifyNoInteractions(auditService);
 
         assertEquals(204, result.getStatusCode());
     }
 
     @Test
-    void shouldReturn204AndNotSendAccountCreationEmailForTestClientAndTestUser()
-            throws Json.JsonException {
+    void shouldReturn204AndNotSendAccountCreationEmailForTestClientAndTestUser() {
         usingValidSession();
         usingValidClientSession(TEST_CLIENT_ID);
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                        TEST_EMAIL_ADDRESS, ACCOUNT_CREATED_CONFIRMATION));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
-        NotifyRequest notifyRequest =
-                new NotifyRequest(
-                        TEST_EMAIL_ADDRESS, ACCOUNT_CREATED_CONFIRMATION, SupportedLanguage.EN);
-        verify(awsSqsClient, never()).send(objectMapper.writeValueAsString(notifyRequest));
+        var result =
+                sendRequest(
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS, ACCOUNT_CREATED_CONFIRMATION));
 
         assertEquals(204, result.getStatusCode());
+        verifyNoInteractions(awsSqsClient);
+        verifyNoInteractions(auditService);
+    }
+
+    private APIGatewayProxyResponseEvent sendRequest(String body) {
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        Map<String, String> headers = new HashMap<>();
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
+        headers.put("Session-Id", session.getSessionId());
+        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
+        event.setHeaders(headers);
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setBody(body);
+
+        return handler.handleRequest(event, context);
     }
 
     private void maxOutCodeRequestCount() {
@@ -601,12 +789,10 @@ class SendNotificationHandlerTest {
     }
 
     private void usingValidClientSession(String clientId) {
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
         var authRequest =
                 new AuthenticationRequest.Builder(
                                 new ResponseType(ResponseType.Value.CODE),
-                                scope,
+                                new Scope(OIDCScopeValue.OPENID),
                                 new ClientID(clientId),
                                 REDIRECT_URI)
                         .state(new State())
