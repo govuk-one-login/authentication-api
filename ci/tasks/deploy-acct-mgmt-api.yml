@@ -61,6 +61,6 @@ run:
         -var "test_clients_enabled=${TEST_CLIENTS_ENABLED}" \
         -var-file "${DEPLOY_ENVIRONMENT}-overrides.tfvars" \
         -var-file ${DEPLOY_ENVIRONMENT}-sizing.tfvars \
-        -lock "${ENABLE_STATE_LOCKING}"
+        -lock="${ENABLE_STATE_LOCKING}"
 
       terraform output --json > ../../../../terraform-outputs/${DEPLOY_ENVIRONMENT}-account-managment-api-terraform-outputs.json
