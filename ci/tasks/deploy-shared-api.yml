@@ -32,6 +32,12 @@ run:
         TEST_USERS="[]"
       fi
 
+      if test -f "test-users-seed-data/test_account_recovery_blocks.vars"; then
+        TEST_ACCOUNT_RECOVERY_BLOCKS=$(cat test-users-seed-data/test_account_recovery_blocks.vars)
+      else
+        TEST_ACCOUNT_RECOVERY_BLOCKS="[]"
+      fi
+
       if [[ "${DEPLOY_ENVIRONMENT}" == "build" ]]; then
         ENABLE_STATE_LOCKING=true
       else
@@ -54,6 +60,7 @@ run:
         -var 'logging_endpoint_arns=["arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prod"]' \
         -var "test_client_email_allowlist=${TEST_CLIENT_EMAIL_ALLOWLIST}" \
         -var "test_users=${TEST_USERS}" \
+        -var "test_account_recovery_blocks=${TEST_ACCOUNT_RECOVERY_BLOCKS}" \
         -var "password_pepper=${PASSWORD_PEPPER}" \
         -var "common_state_bucket=${STATE_BUCKET}" \
         -var "di_tools_signing_profile_version_arn=${DI_TOOLS_SIGNING_PROFILE_VERSION_ARN}" \
