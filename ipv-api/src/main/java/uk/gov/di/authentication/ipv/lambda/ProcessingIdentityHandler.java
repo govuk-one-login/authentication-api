@@ -120,8 +120,8 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                             .map(UserProfile::getEmail)
                             .orElse(AuditService.UNKNOWN),
                     IpAddressHelper.extractIpAddress(input),
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                    AuditService.UNKNOWN);
+                    AuditService.UNKNOWN,
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
             sessionService.save(userContext.getSession());
             LOG.info(
                     "Generating ProcessingIdentityResponse with ProcessingIdentityStatus: {}",
