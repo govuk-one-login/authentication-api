@@ -162,7 +162,7 @@ class ResetPasswordRequestHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         event.setHeaders(headers);
-        event.setBody(format("{ \"email\": \"%s\", \"useCodeFlow\": true }", TEST_EMAIL_ADDRESS));
+        event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(204, result.getStatusCode());
@@ -206,7 +206,7 @@ class ResetPasswordRequestHandlerTest {
         var event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         event.setHeaders(headers);
-        event.setBody(format("{ \"email\": \"%s\", \"useCodeFlow\": true }", TEST_EMAIL_ADDRESS));
+        event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
         var result = handler.handleRequest(event, context);
 
         assertEquals(204, result.getStatusCode());
@@ -248,7 +248,7 @@ class ResetPasswordRequestHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         event.setHeaders(headers);
-        event.setBody(format("{ \"email\": \"%s\", \"useCodeFlow\": true }", TEST_EMAIL_ADDRESS));
+        event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         NotifyRequest notifyRequest =
@@ -315,8 +315,7 @@ class ResetPasswordRequestHandlerTest {
         headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
         headers.put("Session-Id", session.getSessionId());
         event.setHeaders(headers);
-        event.setBody(
-                format("{ \"email\": \"%s\", \"useCodeFlow\": \"%s\"}", TEST_EMAIL_ADDRESS, true));
+        event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(500, result.getStatusCode());
