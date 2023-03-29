@@ -12,6 +12,7 @@ language_cy_enabled                = true
 internal_sector_uri                = "https://identity.build.account.gov.uk"
 extended_feature_flags_enabled     = true
 account_recovery_block_enabled     = true
+custom_doc_app_claim_enabled       = true
 
 blocked_email_duration                    = 30
 otp_code_ttl_duration                     = 120
