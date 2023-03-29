@@ -45,7 +45,6 @@ import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSI
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.UNKNOWN;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
@@ -114,7 +113,6 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
             }
             var persistentId =
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
-            attachLogFieldToLogs(PERSISTENT_SESSION_ID, persistentId);
             var rpClientID = userContext.getClient().map(ClientRegistry::getClientID);
             attachLogFieldToLogs(CLIENT_ID, rpClientID.orElse(UNKNOWN));
             LOG.info("IPVAuthorisationHandler received request");

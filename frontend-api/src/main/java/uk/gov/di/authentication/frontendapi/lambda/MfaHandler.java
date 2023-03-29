@@ -41,7 +41,6 @@ import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHO
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
@@ -115,7 +114,6 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
 
             attachSessionIdToLogs(userContext.getSession().getSessionId());
-            attachLogFieldToLogs(PERSISTENT_SESSION_ID, persistentSessionId);
             attachLogFieldToLogs(
                     CLIENT_ID,
                     userContext.getClient().map(ClientRegistry::getClientID).orElse("unknown"));

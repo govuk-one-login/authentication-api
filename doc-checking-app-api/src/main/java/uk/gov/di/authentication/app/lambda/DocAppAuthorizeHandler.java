@@ -41,6 +41,7 @@ import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segm
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
@@ -138,6 +139,9 @@ public class DocAppAuthorizeHandler
                             configurationService.getHeadersCaseInsensitive());
             attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
             attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
+            attachLogFieldToLogs(
+                    PERSISTENT_SESSION_ID,
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
             var clientID = new ClientID(configurationService.getDocAppAuthorisationClientId());
             attachLogFieldToLogs(CLIENT_ID, clientID.getValue());
             var clientRegistry =

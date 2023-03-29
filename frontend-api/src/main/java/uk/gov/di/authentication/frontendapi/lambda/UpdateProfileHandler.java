@@ -49,7 +49,6 @@ import static uk.gov.di.authentication.shared.entity.MFAMethodType.AUTH_APP;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 
 public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileRequest>
@@ -127,7 +126,6 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                 PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
 
         LogLineHelper.attachSessionIdToLogs(session);
-        attachLogFieldToLogs(PERSISTENT_SESSION_ID, persistentSessionId);
 
         LOG.info("Processing request");
 
