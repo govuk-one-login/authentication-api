@@ -36,8 +36,6 @@ import java.util.Optional;
 import static uk.gov.di.authentication.shared.entity.Session.AccountState.NEW;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
@@ -90,9 +88,6 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
             UserContext userContext) {
 
         attachSessionIdToLogs(userContext.getSession());
-        attachLogFieldToLogs(
-                CLIENT_ID,
-                userContext.getClient().map(ClientRegistry::getClientID).orElse("unknown"));
 
         LOG.info("Received request");
 

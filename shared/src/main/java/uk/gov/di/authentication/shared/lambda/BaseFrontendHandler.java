@@ -10,6 +10,7 @@ import uk.gov.di.authentication.shared.entity.BaseFrontendRequest;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.helpers.LogLineHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
@@ -32,6 +33,7 @@ import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segm
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.UNKNOWN;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
@@ -156,11 +158,15 @@ public abstract class BaseFrontendHandler<T>
 
         userContextBuilder.withClientSessionId(clientSessionId);
 
-        clientSession
-                .map(ClientSession::getAuthRequestParams)
-                .map(m -> m.get(CLIENT_ID))
-                .flatMap(v -> v.stream().findFirst())
-                .ifPresent(c -> userContextBuilder.withClient(clientService.getClient(c)));
+        var clientID =
+                clientSession
+                        .map(ClientSession::getAuthRequestParams)
+                        .map(t -> t.get(CLIENT_ID))
+                        .flatMap(v -> v.stream().findFirst());
+
+        attachLogFieldToLogs(LogLineHelper.LogFieldName.CLIENT_ID, clientID.orElse(UNKNOWN));
+
+        clientID.ifPresent(c -> userContextBuilder.withClient(clientService.getClient(c)));
 
         clientSession.ifPresent(userContextBuilder::withClientSession);
 
