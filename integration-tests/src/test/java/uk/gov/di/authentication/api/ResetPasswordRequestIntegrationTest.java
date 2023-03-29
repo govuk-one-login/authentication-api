@@ -43,7 +43,7 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
 
         var response =
                 makeRequest(
-                        Optional.of(new ResetPasswordRequest(email, true)),
+                        Optional.of(new ResetPasswordRequest(email)),
                         constructFrontendHeaders(sessionId, null, persistentSessionId),
                         Map.of());
 
