@@ -10,6 +10,7 @@ import uk.gov.di.authentication.shared.entity.BaseFrontendRequest;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -30,6 +31,8 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.getUserLanguageFromRequestHeaders;
 import static uk.gov.di.authentication.shared.helpers.LocaleHelper.matchSupportedLanguage;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
 
@@ -134,6 +137,10 @@ public abstract class BaseFrontendHandler<T>
         } else {
             attachSessionIdToLogs(session.get());
         }
+        attachLogFieldToLogs(
+                PERSISTENT_SESSION_ID,
+                PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+
         Optional<String> userLanguage =
                 getUserLanguageFromRequestHeaders(input.getHeaders(), configurationService);
         final T request;

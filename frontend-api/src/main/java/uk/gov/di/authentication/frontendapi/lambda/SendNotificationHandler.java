@@ -54,10 +54,8 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
-import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
 import static uk.gov.di.authentication.shared.helpers.TestClientHelper.isTestClientWithAllowedEmail;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
@@ -116,8 +114,6 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             UserContext userContext) {
 
         attachSessionIdToLogs(userContext.getSession());
-        attachLogFieldToLogs(
-                PERSISTENT_SESSION_ID, extractPersistentIdFromHeaders(input.getHeaders()));
         attachLogFieldToLogs(
                 LogFieldName.CLIENT_ID,
                 userContext.getClient().map(ClientRegistry::getClientID).orElse("unknown"));

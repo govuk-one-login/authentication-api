@@ -31,10 +31,8 @@ import java.util.Optional;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
-import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
 
 public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -81,8 +79,6 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             UserContext userContext) {
 
         attachSessionIdToLogs(userContext.getSession());
-        attachLogFieldToLogs(
-                PERSISTENT_SESSION_ID, extractPersistentIdFromHeaders(input.getHeaders()));
         attachLogFieldToLogs(
                 CLIENT_ID,
                 userContext.getClient().map(ClientRegistry::getClientID).orElse("unknown"));

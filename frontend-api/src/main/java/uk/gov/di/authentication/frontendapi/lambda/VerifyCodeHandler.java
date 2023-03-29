@@ -44,7 +44,6 @@ import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHO
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
@@ -106,8 +105,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             UserContext userContext) {
 
         attachSessionIdToLogs(userContext.getSession());
-        attachLogFieldToLogs(
-                PERSISTENT_SESSION_ID, extractPersistentIdFromHeaders(input.getHeaders()));
         attachLogFieldToLogs(
                 CLIENT_ID,
                 userContext.getClient().map(ClientRegistry::getClientID).orElse("unknown"));
