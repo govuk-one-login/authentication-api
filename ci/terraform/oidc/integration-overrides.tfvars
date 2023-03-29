@@ -20,6 +20,7 @@ spot_enabled                   = true
 language_cy_enabled            = true
 extended_feature_flags_enabled = true
 account_recovery_block_enabled = false
+custom_doc_app_claim_enabled   = true
 
 
 ipv_auth_public_encryption_key = <<-EOT
