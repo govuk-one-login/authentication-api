@@ -97,5 +97,8 @@ resource "aws_dynamodb_table_item" "stub_rp_client" {
         S = email
       }]
     }
+    OneLoginService = {
+      BOOL = var.stub_rp_clients[count.index].one_login_service
+    }
   })
 }
