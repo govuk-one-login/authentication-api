@@ -142,13 +142,12 @@ public class DocAppAuthorizeHandler
             attachLogFieldToLogs(
                     PERSISTENT_SESSION_ID,
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
-            var clientID = new ClientID(configurationService.getDocAppAuthorisationClientId());
-            attachLogFieldToLogs(CLIENT_ID, clientID.getValue());
             var clientRegistry =
                     clientSession.getAuthRequestParams().get("client_id").stream()
                             .findFirst()
                             .flatMap(clientService::getClient)
                             .orElseThrow();
+            attachLogFieldToLogs(CLIENT_ID, clientRegistry.getClientID());
             var state = new State();
             var encryptedJWT =
                     authorisationService.constructRequestJWT(
@@ -158,7 +157,9 @@ public class DocAppAuthorizeHandler
                             clientSessionId);
             var authRequestBuilder =
                     new AuthorizationRequest.Builder(
-                                    new ResponseType(ResponseType.Value.CODE), clientID)
+                                    new ResponseType(ResponseType.Value.CODE),
+                                    new ClientID(
+                                            configurationService.getDocAppAuthorisationClientId()))
                             .endpointURI(configurationService.getDocAppAuthorisationURI())
                             .requestObject(encryptedJWT);
 

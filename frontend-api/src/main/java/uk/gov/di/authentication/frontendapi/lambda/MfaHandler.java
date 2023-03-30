@@ -40,8 +40,6 @@ import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
@@ -114,9 +112,6 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
 
             attachSessionIdToLogs(userContext.getSession().getSessionId());
-            attachLogFieldToLogs(
-                    CLIENT_ID,
-                    userContext.getClient().map(ClientRegistry::getClientID).orElse("unknown"));
 
             LOG.info("MfaHandler received request");
 

@@ -48,8 +48,6 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.shared.entity.MFAMethodType.AUTH_APP;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 
 public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -215,8 +213,6 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                                 session.getInternalCommonSubjectIdentifier());
                     }
                     String clientId = authorizationRequest.getClientID().getValue();
-
-                    attachLogFieldToLogs(CLIENT_ID, clientId);
 
                     Set<String> claimsConsented;
 
