@@ -16,6 +16,7 @@ stub_rp_clients = [
       "email",
       "phone",
     ]
+    one_login_service = false
   },
   {
     client_name = "di-auth-stub-relying-party-staging-app"
@@ -33,6 +34,7 @@ stub_rp_clients = [
       "openid",
       "doc-checking-app",
     ]
+    one_login_service = false
   },
   {
     client_name = "di-auth-stub-relying-party-staging-t1"
@@ -51,5 +53,6 @@ stub_rp_clients = [
       "email",
       "phone",
     ]
+    one_login_service = false
   },
 ]

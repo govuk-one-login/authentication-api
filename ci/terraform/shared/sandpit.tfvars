@@ -24,6 +24,7 @@ stub_rp_clients = [
       "email",
       "phone",
     ]
+    one_login_service = false
   },
 ]
 
