@@ -9,6 +9,7 @@ notify_template_map = {
   VERIFY_CHANGE_HOW_GET_SECURITY_CODES_TEMPLATE_ID = "49b3aea6-9a67-4ef4-af08-3297c1cce82c"
 }
 
+custom_doc_app_claim_enabled       = true
 doc_app_api_enabled                = true
 doc_app_cri_data_endpoint          = "userinfo"
 doc_app_backend_uri                = "https://api-backend-api.review-b.account.gov.uk"
