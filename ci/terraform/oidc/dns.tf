@@ -1,11 +1,9 @@
-module "dns" {
-  source = "../modules/dns"
+locals {
+  service_domain = var.service_domain == null ? "${var.environment}.account.gov.uk" : var.service_domain
 
-  dns_state_bucket = var.dns_state_bucket
-  dns_state_key    = var.dns_state_key
-  dns_state_role   = var.dns_state_role
-  environment      = var.environment
-
-  is_localstack = var.use_localstack
-  is_sandpit    = var.environment == "sandpit"
+  account_management_fqdn     = local.service_domain
+  account_management_api_fqdn = "manage.${local.service_domain}"
+  frontend_fqdn               = "signin.${local.service_domain}"
+  frontend_api_fqdn           = "auth.${local.service_domain}"
+  oidc_api_fqdn               = "oidc.${local.service_domain}"
 }

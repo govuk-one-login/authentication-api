@@ -168,8 +168,8 @@ resource "aws_lambda_function" "email_sqs_lambda" {
   }
   environment {
     variables = merge(var.notify_template_map, {
-      FRONTEND_BASE_URL            = module.dns.frontend_url
-      ACCOUNT_MANAGEMENT_URI       = module.dns.account_management_url
+      FRONTEND_BASE_URL            = "https://${local.frontend_fqdn}/"
+      ACCOUNT_MANAGEMENT_URI       = "https://${local.account_management_fqdn}/"
       RESET_PASSWORD_ROUTE         = var.reset_password_route
       CONTACT_US_LINK_ROUTE        = var.contact_us_link_route
       GOV_UK_ACCOUNTS_URL          = var.gov_uk_accounts_url

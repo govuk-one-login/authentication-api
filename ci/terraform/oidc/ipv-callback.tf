@@ -39,7 +39,7 @@ module "ipv-callback" {
     IPV_BACKEND_URI                 = var.ipv_backend_uri
     IPV_AUDIENCE                    = var.ipv_audience
     IPV_NO_SESSION_RESPONSE_ENABLED = var.ipv_no_session_response_enabled
-    LOGIN_URI                       = module.dns.frontend_url
+    LOGIN_URI                       = "https://${local.frontend_fqdn}/"
     LOCALSTACK_ENDPOINT             = var.use_localstack ? var.localstack_endpoint : null
     OIDC_API_BASE_URL               = local.api_base_url
     REDIS_KEY                       = local.redis_key

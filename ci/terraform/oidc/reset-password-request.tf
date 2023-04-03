@@ -24,7 +24,7 @@ module "reset-password-request" {
 
   handler_environment_variables = {
     ENVIRONMENT            = var.environment
-    FRONTEND_BASE_URL      = module.dns.frontend_url
+    FRONTEND_BASE_URL      = "https://${local.frontend_fqdn}/"
     RESET_PASSWORD_ROUTE   = var.reset_password_route
     BLOCKED_EMAIL_DURATION = var.blocked_email_duration
     SQS_ENDPOINT           = var.use_localstack ? "http://localhost:45678/" : null

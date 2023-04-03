@@ -24,14 +24,14 @@ module "authorize" {
   environment     = var.environment
 
   handler_environment_variables = {
-    DOMAIN_NAME              = module.dns.service_domain_name
+    DOMAIN_NAME              = local.service_domain
     DOC_APP_API_ENABLED      = var.doc_app_api_enabled
     DYNAMO_ENDPOINT          = var.use_localstack ? var.lambda_dynamo_endpoint : null
     TXMA_AUDIT_QUEUE_URL     = module.oidc_txma_audit.queue_url
     ENVIRONMENT              = var.environment
     HEADERS_CASE_INSENSITIVE = var.use_localstack ? "true" : "false"
     LOCALSTACK_ENDPOINT      = var.use_localstack ? var.localstack_endpoint : null
-    LOGIN_URI                = module.dns.frontend_url
+    LOGIN_URI                = "https://${local.frontend_fqdn}/"
     OIDC_API_BASE_URL        = local.api_base_url
     REDIS_KEY                = local.redis_key
     TERMS_CONDITIONS_VERSION = var.terms_and_conditions
