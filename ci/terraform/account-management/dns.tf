@@ -1,5 +1,5 @@
 locals {
-  service_domain = var.service_domain == null ? "${var.environment}.account.gov.uk" : var.service_domain
+  service_domain = var.environment == "production" ? "account.gov.uk" : "${var.environment}.account.gov.uk"
 
   account_management_fqdn     = local.service_domain
   account_management_api_fqdn = "manage.${local.service_domain}"
