@@ -94,7 +94,7 @@ resource "aws_lambda_function" "spot_response_lambda" {
       DYNAMO_ENDPOINT      = var.use_localstack ? var.lambda_dynamo_endpoint : null
       ENVIRONMENT          = var.environment
       TXMA_AUDIT_QUEUE_URL = module.oidc_txma_audit.queue_url
-      FRONTEND_BASE_URL    = module.dns.frontend_url
+      FRONTEND_BASE_URL    = "https://${local.frontend_fqdn}/"
       INTERNAl_SECTOR_URI  = var.internal_sector_uri
     })
   }

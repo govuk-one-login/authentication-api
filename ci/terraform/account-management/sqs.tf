@@ -179,7 +179,7 @@ resource "aws_lambda_function" "email_sqs_lambda" {
   }
   environment {
     variables = merge(var.notify_template_map, {
-      FRONTEND_BASE_URL            = module.dns.frontend_url
+      FRONTEND_BASE_URL            = "https://${local.frontend_fqdn}/"
       CONTACT_US_LINK_ROUTE        = var.contact_us_link_route
       NOTIFY_API_KEY               = var.notify_api_key
       NOTIFY_URL                   = var.notify_url

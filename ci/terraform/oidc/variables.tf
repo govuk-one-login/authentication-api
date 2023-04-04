@@ -92,6 +92,10 @@ variable "environment" {
   type = string
 }
 
+variable "service_domain" {
+  default = null
+}
+
 variable "account_recovery_block_enabled" {
   default = false
 }
@@ -198,18 +202,6 @@ variable "email_acct_creation_otp_code_ttl_duration" {
 variable "contact_us_link_route" {
   type    = string
   default = "contact-us"
-}
-
-variable "dns_state_bucket" {
-  type = string
-}
-
-variable "dns_state_key" {
-  type = string
-}
-
-variable "dns_state_role" {
-  type = string
 }
 
 variable "gov_uk_accounts_url" {

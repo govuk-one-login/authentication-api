@@ -32,7 +32,7 @@ output "email_queue" {
 }
 
 output "analytics_cookie_domain" {
-  value = module.dns.service_domain_name
+  value = local.service_domain
 }
 
 output "events_sns_topic_arn" {
