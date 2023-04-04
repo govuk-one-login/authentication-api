@@ -9,9 +9,6 @@ image_resource:
 params:
   DEPLOYER_ROLE_ARN: ((deployer-role-arn-non-prod))
   DEPLOY_ENVIRONMENT: build
-  DNS_DEPLOYER_ROLE_ARN: ((deployer-role-arn-production))
-  DNS_STATE_BUCKET: ((dns-state-bucket))
-  DNS_STATE_KEY: ((dns-state-key))
   NOTIFY_API_KEY: ((build-notify-api-key))
   STATE_BUCKET: digital-identity-dev-tfstate
   STATE_LOCKING_TABLE: digital-identity-dev-tfstate-locking
@@ -52,9 +49,6 @@ run:
         -var 'logging_endpoint_arns=["arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prod"]' \
         -var "lambda_zip_file=$(ls -1 ../../../../api-release/*.zip)" \
         -var "common_state_bucket=${STATE_BUCKET}" \
-        -var "dns_state_bucket=${DNS_STATE_BUCKET}" \
-        -var "dns_state_key=${DNS_STATE_KEY}" \
-        -var "dns_state_role=${DNS_DEPLOYER_ROLE_ARN}" \
         -var "txma_account_id=${TXMA_ACCOUNT_ID}" \
         -var "test_client_verify_email_otp=${TEST_CLIENT_VERIFY_EMAIL_OTP}" \
         -var "test_client_verify_phone_number_otp=${TEST_CLIENT_VERIFY_PHONE_NUMBER_OTP}" \
