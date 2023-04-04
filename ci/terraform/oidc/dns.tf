@@ -90,8 +90,8 @@ resource "aws_acm_certificate_validation" "oidc_api" {
 #   }
 # }
 
-output "oidc_api_zone_id" {
-  value = aws_route53_zone.oidc_api_zone.zone_id
+output "oidc_api_name_servers" {
+  value = aws_route53_zone.oidc_api_zone.name_servers
 }
 
 resource "aws_route53_zone" "frontend_api_zone" {
@@ -170,6 +170,6 @@ resource "aws_acm_certificate_validation" "frontend_api" {
 #   }
 # }
 
-output "frontend_api_zone_id" {
-  value = aws_route53_zone.frontend_api_zone.zone_id
+output "frontend_api_name_servers" {
+  value = aws_route53_zone.frontend_api_zone.name_servers
 }

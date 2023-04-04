@@ -90,6 +90,6 @@ resource "aws_acm_certificate_validation" "account_management_api" {
 #   }
 # }
 
-output "account_management_api_zone_id" {
-  value = aws_route53_zone.account_management_api_zone.zone_id
+output "account_management_api_name_servers" {
+  value = aws_route53_zone.account_management_api_zone.name_servers
 }
