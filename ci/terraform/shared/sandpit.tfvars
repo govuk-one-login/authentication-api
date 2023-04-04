@@ -30,3 +30,10 @@ stub_rp_clients = [
 
 logging_endpoint_enabled = false
 enforce_code_signing     = false
+
+test_account_recovery_blocks = [
+  {
+    username      = "account-recovery.blocked@digital.cabinet-office.gov.uk"
+    time_to_exist = "1171734022"
+  }
+]

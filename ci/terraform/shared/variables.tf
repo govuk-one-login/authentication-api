@@ -99,6 +99,12 @@ variable "test_users" {
   description = "Test users to add in the database"
 }
 
+variable "test_account_recovery_blocks" {
+  default     = []
+  type        = list(object({ username : string, time_to_exist : string }))
+  description = "Test account recovery blocks to add in the database"
+}
+
 variable "aws_region" {
   default = "eu-west-2"
 }
