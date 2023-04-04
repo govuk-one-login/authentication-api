@@ -8,19 +8,20 @@ doc_app_authorisation_uri          = "https://www.review-b.integration.account.g
 doc_app_jwks_endpoint              = "https://api-backend-api.review-b.integration.account.gov.uk/.well-known/jwks.json"
 doc_app_encryption_key_id          = "0948190d-384c-498d-81e2-a20dd30f147c"
 
-ipv_api_enabled                = true
-ipv_capacity_allowed           = true
-ipv_authorisation_client_id    = "authOrchestrator"
-ipv_authorisation_uri          = "https://identity.integration.account.gov.uk/oauth2/authorize"
-ipv_authorisation_callback_uri = "https://oidc.integration.account.gov.uk/ipv-callback"
-ipv_backend_uri                = "https://api.identity.integration.account.gov.uk"
-ipv_audience                   = "https://identity.integration.account.gov.uk"
-internal_sector_uri            = "https://identity.integration.account.gov.uk"
-spot_enabled                   = true
-language_cy_enabled            = true
-extended_feature_flags_enabled = true
-account_recovery_block_enabled = false
-custom_doc_app_claim_enabled   = true
+ipv_api_enabled                 = true
+ipv_capacity_allowed            = true
+ipv_authorisation_client_id     = "authOrchestrator"
+ipv_authorisation_uri           = "https://identity.integration.account.gov.uk/oauth2/authorize"
+ipv_authorisation_callback_uri  = "https://oidc.integration.account.gov.uk/ipv-callback"
+ipv_backend_uri                 = "https://api.identity.integration.account.gov.uk"
+ipv_audience                    = "https://identity.integration.account.gov.uk"
+internal_sector_uri             = "https://identity.integration.account.gov.uk"
+spot_enabled                    = true
+language_cy_enabled             = true
+extended_feature_flags_enabled  = true
+account_recovery_block_enabled  = false
+custom_doc_app_claim_enabled    = true
+ipv_no_session_response_enabled = true
 
 
 ipv_auth_public_encryption_key = <<-EOT
