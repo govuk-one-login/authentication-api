@@ -10,6 +10,7 @@ import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.AccessTokenType;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.accountmanagement.entity.AuthPolicy;
 import uk.gov.di.accountmanagement.entity.TokenAuthorizerContext;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
@@ -69,6 +70,7 @@ public class AuthoriseAccessTokenHandler
 
     @Override
     public AuthPolicy handleRequest(TokenAuthorizerContext input, Context context) {
+        ThreadContext.clearMap();
         return segmentedFunctionCall(
                 "account-management-api::" + getClass().getSimpleName(),
                 () -> authoriseAccessTokenHandler(input));

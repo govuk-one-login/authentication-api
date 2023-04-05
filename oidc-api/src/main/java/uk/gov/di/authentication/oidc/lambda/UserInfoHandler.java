@@ -8,6 +8,7 @@ import com.nimbusds.openid.connect.sdk.UserInfoErrorResponse;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.app.services.DynamoDocAppService;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
@@ -87,6 +88,7 @@ public class UserInfoHandler
 
     public APIGatewayProxyResponseEvent userInfoRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
+        ThreadContext.clearMap();
         LOG.info("Request received to the UserInfoHandler");
         if (!headersContainValidHeader(
                 input.getHeaders(),

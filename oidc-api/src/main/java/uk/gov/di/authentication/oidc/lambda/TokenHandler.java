@@ -17,6 +17,7 @@ import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.OIDCTokenResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
@@ -127,6 +128,7 @@ public class TokenHandler
 
     public APIGatewayProxyResponseEvent tokenRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
+        ThreadContext.clearMap();
         LOG.info("Token request received");
         Optional<ErrorObject> invalidRequestParamError =
                 tokenService.validateTokenRequestParams(input.getBody());

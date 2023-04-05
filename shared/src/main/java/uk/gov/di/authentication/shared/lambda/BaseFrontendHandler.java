@@ -6,6 +6,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.shared.entity.BaseFrontendRequest;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -122,6 +123,7 @@ public abstract class BaseFrontendHandler<T>
 
     private APIGatewayProxyResponseEvent validateAndHandleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
+        ThreadContext.clearMap();
 
         String clientSessionId =
                 getHeaderValueFromHeaders(

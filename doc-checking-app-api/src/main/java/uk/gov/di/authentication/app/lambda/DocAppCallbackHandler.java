@@ -11,6 +11,7 @@ import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
 import uk.gov.di.authentication.app.exception.DocAppCallbackException;
 import uk.gov.di.authentication.app.services.DocAppAuthorisationService;
@@ -118,6 +119,7 @@ public class DocAppCallbackHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
+        ThreadContext.clearMap();
         return segmentedFunctionCall(
                 "doc-app-api::" + getClass().getSimpleName(),
                 () -> docAppCallbackRequestHandler(input, context));

@@ -6,6 +6,7 @@ import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent.SQSMessage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.entity.LogIds;
 import uk.gov.di.authentication.ipv.entity.SPOTResponse;
@@ -52,6 +53,7 @@ public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
     public Object handleRequest(SQSEvent event, Context context) {
         for (SQSMessage msg : event.getRecords()) {
             try {
+                ThreadContext.clearMap();
                 var spotResponse = objectMapper.readValue(msg.getBody(), SPOTResponse.class);
                 attachSessionIdToLogs(spotResponse.getLogIds().getSessionId());
                 attachLogFieldToLogs(
