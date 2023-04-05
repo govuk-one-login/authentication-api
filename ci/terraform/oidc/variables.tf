@@ -364,9 +364,19 @@ variable "doc_app_jwks_endpoint" {
   default = "undefined"
 }
 
+variable "doc_app_cri_data_v2_endpoint" {
+  type    = string
+  default = "userinfo/v2"
+}
+
 variable "doc_app_rp_client_id" {
   type    = string
   default = "undefined"
+}
+
+variable "doc_app_use_cri_data_v2_endpoint" {
+  type    = bool
+  default = false
 }
 
 variable "spot_account_number" {

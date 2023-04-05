@@ -14,6 +14,8 @@ extended_feature_flags_enabled     = true
 account_recovery_block_enabled     = true
 custom_doc_app_claim_enabled       = true
 ipv_no_session_response_enabled    = true
+doc_app_cri_data_v2_endpoint       = "credentials/issue"
+doc_app_use_cri_data_v2_endpoint   = true
 
 blocked_email_duration                    = 30
 otp_code_ttl_duration                     = 120
