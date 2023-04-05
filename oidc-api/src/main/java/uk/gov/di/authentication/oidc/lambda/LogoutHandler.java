@@ -10,6 +10,7 @@ import com.nimbusds.oauth2.sdk.OAuth2Error;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.services.BackChannelLogoutService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -95,6 +96,7 @@ public class LogoutHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
+        ThreadContext.clearMap();
         return segmentedFunctionCall(
                 "oidc-api::" + getClass().getSimpleName(),
                 () -> logoutRequestHandler(input, context));

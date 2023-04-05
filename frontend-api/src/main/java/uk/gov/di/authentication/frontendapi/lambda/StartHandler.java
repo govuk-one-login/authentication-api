@@ -7,6 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.oauth2.sdk.ParseException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.Features;
 import uk.gov.di.authentication.frontendapi.entity.StartResponse;
@@ -83,6 +84,7 @@ public class StartHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
+        ThreadContext.clearMap();
         LOG.info("Start request received");
         var session = sessionService.getSessionFromRequestHeaders(input.getHeaders()).orElse(null);
         if (Objects.isNull(session)) {

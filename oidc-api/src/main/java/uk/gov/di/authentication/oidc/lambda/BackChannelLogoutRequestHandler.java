@@ -8,6 +8,7 @@ import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jwt.JWTClaimsSet;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.oidc.entity.BackChannelLogoutMessage;
 import uk.gov.di.authentication.oidc.services.HttpRequestService;
 import uk.gov.di.authentication.shared.helpers.LogLineHelper;
@@ -57,6 +58,7 @@ public class BackChannelLogoutRequestHandler implements RequestHandler<SQSEvent,
 
     @Override
     public Object handleRequest(SQSEvent event, Context context) {
+        ThreadContext.clearMap();
         return segmentedFunctionCall(
                 "oidc-api::" + getClass().getSimpleName(),
                 () -> backChannelLogoutRequestHandler(event, context));

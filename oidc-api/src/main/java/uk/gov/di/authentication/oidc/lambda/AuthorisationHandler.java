@@ -15,6 +15,7 @@ import com.nimbusds.openid.connect.sdk.Prompt;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.oidc.helpers.RequestObjectToAuthRequestHelper;
@@ -103,6 +104,7 @@ public class AuthorisationHandler
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
+        ThreadContext.clearMap();
         return segmentedFunctionCall(
                 "oidc-api::" + getClass().getSimpleName(),
                 () -> authoriseRequestHandler(input, context));
