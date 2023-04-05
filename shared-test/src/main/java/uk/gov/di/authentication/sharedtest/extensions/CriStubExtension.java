@@ -66,6 +66,17 @@ public class CriStubExtension extends HttpStubExtension {
                                 + "  \"sub\": \"%s\""
                                 + "}",
                         signedResponse(signingKey), docAppSubjectId));
+
+        register(
+                "/userinfo/v2",
+                200,
+                "application/json",
+                format(
+                        "{"
+                                + "  \"https://vocab.account.gov.uk/v1/credentialJWT\": [\"%s\"],"
+                                + "  \"sub\": \"%s\""
+                                + "}",
+                        signedResponse(signingKey), docAppSubjectId));
     }
 
     private String signedResponse(ECKey signingKey) throws JOSEException {

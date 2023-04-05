@@ -235,10 +235,15 @@ public class DocAppCallbackHandler
             }
 
             try {
+                var criDataEndpoint =
+                        configurationService.isDocAppCriV2DataEndpointEnabled()
+                                ? configurationService.getDocAppCriV2DataEndpoint()
+                                : configurationService.getDocAppCriDataEndpoint();
+
                 var criDataURI =
                         buildURI(
                                 configurationService.getDocAppBackendURI().toString(),
-                                configurationService.getDocAppCriDataEndpoint());
+                                criDataEndpoint);
 
                 var request = new HTTPRequest(POST, criDataURI);
                 request.setAuthorization(

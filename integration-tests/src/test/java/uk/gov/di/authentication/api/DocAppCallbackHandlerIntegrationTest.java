@@ -94,7 +94,8 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                     tokenSigner,
                     ipvPrivateKeyJwtSigner,
                     spotQueue,
-                    docAppPrivateKeyJwtSigner);
+                    docAppPrivateKeyJwtSigner,
+                    false);
 
     private static final String CLIENT_ID = "test-client-id";
     private static final String CLIENT_NAME = "test-client-name";
@@ -130,6 +131,47 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
 
     @Test
     void shouldRedirectToLoginWhenSuccessfullyProcessedDocAppResponse() throws Json.JsonException {
+        setupSession();
+
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(
+                                Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                        constructQueryStringParameters());
+
+        assertThat(response, hasStatus(302));
+        assertThat(
+                response.getHeaders().get(ResponseHeaders.LOCATION),
+                startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue,
+                List.of(
+                        DOC_APP_AUTHORISATION_RESPONSE_RECEIVED,
+                        DOC_APP_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
+                        DOC_APP_SUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED));
+
+        var docAppCredential = documentAppCredentialStore.getCredential(docAppSubjectId.getValue());
+        assertTrue(docAppCredential.isPresent());
+        assertThat(docAppCredential.get().getCredential().size(), equalTo(1));
+    }
+
+    @Test
+    void shouldRedirectToLoginWhenSuccessfullyProcessedDocAppResponseUsingUserinfoV2Endpoint()
+            throws Json.JsonException {
+        var configurationService =
+                new DocAppCallbackHandlerIntegrationTest.TestConfigurationService(
+                        criStub,
+                        auditTopic,
+                        notificationsQueue,
+                        auditSigningKey,
+                        tokenSigner,
+                        ipvPrivateKeyJwtSigner,
+                        spotQueue,
+                        docAppPrivateKeyJwtSigner,
+                        true);
+        handler = new DocAppCallbackHandler(configurationService);
         setupSession();
 
         var response =
@@ -308,6 +350,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
     protected static class TestConfigurationService extends IntegrationTestConfigurationService {
 
         private final CriStubExtension criStubExtension;
+        private final boolean userInfoV2Enabled;
 
         public TestConfigurationService(
                 CriStubExtension criStubExtension,
@@ -317,7 +360,8 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                 TokenSigningExtension tokenSigningKey,
                 TokenSigningExtension ipvPrivateKeyJwtSigner,
                 SqsQueueExtension spotQueue,
-                TokenSigningExtension docAppPrivateKeyJwtSigner) {
+                TokenSigningExtension docAppPrivateKeyJwtSigner,
+                boolean userInfoV2Enabled) {
             super(
                     auditEventTopic,
                     notificationQueue,
@@ -328,6 +372,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                     docAppPrivateKeyJwtSigner,
                     configurationParameters);
             this.criStubExtension = criStubExtension;
+            this.userInfoV2Enabled = userInfoV2Enabled;
         }
 
         @Override
@@ -366,6 +411,16 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
         @Override
         public boolean isCustomDocAppClaimEnabled() {
             return true;
+        }
+
+        @Override
+        public boolean isDocAppCriV2DataEndpointEnabled() {
+            return userInfoV2Enabled;
+        }
+
+        @Override
+        public String getDocAppCriV2DataEndpoint() {
+            return "/userinfo/v2";
         }
     }
 }
