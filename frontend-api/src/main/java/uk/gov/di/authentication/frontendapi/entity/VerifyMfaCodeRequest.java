@@ -30,6 +30,10 @@ public class VerifyMfaCodeRequest {
     @Required
     private boolean isRegistration;
 
+    @SerializedName("profileInformation")
+    @Expose
+    private String profileInformation;
+
     public MFAMethodType getMfaMethodType() {
         return mfaMethodType;
     }
@@ -40,5 +44,9 @@ public class VerifyMfaCodeRequest {
 
     public boolean isRegistration() {
         return isRegistration;
+    }
+
+    public String getProfileInformation() {
+        return profileInformation;
     }
 }
