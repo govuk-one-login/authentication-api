@@ -75,6 +75,6 @@ jobs:
     - name: Zip ${{ matrix.module }} with terraform
       working-directory: ${{ matrix.module }}/build/distributions
       run: |
-        zip template.zip *
+        zip template.zip distributions
         aws s3 cp template.zip "s3://plat-872-audit-pipeline-githubartifactsourcebucke-xsuo8xq7wb9d/template.zip" --metadata "repository=demo-sam-app,commitsha=abc123"
         
