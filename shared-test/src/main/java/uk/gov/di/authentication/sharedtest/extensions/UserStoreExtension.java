@@ -105,6 +105,10 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
         dynamoService.updatePhoneNumberAndAccountVerifiedStatus(email, isVerified);
     }
 
+    public void setAccountVerified(String email) {
+        dynamoService.setAccountVerified(email);
+    }
+
     public List<MFAMethod> getMfaMethod(String email) {
         return dynamoService.getUserCredentialsFromEmail(email).getMfaMethods();
     }
@@ -121,6 +125,16 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
 
     public void updateTermsAndConditions(String email, String version) {
         dynamoService.updateTermsAndConditions(email, version);
+    }
+
+    public boolean isAccountVerified(String email) {
+        return dynamoService.getUserProfileByEmail(email).getAccountVerified() == 1;
+    }
+
+    public boolean isAuthAppVerified(String email) {
+        return dynamoService.getUserCredentialsFromEmail(email).getMfaMethods().stream()
+                .filter(t -> t.getMfaMethodType().equals(MFAMethodType.AUTH_APP.getValue()))
+                .anyMatch(MFAMethod::isMethodVerified);
     }
 
     public void addMfaMethod(

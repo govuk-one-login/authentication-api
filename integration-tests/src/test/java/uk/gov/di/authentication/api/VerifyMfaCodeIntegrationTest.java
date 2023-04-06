@@ -9,6 +9,8 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.frontendapi.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.lambda.VerifyMfaCodeHandler;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -24,6 +26,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -48,28 +51,26 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private String sessionId;
 
     @BeforeEach
-    void beforeEachSetup() {
+    void beforeEachSetup() throws Json.JsonException {
         handler = new VerifyMfaCodeHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
 
         txmaAuditQueue.clear();
 
-        userStore.signUp(EMAIL_ADDRESS, USER_PASSWORD);
-
-        try {
-            this.sessionId = redis.createSession();
-            setUpTestWithoutSignUp(sessionId, withScope());
-        } catch (Json.JsonException e) {
-            throw new RuntimeException(e);
-        }
+        this.sessionId = redis.createSession();
+        setUpTest(sessionId, withScope());
     }
 
-    @Test
-    void whenValidAuthAppCodeReturn204() {
-        userStore.addMfaMethod(
-                EMAIL_ADDRESS, MFAMethodType.AUTH_APP, true, true, AUTH_APP_SECRET_BASE_32);
+    private static Stream<Boolean> isRegistrationRequest() {
+        return Stream.of(true, false);
+    }
+
+    @ParameterizedTest
+    @MethodSource("isRegistrationRequest")
+    void whenValidAuthAppCodeReturn204(boolean isRegistrationRequest) {
+        setUpAuthAppRequest(isRegistrationRequest);
         String code = AUTH_APP_STUB.getAuthAppOneTimeCode(AUTH_APP_SECRET_BASE_32);
         VerifyMfaCodeRequest codeRequest =
-                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, code, true);
+                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, code, isRegistrationRequest);
 
         var response =
                 makeRequest(
@@ -80,15 +81,19 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList(CODE_VERIFIED));
         assertThat(accountRecoveryStore.isBlockPresent(EMAIL_ADDRESS), equalTo(false));
+        assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));
+        assertThat(userStore.isAuthAppVerified(EMAIL_ADDRESS), equalTo(true));
     }
 
-    @Test
-    void whenValidAuthAppCodeReturn204AndClearAccountRecoveryBlockWhenPresent() {
+    @ParameterizedTest
+    @MethodSource("isRegistrationRequest")
+    void whenValidAuthAppCodeReturn204AndClearAccountRecoveryBlockWhenPresent(
+            boolean isRegistrationRequest) {
         accountRecoveryStore.addBlockWithTTL(EMAIL_ADDRESS);
-        userStore.addMfaMethod(
-                EMAIL_ADDRESS, MFAMethodType.AUTH_APP, true, true, AUTH_APP_SECRET_BASE_32);
+        setUpAuthAppRequest(isRegistrationRequest);
         var code = AUTH_APP_STUB.getAuthAppOneTimeCode(AUTH_APP_SECRET_BASE_32);
-        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, code, true);
+        var codeRequest =
+                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, code, isRegistrationRequest);
 
         var response =
                 makeRequest(
@@ -99,15 +104,18 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList(CODE_VERIFIED));
         assertThat(accountRecoveryStore.isBlockPresent(EMAIL_ADDRESS), equalTo(false));
+        assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));
+        assertThat(userStore.isAuthAppVerified(EMAIL_ADDRESS), equalTo(true));
     }
 
-    @Test
-    void whenTwoMinuteOldValidAuthAppCodeReturn204() {
-        userStore.addMfaMethod(
-                EMAIL_ADDRESS, MFAMethodType.AUTH_APP, true, true, AUTH_APP_SECRET_BASE_32);
+    @ParameterizedTest
+    @MethodSource("isRegistrationRequest")
+    void whenTwoMinuteOldValidAuthAppCodeReturn204(boolean isRegistrationRequest) {
+        setUpAuthAppRequest(isRegistrationRequest);
         long oneMinuteAgo = NowHelper.nowMinus(2, ChronoUnit.MINUTES).getTime();
         var code = AUTH_APP_STUB.getAuthAppOneTimeCode(AUTH_APP_SECRET_BASE_32, oneMinuteAgo);
-        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, code, true);
+        var codeRequest =
+                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, code, isRegistrationRequest);
 
         var response =
                 makeRequest(
@@ -117,16 +125,18 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(204));
         assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList(CODE_VERIFIED));
+        assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));
+        assertThat(userStore.isAuthAppVerified(EMAIL_ADDRESS), equalTo(true));
     }
 
-    @Test
-    void whenFiveMinuteOldAuthAppCodeReturn400() {
-        userStore.addMfaMethod(
-                EMAIL_ADDRESS, MFAMethodType.AUTH_APP, true, true, AUTH_APP_SECRET_BASE_32);
+    @ParameterizedTest
+    @MethodSource("isRegistrationRequest")
+    void whenFiveMinuteOldAuthAppCodeReturn400(boolean isRegistrationRequest) {
+        setUpAuthAppRequest(isRegistrationRequest);
         long tenMinutesAgo = NowHelper.nowMinus(5, ChronoUnit.MINUTES).getTime();
         String code = AUTH_APP_STUB.getAuthAppOneTimeCode(AUTH_APP_SECRET_BASE_32, tenMinutesAgo);
         VerifyMfaCodeRequest codeRequest =
-                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, code, true);
+                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, code, isRegistrationRequest);
 
         var response =
                 makeRequest(
@@ -136,15 +146,18 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(400));
         assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList(INVALID_CODE_SENT));
+        assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(!isRegistrationRequest));
+        assertThat(userStore.isAuthAppVerified(EMAIL_ADDRESS), equalTo(!isRegistrationRequest));
     }
 
-    @Test
-    void whenWrongSecretUsedByAuthAppReturn400() {
-        userStore.addMfaMethod(
-                EMAIL_ADDRESS, MFAMethodType.AUTH_APP, true, true, AUTH_APP_SECRET_BASE_32);
+    @ParameterizedTest
+    @MethodSource("isRegistrationRequest")
+    void whenWrongSecretUsedByAuthAppReturn400(boolean isRegistrationRequest) {
+        setUpAuthAppRequest(isRegistrationRequest);
         String invalidCode = AUTH_APP_STUB.getAuthAppOneTimeCode("O5ZG63THFVZWKY3SMV2A====");
         VerifyMfaCodeRequest codeRequest =
-                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, invalidCode, true);
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.AUTH_APP, invalidCode, isRegistrationRequest);
 
         var response =
                 makeRequest(
@@ -155,13 +168,16 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1043));
         assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList(INVALID_CODE_SENT));
+        assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(!isRegistrationRequest));
+        assertThat(userStore.isAuthAppVerified(EMAIL_ADDRESS), equalTo(!isRegistrationRequest));
     }
 
-    @Test
-    void whenWrongSecretUsedByAuthAppReturn400AndNotClearAccountRecoveryBlockWhenPresent() {
+    @ParameterizedTest
+    @MethodSource("isRegistrationRequest")
+    void whenWrongSecretUsedByAuthAppReturn400AndNotClearAccountRecoveryBlockWhenPresent(
+            boolean isRegistrationRequest) {
         accountRecoveryStore.addBlockWithTTL(EMAIL_ADDRESS);
-        userStore.addMfaMethod(
-                EMAIL_ADDRESS, MFAMethodType.AUTH_APP, true, true, AUTH_APP_SECRET_BASE_32);
+        setUpAuthAppRequest(isRegistrationRequest);
         String invalidCode = AUTH_APP_STUB.getAuthAppOneTimeCode("O5ZG63THFVZWKY3SMV2A====");
         VerifyMfaCodeRequest codeRequest =
                 new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, invalidCode, true);
@@ -176,6 +192,8 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1043));
         assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList(INVALID_CODE_SENT));
         assertThat(accountRecoveryStore.isBlockPresent(EMAIL_ADDRESS), equalTo(true));
+        assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(!isRegistrationRequest));
+        assertThat(userStore.isAuthAppVerified(EMAIL_ADDRESS), equalTo(!isRegistrationRequest));
     }
 
     @Test
@@ -214,13 +232,13 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1001));
     }
 
-    @Test
-    void whenCodeSubmissionBlockedReturn400() {
-        userStore.addMfaMethod(
-                EMAIL_ADDRESS, MFAMethodType.AUTH_APP, true, true, AUTH_APP_SECRET_BASE_32);
+    @ParameterizedTest
+    @MethodSource("isRegistrationRequest")
+    void whenAuthAppCodeSubmissionBlockedReturn400(boolean isRegistrationRequest) {
+        setUpAuthAppRequest(isRegistrationRequest);
         String code = AUTH_APP_STUB.getAuthAppOneTimeCode(AUTH_APP_SECRET_BASE_32);
         VerifyMfaCodeRequest codeRequest =
-                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, code, false);
+                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, code, isRegistrationRequest);
 
         redis.blockMfaCodesForEmail(EMAIL_ADDRESS);
 
@@ -233,12 +251,14 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1042));
         assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList(CODE_MAX_RETRIES_REACHED));
+        assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(!isRegistrationRequest));
+        assertThat(userStore.isAuthAppVerified(EMAIL_ADDRESS), equalTo(!isRegistrationRequest));
     }
 
     @Test
-    void whenCodeRetriesLimitExceededBlockEmailAndReturn400() throws Json.JsonException {
-        userStore.addMfaMethod(
-                EMAIL_ADDRESS, MFAMethodType.AUTH_APP, true, true, AUTH_APP_SECRET_BASE_32);
+    void whenAuthAppCodeRetriesLimitExceededForSignInBlockEmailAndReturn400()
+            throws Json.JsonException {
+        setUpAuthAppRequest(false);
         String invalidCode = AUTH_APP_STUB.getAuthAppOneTimeCode("O5ZG63THFVZWKY3SMV2A====");
         VerifyMfaCodeRequest codeRequest =
                 new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, invalidCode, false);
@@ -259,9 +279,12 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1042));
         assertEquals(0, redis.getSession(sessionId).getRetryCount());
+        assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));
+        assertThat(userStore.isAuthAppVerified(EMAIL_ADDRESS), equalTo(true));
     }
 
-    private void setUpTestWithoutSignUp(String sessionId, Scope scope) throws Json.JsonException {
+    private void setUpTest(String sessionId, Scope scope) throws Json.JsonException {
+        userStore.signUp(EMAIL_ADDRESS, USER_PASSWORD);
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(
@@ -293,5 +316,14 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         scope.add(OIDCScopeValue.OPENID);
         scope.add(OIDCScopeValue.EMAIL);
         return scope;
+    }
+
+    public void setUpAuthAppRequest(boolean isRegistrationRequest) {
+        boolean mfaVerified = !isRegistrationRequest;
+        if (mfaVerified) {
+            userStore.setAccountVerified(EMAIL_ADDRESS);
+        }
+        userStore.addMfaMethod(
+                EMAIL_ADDRESS, MFAMethodType.AUTH_APP, mfaVerified, true, AUTH_APP_SECRET_BASE_32);
     }
 }
