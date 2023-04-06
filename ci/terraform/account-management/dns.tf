@@ -15,6 +15,10 @@ data "aws_route53_zone" "service_domain" {
 
 resource "aws_route53_zone" "account_management_api_zone" {
   name = local.account_management_api_fqdn
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_acm_certificate" "account_management_api" {

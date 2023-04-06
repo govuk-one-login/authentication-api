@@ -15,6 +15,10 @@ data "aws_route53_zone" "service_domain" {
 
 resource "aws_route53_zone" "oidc_api_zone" {
   name = local.oidc_api_fqdn
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_acm_certificate" "oidc_api" {
