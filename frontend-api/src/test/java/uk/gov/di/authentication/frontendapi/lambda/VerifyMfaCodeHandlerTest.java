@@ -43,6 +43,7 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.validation.AuthAppCodeValidator;
 import uk.gov.di.authentication.shared.validation.MfaCodeValidatorFactory;
+import uk.gov.di.authentication.shared.validation.PhoneNumberCodeValidator;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
@@ -97,6 +98,8 @@ class VerifyMfaCodeHandlerTest {
     private final MfaCodeValidatorFactory mfaCodeValidatorFactory =
             mock(MfaCodeValidatorFactory.class);
     private final AuthAppCodeValidator authAppCodeValidator = mock(AuthAppCodeValidator.class);
+    private final PhoneNumberCodeValidator phoneNumberCodeValidator =
+            mock(PhoneNumberCodeValidator.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ClientRegistry clientRegistry = mock(ClientRegistry.class);
     private final ClientService clientService = mock(ClientService.class);
@@ -170,7 +173,7 @@ class VerifyMfaCodeHandlerTest {
                 .thenReturn(Optional.of(CODE));
         session.setNewAccount(Session.AccountState.NEW);
         session.setCurrentCredentialStrength(credentialTrustLevel);
-        var result = makeCallWithCode(true);
+        var result = makeCallWithCode(MFAMethodType.AUTH_APP, true);
 
         assertThat(result, hasStatus(204));
         assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.AUTH_APP));
@@ -201,6 +204,47 @@ class VerifyMfaCodeHandlerTest {
                         Session.AccountState.NEW, CLIENT_ID, CLIENT_NAME, "P0", false, true);
     }
 
+    @ParameterizedTest
+    @MethodSource("credentialTrustLevels")
+    void shouldReturn204WhenSuccessfulPhoneCodeRegistrationRequest(
+            CredentialTrustLevel credentialTrustLevel) throws Json.JsonException {
+        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
+                .thenReturn(Optional.of(phoneNumberCodeValidator));
+        when(phoneNumberCodeValidator.validateCode(CODE)).thenReturn(Optional.empty());
+        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
+                .thenReturn(Optional.of(CODE));
+        session.setNewAccount(Session.AccountState.NEW);
+        session.setCurrentCredentialStrength(credentialTrustLevel);
+        var result = makeCallWithCode(MFAMethodType.SMS, true);
+
+        assertThat(result, hasStatus(204));
+        assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
+        assertThat(
+                session.getCurrentCredentialStrength(), equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
+        verify(authenticationService)
+                .updatePhoneNumberAndAccountVerifiedStatus(TEST_EMAIL_ADDRESS, true);
+        verify(codeStorageService, never())
+                .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
+        verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
+        verify(accountRecoveryBlockService).deleteBlockIfPresent(TEST_EMAIL_ADDRESS);
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.CODE_VERIFIED,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        CLIENT_ID,
+                        expectedCommonSubject,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        pair("mfa-type", MFAMethodType.SMS.getValue()));
+        verify(cloudwatchMetricsService)
+                .incrementAuthenticationSuccess(
+                        Session.AccountState.NEW, CLIENT_ID, CLIENT_NAME, "P0", false, true);
+    }
+
     @Test
     void shouldReturn204WhenSuccessfulAuthCodeLoginRequest() throws Json.JsonException {
         when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
@@ -209,7 +253,7 @@ class VerifyMfaCodeHandlerTest {
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
                 .thenReturn(Optional.of(CODE));
         session.setNewAccount(Session.AccountState.EXISTING);
-        var result = makeCallWithCode(false);
+        var result = makeCallWithCode(MFAMethodType.AUTH_APP, false);
 
         assertThat(result, hasStatus(204));
         assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.AUTH_APP));
@@ -242,7 +286,7 @@ class VerifyMfaCodeHandlerTest {
                 .thenReturn(Optional.empty());
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
                 .thenReturn(Optional.of(CODE));
-        var result = makeCallWithCode(true);
+        var result = makeCallWithCode(MFAMethodType.AUTH_APP, true);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1002));
@@ -270,7 +314,7 @@ class VerifyMfaCodeHandlerTest {
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1042));
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
                 .thenReturn(Optional.of(CODE));
-        var result = makeCallWithCode(registration);
+        var result = makeCallWithCode(MFAMethodType.AUTH_APP, registration);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1042));
@@ -306,7 +350,7 @@ class VerifyMfaCodeHandlerTest {
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1043));
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
                 .thenReturn(Optional.of(CODE));
-        var result = makeCallWithCode(registration);
+        var result = makeCallWithCode(MFAMethodType.AUTH_APP, registration);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1043));
@@ -332,8 +376,77 @@ class VerifyMfaCodeHandlerTest {
                         pair("mfa-type", MFAMethodType.AUTH_APP.getValue()));
     }
 
-    private APIGatewayProxyResponseEvent makeCallWithCode(boolean registration)
+    @Test
+    void
+            shouldReturn400AndBlockCodeWhenUserEnteredInvalidPhoneNumberCodeDuringRegistrationTooManyTimes()
+                    throws Json.JsonException {
+        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
+                .thenReturn(Optional.of(phoneNumberCodeValidator));
+        when(phoneNumberCodeValidator.validateCode(CODE))
+                .thenReturn(Optional.of(ErrorResponse.ERROR_1034));
+        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
+                .thenReturn(Optional.of(CODE));
+        var result = makeCallWithCode(MFAMethodType.SMS, true);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1034));
+        assertThat(session.getVerifiedMfaMethodType(), equalTo(null));
+        verify(codeStorageService)
+                .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
+        verify(authenticationService, never())
+                .updatePhoneNumberAndAccountVerifiedStatus(TEST_EMAIL_ADDRESS, true);
+        verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
+        verifyNoInteractions(accountRecoveryBlockService);
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        CLIENT_ID,
+                        expectedCommonSubject,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        pair("mfa-type", MFAMethodType.SMS.getValue()));
+    }
+
+    @Test
+    void shouldReturn400WhenUserEnteredInvalidPhoneNumberCodeForRegistration()
             throws Json.JsonException {
+        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
+                .thenReturn(Optional.of(phoneNumberCodeValidator));
+        when(phoneNumberCodeValidator.validateCode(CODE))
+                .thenReturn(Optional.of(ErrorResponse.ERROR_1037));
+        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
+                .thenReturn(Optional.of(CODE));
+        var result = makeCallWithCode(MFAMethodType.SMS, true);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1037));
+        assertThat(session.getVerifiedMfaMethodType(), equalTo(null));
+        verify(codeStorageService, never())
+                .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
+        verify(authenticationService, never())
+                .updatePhoneNumberAndAccountVerifiedStatus(TEST_EMAIL_ADDRESS, true);
+        verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
+        verifyNoInteractions(accountRecoveryBlockService);
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.INVALID_CODE_SENT,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        CLIENT_ID,
+                        expectedCommonSubject,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        pair("mfa-type", MFAMethodType.SMS.getValue()));
+    }
+
+    private APIGatewayProxyResponseEvent makeCallWithCode(
+            MFAMethodType mfaMethodType, boolean registration) throws Json.JsonException {
         var event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         event.setHeaders(
@@ -342,7 +455,7 @@ class VerifyMfaCodeHandlerTest {
                         session.getSessionId(),
                         "Client-Session-Id",
                         CLIENT_SESSION_ID));
-        var mfaCodeRequest = new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, registration);
+        var mfaCodeRequest = new VerifyMfaCodeRequest(mfaMethodType, CODE, registration);
         event.setBody(objectMapper.writeValueAsString(mfaCodeRequest));
         when(sessionService.getSessionFromRequestHeaders(event.getHeaders()))
                 .thenReturn(Optional.of(session));

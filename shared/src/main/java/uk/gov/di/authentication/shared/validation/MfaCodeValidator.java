@@ -11,9 +11,9 @@ import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_B
 
 public abstract class MfaCodeValidator {
     protected final Logger LOG = LogManager.getLogger(this.getClass());
-    private final CodeStorageService codeStorageService;
+    public final CodeStorageService codeStorageService;
     private final int maxRetries;
-    private final String emailAddress;
+    public final String emailAddress;
 
     MfaCodeValidator(String emailAddress, CodeStorageService codeStorageService, int maxRetries) {
         this.emailAddress = emailAddress;
