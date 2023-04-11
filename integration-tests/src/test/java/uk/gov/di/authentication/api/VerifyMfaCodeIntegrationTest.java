@@ -22,6 +22,7 @@ import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegration
 import uk.gov.di.authentication.sharedtest.helper.AuthAppStub;
 
 import java.net.URI;
+import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
@@ -29,9 +30,11 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import static java.util.Collections.singletonList;
+import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_VERIFIED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.INVALID_CODE_SENT;
@@ -283,6 +286,101 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(userStore.isAuthAppVerified(EMAIL_ADDRESS), equalTo(true));
     }
 
+    @Test
+    void whenValidPhoneNumberCodeForRegistrationReturn204() {
+        var code = redis.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 900);
+        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.SMS, code, true);
+
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
+
+        assertThat(response, hasStatus(204));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_VERIFIED));
+    }
+
+    @Test
+    void whenInvalidPhoneNumberCodeHasExpiredForRegistrationReturn400() {
+        var code = redis.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 1);
+        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.SMS, code, true);
+
+        await().pollDelay(Duration.ofSeconds(2)).untilAsserted(() -> assertTrue(true));
+
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
+
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1037));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(INVALID_CODE_SENT));
+    }
+
+    @Test
+    void whenInvalidPhoneNumberCodeForRegistrationReturn400() {
+        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.SMS, "123456", true);
+
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
+
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1037));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(INVALID_CODE_SENT));
+    }
+
+    @Test
+    void whenPhoneNumberCodeIsBlockedForRegistrationReturn400() throws Json.JsonException {
+        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        redis.blockMfaCodesForEmail(EMAIL_ADDRESS);
+
+        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.SMS, "123456", true);
+
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest), constructFrontendHeaders(sessionId), Map.of());
+
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1034));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList(CODE_MAX_RETRIES_REACHED));
+    }
+
+    @Test
+    void whenPhoneNumberCodeRetriesLimitExceededForRegistrationBlockEmailAndReturn400()
+            throws Json.JsonException {
+        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+
+        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.SMS, "123456", true);
+
+        for (int i = 0; i < 5; i++) {
+            makeRequest(
+                    Optional.of(codeRequest),
+                    constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                    Map.of());
+        }
+
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest), constructFrontendHeaders(sessionId), Map.of());
+
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1034));
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue,
+                List.of(
+                        INVALID_CODE_SENT,
+                        INVALID_CODE_SENT,
+                        INVALID_CODE_SENT,
+                        INVALID_CODE_SENT,
+                        INVALID_CODE_SENT,
+                        CODE_MAX_RETRIES_REACHED));
+    }
+
     private void setUpTest(String sessionId, Scope scope) throws Json.JsonException {
         userStore.signUp(EMAIL_ADDRESS, USER_PASSWORD);
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
@@ -304,7 +402,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 List.of("openid", "email", "phone"),
                 "public-key",
                 singletonList("http://localhost/post-redirect-logout"),
-                "http://example.com",
+                "https://example.com",
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "public",

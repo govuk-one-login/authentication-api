@@ -33,10 +33,22 @@ class MfaCodeValidatorFactoryTest {
 
     @Test
     void whenMfaMethodGeneratesAuthAppCodeValidator() {
+        when(session.getEmailAddress()).thenReturn("test@test.com");
+        when(userContext.getSession()).thenReturn(session);
         var mfaCodeValidator =
                 mfaCodeValidatorFactory.getMfaCodeValidator(
-                        MFAMethodType.AUTH_APP, true, "test@test.com");
+                        MFAMethodType.AUTH_APP, true, userContext);
 
         assertInstanceOf(AuthAppCodeValidator.class, mfaCodeValidator.get());
+    }
+
+    @Test
+    void whenMfaMethodGeneratesPhoneNumberCodeValidator() {
+        when(session.getEmailAddress()).thenReturn("test@test.com");
+        when(userContext.getSession()).thenReturn(session);
+        var mfaCodeValidator =
+                mfaCodeValidatorFactory.getMfaCodeValidator(MFAMethodType.SMS, true, userContext);
+
+        assertInstanceOf(PhoneNumberCodeValidator.class, mfaCodeValidator.get());
     }
 }

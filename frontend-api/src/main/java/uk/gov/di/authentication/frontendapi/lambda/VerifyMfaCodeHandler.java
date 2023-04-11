@@ -29,6 +29,7 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.shared.validation.MfaCodeValidatorFactory;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -111,10 +112,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
             var mfaCodeValidator =
                     mfaCodeValidatorFactory
-                            .getMfaCodeValidator(
-                                    mfaMethodType,
-                                    isRegistration,
-                                    userContext.getSession().getEmailAddress())
+                            .getMfaCodeValidator(mfaMethodType, isRegistration, userContext)
                             .orElse(null);
 
             if (Objects.isNull(mfaCodeValidator)) {
@@ -146,14 +144,15 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
                                 LOG.info(
                                         "MFA code has been successfully verified for MFA type: {}. RegistrationJourney: {}",
-                                        MFAMethodType.AUTH_APP.getValue(),
+                                        codeRequest.getMfaMethodType().getValue(),
                                         codeRequest.isRegistration());
                                 accountRecoveryBlockService.deleteBlockIfPresent(
                                         session.getEmailAddress());
                                 sessionService.save(
                                         session.setCurrentCredentialStrength(
                                                         CredentialTrustLevel.MEDIUM_LEVEL)
-                                                .setVerifiedMfaMethodType(MFAMethodType.AUTH_APP));
+                                                .setVerifiedMfaMethodType(
+                                                        codeRequest.getMfaMethodType()));
                                 cloudwatchMetricsService.incrementAuthenticationSuccess(
                                         session.isNewAccount(),
                                         clientId,
@@ -167,24 +166,23 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                             });
 
         } catch (Exception e) {
+            LOG.error("Unexpected exception thrown");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
     }
 
     private FrontendAuditableEvent errorResponseAsFrontendAuditableEvent(
-            Optional<ErrorResponse> errorResponse) {
-
-        if (errorResponse.isEmpty()) {
-            return CODE_VERIFIED;
-        }
+            ErrorResponse errorResponse) {
 
         Map<ErrorResponse, FrontendAuditableEvent> map =
                 Map.ofEntries(
                         entry(ErrorResponse.ERROR_1042, CODE_MAX_RETRIES_REACHED),
-                        entry(ErrorResponse.ERROR_1043, INVALID_CODE_SENT));
+                        entry(ErrorResponse.ERROR_1043, INVALID_CODE_SENT),
+                        entry(ErrorResponse.ERROR_1034, CODE_MAX_RETRIES_REACHED),
+                        entry(ErrorResponse.ERROR_1037, INVALID_CODE_SENT));
 
-        if (map.containsKey(errorResponse.get())) {
-            return map.get(errorResponse.get());
+        if (map.containsKey(errorResponse)) {
+            return map.get(errorResponse);
         }
 
         return INVALID_CODE_SENT;
@@ -198,15 +196,27 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             UserContext userContext,
             boolean isRegistration) {
 
-        var auditableEvent = errorResponseAsFrontendAuditableEvent(errorResponse);
+        var auditableEvent =
+                errorResponse
+                        .map(this::errorResponseAsFrontendAuditableEvent)
+                        .orElse(CODE_VERIFIED);
 
-        if (isRegistration && errorResponse.isEmpty()) {
+        if (isRegistration
+                && errorResponse.isEmpty()
+                && mfaMethodType.equals(MFAMethodType.AUTH_APP)) {
+            authenticationService.setAccountVerified(session.getEmailAddress());
             authenticationService.setMFAMethodVerifiedTrue(
                     session.getEmailAddress(), mfaMethodType);
-            authenticationService.setAccountVerified(session.getEmailAddress());
+        } else if (isRegistration
+                && errorResponse.isEmpty()
+                && mfaMethodType.equals(MFAMethodType.SMS)) {
+            authenticationService.updatePhoneNumberAndAccountVerifiedStatus(
+                    session.getEmailAddress(), true);
         }
 
-        if (ErrorResponse.ERROR_1042.equals(errorResponse.orElse(null))) {
+        if (errorResponse
+                .map(t -> List.of(ErrorResponse.ERROR_1034, ErrorResponse.ERROR_1042).contains(t))
+                .orElse(false)) {
             blockCodeForSessionAndResetCount(session);
         }
 
