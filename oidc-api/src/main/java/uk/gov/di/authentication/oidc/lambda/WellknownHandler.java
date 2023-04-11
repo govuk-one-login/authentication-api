@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.langtag.LangTagException;
 import com.nimbusds.oauth2.sdk.GrantType;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
@@ -24,6 +25,7 @@ import java.net.URISyntaxException;
 import java.util.List;
 import java.util.NoSuchElementException;
 
+import static com.nimbusds.langtag.LangTagUtils.parseLangTagList;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -98,8 +100,10 @@ public class WellknownHandler
             oidcMetadata.setPolicyURI(buildURI(frontendUrl, "privacy-notice"));
             oidcMetadata.setTermsOfServiceURI(buildURI(frontendUrl, "terms-and-conditions"));
 
+            oidcMetadata.setUILocales(parseLangTagList("en", "cy"));
+
             return oidcMetadata.toString();
-        } catch (URISyntaxException | NoSuchElementException e) {
+        } catch (URISyntaxException | NoSuchElementException | LangTagException e) {
             LOG.error("Exception encountered in WellKnownHandler", e);
             throw new RuntimeException(e);
         }

@@ -3,6 +3,8 @@ package uk.gov.di.authentication.oidc.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.langtag.LangTag;
+import com.nimbusds.langtag.LangTagException;
 import com.nimbusds.oauth2.sdk.GrantType;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.openid.connect.sdk.claims.ClaimType;
@@ -17,6 +19,7 @@ import java.util.Optional;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
@@ -30,7 +33,7 @@ class WellknownHandlerTest {
     private WellknownHandler handler;
 
     @Test
-    void shouldReturn200WhenRequestIsSuccessful() throws ParseException {
+    void shouldReturn200WhenRequestIsSuccessful() throws ParseException, LangTagException {
         when(configService.getOidcApiBaseURL()).thenReturn(Optional.of("http://localhost:8080"));
         when(configService.getFrontendBaseUrl()).thenReturn("http://localhost:8081");
 
@@ -57,6 +60,7 @@ class WellknownHandlerTest {
         assertThat(
                 metadata.getTermsOfServiceURI(),
                 is(URI.create("http://localhost:8081/terms-and-conditions")));
+        assertThat(metadata.getUILocales(), contains(LangTag.parse("en"), LangTag.parse("cy")));
     }
 
     @Test
