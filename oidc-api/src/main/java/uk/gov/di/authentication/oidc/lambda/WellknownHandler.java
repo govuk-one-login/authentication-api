@@ -15,6 +15,7 @@ import com.nimbusds.openid.connect.sdk.claims.ClaimType;
 import com.nimbusds.openid.connect.sdk.op.OIDCProviderMetadata;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
@@ -74,13 +75,7 @@ public class WellknownHandler
             oidcMetadata.setResponseTypes(List.of(new ResponseType("code")));
             oidcMetadata.setGrantTypes(List.of(GrantType.AUTHORIZATION_CODE));
             oidcMetadata.setClaimTypes(List.of(ClaimType.NORMAL));
-            oidcMetadata.setClaims(
-                    List.of(
-                            "sub",
-                            "email",
-                            "email_verified",
-                            "phone_number",
-                            "phone_number_verified"));
+            oidcMetadata.setClaims(ValidClaims.allOneLoginClaims());
             oidcMetadata.setIDTokenJWSAlgs(
                     configService.isRsaSigningAvailable()
                             ? List.of(JWSAlgorithm.ES256, JWSAlgorithm.RS256)

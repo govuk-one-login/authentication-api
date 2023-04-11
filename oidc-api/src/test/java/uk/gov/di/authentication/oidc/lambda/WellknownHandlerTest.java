@@ -8,6 +8,7 @@ import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.openid.connect.sdk.claims.ClaimType;
 import com.nimbusds.openid.connect.sdk.op.OIDCProviderMetadata;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.net.URI;
@@ -38,23 +39,16 @@ class WellknownHandlerTest {
         String expectedTrustMarkURI = "http://localhost:8080/trustmark";
 
         assertThat(result, hasStatus(200));
-        assertThat(
-                OIDCProviderMetadata.parse(result.getBody()).getGrantTypes(),
-                equalTo(List.of(GrantType.AUTHORIZATION_CODE)));
-        assertThat(
-                OIDCProviderMetadata.parse(result.getBody()).getClaimTypes(),
-                equalTo(List.of(ClaimType.NORMAL)));
-        assertThat(
-                OIDCProviderMetadata.parse(result.getBody()).getRegistrationEndpointURI(),
-                equalTo(expectedRegistrationURI));
-        assertThat(
-                OIDCProviderMetadata.parse(result.getBody()).supportsBackChannelLogout(),
-                equalTo(true));
-        assertThat(
-                OIDCProviderMetadata.parse(result.getBody())
-                        .getCustomParameters()
-                        .get("trustmarks"),
-                equalTo(expectedTrustMarkURI));
+        var metadata = OIDCProviderMetadata.parse(result.getBody());
+
+        assertThat(metadata.getGrantTypes(), equalTo(List.of(GrantType.AUTHORIZATION_CODE)));
+        assertThat(metadata.getClaimTypes(), equalTo(List.of(ClaimType.NORMAL)));
+        assertThat(metadata.getRegistrationEndpointURI(), equalTo(expectedRegistrationURI));
+        assertThat(metadata.supportsBackChannelLogout(), equalTo(true));
+        assertThat(metadata.getCustomParameters().get("trustmarks"), equalTo(expectedTrustMarkURI));
+
+        ValidClaims.allOneLoginClaims()
+                .forEach(claim -> assertTrue(metadata.getClaims().contains(claim)));
     }
 
     @Test
