@@ -71,28 +71,28 @@ resource "aws_acm_certificate_validation" "account_management_api" {
 
 }
 
-# resource "aws_api_gateway_domain_name" "account_management_api" {
-#   regional_certificate_arn = aws_acm_certificate_validation.account_management_api.certificate_arn
-#   domain_name              = local.account_management_api_fqdn
+resource "aws_api_gateway_domain_name" "account_management_api" {
+  regional_certificate_arn = aws_acm_certificate_validation.account_management_api.certificate_arn
+  domain_name              = local.account_management_api_fqdn
 
-#   security_policy = "TLS_1_2"
+  security_policy = "TLS_1_2"
 
-#   endpoint_configuration {
-#     types = ["REGIONAL"]
-#   }
-# }
+  endpoint_configuration {
+    types = ["REGIONAL"]
+  }
+}
 
-# resource "aws_route53_record" "account_management_api" {
-#   name    = local.account_management_api_fqdn
-#   type    = "A"
-#   zone_id = aws_route53_zone.account_management_api_zone.zone_id
+resource "aws_route53_record" "account_management_api" {
+  name    = local.account_management_api_fqdn
+  type    = "A"
+  zone_id = aws_route53_zone.account_management_api_zone.zone_id
 
-#   alias {
-#     evaluate_target_health = true
-#     name                   = aws_api_gateway_domain_name.account_management_api.regional_domain_name
-#     zone_id                = aws_api_gateway_domain_name.account_management_api.regional_zone_id
-#   }
-# }
+  alias {
+    evaluate_target_health = true
+    name                   = aws_api_gateway_domain_name.account_management_api.regional_domain_name
+    zone_id                = aws_api_gateway_domain_name.account_management_api.regional_zone_id
+  }
+}
 
 output "account_management_api_name_servers" {
   value = aws_route53_zone.account_management_api_zone.name_servers
