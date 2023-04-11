@@ -93,6 +93,11 @@ public class WellknownHandler
             oidcMetadata.setSupportsBackChannelLogout(true);
             oidcMetadata.setCustomParameter(
                     "trustmarks", buildURI(baseUrl, "/trustmark").toString());
+
+            var frontendUrl = configService.getFrontendBaseUrl();
+            oidcMetadata.setPolicyURI(buildURI(frontendUrl, "privacy-notice"));
+            oidcMetadata.setTermsOfServiceURI(buildURI(frontendUrl, "terms-and-conditions"));
+
             return oidcMetadata.toString();
         } catch (URISyntaxException | NoSuchElementException e) {
             LOG.error("Exception encountered in WellKnownHandler", e);

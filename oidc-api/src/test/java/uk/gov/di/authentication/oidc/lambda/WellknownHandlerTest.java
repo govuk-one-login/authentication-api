@@ -15,6 +15,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.Optional;
 
+import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.*;
@@ -31,6 +32,8 @@ class WellknownHandlerTest {
     @Test
     void shouldReturn200WhenRequestIsSuccessful() throws ParseException {
         when(configService.getOidcApiBaseURL()).thenReturn(Optional.of("http://localhost:8080"));
+        when(configService.getFrontendBaseUrl()).thenReturn("http://localhost:8081");
+
         handler = new WellknownHandler(configService);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -49,6 +52,11 @@ class WellknownHandlerTest {
 
         ValidClaims.allOneLoginClaims()
                 .forEach(claim -> assertTrue(metadata.getClaims().contains(claim)));
+
+        assertThat(metadata.getPolicyURI(), is(URI.create("http://localhost:8081/privacy-notice")));
+        assertThat(
+                metadata.getTermsOfServiceURI(),
+                is(URI.create("http://localhost:8081/terms-and-conditions")));
     }
 
     @Test
