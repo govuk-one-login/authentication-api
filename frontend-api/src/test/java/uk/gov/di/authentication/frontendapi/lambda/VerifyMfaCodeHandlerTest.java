@@ -304,17 +304,16 @@ class VerifyMfaCodeHandlerTest {
         return Stream.of(true, false);
     }
 
-    @ParameterizedTest
-    @MethodSource("registration")
-    void shouldReturn400AndBlockCodeWhenUserEnteredInvalidAuthAppCodeTooManyTimes(
-            boolean registration) throws Json.JsonException {
+    @Test
+    void shouldReturn400AndBlockCodeWhenUserEnteredInvalidAuthAppCodeTooManyTimes()
+            throws Json.JsonException {
         when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
                 .thenReturn(Optional.of(authAppCodeValidator));
         when(authAppCodeValidator.validateCode(CODE))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1042));
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
                 .thenReturn(Optional.of(CODE));
-        var result = makeCallWithCode(MFAMethodType.AUTH_APP, registration);
+        var result = makeCallWithCode(MFAMethodType.AUTH_APP, false);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1042));
@@ -325,6 +324,43 @@ class VerifyMfaCodeHandlerTest {
                 .setMFAMethodVerifiedTrue(TEST_EMAIL_ADDRESS, MFAMethodType.AUTH_APP);
         verify(authenticationService, never()).setAccountVerified(TEST_EMAIL_ADDRESS);
         verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
+        verifyNoInteractions(accountRecoveryBlockService);
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        CLIENT_ID,
+                        expectedCommonSubject,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        pair("mfa-type", MFAMethodType.AUTH_APP.getValue()));
+    }
+
+    @Test
+    void shouldReturn400AndNotBlockCodeWhenUserEnteredInvalidAuthAppCodeAndBlockAlreadyExists()
+            throws Json.JsonException {
+        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
+                .thenReturn(Optional.of(authAppCodeValidator));
+        when(authAppCodeValidator.validateCode(CODE))
+                .thenReturn(Optional.of(ErrorResponse.ERROR_1042));
+        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
+                .thenReturn(Optional.of(CODE));
+        when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
+                .thenReturn(true);
+        var result = makeCallWithCode(MFAMethodType.AUTH_APP, false);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1042));
+        assertThat(session.getVerifiedMfaMethodType(), equalTo(null));
+        verify(codeStorageService, never())
+                .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
+        verify(authenticationService, never())
+                .setMFAMethodVerifiedTrue(TEST_EMAIL_ADDRESS, MFAMethodType.AUTH_APP);
+        verify(authenticationService, never()).setAccountVerified(TEST_EMAIL_ADDRESS);
+        verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
         verifyNoInteractions(accountRecoveryBlockService);
         verify(auditService)
                 .submitAuditEvent(
@@ -396,6 +432,43 @@ class VerifyMfaCodeHandlerTest {
         verify(authenticationService, never())
                 .updatePhoneNumberAndAccountVerifiedStatus(TEST_EMAIL_ADDRESS, true);
         verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
+        verifyNoInteractions(accountRecoveryBlockService);
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        CLIENT_ID,
+                        expectedCommonSubject,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        pair("mfa-type", MFAMethodType.SMS.getValue()));
+    }
+
+    @Test
+    void
+            shouldReturn400AndNotBlockCodeWhenInvalidPhoneNumberCodeEnteredDuringRegistrationAndBlockAlreadyExists()
+                    throws Json.JsonException {
+        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
+                .thenReturn(Optional.of(phoneNumberCodeValidator));
+        when(phoneNumberCodeValidator.validateCode(CODE))
+                .thenReturn(Optional.of(ErrorResponse.ERROR_1034));
+        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
+                .thenReturn(Optional.of(CODE));
+        when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
+                .thenReturn(true);
+        var result = makeCallWithCode(MFAMethodType.SMS, true);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1034));
+        assertThat(session.getVerifiedMfaMethodType(), equalTo(null));
+        verify(codeStorageService, never())
+                .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
+        verify(authenticationService, never())
+                .updatePhoneNumberAndAccountVerifiedStatus(TEST_EMAIL_ADDRESS, true);
+        verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
         verifyNoInteractions(accountRecoveryBlockService);
         verify(auditService)
                 .submitAuditEvent(
