@@ -71,28 +71,28 @@ resource "aws_acm_certificate_validation" "oidc_api" {
 
 }
 
-# resource "aws_api_gateway_domain_name" "oidc_api" {
-#   regional_certificate_arn = aws_acm_certificate_validation.oidc_api.certificate_arn
-#   domain_name              = local.oidc_api_fqdn
+resource "aws_api_gateway_domain_name" "oidc_api" {
+  regional_certificate_arn = aws_acm_certificate_validation.oidc_api.certificate_arn
+  domain_name              = local.oidc_api_fqdn
 
-#   security_policy = "TLS_1_2"
+  security_policy = "TLS_1_2"
 
-#   endpoint_configuration {
-#     types = ["REGIONAL"]
-#   }
-# }
+  endpoint_configuration {
+    types = ["REGIONAL"]
+  }
+}
 
-# resource "aws_route53_record" "oidc_api" {
-#   name    = local.oidc_api_fqdn
-#   type    = "A"
-#   zone_id = aws_route53_zone.oidc_api_zone.zone_id
+resource "aws_route53_record" "oidc_api" {
+  name    = local.oidc_api_fqdn
+  type    = "A"
+  zone_id = aws_route53_zone.oidc_api_zone.zone_id
 
-#   alias {
-#     evaluate_target_health = true
-#     name                   = aws_api_gateway_domain_name.oidc_api.regional_domain_name
-#     zone_id                = aws_api_gateway_domain_name.oidc_api.regional_zone_id
-#   }
-# }
+  alias {
+    evaluate_target_health = true
+    name                   = aws_api_gateway_domain_name.oidc_api.regional_domain_name
+    zone_id                = aws_api_gateway_domain_name.oidc_api.regional_zone_id
+  }
+}
 
 output "oidc_api_name_servers" {
   value = aws_route53_zone.oidc_api_zone.name_servers
@@ -151,28 +151,28 @@ resource "aws_acm_certificate_validation" "frontend_api" {
   validation_record_fqdns = [for record in aws_route53_record.frontend_api_certificate_validation : record.fqdn]
 }
 
-# resource "aws_api_gateway_domain_name" "frontend_api" {
-#   regional_certificate_arn = aws_acm_certificate_validation.frontend_api.certificate_arn
-#   domain_name              = local.frontend_api_fqdn
+resource "aws_api_gateway_domain_name" "frontend_api" {
+  regional_certificate_arn = aws_acm_certificate_validation.frontend_api.certificate_arn
+  domain_name              = local.frontend_api_fqdn
 
-#   security_policy = "TLS_1_2"
+  security_policy = "TLS_1_2"
 
-#   endpoint_configuration {
-#     types = ["REGIONAL"]
-#   }
-# }
+  endpoint_configuration {
+    types = ["REGIONAL"]
+  }
+}
 
-# resource "aws_route53_record" "frontend_api" {
-#   name    = local.frontend_api_fqdn
-#   type    = "A"
-#   zone_id = aws_route53_zone.frontend_api_zone.zone_id
+resource "aws_route53_record" "frontend_api" {
+  name    = local.frontend_api_fqdn
+  type    = "A"
+  zone_id = aws_route53_zone.frontend_api_zone.zone_id
 
-#   alias {
-#     evaluate_target_health = true
-#     name                   = aws_api_gateway_domain_name.frontend_api.regional_domain_name
-#     zone_id                = aws_api_gateway_domain_name.frontend_api.regional_zone_id
-#   }
-# }
+  alias {
+    evaluate_target_health = true
+    name                   = aws_api_gateway_domain_name.frontend_api.regional_domain_name
+    zone_id                = aws_api_gateway_domain_name.frontend_api.regional_zone_id
+  }
+}
 
 output "frontend_api_name_servers" {
   value = aws_route53_zone.frontend_api_zone.name_servers
