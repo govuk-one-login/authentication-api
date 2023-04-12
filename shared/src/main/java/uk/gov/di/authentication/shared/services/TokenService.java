@@ -253,7 +253,7 @@ public class TokenService {
                         NowHelper.now());
         idTokenClaims.setAccessTokenHash(accessTokenHash);
 
-        if (!List.of("integration", "production").contains(configService.getEnvironment())) {
+        if (!Objects.equals("production", configService.getEnvironment())) {
             idTokenClaims.setSessionID(new SessionID(journeyId));
         }
 
