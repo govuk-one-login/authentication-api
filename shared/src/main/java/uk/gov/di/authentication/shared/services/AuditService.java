@@ -2,6 +2,7 @@ package uk.gov.di.authentication.shared.services;
 
 import uk.gov.di.audit.TxmaAuditUser;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
+import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 
 import java.time.Clock;
 import java.util.Arrays;
@@ -10,6 +11,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
 
+import static java.util.function.Predicate.not;
 import static uk.gov.di.audit.TxmaAuditEvent.auditEventWithTime;
 
 public class AuditService {
@@ -67,6 +69,13 @@ public class AuditService {
 
         Arrays.stream(metadataPairs)
                 .forEach(pair -> txmaAuditEvent.addExtension(pair.getKey(), pair.getValue()));
+
+        Optional.ofNullable(phoneNumber)
+                .filter(not(String::isBlank))
+                .flatMap(PhoneNumberHelper::maybeGetCountry)
+                .ifPresent(
+                        country ->
+                                txmaAuditEvent.addExtension("phone_number_country_code", country));
 
         txmaQueueClient.send(txmaAuditEvent.serialize());
     }
