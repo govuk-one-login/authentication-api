@@ -22,11 +22,9 @@ import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
 
 import java.net.URI;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.Collections.singletonList;
@@ -141,102 +139,6 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertThat(response2, hasJsonBody(ErrorResponse.ERROR_1036));
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_VERIFIED, INVALID_CODE_SENT));
-    }
-
-    @Test
-    void shouldCallVerifyCodeEndpointToVerifyPhoneCodeAndReturn204() throws Json.JsonException {
-        String sessionId = redis.createSession();
-        Scope scope = withScope();
-        setUpTestWithoutClientConsent(sessionId, scope);
-        Set<String> claims = ValidScopes.getClaimsForListOfScopes(scope.toStringList());
-        ClientConsent clientConsent =
-                new ClientConsent(
-                        CLIENT_ID, claims, LocalDateTime.now(ZoneId.of("UTC")).toString());
-        userStore.updateConsent(EMAIL_ADDRESS, clientConsent);
-        String code = redis.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 900);
-        VerifyCodeRequest codeRequest =
-                new VerifyCodeRequest(NotificationType.VERIFY_PHONE_NUMBER, code);
-
-        var response =
-                makeRequest(
-                        Optional.of(codeRequest),
-                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
-                        Map.of());
-
-        assertThat(response, hasStatus(204));
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_VERIFIED));
-    }
-
-    @Test
-    void shouldResetCodeRequestCountWhenSuccessfulVerifyPhoneCodeAndReturn204()
-            throws Json.JsonException {
-        String sessionId = redis.createSession();
-        redis.incrementSessionCodeRequestCount(sessionId);
-        redis.incrementSessionCodeRequestCount(sessionId);
-        redis.incrementSessionCodeRequestCount(sessionId);
-        Scope scope = withScope();
-        setUpTestWithoutClientConsent(sessionId, scope);
-        Set<String> claims = ValidScopes.getClaimsForListOfScopes(scope.toStringList());
-        ClientConsent clientConsent =
-                new ClientConsent(
-                        CLIENT_ID, claims, LocalDateTime.now(ZoneId.of("UTC")).toString());
-        userStore.updateConsent(EMAIL_ADDRESS, clientConsent);
-        String code = redis.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 900);
-        VerifyCodeRequest codeRequest =
-                new VerifyCodeRequest(NotificationType.VERIFY_PHONE_NUMBER, code);
-
-        var response =
-                makeRequest(
-                        Optional.of(codeRequest),
-                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
-                        Map.of());
-
-        assertThat(response, hasStatus(204));
-        assertThat(redis.getMfaCodeAttemptsCount(EMAIL_ADDRESS), equalTo(0));
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_VERIFIED));
-    }
-
-    @Test
-    void shouldCallVerifyCodeEndpointAndReturn400WithErrorWhenPhoneNumberCodeHasExpired()
-            throws InterruptedException, Json.JsonException {
-        String sessionId = redis.createSession();
-        setUpTestWithoutSignUp(sessionId, withScope());
-
-        String code = redis.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 2);
-        VerifyCodeRequest codeRequest =
-                new VerifyCodeRequest(NotificationType.VERIFY_PHONE_NUMBER, code);
-
-        TimeUnit.SECONDS.sleep(3);
-
-        var response =
-                makeRequest(
-                        Optional.of(codeRequest),
-                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
-                        Map.of());
-
-        assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1037));
-
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(INVALID_CODE_SENT));
-    }
-
-    @Test
-    void shouldReturnMaxCodesReachedIfPhoneNumberCodeIsBlocked() throws Json.JsonException {
-        String sessionId = redis.createSession();
-        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
-        redis.blockMfaCodesForEmail(EMAIL_ADDRESS);
-
-        VerifyCodeRequest codeRequest =
-                new VerifyCodeRequest(NotificationType.VERIFY_PHONE_NUMBER, "123456");
-
-        var response =
-                makeRequest(
-                        Optional.of(codeRequest), constructFrontendHeaders(sessionId), Map.of());
-
-        assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1034));
-
-        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
 
     @Test

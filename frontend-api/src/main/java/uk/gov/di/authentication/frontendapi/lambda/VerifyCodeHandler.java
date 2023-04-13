@@ -11,12 +11,10 @@ import uk.gov.di.authentication.frontendapi.entity.VerifyCodeRequest;
 import uk.gov.di.authentication.frontendapi.services.DynamoAccountRecoveryBlockService;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
-import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.ValidationHelper;
@@ -33,14 +31,12 @@ import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 
 import static java.util.Map.entry;
 import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.NONE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
-import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
@@ -157,7 +153,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     private ErrorResponse blockedCodeBehaviour(VerifyCodeRequest codeRequest) {
         return Map.ofEntries(
                         entry(VERIFY_EMAIL, ErrorResponse.ERROR_1033),
-                        entry(VERIFY_PHONE_NUMBER, ErrorResponse.ERROR_1034),
                         entry(MFA_SMS, ErrorResponse.ERROR_1027))
                 .get(codeRequest.getNotificationType());
     }
@@ -196,46 +191,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                         ? clientSession.getEffectiveVectorOfTrust().getLevelOfConfidence()
                         : NONE;
 
-        if (notificationType.equals(VERIFY_PHONE_NUMBER)) {
-            LOG.info(
-                    "MFA code has been successfully verified for MFA type: {}. RegistrationJourney: {}",
-                    MFAMethodType.SMS.getValue(),
-                    true);
-            authenticationService.updatePhoneNumberAndAccountVerifiedStatus(
-                    session.getEmailAddress(), true);
-
-            var vectorOfTrust = VectorOfTrust.getDefaults();
-
-            if (Objects.nonNull(userContext.getClientSession().getEffectiveVectorOfTrust())
-                    && userContext
-                            .getClientSession()
-                            .getEffectiveVectorOfTrust()
-                            .containsLevelOfConfidence()) {
-                vectorOfTrust = userContext.getClientSession().getEffectiveVectorOfTrust();
-            }
-
-            clientSessionService.saveClientSession(
-                    userContext.getClientSessionId(),
-                    userContext.getClientSession().setEffectiveVectorOfTrust(vectorOfTrust));
-            sessionService.save(
-                    session.setCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL)
-                            .setVerifiedMfaMethodType(MFAMethodType.SMS));
-            metadataPairs =
-                    new AuditService.MetadataPair[] {
-                        pair("notification-type", notificationType.name()),
-                        pair("mfa-type", MFAMethodType.SMS.getValue())
-                    };
-            cloudwatchMetricsService.incrementAuthenticationSuccess(
-                    session.isNewAccount(),
-                    clientId,
-                    userContext.getClientName(),
-                    levelOfConfidence.getValue(),
-                    clientService.isTestJourney(clientId, session.getEmailAddress()),
-                    clientSession
-                            .getEffectiveVectorOfTrust()
-                            .getCredentialTrustLevel()
-                            .equals(CredentialTrustLevel.LOW_LEVEL));
-        } else if (notificationType.equals(MFA_SMS)) {
+        if (notificationType.equals(MFA_SMS)) {
             LOG.info(
                     "MFA code has been successfully verified for MFA type: {}. RegistrationJourney: {}",
                     MFAMethodType.SMS.getValue(),
@@ -282,7 +238,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 new AuditService.MetadataPair[] {
                     pair("notification-type", notificationType.name())
                 };
-        if (notificationType.equals(VERIFY_PHONE_NUMBER) || notificationType.equals(MFA_SMS)) {
+        if (notificationType.equals(MFA_SMS)) {
             metadataPairs =
                     new AuditService.MetadataPair[] {
                         pair("notification-type", notificationType.name()),
@@ -290,8 +246,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     };
         }
         AuditableEvent auditableEvent;
-        if (List.of(ErrorResponse.ERROR_1027, ErrorResponse.ERROR_1033, ErrorResponse.ERROR_1034)
-                .contains(errorResponse)) {
+        if (List.of(ErrorResponse.ERROR_1027, ErrorResponse.ERROR_1033).contains(errorResponse)) {
             if (!notificationType.equals(VERIFY_EMAIL)
                     && !errorResponse.equals(ErrorResponse.ERROR_1033)) {
                 blockCodeForSession(session);
@@ -323,7 +278,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             case VERIFY_EMAIL:
             case RESET_PASSWORD_WITH_CODE:
                 return configurationService.getTestClientVerifyEmailOTP();
-            case VERIFY_PHONE_NUMBER:
             case MFA_SMS:
                 return configurationService.getTestClientVerifyPhoneNumberOTP();
             default:
