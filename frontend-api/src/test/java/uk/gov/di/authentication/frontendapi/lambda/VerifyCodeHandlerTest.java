@@ -16,13 +16,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.services.DynamoAccountRecoveryBlockService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
-import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -45,7 +43,6 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -59,11 +56,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
-import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
-import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
@@ -196,49 +191,6 @@ class VerifyCodeHandlerTest {
                         pair("notification-type", VERIFY_EMAIL.name()));
     }
 
-    private static Stream<CredentialTrustLevel> credentialTrustLevels() {
-        return Stream.of(CredentialTrustLevel.LOW_LEVEL, CredentialTrustLevel.MEDIUM_LEVEL);
-    }
-
-    @ParameterizedTest
-    @MethodSource("credentialTrustLevels")
-    void shouldReturn204ForValidVerifyPhoneNumberRequest(
-            CredentialTrustLevel credentialTrustLevel) {
-        when(configurationService.getCodeMaxRetries()).thenReturn(5);
-        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER))
-                .thenReturn(Optional.of(CODE));
-        session.setNewAccount(Session.AccountState.NEW);
-        session.setCurrentCredentialStrength(credentialTrustLevel);
-
-        APIGatewayProxyResponseEvent result =
-                makeCallWithCode(CODE, VERIFY_PHONE_NUMBER.toString());
-
-        verify(codeStorageService).deleteOtpCode(TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER);
-        verify(authenticationService)
-                .updatePhoneNumberAndAccountVerifiedStatus(TEST_EMAIL_ADDRESS, true);
-        assertThat(result, hasStatus(204));
-        assertThat(session.getCurrentCredentialStrength(), equalTo(MEDIUM_LEVEL));
-        assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
-
-        verify(sessionService, times(2)).save(session);
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.CODE_VERIFIED,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("notification-type", VERIFY_PHONE_NUMBER.name()),
-                        pair("mfa-type", MFAMethodType.SMS.getValue()));
-        verify(cloudwatchMetricsService)
-                .incrementAuthenticationSuccess(
-                        Session.AccountState.NEW, CLIENT_ID, CLIENT_NAME, "P0", false, false);
-    }
-
     @Test
     void shouldReturnEmailCodeNotValidStateIfRequestCodeDoesNotMatchStoredCode() {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
@@ -250,21 +202,6 @@ class VerifyCodeHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1036));
-    }
-
-    @Test
-    void shouldReturnPhoneNumberCodeNotValidStateIfRequestCodeDoesNotMatchStoredCode() {
-        when(configurationService.getCodeMaxRetries()).thenReturn(5);
-        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER))
-                .thenReturn(Optional.of(CODE));
-
-        APIGatewayProxyResponseEvent result =
-                makeCallWithCode(INVALID_CODE, VERIFY_PHONE_NUMBER.toString());
-
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1037));
-        verify(authenticationService, never())
-                .updatePhoneNumberAndAccountVerifiedStatus(TEST_EMAIL_ADDRESS, true);
     }
 
     @Test
@@ -295,55 +232,6 @@ class VerifyCodeHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
-    }
-
-    @Test
-    void shouldUpdateRedisWhenUserHasReachedMaxPhoneNumberCodeAttempts() {
-        when(configurationService.getCodeMaxRetries()).thenReturn(0);
-        when(configurationService.getBlockedEmailDuration()).thenReturn(BLOCKED_EMAIL_DURATION);
-        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER))
-                .thenReturn(Optional.of(CODE));
-        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS)).thenReturn(1);
-
-        APIGatewayProxyResponseEvent result =
-                makeCallWithCode(INVALID_CODE, VERIFY_PHONE_NUMBER.toString());
-
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1034));
-        assertThat(session.getRetryCount(), equalTo(0));
-        verify(authenticationService, never())
-                .updatePhoneNumberAndAccountVerifiedStatus(TEST_EMAIL_ADDRESS, true);
-        verify(codeStorageService)
-                .saveBlockedForEmail(
-                        TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, BLOCKED_EMAIL_DURATION);
-        verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("notification-type", VERIFY_PHONE_NUMBER.name()),
-                        pair("mfa-type", MFAMethodType.SMS.getValue()));
-    }
-
-    @Test
-    void shouldReturnMaxReachedWhenPhoneNumberCodeIsBlocked() {
-        when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
-                .thenReturn(true);
-
-        APIGatewayProxyResponseEvent result =
-                makeCallWithCode(CODE, VERIFY_PHONE_NUMBER.toString());
-
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1034));
-        verify(codeStorageService, never())
-                .getOtpCode(session.getEmailAddress(), VERIFY_PHONE_NUMBER);
     }
 
     @Test
