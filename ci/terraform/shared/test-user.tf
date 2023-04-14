@@ -47,23 +47,52 @@ resource "aws_dynamodb_table_item" "user_credentials" {
 
   table_name = data.aws_dynamodb_table.user_credential_table.name
   hash_key   = data.aws_dynamodb_table.user_credential_table.hash_key
-  item = jsonencode({
-    "Email" = {
-      "S" = each.value.username
-    },
-    "Updated" = {
-      "S" = formatdate("YYYY-MM-DD'T'hh:mm:ss.000000", time_static.create_date[each.key].rfc3339)
-    },
-    "SubjectID" = {
-      "S" = random_string.subject_id[each.key].result
-    },
-    "Password" = {
-      "S" = each.value.hashed_password
-    },
-    "Created" = {
-      "S" = formatdate("YYYY-MM-DD'T'hh:mm:ss.000000", time_static.create_date[each.key].rfc3339)
-    }
-  })
+  item = jsonencode(
+    merge({
+      "Email" = {
+        "S" = each.value.username
+      },
+      "Updated" = {
+        "S" = formatdate("YYYY-MM-DD'T'hh:mm:ss.000000", time_static.create_date[each.key].rfc3339)
+      },
+      "SubjectID" = {
+        "S" = random_string.subject_id[each.key].result
+      },
+      "Password" = {
+        "S" = each.value.hashed_password
+      },
+      "Created" = {
+        "S" = formatdate("YYYY-MM-DD'T'hh:mm:ss.000000", time_static.create_date[each.key].rfc3339)
+      }
+      },
+      each.value.auth_app_secret != null ?
+      {
+        "MfaMethods" : {
+          "L" : [
+            {
+              "M" : {
+                "CredentialValue" : {
+                  "S" : each.value.auth_app_secret
+                },
+                "Enabled" : {
+                  "N" : "1"
+                },
+                "MethodVerified" : {
+                  "N" : "1"
+                },
+                "MfaMethodType" : {
+                  "S" : "AUTH_APP"
+                },
+                "Updated" : {
+                  "S" : formatdate("YYYY-MM-DD'T'hh:mm:ss.000000", time_static.create_date[each.key].rfc3339)
+                }
+              }
+            }
+          ]
+        }
+      } : {}
+    )
+  )
 }
 
 resource "aws_dynamodb_table_item" "user_profile" {
