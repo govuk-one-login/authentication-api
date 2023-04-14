@@ -109,4 +109,32 @@ class AuditServiceTest {
         assertThat(extensions, hasFieldWithValue("key", equalTo("value")));
         assertThat(extensions, hasFieldWithValue("key2", equalTo("value2")));
     }
+
+    @Test
+    void shouldAddCountryCodeExtensionToPhoneNumberEvents() {
+        var auditService = new AuditService(FIXED_CLOCK, configurationService, awsSqsClient);
+
+        auditService.submitAuditEvent(
+                TEST_EVENT_ONE,
+                "request-id",
+                "session-id",
+                "client-id",
+                "subject-id",
+                "email",
+                "ip-address",
+                "07700900000",
+                "persistent-session-id",
+                pair("key", "value"),
+                pair("key2", "value2"));
+
+        verify(awsSqsClient).send(txmaMessageCaptor.capture());
+
+        var extensions =
+                asJson(txmaMessageCaptor.getValue())
+                        .getAsJsonObject()
+                        .get("extensions")
+                        .getAsJsonObject();
+
+        assertThat(extensions, hasFieldWithValue("phone_number_country_code", equalTo("44")));
+    }
 }
