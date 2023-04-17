@@ -95,7 +95,7 @@ variable "stub_rp_clients" {
 
 variable "test_users" {
   default     = []
-  type        = list(object({ username : string, hashed_password : string, phone : string, terms_and_conditions_version : string, auth_app_secret : optional(string) }))
+  type        = list(object({ username : string, hashed_password : string, phone : string, terms_and_conditions_version : string, auth_app_secret : string }))
   description = "Test users to add in the database"
 }
 

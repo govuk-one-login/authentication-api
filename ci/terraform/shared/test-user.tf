@@ -65,7 +65,7 @@ resource "aws_dynamodb_table_item" "user_credentials" {
         "S" = formatdate("YYYY-MM-DD'T'hh:mm:ss.000000", time_static.create_date[each.key].rfc3339)
       }
       },
-      each.value.auth_app_secret != null ?
+      each.value.auth_app_secret != "" ?
       {
         "MfaMethods" : {
           "L" : [
