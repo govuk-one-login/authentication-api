@@ -37,3 +37,13 @@ test_account_recovery_blocks = [
     time_to_exist = "1171734022"
   }
 ]
+
+test_users = [
+  {
+    username                     = "user.with.auth.app@digital.cabinet-office.gov.uk"
+    hashed_password              = "hashedpassword"
+    phone                        = "1234"
+    terms_and_conditions_version = "1.0"
+    auth_app_secret              = "authappsecret"
+  }
+]
