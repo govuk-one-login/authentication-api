@@ -76,7 +76,6 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.PERSISTENT_ID;
-import static uk.gov.di.authentication.shared.entity.NotificationType.ACCOUNT_CREATED_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
@@ -722,8 +721,12 @@ class SendNotificationHandlerTest {
                         PERSISTENT_ID);
     }
 
-    @Test
-    void shouldReturn204WhenSendingAccountCreationEmail() throws Json.JsonException {
+    @ParameterizedTest
+    @EnumSource(
+            value = NotificationType.class,
+            names = {"ACCOUNT_CREATED_CONFIRMATION", "CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION"})
+    void shouldReturn204WhenSendingAccountCreationEmail(NotificationType notificationType)
+            throws Json.JsonException {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
         var event = new APIGatewayProxyRequestEvent();
@@ -731,12 +734,11 @@ class SendNotificationHandlerTest {
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                        TEST_EMAIL_ADDRESS, ACCOUNT_CREATED_CONFIRMATION));
+                        TEST_EMAIL_ADDRESS, notificationType));
         var result = handler.handleRequest(event, context);
 
         var notifyRequest =
-                new NotifyRequest(
-                        TEST_EMAIL_ADDRESS, ACCOUNT_CREATED_CONFIRMATION, SupportedLanguage.EN);
+                new NotifyRequest(TEST_EMAIL_ADDRESS, notificationType, SupportedLanguage.EN);
         verify(awsSqsClient).send(objectMapper.writeValueAsString(notifyRequest));
         verifyNoInteractions(codeStorageService);
         verifyNoInteractions(auditService);
@@ -744,8 +746,12 @@ class SendNotificationHandlerTest {
         assertEquals(204, result.getStatusCode());
     }
 
-    @Test
-    void shouldReturn204AndNotSendAccountCreationEmailForTestClientAndTestUser() {
+    @ParameterizedTest
+    @EnumSource(
+            value = NotificationType.class,
+            names = {"ACCOUNT_CREATED_CONFIRMATION", "CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION"})
+    void shouldReturn204AndNotSendAccountCreationEmailForTestClientAndTestUser(
+            NotificationType notificationType) {
         usingValidSession();
         usingValidClientSession(TEST_CLIENT_ID);
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
@@ -754,7 +760,7 @@ class SendNotificationHandlerTest {
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS, ACCOUNT_CREATED_CONFIRMATION));
+                                TEST_EMAIL_ADDRESS, notificationType));
 
         assertEquals(204, result.getStatusCode());
         verifyNoInteractions(awsSqsClient);
