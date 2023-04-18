@@ -36,14 +36,9 @@ import static java.util.Map.entry;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_VERIFIED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.INVALID_CODE_SENT;
-import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.NONE;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
-import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 
@@ -101,17 +96,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             Context context,
             VerifyMfaCodeRequest codeRequest,
             UserContext userContext) {
-
-        var clientSessionId =
-                getHeaderValueFromHeaders(
-                        input.getHeaders(),
-                        CLIENT_SESSION_ID_HEADER,
-                        configurationService.getHeadersCaseInsensitive());
-        attachLogFieldToLogs(
-                PERSISTENT_SESSION_ID, extractPersistentIdFromHeaders(input.getHeaders()));
-        attachLogFieldToLogs(
-                CLIENT_ID,
-                userContext.getClient().map(ClientRegistry::getClientID).orElse("unknown"));
 
         LOG.info("Invoking verify MFA code handler");
         try {

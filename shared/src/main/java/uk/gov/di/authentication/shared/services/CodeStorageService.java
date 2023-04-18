@@ -2,9 +2,11 @@ package uk.gov.di.authentication.shared.services;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.helpers.HashHelper;
 
+import java.util.EnumSet;
 import java.util.Optional;
 
 import static java.lang.String.format;
@@ -21,7 +23,6 @@ public class CodeStorageService {
     private static final String EMAIL_KEY_PREFIX = "email-code:";
     private static final String PHONE_NUMBER_KEY_PREFIX = "phone-number-code:";
     private static final String MFA_KEY_PREFIX = "mfa-code:";
-
     private static final String MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX =
             "multiple-incorrect-mfa-codes:";
     private static final String CODE_BLOCKED_VALUE = "blocked";
@@ -38,22 +39,52 @@ public class CodeStorageService {
         this.redisConnectionService = redisConnectionService;
     }
 
+    // TODO: transition uses of this method to the method with an additional prefix - we will
+    // differentiate the counter per MFA type in due course
     public int getIncorrectMfaCodeAttemptsCount(String email) {
-        Optional<String> count =
+        // TODO: this is a temporary solution whilst there are still cached values which are not
+        // counting specifically for an MFA type
+        Optional<String> oldCountCacheValue =
                 Optional.ofNullable(
                         redisConnectionService.getValue(
                                 MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX
                                         + HashHelper.hashSha256String(email)));
-        return count.map(Integer::parseInt).orElse(0);
+        return oldCountCacheValue.map(Integer::parseInt).orElse(0);
     }
 
-    public void increaseIncorrectMfaCodeAttemptsCount(String email) {
-        String encodedHash = HashHelper.hashSha256String(email);
-        String key = MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX + encodedHash;
-        Optional<String> count =
+    public int getIncorrectMfaCodeAttemptsCount(String email, MFAMethodType mfaMethodType) {
+        Optional<String> newCountCacheValue =
                 Optional.ofNullable(
                         redisConnectionService.getValue(
-                                MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX + encodedHash));
+                                MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX
+                                        + mfaMethodType.getValue()
+                                        + HashHelper.hashSha256String(email)));
+        int newCount = newCountCacheValue.map(Integer::parseInt).orElse(0);
+
+        // TODO: remove logic relating to old prefix once cache using it has expired (15 minutes)
+        Optional<String> oldCountCacheValue =
+                Optional.ofNullable(
+                        redisConnectionService.getValue(
+                                MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX
+                                        + HashHelper.hashSha256String(email)));
+        int oldCount = oldCountCacheValue.map(Integer::parseInt).orElse(0);
+
+        // TODO: remove oldCount - within 15 minutes, this should be 0 for all users - by using SUM,
+        // we do not need to increment old counter any more even during transition
+        return oldCount + newCount;
+    }
+
+    // TODO: migrate all usages to specify a MFA type prefix - currently ValidationHelper reference
+    // is left, which in turn is used by VerifyCode handler only
+    public void increaseIncorrectMfaCodeAttemptsCount(String email) {
+        increaseIncorrectMfaCodeAttemptsCount(email, MFAMethodType.EMPTY);
+    }
+
+    public void increaseIncorrectMfaCodeAttemptsCount(String email, MFAMethodType mfaMethodType) {
+        String encodedHash = HashHelper.hashSha256String(email);
+        String key =
+                MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX + mfaMethodType.getValue() + encodedHash;
+        Optional<String> count = Optional.ofNullable(redisConnectionService.getValue(key));
         int newCount = count.map(t -> Integer.parseInt(t) + 1).orElse(1);
         try {
             redisConnectionService.saveWithExpiry(
@@ -63,15 +94,24 @@ public class CodeStorageService {
         }
     }
 
+    // TODO: migrate all usages to specify a MFA type prefix - currently ValidationHelper reference
+    // is left, which in turn is used by VerifyCode handler only
     public void deleteIncorrectMfaCodeAttemptsCount(String email) {
         String encodedHash = HashHelper.hashSha256String(email);
-        String key = MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX + encodedHash;
 
-        try {
-            redisConnectionService.deleteValue(key);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        EnumSet.allOf(MFAMethodType.class)
+                .forEach(
+                        mfaMethodType -> {
+                            String key =
+                                    MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX
+                                            + mfaMethodType.getValue()
+                                            + encodedHash;
+                            try {
+                                redisConnectionService.deleteValue(key);
+                            } catch (Exception e) {
+                                throw new RuntimeException(e);
+                            }
+                        });
     }
 
     public void increaseIncorrectPasswordCount(String email) {

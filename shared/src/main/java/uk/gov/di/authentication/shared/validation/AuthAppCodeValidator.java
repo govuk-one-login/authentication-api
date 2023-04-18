@@ -23,6 +23,7 @@ public class AuthAppCodeValidator extends MfaCodeValidator {
     private final int allowedWindows;
     private final AuthenticationService dynamoService;
     private final String emailAddress;
+    private static final MFAMethodType mfaMethodType = MFAMethodType.AUTH_APP;
 
     public AuthAppCodeValidator(
             String emailAddress,
@@ -40,14 +41,14 @@ public class AuthAppCodeValidator extends MfaCodeValidator {
     @Override
     public Optional<ErrorResponse> validateCode(String code) {
 
-        if (isCodeBlockedForSession()) {
+        if (isCodeBlockedForSession(mfaMethodType)) {
             LOG.info("Code blocked for session");
             return Optional.of(ErrorResponse.ERROR_1042);
         }
 
-        incrementRetryCount();
+        incrementRetryCount(mfaMethodType);
 
-        if (hasExceededRetryLimit()) {
+        if (hasExceededRetryLimit(mfaMethodType)) {
             LOG.info("Exceeded code retry limit");
             return Optional.of(ErrorResponse.ERROR_1042);
         }
@@ -64,7 +65,7 @@ public class AuthAppCodeValidator extends MfaCodeValidator {
             return Optional.of(ErrorResponse.ERROR_1043);
         }
         LOG.info("Auth code valid. Resetting code request count");
-        resetCodeRequestCount();
+        resetCodeRequestCount(mfaMethodType);
 
         return Optional.empty();
     }
@@ -86,10 +87,7 @@ public class AuthAppCodeValidator extends MfaCodeValidator {
                         .filter(MFAMethod::isEnabled)
                         .findAny();
 
-        if (mfaMethod.isPresent()) {
-            return Optional.ofNullable(mfaMethod.get().getCredentialValue());
-        }
-        return Optional.empty();
+        return mfaMethod.map(MFAMethod::getCredentialValue);
     }
 
     public boolean isCodeValid(String code, String secret) {

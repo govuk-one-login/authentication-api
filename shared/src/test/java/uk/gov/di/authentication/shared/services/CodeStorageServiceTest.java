@@ -2,6 +2,7 @@ package uk.gov.di.authentication.shared.services;
 
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 
@@ -31,8 +32,10 @@ class CodeStorageServiceTest {
             "email-code:f660ab912ec121d1b1e928a0bb4bc61b15f5ad44d5efdc4e1c92a25e99b8e44a";
     private static final String REDIS_INCORRECT_PASSWORDS_KEY =
             "multiple-incorrect-passwords:f660ab912ec121d1b1e928a0bb4bc61b15f5ad44d5efdc4e1c92a25e99b8e44a";
-    private static final String REDIS_INCORRECT_MFA_CODES_KEY =
+    private static final String OLD_STYLE_REDIS_INCORRECT_MFA_CODES_KEY =
             "multiple-incorrect-mfa-codes:f660ab912ec121d1b1e928a0bb4bc61b15f5ad44d5efdc4e1c92a25e99b8e44a";
+    private static final String NEW_STYLE_REDIS_INCORRECT_MFA_CODES_KEY_AUTH_APP =
+            "multiple-incorrect-mfa-codes:AUTH_APPf660ab912ec121d1b1e928a0bb4bc61b15f5ad44d5efdc4e1c92a25e99b8e44a";
     private static final String REDIS_PHONE_NUMBER_KEY =
             "phone-number-code:f660ab912ec121d1b1e928a0bb4bc61b15f5ad44d5efdc4e1c92a25e99b8e44a";
     private static final String REDIS_MFA_KEY =
@@ -231,41 +234,108 @@ class CodeStorageServiceTest {
 
     @Test
     void shouldReturn0WhenThereHaveBeenNoIncorrectMfaCodeAttempts() {
-        when(redisConnectionService.getValue(REDIS_INCORRECT_MFA_CODES_KEY)).thenReturn(null);
+        when(redisConnectionService.getValue(OLD_STYLE_REDIS_INCORRECT_MFA_CODES_KEY))
+                .thenReturn(null);
+        when(redisConnectionService.getValue(NEW_STYLE_REDIS_INCORRECT_MFA_CODES_KEY_AUTH_APP))
+                .thenReturn(null);
         assertThat(codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL), equalTo(0));
     }
 
     @Test
-    void shouldReturnNumberOfIncorrectMfaCodeAttempts() {
-        when(redisConnectionService.getValue(REDIS_INCORRECT_MFA_CODES_KEY))
+    void shouldReturnNumberOfIncorrectMfaCodeAttemptsOldPrefix() {
+        when(redisConnectionService.getValue(OLD_STYLE_REDIS_INCORRECT_MFA_CODES_KEY))
                 .thenReturn(String.valueOf(4));
         assertThat(codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL), equalTo(4));
     }
 
     @Test
-    void shouldCreateCountInRedisWhenThereHasBeenNoPreviousIncorrectMfaCodeAttempt() {
-        when(redisConnectionService.getValue(REDIS_INCORRECT_MFA_CODES_KEY)).thenReturn(null);
-        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(TEST_EMAIL);
-
-        verify(redisConnectionService)
-                .saveWithExpiry(REDIS_INCORRECT_MFA_CODES_KEY, String.valueOf(1), CODE_EXPIRY_TIME);
+    void shouldReturnNumberOfIncorrectMfaCodeAttemptsNewPrefix() {
+        when(redisConnectionService.getValue(NEW_STYLE_REDIS_INCORRECT_MFA_CODES_KEY_AUTH_APP))
+                .thenReturn(String.valueOf(4));
+        assertThat(
+                codeStorageService.getIncorrectMfaCodeAttemptsCount(
+                        TEST_EMAIL, MFAMethodType.AUTH_APP),
+                equalTo(4));
     }
 
     @Test
-    void shouldIncrementCountWhenThereHasBeenPreviousIncorrectMfaCodeAttempt() {
-        when(redisConnectionService.getValue(REDIS_INCORRECT_MFA_CODES_KEY))
+    void shouldReturnNumberOfIncorrectMfaCodeAttemptsMixedPrefixes() {
+        when(redisConnectionService.getValue(OLD_STYLE_REDIS_INCORRECT_MFA_CODES_KEY))
+                .thenReturn(String.valueOf(1));
+        when(redisConnectionService.getValue(NEW_STYLE_REDIS_INCORRECT_MFA_CODES_KEY_AUTH_APP))
+                .thenReturn(String.valueOf(2));
+        assertThat(
+                codeStorageService.getIncorrectMfaCodeAttemptsCount(
+                        TEST_EMAIL, MFAMethodType.AUTH_APP),
+                equalTo(3));
+    }
+
+    @Test
+    void shouldCreateCountInRedisWhenThereHasBeenNoPreviousIncorrectMfaCodeAttemptOldPrefix() {
+        when(redisConnectionService.getValue(OLD_STYLE_REDIS_INCORRECT_MFA_CODES_KEY))
+                .thenReturn(null);
+        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(TEST_EMAIL);
+
+        verify(redisConnectionService)
+                .saveWithExpiry(
+                        OLD_STYLE_REDIS_INCORRECT_MFA_CODES_KEY,
+                        String.valueOf(1),
+                        CODE_EXPIRY_TIME);
+    }
+
+    @Test
+    void shouldCreateCountInRedisWhenThereHasBeenNoPreviousIncorrectMfaCodeAttemptNewPrefix() {
+        when(redisConnectionService.getValue(NEW_STYLE_REDIS_INCORRECT_MFA_CODES_KEY_AUTH_APP))
+                .thenReturn(null);
+        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(
+                TEST_EMAIL, MFAMethodType.AUTH_APP);
+
+        verify(redisConnectionService)
+                .saveWithExpiry(
+                        NEW_STYLE_REDIS_INCORRECT_MFA_CODES_KEY_AUTH_APP,
+                        String.valueOf(1),
+                        CODE_EXPIRY_TIME);
+    }
+
+    @Test
+    void
+            shouldCreateCountInRedisWhenThereHasBeenNoPreviousIncorrectMfaCodeAttemptWithNewPrefixButThereIsAnExistingValueWithOldPrefix() {
+        when(redisConnectionService.getValue(OLD_STYLE_REDIS_INCORRECT_MFA_CODES_KEY))
                 .thenReturn(String.valueOf(3));
-        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(TEST_EMAIL);
+        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(
+                TEST_EMAIL, MFAMethodType.AUTH_APP);
 
         verify(redisConnectionService)
-                .saveWithExpiry(REDIS_INCORRECT_MFA_CODES_KEY, String.valueOf(4), CODE_EXPIRY_TIME);
+                .saveWithExpiry(
+                        NEW_STYLE_REDIS_INCORRECT_MFA_CODES_KEY_AUTH_APP,
+                        String.valueOf(1),
+                        CODE_EXPIRY_TIME);
     }
 
     @Test
-    void shouldCallRedisToDeleteIncorrectMfaCodeAttemptCount() {
+    void
+            shouldIncrementCountWhenThereHasBeenPreviousIncorrectMfaCodeAttemptAndIgnoreOldPrefixCounter() {
+        when(redisConnectionService.getValue(OLD_STYLE_REDIS_INCORRECT_MFA_CODES_KEY))
+                .thenReturn(String.valueOf(4));
+        when(redisConnectionService.getValue(NEW_STYLE_REDIS_INCORRECT_MFA_CODES_KEY_AUTH_APP))
+                .thenReturn(String.valueOf(2));
+        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(
+                TEST_EMAIL, MFAMethodType.AUTH_APP);
+
+        verify(redisConnectionService)
+                .saveWithExpiry(
+                        NEW_STYLE_REDIS_INCORRECT_MFA_CODES_KEY_AUTH_APP,
+                        String.valueOf(3),
+                        CODE_EXPIRY_TIME);
+    }
+
+    @Test
+    void shouldCallRedisToDeleteIncorrectMfaCodeAttemptCountWhenCalledWithEmailOnly() {
         codeStorageService.deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL);
 
-        verify(redisConnectionService).deleteValue(REDIS_INCORRECT_MFA_CODES_KEY);
+        verify(redisConnectionService).deleteValue(OLD_STYLE_REDIS_INCORRECT_MFA_CODES_KEY);
+        verify(redisConnectionService)
+                .deleteValue(NEW_STYLE_REDIS_INCORRECT_MFA_CODES_KEY_AUTH_APP);
     }
 
     @Test

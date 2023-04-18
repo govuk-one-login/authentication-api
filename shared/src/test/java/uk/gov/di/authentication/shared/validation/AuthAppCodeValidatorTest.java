@@ -91,7 +91,8 @@ class AuthAppCodeValidatorTest {
 
     private void setUpBlockedUser() {
         when(mockCodeStorageService.isBlockedForEmail(
-                        "blocked-email-address", CODE_BLOCKED_KEY_PREFIX))
+                        "blocked-email-address",
+                        CODE_BLOCKED_KEY_PREFIX + MFAMethodType.AUTH_APP.getValue()))
                 .thenReturn(true);
 
         this.authAppCodeValidator =
@@ -104,9 +105,12 @@ class AuthAppCodeValidatorTest {
     }
 
     private void setUpRetryLimitExceededUser() {
-        when(mockCodeStorageService.isBlockedForEmail("email-address", CODE_BLOCKED_KEY_PREFIX))
+        when(mockCodeStorageService.isBlockedForEmail(
+                        "email-address",
+                        CODE_BLOCKED_KEY_PREFIX + MFAMethodType.AUTH_APP.getValue()))
                 .thenReturn(false);
-        when(mockCodeStorageService.getIncorrectMfaCodeAttemptsCount("email-address"))
+        when(mockCodeStorageService.getIncorrectMfaCodeAttemptsCount(
+                        "email-address", MFAMethodType.AUTH_APP))
                 .thenReturn(MAX_RETRIES + 1);
 
         this.authAppCodeValidator =
