@@ -17,6 +17,7 @@ stub_rp_clients = [
       "phone",
     ]
     one_login_service = false
+    service_type      = "MANDATORY"
   },
   {
     client_name = "di-auth-stub-relying-party-staging-app"
@@ -35,6 +36,7 @@ stub_rp_clients = [
       "doc-checking-app",
     ]
     one_login_service = false
+    service_type      = "MANDATORY"
   },
   {
     client_name = "di-auth-stub-relying-party-staging-t1"
@@ -54,5 +56,6 @@ stub_rp_clients = [
       "phone",
     ]
     one_login_service = false
+    service_type      = "MANDATORY"
   },
 ]

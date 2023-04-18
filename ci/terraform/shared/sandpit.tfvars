@@ -25,6 +25,7 @@ stub_rp_clients = [
       "phone",
     ]
     one_login_service = false
+    service_type      = "MANDATORY"
   },
 ]
 

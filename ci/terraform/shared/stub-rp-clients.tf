@@ -72,7 +72,7 @@ resource "aws_dynamodb_table_item" "stub_rp_client" {
       "-----END PUBLIC KEY-----", ""), "\n", "")
     }
     ServiceType = {
-      S = "MANDATORY"
+      S = var.stub_rp_clients[count.index].service_type
     }
     SubjectType = {
       S = "pairwise"
