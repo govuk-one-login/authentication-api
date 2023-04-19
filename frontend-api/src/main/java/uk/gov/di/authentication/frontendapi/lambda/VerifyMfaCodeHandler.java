@@ -217,7 +217,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         if (errorResponse
                 .map(t -> List.of(ErrorResponse.ERROR_1034, ErrorResponse.ERROR_1042).contains(t))
                 .orElse(false)) {
-            blockCodeForSessionAndResetCountIfBlockDoesNotExist(session);
+            blockCodeForSessionAndResetCountIfBlockDoesNotExist(session, mfaMethodType);
         }
 
         auditService.submitAuditEvent(
@@ -236,7 +236,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 pair("mfa-type", mfaMethodType.getValue()));
     }
 
-    private void blockCodeForSessionAndResetCountIfBlockDoesNotExist(Session session) {
+    private void blockCodeForSessionAndResetCountIfBlockDoesNotExist(
+            Session session, MFAMethodType mfaMethodType) {
         if (!codeStorageService.isBlockedForEmail(
                 session.getEmailAddress(), CODE_BLOCKED_KEY_PREFIX)) {
             codeStorageService.saveBlockedForEmail(
@@ -244,6 +245,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                     CODE_BLOCKED_KEY_PREFIX,
                     configurationService.getBlockedEmailDuration());
             codeStorageService.deleteIncorrectMfaCodeAttemptsCount(session.getEmailAddress());
+            codeStorageService.deleteIncorrectMfaCodeAttemptsCount(
+                    session.getEmailAddress(), mfaMethodType);
         }
     }
 }

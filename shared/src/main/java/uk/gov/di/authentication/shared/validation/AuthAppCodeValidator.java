@@ -45,7 +45,7 @@ public class AuthAppCodeValidator extends MfaCodeValidator {
             return Optional.of(ErrorResponse.ERROR_1042);
         }
 
-        incrementRetryCount();
+        incrementRetryCount(MFAMethodType.AUTH_APP);
 
         if (hasExceededRetryLimit()) {
             LOG.info("Exceeded code retry limit");
@@ -64,7 +64,7 @@ public class AuthAppCodeValidator extends MfaCodeValidator {
             return Optional.of(ErrorResponse.ERROR_1043);
         }
         LOG.info("Auth code valid. Resetting code request count");
-        resetCodeRequestCount();
+        resetCodeIncorrectEntryCount(MFAMethodType.AUTH_APP);
 
         return Optional.empty();
     }
@@ -86,10 +86,7 @@ public class AuthAppCodeValidator extends MfaCodeValidator {
                         .filter(MFAMethod::isEnabled)
                         .findAny();
 
-        if (mfaMethod.isPresent()) {
-            return Optional.ofNullable(mfaMethod.get().getCredentialValue());
-        }
-        return Optional.empty();
+        return mfaMethod.map(MFAMethod::getCredentialValue);
     }
 
     public boolean isCodeValid(String code, String secret) {

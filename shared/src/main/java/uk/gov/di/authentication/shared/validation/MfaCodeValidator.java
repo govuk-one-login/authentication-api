@@ -3,6 +3,7 @@ package uk.gov.di.authentication.shared.validation;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 
 import java.util.Optional;
@@ -30,12 +31,18 @@ public abstract class MfaCodeValidator {
         return codeStorageService.getIncorrectMfaCodeAttemptsCount(emailAddress) > maxRetries;
     }
 
-    void incrementRetryCount() {
-        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(emailAddress);
+    void incrementRetryCount(MFAMethodType mfaMethodType) {
+        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(
+                emailAddress); // TODO: remove this transitional method call when cache reflects
+        // only following line
+        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(emailAddress, mfaMethodType);
     }
 
-    void resetCodeRequestCount() {
-        codeStorageService.deleteIncorrectMfaCodeAttemptsCount(emailAddress);
+    void resetCodeIncorrectEntryCount(MFAMethodType mfaMethodType) {
+        codeStorageService.deleteIncorrectMfaCodeAttemptsCount(
+                emailAddress); // TODO: remove this transitional method call when cache reflects
+        // only following line
+        codeStorageService.deleteIncorrectMfaCodeAttemptsCount(emailAddress, mfaMethodType);
     }
 
     public abstract Optional<ErrorResponse> validateCode(String code);
