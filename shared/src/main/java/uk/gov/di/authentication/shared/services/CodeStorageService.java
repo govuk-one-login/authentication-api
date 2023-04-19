@@ -2,6 +2,7 @@ package uk.gov.di.authentication.shared.services;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.helpers.HashHelper;
 
@@ -49,7 +50,8 @@ public class CodeStorageService {
                                         + HashHelper.hashSha256String(email)));
         return count.map(Integer::parseInt).orElse(0);
     }
-
+    // TODO: remove this transitional method when cache reflects MFA-type-specific prefixing i.e.
+    // method call with MFAMethodType argument
     public void increaseIncorrectMfaCodeAttemptsCount(String email) {
         String encodedHash = HashHelper.hashSha256String(email);
         String key = MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX + encodedHash;
@@ -66,9 +68,36 @@ public class CodeStorageService {
         }
     }
 
+    public void increaseIncorrectMfaCodeAttemptsCount(String email, MFAMethodType mfaMethodType) {
+        String encodedHash = HashHelper.hashSha256String(email);
+        String key =
+                MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX + mfaMethodType.getValue() + encodedHash;
+        Optional<String> count = Optional.ofNullable(redisConnectionService.getValue(key));
+        int newCount = count.map(t -> Integer.parseInt(t) + 1).orElse(1);
+        try {
+            redisConnectionService.saveWithExpiry(
+                    key, String.valueOf(newCount), MFA_ATTEMPTS_COUNTER_TIME_TO_LIVE_SECONDS);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+    // TODO: remove this transitional method when cache reflects MFA-type-specific prefixing i.e.
+    // method call with MFAMethodType argument
     public void deleteIncorrectMfaCodeAttemptsCount(String email) {
         String encodedHash = HashHelper.hashSha256String(email);
         String key = MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX + encodedHash;
+
+        try {
+            redisConnectionService.deleteValue(key);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void deleteIncorrectMfaCodeAttemptsCount(String email, MFAMethodType mfaMethodType) {
+        String encodedHash = HashHelper.hashSha256String(email);
+        String key =
+                MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX + mfaMethodType.getValue() + encodedHash;
 
         try {
             redisConnectionService.deleteValue(key);
