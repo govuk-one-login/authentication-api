@@ -50,8 +50,17 @@ public class CodeStorageService {
                                         + HashHelper.hashSha256String(email)));
         return count.map(Integer::parseInt).orElse(0);
     }
-    // TODO: remove this transitional method when cache reflects MFA-type-specific prefixing i.e.
-    // method call with MFAMethodType argument
+
+    public int getIncorrectMfaCodeAttemptsCount(String email, MFAMethodType mfaMethodType) {
+        Optional<String> count =
+                Optional.ofNullable(
+                        redisConnectionService.getValue(
+                                MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX
+                                        + mfaMethodType.getValue()
+                                        + HashHelper.hashSha256String(email)));
+        return count.map(Integer::parseInt).orElse(0);
+    }
+
     public void increaseIncorrectMfaCodeAttemptsCount(String email) {
         String encodedHash = HashHelper.hashSha256String(email);
         String key = MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX + encodedHash;
@@ -81,8 +90,7 @@ public class CodeStorageService {
             throw new RuntimeException(e);
         }
     }
-    // TODO: remove this transitional method when cache reflects MFA-type-specific prefixing i.e.
-    // method call with MFAMethodType argument
+
     public void deleteIncorrectMfaCodeAttemptsCount(String email) {
         String encodedHash = HashHelper.hashSha256String(email);
         String key = MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX + encodedHash;
