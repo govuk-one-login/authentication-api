@@ -14,6 +14,7 @@ import javax.crypto.spec.SecretKeySpec;
 
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
@@ -23,22 +24,25 @@ public class AuthAppCodeValidator extends MfaCodeValidator {
     private final int allowedWindows;
     private final AuthenticationService dynamoService;
     private final String emailAddress;
+    private final boolean isRegistration;
 
     public AuthAppCodeValidator(
             String emailAddress,
             CodeStorageService codeStorageService,
             ConfigurationService configurationService,
             AuthenticationService dynamoService,
-            int maxRetries) {
+            int maxRetries,
+            boolean isRegistration) {
         super(emailAddress, codeStorageService, maxRetries);
         this.dynamoService = dynamoService;
         this.emailAddress = emailAddress;
         this.windowTime = configurationService.getAuthAppCodeWindowLength();
         this.allowedWindows = configurationService.getAuthAppCodeAllowedWindows();
+        this.isRegistration = isRegistration;
     }
 
     @Override
-    public Optional<ErrorResponse> validateCode(String code) {
+    public Optional<ErrorResponse> validateCode(String code, String profileInformation) {
 
         if (isCodeBlockedForSession()) {
             LOG.info("Code blocked for session");
@@ -52,14 +56,15 @@ public class AuthAppCodeValidator extends MfaCodeValidator {
             return Optional.of(ErrorResponse.ERROR_1042);
         }
 
-        Optional<String> storedSecret = getMfaCredentialValue();
+        var authAppSecret =
+                isRegistration ? profileInformation : getMfaCredentialValue().orElse(null);
 
-        if (storedSecret.isEmpty()) {
+        if (Objects.isNull(authAppSecret)) {
             LOG.info("No auth app secret found");
             return Optional.of(ErrorResponse.ERROR_1043);
         }
 
-        if (!isCodeValid(code, storedSecret.get())) {
+        if (!isCodeValid(code, authAppSecret)) {
             LOG.info("Auth code is not valid");
             return Optional.of(ErrorResponse.ERROR_1043);
         }
@@ -67,26 +72,6 @@ public class AuthAppCodeValidator extends MfaCodeValidator {
         resetCodeIncorrectEntryCount(MFAMethodType.AUTH_APP);
 
         return Optional.empty();
-    }
-
-    public Optional<String> getMfaCredentialValue() {
-        var userCredentials = dynamoService.getUserCredentialsFromEmail(emailAddress);
-
-        if (userCredentials == null) {
-            LOG.info("User credentials not found");
-            return Optional.empty();
-        }
-
-        var mfaMethod =
-                userCredentials.getMfaMethods().stream()
-                        .filter(
-                                method ->
-                                        method.getMfaMethodType()
-                                                .equals(MFAMethodType.AUTH_APP.getValue()))
-                        .filter(MFAMethod::isEnabled)
-                        .findAny();
-
-        return mfaMethod.map(MFAMethod::getCredentialValue);
     }
 
     public boolean isCodeValid(String code, String secret) {
@@ -105,6 +90,26 @@ public class AuthAppCodeValidator extends MfaCodeValidator {
         }
 
         return checkCode(secret, codeToCheck, NowHelper.now().getTime());
+    }
+
+    private Optional<String> getMfaCredentialValue() {
+        var userCredentials = dynamoService.getUserCredentialsFromEmail(emailAddress);
+
+        if (userCredentials == null) {
+            LOG.info("User credentials not found");
+            return Optional.empty();
+        }
+
+        var mfaMethod =
+                userCredentials.getMfaMethods().stream()
+                        .filter(
+                                method ->
+                                        method.getMfaMethodType()
+                                                .equals(MFAMethodType.AUTH_APP.getValue()))
+                        .filter(MFAMethod::isEnabled)
+                        .findAny();
+
+        return mfaMethod.map(MFAMethod::getCredentialValue);
     }
 
     private boolean checkCode(String secret, long code, long timestamp) {

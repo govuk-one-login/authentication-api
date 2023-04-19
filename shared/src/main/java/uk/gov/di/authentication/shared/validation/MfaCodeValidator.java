@@ -40,5 +40,5 @@ public abstract class MfaCodeValidator {
         codeStorageService.deleteIncorrectMfaCodeAttemptsCount(emailAddress, mfaMethodType);
     }
 
-    public abstract Optional<ErrorResponse> validateCode(String code);
+    public abstract Optional<ErrorResponse> validateCode(String code, String profileInformation);
 }

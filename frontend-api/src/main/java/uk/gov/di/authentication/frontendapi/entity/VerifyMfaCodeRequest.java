@@ -10,9 +10,18 @@ public class VerifyMfaCodeRequest {
     public VerifyMfaCodeRequest() {}
 
     public VerifyMfaCodeRequest(MFAMethodType mfaMethodType, String code, boolean isRegistration) {
+        this(mfaMethodType, code, isRegistration, null);
+    }
+
+    public VerifyMfaCodeRequest(
+            MFAMethodType mfaMethodType,
+            String code,
+            boolean isRegistration,
+            String profileInformation) {
         this.mfaMethodType = mfaMethodType;
         this.code = code;
         this.isRegistration = isRegistration;
+        this.profileInformation = profileInformation;
     }
 
     @SerializedName("mfaMethodType")

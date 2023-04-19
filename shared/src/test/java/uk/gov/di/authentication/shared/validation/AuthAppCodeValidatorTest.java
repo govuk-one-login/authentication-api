@@ -1,7 +1,9 @@
 package uk.gov.di.authentication.shared.validation;
 
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
@@ -16,6 +18,7 @@ import uk.gov.di.authentication.sharedtest.helper.AuthAppStub;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
@@ -39,57 +42,70 @@ class AuthAppCodeValidatorTest {
         this.mockDynamoService = mock(DynamoService.class);
     }
 
-    @Test
-    void returnsNoErrorOnValidAuthCode() {
-        setUpValidAuthCode();
+    private static Stream<Arguments> validatorParams() {
+        return Stream.of(Arguments.of(false, null), Arguments.of(true, "test-credential-value"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("validatorParams")
+    void returnsNoErrorOnValidAuthCode(boolean isRegistration, String authAppSecret) {
+        setUpValidAuthCode(isRegistration);
         var authAppStub = new AuthAppStub();
         String authCode =
                 authAppStub.getAuthAppOneTimeCode(
                         "test-credential-value", NowHelper.now().getTime());
 
-        assertEquals(Optional.empty(), authAppCodeValidator.validateCode(authCode));
+        assertEquals(Optional.empty(), authAppCodeValidator.validateCode(authCode, authAppSecret));
     }
 
-    @Test
-    void returnsCorrectErrorWhenCodeBlockedForEmailAddress() {
-        setUpBlockedUser();
+    @ParameterizedTest
+    @MethodSource("validatorParams")
+    void returnsCorrectErrorWhenCodeBlockedForEmailAddress(
+            boolean isRegistration, String authAppSecret) {
+        setUpBlockedUser(isRegistration);
 
         assertEquals(
                 Optional.of(ErrorResponse.ERROR_1042),
-                authAppCodeValidator.validateCode("any-code"));
+                authAppCodeValidator.validateCode("any-code", authAppSecret));
     }
 
-    @Test
-    void returnsCorrectErrorWhenRetryLimitExceeded() {
-        setUpRetryLimitExceededUser();
+    @ParameterizedTest
+    @MethodSource("validatorParams")
+    void returnsCorrectErrorWhenRetryLimitExceeded(boolean isRegistration, String authAppSecret) {
+        setUpRetryLimitExceededUser(isRegistration);
 
         assertEquals(
                 Optional.of(ErrorResponse.ERROR_1042),
-                authAppCodeValidator.validateCode("any-code"));
+                authAppCodeValidator.validateCode("any-code", authAppSecret));
     }
 
-    @Test
-    void returnsCorrectErrorWhenNoAuthCodeIsFound() {
-        setUpNoAuthCodeForUser();
+    @ParameterizedTest
+    @MethodSource("validatorParams")
+    void returnsCorrectErrorWhenNoAuthCodeIsFound(boolean isRegistration) {
+        setUpNoAuthCodeForUser(isRegistration);
 
         assertEquals(
                 Optional.of(ErrorResponse.ERROR_1043),
-                authAppCodeValidator.validateCode("any-code"));
+                authAppCodeValidator.validateCode("any-code", null));
     }
 
-    @Test
-    void returnsCorrectErrorWhenAuthCodeIsInvalid() {
-        setUpValidAuthCode();
+    @ParameterizedTest
+    @MethodSource("validatorParams")
+    void returnsCorrectErrorWhenAuthCodeIsInvalid(boolean isRegistration, String authAppSecret) {
+        setUpValidAuthCode(isRegistration);
 
-        assertEquals(
-                Optional.of(ErrorResponse.ERROR_1043), authAppCodeValidator.validateCode("111111"));
-        assertEquals(Optional.of(ErrorResponse.ERROR_1043), authAppCodeValidator.validateCode(""));
         assertEquals(
                 Optional.of(ErrorResponse.ERROR_1043),
-                authAppCodeValidator.validateCode("999999999999"));
+                authAppCodeValidator.validateCode("111111", authAppSecret));
+        assertEquals(
+                Optional.of(ErrorResponse.ERROR_1043),
+                authAppCodeValidator.validateCode("", authAppSecret));
+        assertEquals(
+                Optional.of(ErrorResponse.ERROR_1043),
+                authAppCodeValidator.validateCode("999999999999", authAppSecret));
     }
 
-    private void setUpBlockedUser() {
+    private void setUpBlockedUser(boolean isRegistration) {
         when(mockCodeStorageService.isBlockedForEmail(
                         "blocked-email-address", CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
@@ -100,10 +116,11 @@ class AuthAppCodeValidatorTest {
                         mockCodeStorageService,
                         mockConfigurationService,
                         mockDynamoService,
-                        MAX_RETRIES);
+                        MAX_RETRIES,
+                        isRegistration);
     }
 
-    private void setUpRetryLimitExceededUser() {
+    private void setUpRetryLimitExceededUser(boolean isRegistration) {
         when(mockCodeStorageService.isBlockedForEmail("email-address", CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(false);
         when(mockCodeStorageService.getIncorrectMfaCodeAttemptsCount(
@@ -116,10 +133,11 @@ class AuthAppCodeValidatorTest {
                         mockCodeStorageService,
                         mockConfigurationService,
                         mockDynamoService,
-                        MAX_RETRIES);
+                        MAX_RETRIES,
+                        isRegistration);
     }
 
-    private void setUpNoAuthCodeForUser() {
+    private void setUpNoAuthCodeForUser(boolean isRegistration) {
         when(mockCodeStorageService.isBlockedForEmail("email-address", CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(false);
         when(mockDynamoService.getUserCredentialsFromEmail("email-address"))
@@ -131,10 +149,11 @@ class AuthAppCodeValidatorTest {
                         mockCodeStorageService,
                         mockConfigurationService,
                         mockDynamoService,
-                        MAX_RETRIES);
+                        MAX_RETRIES,
+                        isRegistration);
     }
 
-    private void setUpValidAuthCode() {
+    private void setUpValidAuthCode(boolean isRegistration) {
         when(mockSession.getEmailAddress()).thenReturn("email-address");
         when(mockSession.getRetryCount()).thenReturn(0);
         when(mockCodeStorageService.isBlockedForEmail("email-address", CODE_BLOCKED_KEY_PREFIX))
@@ -158,6 +177,7 @@ class AuthAppCodeValidatorTest {
                         mockCodeStorageService,
                         mockConfigurationService,
                         mockDynamoService,
-                        MAX_RETRIES);
+                        MAX_RETRIES,
+                        isRegistration);
     }
 }

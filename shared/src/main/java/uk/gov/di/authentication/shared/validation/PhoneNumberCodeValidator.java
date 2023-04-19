@@ -33,7 +33,7 @@ public class PhoneNumberCodeValidator extends MfaCodeValidator {
     }
 
     @Override
-    public Optional<ErrorResponse> validateCode(String code) {
+    public Optional<ErrorResponse> validateCode(String code, String profileInformation) {
         if (!isRegistration) {
             LOG.error("Sign In Phone number codes are not supported");
             throw new RuntimeException("Sign In Phone number codes are not supported");

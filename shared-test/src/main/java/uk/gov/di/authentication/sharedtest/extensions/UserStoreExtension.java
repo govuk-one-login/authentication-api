@@ -135,10 +135,23 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
         return dynamoService.getUserProfileByEmail(email).getAccountVerified() == 1;
     }
 
+    public boolean isPhoneNumberVerified(String email) {
+        return dynamoService.getUserProfileByEmail(email).isPhoneNumberVerified();
+    }
+
     public boolean isAuthAppVerified(String email) {
-        return dynamoService.getUserCredentialsFromEmail(email).getMfaMethods().stream()
-                .filter(t -> t.getMfaMethodType().equals(MFAMethodType.AUTH_APP.getValue()))
-                .anyMatch(MFAMethod::isMethodVerified);
+        return Optional.ofNullable(dynamoService.getUserCredentialsFromEmail(email).getMfaMethods())
+                .map(
+                        t ->
+                                t.stream()
+                                        .filter(
+                                                e ->
+                                                        e.getMfaMethodType()
+                                                                .equals(
+                                                                        MFAMethodType.AUTH_APP
+                                                                                .getValue()))
+                                        .anyMatch(MFAMethod::isMethodVerified))
+                .orElse(false);
     }
 
     public boolean isAuthAppEnabled(String email) {

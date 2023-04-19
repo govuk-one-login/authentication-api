@@ -383,25 +383,6 @@ public class DynamoService implements AuthenticationService {
     }
 
     @Override
-    public void setMFAMethodVerifiedTrue(String email, MFAMethodType mfaMethodType) {
-        var dateTime = NowHelper.toTimestampString(NowHelper.now());
-        var userCredentials =
-                dynamoUserCredentialsTable.getItem(
-                        Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
-        var mfaMethod =
-                userCredentials.getMfaMethods().stream()
-                        .filter(
-                                method ->
-                                        method.getMfaMethodType().equals(mfaMethodType.getValue()))
-                        .findFirst()
-                        .orElseThrow();
-
-        mfaMethod.withMethodVerified(true);
-        mfaMethod.withUpdated(dateTime);
-        dynamoUserCredentialsTable.updateItem(userCredentials);
-    }
-
-    @Override
     public void setMFAMethodEnabled(String email, MFAMethodType mfaMethodType, boolean enabled) {
         var userCredentials =
                 dynamoUserCredentialsTable.getItem(

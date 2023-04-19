@@ -39,6 +39,7 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_VERIFIED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.INVALID_CODE_SENT;
 import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.NONE;
+import static uk.gov.di.authentication.shared.entity.MFAMethodType.AUTH_APP;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
@@ -120,10 +121,11 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1002);
             }
 
-            var errorResponse = mfaCodeValidator.validateCode(codeRequest.getCode());
+            var errorResponse =
+                    mfaCodeValidator.validateCode(
+                            codeRequest.getCode(), codeRequest.getProfileInformation());
 
-            processCodeSession(
-                    errorResponse, session, mfaMethodType, input, userContext, isRegistration);
+            processCodeSession(errorResponse, session, input, userContext, codeRequest);
 
             sessionService.save(session);
 
@@ -191,33 +193,43 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     private void processCodeSession(
             Optional<ErrorResponse> errorResponse,
             Session session,
-            MFAMethodType mfaMethodType,
             APIGatewayProxyRequestEvent input,
             UserContext userContext,
-            boolean isRegistration) {
-        String emailAddress = session.getEmailAddress();
+            VerifyMfaCodeRequest codeRequest) {
+        var emailAddress = session.getEmailAddress();
 
         var auditableEvent =
                 errorResponse
                         .map(this::errorResponseAsFrontendAuditableEvent)
                         .orElse(CODE_VERIFIED);
 
-        if (isRegistration
-                && errorResponse.isEmpty()
-                && mfaMethodType.equals(MFAMethodType.AUTH_APP)) {
-            authenticationService.setAccountVerified(emailAddress);
-            authenticationService.setMFAMethodVerifiedTrue(emailAddress, mfaMethodType);
-        } else if (isRegistration
-                && errorResponse.isEmpty()
-                && mfaMethodType.equals(MFAMethodType.SMS)) {
-            authenticationService.updatePhoneNumberAndAccountVerifiedStatus(emailAddress, true);
-            authenticationService.setMFAMethodEnabled(emailAddress, MFAMethodType.AUTH_APP, false);
+        if (codeRequest.isRegistration() && errorResponse.isEmpty()) {
+            switch (codeRequest.getMfaMethodType()) {
+                case AUTH_APP:
+                    authenticationService.setAccountVerified(emailAddress);
+                    authenticationService.updateMFAMethod(
+                            emailAddress,
+                            AUTH_APP,
+                            true,
+                            true,
+                            codeRequest.getProfileInformation());
+                    break;
+                case SMS:
+                    authenticationService.updatePhoneNumber(
+                            emailAddress, codeRequest.getProfileInformation());
+                    authenticationService.updatePhoneNumberAndAccountVerifiedStatus(
+                            emailAddress, true);
+                    authenticationService.setMFAMethodEnabled(
+                            emailAddress, MFAMethodType.AUTH_APP, false);
+                    break;
+            }
         }
 
         if (errorResponse
                 .map(t -> List.of(ErrorResponse.ERROR_1034, ErrorResponse.ERROR_1042).contains(t))
                 .orElse(false)) {
-            blockCodeForSessionAndResetCountIfBlockDoesNotExist(emailAddress, mfaMethodType);
+            blockCodeForSessionAndResetCountIfBlockDoesNotExist(
+                    emailAddress, codeRequest.getMfaMethodType());
         }
 
         auditService.submitAuditEvent(
@@ -233,7 +245,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 IpAddressHelper.extractIpAddress(input),
                 AuditService.UNKNOWN,
                 extractPersistentIdFromHeaders(input.getHeaders()),
-                pair("mfa-type", mfaMethodType.getValue()));
+                pair("mfa-type", codeRequest.getMfaMethodType().getValue()));
     }
 
     private void blockCodeForSessionAndResetCountIfBlockDoesNotExist(

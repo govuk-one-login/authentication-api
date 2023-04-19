@@ -32,7 +32,8 @@ class AuthAppStubTest {
                         mock(CodeStorageService.class),
                         configurationService,
                         mock(DynamoService.class),
-                        99999);
+                        99999,
+                        false);
     }
 
     @Test
