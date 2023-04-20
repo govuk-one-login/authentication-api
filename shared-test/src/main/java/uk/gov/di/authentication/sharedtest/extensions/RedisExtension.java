@@ -211,8 +211,20 @@ public class RedisExtension
         codeStorageService.saveBlockedForEmail(email, CODE_BLOCKED_KEY_PREFIX, 10);
     }
 
+    public boolean isBlockedMfaCodesForEmail(String email) {
+        return codeStorageService.isBlockedForEmail(email, CODE_BLOCKED_KEY_PREFIX);
+    }
+
     public int getMfaCodeAttemptsCount(String email) {
         return codeStorageService.getIncorrectMfaCodeAttemptsCount(email);
+    }
+
+    public int getMfaCodeAttemptsCount(String email, MFAMethodType mfaMethodType) {
+        return codeStorageService.getIncorrectMfaCodeAttemptsCount(email, mfaMethodType);
+    }
+
+    public void increaseMfaCodeAttemptsCount(String email, MFAMethodType mfaMethodType) {
+        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(email, mfaMethodType);
     }
 
     public void addToRedis(String key, String value, Long expiry) {

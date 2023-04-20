@@ -34,6 +34,7 @@ import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_VERIFIED;
@@ -267,11 +268,10 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, invalidCode, false);
 
         for (int i = 0; i < 5; i++) {
-            makeRequest(
-                    Optional.of(codeRequest),
-                    constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
-                    Map.of());
+            redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS, MFAMethodType.AUTH_APP);
         }
+
+        assertEquals(5, redis.getMfaCodeAttemptsCount(EMAIL_ADDRESS, MFAMethodType.AUTH_APP));
 
         var response =
                 makeRequest(
@@ -281,9 +281,34 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1042));
-        assertEquals(0, redis.getSession(sessionId).getRetryCount());
-        assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));
-        assertThat(userStore.isAuthAppVerified(EMAIL_ADDRESS), equalTo(true));
+        assertEquals(0, redis.getMfaCodeAttemptsCount(EMAIL_ADDRESS, MFAMethodType.AUTH_APP));
+        assertTrue(redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS));
+        assertTrue(userStore.isAccountVerified(EMAIL_ADDRESS));
+        assertTrue(userStore.isAuthAppVerified(EMAIL_ADDRESS));
+    }
+
+    @Test
+    void
+            whenAuthCodeRetriesLimitReachedButEmailAddressNotBlockedAllowSmsAttemptAndReturn400WithoutBlockingFurtherRetries()
+                    throws Json.JsonException {
+        for (int i = 0; i < 5; i++) {
+            redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS, MFAMethodType.AUTH_APP);
+        }
+
+        String invalidCode = "999999";
+        VerifyMfaCodeRequest codeRequest =
+                new VerifyMfaCodeRequest(MFAMethodType.SMS, invalidCode, true);
+
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
+
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1037));
+        assertEquals(1, redis.getMfaCodeAttemptsCount(EMAIL_ADDRESS));
+        assertFalse(redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS));
     }
 
     @Test
