@@ -106,7 +106,8 @@ class AuthAppCodeValidatorTest {
     private void setUpRetryLimitExceededUser() {
         when(mockCodeStorageService.isBlockedForEmail("email-address", CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(false);
-        when(mockCodeStorageService.getIncorrectMfaCodeAttemptsCount("email-address"))
+        when(mockCodeStorageService.getIncorrectMfaCodeAttemptsCount(
+                        "email-address", MFAMethodType.AUTH_APP))
                 .thenReturn(MAX_RETRIES + 1);
 
         this.authAppCodeValidator =

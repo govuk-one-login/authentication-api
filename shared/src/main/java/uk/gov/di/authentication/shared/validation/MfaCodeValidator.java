@@ -26,22 +26,17 @@ public abstract class MfaCodeValidator {
         return codeStorageService.isBlockedForEmail(emailAddress, CODE_BLOCKED_KEY_PREFIX);
     }
 
-    boolean hasExceededRetryLimit() {
+    boolean hasExceededRetryLimit(MFAMethodType mfaMethodType) {
         LOG.info("Max retries: {}", maxRetries);
-        return codeStorageService.getIncorrectMfaCodeAttemptsCount(emailAddress) > maxRetries;
+        return codeStorageService.getIncorrectMfaCodeAttemptsCount(emailAddress, mfaMethodType)
+                > maxRetries;
     }
 
     void incrementRetryCount(MFAMethodType mfaMethodType) {
-        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(
-                emailAddress); // TODO: remove this transitional method call when cache reflects
-        // only following line
         codeStorageService.increaseIncorrectMfaCodeAttemptsCount(emailAddress, mfaMethodType);
     }
 
     void resetCodeIncorrectEntryCount(MFAMethodType mfaMethodType) {
-        codeStorageService.deleteIncorrectMfaCodeAttemptsCount(
-                emailAddress); // TODO: remove this transitional method call when cache reflects
-        // only following line
         codeStorageService.deleteIncorrectMfaCodeAttemptsCount(emailAddress, mfaMethodType);
     }
 

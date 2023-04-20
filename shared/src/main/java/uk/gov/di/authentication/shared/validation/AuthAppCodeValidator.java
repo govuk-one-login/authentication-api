@@ -47,7 +47,7 @@ public class AuthAppCodeValidator extends MfaCodeValidator {
 
         incrementRetryCount(MFAMethodType.AUTH_APP);
 
-        if (hasExceededRetryLimit()) {
+        if (hasExceededRetryLimit(MFAMethodType.AUTH_APP)) {
             LOG.info("Exceeded code retry limit");
             return Optional.of(ErrorResponse.ERROR_1042);
         }

@@ -323,7 +323,8 @@ class VerifyMfaCodeHandlerTest {
         verify(authenticationService, never())
                 .setMFAMethodVerifiedTrue(TEST_EMAIL_ADDRESS, MFAMethodType.AUTH_APP);
         verify(authenticationService, never()).setAccountVerified(TEST_EMAIL_ADDRESS);
-        verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
+        verify(codeStorageService)
+                .deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS, MFAMethodType.AUTH_APP);
         verifyNoInteractions(accountRecoveryBlockService);
         verify(auditService)
                 .submitAuditEvent(
