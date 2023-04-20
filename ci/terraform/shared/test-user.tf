@@ -122,7 +122,7 @@ resource "aws_dynamodb_table_item" "user_profile" {
     "termsAndConditions" = {
       "M" = {
         "version" = {
-          "S" = "1.0"
+          "S" = each.value.terms_and_conditions_version
         },
         "timestamp" = {
           "S" = formatdate("YYYY-MM-DD'T'hh:mm:ss.000000", time_static.create_date[each.key].rfc3339)
