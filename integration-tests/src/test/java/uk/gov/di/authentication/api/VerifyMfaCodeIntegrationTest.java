@@ -289,7 +289,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void
-            whenAuthCodeRetriesLimitReachedButEmailAddressNotBlockedAllowSmsAttemptAndReturn400WithoutBlockingFurtherRetries()
+            whenIncorrectAuthCodesInputtedUpToSmsRetriesLimitAllowSmsAttemptAndReturn400WithoutBlockingFurtherRetries()
                     throws Json.JsonException {
         for (int i = 0; i < 5; i++) {
             redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS, MFAMethodType.AUTH_APP);

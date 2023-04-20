@@ -195,6 +195,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             APIGatewayProxyRequestEvent input,
             UserContext userContext,
             boolean isRegistration) {
+        String emailAddress = session.getEmailAddress();
 
         var auditableEvent =
                 errorResponse
@@ -204,20 +205,18 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         if (isRegistration
                 && errorResponse.isEmpty()
                 && mfaMethodType.equals(MFAMethodType.AUTH_APP)) {
-            authenticationService.setAccountVerified(session.getEmailAddress());
-            authenticationService.setMFAMethodVerifiedTrue(
-                    session.getEmailAddress(), mfaMethodType);
+            authenticationService.setAccountVerified(emailAddress);
+            authenticationService.setMFAMethodVerifiedTrue(emailAddress, mfaMethodType);
         } else if (isRegistration
                 && errorResponse.isEmpty()
                 && mfaMethodType.equals(MFAMethodType.SMS)) {
-            authenticationService.updatePhoneNumberAndAccountVerifiedStatus(
-                    session.getEmailAddress(), true);
+            authenticationService.updatePhoneNumberAndAccountVerifiedStatus(emailAddress, true);
         }
 
         if (errorResponse
                 .map(t -> List.of(ErrorResponse.ERROR_1034, ErrorResponse.ERROR_1042).contains(t))
                 .orElse(false)) {
-            blockCodeForSessionAndResetCountIfBlockDoesNotExist(session, mfaMethodType);
+            blockCodeForSessionAndResetCountIfBlockDoesNotExist(emailAddress, mfaMethodType);
         }
 
         auditService.submitAuditEvent(
@@ -229,7 +228,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         .map(ClientRegistry::getClientID)
                         .orElse(AuditService.UNKNOWN),
                 session.getInternalCommonSubjectIdentifier(),
-                session.getEmailAddress(),
+                emailAddress,
                 IpAddressHelper.extractIpAddress(input),
                 AuditService.UNKNOWN,
                 extractPersistentIdFromHeaders(input.getHeaders()),
@@ -237,8 +236,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     }
 
     private void blockCodeForSessionAndResetCountIfBlockDoesNotExist(
-            Session session, MFAMethodType mfaMethodType) {
-        String emailAddress = session.getEmailAddress();
+            String emailAddress, MFAMethodType mfaMethodType) {
 
         if (codeStorageService.isBlockedForEmail(emailAddress, CODE_BLOCKED_KEY_PREFIX)) {
             return;
