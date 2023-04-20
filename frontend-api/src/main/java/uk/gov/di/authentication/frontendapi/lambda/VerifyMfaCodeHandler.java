@@ -244,6 +244,11 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
         codeStorageService.saveBlockedForEmail(
                 emailAddress,
+                CODE_BLOCKED_KEY_PREFIX + mfaMethodType.getValue(),
+                configurationService.getBlockedEmailDuration());
+
+        codeStorageService.saveBlockedForEmail(
+                emailAddress,
                 CODE_BLOCKED_KEY_PREFIX,
                 configurationService.getBlockedEmailDuration());
 
