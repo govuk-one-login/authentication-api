@@ -101,6 +101,10 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
         dynamoService.updatePhoneNumberAndAccountVerifiedStatus(email, true);
     }
 
+    public void addUnverifiedPhoneNumber(String email, String phoneNumber) {
+        dynamoService.updatePhoneNumber(email, phoneNumber);
+    }
+
     public void setPhoneNumberVerified(String email, boolean isVerified) {
         dynamoService.updatePhoneNumberAndAccountVerifiedStatus(email, isVerified);
     }
