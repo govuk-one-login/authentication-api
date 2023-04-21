@@ -324,6 +324,24 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(204));
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_VERIFIED));
+        assertThat(userStore.isAuthAppEnabled(EMAIL_ADDRESS), equalTo(false));
+    }
+
+    @Test
+    void whenValidPhoneNumberCodeForRegistrationReturn204AndInvalidateAuthApp() {
+        setUpAuthAppRequest(true);
+        var code = redis.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 900);
+        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.SMS, code, true);
+
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
+
+        assertThat(response, hasStatus(204));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_VERIFIED));
+        assertThat(userStore.isAuthAppEnabled(EMAIL_ADDRESS), equalTo(false));
     }
 
     @Test

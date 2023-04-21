@@ -211,6 +211,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 && errorResponse.isEmpty()
                 && mfaMethodType.equals(MFAMethodType.SMS)) {
             authenticationService.updatePhoneNumberAndAccountVerifiedStatus(emailAddress, true);
+            authenticationService.setMFAMethodEnabled(emailAddress, MFAMethodType.AUTH_APP, false);
         }
 
         if (errorResponse

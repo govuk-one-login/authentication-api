@@ -227,6 +227,8 @@ class VerifyMfaCodeHandlerTest {
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
         verify(accountRecoveryBlockService).deleteBlockIfPresent(TEST_EMAIL_ADDRESS);
+        verify(authenticationService)
+                .setMFAMethodEnabled(TEST_EMAIL_ADDRESS, MFAMethodType.AUTH_APP, false);
 
         verify(auditService)
                 .submitAuditEvent(
@@ -432,6 +434,8 @@ class VerifyMfaCodeHandlerTest {
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(authenticationService, never())
                 .updatePhoneNumberAndAccountVerifiedStatus(TEST_EMAIL_ADDRESS, true);
+        verify(authenticationService, never())
+                .setMFAMethodEnabled(TEST_EMAIL_ADDRESS, MFAMethodType.AUTH_APP, false);
         verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
         verifyNoInteractions(accountRecoveryBlockService);
         verify(auditService)
@@ -469,6 +473,8 @@ class VerifyMfaCodeHandlerTest {
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(authenticationService, never())
                 .updatePhoneNumberAndAccountVerifiedStatus(TEST_EMAIL_ADDRESS, true);
+        verify(authenticationService, never())
+                .setMFAMethodEnabled(TEST_EMAIL_ADDRESS, MFAMethodType.AUTH_APP, false);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
         verifyNoInteractions(accountRecoveryBlockService);
         verify(auditService)
@@ -503,6 +509,8 @@ class VerifyMfaCodeHandlerTest {
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(authenticationService, never())
                 .updatePhoneNumberAndAccountVerifiedStatus(TEST_EMAIL_ADDRESS, true);
+        verify(authenticationService, never())
+                .setMFAMethodEnabled(TEST_EMAIL_ADDRESS, MFAMethodType.AUTH_APP, false);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
         verifyNoInteractions(accountRecoveryBlockService);
         verify(auditService)
