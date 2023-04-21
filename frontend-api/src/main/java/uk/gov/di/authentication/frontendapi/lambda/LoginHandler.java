@@ -14,6 +14,7 @@ import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.conditions.ConsentHelper;
 import uk.gov.di.authentication.shared.conditions.MfaHelper;
 import uk.gov.di.authentication.shared.conditions.TermsAndConditionsHelper;
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
@@ -199,10 +200,13 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             }
             boolean termsAndConditionsAccepted = false;
             if (Objects.nonNull(userProfile.getTermsAndConditions())) {
+                var isSmokeTestClient =
+                        userContext.getClient().map(ClientRegistry::isSmokeTest).orElse(false);
                 termsAndConditionsAccepted =
                         TermsAndConditionsHelper.hasTermsAndConditionsBeenAccepted(
                                 userProfile.getTermsAndConditions(),
-                                configurationService.getTermsAndConditionsVersion());
+                                configurationService.getTermsAndConditionsVersion(),
+                                isSmokeTestClient);
             }
             sessionService.save(userContext.getSession().setNewAccount(EXISTING));
             var isMfaRequired =
