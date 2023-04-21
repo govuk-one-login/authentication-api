@@ -7,7 +7,8 @@ public class TermsAndConditionsHelper {
     private TermsAndConditionsHelper() {}
 
     public static boolean hasTermsAndConditionsBeenAccepted(
-            TermsAndConditions termsAndConditions, String latestVersion) {
+            TermsAndConditions termsAndConditions, String latestVersion, boolean smokeTestClient) {
+        if (smokeTestClient) return true;
         if (latestVersion == null) return false;
         return termsAndConditions.getVersion().equals(latestVersion);
     }

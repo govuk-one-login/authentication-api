@@ -734,6 +734,64 @@ class LoginHandlerTest {
         verify(sessionService, never()).save(any(Session.class));
     }
 
+    @Test
+    void termsAndConditionsShouldBeAcceptedIfClientIsSmokeTestClient() throws Json.JsonException {
+        when(configurationService.getTermsAndConditionsVersion()).thenReturn("2.0");
+        setUpSmokeTestClient();
+        Map<String, String> headers = new HashMap<>();
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
+        headers.put("Session-Id", session.getSessionId());
+        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
+        UserProfile userProfile = generateUserProfile(null);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
+        usingValidSession();
+        usingApplicableUserCredentialsWithLogin(SMS, true);
+        usingDefaultVectorOfTrust();
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setHeaders(headers);
+        event.setBody(
+                format(
+                        "{ \"password\": \"%s\", \"email\": \"%s\" }",
+                        PASSWORD, EMAIL.toUpperCase()));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+
+        LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
+        assertThat(
+                response.getRedactedPhoneNumber(),
+                equalTo(RedactPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
+        assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
+        verify(authenticationService).getUserProfileByEmailMaybe(EMAIL);
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.LOG_IN_SUCCESS,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        CLIENT_ID.getValue(),
+                        expectedCommonSubject,
+                        userProfile.getEmail(),
+                        "123.123.123.123",
+                        userProfile.getPhoneNumber(),
+                        PERSISTENT_ID,
+                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
+
+        verifyNoInteractions(cloudwatchMetricsService);
+        verify(sessionService, atLeastOnce())
+                .save(
+                        argThat(
+                                t ->
+                                        t.getInternalCommonSubjectIdentifier()
+                                                .equals(expectedCommonSubject)));
+        verify(sessionService, atLeastOnce())
+                .save(argThat(t -> t.isNewAccount() == Session.AccountState.EXISTING));
+    }
+
     private AuthenticationRequest generateAuthRequest() {
         return generateAuthRequest(null);
     }
@@ -803,5 +861,14 @@ class LoginHandlerTest {
                 VectorOfTrust.parseFromAuthRequestAttribute(
                         Collections.singletonList(jsonArrayOf("Cl.Cm")));
         when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vectorOfTrust);
+    }
+
+    private void setUpSmokeTestClient() {
+        when(clientService.getClient(CLIENT_ID.getValue()))
+                .thenReturn(
+                        Optional.of(
+                                new ClientRegistry()
+                                        .withSmokeTest(true)
+                                        .withClientID(CLIENT_ID.getValue())));
     }
 }
