@@ -32,6 +32,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -48,6 +49,7 @@ import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1001;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1002;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1011;
 import static uk.gov.di.authentication.shared.entity.NotificationType.ACCOUNT_CREATED_CONFIRMATION;
+import static uk.gov.di.authentication.shared.entity.NotificationType.CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
@@ -63,6 +65,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
 
     private static final Logger LOG = LogManager.getLogger(SendNotificationHandler.class);
     private static final CloudwatchMetricsService METRICS = new CloudwatchMetricsService();
+    private static final List<NotificationType> CONFIRMATION_NOTIFICATION_TYPES =
+            List.of(ACCOUNT_CREATED_CONFIRMATION, CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION);
 
     private final AwsSqsClient sqsClient;
     private final CodeGeneratorService codeGeneratorService;
@@ -117,16 +121,16 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             if (!userContext.getSession().validateSession(request.getEmail())) {
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
             }
-            if (request.getNotificationType().equals(ACCOUNT_CREATED_CONFIRMATION)) {
-                LOG.info("Placing message on queue for AccountCreatedConfirmation");
+            if (CONFIRMATION_NOTIFICATION_TYPES.contains(request.getNotificationType())) {
+                LOG.info("Placing message on queue for {}", request.getNotificationType());
                 NotifyRequest notifyRequest =
                         new NotifyRequest(
                                 request.getEmail(),
-                                ACCOUNT_CREATED_CONFIRMATION,
+                                request.getNotificationType(),
                                 userContext.getUserLanguage());
                 if (!isTestClientWithAllowedEmail(userContext, configurationService)) {
                     sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
-                    LOG.info("AccountCreatedConfirmation email placed on queue");
+                    LOG.info("{} email placed on queue", request.getNotificationType());
                 }
                 return generateEmptySuccessApiGatewayResponse();
             }

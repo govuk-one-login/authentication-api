@@ -2,19 +2,25 @@ package uk.gov.di.authentication.queuehandlers;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.frontendapi.lambda.NotificationHandler;
+import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.NotifyIntegrationTest;
 
 import java.security.SecureRandom;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.Mockito.mock;
 import static uk.gov.di.authentication.shared.entity.NotificationType.ACCOUNT_CREATED_CONFIRMATION;
+import static uk.gov.di.authentication.shared.entity.NotificationType.CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
@@ -97,14 +103,22 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
                         "validation-code", withLength(equalTo(VERIFICATION_CODE_LENGTH))));
     }
 
-    @Test
-    void shouldCallNotifyWhenValidAccountCreatedRequestIsAddedToQueue() throws Json.JsonException {
+    private static Stream<Arguments> confirmationEmails() {
+        return Stream.of(
+                Arguments.of(ACCOUNT_CREATED_CONFIRMATION, "accountCreatedEmail"),
+                Arguments.of(
+                        CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION,
+                        "changeHowGetSecurityCodesConfirmationEmail"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("confirmationEmails")
+    void shouldCallNotifyWhenValidAccountCreatedRequestIsAddedToQueue(
+            NotificationType notificationType, String referer) throws Json.JsonException {
         handler.handleRequest(
                 createSqsEvent(
                         new NotifyRequest(
-                                TEST_EMAIL_ADDRESS,
-                                ACCOUNT_CREATED_CONFIRMATION,
-                                SupportedLanguage.EN)),
+                                TEST_EMAIL_ADDRESS, notificationType, SupportedLanguage.EN)),
                 mock(Context.class));
 
         var request = notifyStub.waitForRequest(60);
@@ -117,7 +131,6 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
                 personalisation,
                 hasFieldWithValue(
                         "contact-us-link",
-                        equalTo(
-                                "http://localhost:3000/frontend/contact-us?referer=accountCreatedEmail")));
+                        equalTo("http://localhost:3000/frontend/contact-us?referer=" + referer)));
     }
 }

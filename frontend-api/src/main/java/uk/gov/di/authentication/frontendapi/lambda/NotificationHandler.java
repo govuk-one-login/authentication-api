@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 
 import static uk.gov.di.authentication.shared.entity.NotificationType.ACCOUNT_CREATED_CONFIRMATION;
+import static uk.gov.di.authentication.shared.entity.NotificationType.CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION_SMS;
@@ -175,6 +176,20 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                                     notifyRequest.getDestination(),
                                     notifyPersonalisation,
                                     VERIFY_CHANGE_HOW_GET_SECURITY_CODES,
+                                    notifyRequest.getLanguage());
+                            break;
+                        case CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION:
+                            Map<String, Object>
+                                    changeHowGetSecurityCodesConfirmationPersonalisation =
+                                            new HashMap<>();
+                            changeHowGetSecurityCodesConfirmationPersonalisation.put(
+                                    "contact-us-link",
+                                    buildContactUsUrl(
+                                            "changeHowGetSecurityCodesConfirmationEmail"));
+                            notificationService.sendEmail(
+                                    notifyRequest.getDestination(),
+                                    changeHowGetSecurityCodesConfirmationPersonalisation,
+                                    CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION,
                                     notifyRequest.getLanguage());
                             break;
                     }
