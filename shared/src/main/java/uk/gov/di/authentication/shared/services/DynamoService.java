@@ -402,6 +402,28 @@ public class DynamoService implements AuthenticationService {
     }
 
     @Override
+    public void setMFAMethodEnabled(String email, MFAMethodType mfaMethodType, boolean enabled) {
+        var userCredentials =
+                dynamoUserCredentialsTable.getItem(
+                        Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
+        var mfaMethods = userCredentials.getMfaMethods();
+        if (mfaMethods != null) {
+            var mfaMethod =
+                    mfaMethods.stream()
+                            .filter(
+                                    method ->
+                                            method.getMfaMethodType()
+                                                    .equals(mfaMethodType.getValue()))
+                            .findFirst();
+            mfaMethod.ifPresent(
+                    mfa -> {
+                        mfa.withEnabled(enabled);
+                        dynamoUserCredentialsTable.updateItem(userCredentials);
+                    });
+        }
+    }
+
+    @Override
     public UserProfile getUserProfileFromSubject(String subject) {
         QueryConditional q =
                 QueryConditional.keyEqualTo(Key.builder().partitionValue(subject).build());

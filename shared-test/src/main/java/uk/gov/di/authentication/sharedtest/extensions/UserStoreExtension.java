@@ -141,6 +141,14 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
                 .anyMatch(MFAMethod::isMethodVerified);
     }
 
+    public boolean isAuthAppEnabled(String email) {
+        var mfaMethods = dynamoService.getUserCredentialsFromEmail(email).getMfaMethods();
+        return mfaMethods != null
+                && mfaMethods.stream()
+                        .filter(t -> t.getMfaMethodType().equals(MFAMethodType.AUTH_APP.getValue()))
+                        .anyMatch(MFAMethod::isEnabled);
+    }
+
     public void addMfaMethod(
             String email,
             MFAMethodType mfaMethodType,
