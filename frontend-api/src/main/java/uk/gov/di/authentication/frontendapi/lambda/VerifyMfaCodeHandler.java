@@ -248,6 +248,11 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 CODE_BLOCKED_KEY_PREFIX,
                 configurationService.getBlockedEmailDuration());
 
+        codeStorageService.saveBlockedForEmail(
+                emailAddress,
+                CODE_BLOCKED_KEY_PREFIX + mfaMethodType.getValue(),
+                configurationService.getBlockedEmailDuration());
+
         if (mfaMethodType == MFAMethodType.SMS) {
             codeStorageService.deleteIncorrectMfaCodeAttemptsCount(emailAddress);
         } else {
