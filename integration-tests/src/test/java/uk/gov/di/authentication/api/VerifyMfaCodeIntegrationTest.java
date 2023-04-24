@@ -27,6 +27,7 @@ import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -117,6 +118,24 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 t ->
                                         t.getCredentialValue().equals(secret)
                                                 && t.isMethodVerified()));
+    }
+
+    @Test
+    void shouldReturn400WhenAuthAppSecretIsInvalid() {
+        var secret = "not-base-32-encoded-secret";
+        var code = AUTH_APP_STUB.getAuthAppOneTimeCode(secret);
+        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, code, true, secret);
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
+
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1041));
+        assertThat(accountRecoveryStore.isBlockPresent(EMAIL_ADDRESS), equalTo(false));
+        assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(false));
+        assertTrue(Objects.isNull(userStore.getMfaMethod(EMAIL_ADDRESS)));
     }
 
     @Test
@@ -425,9 +444,10 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void whenValidPhoneNumberCodeForRegistrationReturn204AndInvalidateAuthApp() {
-        setUpAuthAppRequest(true);
+        userStore.addMfaMethod(
+                EMAIL_ADDRESS, MFAMethodType.AUTH_APP, false, true, AUTH_APP_SECRET_BASE_32);
         var code = redis.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 900);
-        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.SMS, code, true);
+        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.SMS, code, true, PHONE_NUMBER);
 
         var response =
                 makeRequest(
@@ -438,6 +458,9 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(204));
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_VERIFIED));
         assertThat(userStore.isAuthAppEnabled(EMAIL_ADDRESS), equalTo(false));
+        assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));
+        assertThat(userStore.getPhoneNumberForUser(EMAIL_ADDRESS).get(), equalTo(PHONE_NUMBER));
+        assertTrue(userStore.isPhoneNumberVerified(EMAIL_ADDRESS));
     }
 
     @Test

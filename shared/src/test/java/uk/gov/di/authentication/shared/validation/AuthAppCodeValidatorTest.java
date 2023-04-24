@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.shared.validation;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -20,6 +21,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -32,6 +35,8 @@ class AuthAppCodeValidatorTest {
     ConfigurationService mockConfigurationService;
     DynamoService mockDynamoService;
 
+    private static final String AUTH_APP_SECRET =
+            "JZ5PYIOWNZDAOBA65S5T77FEEKYCCIT2VE4RQDAJD7SO73T3LODA";
     private final int MAX_RETRIES = 5;
 
     @BeforeEach
@@ -43,7 +48,7 @@ class AuthAppCodeValidatorTest {
     }
 
     private static Stream<Arguments> validatorParams() {
-        return Stream.of(Arguments.of(false, null), Arguments.of(true, "test-credential-value"));
+        return Stream.of(Arguments.of(false, null), Arguments.of(true, AUTH_APP_SECRET));
     }
 
     @ParameterizedTest
@@ -52,8 +57,7 @@ class AuthAppCodeValidatorTest {
         setUpValidAuthCode(isRegistration);
         var authAppStub = new AuthAppStub();
         String authCode =
-                authAppStub.getAuthAppOneTimeCode(
-                        "test-credential-value", NowHelper.now().getTime());
+                authAppStub.getAuthAppOneTimeCode(AUTH_APP_SECRET, NowHelper.now().getTime());
 
         assertEquals(Optional.empty(), authAppCodeValidator.validateCode(authCode, authAppSecret));
     }
@@ -87,6 +91,15 @@ class AuthAppCodeValidatorTest {
         assertEquals(
                 Optional.of(ErrorResponse.ERROR_1043),
                 authAppCodeValidator.validateCode("any-code", null));
+    }
+
+    @Test
+    void shouldReturnErrorWhenAuthAppSecretIsInvalid() {
+        setUpValidAuthCode(true);
+
+        assertThat(
+                authAppCodeValidator.validateCode("123456", "not-base-32-encoded-secret"),
+                equalTo(Optional.of(ErrorResponse.ERROR_1041)));
     }
 
     @ParameterizedTest
@@ -164,7 +177,7 @@ class AuthAppCodeValidatorTest {
         UserCredentials mockUserCredentials = mock(UserCredentials.class);
         MFAMethod mockMfaMethod = mock(MFAMethod.class);
         when(mockMfaMethod.getMfaMethodType()).thenReturn(MFAMethodType.AUTH_APP.getValue());
-        when(mockMfaMethod.getCredentialValue()).thenReturn("test-credential-value");
+        when(mockMfaMethod.getCredentialValue()).thenReturn(AUTH_APP_SECRET);
         when(mockMfaMethod.isEnabled()).thenReturn(true);
         List<MFAMethod> mockMfaMethodList = Collections.singletonList(mockMfaMethod);
         when(mockUserCredentials.getMfaMethods()).thenReturn(mockMfaMethodList);

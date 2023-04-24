@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.shared.validation;
 
+import org.apache.commons.codec.CodecPolicy;
 import org.apache.commons.codec.binary.Base32;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
@@ -25,6 +26,7 @@ public class AuthAppCodeValidator extends MfaCodeValidator {
     private final AuthenticationService dynamoService;
     private final String emailAddress;
     private final boolean isRegistration;
+    private static final Base32 base32 = new Base32(0, null, false, (byte) '=', CodecPolicy.STRICT);
 
     public AuthAppCodeValidator(
             String emailAddress,
@@ -62,6 +64,10 @@ public class AuthAppCodeValidator extends MfaCodeValidator {
         if (Objects.isNull(authAppSecret)) {
             LOG.info("No auth app secret found");
             return Optional.of(ErrorResponse.ERROR_1043);
+        }
+
+        if (isRegistration && !base32.isInAlphabet(profileInformation)) {
+            return Optional.of(ErrorResponse.ERROR_1041);
         }
 
         if (!isCodeValid(code, authAppSecret)) {

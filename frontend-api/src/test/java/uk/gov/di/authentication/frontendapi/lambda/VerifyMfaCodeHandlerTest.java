@@ -62,7 +62,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
@@ -172,8 +171,6 @@ class VerifyMfaCodeHandlerTest {
         when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
                 .thenReturn(Optional.of(authAppCodeValidator));
         when(authAppCodeValidator.validateCode(CODE, AUTH_APP_SECRET)).thenReturn(Optional.empty());
-        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
-                .thenReturn(Optional.of(CODE));
         session.setNewAccount(Session.AccountState.NEW);
         session.setCurrentCredentialStrength(credentialTrustLevel);
         var result =
@@ -188,6 +185,7 @@ class VerifyMfaCodeHandlerTest {
         verify(authenticationService)
                 .updateMFAMethod(
                         TEST_EMAIL_ADDRESS, MFAMethodType.AUTH_APP, true, true, AUTH_APP_SECRET);
+        verify(authenticationService).setAccountVerified(TEST_EMAIL_ADDRESS);
         verify(codeStorageService, never())
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
@@ -218,8 +216,6 @@ class VerifyMfaCodeHandlerTest {
                 .thenReturn(Optional.of(phoneNumberCodeValidator));
         when(phoneNumberCodeValidator.validateCode(CODE, PHONE_NUMBER))
                 .thenReturn(Optional.empty());
-        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
-                .thenReturn(Optional.of(CODE));
         session.setNewAccount(Session.AccountState.NEW);
         session.setCurrentCredentialStrength(credentialTrustLevel);
         var result =
@@ -262,8 +258,6 @@ class VerifyMfaCodeHandlerTest {
         when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
                 .thenReturn(Optional.of(authAppCodeValidator));
         when(authAppCodeValidator.validateCode(CODE, null)).thenReturn(Optional.empty());
-        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
-                .thenReturn(Optional.of(CODE));
         session.setNewAccount(Session.AccountState.EXISTING);
         var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, false);
         var result = makeCallWithCode(codeRequest);
@@ -296,8 +290,6 @@ class VerifyMfaCodeHandlerTest {
     void shouldReturn400IfMfaCodeValidatorCannotBeFound() throws Json.JsonException {
         when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
                 .thenReturn(Optional.empty());
-        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
-                .thenReturn(Optional.of(CODE));
         var codeRequest =
                 new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, true, AUTH_APP_SECRET);
         var result = makeCallWithCode(codeRequest);
@@ -323,8 +315,6 @@ class VerifyMfaCodeHandlerTest {
                 .thenReturn(Optional.of(authAppCodeValidator));
         when(authAppCodeValidator.validateCode(CODE, null))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1042));
-        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
-                .thenReturn(Optional.of(CODE));
         var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, false);
         var result = makeCallWithCode(codeRequest);
 
@@ -358,8 +348,6 @@ class VerifyMfaCodeHandlerTest {
                 .thenReturn(Optional.of(authAppCodeValidator));
         when(authAppCodeValidator.validateCode(CODE, null))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1042));
-        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
-                .thenReturn(Optional.of(CODE));
         when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
         var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, false);
@@ -396,8 +384,6 @@ class VerifyMfaCodeHandlerTest {
         var profileInformation = registration ? AUTH_APP_SECRET : null;
         when(authAppCodeValidator.validateCode(CODE, profileInformation))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1043));
-        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
-                .thenReturn(Optional.of(CODE));
         var codeRequest =
                 new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, false, profileInformation);
         var result = makeCallWithCode(codeRequest);
@@ -432,8 +418,6 @@ class VerifyMfaCodeHandlerTest {
                 .thenReturn(Optional.of(phoneNumberCodeValidator));
         when(phoneNumberCodeValidator.validateCode(CODE, PHONE_NUMBER))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1034));
-        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
-                .thenReturn(Optional.of(CODE));
         var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.SMS, CODE, true, PHONE_NUMBER);
         var result = makeCallWithCode(codeRequest);
 
@@ -470,8 +454,6 @@ class VerifyMfaCodeHandlerTest {
                 .thenReturn(Optional.of(phoneNumberCodeValidator));
         when(phoneNumberCodeValidator.validateCode(CODE, PHONE_NUMBER))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1034));
-        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
-                .thenReturn(Optional.of(CODE));
         when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
         var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.SMS, CODE, true, PHONE_NUMBER);
@@ -509,8 +491,6 @@ class VerifyMfaCodeHandlerTest {
                 .thenReturn(Optional.of(phoneNumberCodeValidator));
         when(phoneNumberCodeValidator.validateCode(CODE, PHONE_NUMBER))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1037));
-        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
-                .thenReturn(Optional.of(CODE));
         var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.SMS, CODE, true, PHONE_NUMBER);
         var result = makeCallWithCode(codeRequest);
 
@@ -537,6 +517,33 @@ class VerifyMfaCodeHandlerTest {
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("mfa-type", MFAMethodType.SMS.getValue()));
+    }
+
+    @Test
+    void shouldReturn400WhenAuthAppSecretIsInvalid() throws Json.JsonException {
+        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
+                .thenReturn(Optional.of(authAppCodeValidator));
+        when(authAppCodeValidator.validateCode(CODE, "not-base-32-encoded-secret"))
+                .thenReturn(Optional.of(ErrorResponse.ERROR_1041));
+        session.setNewAccount(Session.AccountState.NEW);
+        session.setCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL);
+        var result =
+                makeCallWithCode(
+                        new VerifyMfaCodeRequest(
+                                MFAMethodType.AUTH_APP, CODE, true, "not-base-32-encoded-secret"));
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1041));
+        verify(authenticationService, never())
+                .updateMFAMethod(
+                        TEST_EMAIL_ADDRESS, MFAMethodType.AUTH_APP, true, true, AUTH_APP_SECRET);
+        verify(authenticationService, never()).setAccountVerified(TEST_EMAIL_ADDRESS);
+        verify(codeStorageService, never())
+                .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
+        verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
+        verify(accountRecoveryBlockService, never()).deleteBlockIfPresent(TEST_EMAIL_ADDRESS);
+        verifyNoInteractions(auditService);
+        verifyNoInteractions(cloudwatchMetricsService);
     }
 
     private APIGatewayProxyResponseEvent makeCallWithCode(VerifyMfaCodeRequest mfaCodeRequest)

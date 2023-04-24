@@ -125,6 +125,10 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                     mfaCodeValidator.validateCode(
                             codeRequest.getCode(), codeRequest.getProfileInformation());
 
+            if (errorResponse.filter(ErrorResponse.ERROR_1041::equals).isPresent()) {
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1041);
+            }
+
             processCodeSession(errorResponse, session, input, userContext, codeRequest);
 
             sessionService.save(session);
