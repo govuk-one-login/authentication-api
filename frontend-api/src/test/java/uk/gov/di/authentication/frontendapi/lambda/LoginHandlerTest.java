@@ -347,6 +347,75 @@ class LoginHandlerTest {
                 .save(argThat(t -> t.isNewAccount() == Session.AccountState.EXISTING));
     }
 
+    @Test
+    void shouldReturn200WithCorrectMfaMethodVerifiedStatus() throws Json.JsonException {
+        Map<String, String> headers = new HashMap<>();
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
+        headers.put("Session-Id", session.getSessionId());
+        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
+        var userProfile = generateUserProfile(null);
+        var userCredentials =
+                new UserCredentials()
+                        .withEmail(EMAIL)
+                        .withPassword(PASSWORD)
+                        .setMfaMethod(
+                                new MFAMethod()
+                                        .withMfaMethodType(MFAMethodType.AUTH_APP.getValue())
+                                        .withMethodVerified(false)
+                                        .withEnabled(true));
+        when(authenticationService.login(userCredentials, PASSWORD)).thenReturn(true);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        when(authenticationService.getUserCredentialsFromEmail(EMAIL)).thenReturn(userCredentials);
+        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
+        usingValidSession();
+
+        usingDefaultVectorOfTrust();
+
+        var event = new APIGatewayProxyRequestEvent();
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setHeaders(headers);
+        event.setBody(
+                format(
+                        "{ \"password\": \"%s\", \"email\": \"%s\" }",
+                        PASSWORD, EMAIL.toUpperCase()));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+
+        var response = objectMapper.readValue(result.getBody(), LoginResponse.class);
+        assertThat(
+                response.getRedactedPhoneNumber(),
+                equalTo(RedactPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
+        assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
+        assertThat(response.getMfaMethodType(), equalTo(SMS));
+        assertThat(response.isMfaMethodVerified(), equalTo(true));
+        verify(authenticationService).getUserProfileByEmailMaybe(EMAIL);
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.LOG_IN_SUCCESS,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        CLIENT_ID.getValue(),
+                        expectedCommonSubject,
+                        userProfile.getEmail(),
+                        "123.123.123.123",
+                        userProfile.getPhoneNumber(),
+                        PERSISTENT_ID,
+                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
+        verifyNoInteractions(cloudwatchMetricsService);
+
+        verify(sessionService, atLeastOnce())
+                .save(
+                        argThat(
+                                t ->
+                                        t.getInternalCommonSubjectIdentifier()
+                                                .equals(expectedCommonSubject)));
+        verify(sessionService, atLeastOnce())
+                .save(argThat(t -> t.isNewAccount() == Session.AccountState.EXISTING));
+    }
+
     @ParameterizedTest
     @EnumSource(MFAMethodType.class)
     void shouldReturn200IfLoginIsSuccessfulButPasswordWasCommonPassword(MFAMethodType mfaMethodType)
