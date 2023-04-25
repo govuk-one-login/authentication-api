@@ -15,9 +15,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
@@ -40,11 +37,9 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import java.net.URI;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -58,18 +53,13 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_AUTH_APP;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_CONSENT_UPDATED;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_PHONE_NUMBER;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_REQUEST_ERROR;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_REQUEST_RECEIVED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE;
-import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.ADD_PHONE_NUMBER;
 import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.CAPTURE_CONSENT;
-import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.REGISTER_AUTH_APP;
 import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.UPDATE_TERMS_CONDS;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
-import static uk.gov.di.authentication.shared.entity.MFAMethodType.AUTH_APP;
 import static uk.gov.di.authentication.shared.helpers.CookieHelper.buildCookieString;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -83,7 +73,6 @@ class UpdateProfileHandlerTest {
     private static final boolean CONSENT_VALUE = true;
     private static final String SESSION_ID = "a-session-id";
     private static final String CLIENT_SESSION_ID = "client-session-id";
-    private static final String PERSISTENT_SESSION_ID = "psid";
     private static final ClientID CLIENT_ID = new ClientID("client-one");
     private static final String CLIENT_NAME = "client-name";
     private static final String INTERNAL_SUBJECT = new Subject().getValue();
@@ -140,109 +129,6 @@ class UpdateProfileHandlerTest {
                         configurationService,
                         auditService,
                         clientService);
-    }
-
-    private static Stream<Arguments> updateNumberDetailsSuccess() {
-        return Stream.of(
-                Arguments.of(PHONE_NUMBER, "production", false),
-                Arguments.of(PHONE_NUMBER, "production", true),
-                Arguments.of("07700900000", "production", true),
-                Arguments.of("07700900000", "integration", true),
-                Arguments.of("07700900000", "integration", false),
-                Arguments.of("+447700900111", "production", true),
-                Arguments.of("+447700900111", "integration", true),
-                Arguments.of("+447700900111", "integration", false));
-    }
-
-    @ParameterizedTest
-    @MethodSource("updateNumberDetailsSuccess")
-    void shouldReturn204WhenUpdatingPhoneNumber(
-            String phoneNumber, String environment, boolean isSmokeTest) {
-        usingValidSession();
-        usingValidClientSession();
-        when(clientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.of(clientRegistry));
-        when(clientRegistry.isSmokeTest()).thenReturn(isSmokeTest);
-        when(configurationService.getEnvironment()).thenReturn(environment);
-
-        String persistentId = "some-persistent-id-value";
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentId);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(headers);
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\", \"updateProfileType\": \"%s\", \"profileInformation\": \"%s\" }",
-                        TEST_EMAIL_ADDRESS, ADD_PHONE_NUMBER, phoneNumber));
-        APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
-
-        verify(authenticationService).updatePhoneNumber(TEST_EMAIL_ADDRESS, phoneNumber);
-
-        assertThat(result, hasStatus(204));
-
-        verify(auditService)
-                .submitAuditEvent(
-                        UPDATE_PROFILE_PHONE_NUMBER,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        "",
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "",
-                        phoneNumber,
-                        persistentId);
-    }
-
-    private static Stream<Arguments> updateNumberDetailsFails() {
-        return Stream.of(
-                Arguments.of("0123456789A", "production", false),
-                Arguments.of("0123456789A", "production", true),
-                Arguments.of("07700900000", "production", false),
-                Arguments.of("+447700900111", "production", false));
-    }
-
-    @ParameterizedTest
-    @MethodSource("updateNumberDetailsFails")
-    void shouldReturn400WhenPhoneNumberFailsValidation(
-            String phoneNumber, String environment, boolean isSmokeTest) {
-        usingValidSession();
-        usingValidClientSession();
-        when(authenticationService.getUserProfileFromEmail(TEST_EMAIL_ADDRESS))
-                .thenReturn(Optional.of(generateUserProfileWithConsent()));
-        when(clientRegistry.getClientID()).thenReturn(CLIENT_ID.getValue());
-        when(clientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.of(clientRegistry));
-        when(clientRegistry.isSmokeTest()).thenReturn(isSmokeTest);
-        when(configurationService.getEnvironment()).thenReturn(environment);
-
-        Map<String, String> headers = new HashMap<>();
-        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_SESSION_ID);
-        headers.put("Session-Id", session.getSessionId());
-        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(headers);
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\", \"updateProfileType\": \"%s\", \"profileInformation\": \"%s\" }",
-                        TEST_EMAIL_ADDRESS, ADD_PHONE_NUMBER, phoneNumber));
-        APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
-
-        verify(authenticationService, never()).updatePhoneNumber(TEST_EMAIL_ADDRESS, phoneNumber);
-
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1012));
-
-        verify(auditService)
-                .submitAuditEvent(
-                        UPDATE_PROFILE_REQUEST_ERROR,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        CLIENT_ID.getValue(),
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "",
-                        "",
-                        PERSISTENT_SESSION_ID);
     }
 
     @Test
@@ -340,7 +226,7 @@ class UpdateProfileHandlerTest {
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"updateProfileType\": \"%s\"}",
-                        TEST_EMAIL_ADDRESS, ADD_PHONE_NUMBER));
+                        TEST_EMAIL_ADDRESS, UPDATE_TERMS_CONDS));
         APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
 
         assertThat(result, hasStatus(400));
@@ -358,87 +244,6 @@ class UpdateProfileHandlerTest {
                         "",
                         "",
                         "");
-    }
-
-    @Test
-    void shouldReturn204WhenUpdatingAuthAppSecret() {
-        usingValidSession();
-        usingValidClientSession();
-        when(authenticationService.getUserProfileFromEmail(TEST_EMAIL_ADDRESS))
-                .thenReturn(Optional.of(generateUserProfileWithConsent()));
-        when(clientRegistry.getClientID()).thenReturn(CLIENT_ID.getValue());
-        when(clientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.of(clientRegistry));
-
-        var authAppSecret = "JZ5PYIOWNZDAOBA65S5T77FEEKYCCIT2VE4RQDAJD7SO73T3LODA";
-        var event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(
-                Map.of(
-                        "Session-Id",
-                        session.getSessionId(),
-                        CLIENT_SESSION_ID_HEADER,
-                        CLIENT_SESSION_ID));
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\", \"updateProfileType\": \"%s\", \"profileInformation\": \"%s\" }",
-                        TEST_EMAIL_ADDRESS, REGISTER_AUTH_APP, authAppSecret));
-        var result = makeHandlerRequest(event);
-
-        assertThat(result, hasStatus(204));
-        verify(authenticationService)
-                .updateMFAMethod(TEST_EMAIL_ADDRESS, AUTH_APP, false, true, authAppSecret);
-        verify(auditService)
-                .submitAuditEvent(
-                        UPDATE_PROFILE_AUTH_APP,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID.getValue(),
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "",
-                        PHONE_NUMBER,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
-    }
-
-    @Test
-    void shouldReturn400WhenAuthAppSecretIsNotBase32EncodedString() {
-        usingValidSession();
-        usingValidClientSession();
-        when(authenticationService.getUserProfileFromEmail(TEST_EMAIL_ADDRESS))
-                .thenReturn(Optional.of(generateUserProfileWithConsent()));
-        when(clientRegistry.getClientID()).thenReturn(CLIENT_ID.getValue());
-        when(clientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.of(clientRegistry));
-
-        var authAppSecret = "not-base-32-encoded-secret";
-        var event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(
-                Map.of(
-                        "Session-Id",
-                        session.getSessionId(),
-                        PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
-                        PERSISTENT_SESSION_ID,
-                        CLIENT_SESSION_ID_HEADER,
-                        CLIENT_SESSION_ID));
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\", \"updateProfileType\": \"%s\", \"profileInformation\": \"%s\" }",
-                        TEST_EMAIL_ADDRESS, REGISTER_AUTH_APP, authAppSecret));
-
-        var result = makeHandlerRequest(event);
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1041));
-        verify(authenticationService, never())
-                .updateMFAMethod(TEST_EMAIL_ADDRESS, AUTH_APP, false, true, authAppSecret);
-        verify(auditService)
-                .submitAuditEvent(
-                        UPDATE_PROFILE_REQUEST_ERROR,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        CLIENT_ID.getValue(),
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "",
-                        "",
-                        PERSISTENT_SESSION_ID);
     }
 
     private void usingValidSession() {

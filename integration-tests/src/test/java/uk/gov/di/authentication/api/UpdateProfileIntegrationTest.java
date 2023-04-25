@@ -8,8 +8,6 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.frontendapi.entity.UpdateProfileRequest;
 import uk.gov.di.authentication.frontendapi.lambda.UpdateProfileHandler;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
@@ -26,17 +24,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Stream;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_REQUEST_RECEIVED;
-import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.ADD_PHONE_NUMBER;
 import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.CAPTURE_CONSENT;
-import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.REGISTER_AUTH_APP;
 import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.UPDATE_TERMS_CONDS;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -51,41 +44,6 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
     void setup() {
         handler = new UpdateProfileHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
         txmaAuditQueue.clear();
-    }
-
-    private static Stream<String> phoneNumbers() {
-        return Stream.of(
-                "+447316763843",
-                "+4407316763843",
-                "+33645453322",
-                "+447316763843",
-                "+33645453322",
-                "+33645453322",
-                "07911123456",
-                "07123456789");
-    }
-
-    @ParameterizedTest
-    @MethodSource("phoneNumbers")
-    void shouldCallUpdateProfileEndpointToUpdatePhoneNumberAndReturn204(String phonenumber)
-            throws Json.JsonException {
-        String sessionId = redis.createSession();
-        String clientSessionId = IdGenerator.generate();
-        setUpTest(sessionId, clientSessionId);
-        UpdateProfileRequest request =
-                new UpdateProfileRequest(EMAIL_ADDRESS, ADD_PHONE_NUMBER, phonenumber);
-
-        var response =
-                makeRequest(
-                        Optional.of(request),
-                        constructFrontendHeaders(sessionId, clientSessionId),
-                        Map.of());
-
-        assertThat(response, hasStatus(204));
-
-        assertTxmaAuditEventsReceived(
-                txmaAuditQueue,
-                List.of(UPDATE_PROFILE_REQUEST_RECEIVED, UPDATE_PROFILE_REQUEST_RECEIVED));
     }
 
     @Test
@@ -137,33 +95,6 @@ public class UpdateProfileIntegrationTest extends ApiGatewayHandlerIntegrationTe
                         Map.of());
 
         assertThat(response, hasStatus(204));
-        assertTxmaAuditEventsReceived(
-                txmaAuditQueue,
-                List.of(UPDATE_PROFILE_REQUEST_RECEIVED, UPDATE_PROFILE_REQUEST_RECEIVED));
-    }
-
-    @Test
-    void shouldCallUpdateProfileToAddAuthAppAndReturn204() throws Json.JsonException {
-        var sessionId = redis.createSession();
-        var clientSessionId = IdGenerator.generate();
-        setUpTest(sessionId, clientSessionId);
-        var authAppSecret = "JZ5PYIOWNZDAOBA65S5T77FEEKYCCIT2VE4RQDAJD7SO73T3LODA";
-
-        var request = new UpdateProfileRequest(EMAIL_ADDRESS, REGISTER_AUTH_APP, authAppSecret);
-
-        var response =
-                makeRequest(
-                        Optional.of(request),
-                        constructFrontendHeaders(sessionId, clientSessionId),
-                        Map.of());
-
-        assertThat(response, hasStatus(204));
-        var mfaMethod = userStore.getMfaMethod(EMAIL_ADDRESS);
-        assertNotNull(mfaMethod);
-        assertThat(mfaMethod.size(), equalTo(1));
-        assertThat(mfaMethod.get(0).getCredentialValue(), equalTo(authAppSecret));
-        assertThat(mfaMethod.get(0).isMethodVerified(), equalTo(false));
-        assertThat(mfaMethod.get(0).isEnabled(), equalTo(true));
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
                 List.of(UPDATE_PROFILE_REQUEST_RECEIVED, UPDATE_PROFILE_REQUEST_RECEIVED));

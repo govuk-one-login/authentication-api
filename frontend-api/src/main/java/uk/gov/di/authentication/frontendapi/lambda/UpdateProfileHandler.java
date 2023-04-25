@@ -7,8 +7,6 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
-import org.apache.commons.codec.CodecPolicy;
-import org.apache.commons.codec.binary.Base32;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.UpdateProfileRequest;
@@ -23,8 +21,6 @@ import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.LogLineHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
-import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
-import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -39,13 +35,10 @@ import java.time.ZoneId;
 import java.util.Optional;
 import java.util.Set;
 
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_AUTH_APP;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_CONSENT_UPDATED;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_PHONE_NUMBER;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_REQUEST_ERROR;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_REQUEST_RECEIVED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE;
-import static uk.gov.di.authentication.shared.entity.MFAMethodType.AUTH_APP;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 
@@ -53,7 +46,6 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOG = LogManager.getLogger(UpdateProfileHandler.class);
-    private static final byte PAD_DEFAULT = '=';
 
     private final AuditService auditService;
 
@@ -152,38 +144,7 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                         .getClient()
                         .map(ClientRegistry::getClientID)
                         .orElse(AuditService.UNKNOWN);
-        boolean isSmokeTest =
-                userContext.getClient().map(ClientRegistry::isSmokeTest).orElse(false);
         switch (request.getUpdateProfileType()) {
-            case ADD_PHONE_NUMBER:
-                {
-                    String phoneNumber =
-                            PhoneNumberHelper.removeWhitespaceFromPhoneNumber(
-                                    request.getProfileInformation());
-                    Optional<ErrorResponse> errorResponse =
-                            ValidationHelper.validatePhoneNumber(
-                                    phoneNumber,
-                                    configurationService.getEnvironment(),
-                                    isSmokeTest);
-                    if (errorResponse.isPresent()) {
-                        return generateErrorResponse(
-                                errorResponse.get(),
-                                userContext.getClientSessionId(),
-                                session.getSessionId(),
-                                auditableClientId,
-                                request.getEmail(),
-                                persistentSessionId,
-                                session.getInternalCommonSubjectIdentifier());
-                    }
-                    if (isSmokeTest) LOG.info("Accepting test number as valid for smoke test");
-                    authenticationService.updatePhoneNumber(
-                            request.getEmail(), request.getProfileInformation());
-                    auditableEvent = UPDATE_PROFILE_PHONE_NUMBER;
-                    auditablePhoneNumber = request.getProfileInformation();
-
-                    LOG.info("Phone number updated");
-                    break;
-                }
             case CAPTURE_CONSENT:
                 {
                     ClientSession clientSession = userContext.getClientSession();
@@ -240,29 +201,6 @@ public class UpdateProfileHandler extends BaseFrontendHandler<UpdateProfileReque
                     LOG.info(
                             "Updated terms and conditions for Version: {}",
                             configurationService.getTermsAndConditionsVersion());
-                    break;
-                }
-            case REGISTER_AUTH_APP:
-                {
-                    var base32 = new Base32(0, null, false, PAD_DEFAULT, CodecPolicy.STRICT);
-                    if (!base32.isInAlphabet(request.getProfileInformation())) {
-                        return generateErrorResponse(
-                                ErrorResponse.ERROR_1041,
-                                userContext.getClientSessionId(),
-                                session.getSessionId(),
-                                auditableClientId,
-                                request.getEmail(),
-                                persistentSessionId,
-                                session.getInternalCommonSubjectIdentifier());
-                    }
-                    authenticationService.updateMFAMethod(
-                            userContext.getSession().getEmailAddress(),
-                            AUTH_APP,
-                            false,
-                            true,
-                            request.getProfileInformation());
-                    auditableEvent = UPDATE_PROFILE_AUTH_APP;
-                    LOG.info("MFA Method has been updated for type: {}", AUTH_APP);
                     break;
                 }
             default:
