@@ -18,6 +18,7 @@ import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
+import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -169,6 +170,16 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 case VERIFY_PHONE_NUMBER:
                     if (request.getPhoneNumber() == null) {
                         return generateApiGatewayProxyResponse(400, ERROR_1011);
+                    }
+                    var isSmokeTest =
+                            userContext.getClient().map(ClientRegistry::isSmokeTest).orElse(false);
+                    var errorResponse =
+                            ValidationHelper.validatePhoneNumber(
+                                    request.getPhoneNumber(),
+                                    configurationService.getEnvironment(),
+                                    isSmokeTest);
+                    if (errorResponse.isPresent()) {
+                        return generateApiGatewayProxyResponse(400, errorResponse.get());
                     }
                     return handleNotificationRequest(
                             PhoneNumberHelper.removeWhitespaceFromPhoneNumber(

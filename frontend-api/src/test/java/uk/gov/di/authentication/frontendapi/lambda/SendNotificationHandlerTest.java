@@ -16,7 +16,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mockito;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
@@ -49,6 +51,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -367,6 +370,35 @@ class SendNotificationHandlerTest {
         verifyNoInteractions(awsSqsClient);
         verifyNoInteractions(codeStorageService);
         verify(sessionService, never()).save(argThat(this::isSessionWithEmailSent));
+        verifyNoInteractions(auditService);
+    }
+
+    private static Stream<Arguments> sendNotificationPhoneNumberFails() {
+        return Stream.of(
+                Arguments.of("0123456789A", "production", false),
+                Arguments.of("0123456789A", "production", true),
+                Arguments.of("07700900000", "production", false),
+                Arguments.of("+447700900111", "production", false));
+    }
+
+    @ParameterizedTest
+    @MethodSource("sendNotificationPhoneNumberFails")
+    void shouldReturn400WhenPhoneNumberFailsValidation(
+            String phoneNumber, String environment, boolean isSmokeTest) {
+        usingValidSession();
+        usingValidClientSession(CLIENT_ID);
+        clientRegistry.withSmokeTest(isSmokeTest);
+        when(configurationService.getEnvironment()).thenReturn(environment);
+
+        var result =
+                sendRequest(
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, phoneNumber));
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1012));
+        verifyNoInteractions(awsSqsClient);
         verifyNoInteractions(auditService);
     }
 
