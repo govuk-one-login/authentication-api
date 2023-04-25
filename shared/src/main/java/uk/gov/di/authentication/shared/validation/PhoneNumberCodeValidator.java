@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.shared.validation;
 
+import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
@@ -33,7 +34,7 @@ public class PhoneNumberCodeValidator extends MfaCodeValidator {
     }
 
     @Override
-    public Optional<ErrorResponse> validateCode(String code) {
+    public Optional<ErrorResponse> validateCode(CodeRequest codeRequest) {
         if (!isRegistration) {
             LOG.error("Sign In Phone number codes are not supported");
             throw new RuntimeException("Sign In Phone number codes are not supported");
@@ -59,7 +60,7 @@ public class PhoneNumberCodeValidator extends MfaCodeValidator {
         return ValidationHelper.validateVerificationCode(
                 notificationType,
                 storedCode,
-                code,
+                codeRequest.getCode(),
                 codeStorageService,
                 emailAddress,
                 configurationService.getCodeMaxRetries());

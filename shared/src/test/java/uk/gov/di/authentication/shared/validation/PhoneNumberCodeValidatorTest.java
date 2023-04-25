@@ -2,7 +2,9 @@ package uk.gov.di.authentication.shared.validation;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
@@ -28,6 +30,7 @@ class PhoneNumberCodeValidatorTest {
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@example.com";
     private static final String VALID_CODE = "123456";
     private static final String INVALID_CODE = "826272";
+    private static final String PHONE_NUMBER = "+447700900000";
 
     @BeforeEach
     void setup() {
@@ -38,7 +41,11 @@ class PhoneNumberCodeValidatorTest {
     void shouldReturnNoErrorForValidRegistrationPhoneNumberCode() {
         setupPhoneNumberCode(true);
 
-        assertThat(phoneNumberCodeValidator.validateCode(VALID_CODE), equalTo(Optional.empty()));
+        assertThat(
+                phoneNumberCodeValidator.validateCode(
+                        new VerifyMfaCodeRequest(
+                                MFAMethodType.SMS, VALID_CODE, true, PHONE_NUMBER)),
+                equalTo(Optional.empty()));
     }
 
     @Test
@@ -46,7 +53,9 @@ class PhoneNumberCodeValidatorTest {
         setupPhoneNumberCode(true);
 
         assertThat(
-                phoneNumberCodeValidator.validateCode(INVALID_CODE),
+                phoneNumberCodeValidator.validateCode(
+                        new VerifyMfaCodeRequest(
+                                MFAMethodType.SMS, INVALID_CODE, true, PHONE_NUMBER)),
                 equalTo(Optional.of(ErrorResponse.ERROR_1037)));
     }
 
@@ -55,7 +64,9 @@ class PhoneNumberCodeValidatorTest {
         setUpPhoneNumberCodeRetryLimitExceeded();
 
         assertThat(
-                phoneNumberCodeValidator.validateCode(INVALID_CODE),
+                phoneNumberCodeValidator.validateCode(
+                        new VerifyMfaCodeRequest(
+                                MFAMethodType.SMS, INVALID_CODE, true, PHONE_NUMBER)),
                 equalTo(Optional.of(ErrorResponse.ERROR_1034)));
     }
 
@@ -64,7 +75,9 @@ class PhoneNumberCodeValidatorTest {
         setUpBlockedPhoneNumberCode();
 
         assertThat(
-                phoneNumberCodeValidator.validateCode(INVALID_CODE),
+                phoneNumberCodeValidator.validateCode(
+                        new VerifyMfaCodeRequest(
+                                MFAMethodType.SMS, INVALID_CODE, true, PHONE_NUMBER)),
                 equalTo(Optional.of(ErrorResponse.ERROR_1034)));
     }
 
@@ -75,7 +88,10 @@ class PhoneNumberCodeValidatorTest {
         var expectedException =
                 assertThrows(
                         RuntimeException.class,
-                        () -> phoneNumberCodeValidator.validateCode(INVALID_CODE),
+                        () ->
+                                phoneNumberCodeValidator.validateCode(
+                                        new VerifyMfaCodeRequest(
+                                                MFAMethodType.SMS, INVALID_CODE, true, null)),
                         "Expected to throw exception");
 
         assertThat(

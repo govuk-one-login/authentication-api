@@ -38,7 +38,8 @@ public class MfaCodeValidatorFactory {
                                 codeStorageService,
                                 configurationService,
                                 authenticationService,
-                                codeMaxRetries));
+                                codeMaxRetries,
+                                isRegistration));
             case SMS:
                 return Optional.of(
                         new PhoneNumberCodeValidator(
