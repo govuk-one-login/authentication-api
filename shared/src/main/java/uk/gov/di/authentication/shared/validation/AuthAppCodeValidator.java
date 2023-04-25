@@ -2,6 +2,7 @@ package uk.gov.di.authentication.shared.validation;
 
 import org.apache.commons.codec.CodecPolicy;
 import org.apache.commons.codec.binary.Base32;
+import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
@@ -44,8 +45,7 @@ public class AuthAppCodeValidator extends MfaCodeValidator {
     }
 
     @Override
-    public Optional<ErrorResponse> validateCode(String code, String profileInformation) {
-
+    public Optional<ErrorResponse> validateCode(CodeRequest codeRequest) {
         if (isCodeBlockedForSession()) {
             LOG.info("Code blocked for session");
             return Optional.of(ErrorResponse.ERROR_1042);
@@ -59,18 +59,20 @@ public class AuthAppCodeValidator extends MfaCodeValidator {
         }
 
         var authAppSecret =
-                isRegistration ? profileInformation : getMfaCredentialValue().orElse(null);
+                isRegistration
+                        ? codeRequest.getProfileInformation()
+                        : getMfaCredentialValue().orElse(null);
 
         if (Objects.isNull(authAppSecret)) {
             LOG.info("No auth app secret found");
             return Optional.of(ErrorResponse.ERROR_1043);
         }
 
-        if (isRegistration && !base32.isInAlphabet(profileInformation)) {
+        if (isRegistration && !base32.isInAlphabet(codeRequest.getProfileInformation())) {
             return Optional.of(ErrorResponse.ERROR_1041);
         }
 
-        if (!isCodeValid(code, authAppSecret)) {
+        if (!isCodeValid(codeRequest.getCode(), authAppSecret)) {
             LOG.info("Auth code is not valid");
             return Optional.of(ErrorResponse.ERROR_1043);
         }

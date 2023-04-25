@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
@@ -59,7 +60,11 @@ class AuthAppCodeValidatorTest {
         String authCode =
                 authAppStub.getAuthAppOneTimeCode(AUTH_APP_SECRET, NowHelper.now().getTime());
 
-        assertEquals(Optional.empty(), authAppCodeValidator.validateCode(authCode, authAppSecret));
+        assertEquals(
+                Optional.empty(),
+                authAppCodeValidator.validateCode(
+                        new VerifyMfaCodeRequest(
+                                MFAMethodType.AUTH_APP, authCode, isRegistration, authAppSecret)));
     }
 
     @ParameterizedTest
@@ -70,7 +75,9 @@ class AuthAppCodeValidatorTest {
 
         assertEquals(
                 Optional.of(ErrorResponse.ERROR_1042),
-                authAppCodeValidator.validateCode("any-code", authAppSecret));
+                authAppCodeValidator.validateCode(
+                        new VerifyMfaCodeRequest(
+                                MFAMethodType.AUTH_APP, "000000", isRegistration, authAppSecret)));
     }
 
     @ParameterizedTest
@@ -80,7 +87,9 @@ class AuthAppCodeValidatorTest {
 
         assertEquals(
                 Optional.of(ErrorResponse.ERROR_1042),
-                authAppCodeValidator.validateCode("any-code", authAppSecret));
+                authAppCodeValidator.validateCode(
+                        new VerifyMfaCodeRequest(
+                                MFAMethodType.AUTH_APP, "000000", isRegistration, authAppSecret)));
     }
 
     @ParameterizedTest
@@ -90,7 +99,9 @@ class AuthAppCodeValidatorTest {
 
         assertEquals(
                 Optional.of(ErrorResponse.ERROR_1043),
-                authAppCodeValidator.validateCode("any-code", null));
+                authAppCodeValidator.validateCode(
+                        new VerifyMfaCodeRequest(
+                                MFAMethodType.AUTH_APP, "000000", isRegistration)));
     }
 
     @Test
@@ -98,7 +109,12 @@ class AuthAppCodeValidatorTest {
         setUpValidAuthCode(true);
 
         assertThat(
-                authAppCodeValidator.validateCode("123456", "not-base-32-encoded-secret"),
+                authAppCodeValidator.validateCode(
+                        new VerifyMfaCodeRequest(
+                                MFAMethodType.AUTH_APP,
+                                "000000",
+                                true,
+                                "not-base-32-encoded-secret")),
                 equalTo(Optional.of(ErrorResponse.ERROR_1041)));
     }
 
@@ -109,13 +125,18 @@ class AuthAppCodeValidatorTest {
 
         assertEquals(
                 Optional.of(ErrorResponse.ERROR_1043),
-                authAppCodeValidator.validateCode("111111", authAppSecret));
+                authAppCodeValidator.validateCode(
+                        new VerifyMfaCodeRequest(
+                                MFAMethodType.AUTH_APP, "111111", true, authAppSecret)));
         assertEquals(
                 Optional.of(ErrorResponse.ERROR_1043),
-                authAppCodeValidator.validateCode("", authAppSecret));
+                authAppCodeValidator.validateCode(
+                        new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, "", true, authAppSecret)));
         assertEquals(
                 Optional.of(ErrorResponse.ERROR_1043),
-                authAppCodeValidator.validateCode("999999999999", authAppSecret));
+                authAppCodeValidator.validateCode(
+                        new VerifyMfaCodeRequest(
+                                MFAMethodType.AUTH_APP, "999999999999", true, authAppSecret)));
     }
 
     private void setUpBlockedUser(boolean isRegistration) {

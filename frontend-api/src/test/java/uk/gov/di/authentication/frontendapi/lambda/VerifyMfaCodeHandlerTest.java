@@ -17,8 +17,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import uk.gov.di.authentication.entity.CodeRequest;
+import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
-import uk.gov.di.authentication.frontendapi.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.services.DynamoAccountRecoveryBlockService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
@@ -170,7 +171,8 @@ class VerifyMfaCodeHandlerTest {
             CredentialTrustLevel credentialTrustLevel) throws Json.JsonException {
         when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
                 .thenReturn(Optional.of(authAppCodeValidator));
-        when(authAppCodeValidator.validateCode(CODE, AUTH_APP_SECRET)).thenReturn(Optional.empty());
+        when(authAppCodeValidator.validateCode(any(CodeRequest.class)))
+                .thenReturn(Optional.empty());
         session.setNewAccount(Session.AccountState.NEW);
         session.setCurrentCredentialStrength(credentialTrustLevel);
         var result =
@@ -226,7 +228,7 @@ class VerifyMfaCodeHandlerTest {
             CredentialTrustLevel credentialTrustLevel) throws Json.JsonException {
         when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
                 .thenReturn(Optional.of(phoneNumberCodeValidator));
-        when(phoneNumberCodeValidator.validateCode(CODE, PHONE_NUMBER))
+        when(phoneNumberCodeValidator.validateCode(any(CodeRequest.class)))
                 .thenReturn(Optional.empty());
         session.setNewAccount(Session.AccountState.NEW);
         session.setCurrentCredentialStrength(credentialTrustLevel);
@@ -281,7 +283,8 @@ class VerifyMfaCodeHandlerTest {
     void shouldReturn204WhenSuccessfulAuthAppCodeLoginRequest() throws Json.JsonException {
         when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
                 .thenReturn(Optional.of(authAppCodeValidator));
-        when(authAppCodeValidator.validateCode(CODE, null)).thenReturn(Optional.empty());
+        when(authAppCodeValidator.validateCode(any(CodeRequest.class)))
+                .thenReturn(Optional.empty());
         session.setNewAccount(Session.AccountState.EXISTING);
         var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, false);
         var result = makeCallWithCode(codeRequest);
@@ -337,7 +340,7 @@ class VerifyMfaCodeHandlerTest {
             throws Json.JsonException {
         when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
                 .thenReturn(Optional.of(authAppCodeValidator));
-        when(authAppCodeValidator.validateCode(CODE, null))
+        when(authAppCodeValidator.validateCode(any(CodeRequest.class)))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1042));
         var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, false);
         var result = makeCallWithCode(codeRequest);
@@ -370,7 +373,7 @@ class VerifyMfaCodeHandlerTest {
             throws Json.JsonException {
         when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
                 .thenReturn(Optional.of(authAppCodeValidator));
-        when(authAppCodeValidator.validateCode(CODE, null))
+        when(authAppCodeValidator.validateCode(any(CodeRequest.class)))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1042));
         when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
@@ -406,7 +409,7 @@ class VerifyMfaCodeHandlerTest {
         when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
                 .thenReturn(Optional.of(authAppCodeValidator));
         var profileInformation = registration ? AUTH_APP_SECRET : null;
-        when(authAppCodeValidator.validateCode(CODE, profileInformation))
+        when(authAppCodeValidator.validateCode(any(CodeRequest.class)))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1043));
         var codeRequest =
                 new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, false, profileInformation);
@@ -440,7 +443,7 @@ class VerifyMfaCodeHandlerTest {
                     throws Json.JsonException {
         when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
                 .thenReturn(Optional.of(phoneNumberCodeValidator));
-        when(phoneNumberCodeValidator.validateCode(CODE, PHONE_NUMBER))
+        when(phoneNumberCodeValidator.validateCode(any(CodeRequest.class)))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1034));
         var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.SMS, CODE, true, PHONE_NUMBER);
         var result = makeCallWithCode(codeRequest);
@@ -476,7 +479,7 @@ class VerifyMfaCodeHandlerTest {
                     throws Json.JsonException {
         when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
                 .thenReturn(Optional.of(phoneNumberCodeValidator));
-        when(phoneNumberCodeValidator.validateCode(CODE, PHONE_NUMBER))
+        when(phoneNumberCodeValidator.validateCode(any(CodeRequest.class)))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1034));
         when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
@@ -513,7 +516,7 @@ class VerifyMfaCodeHandlerTest {
             throws Json.JsonException {
         when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
                 .thenReturn(Optional.of(phoneNumberCodeValidator));
-        when(phoneNumberCodeValidator.validateCode(CODE, PHONE_NUMBER))
+        when(phoneNumberCodeValidator.validateCode(any(CodeRequest.class)))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1037));
         var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.SMS, CODE, true, PHONE_NUMBER);
         var result = makeCallWithCode(codeRequest);
@@ -547,7 +550,7 @@ class VerifyMfaCodeHandlerTest {
     void shouldReturn400WhenAuthAppSecretIsInvalid() throws Json.JsonException {
         when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
                 .thenReturn(Optional.of(authAppCodeValidator));
-        when(authAppCodeValidator.validateCode(CODE, "not-base-32-encoded-secret"))
+        when(authAppCodeValidator.validateCode(any(CodeRequest.class)))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1041));
         session.setNewAccount(Session.AccountState.NEW);
         session.setCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL);
@@ -570,7 +573,7 @@ class VerifyMfaCodeHandlerTest {
         verifyNoInteractions(cloudwatchMetricsService);
     }
 
-    private APIGatewayProxyResponseEvent makeCallWithCode(VerifyMfaCodeRequest mfaCodeRequest)
+    private APIGatewayProxyResponseEvent makeCallWithCode(CodeRequest mfaCodeRequest)
             throws Json.JsonException {
         var event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));

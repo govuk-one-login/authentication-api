@@ -2,6 +2,7 @@ package uk.gov.di.authentication.shared.validation;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
@@ -40,5 +41,5 @@ public abstract class MfaCodeValidator {
         codeStorageService.deleteIncorrectMfaCodeAttemptsCount(emailAddress, mfaMethodType);
     }
 
-    public abstract Optional<ErrorResponse> validateCode(String code, String profileInformation);
+    public abstract Optional<ErrorResponse> validateCode(CodeRequest codeRequest);
 }
