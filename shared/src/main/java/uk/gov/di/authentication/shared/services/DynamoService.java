@@ -350,7 +350,11 @@ public class DynamoService implements AuthenticationService {
                         .withPhoneNumber(formattedPhoneNumber)
                         .withPhoneNumberVerified(phoneNumberVerified)
                         .withAccountVerified(accountVerified ? 1 : 0);
-        dynamoUserProfileTable.updateItem(userProfile);
+
+        dynamoDbEnhancedClient.transactWriteItems(
+                TransactWriteItemsEnhancedRequest.builder()
+                        .addUpdateItem(dynamoUserProfileTable, userProfile)
+                        .build());
     }
 
     @Override
