@@ -70,7 +70,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
         var sessionId = redis.createSession();
         var phoneNumber = "+441234567890";
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
-        userStore.addPhoneNumber(EMAIL_ADDRESS, phoneNumber);
+        userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, phoneNumber);
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
 
         var response =
@@ -121,8 +121,8 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
         var sessionId = redis.createSession();
         var phoneNumber = "+441234567890";
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
-        userStore.addPhoneNumber(EMAIL_ADDRESS, phoneNumber);
-        userStore.setPhoneNumberVerified(EMAIL_ADDRESS, phoneNumberVerified);
+        userStore.setPhoneNumberAndVerificationStatus(
+                EMAIL_ADDRESS, phoneNumber, phoneNumberVerified, phoneNumberVerified);
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
 
         var response =

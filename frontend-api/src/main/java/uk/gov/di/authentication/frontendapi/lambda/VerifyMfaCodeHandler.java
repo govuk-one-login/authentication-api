@@ -227,10 +227,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                             codeRequest.getMfaMethodType());
                     break;
                 case SMS:
-                    authenticationService.updatePhoneNumber(
-                            emailAddress, codeRequest.getProfileInformation());
                     authenticationService.updatePhoneNumberAndAccountVerifiedStatus(
-                            emailAddress, true);
+                            emailAddress, codeRequest.getProfileInformation(), true, true);
                     authenticationService.setMFAMethodEnabled(
                             emailAddress, MFAMethodType.AUTH_APP, false);
                     submitAuditEvent(

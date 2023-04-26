@@ -35,7 +35,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         String subjectId = "new-subject";
         SESSION_ID = redis.createUnauthenticatedSessionWithEmail(USER_EMAIL);
         userStore.signUp(USER_EMAIL, USER_PASSWORD, new Subject(subjectId));
-        userStore.addPhoneNumber(USER_EMAIL, USER_PHONE_NUMBER);
+        userStore.addVerifiedPhoneNumber(USER_EMAIL, USER_PHONE_NUMBER);
     }
 
     @Test

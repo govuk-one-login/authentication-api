@@ -36,7 +36,7 @@ public class ResetPasswordRequestIntegrationTest extends ApiGatewayHandlerIntegr
         String password = "password-1";
         String phoneNumber = "01234567890";
         userStore.signUp(email, password);
-        userStore.addPhoneNumber(email, phoneNumber);
+        userStore.addVerifiedPhoneNumber(email, phoneNumber);
         String sessionId = redis.createSession();
         String persistentSessionId = "test-persistent-id";
         redis.addEmailToSession(sessionId, email);

@@ -437,7 +437,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldReturn204WhenSuccessfulSMSRegistrationRequestAndOverwriteExistingPhoneNumber() {
-        userStore.addPhoneNumber(EMAIL_ADDRESS, "+447700900111");
+        userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, "+447700900111");
         var code = redis.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 900);
         var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.SMS, code, true, PHONE_NUMBER);
 
