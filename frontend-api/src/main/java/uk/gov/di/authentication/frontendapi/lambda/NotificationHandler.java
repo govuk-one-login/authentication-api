@@ -12,6 +12,7 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
+import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -201,9 +202,21 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                     LOG.error(
                             "Error sending with Notify using NotificationType: {}",
                             notifyRequest.getNotificationType());
+
+                    if (isPhoneNotification(notifyRequest.getNotificationType())) {
+                        String countryCode =
+                                PhoneNumberHelper.maybeGetCountry(notifyRequest.getDestination())
+                                        .orElse("unable to parse country");
+                        throw new RuntimeException(
+                                String.format(
+                                        "Error sending Notify SMS with NotificationType: %s and country code: %s",
+                                        notifyRequest.getNotificationType(), countryCode),
+                                e);
+                    }
+
                     throw new RuntimeException(
                             String.format(
-                                    "Error sending with Notify using NotificationType: %s",
+                                    "Error sending Notify email with NotificationType: %s",
                                     notifyRequest.getNotificationType()),
                             e);
                 }
@@ -214,6 +227,17 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
             }
         }
         return null;
+    }
+
+    private boolean isPhoneNotification(NotificationType notificationType) {
+        switch (notificationType) {
+            case VERIFY_PHONE_NUMBER:
+            case MFA_SMS:
+            case PASSWORD_RESET_CONFIRMATION_SMS:
+                return true;
+            default:
+                return false;
+        }
     }
 
     private String buildContactUsUrl(String referer) {

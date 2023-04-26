@@ -226,7 +226,7 @@ public class NotificationHandlerTest {
                         "Expected to throw exception");
 
         assertEquals(
-                "Error sending with Notify using NotificationType: VERIFY_EMAIL",
+                "Error sending Notify email with NotificationType: VERIFY_EMAIL",
                 exception.getMessage());
     }
 
@@ -256,7 +256,7 @@ public class NotificationHandlerTest {
                         "Expected to throw exception");
 
         assertEquals(
-                "Error sending with Notify using NotificationType: VERIFY_PHONE_NUMBER",
+                "Error sending Notify SMS with NotificationType: VERIFY_PHONE_NUMBER and country code: 44",
                 exception.getMessage());
     }
 
