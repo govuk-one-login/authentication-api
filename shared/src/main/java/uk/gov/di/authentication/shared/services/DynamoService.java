@@ -348,6 +348,25 @@ public class DynamoService implements AuthenticationService {
     }
 
     @Override
+    public void updatePhoneNumberAndAccountVerifiedStatus(
+            String email,
+            String phoneNumber,
+            boolean phoneNumberVerified,
+            boolean accountVerified) {
+        var formattedPhoneNumber = PhoneNumberHelper.formatPhoneNumber(phoneNumber);
+        var userProfile =
+                dynamoUserProfileTable
+                        .getItem(
+                                Key.builder()
+                                        .partitionValue(email.toLowerCase(Locale.ROOT))
+                                        .build())
+                        .withPhoneNumber(formattedPhoneNumber)
+                        .withPhoneNumberVerified(phoneNumberVerified)
+                        .withAccountVerified(accountVerified ? 1 : 0);
+        dynamoUserProfileTable.updateItem(userProfile);
+    }
+
+    @Override
     public Optional<String> getPhoneNumber(String email) {
         return Optional.ofNullable(
                 dynamoUserProfileTable
