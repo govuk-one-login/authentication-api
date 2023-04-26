@@ -16,6 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.services.DynamoAccountRecoveryBlockService;
@@ -23,6 +24,7 @@ import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
@@ -43,6 +45,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -58,6 +61,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
+import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
@@ -79,7 +83,6 @@ class VerifyCodeHandlerTest {
             "testclient.user1@digital.cabinet-office.gov.uk";
     private static final long CODE_EXPIRY_TIME = 900;
     private static final long BLOCKED_EMAIL_DURATION = 799;
-
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
     private final Context context = mock(Context.class);
     private final SessionService sessionService = mock(SessionService.class);
@@ -166,14 +169,20 @@ class VerifyCodeHandlerTest {
         when(configurationService.getEnvironment()).thenReturn("unit-test");
     }
 
-    @Test
-    void shouldReturn204ForValidVerifyEmailRequest() {
-        when(configurationService.getCodeMaxRetries()).thenReturn(5);
-        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
-                .thenReturn(Optional.of(CODE));
-        APIGatewayProxyResponseEvent result = makeCallWithCode(CODE, VERIFY_EMAIL.toString());
+    private static Stream<NotificationType> emailNotificationTypes() {
+        return Stream.of(VERIFY_EMAIL, VERIFY_CHANGE_HOW_GET_SECURITY_CODES);
+    }
 
-        verify(codeStorageService).deleteOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL);
+    @ParameterizedTest
+    @MethodSource("emailNotificationTypes")
+    void shouldReturn204ForValidVerifyEmailRequest(NotificationType emailNotificationType) {
+        when(configurationService.getCodeMaxRetries()).thenReturn(5);
+        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, emailNotificationType))
+                .thenReturn(Optional.of(CODE));
+        APIGatewayProxyResponseEvent result =
+                makeCallWithCode(CODE, emailNotificationType.toString());
+
+        verify(codeStorageService).deleteOtpCode(TEST_EMAIL_ADDRESS, emailNotificationType);
         assertThat(result, hasStatus(204));
         verify(sessionService).save(session);
 
@@ -188,17 +197,19 @@ class VerifyCodeHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("notification-type", VERIFY_EMAIL.name()));
+                        pair("notification-type", emailNotificationType.name()));
     }
 
-    @Test
-    void shouldReturnEmailCodeNotValidStateIfRequestCodeDoesNotMatchStoredCode() {
+    @ParameterizedTest
+    @MethodSource("emailNotificationTypes")
+    void shouldReturnEmailCodeNotValidStateIfRequestCodeDoesNotMatchStoredCode(
+            NotificationType emailNotificationType) {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
-        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
+        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, emailNotificationType))
                 .thenReturn(Optional.of(CODE));
 
         APIGatewayProxyResponseEvent result =
-                makeCallWithCode(INVALID_CODE, VERIFY_EMAIL.toString());
+                makeCallWithCode(INVALID_CODE, emailNotificationType.toString());
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1036));
@@ -234,18 +245,20 @@ class VerifyCodeHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
     }
 
-    @Test
-    void shouldNotUpdateRedisWhenUserHasReachedMaxEmailCodeAttempts() {
+    @ParameterizedTest
+    @MethodSource("emailNotificationTypes")
+    void shouldNotUpdateRedisWhenUserHasReachedMaxEmailCodeAttempts(
+            NotificationType emailNotificationType) {
         when(configurationService.getCodeMaxRetries()).thenReturn(0);
 
         when(configurationService.getBlockedEmailDuration()).thenReturn(BLOCKED_EMAIL_DURATION);
-        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
+        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, emailNotificationType))
                 .thenReturn(Optional.of(CODE));
 
         when(codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS)).thenReturn(1);
 
         APIGatewayProxyResponseEvent result =
-                makeCallWithCode(INVALID_CODE, VERIFY_EMAIL.toString());
+                makeCallWithCode(INVALID_CODE, emailNotificationType.toString());
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1033));
@@ -265,15 +278,17 @@ class VerifyCodeHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("notification-type", VERIFY_EMAIL.name()));
+                        pair("notification-type", emailNotificationType.name()));
     }
 
-    @Test
-    void shouldReturnMaxReachedWhenEmailCodeIsBlocked() {
+    @ParameterizedTest
+    @MethodSource("emailNotificationTypes")
+    void shouldReturnMaxReachedWhenEmailCodeIsBlocked(NotificationType emailNotificationType) {
         when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
 
-        APIGatewayProxyResponseEvent result = makeCallWithCode(CODE, VERIFY_EMAIL.toString());
+        APIGatewayProxyResponseEvent result =
+                makeCallWithCode(CODE, emailNotificationType.toString());
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1033));

@@ -36,6 +36,7 @@ import java.util.Optional;
 import static java.util.Map.entry;
 import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.NONE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
+import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
@@ -152,6 +153,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
     private ErrorResponse blockedCodeBehaviour(VerifyCodeRequest codeRequest) {
         return Map.ofEntries(
+                        entry(VERIFY_CHANGE_HOW_GET_SECURITY_CODES, ErrorResponse.ERROR_1033),
                         entry(VERIFY_EMAIL, ErrorResponse.ERROR_1033),
                         entry(MFA_SMS, ErrorResponse.ERROR_1027))
                 .get(codeRequest.getNotificationType());
@@ -247,7 +249,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         }
         AuditableEvent auditableEvent;
         if (List.of(ErrorResponse.ERROR_1027, ErrorResponse.ERROR_1033).contains(errorResponse)) {
-            if (!notificationType.equals(VERIFY_EMAIL)
+            if (!List.of(VERIFY_EMAIL, VERIFY_CHANGE_HOW_GET_SECURITY_CODES)
+                            .contains(notificationType)
                     && !errorResponse.equals(ErrorResponse.ERROR_1033)) {
                 blockCodeForSession(session);
             }
@@ -276,6 +279,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         LOG.info("Using TestClient with NotificationType {}", notificationType);
         switch (notificationType) {
             case VERIFY_EMAIL:
+            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
             case RESET_PASSWORD_WITH_CODE:
                 return configurationService.getTestClientVerifyEmailOTP();
             case MFA_SMS:

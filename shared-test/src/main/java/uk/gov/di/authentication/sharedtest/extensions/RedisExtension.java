@@ -14,6 +14,7 @@ import uk.gov.di.authentication.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
@@ -189,6 +190,14 @@ public class RedisExtension
     public String generateAndSaveEmailCode(String email, long codeExpiryTime) {
         var code = new CodeGeneratorService().sixDigitCode();
         codeStorageService.saveOtpCode(email, code, codeExpiryTime, VERIFY_EMAIL);
+
+        return code;
+    }
+
+    public String generateAndSaveEmailCode(
+            String email, long codeExpiryTime, NotificationType notificationType) {
+        var code = new CodeGeneratorService().sixDigitCode();
+        codeStorageService.saveOtpCode(email, code, codeExpiryTime, notificationType);
 
         return code;
     }
