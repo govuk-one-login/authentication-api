@@ -38,8 +38,6 @@ public interface AuthenticationService {
 
     Optional<List<ClientConsent>> getUserConsents(String email);
 
-    void updatePhoneNumberAndAccountVerifiedStatus(String email, boolean verifiedStatus);
-
     void updatePhoneNumberAndAccountVerifiedStatus(
             String email, String phoneNumber, boolean phoneNumberVerified, boolean accountVerified);
 

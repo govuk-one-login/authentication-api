@@ -164,7 +164,7 @@ class SendOtpNotificationIntegrationTest extends ApiGatewayHandlerIntegrationTes
     void shouldReturn400WhenNewPhoneNumberIsTheSameAsCurrentPhoneNumber()
             throws Json.JsonException {
         userStore.signUp(TEST_EMAIL, "password");
-        userStore.addPhoneNumber(TEST_EMAIL, "+447755551084");
+        userStore.addVerifiedPhoneNumber(TEST_EMAIL, "+447755551084");
         var response =
                 makeRequest(
                         Optional.of(

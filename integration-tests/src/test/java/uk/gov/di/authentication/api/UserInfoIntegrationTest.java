@@ -406,8 +406,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             identityStore.addCoreIdentityJWT(PUBLIC_SUBJECT.getValue(), coreIdentityJWT);
         }
         userStore.signUp(TEST_EMAIL_ADDRESS, TEST_PASSWORD, INTERNAL_SUBJECT);
-        userStore.addPhoneNumber(TEST_EMAIL_ADDRESS, TEST_PHONE_NUMBER);
-        userStore.setPhoneNumberVerified(TEST_EMAIL_ADDRESS, true);
+        userStore.addVerifiedPhoneNumber(TEST_EMAIL_ADDRESS, TEST_PHONE_NUMBER);
         KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         clientStore.registerClient(
                 CLIENT_ID,

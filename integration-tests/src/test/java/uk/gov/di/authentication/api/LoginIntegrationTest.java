@@ -73,10 +73,10 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var scope = new Scope(OIDCScopeValue.OPENID);
 
         userStore.signUp(email, password);
-        userStore.addUnverifiedPhoneNumber(email, "01234567890");
         userStore.updateTermsAndConditions(email, termsAndConditionsVersion);
         if (mfaMethodType.equals(SMS)) {
-            userStore.setPhoneNumberVerified(email, mfaMethodVerified);
+            userStore.setPhoneNumberAndVerificationStatus(
+                    email, "01234567890", mfaMethodVerified, mfaMethodVerified);
         } else {
             userStore.updateMFAMethod(
                     email, mfaMethodType, mfaMethodVerified, true, "auth-app-credential");

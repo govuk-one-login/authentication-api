@@ -96,17 +96,17 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
         dynamoService.updateConsent(email, clientConsent);
     }
 
-    public void addPhoneNumber(String email, String phoneNumber) {
-        dynamoService.updatePhoneNumber(email, phoneNumber);
-        dynamoService.updatePhoneNumberAndAccountVerifiedStatus(email, true);
+    public void addVerifiedPhoneNumber(String email, String phoneNumber) {
+        setPhoneNumberAndVerificationStatus(email, phoneNumber, true, true);
     }
 
-    public void addUnverifiedPhoneNumber(String email, String phoneNumber) {
-        dynamoService.updatePhoneNumber(email, phoneNumber);
-    }
-
-    public void setPhoneNumberVerified(String email, boolean isVerified) {
-        dynamoService.updatePhoneNumberAndAccountVerifiedStatus(email, isVerified);
+    public void setPhoneNumberAndVerificationStatus(
+            String email,
+            String phoneNumber,
+            boolean phoneNumberVerified,
+            boolean accountVerified) {
+        dynamoService.updatePhoneNumberAndAccountVerifiedStatus(
+                email, phoneNumber, phoneNumberVerified, accountVerified);
     }
 
     public void setAccountVerified(String email) {

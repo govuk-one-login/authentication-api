@@ -144,8 +144,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         userStore.signUp(userEmail, "rubbbishPassword");
 
         if (Objects.nonNull(mfaMethodType) && mfaMethodType.equals(MFAMethodType.SMS)) {
-            userStore.addPhoneNumber(userEmail, "+447316763843");
-            userStore.setPhoneNumberVerified(userEmail, true);
+            userStore.addVerifiedPhoneNumber(userEmail, "+447316763843");
         } else if (Objects.nonNull(mfaMethodType) && mfaMethodType.equals(MFAMethodType.AUTH_APP)) {
             userStore.addMfaMethod(
                     userEmail, MFAMethodType.AUTH_APP, true, true, "rubbish-credential-value");
