@@ -304,3 +304,31 @@ resource "aws_dynamodb_table" "account_recovery_block_table" {
 
   tags = local.default_tags
 }
+
+resource "aws_dynamodb_table" "account_modifiers_table" {
+  name         = "${var.environment}-account-modifiers"
+  billing_mode = var.provision_dynamo ? "PROVISIONED" : "PAY_PER_REQUEST"
+  hash_key     = "InternalCommonSubjectIdentifier"
+
+  read_capacity  = var.provision_dynamo ? var.dynamo_default_read_capacity : null
+  write_capacity = var.provision_dynamo ? var.dynamo_default_write_capacity : null
+
+  attribute {
+    name = "InternalCommonSubjectIdentifier"
+    type = "S"
+  }
+
+  point_in_time_recovery {
+    enabled = !var.use_localstack
+  }
+
+  server_side_encryption {
+    enabled = !var.use_localstack
+  }
+
+  lifecycle {
+    prevent_destroy = false
+  }
+
+  tags = local.default_tags
+}
