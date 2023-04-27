@@ -464,8 +464,23 @@ class SendNotificationHandlerTest {
         verifyNoInteractions(codeStorageService);
     }
 
-    @Test
-    void shouldReturn204ForValidVerifyPhoneNumberRequest() throws Json.JsonException {
+    private static Stream<String> validPhoneNumbers() {
+        return Stream.of(
+                "+447316763843",
+                "+4407316763843",
+                "+33645453322",
+                "+447316763843",
+                "+33645453322",
+                "+33645453322",
+                "07911123456",
+                "07123456789",
+                "07755551084");
+    }
+
+    @ParameterizedTest
+    @MethodSource("validPhoneNumbers")
+    void shouldReturn204ForValidVerifyPhoneNumberRequest(String phoneNumber)
+            throws Json.JsonException {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
 
@@ -473,7 +488,7 @@ class SendNotificationHandlerTest {
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER));
+                                TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, phoneNumber));
 
         assertEquals(204, result.getStatusCode());
         verify(codeGeneratorService).sixDigitCode();
@@ -488,7 +503,7 @@ class SendNotificationHandlerTest {
                 .send(
                         objectMapper.writeValueAsString(
                                 new NotifyRequest(
-                                        TEST_PHONE_NUMBER,
+                                        phoneNumber,
                                         VERIFY_PHONE_NUMBER,
                                         TEST_SIX_DIGIT_CODE,
                                         SupportedLanguage.EN)));
@@ -501,7 +516,7 @@ class SendNotificationHandlerTest {
                         expectedCommonSubject,
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
-                        TEST_PHONE_NUMBER,
+                        phoneNumber,
                         PERSISTENT_ID);
     }
 
