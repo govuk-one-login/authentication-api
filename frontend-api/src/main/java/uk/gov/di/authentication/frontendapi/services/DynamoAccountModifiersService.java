@@ -62,17 +62,17 @@ public class DynamoAccountModifiersService {
         dynamoAccountModifiersTable.updateItem(accountModifiers);
     }
 
-    public void removeAccountModifiersIfPresent(String internalCommonSubjectId) {
-        if (getAccountModifiers(internalCommonSubjectId).isPresent()) {
-            dynamoAccountModifiersTable.deleteItem(
-                    Key.builder().partitionValue(internalCommonSubjectId).build());
-        }
-    }
-
     public Optional<AccountModifiers> getAccountModifiers(String internalCommonSubjectId) {
         return Optional.ofNullable(
                 dynamoAccountModifiersTable.getItem(
                         Key.builder().partitionValue(internalCommonSubjectId).build()));
+    }
+
+    public boolean isAccountRecoveryBlockPresent(String internalCommonSubjectId) {
+        return getAccountModifiers(internalCommonSubjectId)
+                .map(AccountModifiers::getAccountRecovery)
+                .filter(AccountRecovery::isBlocked)
+                .isPresent();
     }
 
     private void warmUp() {

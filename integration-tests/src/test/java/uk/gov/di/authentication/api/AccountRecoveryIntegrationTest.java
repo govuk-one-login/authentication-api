@@ -4,6 +4,7 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
@@ -13,9 +14,9 @@ import uk.gov.di.authentication.frontendapi.entity.AccountRecoveryResponse;
 import uk.gov.di.authentication.frontendapi.lambda.AccountRecoveryHandler;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
-import uk.gov.di.authentication.sharedtest.extensions.AccountRecoveryStoreExtension;
 
 import java.net.URI;
 import java.time.LocalDateTime;
@@ -32,39 +33,27 @@ public class AccountRecoveryIntegrationTest extends ApiGatewayHandlerIntegration
 
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     public static final String CLIENT_SESSION_ID = "some-client-session-id";
+    private static final String INTERNAl_SECTOR_URI = "https://test.account.gov.uk";
+    private static final String INTERNAl_SECTOR_HOST = "test.account.gov.uk";
+    private static final Subject SUBJECT = new Subject();
 
     @BeforeEach
     void setup() {
-        handler = new AccountRecoveryHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
+        handler = new AccountRecoveryHandler(new AccountRecoveryTestConfigurationService());
         txmaAuditQueue.clear();
     }
 
     @Test
-    void shouldNotBePermittedForAccountRecoveryWhenBlockIsPresentWithTTL()
-            throws Json.JsonException {
+    void shouldNotBePermittedForAccountRecoveryWhenBlockIsPresent() throws Json.JsonException {
+        userStore.signUp(EMAIL, "password-1", SUBJECT);
+        var salt = userStore.addSalt(EMAIL);
+        var internalCommonSubjectId =
+                ClientSubjectHelper.calculatePairwiseIdentifier(
+                        SUBJECT.getValue(), INTERNAl_SECTOR_HOST, salt);
         var sessionId = redis.createSession();
-        accountRecoveryStore.addBlockWithTTL(EMAIL);
+        accountModifiersStore.setAccountRecoveryBlock(internalCommonSubjectId);
         redis.addEmailToSession(sessionId, EMAIL);
         redis.createClientSession(CLIENT_SESSION_ID, createClientSession());
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Session-Id", sessionId);
-        headers.put("X-API-Key", FRONTEND_API_KEY);
-        headers.put("Client-Session-Id", CLIENT_SESSION_ID);
-        var response =
-                makeRequest(Optional.of(format("{ \"email\": \"%s\"}", EMAIL)), headers, Map.of());
-
-        assertThat(response, hasStatus(200));
-        assertThat(response, hasJsonBody(new AccountRecoveryResponse(false)));
-    }
-
-    @Test
-    void shouldNotBePermittedForAccountRecoveryWhenBlockIsPresentWithNoTTL()
-            throws Json.JsonException {
-        var sessionId = redis.createSession();
-        accountRecoveryStore.addBlockWithoutTTL(EMAIL);
-        redis.addEmailToSession(sessionId, EMAIL);
-        redis.createClientSession(CLIENT_SESSION_ID, createClientSession());
-
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", sessionId);
         headers.put("X-API-Key", FRONTEND_API_KEY);
@@ -79,26 +68,7 @@ public class AccountRecoveryIntegrationTest extends ApiGatewayHandlerIntegration
     @Test
     void shouldBePermittedForAccountRecoveryWhenNoBlockIsPresent() throws Json.JsonException {
         var sessionId = redis.createSession();
-        redis.addEmailToSession(sessionId, EMAIL);
-        redis.createClientSession(CLIENT_SESSION_ID, createClientSession());
-
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Session-Id", sessionId);
-        headers.put("X-API-Key", FRONTEND_API_KEY);
-        headers.put("Client-Session-Id", CLIENT_SESSION_ID);
-        var response =
-                makeRequest(Optional.of(format("{ \"email\": \"%s\"}", EMAIL)), headers, Map.of());
-
-        assertThat(response, hasStatus(200));
-        assertThat(response, hasJsonBody(new AccountRecoveryResponse(true)));
-    }
-
-    @Test
-    void shouldBePermittedForAccountRecoveryWhenBlockIsPresentButGonePastTTL()
-            throws Json.JsonException {
-        var accountRecoveryStore = new AccountRecoveryStoreExtension(-10);
-        accountRecoveryStore.addBlockWithTTL(EMAIL);
-        var sessionId = redis.createSession();
+        userStore.signUp(EMAIL, "password-1", SUBJECT);
         redis.addEmailToSession(sessionId, EMAIL);
         redis.createClientSession(CLIENT_SESSION_ID, createClientSession());
 
@@ -127,5 +97,31 @@ public class AccountRecoveryIntegrationTest extends ApiGatewayHandlerIntegration
                 LocalDateTime.now(),
                 VectorOfTrust.getDefaults(),
                 "test-client-name");
+    }
+
+    private static class AccountRecoveryTestConfigurationService
+            extends IntegrationTestConfigurationService {
+
+        public AccountRecoveryTestConfigurationService() {
+            super(
+                    auditTopic,
+                    notificationsQueue,
+                    auditSigningKey,
+                    tokenSigner,
+                    ipvPrivateKeyJwtSigner,
+                    spotQueue,
+                    docAppPrivateKeyJwtSigner,
+                    configurationParameters);
+        }
+
+        @Override
+        public String getInternalSectorUri() {
+            return INTERNAl_SECTOR_URI;
+        }
+
+        @Override
+        public String getTxmaAuditQueueUrl() {
+            return txmaAuditQueue.getQueueUrl();
+        }
     }
 }

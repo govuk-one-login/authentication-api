@@ -8,8 +8,6 @@ import software.amazon.awssdk.services.dynamodb.model.CreateTableRequest;
 import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
 import software.amazon.awssdk.services.dynamodb.model.KeyType;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
-import uk.gov.di.authentication.frontendapi.entity.AccountModifiers;
-import uk.gov.di.authentication.frontendapi.entity.AccountRecovery;
 import uk.gov.di.authentication.frontendapi.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.DynamoTestConfiguration;
@@ -41,11 +39,11 @@ public class AccountModifiersStoreExtension extends DynamoExtension implements A
     }
 
     public boolean isBlockPresent(String internalCommonSubjectId) {
-        return dynamoAccountModifiersService
-                .getAccountModifiers(internalCommonSubjectId)
-                .map(AccountModifiers::getAccountRecovery)
-                .filter(AccountRecovery::isBlocked)
-                .isPresent();
+        return dynamoAccountModifiersService.isAccountRecoveryBlockPresent(internalCommonSubjectId);
+    }
+
+    public void setAccountRecoveryBlock(String internalCommonSubjectId) {
+        dynamoAccountModifiersService.setAccountRecoveryBlock(internalCommonSubjectId, true);
     }
 
     @Override
