@@ -26,6 +26,10 @@ data "aws_dynamodb_table" "account_recovery_block_table" {
   name = "${var.environment}-account-recovery-block"
 }
 
+data "aws_dynamodb_table" "account_modifiers_table" {
+  name = "${var.environment}-account-modifiers"
+}
+
 data "aws_iam_policy_document" "dynamo_user_write_policy_document" {
   statement {
     sid    = "AllowAccessToDynamoTables"
@@ -199,6 +203,53 @@ data "aws_iam_policy_document" "dynamo_common_passwords_read_access_policy_docum
   }
 }
 
+
+data "aws_iam_policy_document" "dynamo_account_modifiers_read_access_policy_document" {
+  statement {
+    sid    = "AllowAccessToDynamoTables"
+    effect = "Allow"
+
+    actions = [
+      "dynamodb:DescribeTable",
+      "dynamodb:Get*",
+
+    ]
+    resources = [
+      data.aws_dynamodb_table.account_modifiers_table.arn,
+    ]
+  }
+}
+
+data "aws_iam_policy_document" "dynamo_account_modifiers_delete_access_policy_document" {
+  statement {
+    sid    = "AllowAccessToDynamoTables"
+    effect = "Allow"
+
+    actions = [
+      "dynamodb:DeleteItem",
+
+    ]
+    resources = [
+      data.aws_dynamodb_table.account_modifiers_table.arn,
+    ]
+  }
+}
+
+data "aws_iam_policy_document" "dynamo_account_modifiers_write_access_policy_document" {
+  statement {
+    sid    = "AllowAccessToDynamoTables"
+    effect = "Allow"
+
+    actions = [
+      "dynamodb:UpdateItem",
+      "dynamodb:PutItem",
+    ]
+    resources = [
+      data.aws_dynamodb_table.account_modifiers_table.arn,
+    ]
+  }
+}
+
 data "aws_iam_policy_document" "dynamo_account_recovery_block_read_access_policy_document" {
   statement {
     sid    = "AllowAccessToDynamoTables"
@@ -347,4 +398,28 @@ resource "aws_iam_policy" "dynamo_account_recovery_block_write_access_policy" {
   description = "IAM policy for managing write permissions to the Dynamo Account Recovery Block table"
 
   policy = data.aws_iam_policy_document.dynamo_account_recovery_block_write_access_policy_document.json
+}
+
+resource "aws_iam_policy" "dynamo_account_modifiers_read_access_policy" {
+  name_prefix = "dynamo-account-modifiers-read"
+  path        = "/${var.environment}/oidc-default/"
+  description = "IAM policy for managing read permissions to the Dynamo Account Modifiers table"
+
+  policy = data.aws_iam_policy_document.dynamo_account_modifiers_read_access_policy_document.json
+}
+
+resource "aws_iam_policy" "dynamo_account_modifiers_delete_access_policy" {
+  name_prefix = "dynamo-account-modifiers-delete"
+  path        = "/${var.environment}/oidc-default/"
+  description = "IAM policy for managing delete permissions to the Dynamo Account Modifiers table"
+
+  policy = data.aws_iam_policy_document.dynamo_account_modifiers_delete_access_policy_document.json
+}
+
+resource "aws_iam_policy" "dynamo_account_modifiers_write_access_policy" {
+  name_prefix = "dynamo-account-modifiers-write"
+  path        = "/${var.environment}/oidc-default/"
+  description = "IAM policy for managing write permissions to the Dynamo Account Modifiers table"
+
+  policy = data.aws_iam_policy_document.dynamo_account_modifiers_write_access_policy_document.json
 }
