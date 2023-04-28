@@ -10,6 +10,7 @@ import uk.gov.di.authentication.frontendapi.lambda.ResetPasswordHandler;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.CommonPasswordsExtension;
@@ -33,11 +34,13 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
     private static final String EMAIL_ADDRESS = "test@test.com";
     private static final String PASSWORD = "Pa55word";
+    private static final String INTERNAl_SECTOR_URI = "https://test.account.gov.uk";
+    private static final String INTERNAl_SECTOR_HOST = "test.account.gov.uk";
     private static final Subject SUBJECT = new Subject();
 
     @BeforeEach
     public void setUp() {
-        handler = new ResetPasswordHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
+        handler = new ResetPasswordHandler(new ResetPasswordTestConfigurationService());
         txmaAuditQueue.clear();
     }
 
@@ -65,11 +68,12 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
     }
 
     @Test
-    void shouldUpdatePasswordSendSMSAndWriteToAccountRecoveryTableWhenUserHasVerifiedPhoneNumber()
+    void shouldUpdatePasswordSendSMSAndWriteToAccountModifiersTableWhenUserHasVerifiedPhoneNumber()
             throws Json.JsonException {
         var sessionId = redis.createSession();
         var phoneNumber = "+441234567890";
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
+        byte[] salt = userStore.addSalt(EMAIL_ADDRESS);
         userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, phoneNumber);
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
 
@@ -88,6 +92,11 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
         assertThat(requests.get(0).getNotificationType(), equalTo(PASSWORD_RESET_CONFIRMATION));
         assertThat(requests.get(1).getDestination(), equalTo(phoneNumber));
         assertThat(requests.get(1).getNotificationType(), equalTo(PASSWORD_RESET_CONFIRMATION_SMS));
+
+        var internalCommonSubjectId =
+                ClientSubjectHelper.calculatePairwiseIdentifier(
+                        SUBJECT.getValue(), INTERNAl_SECTOR_HOST, salt);
+        assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(true));
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(PASSWORD_RESET_SUCCESSFUL));
     }
@@ -116,7 +125,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
     @ParameterizedTest
     @MethodSource("phoneNumberVerified")
-    void shouldUpdatePasswordAndWriteToAccountRecoveryTableWithIfUserHasVerifiedPhoneNumber(
+    void shouldUpdatePasswordAndWriteToAccountModifiersTableWithIfUserHasVerifiedPhoneNumber(
             boolean phoneNumberVerified) throws Json.JsonException {
         var sessionId = redis.createSession();
         var phoneNumber = "+441234567890";
@@ -124,6 +133,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
         userStore.setPhoneNumberAndVerificationStatus(
                 EMAIL_ADDRESS, phoneNumber, phoneNumberVerified, phoneNumberVerified);
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        byte[] salt = userStore.addSalt(EMAIL_ADDRESS);
 
         var response =
                 makeRequest(
@@ -139,8 +149,12 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
         assertThat(requests.get(0).getDestination(), equalTo(EMAIL_ADDRESS));
         assertThat(requests.get(0).getNotificationType(), equalTo(PASSWORD_RESET_CONFIRMATION));
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(PASSWORD_RESET_SUCCESSFUL));
+        var internalCommonSubjectId =
+                ClientSubjectHelper.calculatePairwiseIdentifier(
+                        SUBJECT.getValue(), INTERNAl_SECTOR_HOST, salt);
         assertThat(
-                accountRecoveryStore.isBlockPresent(EMAIL_ADDRESS), equalTo(phoneNumberVerified));
+                accountModifiersStore.isBlockPresent(internalCommonSubjectId),
+                equalTo(phoneNumberVerified));
 
         if (phoneNumberVerified) {
             assertThat(requests.get(1).getDestination(), equalTo(phoneNumber));
@@ -160,6 +174,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
             boolean authAppVerified) throws Json.JsonException {
         var sessionId = redis.createSession();
         userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
+        byte[] salt = userStore.addSalt(EMAIL_ADDRESS);
         userStore.addMfaMethod(
                 EMAIL_ADDRESS, MFAMethodType.AUTH_APP, authAppVerified, true, "credential");
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
@@ -177,8 +192,40 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
         assertThat(requests, hasSize(1));
         assertThat(requests.get(0).getDestination(), equalTo(EMAIL_ADDRESS));
         assertThat(requests.get(0).getNotificationType(), equalTo(PASSWORD_RESET_CONFIRMATION));
-        assertThat(accountRecoveryStore.isBlockPresent(EMAIL_ADDRESS), equalTo(authAppVerified));
+
+        var internalCommonSubjectId =
+                ClientSubjectHelper.calculatePairwiseIdentifier(
+                        SUBJECT.getValue(), INTERNAl_SECTOR_HOST, salt);
+        assertThat(
+                accountModifiersStore.isBlockPresent(internalCommonSubjectId),
+                equalTo(authAppVerified));
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(PASSWORD_RESET_SUCCESSFUL));
+    }
+
+    private static class ResetPasswordTestConfigurationService
+            extends IntegrationTestConfigurationService {
+
+        public ResetPasswordTestConfigurationService() {
+            super(
+                    auditTopic,
+                    notificationsQueue,
+                    auditSigningKey,
+                    tokenSigner,
+                    ipvPrivateKeyJwtSigner,
+                    spotQueue,
+                    docAppPrivateKeyJwtSigner,
+                    configurationParameters);
+        }
+
+        @Override
+        public String getInternalSectorUri() {
+            return INTERNAl_SECTOR_URI;
+        }
+
+        @Override
+        public String getTxmaAuditQueueUrl() {
+            return txmaAuditQueue.getQueueUrl();
+        }
     }
 }

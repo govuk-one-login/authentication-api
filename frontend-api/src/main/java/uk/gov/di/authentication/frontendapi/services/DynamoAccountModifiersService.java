@@ -8,6 +8,7 @@ import uk.gov.di.authentication.frontendapi.entity.AccountRecovery;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
+import java.util.Objects;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.dynamodb.DynamoClientHelper.createDynamoEnhancedClient;
@@ -26,22 +27,39 @@ public class DynamoAccountModifiersService {
         warmUp();
     }
 
-    public void createAccountModifiersWithAccountBlock(
+    public void setAccountRecoveryBlock(
             String internalCommonSubjectId, boolean accountRecoveryBlock) {
         var dateTime = NowHelper.toTimestampString(NowHelper.now());
-        var accountRecovery =
-                new AccountRecovery()
-                        .withBlocked(accountRecoveryBlock)
-                        .withUpdated(dateTime)
-                        .withCreated(dateTime);
-        var accountModifiers =
-                new AccountModifiers()
-                        .withInternalCommonSubjectIdentifier(internalCommonSubjectId)
-                        .withCreated(dateTime)
-                        .withUpdated(dateTime)
-                        .withAccountRecovery(accountRecovery);
 
-        dynamoAccountModifiersTable.putItem(accountModifiers);
+        var optionalAccountModifiers =
+                getAccountModifiers(internalCommonSubjectId)
+                        .map(t -> t.withUpdated(dateTime))
+                        .map(
+                                t ->
+                                        Objects.nonNull(t.getAccountRecovery())
+                                                ? t.withAccountRecovery(
+                                                        t.getAccountRecovery()
+                                                                .withBlocked(true)
+                                                                .withUpdated(dateTime))
+                                                : t.withAccountRecovery(
+                                                        new AccountRecovery()
+                                                                .withCreated(dateTime)
+                                                                .withUpdated(dateTime)
+                                                                .withBlocked(true)));
+
+        var accountModifiers =
+                optionalAccountModifiers.orElse(
+                        new AccountModifiers()
+                                .withInternalCommonSubjectIdentifier(internalCommonSubjectId)
+                                .withCreated(dateTime)
+                                .withUpdated(dateTime)
+                                .withAccountRecovery(
+                                        new AccountRecovery()
+                                                .withBlocked(accountRecoveryBlock)
+                                                .withUpdated(dateTime)
+                                                .withCreated(dateTime)));
+
+        dynamoAccountModifiersTable.updateItem(accountModifiers);
     }
 
     public void removeAccountModifiersIfPresent(String internalCommonSubjectId) {
