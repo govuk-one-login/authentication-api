@@ -185,8 +185,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                                             new HashMap<>();
                             changeHowGetSecurityCodesConfirmationPersonalisation.put(
                                     "contact-us-link",
-                                    buildContactUsUrl(
-                                            "changeHowGetSecurityCodesConfirmationEmail"));
+                                    buildContactUsUrl("changeCodesConfirmEmail"));
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     changeHowGetSecurityCodesConfirmationPersonalisation,
