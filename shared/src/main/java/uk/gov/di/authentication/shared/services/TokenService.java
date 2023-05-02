@@ -251,11 +251,9 @@ public class TokenService {
                         List.of(new Audience(clientId)),
                         expiryDate,
                         NowHelper.now());
-        idTokenClaims.setAccessTokenHash(accessTokenHash);
 
-        if (!Objects.equals("production", configService.getEnvironment())) {
-            idTokenClaims.setSessionID(new SessionID(journeyId));
-        }
+        idTokenClaims.setAccessTokenHash(accessTokenHash);
+        idTokenClaims.setSessionID(new SessionID(journeyId));
 
         idTokenClaims.putAll(additionalTokenClaims);
         if (!isDocAppJourney) {
