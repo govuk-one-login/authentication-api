@@ -107,8 +107,7 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
         return Stream.of(
                 Arguments.of(ACCOUNT_CREATED_CONFIRMATION, "accountCreatedEmail"),
                 Arguments.of(
-                        CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION,
-                        "changeHowGetSecurityCodesConfirmationEmail"));
+                        CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION, "changeCodesConfirmEmail"));
     }
 
     @ParameterizedTest
