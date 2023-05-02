@@ -8,9 +8,9 @@ module "frontend_api_account_recovery_role" {
     aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
     aws_iam_policy.lambda_sns_policy.arn,
     aws_iam_policy.dynamo_user_read_access_policy.arn,
+    aws_iam_policy.dynamo_user_write_access_policy.arn,
     aws_iam_policy.dynamo_client_registry_read_access_policy.arn,
     aws_iam_policy.redis_parameter_policy.arn,
-    aws_iam_policy.dynamo_account_recovery_block_read_access_policy.arn,
     aws_iam_policy.dynamo_account_modifiers_read_access_policy.arn,
     module.oidc_txma_audit.access_policy_arn
   ]

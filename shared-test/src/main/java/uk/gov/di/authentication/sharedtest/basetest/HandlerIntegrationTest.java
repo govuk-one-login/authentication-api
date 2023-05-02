@@ -7,6 +7,7 @@ import software.amazon.awssdk.services.kms.model.KeyUsageType;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.authentication.sharedtest.extensions.AccountModifiersStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.AccountRecoveryStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.AuditSnsTopicExtension;
 import uk.gov.di.authentication.sharedtest.extensions.ClientStoreExtension;
@@ -151,6 +152,10 @@ public abstract class HandlerIntegrationTest<Q, S> {
     @RegisterExtension
     protected static final AccountRecoveryStoreExtension accountRecoveryStore =
             new AccountRecoveryStoreExtension(100);
+
+    @RegisterExtension
+    protected static final AccountModifiersStoreExtension accountModifiersStore =
+            new AccountModifiersStoreExtension();
 
     @RegisterExtension
     protected static final DocumentAppCredentialStoreExtension documentAppCredentialStore =

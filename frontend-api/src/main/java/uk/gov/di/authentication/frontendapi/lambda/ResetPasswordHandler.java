@@ -4,11 +4,12 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordCompletionRequest;
-import uk.gov.di.authentication.frontendapi.services.DynamoAccountRecoveryBlockService;
+import uk.gov.di.authentication.frontendapi.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -19,6 +20,7 @@ import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.Argon2MatcherHelper;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.TestClientHelper;
@@ -53,7 +55,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
     private final AuditService auditService;
     private final CommonPasswordsService commonPasswordsService;
     private final PasswordValidator passwordValidator;
-    private final DynamoAccountRecoveryBlockService accountRecoveryBlockService;
+    private final DynamoAccountModifiersService dynamoAccountModifiersService;
 
     private static final Logger LOG = LogManager.getLogger(ResetPasswordHandler.class);
 
@@ -68,7 +70,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             AuditService auditService,
             CommonPasswordsService commonPasswordsService,
             PasswordValidator passwordValidator,
-            DynamoAccountRecoveryBlockService accountRecoveryBlockService) {
+            DynamoAccountModifiersService dynamoAccountModifiersService) {
         super(
                 ResetPasswordCompletionRequest.class,
                 configurationService,
@@ -82,7 +84,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
         this.auditService = auditService;
         this.commonPasswordsService = commonPasswordsService;
         this.passwordValidator = passwordValidator;
-        this.accountRecoveryBlockService = accountRecoveryBlockService;
+        this.dynamoAccountModifiersService = dynamoAccountModifiersService;
     }
 
     public ResetPasswordHandler() {
@@ -101,8 +103,8 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
         this.auditService = new AuditService(configurationService);
         this.commonPasswordsService = new CommonPasswordsService(configurationService);
         this.passwordValidator = new PasswordValidator(commonPasswordsService);
-        this.accountRecoveryBlockService =
-                new DynamoAccountRecoveryBlockService(configurationService);
+        this.dynamoAccountModifiersService =
+                new DynamoAccountModifiersService(configurationService);
     }
 
     @Override
@@ -136,10 +138,18 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                     authenticationService.getUserProfileByEmail(
                             userContext.getSession().getEmailAddress());
 
+            LOG.info("Calculating internal common subject identifier");
+            var internalCommonSubjectId =
+                    ClientSubjectHelper.getSubjectWithSectorIdentifier(
+                            userProfile,
+                            configurationService.getInternalSectorUri(),
+                            authenticationService);
+
             updateAccountRecoveryBlockTable(
                     configurationService.isAccountRecoveryBlockEnabled(),
                     userProfile,
-                    userCredentials);
+                    userCredentials,
+                    internalCommonSubjectId);
 
             var incorrectPasswordCount =
                     codeStorageService.getIncorrectPasswordCount(userCredentials.getEmail());
@@ -176,7 +186,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                             .getClient()
                             .map(ClientRegistry::getClientID)
                             .orElse(AuditService.UNKNOWN),
-                    AuditService.UNKNOWN,
+                    internalCommonSubjectId.getValue(),
                     userCredentials.getEmail(),
                     IpAddressHelper.extractIpAddress(input),
                     AuditService.UNKNOWN,
@@ -212,7 +222,8 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
     private void updateAccountRecoveryBlockTable(
             boolean accountRecoveryBlockEnabled,
             UserProfile userProfile,
-            UserCredentials userCredentials) {
+            UserCredentials userCredentials,
+            Subject internalCommonSubjectId) {
         LOG.info("AccountRecoveryBlock enabled: {}", accountRecoveryBlockEnabled);
         var authAppVerified =
                 Optional.ofNullable(userCredentials.getMfaMethods())
@@ -228,12 +239,10 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                 "AuthAppVerified: {}. PhoneNumberVerified: {}",
                 authAppVerified,
                 phoneNumberVerified);
-        if (accountRecoveryBlockEnabled && phoneNumberVerified) {
-            LOG.info("Adding block with TTL to account recovery table");
-            accountRecoveryBlockService.addBlockWithTTL(userProfile.getEmail());
-        } else if (accountRecoveryBlockEnabled && authAppVerified) {
-            LOG.info("Adding block with NO TTL to account recovery table");
-            accountRecoveryBlockService.addBlockWithNoTTL(userProfile.getEmail());
+        if (accountRecoveryBlockEnabled && (phoneNumberVerified || authAppVerified)) {
+            LOG.info("Adding block to account modifiers table");
+            dynamoAccountModifiersService.setAccountRecoveryBlock(
+                    internalCommonSubjectId.getValue(), true);
         }
     }
 }

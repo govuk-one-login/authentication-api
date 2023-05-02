@@ -7,13 +7,14 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
-import uk.gov.di.authentication.frontendapi.services.DynamoAccountRecoveryBlockService;
+import uk.gov.di.authentication.frontendapi.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -25,10 +26,12 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.Argon2EncoderHelper;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -51,6 +54,7 @@ import java.util.Optional;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -75,8 +79,10 @@ class ResetPasswordHandlerTest {
     private final ClientService clientService = mock(ClientService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ClientSession clientSession = mock(ClientSession.class);
-    private final DynamoAccountRecoveryBlockService accountRecoveryBlockService =
-            mock(DynamoAccountRecoveryBlockService.class);
+    private final DynamoAccountModifiersService accountModifiersService =
+            mock(DynamoAccountModifiersService.class);
+    private static final Subject INTERNAL_SUBJECT_ID = new Subject();
+    private static final byte[] SALT = SaltHelper.generateNewSalt();
     private final AuditService auditService = mock(AuditService.class);
     private final CommonPasswordsService commonPasswordsService =
             mock(CommonPasswordsService.class);
@@ -88,6 +94,7 @@ class ResetPasswordHandlerTest {
     private static final String TEST_PHONE_NUMBER = "01234567890";
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String PERSISTENT_ID = "some-persistent-id-value";
+    private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final Json objectMapper = SerializationService.getInstance();
     private static final NotifyRequest EXPECTED_SMS_NOTIFY_REQUEST =
             new NotifyRequest(
@@ -97,6 +104,9 @@ class ResetPasswordHandlerTest {
     private static final NotifyRequest EXPECTED_EMAIL_NOTIFY_REQUEST =
             new NotifyRequest(
                     EMAIL, NotificationType.PASSWORD_RESET_CONFIRMATION, SupportedLanguage.EN);
+    private final String expectedCommonSubject =
+            ClientSubjectHelper.calculatePairwiseIdentifier(
+                    INTERNAL_SUBJECT_ID.getValue(), "test.account.gov.uk", SALT);
 
     private ResetPasswordHandler handler;
     private final Session session = new Session(IdGenerator.generate()).setEmailAddress(EMAIL);
@@ -117,8 +127,10 @@ class ResetPasswordHandlerTest {
                 .when(passwordValidator)
                 .validate("password");
         when(clientService.getClient(TEST_CLIENT_ID)).thenReturn(Optional.of(testClientRegistry));
+        when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
         when(configurationService.isResetPasswordConfirmationSmsEnabled()).thenReturn(true);
         when(configurationService.isAccountRecoveryBlockEnabled()).thenReturn(true);
+        when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         usingValidSession();
         usingValidClientSession();
         handler =
@@ -133,7 +145,7 @@ class ResetPasswordHandlerTest {
                         auditService,
                         commonPasswordsService,
                         passwordValidator,
-                        accountRecoveryBlockService);
+                        accountModifiersService);
     }
 
     @Test
@@ -155,7 +167,7 @@ class ResetPasswordHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         TEST_CLIENT_ID,
-                        AuditService.UNKNOWN,
+                        expectedCommonSubject,
                         EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
@@ -178,14 +190,14 @@ class ResetPasswordHandlerTest {
         verify(sqsClient, never())
                 .send(objectMapper.writeValueAsString(EXPECTED_SMS_NOTIFY_REQUEST));
         verify(authenticationService, times(1)).updatePassword(EMAIL, NEW_PASSWORD);
-        verifyNoInteractions(accountRecoveryBlockService);
+        verifyNoInteractions(accountModifiersService);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         TEST_CLIENT_ID,
-                        AuditService.UNKNOWN,
+                        expectedCommonSubject,
                         EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
@@ -194,7 +206,7 @@ class ResetPasswordHandlerTest {
 
     @Test
     void
-            shouldReturn204ForSuccessfulPasswordResetSendConfirmationToSMSAndUpdateAccountRecoveryTableWithTTL()
+            shouldReturn204ForSuccessfulPasswordResetSendConfirmationToSMSAndUpdateModifiersTableWithBlock()
                     throws Json.JsonException {
         when(authenticationService.getUserCredentialsFromEmail(EMAIL))
                 .thenReturn(generateUserCredentials());
@@ -209,15 +221,14 @@ class ResetPasswordHandlerTest {
         verify(sqsClient, times(1))
                 .send(objectMapper.writeValueAsString(EXPECTED_SMS_NOTIFY_REQUEST));
         verify(authenticationService, times(1)).updatePassword(EMAIL, NEW_PASSWORD);
-        verify(accountRecoveryBlockService).addBlockWithTTL(EMAIL);
-        verify(accountRecoveryBlockService, never()).addBlockWithNoTTL(EMAIL);
+        verify(accountModifiersService).setAccountRecoveryBlock(expectedCommonSubject, true);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         TEST_CLIENT_ID,
-                        AuditService.UNKNOWN,
+                        expectedCommonSubject,
                         EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
@@ -225,7 +236,7 @@ class ResetPasswordHandlerTest {
     }
 
     @Test
-    void shouldNotWriteToAccountRecoveryTableWhenNoVerifiedMFAMethodIsPresent()
+    void shouldNotWriteToAccountModifiersTableWhenNoVerifiedMFAMethodIsPresent()
             throws Json.JsonException {
         when(authenticationService.getUserProfileByEmail(EMAIL))
                 .thenReturn(generateUserProfile(false));
@@ -240,7 +251,7 @@ class ResetPasswordHandlerTest {
         verify(sqsClient, never())
                 .send(objectMapper.writeValueAsString(EXPECTED_SMS_NOTIFY_REQUEST));
         verify(authenticationService, times(1)).updatePassword(EMAIL, NEW_PASSWORD);
-        verifyNoInteractions(accountRecoveryBlockService);
+        verifyNoInteractions(accountModifiersService);
 
         verify(auditService)
                 .submitAuditEvent(
@@ -248,7 +259,7 @@ class ResetPasswordHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         TEST_CLIENT_ID,
-                        AuditService.UNKNOWN,
+                        expectedCommonSubject,
                         EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
@@ -269,14 +280,14 @@ class ResetPasswordHandlerTest {
         verify(sqsClient, times(1))
                 .send(objectMapper.writeValueAsString(EXPECTED_EMAIL_NOTIFY_REQUEST));
         verify(authenticationService, times(1)).updatePassword(EMAIL, NEW_PASSWORD);
-        verifyNoInteractions(accountRecoveryBlockService);
+        verifyNoInteractions(accountModifiersService);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         TEST_CLIENT_ID,
-                        AuditService.UNKNOWN,
+                        expectedCommonSubject,
                         EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
@@ -293,7 +304,7 @@ class ResetPasswordHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
         verifyNoInteractions(auditService);
-        verifyNoInteractions(accountRecoveryBlockService);
+        verifyNoInteractions(accountModifiersService);
     }
 
     @Test
@@ -304,7 +315,7 @@ class ResetPasswordHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1007));
         verify(authenticationService, never()).updatePassword(EMAIL, NEW_PASSWORD);
         verifyNoInteractions(auditService);
-        verifyNoInteractions(accountRecoveryBlockService);
+        verifyNoInteractions(accountModifiersService);
     }
 
     @Test
@@ -317,7 +328,7 @@ class ResetPasswordHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1024));
         verify(authenticationService, never()).updatePassword(EMAIL, NEW_PASSWORD);
-        verifyNoInteractions(accountRecoveryBlockService);
+        verifyNoInteractions(accountModifiersService);
         verifyNoInteractions(sqsClient);
         verifyNoInteractions(auditService);
     }
@@ -345,7 +356,7 @@ class ResetPasswordHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         TEST_CLIENT_ID,
-                        AuditService.UNKNOWN,
+                        expectedCommonSubject,
                         EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
@@ -364,11 +375,11 @@ class ResetPasswordHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1000));
         verify(authenticationService, never()).updatePassword(EMAIL, NEW_PASSWORD);
         verifyNoInteractions(auditService);
-        verifyNoInteractions(accountRecoveryBlockService);
+        verifyNoInteractions(accountModifiersService);
     }
 
     @Test
-    void shouldNotUpdateAccountRecoveryTableWhenPasswordResetSuccessfullyButFeatureIsDisabled()
+    void shouldNotUpdateAccountModifiersTableWhenPasswordResetSuccessfullyButFeatureIsDisabled()
             throws Json.JsonException {
         when(configurationService.isAccountRecoveryBlockEnabled()).thenReturn(false);
         when(authenticationService.getUserProfileByEmail(EMAIL))
@@ -380,7 +391,7 @@ class ResetPasswordHandlerTest {
 
         assertThat(result, hasStatus(204));
         verify(authenticationService, times(1)).updatePassword(EMAIL, NEW_PASSWORD);
-        verifyNoInteractions(accountRecoveryBlockService);
+        verifyNoInteractions(accountModifiersService);
         verify(sqsClient, times(1))
                 .send(objectMapper.writeValueAsString(EXPECTED_EMAIL_NOTIFY_REQUEST));
         verify(sqsClient, never())
@@ -391,7 +402,7 @@ class ResetPasswordHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         TEST_CLIENT_ID,
-                        AuditService.UNKNOWN,
+                        expectedCommonSubject,
                         EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
@@ -400,7 +411,7 @@ class ResetPasswordHandlerTest {
 
     @Test
     void
-            shouldUpdateAccountRecoveryTableWithNoTTLWhenPasswordResetSuccessfullyAndVerifiedAuthAppIsPresent()
+            shouldUpdateAccountModifiersWithBlockWhenPasswordResetSuccessfullyAndVerifiedAuthAppIsPresent()
                     throws Json.JsonException {
         when(authenticationService.getUserProfileByEmail(EMAIL))
                 .thenReturn(generateUserProfile(false));
@@ -411,8 +422,7 @@ class ResetPasswordHandlerTest {
 
         assertThat(result, hasStatus(204));
         verify(authenticationService, times(1)).updatePassword(EMAIL, NEW_PASSWORD);
-        verify(accountRecoveryBlockService).addBlockWithNoTTL(EMAIL);
-        verify(accountRecoveryBlockService, never()).addBlockWithTTL(EMAIL);
+        verify(accountModifiersService).setAccountRecoveryBlock(expectedCommonSubject, true);
         verify(sqsClient, times(1))
                 .send(objectMapper.writeValueAsString(EXPECTED_EMAIL_NOTIFY_REQUEST));
         verify(sqsClient, never())
@@ -423,7 +433,7 @@ class ResetPasswordHandlerTest {
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         TEST_CLIENT_ID,
-                        AuditService.UNKNOWN,
+                        expectedCommonSubject,
                         EMAIL,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
@@ -480,6 +490,7 @@ class ResetPasswordHandlerTest {
     private UserProfile generateUserProfile(boolean isPhoneNumberVerified) {
         return new UserProfile()
                 .withEmail(EMAIL)
+                .withSubjectID(INTERNAL_SUBJECT_ID.getValue())
                 .withPhoneNumber(TEST_PHONE_NUMBER)
                 .withPhoneNumberVerified(isPhoneNumberVerified);
     }
@@ -487,6 +498,7 @@ class ResetPasswordHandlerTest {
     private UserCredentials generateMigratedUserCredentials() {
         return new UserCredentials()
                 .withEmail(EMAIL)
+                .withSubjectID(INTERNAL_SUBJECT_ID.getValue())
                 .withMigratedPassword("old-password1")
                 .withSubjectID(SUBJECT);
     }
