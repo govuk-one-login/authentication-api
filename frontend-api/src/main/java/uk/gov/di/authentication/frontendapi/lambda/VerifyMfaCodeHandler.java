@@ -13,6 +13,7 @@ import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper;
@@ -110,11 +111,16 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         try {
             var session = userContext.getSession();
             var mfaMethodType = codeRequest.getMfaMethodType();
-            var isRegistration = codeRequest.isRegistration();
+            var isRegistration =
+                    codeRequest
+                            .getJourneyType()
+                            .getValue()
+                            .equals(JourneyType.REGISTRATION.getValue());
+            var journeyType = codeRequest.getJourneyType();
 
             var mfaCodeValidator =
                     mfaCodeValidatorFactory
-                            .getMfaCodeValidator(mfaMethodType, isRegistration, userContext)
+                            .getMfaCodeValidator(mfaMethodType, journeyType, userContext)
                             .orElse(null);
 
             if (Objects.isNull(mfaCodeValidator)) {
@@ -128,7 +134,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1041);
             }
 
-            processCodeSession(errorResponse, session, input, userContext, codeRequest);
+            processCodeSession(
+                    errorResponse, session, input, userContext, codeRequest, isRegistration);
 
             sessionService.save(session);
 
@@ -150,7 +157,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                                 LOG.info(
                                         "MFA code has been successfully verified for MFA type: {}. RegistrationJourney: {}",
                                         codeRequest.getMfaMethodType().getValue(),
-                                        codeRequest.isRegistration());
+                                        isRegistration);
                                 accountRecoveryBlockService.deleteBlockIfPresent(
                                         session.getEmailAddress());
                                 sessionService.save(
@@ -198,7 +205,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             Session session,
             APIGatewayProxyRequestEvent input,
             UserContext userContext,
-            VerifyMfaCodeRequest codeRequest) {
+            VerifyMfaCodeRequest codeRequest,
+            boolean isRegistration) {
         var emailAddress = session.getEmailAddress();
 
         var auditableEvent =
@@ -209,7 +217,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         submitAuditEvent(
                 auditableEvent, session, userContext, input, codeRequest.getMfaMethodType());
 
-        if (codeRequest.isRegistration() && errorResponse.isEmpty()) {
+        if (isRegistration && errorResponse.isEmpty()) {
             switch (codeRequest.getMfaMethodType()) {
                 case AUTH_APP:
                     authenticationService.setAccountVerified(emailAddress);
