@@ -70,7 +70,7 @@ public class DynamoService implements AuthenticationService {
     @Override
     public boolean userExists(String email) {
         return dynamoUserProfileTable.getItem(
-                        Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build())
+                Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build())
                 != null;
     }
 
@@ -358,6 +358,34 @@ public class DynamoService implements AuthenticationService {
     }
 
     @Override
+    public void updatePhoneNumberAndAccountVerifiedStatusForAccountRecovery(
+            String email,
+            String phoneNumber,
+            boolean phoneNumberVerified,
+            boolean accountVerified) {
+        var formattedPhoneNumber = PhoneNumberHelper.formatPhoneNumber(phoneNumber);
+        var userProfile =
+                dynamoUserProfileTable
+                        .getItem(
+                                Key.builder()
+                                        .partitionValue(email.toLowerCase(Locale.ROOT))
+                                        .build())
+                        .withPhoneNumber(formattedPhoneNumber)
+                        .withPhoneNumberVerified(phoneNumberVerified)
+                        .withAccountVerified(accountVerified ? 1 : 0);
+
+        dynamoDbEnhancedClient.transactWriteItems(
+                TransactWriteItemsEnhancedRequest.builder()
+                        .addDeleteItem(dynamoUserProfileTable, userProfile)
+                        .build());
+
+        dynamoDbEnhancedClient.transactWriteItems(
+                TransactWriteItemsEnhancedRequest.builder()
+                        .addPutItem(dynamoUserProfileTable, userProfile)
+                        .build());
+    }
+
+    @Override
     public Optional<String> getPhoneNumber(String email) {
         return Optional.ofNullable(
                 dynamoUserProfileTable
@@ -393,6 +421,44 @@ public class DynamoService implements AuthenticationService {
     }
 
     @Override
+    public void updateMFAMethodForAccountRecovery(
+            String email,
+            MFAMethodType mfaMethodType,
+            boolean methodVerified,
+            boolean enabled,
+            String credentialValue) {
+        var updatedDateTime = LocalDateTime.now(ZoneId.of("UTC"));
+        var dateTime = NowHelper.toTimestampString(NowHelper.now());
+        var newMfaMethod =
+                new MFAMethod(
+                        mfaMethodType.getValue(),
+                        credentialValue,
+                        methodVerified,
+                        enabled,
+                        dateTime);
+        var userCredentials =
+                dynamoUserCredentialsTable
+                        .getItem(
+                                Key.builder()
+                                        .partitionValue(email.toLowerCase(Locale.ROOT))
+                                        .build())
+                        .setMfaMethod(newMfaMethod)
+                        .withUpdated(updatedDateTime.toString());
+        dynamoDbEnhancedClient.transactWriteItems(
+                TransactWriteItemsEnhancedRequest.builder()
+                        .addDeleteItem(
+                                dynamoUserCredentialsTable,
+                                Key.builder()
+                                        .partitionValue(userCredentials.getEmail().toLowerCase(Locale.ROOT))
+                                        .build())
+                        .build());
+        dynamoDbEnhancedClient.transactWriteItems(
+                TransactWriteItemsEnhancedRequest.builder()
+                        .addPutItem(dynamoUserCredentialsTable, userCredentials)
+                        .build());
+    }
+
+    @Override
     public void setMFAMethodEnabled(String email, MFAMethodType mfaMethodType, boolean enabled) {
         var userCredentials =
                 dynamoUserCredentialsTable.getItem(
@@ -410,6 +476,40 @@ public class DynamoService implements AuthenticationService {
                     mfa -> {
                         mfa.withEnabled(enabled);
                         dynamoUserCredentialsTable.updateItem(userCredentials);
+                    });
+        }
+    }
+
+    @Override
+    public void setMFAMethodEnabledForAccountRecovery(String email, MFAMethodType mfaMethodType, boolean enabled) {
+        var userCredentials =
+                dynamoUserCredentialsTable.getItem(
+                        Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
+        var mfaMethods = userCredentials.getMfaMethods();
+        if (mfaMethods != null) {
+            var mfaMethod =
+                    mfaMethods.stream()
+                            .filter(
+                                    method ->
+                                            method.getMfaMethodType()
+                                                    .equals(mfaMethodType.getValue()))
+                            .findFirst();
+
+            mfaMethod.ifPresent(
+                    mfa -> {
+                        mfa.withEnabled(enabled);
+                        dynamoDbEnhancedClient.transactWriteItems(
+                                TransactWriteItemsEnhancedRequest.builder()
+                                        .addDeleteItem(
+                                                dynamoUserCredentialsTable,
+                                                Key.builder()
+                                                        .partitionValue(userCredentials.getEmail().toLowerCase(Locale.ROOT))
+                                                        .build())
+                                        .build());
+                        dynamoDbEnhancedClient.transactWriteItems(
+                                TransactWriteItemsEnhancedRequest.builder()
+                                        .addPutItem(dynamoUserCredentialsTable, userCredentials)
+                                        .build());
                     });
         }
     }
@@ -460,6 +560,28 @@ public class DynamoService implements AuthenticationService {
                                         .partitionValue(email.toLowerCase(Locale.ROOT))
                                         .build())
                         .withAccountVerified(1));
+    }
+
+    @Override
+    public void setAccountVerifiedForAccountRecovery(String email) {
+        var profile = dynamoUserProfileTable
+                .getItem(
+                        Key.builder()
+                                .partitionValue(email.toLowerCase(Locale.ROOT))
+                                .build())
+                .withAccountVerified(1);
+        dynamoDbEnhancedClient.transactWriteItems(
+                TransactWriteItemsEnhancedRequest.builder()
+                        .addDeleteItem(
+                                dynamoUserProfileTable,
+                                Key.builder()
+                                        .partitionValue(email.toLowerCase(Locale.ROOT))
+                                        .build())
+                        .build());
+        dynamoDbEnhancedClient.transactWriteItems(
+                TransactWriteItemsEnhancedRequest.builder()
+                        .addPutItem(dynamoUserProfileTable, profile)
+                        .build());
     }
 
     public List<UserProfile> getAllBulkTestUsers() {

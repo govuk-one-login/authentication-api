@@ -13,6 +13,7 @@ import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper;
@@ -110,11 +111,11 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         try {
             var session = userContext.getSession();
             var mfaMethodType = codeRequest.getMfaMethodType();
-            var isRegistration = codeRequest.isRegistration();
+            var journeyType = codeRequest.getJourneyType();
 
             var mfaCodeValidator =
                     mfaCodeValidatorFactory
-                            .getMfaCodeValidator(mfaMethodType, isRegistration, userContext)
+                            .getMfaCodeValidator(mfaMethodType, journeyType, userContext)
                             .orElse(null);
 
             if (Objects.isNull(mfaCodeValidator)) {
@@ -209,35 +210,71 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         submitAuditEvent(
                 auditableEvent, session, userContext, input, codeRequest.getMfaMethodType());
 
-        if (codeRequest.isRegistration() && errorResponse.isEmpty()) {
-            switch (codeRequest.getMfaMethodType()) {
-                case AUTH_APP:
-                    authenticationService.setAccountVerified(emailAddress);
-                    authenticationService.updateMFAMethod(
-                            emailAddress,
-                            AUTH_APP,
-                            true,
-                            true,
-                            codeRequest.getProfileInformation());
-                    submitAuditEvent(
-                            FrontendAuditableEvent.UPDATE_PROFILE_AUTH_APP,
-                            session,
-                            userContext,
-                            input,
-                            codeRequest.getMfaMethodType());
+        if (errorResponse.isEmpty()) {
+            switch (codeRequest.getJourneyType()) {
+                case REGISTRATION:
+                    switch (codeRequest.getMfaMethodType()) {
+                        case AUTH_APP:
+                            authenticationService.setAccountVerified(emailAddress);
+                            authenticationService.updateMFAMethod(
+                                    emailAddress,
+                                    AUTH_APP,
+                                    true,
+                                    true,
+                                    codeRequest.getProfileInformation());
+                            submitAuditEvent(
+                                    FrontendAuditableEvent.UPDATE_PROFILE_AUTH_APP,
+                                    session,
+                                    userContext,
+                                    input,
+                                    codeRequest.getMfaMethodType());
+                            break;
+                        case SMS:
+                            authenticationService.updatePhoneNumberAndAccountVerifiedStatus(
+                                    emailAddress, codeRequest.getProfileInformation(), true, true);
+                            authenticationService.setMFAMethodEnabled(
+                                    emailAddress, MFAMethodType.AUTH_APP, false);
+                            submitAuditEvent(
+                                    FrontendAuditableEvent.UPDATE_PROFILE_PHONE_NUMBER,
+                                    session,
+                                    userContext,
+                                    input,
+                                    codeRequest.getMfaMethodType(),
+                                    codeRequest.getProfileInformation());
+                            break;
+                    }
                     break;
-                case SMS:
-                    authenticationService.updatePhoneNumberAndAccountVerifiedStatus(
-                            emailAddress, codeRequest.getProfileInformation(), true, true);
-                    authenticationService.setMFAMethodEnabled(
-                            emailAddress, MFAMethodType.AUTH_APP, false);
-                    submitAuditEvent(
-                            FrontendAuditableEvent.UPDATE_PROFILE_PHONE_NUMBER,
-                            session,
-                            userContext,
-                            input,
-                            codeRequest.getMfaMethodType(),
-                            codeRequest.getProfileInformation());
+                case ACCOUNT_RECOVERY:
+                    switch (codeRequest.getMfaMethodType()) {
+                        case AUTH_APP:
+                            authenticationService.setAccountVerifiedForAccountRecovery(emailAddress);
+                            authenticationService.updateMFAMethodForAccountRecovery(
+                                    emailAddress,
+                                    codeRequest.getMfaMethodType(),
+                                    true,
+                                    true,
+                                    codeRequest.getProfileInformation());
+                            submitAuditEvent(
+                                    FrontendAuditableEvent.UPDATE_PROFILE_AUTH_APP,
+                                    session,
+                                    userContext,
+                                    input,
+                                    codeRequest.getMfaMethodType());
+                            break;
+                        case SMS:
+                            authenticationService.updatePhoneNumberAndAccountVerifiedStatusForAccountRecovery(
+                                    emailAddress, codeRequest.getProfileInformation(), true, true);
+                            authenticationService.setMFAMethodEnabledForAccountRecovery(
+                                    emailAddress, codeRequest.getMfaMethodType(), false);
+                            submitAuditEvent(
+                                    FrontendAuditableEvent.UPDATE_PROFILE_PHONE_NUMBER,
+                                    session,
+                                    userContext,
+                                    input,
+                                    codeRequest.getMfaMethodType(),
+                                    codeRequest.getProfileInformation());
+                            break;
+                    }
                     break;
             }
         }

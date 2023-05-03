@@ -101,6 +101,18 @@ class DynamoServiceIntegrationTest {
     }
 
     @Test
+    void shouldUpdateEmailAndDeletePreviousItemsWithAccountVerifiedForAccountRecovery() {
+        setUpDynamo();
+        dynamoService.setAccountVerifiedForAccountRecovery(TEST_EMAIL);
+
+        UserProfile userProfile =
+                dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL).orElseThrow();
+        UserCredentials userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+
+        testUpdateEmail(userProfile, userCredentials);
+    }
+
+    @Test
     void shouldUpdateEmailAndDeletePreviousItemsWithSalt() {
         setUpDynamo();
         userStore.addSalt(TEST_EMAIL);
@@ -165,11 +177,44 @@ class DynamoServiceIntegrationTest {
     }
 
     @Test
+    void shouldAddAuthAppMFAMethodForAccountRecovery() {
+        setUpDynamo();
+        dynamoService.updateMFAMethodForAccountRecovery(
+                TEST_EMAIL, MFAMethodType.AUTH_APP, true, true, TEST_MFA_APP_CREDENTIAL);
+        UserCredentials updatedUserCredentials =
+                dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+
+        assertThat(updatedUserCredentials.getMfaMethods().size(), equalTo(1));
+        MFAMethod mfaMethod = updatedUserCredentials.getMfaMethods().get(0);
+        assertThat(mfaMethod.getMfaMethodType(), equalTo(MFAMethodType.AUTH_APP.getValue()));
+        assertThat(mfaMethod.isMethodVerified(), equalTo(true));
+        assertThat(mfaMethod.isEnabled(), equalTo(true));
+        assertThat(mfaMethod.getCredentialValue(), equalTo(TEST_MFA_APP_CREDENTIAL));
+    }
+
+    @Test
     void shoulSetAuthAppMFAMethodNotEnabled() {
         setUpDynamo();
         dynamoService.updateMFAMethod(
                 TEST_EMAIL, MFAMethodType.AUTH_APP, true, true, TEST_MFA_APP_CREDENTIAL);
         dynamoService.setMFAMethodEnabled(TEST_EMAIL, MFAMethodType.AUTH_APP, false);
+        UserCredentials updatedUserCredentials =
+                dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+
+        assertThat(updatedUserCredentials.getMfaMethods().size(), equalTo(1));
+        MFAMethod mfaMethod = updatedUserCredentials.getMfaMethods().get(0);
+        assertThat(mfaMethod.getMfaMethodType(), equalTo(MFAMethodType.AUTH_APP.getValue()));
+        assertThat(mfaMethod.isMethodVerified(), equalTo(true));
+        assertThat(mfaMethod.isEnabled(), equalTo(false));
+        assertThat(mfaMethod.getCredentialValue(), equalTo(TEST_MFA_APP_CREDENTIAL));
+    }
+
+    @Test
+    void shoulSetAuthAppMFAMethodNotEnabledForAccountRecovery() {
+        setUpDynamo();
+        dynamoService.updateMFAMethodForAccountRecovery(
+                TEST_EMAIL, MFAMethodType.AUTH_APP, true, true, TEST_MFA_APP_CREDENTIAL);
+        dynamoService.setMFAMethodEnabledForAccountRecovery(TEST_EMAIL, MFAMethodType.AUTH_APP, false);
         UserCredentials updatedUserCredentials =
                 dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
 

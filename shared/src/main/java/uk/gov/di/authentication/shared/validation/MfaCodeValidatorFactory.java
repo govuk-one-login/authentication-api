@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.shared.validation;
 
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
@@ -24,7 +25,9 @@ public class MfaCodeValidatorFactory {
     }
 
     public Optional<MfaCodeValidator> getMfaCodeValidator(
-            MFAMethodType mfaMethodType, boolean isRegistration, UserContext userContext) {
+            MFAMethodType mfaMethodType, JourneyType journeyType, UserContext userContext) {
+
+        var isRegistration = journeyType.getValue().equals(JourneyType.REGISTRATION.getValue());
 
         switch (mfaMethodType) {
             case AUTH_APP:

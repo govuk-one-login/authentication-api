@@ -41,7 +41,12 @@ public interface AuthenticationService {
     void updatePhoneNumberAndAccountVerifiedStatus(
             String email, String phoneNumber, boolean phoneNumberVerified, boolean accountVerified);
 
+    void updatePhoneNumberAndAccountVerifiedStatusForAccountRecovery(
+            String email, String phoneNumber, boolean phoneNumberVerified, boolean accountVerified);
+
     void setAccountVerified(String email);
+
+    void setAccountVerifiedForAccountRecovery(String email);
 
     Optional<String> getPhoneNumber(String email);
 
@@ -76,5 +81,13 @@ public interface AuthenticationService {
             boolean enabled,
             String credentialValue);
 
+    void updateMFAMethodForAccountRecovery(
+            String email,
+            MFAMethodType mfaMethodType,
+            boolean methodVerified,
+            boolean enabled,
+            String credentialValue);
+
     void setMFAMethodEnabled(String email, MFAMethodType mfaMethodType, boolean enabled);
+    void setMFAMethodEnabledForAccountRecovery(String email, MFAMethodType mfaMethodType, boolean enabled);
 }

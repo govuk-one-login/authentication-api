@@ -16,7 +16,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
-class DynamoClientServiceTest {
+class  DynamoClientServiceTest {
     private static final ClientID CLIENT_ID = new ClientID();
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);

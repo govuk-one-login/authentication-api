@@ -7,6 +7,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -64,7 +65,7 @@ class AuthAppCodeValidatorTest {
                 Optional.empty(),
                 authAppCodeValidator.validateCode(
                         new VerifyMfaCodeRequest(
-                                MFAMethodType.AUTH_APP, authCode, isRegistration, authAppSecret)));
+                                MFAMethodType.AUTH_APP, authCode, isRegistration, JourneyType.UNKNOWN, authAppSecret)));
     }
 
     @ParameterizedTest
@@ -77,7 +78,7 @@ class AuthAppCodeValidatorTest {
                 Optional.of(ErrorResponse.ERROR_1042),
                 authAppCodeValidator.validateCode(
                         new VerifyMfaCodeRequest(
-                                MFAMethodType.AUTH_APP, "000000", isRegistration, authAppSecret)));
+                                MFAMethodType.AUTH_APP, "000000", isRegistration, JourneyType.UNKNOWN, authAppSecret)));
     }
 
     @ParameterizedTest
@@ -89,7 +90,7 @@ class AuthAppCodeValidatorTest {
                 Optional.of(ErrorResponse.ERROR_1042),
                 authAppCodeValidator.validateCode(
                         new VerifyMfaCodeRequest(
-                                MFAMethodType.AUTH_APP, "000000", isRegistration, authAppSecret)));
+                                MFAMethodType.AUTH_APP, "000000", isRegistration, JourneyType.UNKNOWN, authAppSecret)));
     }
 
     @ParameterizedTest
@@ -101,7 +102,7 @@ class AuthAppCodeValidatorTest {
                 Optional.of(ErrorResponse.ERROR_1043),
                 authAppCodeValidator.validateCode(
                         new VerifyMfaCodeRequest(
-                                MFAMethodType.AUTH_APP, "000000", isRegistration)));
+                                MFAMethodType.AUTH_APP, "000000", isRegistration, JourneyType.UNKNOWN)));
     }
 
     @Test
@@ -114,6 +115,7 @@ class AuthAppCodeValidatorTest {
                                 MFAMethodType.AUTH_APP,
                                 "000000",
                                 true,
+                                JourneyType.UNKNOWN,
                                 "not-base-32-encoded-secret")),
                 equalTo(Optional.of(ErrorResponse.ERROR_1041)));
     }
@@ -127,16 +129,16 @@ class AuthAppCodeValidatorTest {
                 Optional.of(ErrorResponse.ERROR_1043),
                 authAppCodeValidator.validateCode(
                         new VerifyMfaCodeRequest(
-                                MFAMethodType.AUTH_APP, "111111", true, authAppSecret)));
+                                MFAMethodType.AUTH_APP, "111111", true, JourneyType.UNKNOWN, authAppSecret)));
         assertEquals(
                 Optional.of(ErrorResponse.ERROR_1043),
                 authAppCodeValidator.validateCode(
-                        new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, "", true, authAppSecret)));
+                        new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, "", true, JourneyType.UNKNOWN, authAppSecret)));
         assertEquals(
                 Optional.of(ErrorResponse.ERROR_1043),
                 authAppCodeValidator.validateCode(
                         new VerifyMfaCodeRequest(
-                                MFAMethodType.AUTH_APP, "999999999999", true, authAppSecret)));
+                                MFAMethodType.AUTH_APP, "999999999999", true, JourneyType.UNKNOWN, authAppSecret)));
     }
 
     private void setUpBlockedUser(boolean isRegistration) {
