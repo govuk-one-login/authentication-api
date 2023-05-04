@@ -4,7 +4,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -40,29 +39,23 @@ class PhoneNumberCodeValidatorTest {
 
     @Test
     void shouldReturnNoErrorForValidRegistrationPhoneNumberCode() {
-        setupPhoneNumberCode(JourneyType.REGISTRATION);
+        setupPhoneNumberCode(true);
 
         assertThat(
                 phoneNumberCodeValidator.validateCode(
                         new VerifyMfaCodeRequest(
-                                MFAMethodType.SMS,
-                                VALID_CODE,
-                                JourneyType.REGISTRATION,
-                                PHONE_NUMBER)),
+                                MFAMethodType.SMS, VALID_CODE, true, PHONE_NUMBER)),
                 equalTo(Optional.empty()));
     }
 
     @Test
     void shouldReturnErrorForInvalidRegistrationPhoneNumberCode() {
-        setupPhoneNumberCode(JourneyType.REGISTRATION);
+        setupPhoneNumberCode(true);
 
         assertThat(
                 phoneNumberCodeValidator.validateCode(
                         new VerifyMfaCodeRequest(
-                                MFAMethodType.SMS,
-                                INVALID_CODE,
-                                JourneyType.REGISTRATION,
-                                PHONE_NUMBER)),
+                                MFAMethodType.SMS, INVALID_CODE, true, PHONE_NUMBER)),
                 equalTo(Optional.of(ErrorResponse.ERROR_1037)));
     }
 
@@ -73,10 +66,7 @@ class PhoneNumberCodeValidatorTest {
         assertThat(
                 phoneNumberCodeValidator.validateCode(
                         new VerifyMfaCodeRequest(
-                                MFAMethodType.SMS,
-                                INVALID_CODE,
-                                JourneyType.REGISTRATION,
-                                PHONE_NUMBER)),
+                                MFAMethodType.SMS, INVALID_CODE, true, PHONE_NUMBER)),
                 equalTo(Optional.of(ErrorResponse.ERROR_1034)));
     }
 
@@ -87,16 +77,13 @@ class PhoneNumberCodeValidatorTest {
         assertThat(
                 phoneNumberCodeValidator.validateCode(
                         new VerifyMfaCodeRequest(
-                                MFAMethodType.SMS,
-                                INVALID_CODE,
-                                JourneyType.REGISTRATION,
-                                PHONE_NUMBER)),
+                                MFAMethodType.SMS, INVALID_CODE, true, PHONE_NUMBER)),
                 equalTo(Optional.of(ErrorResponse.ERROR_1034)));
     }
 
     @Test
     void shouldThrowExceptionForSignInPhoneNumberCode() {
-        setupPhoneNumberCode(JourneyType.SIGN_IN);
+        setupPhoneNumberCode(false);
 
         var expectedException =
                 assertThrows(
@@ -104,10 +91,7 @@ class PhoneNumberCodeValidatorTest {
                         () ->
                                 phoneNumberCodeValidator.validateCode(
                                         new VerifyMfaCodeRequest(
-                                                MFAMethodType.SMS,
-                                                INVALID_CODE,
-                                                JourneyType.REGISTRATION,
-                                                null)),
+                                                MFAMethodType.SMS, INVALID_CODE, true, null)),
                         "Expected to throw exception");
 
         assertThat(
@@ -115,7 +99,7 @@ class PhoneNumberCodeValidatorTest {
                 equalTo("Sign In Phone number codes are not supported"));
     }
 
-    public void setupPhoneNumberCode(JourneyType journeyType) {
+    public void setupPhoneNumberCode(boolean isRegistration) {
         when(session.getEmailAddress()).thenReturn(TEST_EMAIL_ADDRESS);
         when(userContext.getSession()).thenReturn(session);
         when(configurationService.isTestClientsEnabled()).thenReturn(false);
@@ -126,7 +110,7 @@ class PhoneNumberCodeValidatorTest {
                 .thenReturn(false);
         phoneNumberCodeValidator =
                 new PhoneNumberCodeValidator(
-                        codeStorageService, userContext, configurationService, journeyType);
+                        codeStorageService, userContext, configurationService, isRegistration);
     }
 
     public void setUpPhoneNumberCodeRetryLimitExceeded() {
@@ -141,10 +125,7 @@ class PhoneNumberCodeValidatorTest {
                 .thenReturn(false);
         phoneNumberCodeValidator =
                 new PhoneNumberCodeValidator(
-                        codeStorageService,
-                        userContext,
-                        configurationService,
-                        JourneyType.REGISTRATION);
+                        codeStorageService, userContext, configurationService, true);
     }
 
     public void setUpBlockedPhoneNumberCode() {
@@ -158,9 +139,6 @@ class PhoneNumberCodeValidatorTest {
                 .thenReturn(true);
         phoneNumberCodeValidator =
                 new PhoneNumberCodeValidator(
-                        codeStorageService,
-                        userContext,
-                        configurationService,
-                        JourneyType.REGISTRATION);
+                        codeStorageService, userContext, configurationService, true);
     }
 }

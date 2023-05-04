@@ -1,6 +1,5 @@
 package uk.gov.di.authentication.shared.validation;
 
-import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
@@ -25,8 +24,8 @@ public class MfaCodeValidatorFactory {
     }
 
     public Optional<MfaCodeValidator> getMfaCodeValidator(
-            MFAMethodType mfaMethodType, JourneyType journeyType, UserContext userContext) {
-        var isRegistration = journeyType.getValue().equals(JourneyType.REGISTRATION.getValue());
+            MFAMethodType mfaMethodType, boolean isRegistration, UserContext userContext) {
+
         switch (mfaMethodType) {
             case AUTH_APP:
                 int codeMaxRetries =
@@ -40,14 +39,14 @@ public class MfaCodeValidatorFactory {
                                 configurationService,
                                 authenticationService,
                                 codeMaxRetries,
-                                journeyType));
+                                isRegistration));
             case SMS:
                 return Optional.of(
                         new PhoneNumberCodeValidator(
                                 codeStorageService,
                                 userContext,
                                 configurationService,
-                                journeyType));
+                                isRegistration));
             default:
                 return Optional.empty();
         }

@@ -25,7 +25,6 @@ import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -170,7 +169,7 @@ class VerifyMfaCodeHandlerTest {
     @MethodSource("credentialTrustLevels")
     void shouldReturn204WhenSuccessfulAuthAppCodeRegistrationRequestAndSetMfaMethod(
             CredentialTrustLevel credentialTrustLevel) throws Json.JsonException {
-        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), any(JourneyType.class), any()))
+        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
                 .thenReturn(Optional.of(authAppCodeValidator));
         when(authAppCodeValidator.validateCode(any(CodeRequest.class)))
                 .thenReturn(Optional.empty());
@@ -179,10 +178,7 @@ class VerifyMfaCodeHandlerTest {
         var result =
                 makeCallWithCode(
                         new VerifyMfaCodeRequest(
-                                MFAMethodType.AUTH_APP,
-                                CODE,
-                                JourneyType.REGISTRATION,
-                                AUTH_APP_SECRET));
+                                MFAMethodType.AUTH_APP, CODE, true, AUTH_APP_SECRET));
 
         assertThat(result, hasStatus(204));
         assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.AUTH_APP));
@@ -230,7 +226,7 @@ class VerifyMfaCodeHandlerTest {
     @MethodSource("credentialTrustLevels")
     void shouldReturn204WhenSuccessfulPhoneCodeRegistrationRequestAndSetPhoneNumber(
             CredentialTrustLevel credentialTrustLevel) throws Json.JsonException {
-        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), any(JourneyType.class), any()))
+        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
                 .thenReturn(Optional.of(phoneNumberCodeValidator));
         when(phoneNumberCodeValidator.validateCode(any(CodeRequest.class)))
                 .thenReturn(Optional.empty());
@@ -238,8 +234,7 @@ class VerifyMfaCodeHandlerTest {
         session.setCurrentCredentialStrength(credentialTrustLevel);
         var result =
                 makeCallWithCode(
-                        new VerifyMfaCodeRequest(
-                                MFAMethodType.SMS, CODE, JourneyType.REGISTRATION, PHONE_NUMBER));
+                        new VerifyMfaCodeRequest(MFAMethodType.SMS, CODE, true, PHONE_NUMBER));
 
         assertThat(result, hasStatus(204));
         assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
@@ -286,13 +281,12 @@ class VerifyMfaCodeHandlerTest {
 
     @Test
     void shouldReturn204WhenSuccessfulAuthAppCodeLoginRequest() throws Json.JsonException {
-        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), any(JourneyType.class), any()))
+        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
                 .thenReturn(Optional.of(authAppCodeValidator));
         when(authAppCodeValidator.validateCode(any(CodeRequest.class)))
                 .thenReturn(Optional.empty());
         session.setNewAccount(Session.AccountState.EXISTING);
-        var codeRequest =
-                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, JourneyType.SIGN_IN);
+        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, false);
         var result = makeCallWithCode(codeRequest);
 
         assertThat(result, hasStatus(204));
@@ -321,11 +315,10 @@ class VerifyMfaCodeHandlerTest {
 
     @Test
     void shouldReturn400IfMfaCodeValidatorCannotBeFound() throws Json.JsonException {
-        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), any(JourneyType.class), any()))
+        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
                 .thenReturn(Optional.empty());
         var codeRequest =
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.AUTH_APP, CODE, JourneyType.REGISTRATION, AUTH_APP_SECRET);
+                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, true, AUTH_APP_SECRET);
         var result = makeCallWithCode(codeRequest);
 
         assertThat(result, hasStatus(400));
@@ -345,12 +338,11 @@ class VerifyMfaCodeHandlerTest {
     @Test
     void shouldReturn400AndBlockCodeWhenUserEnteredInvalidAuthAppCodeTooManyTimes()
             throws Json.JsonException {
-        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), any(JourneyType.class), any()))
+        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
                 .thenReturn(Optional.of(authAppCodeValidator));
         when(authAppCodeValidator.validateCode(any(CodeRequest.class)))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1042));
-        var codeRequest =
-                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, JourneyType.SIGN_IN);
+        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, false);
         var result = makeCallWithCode(codeRequest);
 
         assertThat(result, hasStatus(400));
@@ -379,14 +371,13 @@ class VerifyMfaCodeHandlerTest {
     @Test
     void shouldReturn400AndNotBlockCodeWhenUserEnteredInvalidAuthAppCodeAndBlockAlreadyExists()
             throws Json.JsonException {
-        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), any(JourneyType.class), any()))
+        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
                 .thenReturn(Optional.of(authAppCodeValidator));
         when(authAppCodeValidator.validateCode(any(CodeRequest.class)))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1042));
         when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
-        var codeRequest =
-                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, JourneyType.SIGN_IN);
+        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, false);
         var result = makeCallWithCode(codeRequest);
 
         assertThat(result, hasStatus(400));
@@ -415,14 +406,13 @@ class VerifyMfaCodeHandlerTest {
     @MethodSource("registration")
     void shouldReturn400WhenUserEnteredInvalidAuthAppCode(boolean registration)
             throws Json.JsonException {
-        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), any(JourneyType.class), any()))
+        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
                 .thenReturn(Optional.of(authAppCodeValidator));
         var profileInformation = registration ? AUTH_APP_SECRET : null;
         when(authAppCodeValidator.validateCode(any(CodeRequest.class)))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1043));
         var codeRequest =
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.AUTH_APP, CODE, JourneyType.SIGN_IN, profileInformation);
+                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, false, profileInformation);
         var result = makeCallWithCode(codeRequest);
 
         assertThat(result, hasStatus(400));
@@ -451,13 +441,11 @@ class VerifyMfaCodeHandlerTest {
     void
             shouldReturn400AndBlockCodeWhenUserEnteredInvalidPhoneNumberCodeDuringRegistrationTooManyTimes()
                     throws Json.JsonException {
-        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), any(JourneyType.class), any()))
+        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
                 .thenReturn(Optional.of(phoneNumberCodeValidator));
         when(phoneNumberCodeValidator.validateCode(any(CodeRequest.class)))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1034));
-        var codeRequest =
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS, CODE, JourneyType.REGISTRATION, PHONE_NUMBER);
+        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.SMS, CODE, true, PHONE_NUMBER);
         var result = makeCallWithCode(codeRequest);
 
         assertThat(result, hasStatus(400));
@@ -490,15 +478,13 @@ class VerifyMfaCodeHandlerTest {
     void
             shouldReturn400AndNotBlockCodeWhenInvalidPhoneNumberCodeEnteredDuringRegistrationAndBlockAlreadyExists()
                     throws Json.JsonException {
-        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), any(JourneyType.class), any()))
+        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
                 .thenReturn(Optional.of(phoneNumberCodeValidator));
         when(phoneNumberCodeValidator.validateCode(any(CodeRequest.class)))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1034));
         when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
-        var codeRequest =
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS, CODE, JourneyType.REGISTRATION, PHONE_NUMBER);
+        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.SMS, CODE, true, PHONE_NUMBER);
         var result = makeCallWithCode(codeRequest);
 
         assertThat(result, hasStatus(400));
@@ -530,13 +516,11 @@ class VerifyMfaCodeHandlerTest {
     @Test
     void shouldReturn400WhenUserEnteredInvalidPhoneNumberCodeForRegistration()
             throws Json.JsonException {
-        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), any(JourneyType.class), any()))
+        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
                 .thenReturn(Optional.of(phoneNumberCodeValidator));
         when(phoneNumberCodeValidator.validateCode(any(CodeRequest.class)))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1037));
-        var codeRequest =
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS, CODE, JourneyType.REGISTRATION, PHONE_NUMBER);
+        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.SMS, CODE, true, PHONE_NUMBER);
         var result = makeCallWithCode(codeRequest);
 
         assertThat(result, hasStatus(400));
@@ -567,7 +551,7 @@ class VerifyMfaCodeHandlerTest {
 
     @Test
     void shouldReturn400WhenAuthAppSecretIsInvalid() throws Json.JsonException {
-        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), any(JourneyType.class), any()))
+        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), anyBoolean(), any()))
                 .thenReturn(Optional.of(authAppCodeValidator));
         when(authAppCodeValidator.validateCode(any(CodeRequest.class)))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1041));
@@ -576,10 +560,7 @@ class VerifyMfaCodeHandlerTest {
         var result =
                 makeCallWithCode(
                         new VerifyMfaCodeRequest(
-                                MFAMethodType.AUTH_APP,
-                                CODE,
-                                JourneyType.REGISTRATION,
-                                "not-base-32-encoded-secret"));
+                                MFAMethodType.AUTH_APP, CODE, true, "not-base-32-encoded-secret"));
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1041));

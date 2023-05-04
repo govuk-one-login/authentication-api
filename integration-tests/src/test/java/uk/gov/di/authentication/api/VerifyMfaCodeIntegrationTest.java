@@ -16,7 +16,6 @@ import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.lambda.VerifyMfaCodeHandler;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -72,17 +71,14 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     private static Stream<Arguments> verifyMfaCodeRequest() {
-        return Stream.of(
-                Arguments.of(JourneyType.REGISTRATION, AUTH_APP_SECRET_BASE_32),
-                Arguments.of(JourneyType.SIGN_IN, null));
+        return Stream.of(Arguments.of(true, AUTH_APP_SECRET_BASE_32), Arguments.of(false, null));
     }
 
     @Test
     void whenValidAuthAppOtpCodeReturn204WhenSigningIn() {
         setUpAuthAppRequest(false);
         var code = AUTH_APP_STUB.getAuthAppOneTimeCode(AUTH_APP_SECRET_BASE_32);
-        var codeRequest =
-                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, code, JourneyType.SIGN_IN);
+        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, code, false);
 
         var response =
                 makeRequest(
@@ -101,9 +97,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldReturn204WhenSuccessfulAuthAppOtpCodeRegistrationRequestAndSetMfaMethod() {
         var secret = "JZ5PYIOWNZDAOBA65S5T77FEEKYCCIT2VE4RQDAJD7SO73T3LODA";
         var code = AUTH_APP_STUB.getAuthAppOneTimeCode(secret);
-        var codeRequest =
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.AUTH_APP, code, JourneyType.REGISTRATION, secret);
+        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, code, true, secret);
         var response =
                 makeRequest(
                         Optional.of(codeRequest),
@@ -130,9 +124,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldReturn400WhenAuthAppSecretIsInvalid() {
         var secret = "not-base-32-encoded-secret";
         var code = AUTH_APP_STUB.getAuthAppOneTimeCode(secret);
-        var codeRequest =
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.AUTH_APP, code, JourneyType.REGISTRATION, secret);
+        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, code, true, secret);
         var response =
                 makeRequest(
                         Optional.of(codeRequest),
@@ -156,11 +148,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 EMAIL_ADDRESS, MFAMethodType.AUTH_APP, true, false, currentAuthAppCredential);
         var code = AUTH_APP_STUB.getAuthAppOneTimeCode(newAuthAppCredential);
         var codeRequest =
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.AUTH_APP,
-                        code,
-                        JourneyType.REGISTRATION,
-                        newAuthAppCredential);
+                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, code, true, newAuthAppCredential);
         var response =
                 makeRequest(
                         Optional.of(codeRequest),
@@ -190,15 +178,13 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @ParameterizedTest
     @MethodSource("verifyMfaCodeRequest")
     void whenValidAuthAppOtpCodeReturn204AndClearAccountRecoveryBlockWhenPresent(
-            JourneyType journeyType, String profileInformation) {
+            boolean isRegistrationRequest, String profileInformation) {
         accountRecoveryStore.addBlockWithoutTTL(EMAIL_ADDRESS);
-        var isRegistrationRequest =
-                journeyType.getValue().equals(JourneyType.REGISTRATION.getValue());
         setUpAuthAppRequest(isRegistrationRequest);
         var code = AUTH_APP_STUB.getAuthAppOneTimeCode(AUTH_APP_SECRET_BASE_32);
         var codeRequest =
                 new VerifyMfaCodeRequest(
-                        MFAMethodType.AUTH_APP, code, journeyType, profileInformation);
+                        MFAMethodType.AUTH_APP, code, isRegistrationRequest, profileInformation);
 
         var response =
                 makeRequest(
@@ -220,15 +206,13 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @ParameterizedTest
     @MethodSource("verifyMfaCodeRequest")
     void whenTwoMinuteOldValidAuthAppOtpCodeReturn204(
-            JourneyType journeyType, String profileInformation) {
-        var isRegistrationRequest =
-                journeyType.getValue().equals(JourneyType.REGISTRATION.getValue());
+            boolean isRegistrationRequest, String profileInformation) {
         setUpAuthAppRequest(isRegistrationRequest);
         long oneMinuteAgo = NowHelper.nowMinus(2, ChronoUnit.MINUTES).getTime();
         var code = AUTH_APP_STUB.getAuthAppOneTimeCode(AUTH_APP_SECRET_BASE_32, oneMinuteAgo);
         var codeRequest =
                 new VerifyMfaCodeRequest(
-                        MFAMethodType.AUTH_APP, code, journeyType, profileInformation);
+                        MFAMethodType.AUTH_APP, code, isRegistrationRequest, profileInformation);
 
         var response =
                 makeRequest(
@@ -249,15 +233,13 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @ParameterizedTest
     @MethodSource("verifyMfaCodeRequest")
     void whenFiveMinuteOldAuthAppOtpCodeReturn400(
-            JourneyType journeyType, String profileInformation) {
-        var isRegistrationRequest =
-                journeyType.getValue().equals(JourneyType.REGISTRATION.getValue());
+            boolean isRegistrationRequest, String profileInformation) {
         setUpAuthAppRequest(isRegistrationRequest);
         long tenMinutesAgo = NowHelper.nowMinus(5, ChronoUnit.MINUTES).getTime();
         String code = AUTH_APP_STUB.getAuthAppOneTimeCode(AUTH_APP_SECRET_BASE_32, tenMinutesAgo);
         VerifyMfaCodeRequest codeRequest =
                 new VerifyMfaCodeRequest(
-                        MFAMethodType.AUTH_APP, code, journeyType, profileInformation);
+                        MFAMethodType.AUTH_APP, code, isRegistrationRequest, profileInformation);
 
         var response =
                 makeRequest(
@@ -267,20 +249,24 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(400));
         assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList(INVALID_CODE_SENT));
-        assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(!isRegistrationRequest));
-        assertThat(userStore.isAuthAppVerified(EMAIL_ADDRESS), equalTo(!isRegistrationRequest));
+        assertThat(
+                userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(!codeRequest.isRegistration()));
+        assertThat(
+                userStore.isAuthAppVerified(EMAIL_ADDRESS), equalTo(!codeRequest.isRegistration()));
     }
 
     @ParameterizedTest
     @MethodSource("verifyMfaCodeRequest")
-    void whenWrongSecretUsedByAuthAppReturn400(JourneyType journeyType, String profileInformation) {
-        var isRegistrationRequest =
-                journeyType.getValue().equals(JourneyType.REGISTRATION.getValue());
+    void whenWrongSecretUsedByAuthAppReturn400(
+            boolean isRegistrationRequest, String profileInformation) {
         setUpAuthAppRequest(isRegistrationRequest);
         String invalidCode = AUTH_APP_STUB.getAuthAppOneTimeCode("O5ZG63THFVZWKY3SMV2A====");
         VerifyMfaCodeRequest codeRequest =
                 new VerifyMfaCodeRequest(
-                        MFAMethodType.AUTH_APP, invalidCode, journeyType, profileInformation);
+                        MFAMethodType.AUTH_APP,
+                        invalidCode,
+                        isRegistrationRequest,
+                        profileInformation);
 
         var response =
                 makeRequest(
@@ -301,8 +287,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         setUpAuthAppRequest(false);
         String invalidCode = AUTH_APP_STUB.getAuthAppOneTimeCode("O5ZG63THFVZWKY3SMV2A====");
         VerifyMfaCodeRequest codeRequest =
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.AUTH_APP, invalidCode, JourneyType.SIGN_IN, null);
+                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, invalidCode, false, null);
 
         var response =
                 makeRequest(
@@ -324,7 +309,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 EMAIL_ADDRESS, MFAMethodType.AUTH_APP, true, false, AUTH_APP_SECRET_BASE_32);
         String code = AUTH_APP_STUB.getAuthAppOneTimeCode(AUTH_APP_SECRET_BASE_32);
         VerifyMfaCodeRequest codeRequest =
-                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, code, JourneyType.REGISTRATION);
+                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, code, true);
 
         var response =
                 makeRequest(
@@ -342,8 +327,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         userStore.addMfaMethod(
                 EMAIL_ADDRESS, MFAMethodType.AUTH_APP, true, true, AUTH_APP_SECRET_BASE_32);
         String code = AUTH_APP_STUB.getAuthAppOneTimeCode(AUTH_APP_SECRET_BASE_32);
-        VerifyMfaCodeRequest codeRequest =
-                new VerifyMfaCodeRequest(null, code, JourneyType.REGISTRATION);
+        VerifyMfaCodeRequest codeRequest = new VerifyMfaCodeRequest(null, code, true);
 
         var response =
                 makeRequest(
@@ -357,13 +341,11 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @ParameterizedTest
     @MethodSource("verifyMfaCodeRequest")
-    void whenAuthAppCodeSubmissionBlockedReturn400(JourneyType journeyType) {
-        var isRegistrationRequest =
-                journeyType.getValue().equals(JourneyType.REGISTRATION.getValue());
+    void whenAuthAppCodeSubmissionBlockedReturn400(boolean isRegistrationRequest) {
         setUpAuthAppRequest(isRegistrationRequest);
         String code = AUTH_APP_STUB.getAuthAppOneTimeCode(AUTH_APP_SECRET_BASE_32);
         VerifyMfaCodeRequest codeRequest =
-                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, code, journeyType);
+                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, code, isRegistrationRequest);
 
         redis.blockMfaCodesForEmail(EMAIL_ADDRESS);
 
@@ -385,7 +367,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         setUpAuthAppRequest(false);
         String invalidCode = AUTH_APP_STUB.getAuthAppOneTimeCode("O5ZG63THFVZWKY3SMV2A====");
         VerifyMfaCodeRequest codeRequest =
-                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, invalidCode, JourneyType.SIGN_IN);
+                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, invalidCode, false);
 
         for (int i = 0; i < 5; i++) {
             redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS, MFAMethodType.AUTH_APP);
@@ -416,7 +398,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         String invalidCode = "999999";
         VerifyMfaCodeRequest codeRequest =
-                new VerifyMfaCodeRequest(MFAMethodType.SMS, invalidCode, JourneyType.REGISTRATION);
+                new VerifyMfaCodeRequest(MFAMethodType.SMS, invalidCode, true);
 
         var response =
                 makeRequest(
@@ -433,9 +415,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @Test
     void whenValidPhoneNumberOtpCodeForRegistrationReturn204AndUpdatePhoneNumber() {
         var code = redis.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 900);
-        var codeRequest =
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS, code, JourneyType.REGISTRATION, PHONE_NUMBER);
+        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.SMS, code, true, PHONE_NUMBER);
 
         var response =
                 makeRequest(
@@ -459,9 +439,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldReturn204WhenSuccessfulSMSRegistrationRequestAndOverwriteExistingPhoneNumber() {
         userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, "+447700900111");
         var code = redis.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 900);
-        var codeRequest =
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS, code, JourneyType.REGISTRATION, PHONE_NUMBER);
+        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.SMS, code, true, PHONE_NUMBER);
 
         var response =
                 makeRequest(
@@ -482,9 +460,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         userStore.addMfaMethod(
                 EMAIL_ADDRESS, MFAMethodType.AUTH_APP, false, true, AUTH_APP_SECRET_BASE_32);
         var code = redis.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 900);
-        var codeRequest =
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS, code, JourneyType.REGISTRATION, PHONE_NUMBER);
+        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.SMS, code, true, PHONE_NUMBER);
 
         var response =
                 makeRequest(
@@ -504,8 +480,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @Test
     void whenInvalidPhoneNumberCodeHasExpiredForRegistrationReturn400() {
         var code = redis.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 1);
-        var codeRequest =
-                new VerifyMfaCodeRequest(MFAMethodType.SMS, code, JourneyType.REGISTRATION);
+        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.SMS, code, true);
 
         await().pollDelay(Duration.ofSeconds(2)).untilAsserted(() -> assertTrue(true));
 
@@ -522,8 +497,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void whenInvalidPhoneNumberCodeForRegistrationReturn400() {
-        var codeRequest =
-                new VerifyMfaCodeRequest(MFAMethodType.SMS, "123456", JourneyType.REGISTRATION);
+        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.SMS, "123456", true);
 
         var response =
                 makeRequest(
@@ -541,8 +515,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
         redis.blockMfaCodesForEmail(EMAIL_ADDRESS);
 
-        var codeRequest =
-                new VerifyMfaCodeRequest(MFAMethodType.SMS, "123456", JourneyType.REGISTRATION);
+        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.SMS, "123456", true);
 
         var response =
                 makeRequest(
@@ -558,8 +531,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             throws Json.JsonException {
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
 
-        var codeRequest =
-                new VerifyMfaCodeRequest(MFAMethodType.SMS, "123456", JourneyType.REGISTRATION);
+        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.SMS, "123456", true);
 
         for (int i = 0; i < 5; i++) {
             makeRequest(
