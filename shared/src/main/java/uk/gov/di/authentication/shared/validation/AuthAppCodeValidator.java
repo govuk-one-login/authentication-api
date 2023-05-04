@@ -4,6 +4,7 @@ import org.apache.commons.codec.CodecPolicy;
 import org.apache.commons.codec.binary.Base32;
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -26,7 +27,7 @@ public class AuthAppCodeValidator extends MfaCodeValidator {
     private final int allowedWindows;
     private final AuthenticationService dynamoService;
     private final String emailAddress;
-    private final boolean isRegistration;
+    private final JourneyType journeyType;
     private static final Base32 base32 = new Base32(0, null, false, (byte) '=', CodecPolicy.STRICT);
 
     public AuthAppCodeValidator(
@@ -35,17 +36,19 @@ public class AuthAppCodeValidator extends MfaCodeValidator {
             ConfigurationService configurationService,
             AuthenticationService dynamoService,
             int maxRetries,
-            boolean isRegistration) {
+            JourneyType journeyType) {
         super(emailAddress, codeStorageService, maxRetries);
         this.dynamoService = dynamoService;
         this.emailAddress = emailAddress;
         this.windowTime = configurationService.getAuthAppCodeWindowLength();
         this.allowedWindows = configurationService.getAuthAppCodeAllowedWindows();
-        this.isRegistration = isRegistration;
+        this.journeyType = journeyType;
     }
 
     @Override
     public Optional<ErrorResponse> validateCode(CodeRequest codeRequest) {
+        var isRegistration = journeyType.getValue().equals(JourneyType.REGISTRATION.getValue());
+
         if (isCodeBlockedForSession()) {
             LOG.info("Code blocked for session");
             return Optional.of(ErrorResponse.ERROR_1042);
