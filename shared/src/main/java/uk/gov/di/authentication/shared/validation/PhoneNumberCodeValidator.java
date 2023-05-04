@@ -2,7 +2,6 @@ package uk.gov.di.authentication.shared.validation;
 
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.ValidationHelper;
@@ -18,25 +17,24 @@ public class PhoneNumberCodeValidator extends MfaCodeValidator {
 
     private final ConfigurationService configurationService;
     private final UserContext userContext;
-    private final JourneyType journeyType;
+    private final boolean isRegistration;
 
     PhoneNumberCodeValidator(
             CodeStorageService codeStorageService,
             UserContext userContext,
             ConfigurationService configurationService,
-            JourneyType journeyType) {
+            boolean isRegistration) {
         super(
                 userContext.getSession().getEmailAddress(),
                 codeStorageService,
                 configurationService.getCodeMaxRetries());
         this.userContext = userContext;
         this.configurationService = configurationService;
-        this.journeyType = journeyType;
+        this.isRegistration = isRegistration;
     }
 
     @Override
     public Optional<ErrorResponse> validateCode(CodeRequest codeRequest) {
-        var isRegistration = journeyType.getValue().equals(JourneyType.REGISTRATION.getValue());
         if (!isRegistration) {
             LOG.error("Sign In Phone number codes are not supported");
             throw new RuntimeException("Sign In Phone number codes are not supported");

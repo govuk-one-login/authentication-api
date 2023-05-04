@@ -2,7 +2,6 @@ package uk.gov.di.authentication.shared.validation;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -38,7 +37,7 @@ class MfaCodeValidatorFactoryTest {
         when(userContext.getSession()).thenReturn(session);
         var mfaCodeValidator =
                 mfaCodeValidatorFactory.getMfaCodeValidator(
-                        MFAMethodType.AUTH_APP, JourneyType.REGISTRATION, userContext);
+                        MFAMethodType.AUTH_APP, true, userContext);
 
         assertInstanceOf(AuthAppCodeValidator.class, mfaCodeValidator.get());
     }
@@ -48,8 +47,7 @@ class MfaCodeValidatorFactoryTest {
         when(session.getEmailAddress()).thenReturn("test@test.com");
         when(userContext.getSession()).thenReturn(session);
         var mfaCodeValidator =
-                mfaCodeValidatorFactory.getMfaCodeValidator(
-                        MFAMethodType.SMS, JourneyType.REGISTRATION, userContext);
+                mfaCodeValidatorFactory.getMfaCodeValidator(MFAMethodType.SMS, true, userContext);
 
         assertInstanceOf(PhoneNumberCodeValidator.class, mfaCodeValidator.get());
     }

@@ -7,7 +7,6 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -50,15 +49,13 @@ class AuthAppCodeValidatorTest {
     }
 
     private static Stream<Arguments> validatorParams() {
-        return Stream.of(
-                Arguments.of(JourneyType.SIGN_IN, null),
-                Arguments.of(JourneyType.REGISTRATION, AUTH_APP_SECRET));
+        return Stream.of(Arguments.of(false, null), Arguments.of(true, AUTH_APP_SECRET));
     }
 
     @ParameterizedTest
     @MethodSource("validatorParams")
-    void returnsNoErrorOnValidAuthCode(JourneyType journeyType, String authAppSecret) {
-        setUpValidAuthCode(journeyType);
+    void returnsNoErrorOnValidAuthCode(boolean isRegistration, String authAppSecret) {
+        setUpValidAuthCode(isRegistration);
         var authAppStub = new AuthAppStub();
         String authCode =
                 authAppStub.getAuthAppOneTimeCode(AUTH_APP_SECRET, NowHelper.now().getTime());
@@ -67,91 +64,82 @@ class AuthAppCodeValidatorTest {
                 Optional.empty(),
                 authAppCodeValidator.validateCode(
                         new VerifyMfaCodeRequest(
-                                MFAMethodType.AUTH_APP, authCode, journeyType, authAppSecret)));
+                                MFAMethodType.AUTH_APP, authCode, isRegistration, authAppSecret)));
     }
 
     @ParameterizedTest
     @MethodSource("validatorParams")
     void returnsCorrectErrorWhenCodeBlockedForEmailAddress(
-            JourneyType journeyType, String authAppSecret) {
-        setUpBlockedUser(journeyType);
+            boolean isRegistration, String authAppSecret) {
+        setUpBlockedUser(isRegistration);
 
         assertEquals(
                 Optional.of(ErrorResponse.ERROR_1042),
                 authAppCodeValidator.validateCode(
                         new VerifyMfaCodeRequest(
-                                MFAMethodType.AUTH_APP, "000000", journeyType, authAppSecret)));
+                                MFAMethodType.AUTH_APP, "000000", isRegistration, authAppSecret)));
     }
 
     @ParameterizedTest
     @MethodSource("validatorParams")
-    void returnsCorrectErrorWhenRetryLimitExceeded(JourneyType journeyType, String authAppSecret) {
-        setUpRetryLimitExceededUser(journeyType);
+    void returnsCorrectErrorWhenRetryLimitExceeded(boolean isRegistration, String authAppSecret) {
+        setUpRetryLimitExceededUser(isRegistration);
 
         assertEquals(
                 Optional.of(ErrorResponse.ERROR_1042),
                 authAppCodeValidator.validateCode(
                         new VerifyMfaCodeRequest(
-                                MFAMethodType.AUTH_APP, "000000", journeyType, authAppSecret)));
+                                MFAMethodType.AUTH_APP, "000000", isRegistration, authAppSecret)));
     }
 
     @ParameterizedTest
     @MethodSource("validatorParams")
-    void returnsCorrectErrorWhenNoAuthCodeIsFound(JourneyType journeyType) {
-        setUpNoAuthCodeForUser(journeyType);
+    void returnsCorrectErrorWhenNoAuthCodeIsFound(boolean isRegistration) {
+        setUpNoAuthCodeForUser(isRegistration);
 
         assertEquals(
                 Optional.of(ErrorResponse.ERROR_1043),
                 authAppCodeValidator.validateCode(
-                        new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, "000000", journeyType)));
+                        new VerifyMfaCodeRequest(
+                                MFAMethodType.AUTH_APP, "000000", isRegistration)));
     }
 
     @Test
     void shouldReturnErrorWhenAuthAppSecretIsInvalid() {
-        setUpValidAuthCode(JourneyType.REGISTRATION);
+        setUpValidAuthCode(true);
 
         assertThat(
                 authAppCodeValidator.validateCode(
                         new VerifyMfaCodeRequest(
                                 MFAMethodType.AUTH_APP,
                                 "000000",
-                                JourneyType.REGISTRATION,
+                                true,
                                 "not-base-32-encoded-secret")),
                 equalTo(Optional.of(ErrorResponse.ERROR_1041)));
     }
 
     @ParameterizedTest
     @MethodSource("validatorParams")
-    void returnsCorrectErrorWhenAuthCodeIsInvalid(JourneyType journeyType, String authAppSecret) {
-        setUpValidAuthCode(journeyType);
+    void returnsCorrectErrorWhenAuthCodeIsInvalid(boolean isRegistration, String authAppSecret) {
+        setUpValidAuthCode(isRegistration);
 
         assertEquals(
                 Optional.of(ErrorResponse.ERROR_1043),
                 authAppCodeValidator.validateCode(
                         new VerifyMfaCodeRequest(
-                                MFAMethodType.AUTH_APP,
-                                "111111",
-                                JourneyType.REGISTRATION,
-                                authAppSecret)));
+                                MFAMethodType.AUTH_APP, "111111", true, authAppSecret)));
+        assertEquals(
+                Optional.of(ErrorResponse.ERROR_1043),
+                authAppCodeValidator.validateCode(
+                        new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, "", true, authAppSecret)));
         assertEquals(
                 Optional.of(ErrorResponse.ERROR_1043),
                 authAppCodeValidator.validateCode(
                         new VerifyMfaCodeRequest(
-                                MFAMethodType.AUTH_APP,
-                                "",
-                                JourneyType.REGISTRATION,
-                                authAppSecret)));
-        assertEquals(
-                Optional.of(ErrorResponse.ERROR_1043),
-                authAppCodeValidator.validateCode(
-                        new VerifyMfaCodeRequest(
-                                MFAMethodType.AUTH_APP,
-                                "999999999999",
-                                JourneyType.REGISTRATION,
-                                authAppSecret)));
+                                MFAMethodType.AUTH_APP, "999999999999", true, authAppSecret)));
     }
 
-    private void setUpBlockedUser(JourneyType journeyType) {
+    private void setUpBlockedUser(boolean isRegistration) {
         when(mockCodeStorageService.isBlockedForEmail(
                         "blocked-email-address", CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
@@ -163,10 +151,10 @@ class AuthAppCodeValidatorTest {
                         mockConfigurationService,
                         mockDynamoService,
                         MAX_RETRIES,
-                        journeyType);
+                        isRegistration);
     }
 
-    private void setUpRetryLimitExceededUser(JourneyType journeyType) {
+    private void setUpRetryLimitExceededUser(boolean isRegistration) {
         when(mockCodeStorageService.isBlockedForEmail("email-address", CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(false);
         when(mockCodeStorageService.getIncorrectMfaCodeAttemptsCount(
@@ -180,10 +168,10 @@ class AuthAppCodeValidatorTest {
                         mockConfigurationService,
                         mockDynamoService,
                         MAX_RETRIES,
-                        journeyType);
+                        isRegistration);
     }
 
-    private void setUpNoAuthCodeForUser(JourneyType journeyType) {
+    private void setUpNoAuthCodeForUser(boolean isRegistration) {
         when(mockCodeStorageService.isBlockedForEmail("email-address", CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(false);
         when(mockDynamoService.getUserCredentialsFromEmail("email-address"))
@@ -196,10 +184,10 @@ class AuthAppCodeValidatorTest {
                         mockConfigurationService,
                         mockDynamoService,
                         MAX_RETRIES,
-                        journeyType);
+                        isRegistration);
     }
 
-    private void setUpValidAuthCode(JourneyType journeyType) {
+    private void setUpValidAuthCode(boolean isRegistration) {
         when(mockSession.getEmailAddress()).thenReturn("email-address");
         when(mockSession.getRetryCount()).thenReturn(0);
         when(mockCodeStorageService.isBlockedForEmail("email-address", CODE_BLOCKED_KEY_PREFIX))
@@ -224,6 +212,6 @@ class AuthAppCodeValidatorTest {
                         mockConfigurationService,
                         mockDynamoService,
                         MAX_RETRIES,
-                        journeyType);
+                        isRegistration);
     }
 }

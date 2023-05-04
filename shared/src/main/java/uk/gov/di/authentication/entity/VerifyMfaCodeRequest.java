@@ -2,7 +2,6 @@ package uk.gov.di.authentication.entity;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.validation.Required;
 
@@ -10,18 +9,18 @@ public class VerifyMfaCodeRequest extends CodeRequest {
 
     public VerifyMfaCodeRequest() {}
 
-    public VerifyMfaCodeRequest(MFAMethodType mfaMethodType, String code, JourneyType journeyType) {
-        this(mfaMethodType, code, journeyType, null);
+    public VerifyMfaCodeRequest(MFAMethodType mfaMethodType, String code, boolean isRegistration) {
+        this(mfaMethodType, code, isRegistration, null);
     }
 
     public VerifyMfaCodeRequest(
             MFAMethodType mfaMethodType,
             String code,
-            JourneyType journeyType,
+            boolean isRegistration,
             String profileInformation) {
         this.mfaMethodType = mfaMethodType;
         this.code = code;
-        this.journeyType = journeyType;
+        this.isRegistration = isRegistration;
         this.profileInformation = profileInformation;
     }
 
@@ -30,16 +29,16 @@ public class VerifyMfaCodeRequest extends CodeRequest {
     @Required
     private MFAMethodType mfaMethodType;
 
-    @SerializedName("journeyType")
+    @SerializedName("isRegistration")
     @Expose
     @Required
-    private JourneyType journeyType;
+    private boolean isRegistration;
 
     public MFAMethodType getMfaMethodType() {
         return mfaMethodType;
     }
 
-    public JourneyType getJourneyType() {
-        return journeyType;
+    public boolean isRegistration() {
+        return isRegistration;
     }
 }
