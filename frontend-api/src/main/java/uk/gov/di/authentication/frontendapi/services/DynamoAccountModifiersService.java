@@ -39,13 +39,14 @@ public class DynamoAccountModifiersService {
                                         Objects.nonNull(t.getAccountRecovery())
                                                 ? t.withAccountRecovery(
                                                         t.getAccountRecovery()
-                                                                .withBlocked(true)
+                                                                .withBlocked(accountRecoveryBlock)
                                                                 .withUpdated(dateTime))
                                                 : t.withAccountRecovery(
                                                         new AccountRecovery()
                                                                 .withCreated(dateTime)
                                                                 .withUpdated(dateTime)
-                                                                .withBlocked(true)));
+                                                                .withBlocked(
+                                                                        accountRecoveryBlock)));
 
         var accountModifiers =
                 optionalAccountModifiers.orElse(
@@ -73,6 +74,12 @@ public class DynamoAccountModifiersService {
                 .map(AccountModifiers::getAccountRecovery)
                 .filter(AccountRecovery::isBlocked)
                 .isPresent();
+    }
+
+    public void removeAccountRecoveryBlockIfPresent(String internalCommonSubjectId) {
+        if (isAccountRecoveryBlockPresent(internalCommonSubjectId)) {
+            setAccountRecoveryBlock(internalCommonSubjectId, false);
+        }
     }
 
     private void warmUp() {

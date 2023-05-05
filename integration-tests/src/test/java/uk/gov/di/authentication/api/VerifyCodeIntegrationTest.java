@@ -4,6 +4,7 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
@@ -18,6 +19,8 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
@@ -48,6 +51,8 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     private static final String REDIRECT_URI = "http://localhost/redirect";
     public static final String CLIENT_SESSION_ID = "a-client-session-id";
     public static final String CLIENT_NAME = "test-client-name";
+    private static final Subject SUBJECT = new Subject();
+    private static final String INTERNAl_SECTOR_HOST = "test.account.gov.uk";
 
     @BeforeEach
     void setup() {
@@ -177,7 +182,11 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
     @Test
     void shouldReturn204WhenUserEntersValidMfaSmsCode() throws Exception {
+        var internalCommonSubjectId =
+                ClientSubjectHelper.calculatePairwiseIdentifier(
+                        SUBJECT.getValue(), INTERNAl_SECTOR_HOST, SaltHelper.generateNewSalt());
         var sessionId = redis.createSession();
+        redis.addInternalCommonSubjectIdToSession(sessionId, internalCommonSubjectId);
         var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.PHONE);
         setUpTestWithoutClientConsent(sessionId, withScope());
         userStore.updateTermsAndConditions(EMAIL_ADDRESS, "1.0");
@@ -198,15 +207,20 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         Map.of());
 
         assertThat(response, hasStatus(204));
-        assertThat(accountRecoveryStore.isBlockPresent(EMAIL_ADDRESS), equalTo(false));
+
+        assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(false));
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_VERIFIED));
     }
 
     @Test
     void shouldReturn204WhenUserEntersValidMfaSmsCodeAndClearAccountRecoveryBlockWhenPresent()
             throws Exception {
-        accountRecoveryStore.addBlockWithTTL(EMAIL_ADDRESS);
+        var internalCommonSubjectId =
+                ClientSubjectHelper.calculatePairwiseIdentifier(
+                        SUBJECT.getValue(), INTERNAl_SECTOR_HOST, SaltHelper.generateNewSalt());
+        accountModifiersStore.setAccountRecoveryBlock(internalCommonSubjectId);
         var sessionId = redis.createSession();
+        redis.addInternalCommonSubjectIdToSession(sessionId, internalCommonSubjectId);
         var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.PHONE);
         setUpTestWithoutClientConsent(sessionId, withScope());
         userStore.updateTermsAndConditions(EMAIL_ADDRESS, "1.0");
@@ -227,15 +241,19 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         Map.of());
 
         assertThat(response, hasStatus(204));
-        assertThat(accountRecoveryStore.isBlockPresent(EMAIL_ADDRESS), equalTo(false));
+        assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(false));
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_VERIFIED));
     }
 
     @Test
     void shouldReturn400WhenInvalidMfaSmsCodeIsEnteredAndNotClearAccountRecoveryBlockWhenPresent()
             throws Json.JsonException {
-        accountRecoveryStore.addBlockWithTTL(EMAIL_ADDRESS);
+        var internalCommonSubjectId =
+                ClientSubjectHelper.calculatePairwiseIdentifier(
+                        SUBJECT.getValue(), INTERNAl_SECTOR_HOST, SaltHelper.generateNewSalt());
+        accountModifiersStore.setAccountRecoveryBlock(internalCommonSubjectId);
         var sessionId = redis.createSession();
+        redis.addInternalCommonSubjectIdToSession(sessionId, internalCommonSubjectId);
         var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.PHONE);
         setUpTestWithoutClientConsent(sessionId, withScope());
         userStore.updateTermsAndConditions(EMAIL_ADDRESS, "1.0");
@@ -256,7 +274,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         Map.of());
 
         assertThat(response, hasStatus(400));
-        assertThat(accountRecoveryStore.isBlockPresent(EMAIL_ADDRESS), equalTo(true));
+        assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(true));
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(INVALID_CODE_SENT));
     }
 
