@@ -19,7 +19,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
-import uk.gov.di.authentication.frontendapi.services.DynamoAccountRecoveryBlockService;
+import uk.gov.di.authentication.frontendapi.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -105,8 +105,8 @@ class VerifyCodeHandlerTest {
     private final AuditService auditService = mock(AuditService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
-    private final DynamoAccountRecoveryBlockService accountRecoveryBlockService =
-            mock(DynamoAccountRecoveryBlockService.class);
+    private final DynamoAccountModifiersService accountModifiersService =
+            mock(DynamoAccountModifiersService.class);
 
     private final ClientRegistry clientRegistry =
             new ClientRegistry()
@@ -154,7 +154,7 @@ class VerifyCodeHandlerTest {
                         codeStorageService,
                         auditService,
                         cloudwatchMetricsService,
-                        accountRecoveryBlockService);
+                        accountModifiersService);
 
         when(authenticationService.getUserProfileFromEmail(TEST_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(userProfile));
@@ -185,6 +185,7 @@ class VerifyCodeHandlerTest {
         verify(codeStorageService).deleteOtpCode(TEST_EMAIL_ADDRESS, emailNotificationType);
         assertThat(result, hasStatus(204));
         verify(sessionService).save(session);
+        verifyNoInteractions(accountModifiersService);
 
         verify(auditService)
                 .submitAuditEvent(
@@ -213,6 +214,7 @@ class VerifyCodeHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1036));
+        verifyNoInteractions(accountModifiersService);
     }
 
     @Test
@@ -226,6 +228,7 @@ class VerifyCodeHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+        verifyNoInteractions(accountModifiersService);
     }
 
     @Test
@@ -235,6 +238,7 @@ class VerifyCodeHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1000));
+        verifyNoInteractions(accountModifiersService);
     }
 
     @Test
@@ -243,6 +247,7 @@ class VerifyCodeHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+        verifyNoInteractions(accountModifiersService);
     }
 
     @ParameterizedTest
@@ -267,6 +272,7 @@ class VerifyCodeHandlerTest {
                 .saveBlockedForEmail(
                         TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, BLOCKED_EMAIL_DURATION);
         verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
+        verifyNoInteractions(accountModifiersService);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
@@ -290,6 +296,7 @@ class VerifyCodeHandlerTest {
         APIGatewayProxyResponseEvent result =
                 makeCallWithCode(CODE, emailNotificationType.toString());
 
+        verifyNoInteractions(accountModifiersService);
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1033));
     }
@@ -306,7 +313,7 @@ class VerifyCodeHandlerTest {
         verify(codeStorageService).deleteOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS);
         assertThat(result, hasStatus(204));
         assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
-        verify(accountRecoveryBlockService).deleteBlockIfPresent(TEST_EMAIL_ADDRESS);
+        verify(accountModifiersService).removeAccountRecoveryBlockIfPresent(expectedCommonSubject);
         verify(sessionService, times(2)).save(session);
         verify(auditService)
                 .submitAuditEvent(
@@ -331,7 +338,7 @@ class VerifyCodeHandlerTest {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS))
                 .thenReturn(Optional.of(CODE));
-        verifyNoInteractions(accountRecoveryBlockService);
+        verifyNoInteractions(accountModifiersService);
 
         APIGatewayProxyResponseEvent result = makeCallWithCode(INVALID_CODE, MFA_SMS.toString());
 
@@ -355,7 +362,7 @@ class VerifyCodeHandlerTest {
         verify(codeStorageService)
                 .saveBlockedForEmail(
                         TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, BLOCKED_EMAIL_DURATION);
-        verifyNoInteractions(accountRecoveryBlockService);
+        verifyNoInteractions(accountModifiersService);
         verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
         verify(auditService)
                 .submitAuditEvent(
@@ -382,7 +389,7 @@ class VerifyCodeHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1027));
 
-        verifyNoInteractions(accountRecoveryBlockService);
+        verifyNoInteractions(accountModifiersService);
         verify(codeStorageService, never()).getOtpCode(session.getEmailAddress(), MFA_SMS);
     }
 
@@ -408,6 +415,7 @@ class VerifyCodeHandlerTest {
                         Optional.of(testClientSession),
                         TEST_CLIENT_ID);
 
+        verifyNoInteractions(accountModifiersService);
         verify(codeStorageService).deleteOtpCode(email, VERIFY_EMAIL);
         assertThat(result, hasStatus(204));
     }
@@ -436,6 +444,7 @@ class VerifyCodeHandlerTest {
                         Optional.of(testClientSession),
                         TEST_CLIENT_ID);
 
+        verifyNoInteractions(accountModifiersService);
         verify(codeStorageService).deleteOtpCode(email, VERIFY_EMAIL);
         assertThat(result, hasStatus(204));
     }
@@ -455,6 +464,7 @@ class VerifyCodeHandlerTest {
                         Optional.of(testClientSession),
                         TEST_CLIENT_ID);
 
+        verifyNoInteractions(accountModifiersService);
         verify(codeStorageService).deleteOtpCode(TEST_CLIENT_EMAIL, RESET_PASSWORD_WITH_CODE);
         assertThat(result, hasStatus(204));
     }
