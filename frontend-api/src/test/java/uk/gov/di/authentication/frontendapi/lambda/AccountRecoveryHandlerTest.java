@@ -5,13 +5,16 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.AccountRecoveryResponse;
 import uk.gov.di.authentication.frontendapi.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -27,6 +30,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
@@ -39,6 +43,7 @@ class AccountRecoveryHandlerTest {
     private static final String EMAIL = "joe.bloggs@test.com";
     private static final String PERSISTENT_ID = "some-persistent-id-value";
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
+    private static final String CLIENT_SESSION_ID = "known-client-session-id";
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private static final Subject INTERNAL_SUBJECT_ID = new Subject();
     private final Context context = mock(Context.class);
@@ -49,8 +54,12 @@ class AccountRecoveryHandlerTest {
     private final DynamoAccountModifiersService dynamoAccountModifiersService =
             mock(DynamoAccountModifiersService.class);
     private final ClientService clientService = mock(ClientService.class);
+    private final AuditService auditService = mock(AuditService.class);
     private AccountRecoveryHandler handler;
 
+    private final String internalCommonSubjectId =
+            ClientSubjectHelper.calculatePairwiseIdentifier(
+                    INTERNAL_SUBJECT_ID.getValue(), "test.account.gov.uk", SALT);
     private final Session session = new Session(IdGenerator.generate()).setEmailAddress(EMAIL);
 
     @BeforeEach
@@ -67,7 +76,8 @@ class AccountRecoveryHandlerTest {
                         clientSessionService,
                         clientService,
                         authenticationService,
-                        dynamoAccountModifiersService);
+                        dynamoAccountModifiersService,
+                        auditService);
     }
 
     @Test
@@ -90,6 +100,17 @@ class AccountRecoveryHandlerTest {
 
         assertThat(result, hasStatus(200));
         assertThat(result, hasJsonBody(expectedResponse));
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.ACCOUNT_RECOVERY_NOT_PERMITTED,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        AuditService.UNKNOWN,
+                        internalCommonSubjectId,
+                        EMAIL,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_ID);
     }
 
     @Test
@@ -112,6 +133,17 @@ class AccountRecoveryHandlerTest {
 
         assertThat(result, hasStatus(200));
         assertThat(result, hasJsonBody(expectedResponse));
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.ACCOUNT_RECOVERY_PERMITTED,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        AuditService.UNKNOWN,
+                        internalCommonSubjectId,
+                        EMAIL,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_ID);
     }
 
     private void usingValidSession() {

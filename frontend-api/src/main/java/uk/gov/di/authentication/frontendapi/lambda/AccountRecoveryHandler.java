@@ -8,9 +8,13 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.AccountRecoveryRequest;
 import uk.gov.di.authentication.frontendapi.entity.AccountRecoveryResponse;
 import uk.gov.di.authentication.frontendapi.services.DynamoAccountModifiersService;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -18,12 +22,15 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_NOT_PERMITTED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_PERMITTED;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
 public class AccountRecoveryHandler extends BaseFrontendHandler<AccountRecoveryRequest> {
 
     private static final Logger LOG = LogManager.getLogger(AccountRecoveryHandler.class);
     private final DynamoAccountModifiersService dynamoAccountModifiersService;
+    private final AuditService auditService;
 
     protected AccountRecoveryHandler(
             ConfigurationService configurationService,
@@ -31,7 +38,8 @@ public class AccountRecoveryHandler extends BaseFrontendHandler<AccountRecoveryR
             ClientSessionService clientSessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
-            DynamoAccountModifiersService dynamoAccountModifiersService) {
+            DynamoAccountModifiersService dynamoAccountModifiersService,
+            AuditService auditService) {
         super(
                 AccountRecoveryRequest.class,
                 configurationService,
@@ -40,12 +48,14 @@ public class AccountRecoveryHandler extends BaseFrontendHandler<AccountRecoveryR
                 clientService,
                 authenticationService);
         this.dynamoAccountModifiersService = dynamoAccountModifiersService;
+        this.auditService = auditService;
     }
 
     public AccountRecoveryHandler(ConfigurationService configurationService) {
         super(AccountRecoveryRequest.class, configurationService);
         this.dynamoAccountModifiersService =
                 new DynamoAccountModifiersService(configurationService);
+        this.auditService = new AuditService(configurationService);
     }
 
     public AccountRecoveryHandler() {
@@ -70,6 +80,23 @@ public class AccountRecoveryHandler extends BaseFrontendHandler<AccountRecoveryR
                     !dynamoAccountModifiersService.isAccountRecoveryBlockPresent(
                             commonSubjectId.getValue());
             LOG.info("Account recovery is permitted: {}", accountRecoveryPermitted);
+            var auditableEvent =
+                    accountRecoveryPermitted
+                            ? ACCOUNT_RECOVERY_PERMITTED
+                            : ACCOUNT_RECOVERY_NOT_PERMITTED;
+            auditService.submitAuditEvent(
+                    auditableEvent,
+                    userContext.getClientSessionId(),
+                    userContext.getSession().getSessionId(),
+                    userContext.getClientId(),
+                    commonSubjectId.getValue(),
+                    userContext
+                            .getUserProfile()
+                            .map(UserProfile::getEmail)
+                            .orElse(AuditService.UNKNOWN),
+                    IpAddressHelper.extractIpAddress(input),
+                    AuditService.UNKNOWN,
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
             var accountRecoveryResponse = new AccountRecoveryResponse(accountRecoveryPermitted);
             LOG.info("Returning response back to frontend");
             return generateApiGatewayProxyResponse(200, accountRecoveryResponse);
