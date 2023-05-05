@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.shared.validation;
 
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
@@ -24,7 +25,10 @@ public class MfaCodeValidatorFactory {
     }
 
     public Optional<MfaCodeValidator> getMfaCodeValidator(
-            MFAMethodType mfaMethodType, boolean isRegistration, UserContext userContext) {
+            MFAMethodType mfaMethodType,
+            boolean isRegistration,
+            JourneyType journeyType,
+            UserContext userContext) {
 
         switch (mfaMethodType) {
             case AUTH_APP:
@@ -39,14 +43,16 @@ public class MfaCodeValidatorFactory {
                                 configurationService,
                                 authenticationService,
                                 codeMaxRetries,
-                                isRegistration));
+                                isRegistration,
+                                journeyType));
             case SMS:
                 return Optional.of(
                         new PhoneNumberCodeValidator(
                                 codeStorageService,
                                 userContext,
                                 configurationService,
-                                isRegistration));
+                                isRegistration,
+                                journeyType));
             default:
                 return Optional.empty();
         }

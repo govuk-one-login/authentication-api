@@ -111,10 +111,12 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             var session = userContext.getSession();
             var mfaMethodType = codeRequest.getMfaMethodType();
             var isRegistration = codeRequest.isRegistration();
+            var journeyType = codeRequest.getJourneyType();
 
             var mfaCodeValidator =
                     mfaCodeValidatorFactory
-                            .getMfaCodeValidator(mfaMethodType, isRegistration, userContext)
+                            .getMfaCodeValidator(
+                                    mfaMethodType, isRegistration, journeyType, userContext)
                             .orElse(null);
 
             if (Objects.isNull(mfaCodeValidator)) {

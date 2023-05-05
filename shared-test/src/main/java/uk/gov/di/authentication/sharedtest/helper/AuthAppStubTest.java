@@ -3,6 +3,7 @@ package uk.gov.di.authentication.sharedtest.helper;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
@@ -33,7 +34,8 @@ class AuthAppStubTest {
                         configurationService,
                         mock(DynamoService.class),
                         99999,
-                        false);
+                        false,
+                        JourneyType.SIGN_IN);
     }
 
     @Test
