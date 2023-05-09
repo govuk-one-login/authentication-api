@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -44,7 +45,11 @@ class PhoneNumberCodeValidatorTest {
         assertThat(
                 phoneNumberCodeValidator.validateCode(
                         new VerifyMfaCodeRequest(
-                                MFAMethodType.SMS, VALID_CODE, true, PHONE_NUMBER)),
+                                MFAMethodType.SMS,
+                                VALID_CODE,
+                                true,
+                                JourneyType.REGISTRATION,
+                                PHONE_NUMBER)),
                 equalTo(Optional.empty()));
     }
 
@@ -55,7 +60,11 @@ class PhoneNumberCodeValidatorTest {
         assertThat(
                 phoneNumberCodeValidator.validateCode(
                         new VerifyMfaCodeRequest(
-                                MFAMethodType.SMS, INVALID_CODE, true, PHONE_NUMBER)),
+                                MFAMethodType.SMS,
+                                INVALID_CODE,
+                                true,
+                                JourneyType.REGISTRATION,
+                                PHONE_NUMBER)),
                 equalTo(Optional.of(ErrorResponse.ERROR_1037)));
     }
 
@@ -66,7 +75,11 @@ class PhoneNumberCodeValidatorTest {
         assertThat(
                 phoneNumberCodeValidator.validateCode(
                         new VerifyMfaCodeRequest(
-                                MFAMethodType.SMS, INVALID_CODE, true, PHONE_NUMBER)),
+                                MFAMethodType.SMS,
+                                INVALID_CODE,
+                                true,
+                                JourneyType.REGISTRATION,
+                                PHONE_NUMBER)),
                 equalTo(Optional.of(ErrorResponse.ERROR_1034)));
     }
 
@@ -77,7 +90,11 @@ class PhoneNumberCodeValidatorTest {
         assertThat(
                 phoneNumberCodeValidator.validateCode(
                         new VerifyMfaCodeRequest(
-                                MFAMethodType.SMS, INVALID_CODE, true, PHONE_NUMBER)),
+                                MFAMethodType.SMS,
+                                INVALID_CODE,
+                                true,
+                                JourneyType.REGISTRATION,
+                                PHONE_NUMBER)),
                 equalTo(Optional.of(ErrorResponse.ERROR_1034)));
     }
 
@@ -110,7 +127,11 @@ class PhoneNumberCodeValidatorTest {
                 .thenReturn(false);
         phoneNumberCodeValidator =
                 new PhoneNumberCodeValidator(
-                        codeStorageService, userContext, configurationService, isRegistration);
+                        codeStorageService,
+                        userContext,
+                        configurationService,
+                        isRegistration,
+                        JourneyType.REGISTRATION);
     }
 
     public void setUpPhoneNumberCodeRetryLimitExceeded() {
@@ -125,7 +146,11 @@ class PhoneNumberCodeValidatorTest {
                 .thenReturn(false);
         phoneNumberCodeValidator =
                 new PhoneNumberCodeValidator(
-                        codeStorageService, userContext, configurationService, true);
+                        codeStorageService,
+                        userContext,
+                        configurationService,
+                        true,
+                        JourneyType.REGISTRATION);
     }
 
     public void setUpBlockedPhoneNumberCode() {
@@ -139,6 +164,10 @@ class PhoneNumberCodeValidatorTest {
                 .thenReturn(true);
         phoneNumberCodeValidator =
                 new PhoneNumberCodeValidator(
-                        codeStorageService, userContext, configurationService, true);
+                        codeStorageService,
+                        userContext,
+                        configurationService,
+                        true,
+                        JourneyType.REGISTRATION);
     }
 }
