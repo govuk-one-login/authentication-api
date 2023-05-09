@@ -22,6 +22,8 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import java.util.NoSuchElementException;
 
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
@@ -59,6 +61,10 @@ public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
                 attachLogFieldToLogs(
                         PERSISTENT_SESSION_ID, spotResponse.getLogIds().getPersistentSessionId());
                 attachLogFieldToLogs(CLIENT_ID, spotResponse.getLogIds().getClientId());
+                attachLogFieldToLogs(
+                        CLIENT_SESSION_ID, spotResponse.getLogIds().getClientSessionId());
+                attachLogFieldToLogs(
+                        GOVUK_SIGNIN_JOURNEY_ID, spotResponse.getLogIds().getClientSessionId());
 
                 if (spotResponse.getStatus().equals(SPOTStatus.ACCEPTED)) {
                     LOG.info(

@@ -38,6 +38,7 @@ import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.PASSPO
 public class SpotResponseIntegrationTest extends HandlerIntegrationTest<SQSEvent, Object> {
 
     private static final String SESSION_ID = "a-session-id";
+    private static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final String PERSISTENT_SESSION_ID = "a-persistent-id";
     private static final ClientID CLIENT_ID = new ClientID();
     private static final String REQUEST_ID = "request-id";
@@ -64,10 +65,11 @@ public class SpotResponseIntegrationTest extends HandlerIntegrationTest<SQSEvent
         var spotResponse =
                 format(
                         "{\"sub\":\"%s\",\"status\":\"ACCEPTED\","
-                                + "\"claims\":{\"http://something/v1/verifiableIdentityJWT\":\"%s\"}, \"log_ids\":{\"session_id\":\"%s\",\"persistent_session_id\":\"%s\",\"request_id\":\"%s\",\"client_id\":\"%s\"}}",
+                                + "\"claims\":{\"http://something/v1/verifiableIdentityJWT\":\"%s\"}, \"log_ids\":{\"session_id\":\"%s\",\"client_session_id\":\"%s\",\"persistent_session_id\":\"%s\",\"request_id\":\"%s\",\"client_id\":\"%s\"}}",
                         pairwiseIdentifier,
                         signedCredential,
                         SESSION_ID,
+                        CLIENT_SESSION_ID,
                         PERSISTENT_SESSION_ID,
                         REQUEST_ID,
                         CLIENT_ID);
@@ -95,10 +97,11 @@ public class SpotResponseIntegrationTest extends HandlerIntegrationTest<SQSEvent
         var spotResponse =
                 format(
                         "{\"sub\":\"%s\",\"status\":\"ACCEPTED\","
-                                + "\"claims\":{\"http://something/v1/verifiableIdentityJWT\":\"%s\"}, \"log_ids\":{\"session_id\":\"%s\",\"persistent_session_id\":\"%s\",\"request_id\":\"%s\",\"client_id\":\"%s\"}}",
+                                + "\"claims\":{\"http://something/v1/verifiableIdentityJWT\":\"%s\"}, \"log_ids\":{\"session_id\":\"%s\",\"client_session_id\":\"%s\",\"persistent_session_id\":\"%s\",\"request_id\":\"%s\",\"client_id\":\"%s\"}}",
                         pairwiseIdentifier,
                         signedCredential,
                         SESSION_ID,
+                        CLIENT_SESSION_ID,
                         PERSISTENT_SESSION_ID,
                         REQUEST_ID,
                         CLIENT_ID);
@@ -123,9 +126,10 @@ public class SpotResponseIntegrationTest extends HandlerIntegrationTest<SQSEvent
         var spotResponse =
                 format(
                         "{\"sub\":\"%s\",\"status\":\"REJECTED\","
-                                + "\"log_ids\":{\"session_id\":\"%s\",\"persistent_session_id\":\"%s\",\"request_id\":\"%s\",\"client_id\":\"%s\"}}",
+                                + "\"log_ids\":{\"session_id\":\"%s\",\"client_session_id\":\"%s\",\"persistent_session_id\":\"%s\",\"request_id\":\"%s\",\"client_id\":\"%s\"}}",
                         pairwiseIdentifier,
                         SESSION_ID,
+                        CLIENT_SESSION_ID,
                         PERSISTENT_SESSION_ID,
                         REQUEST_ID,
                         CLIENT_ID);
