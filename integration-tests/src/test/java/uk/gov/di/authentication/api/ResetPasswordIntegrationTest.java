@@ -7,6 +7,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordCompletionRequest;
 import uk.gov.di.authentication.frontendapi.lambda.ResetPasswordHandler;
+import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
@@ -24,6 +25,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_ADDED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION_SMS;
@@ -98,7 +100,8 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
                         SUBJECT.getValue(), INTERNAl_SECTOR_HOST, salt);
         assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(true));
 
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(PASSWORD_RESET_SUCCESSFUL));
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue, List.of(ACCOUNT_RECOVERY_BLOCK_ADDED, PASSWORD_RESET_SUCCESSFUL));
     }
 
     @Test
@@ -148,13 +151,18 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
         assertThat(requests, hasSize(phoneNumberVerified ? 2 : 1));
         assertThat(requests.get(0).getDestination(), equalTo(EMAIL_ADDRESS));
         assertThat(requests.get(0).getNotificationType(), equalTo(PASSWORD_RESET_CONFIRMATION));
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(PASSWORD_RESET_SUCCESSFUL));
         var internalCommonSubjectId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         SUBJECT.getValue(), INTERNAl_SECTOR_HOST, salt);
         assertThat(
                 accountModifiersStore.isBlockPresent(internalCommonSubjectId),
                 equalTo(phoneNumberVerified));
+
+        List<AuditableEvent> expectedAuditableEvents =
+                phoneNumberVerified
+                        ? List.of(ACCOUNT_RECOVERY_BLOCK_ADDED, PASSWORD_RESET_SUCCESSFUL)
+                        : List.of(PASSWORD_RESET_SUCCESSFUL);
+        assertTxmaAuditEventsReceived(txmaAuditQueue, expectedAuditableEvents);
 
         if (phoneNumberVerified) {
             assertThat(requests.get(1).getDestination(), equalTo(phoneNumber));
@@ -200,7 +208,11 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
                 accountModifiersStore.isBlockPresent(internalCommonSubjectId),
                 equalTo(authAppVerified));
 
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(PASSWORD_RESET_SUCCESSFUL));
+        List<AuditableEvent> expectedAuditableEvents =
+                authAppVerified
+                        ? List.of(ACCOUNT_RECOVERY_BLOCK_ADDED, PASSWORD_RESET_SUCCESSFUL)
+                        : List.of(PASSWORD_RESET_SUCCESSFUL);
+        assertTxmaAuditEventsReceived(txmaAuditQueue, expectedAuditableEvents);
     }
 
     private static class ResetPasswordTestConfigurationService
