@@ -43,6 +43,7 @@ import java.util.Collections;
 import java.util.Objects;
 import java.util.Optional;
 
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_ADDED;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 
@@ -149,7 +150,9 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                     configurationService.isAccountRecoveryBlockEnabled(),
                     userProfile,
                     userCredentials,
-                    internalCommonSubjectId);
+                    internalCommonSubjectId,
+                    userContext,
+                    input);
 
             var incorrectPasswordCount =
                     codeStorageService.getIncorrectPasswordCount(userCredentials.getEmail());
@@ -223,7 +226,9 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             boolean accountRecoveryBlockEnabled,
             UserProfile userProfile,
             UserCredentials userCredentials,
-            Subject internalCommonSubjectId) {
+            Subject internalCommonSubjectId,
+            UserContext userContext,
+            APIGatewayProxyRequestEvent input) {
         LOG.info("AccountRecoveryBlock enabled: {}", accountRecoveryBlockEnabled);
         var authAppVerified =
                 Optional.ofNullable(userCredentials.getMfaMethods())
@@ -243,6 +248,19 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             LOG.info("Adding block to account modifiers table");
             dynamoAccountModifiersService.setAccountRecoveryBlock(
                     internalCommonSubjectId.getValue(), true);
+            auditService.submitAuditEvent(
+                    ACCOUNT_RECOVERY_BLOCK_ADDED,
+                    userContext.getClientSessionId(),
+                    userContext.getSession().getSessionId(),
+                    userContext
+                            .getClient()
+                            .map(ClientRegistry::getClientID)
+                            .orElse(AuditService.UNKNOWN),
+                    internalCommonSubjectId.getValue(),
+                    userCredentials.getEmail(),
+                    IpAddressHelper.extractIpAddress(input),
+                    AuditService.UNKNOWN,
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
         }
     }
 }

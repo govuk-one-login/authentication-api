@@ -41,7 +41,8 @@ public enum FrontendAuditableEvent implements AuditableEvent {
     ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST,
     ACCOUNT_RECOVERY_EMAIL_CODE_SENT_FOR_TEST_CLIENT,
     ACCOUNT_RECOVERY_PERMITTED,
-    ACCOUNT_RECOVERY_NOT_PERMITTED;
+    ACCOUNT_RECOVERY_NOT_PERMITTED,
+    ACCOUNT_RECOVERY_BLOCK_ADDED;
 
     public AuditableEvent parseFromName(String name) {
         return valueOf(name);

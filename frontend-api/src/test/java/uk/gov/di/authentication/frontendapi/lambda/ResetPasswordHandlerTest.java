@@ -224,6 +224,17 @@ class ResetPasswordHandlerTest {
         verify(accountModifiersService).setAccountRecoveryBlock(expectedCommonSubject, true);
         verify(auditService)
                 .submitAuditEvent(
+                        FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_ADDED,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        TEST_CLIENT_ID,
+                        expectedCommonSubject,
+                        EMAIL,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_ID);
+        verify(auditService)
+                .submitAuditEvent(
                         FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
@@ -427,6 +438,17 @@ class ResetPasswordHandlerTest {
                 .send(objectMapper.writeValueAsString(EXPECTED_EMAIL_NOTIFY_REQUEST));
         verify(sqsClient, never())
                 .send(objectMapper.writeValueAsString(EXPECTED_SMS_NOTIFY_REQUEST));
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_ADDED,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        TEST_CLIENT_ID,
+                        expectedCommonSubject,
+                        EMAIL,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_ID);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL,
