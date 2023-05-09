@@ -38,11 +38,11 @@ public class VerifyMfaCodeRequest extends CodeRequest {
 
     @SerializedName("isRegistration")
     @Expose
-    @Required
     private boolean isRegistration;
 
     @SerializedName("journeyType")
     @Expose
+    @Required
     private JourneyType journeyType;
 
     public MFAMethodType getMfaMethodType() {

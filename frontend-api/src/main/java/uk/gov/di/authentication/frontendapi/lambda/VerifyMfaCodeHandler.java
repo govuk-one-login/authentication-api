@@ -115,8 +115,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
             var mfaCodeValidator =
                     mfaCodeValidatorFactory
-                            .getMfaCodeValidator(
-                                    mfaMethodType, isRegistration, journeyType, userContext)
+                            .getMfaCodeValidator(mfaMethodType, journeyType, userContext)
                             .orElse(null);
 
             if (Objects.isNull(mfaCodeValidator)) {

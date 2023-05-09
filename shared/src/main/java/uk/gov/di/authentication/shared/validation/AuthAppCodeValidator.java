@@ -27,7 +27,6 @@ public class AuthAppCodeValidator extends MfaCodeValidator {
     private final int allowedWindows;
     private final AuthenticationService dynamoService;
     private final String emailAddress;
-    private final boolean isRegistration;
     private final JourneyType journeyType;
     private static final Base32 base32 = new Base32(0, null, false, (byte) '=', CodecPolicy.STRICT);
 
@@ -37,14 +36,12 @@ public class AuthAppCodeValidator extends MfaCodeValidator {
             ConfigurationService configurationService,
             AuthenticationService dynamoService,
             int maxRetries,
-            boolean isRegistration,
             JourneyType journeyType) {
         super(emailAddress, codeStorageService, maxRetries);
         this.dynamoService = dynamoService;
         this.emailAddress = emailAddress;
         this.windowTime = configurationService.getAuthAppCodeWindowLength();
         this.allowedWindows = configurationService.getAuthAppCodeAllowedWindows();
-        this.isRegistration = isRegistration;
         this.journeyType = journeyType;
     }
 
@@ -63,16 +60,17 @@ public class AuthAppCodeValidator extends MfaCodeValidator {
         }
 
         var authAppSecret =
-                isRegistration
-                        ? codeRequest.getProfileInformation()
-                        : getMfaCredentialValue().orElse(null);
+                journeyType.equals(JourneyType.SIGN_IN)
+                        ? getMfaCredentialValue().orElse(null)
+                        : codeRequest.getProfileInformation();
 
         if (Objects.isNull(authAppSecret)) {
             LOG.info("No auth app secret found");
             return Optional.of(ErrorResponse.ERROR_1043);
         }
 
-        if (isRegistration && !base32.isInAlphabet(codeRequest.getProfileInformation())) {
+        if (!journeyType.equals(JourneyType.SIGN_IN)
+                && !base32.isInAlphabet(codeRequest.getProfileInformation())) {
             return Optional.of(ErrorResponse.ERROR_1041);
         }
 

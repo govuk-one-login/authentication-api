@@ -183,7 +183,6 @@ class AuthAppCodeValidatorTest {
                         mockConfigurationService,
                         mockDynamoService,
                         MAX_RETRIES,
-                        isRegistration,
                         journeyType);
     }
 
@@ -203,7 +202,6 @@ class AuthAppCodeValidatorTest {
                         mockConfigurationService,
                         mockDynamoService,
                         MAX_RETRIES,
-                        isRegistration,
                         journeyType);
     }
 
@@ -222,7 +220,6 @@ class AuthAppCodeValidatorTest {
                         mockConfigurationService,
                         mockDynamoService,
                         MAX_RETRIES,
-                        isRegistration,
                         journeyType);
     }
 
@@ -253,7 +250,6 @@ class AuthAppCodeValidatorTest {
                         mockConfigurationService,
                         mockDynamoService,
                         MAX_RETRIES,
-                        isRegistration,
                         journeyType);
     }
 }
