@@ -21,6 +21,15 @@ resource "aws_api_gateway_api_key" "di_auth_frontend_api_key" {
   name = "${var.environment}-di-auth-frontend-api-key"
 }
 
+resource "aws_secretsmanager_secret" "di_auth_frontend_api_key" {
+  name = "/${var.environment}/frontend-api-key"
+}
+
+resource "aws_secretsmanager_secret_version" "example" {
+  secret_id     = aws_secretsmanager_secret.di_auth_frontend_api_key.id
+  secret_string = aws_api_gateway_api_key.di_auth_frontend_api_key.value
+}
+
 resource "aws_api_gateway_usage_plan_key" "di_auth_frontend_usage_plan_key" {
   key_id        = aws_api_gateway_api_key.di_auth_frontend_api_key.id
   key_type      = "API_KEY"
