@@ -40,20 +40,11 @@ public class VerifyMfaCodeRequest extends CodeRequest {
     @Expose
     private boolean isRegistration;
 
-    @SerializedName("journeyType")
-    @Expose
-    @Required
-    private JourneyType journeyType;
-
     public MFAMethodType getMfaMethodType() {
         return mfaMethodType;
     }
 
     public boolean isRegistration() {
         return isRegistration;
-    }
-
-    public JourneyType getJourneyType() {
-        return journeyType;
     }
 }
