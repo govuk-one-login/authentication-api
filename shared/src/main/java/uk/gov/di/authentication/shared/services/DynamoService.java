@@ -350,11 +350,27 @@ public class DynamoService implements AuthenticationService {
                         .withPhoneNumber(formattedPhoneNumber)
                         .withPhoneNumberVerified(phoneNumberVerified)
                         .withAccountVerified(accountVerified ? 1 : 0);
+        var userCredentials =
+                dynamoUserCredentialsTable.getItem(
+                        Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
 
-        dynamoDbEnhancedClient.transactWriteItems(
+        var transactWriteBuilder =
                 TransactWriteItemsEnhancedRequest.builder()
-                        .addUpdateItem(dynamoUserProfileTable, userProfile)
-                        .build());
+                        .addUpdateItem(dynamoUserProfileTable, userProfile);
+
+        userCredentials.getMfaMethods().stream()
+                .filter(
+                        method ->
+                                method.getMfaMethodType().equals(MFAMethodType.AUTH_APP.getValue())
+                                        && method.isEnabled())
+                .findFirst()
+                .ifPresent(
+                        t -> {
+                            userCredentials.setMfaMethod(t.withEnabled(false));
+                            transactWriteBuilder.addUpdateItem(
+                                    dynamoUserCredentialsTable, userCredentials);
+                        });
+        dynamoDbEnhancedClient.transactWriteItems(transactWriteBuilder.build());
     }
 
     @Override
@@ -414,28 +430,6 @@ public class DynamoService implements AuthenticationService {
                         .addUpdateItem(dynamoUserProfileTable, userProfile)
                         .addUpdateItem(dynamoUserCredentialsTable, userCredentials)
                         .build());
-    }
-
-    @Override
-    public void setMFAMethodEnabled(String email, MFAMethodType mfaMethodType, boolean enabled) {
-        var userCredentials =
-                dynamoUserCredentialsTable.getItem(
-                        Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
-        var mfaMethods = userCredentials.getMfaMethods();
-        if (mfaMethods != null) {
-            var mfaMethod =
-                    mfaMethods.stream()
-                            .filter(
-                                    method ->
-                                            method.getMfaMethodType()
-                                                    .equals(mfaMethodType.getValue()))
-                            .findFirst();
-            mfaMethod.ifPresent(
-                    mfa -> {
-                        mfa.withEnabled(enabled);
-                        dynamoUserCredentialsTable.updateItem(userCredentials);
-                    });
-        }
     }
 
     @Override

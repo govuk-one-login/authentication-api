@@ -165,11 +165,12 @@ class DynamoServiceIntegrationTest {
     }
 
     @Test
-    void shoulSetAuthAppMFAMethodNotEnabled() {
+    void shouldSetAuthAppMFAMethodNotEnabled() {
         setUpDynamo();
         dynamoService.updateMFAMethod(
                 TEST_EMAIL, MFAMethodType.AUTH_APP, true, true, TEST_MFA_APP_CREDENTIAL);
-        dynamoService.setMFAMethodEnabled(TEST_EMAIL, MFAMethodType.AUTH_APP, false);
+        dynamoService.updatePhoneNumberAndAccountVerifiedStatus(
+                TEST_EMAIL, "+4407316763843", true, true);
         UserCredentials updatedUserCredentials =
                 dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
 

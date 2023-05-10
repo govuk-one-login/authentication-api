@@ -85,7 +85,6 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
             case REGISTRATION:
                 dynamoService.updatePhoneNumberAndAccountVerifiedStatus(
                         emailAddress, codeRequest.getProfileInformation(), true, true);
-                dynamoService.setMFAMethodEnabled(emailAddress, MFAMethodType.AUTH_APP, false);
                 submitAuditEvent(
                         FrontendAuditableEvent.UPDATE_PROFILE_PHONE_NUMBER,
                         userContext,

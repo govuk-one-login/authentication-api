@@ -77,6 +77,4 @@ public interface AuthenticationService {
             String credentialValue);
 
     void setAuthAppAndAccountVerified(String email, String credentialValue);
-
-    void setMFAMethodEnabled(String email, MFAMethodType mfaMethodType, boolean enabled);
 }
