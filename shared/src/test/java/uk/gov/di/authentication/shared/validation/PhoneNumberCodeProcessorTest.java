@@ -21,9 +21,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 
-class PhoneNumberCodeValidatorTest {
+class PhoneNumberCodeProcessorTest {
 
-    private PhoneNumberCodeValidator phoneNumberCodeValidator;
+    private PhoneNumberCodeProcessor phoneNumberCodeProcessor;
     private final Session session = mock(Session.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final UserContext userContext = mock(UserContext.class);
@@ -43,7 +43,7 @@ class PhoneNumberCodeValidatorTest {
         setupPhoneNumberCode(JourneyType.REGISTRATION);
 
         assertThat(
-                phoneNumberCodeValidator.validateCode(
+                phoneNumberCodeProcessor.validateCode(
                         new VerifyMfaCodeRequest(
                                 MFAMethodType.SMS,
                                 VALID_CODE,
@@ -58,7 +58,7 @@ class PhoneNumberCodeValidatorTest {
         setupPhoneNumberCode(JourneyType.REGISTRATION);
 
         assertThat(
-                phoneNumberCodeValidator.validateCode(
+                phoneNumberCodeProcessor.validateCode(
                         new VerifyMfaCodeRequest(
                                 MFAMethodType.SMS,
                                 INVALID_CODE,
@@ -73,7 +73,7 @@ class PhoneNumberCodeValidatorTest {
         setUpPhoneNumberCodeRetryLimitExceeded();
 
         assertThat(
-                phoneNumberCodeValidator.validateCode(
+                phoneNumberCodeProcessor.validateCode(
                         new VerifyMfaCodeRequest(
                                 MFAMethodType.SMS,
                                 INVALID_CODE,
@@ -88,7 +88,7 @@ class PhoneNumberCodeValidatorTest {
         setUpBlockedPhoneNumberCode();
 
         assertThat(
-                phoneNumberCodeValidator.validateCode(
+                phoneNumberCodeProcessor.validateCode(
                         new VerifyMfaCodeRequest(
                                 MFAMethodType.SMS,
                                 INVALID_CODE,
@@ -106,7 +106,7 @@ class PhoneNumberCodeValidatorTest {
                 assertThrows(
                         RuntimeException.class,
                         () ->
-                                phoneNumberCodeValidator.validateCode(
+                                phoneNumberCodeProcessor.validateCode(
                                         new VerifyMfaCodeRequest(
                                                 MFAMethodType.SMS,
                                                 INVALID_CODE,
@@ -128,8 +128,8 @@ class PhoneNumberCodeValidatorTest {
                 .thenReturn(Optional.of(VALID_CODE));
         when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(false);
-        phoneNumberCodeValidator =
-                new PhoneNumberCodeValidator(
+        phoneNumberCodeProcessor =
+                new PhoneNumberCodeProcessor(
                         codeStorageService, userContext, configurationService, journeyType);
     }
 
@@ -143,8 +143,8 @@ class PhoneNumberCodeValidatorTest {
                 .thenReturn(Optional.of(VALID_CODE));
         when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(false);
-        phoneNumberCodeValidator =
-                new PhoneNumberCodeValidator(
+        phoneNumberCodeProcessor =
+                new PhoneNumberCodeProcessor(
                         codeStorageService,
                         userContext,
                         configurationService,
@@ -160,8 +160,8 @@ class PhoneNumberCodeValidatorTest {
                 .thenReturn(Optional.of(VALID_CODE));
         when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
-        phoneNumberCodeValidator =
-                new PhoneNumberCodeValidator(
+        phoneNumberCodeProcessor =
+                new PhoneNumberCodeProcessor(
                         codeStorageService,
                         userContext,
                         configurationService,

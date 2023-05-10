@@ -9,13 +9,13 @@ import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Optional;
 
-public class MfaCodeValidatorFactory {
+public class MfaCodeProcessorFactory {
 
     private final ConfigurationService configurationService;
     private final CodeStorageService codeStorageService;
     private final AuthenticationService authenticationService;
 
-    public MfaCodeValidatorFactory(
+    public MfaCodeProcessorFactory(
             ConfigurationService configurationService,
             CodeStorageService codeStorageService,
             AuthenticationService authenticationService) {
@@ -24,7 +24,7 @@ public class MfaCodeValidatorFactory {
         this.authenticationService = authenticationService;
     }
 
-    public Optional<MfaCodeValidator> getMfaCodeValidator(
+    public Optional<MfaCodeProcessor> getMfaCodeProcessor(
             MFAMethodType mfaMethodType, JourneyType journeyType, UserContext userContext) {
 
         switch (mfaMethodType) {
@@ -34,7 +34,7 @@ public class MfaCodeValidatorFactory {
                                 ? configurationService.getCodeMaxRetriesRegistration()
                                 : configurationService.getCodeMaxRetries();
                 return Optional.of(
-                        new AuthAppCodeValidator(
+                        new AuthAppCodeProcessor(
                                 userContext.getSession().getEmailAddress(),
                                 codeStorageService,
                                 configurationService,
@@ -43,7 +43,7 @@ public class MfaCodeValidatorFactory {
                                 journeyType));
             case SMS:
                 return Optional.of(
-                        new PhoneNumberCodeValidator(
+                        new PhoneNumberCodeProcessor(
                                 codeStorageService,
                                 userContext,
                                 configurationService,

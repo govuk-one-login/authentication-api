@@ -14,13 +14,13 @@ import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.helpers.TestClientHelper.isTestClientWithAllowedEmail;
 
-public class PhoneNumberCodeValidator extends MfaCodeValidator {
+public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
 
     private final ConfigurationService configurationService;
     private final UserContext userContext;
     private final JourneyType journeyType;
 
-    PhoneNumberCodeValidator(
+    PhoneNumberCodeProcessor(
             CodeStorageService codeStorageService,
             UserContext userContext,
             ConfigurationService configurationService,

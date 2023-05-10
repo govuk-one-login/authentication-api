@@ -14,14 +14,14 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-class MfaCodeValidatorFactoryTest {
+class MfaCodeProcessorFactoryTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final UserContext userContext = mock(UserContext.class);
     private final Session session = mock(Session.class);
-    private final MfaCodeValidatorFactory mfaCodeValidatorFactory =
-            new MfaCodeValidatorFactory(
+    private final MfaCodeProcessorFactory mfaCodeProcessorFactory =
+            new MfaCodeProcessorFactory(
                     configurationService, codeStorageService, authenticationService);
 
     @BeforeEach
@@ -33,24 +33,24 @@ class MfaCodeValidatorFactoryTest {
     }
 
     @Test
-    void whenMfaMethodGeneratesAuthAppCodeValidator() {
+    void whenMfaMethodGeneratesAuthAppCodeProcessor() {
         when(session.getEmailAddress()).thenReturn("test@test.com");
         when(userContext.getSession()).thenReturn(session);
-        var mfaCodeValidator =
-                mfaCodeValidatorFactory.getMfaCodeValidator(
+        var mfaCodeProcessor =
+                mfaCodeProcessorFactory.getMfaCodeProcessor(
                         MFAMethodType.AUTH_APP, JourneyType.REGISTRATION, userContext);
 
-        assertInstanceOf(AuthAppCodeValidator.class, mfaCodeValidator.get());
+        assertInstanceOf(AuthAppCodeProcessor.class, mfaCodeProcessor.get());
     }
 
     @Test
-    void whenMfaMethodGeneratesPhoneNumberCodeValidator() {
+    void whenMfaMethodGeneratesPhoneNumberCodeProcessor() {
         when(session.getEmailAddress()).thenReturn("test@test.com");
         when(userContext.getSession()).thenReturn(session);
-        var mfaCodeValidator =
-                mfaCodeValidatorFactory.getMfaCodeValidator(
+        var mfaCodeProcessor =
+                mfaCodeProcessorFactory.getMfaCodeProcessor(
                         MFAMethodType.SMS, JourneyType.REGISTRATION, userContext);
 
-        assertInstanceOf(PhoneNumberCodeValidator.class, mfaCodeValidator.get());
+        assertInstanceOf(PhoneNumberCodeProcessor.class, mfaCodeProcessor.get());
     }
 }

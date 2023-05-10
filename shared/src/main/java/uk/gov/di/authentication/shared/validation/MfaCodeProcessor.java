@@ -11,13 +11,13 @@ import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 
-public abstract class MfaCodeValidator {
+public abstract class MfaCodeProcessor {
     protected final Logger LOG = LogManager.getLogger(this.getClass());
     public final CodeStorageService codeStorageService;
     private final int maxRetries;
     public final String emailAddress;
 
-    MfaCodeValidator(String emailAddress, CodeStorageService codeStorageService, int maxRetries) {
+    MfaCodeProcessor(String emailAddress, CodeStorageService codeStorageService, int maxRetries) {
         this.emailAddress = emailAddress;
         this.codeStorageService = codeStorageService;
         this.maxRetries = maxRetries;

@@ -21,7 +21,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
-public class AuthAppCodeValidator extends MfaCodeValidator {
+public class AuthAppCodeProcessor extends MfaCodeProcessor {
 
     private final int windowTime;
     private final int allowedWindows;
@@ -30,7 +30,7 @@ public class AuthAppCodeValidator extends MfaCodeValidator {
     private final JourneyType journeyType;
     private static final Base32 base32 = new Base32(0, null, false, (byte) '=', CodecPolicy.STRICT);
 
-    public AuthAppCodeValidator(
+    public AuthAppCodeProcessor(
             String emailAddress,
             CodeStorageService codeStorageService,
             ConfigurationService configurationService,
