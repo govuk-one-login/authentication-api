@@ -13,6 +13,7 @@ import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper;
@@ -110,7 +111,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         try {
             var session = userContext.getSession();
             var mfaMethodType = codeRequest.getMfaMethodType();
-            var isRegistration = codeRequest.isRegistration();
             var journeyType = codeRequest.getJourneyType();
 
             var mfaCodeValidator =
@@ -149,9 +149,9 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                                                 : NONE;
 
                                 LOG.info(
-                                        "MFA code has been successfully verified for MFA type: {}. RegistrationJourney: {}",
+                                        "MFA code has been successfully verified for MFA type: {}. JourneyType: {}",
                                         codeRequest.getMfaMethodType().getValue(),
-                                        codeRequest.isRegistration());
+                                        codeRequest.getJourneyType().getValue());
                                 accountRecoveryBlockService.deleteBlockIfPresent(
                                         session.getEmailAddress());
                                 sessionService.save(
@@ -210,7 +210,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         submitAuditEvent(
                 auditableEvent, session, userContext, input, codeRequest.getMfaMethodType());
 
-        if (codeRequest.isRegistration() && errorResponse.isEmpty()) {
+        if (codeRequest.getJourneyType().equals(JourneyType.REGISTRATION)
+                && errorResponse.isEmpty()) {
             switch (codeRequest.getMfaMethodType()) {
                 case AUTH_APP:
                     authenticationService.setAccountVerified(emailAddress);
