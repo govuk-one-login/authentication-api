@@ -99,9 +99,8 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
             CodeRequest codeRequest, APIGatewayProxyRequestEvent input) {
         switch (codeRequest.getJourneyType()) {
             case REGISTRATION:
-                dynamoService.setAccountVerified(emailAddress);
-                dynamoService.updateMFAMethod(
-                        emailAddress, AUTH_APP, true, true, codeRequest.getProfileInformation());
+                dynamoService.setAuthAppAndAccountVerified(
+                        emailAddress, codeRequest.getProfileInformation());
                 submitAuditEvent(
                         FrontendAuditableEvent.UPDATE_PROFILE_AUTH_APP,
                         userContext,
