@@ -18,14 +18,12 @@ public class PhoneNumberCodeValidator extends MfaCodeValidator {
 
     private final ConfigurationService configurationService;
     private final UserContext userContext;
-    private final boolean isRegistration;
     private final JourneyType journeyType;
 
     PhoneNumberCodeValidator(
             CodeStorageService codeStorageService,
             UserContext userContext,
             ConfigurationService configurationService,
-            boolean isRegistration,
             JourneyType journeyType) {
         super(
                 userContext.getSession().getEmailAddress(),
@@ -33,18 +31,19 @@ public class PhoneNumberCodeValidator extends MfaCodeValidator {
                 configurationService.getCodeMaxRetries());
         this.userContext = userContext;
         this.configurationService = configurationService;
-        this.isRegistration = isRegistration;
         this.journeyType = journeyType;
     }
 
     @Override
     public Optional<ErrorResponse> validateCode(CodeRequest codeRequest) {
-        if (!isRegistration) {
+        if (journeyType.equals(JourneyType.SIGN_IN)) {
             LOG.error("Sign In Phone number codes are not supported");
             throw new RuntimeException("Sign In Phone number codes are not supported");
         }
         var notificationType =
-                isRegistration ? NotificationType.VERIFY_PHONE_NUMBER : NotificationType.MFA_SMS;
+                journeyType.equals(JourneyType.REGISTRATION)
+                        ? NotificationType.VERIFY_PHONE_NUMBER
+                        : NotificationType.MFA_SMS;
         if (isCodeBlockedForSession()) {
             LOG.info("Code blocked for session");
             return Optional.of(ErrorResponse.ERROR_1034);

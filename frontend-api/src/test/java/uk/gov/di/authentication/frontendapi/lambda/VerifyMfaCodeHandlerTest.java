@@ -170,8 +170,7 @@ class VerifyMfaCodeHandlerTest {
     @MethodSource("credentialTrustLevels")
     void shouldReturn204WhenSuccessfulAuthAppCodeRegistrationRequestAndSetMfaMethod(
             CredentialTrustLevel credentialTrustLevel) throws Json.JsonException {
-        when(mfaCodeValidatorFactory.getMfaCodeValidator(
-                        any(), anyBoolean(), any(JourneyType.class), any()))
+        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), any(JourneyType.class), any()))
                 .thenReturn(Optional.of(authAppCodeValidator));
         when(authAppCodeValidator.validateCode(any(CodeRequest.class)))
                 .thenReturn(Optional.empty());
@@ -232,8 +231,7 @@ class VerifyMfaCodeHandlerTest {
     @MethodSource("credentialTrustLevels")
     void shouldReturn204WhenSuccessfulPhoneCodeRegistrationRequestAndSetPhoneNumber(
             CredentialTrustLevel credentialTrustLevel) throws Json.JsonException {
-        when(mfaCodeValidatorFactory.getMfaCodeValidator(
-                        any(), anyBoolean(), any(JourneyType.class), any()))
+        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), any(JourneyType.class), any()))
                 .thenReturn(Optional.of(phoneNumberCodeValidator));
         when(phoneNumberCodeValidator.validateCode(any(CodeRequest.class)))
                 .thenReturn(Optional.empty());
@@ -293,8 +291,7 @@ class VerifyMfaCodeHandlerTest {
 
     @Test
     void shouldReturn204WhenSuccessfulAuthAppCodeLoginRequest() throws Json.JsonException {
-        when(mfaCodeValidatorFactory.getMfaCodeValidator(
-                        any(), anyBoolean(), any(JourneyType.class), any()))
+        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), any(JourneyType.class), any()))
                 .thenReturn(Optional.of(authAppCodeValidator));
         when(authAppCodeValidator.validateCode(any(CodeRequest.class)))
                 .thenReturn(Optional.empty());
@@ -329,8 +326,7 @@ class VerifyMfaCodeHandlerTest {
 
     @Test
     void shouldReturn400IfMfaCodeValidatorCannotBeFound() throws Json.JsonException {
-        when(mfaCodeValidatorFactory.getMfaCodeValidator(
-                        any(), anyBoolean(), any(JourneyType.class), any()))
+        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), any(JourneyType.class), any()))
                 .thenReturn(Optional.empty());
         var codeRequest =
                 new VerifyMfaCodeRequest(
@@ -358,8 +354,7 @@ class VerifyMfaCodeHandlerTest {
     @Test
     void shouldReturn400AndBlockCodeWhenUserEnteredInvalidAuthAppCodeTooManyTimes()
             throws Json.JsonException {
-        when(mfaCodeValidatorFactory.getMfaCodeValidator(
-                        any(), anyBoolean(), any(JourneyType.class), any()))
+        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), any(JourneyType.class), any()))
                 .thenReturn(Optional.of(authAppCodeValidator));
         when(authAppCodeValidator.validateCode(any(CodeRequest.class)))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1042));
@@ -393,8 +388,7 @@ class VerifyMfaCodeHandlerTest {
     @Test
     void shouldReturn400AndNotBlockCodeWhenUserEnteredInvalidAuthAppCodeAndBlockAlreadyExists()
             throws Json.JsonException {
-        when(mfaCodeValidatorFactory.getMfaCodeValidator(
-                        any(), anyBoolean(), any(JourneyType.class), any()))
+        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), any(JourneyType.class), any()))
                 .thenReturn(Optional.of(authAppCodeValidator));
         when(authAppCodeValidator.validateCode(any(CodeRequest.class)))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1042));
@@ -430,8 +424,7 @@ class VerifyMfaCodeHandlerTest {
     @MethodSource("registration")
     void shouldReturn400WhenUserEnteredInvalidAuthAppCode(boolean registration)
             throws Json.JsonException {
-        when(mfaCodeValidatorFactory.getMfaCodeValidator(
-                        any(), anyBoolean(), any(JourneyType.class), any()))
+        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), any(JourneyType.class), any()))
                 .thenReturn(Optional.of(authAppCodeValidator));
         var profileInformation = registration ? AUTH_APP_SECRET : null;
         when(authAppCodeValidator.validateCode(any(CodeRequest.class)))
@@ -471,8 +464,7 @@ class VerifyMfaCodeHandlerTest {
     void
             shouldReturn400AndBlockCodeWhenUserEnteredInvalidPhoneNumberCodeDuringRegistrationTooManyTimes()
                     throws Json.JsonException {
-        when(mfaCodeValidatorFactory.getMfaCodeValidator(
-                        any(), anyBoolean(), any(JourneyType.class), any()))
+        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), any(JourneyType.class), any()))
                 .thenReturn(Optional.of(phoneNumberCodeValidator));
         when(phoneNumberCodeValidator.validateCode(any(CodeRequest.class)))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1034));
@@ -511,8 +503,7 @@ class VerifyMfaCodeHandlerTest {
     void
             shouldReturn400AndNotBlockCodeWhenInvalidPhoneNumberCodeEnteredDuringRegistrationAndBlockAlreadyExists()
                     throws Json.JsonException {
-        when(mfaCodeValidatorFactory.getMfaCodeValidator(
-                        any(), anyBoolean(), any(JourneyType.class), any()))
+        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), any(JourneyType.class), any()))
                 .thenReturn(Optional.of(phoneNumberCodeValidator));
         when(phoneNumberCodeValidator.validateCode(any(CodeRequest.class)))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1034));
@@ -552,8 +543,7 @@ class VerifyMfaCodeHandlerTest {
     @Test
     void shouldReturn400WhenUserEnteredInvalidPhoneNumberCodeForRegistration()
             throws Json.JsonException {
-        when(mfaCodeValidatorFactory.getMfaCodeValidator(
-                        any(), anyBoolean(), any(JourneyType.class), any()))
+        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), any(JourneyType.class), any()))
                 .thenReturn(Optional.of(phoneNumberCodeValidator));
         when(phoneNumberCodeValidator.validateCode(any(CodeRequest.class)))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1037));
@@ -590,8 +580,7 @@ class VerifyMfaCodeHandlerTest {
 
     @Test
     void shouldReturn400WhenAuthAppSecretIsInvalid() throws Json.JsonException {
-        when(mfaCodeValidatorFactory.getMfaCodeValidator(
-                        any(), anyBoolean(), any(JourneyType.class), any()))
+        when(mfaCodeValidatorFactory.getMfaCodeValidator(any(), any(JourneyType.class), any()))
                 .thenReturn(Optional.of(authAppCodeValidator));
         when(authAppCodeValidator.validateCode(any(CodeRequest.class)))
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1041));

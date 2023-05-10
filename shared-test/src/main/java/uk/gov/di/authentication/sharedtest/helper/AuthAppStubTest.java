@@ -34,7 +34,6 @@ class AuthAppStubTest {
                         configurationService,
                         mock(DynamoService.class),
                         99999,
-                        false,
                         JourneyType.SIGN_IN);
     }
 

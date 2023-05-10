@@ -25,15 +25,12 @@ public class MfaCodeValidatorFactory {
     }
 
     public Optional<MfaCodeValidator> getMfaCodeValidator(
-            MFAMethodType mfaMethodType,
-            boolean isRegistration,
-            JourneyType journeyType,
-            UserContext userContext) {
+            MFAMethodType mfaMethodType, JourneyType journeyType, UserContext userContext) {
 
         switch (mfaMethodType) {
             case AUTH_APP:
                 int codeMaxRetries =
-                        isRegistration
+                        journeyType.equals(JourneyType.REGISTRATION)
                                 ? configurationService.getCodeMaxRetriesRegistration()
                                 : configurationService.getCodeMaxRetries();
                 return Optional.of(
@@ -43,7 +40,6 @@ public class MfaCodeValidatorFactory {
                                 configurationService,
                                 authenticationService,
                                 codeMaxRetries,
-                                isRegistration,
                                 journeyType));
             case SMS:
                 return Optional.of(
@@ -51,7 +47,6 @@ public class MfaCodeValidatorFactory {
                                 codeStorageService,
                                 userContext,
                                 configurationService,
-                                isRegistration,
                                 journeyType));
             default:
                 return Optional.empty();
