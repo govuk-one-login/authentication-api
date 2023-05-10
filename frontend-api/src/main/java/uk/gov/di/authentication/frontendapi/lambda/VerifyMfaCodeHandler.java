@@ -29,7 +29,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
-import uk.gov.di.authentication.shared.validation.MfaCodeValidatorFactory;
+import uk.gov.di.authentication.shared.validation.MfaCodeProcessorFactory;
 
 import java.util.List;
 import java.util.Map;
@@ -53,7 +53,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     private static final Logger LOG = LogManager.getLogger(VerifyMfaCodeHandler.class);
     private final CodeStorageService codeStorageService;
     private final AuditService auditService;
-    private final MfaCodeValidatorFactory mfaCodeValidatorFactory;
+    private final MfaCodeProcessorFactory mfaCodeProcessorFactory;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final DynamoAccountRecoveryBlockService accountRecoveryBlockService;
 
@@ -65,7 +65,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             AuthenticationService authenticationService,
             CodeStorageService codeStorageService,
             AuditService auditService,
-            MfaCodeValidatorFactory mfaCodeValidatorFactory,
+            MfaCodeProcessorFactory mfaCodeProcessorFactory,
             CloudwatchMetricsService cloudwatchMetricsService,
             DynamoAccountRecoveryBlockService accountRecoveryBlockService) {
         super(
@@ -77,7 +77,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 authenticationService);
         this.codeStorageService = codeStorageService;
         this.auditService = auditService;
-        this.mfaCodeValidatorFactory = mfaCodeValidatorFactory;
+        this.mfaCodeProcessorFactory = mfaCodeProcessorFactory;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.accountRecoveryBlockService = accountRecoveryBlockService;
     }
@@ -90,8 +90,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         super(VerifyMfaCodeRequest.class, configurationService);
         this.codeStorageService = new CodeStorageService(configurationService);
         this.auditService = new AuditService(configurationService);
-        this.mfaCodeValidatorFactory =
-                new MfaCodeValidatorFactory(
+        this.mfaCodeProcessorFactory =
+                new MfaCodeProcessorFactory(
                         configurationService,
                         codeStorageService,
                         new DynamoService(configurationService));
@@ -113,17 +113,17 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             var mfaMethodType = codeRequest.getMfaMethodType();
             var journeyType = codeRequest.getJourneyType();
 
-            var mfaCodeValidator =
-                    mfaCodeValidatorFactory
-                            .getMfaCodeValidator(mfaMethodType, journeyType, userContext)
+            var mfaCodeProcessor =
+                    mfaCodeProcessorFactory
+                            .getMfaCodeProcessor(mfaMethodType, journeyType, userContext)
                             .orElse(null);
 
-            if (Objects.isNull(mfaCodeValidator)) {
+            if (Objects.isNull(mfaCodeProcessor)) {
                 LOG.info("No MFA code validator found for this MFA method type");
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1002);
             }
 
-            var errorResponse = mfaCodeValidator.validateCode(codeRequest);
+            var errorResponse = mfaCodeProcessor.validateCode(codeRequest);
 
             if (errorResponse.filter(ErrorResponse.ERROR_1041::equals).isPresent()) {
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1041);

@@ -30,8 +30,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 
-class AuthAppCodeValidatorTest {
-    AuthAppCodeValidator authAppCodeValidator;
+class AuthAppCodeProcessorTest {
+    AuthAppCodeProcessor authAppCodeProcessor;
     Session mockSession;
     CodeStorageService mockCodeStorageService;
     ConfigurationService mockConfigurationService;
@@ -63,7 +63,7 @@ class AuthAppCodeValidatorTest {
 
         assertEquals(
                 Optional.empty(),
-                authAppCodeValidator.validateCode(
+                authAppCodeProcessor.validateCode(
                         new VerifyMfaCodeRequest(
                                 MFAMethodType.AUTH_APP,
                                 authCode,
@@ -80,7 +80,7 @@ class AuthAppCodeValidatorTest {
 
         assertEquals(
                 Optional.of(ErrorResponse.ERROR_1042),
-                authAppCodeValidator.validateCode(
+                authAppCodeProcessor.validateCode(
                         new VerifyMfaCodeRequest(
                                 MFAMethodType.AUTH_APP,
                                 "000000",
@@ -96,7 +96,7 @@ class AuthAppCodeValidatorTest {
 
         assertEquals(
                 Optional.of(ErrorResponse.ERROR_1042),
-                authAppCodeValidator.validateCode(
+                authAppCodeProcessor.validateCode(
                         new VerifyMfaCodeRequest(
                                 MFAMethodType.AUTH_APP,
                                 "000000",
@@ -112,7 +112,7 @@ class AuthAppCodeValidatorTest {
 
         assertEquals(
                 Optional.of(ErrorResponse.ERROR_1043),
-                authAppCodeValidator.validateCode(
+                authAppCodeProcessor.validateCode(
                         new VerifyMfaCodeRequest(
                                 MFAMethodType.AUTH_APP,
                                 "000000",
@@ -125,7 +125,7 @@ class AuthAppCodeValidatorTest {
         setUpValidAuthCode(true);
 
         assertThat(
-                authAppCodeValidator.validateCode(
+                authAppCodeProcessor.validateCode(
                         new VerifyMfaCodeRequest(
                                 MFAMethodType.AUTH_APP,
                                 "000000",
@@ -142,7 +142,7 @@ class AuthAppCodeValidatorTest {
 
         assertEquals(
                 Optional.of(ErrorResponse.ERROR_1043),
-                authAppCodeValidator.validateCode(
+                authAppCodeProcessor.validateCode(
                         new VerifyMfaCodeRequest(
                                 MFAMethodType.AUTH_APP,
                                 "111111",
@@ -151,7 +151,7 @@ class AuthAppCodeValidatorTest {
                                 authAppSecret)));
         assertEquals(
                 Optional.of(ErrorResponse.ERROR_1043),
-                authAppCodeValidator.validateCode(
+                authAppCodeProcessor.validateCode(
                         new VerifyMfaCodeRequest(
                                 MFAMethodType.AUTH_APP,
                                 "",
@@ -160,7 +160,7 @@ class AuthAppCodeValidatorTest {
                                 authAppSecret)));
         assertEquals(
                 Optional.of(ErrorResponse.ERROR_1043),
-                authAppCodeValidator.validateCode(
+                authAppCodeProcessor.validateCode(
                         new VerifyMfaCodeRequest(
                                 MFAMethodType.AUTH_APP,
                                 "999999999999",
@@ -176,8 +176,8 @@ class AuthAppCodeValidatorTest {
 
         var journeyType = isRegistration ? JourneyType.REGISTRATION : JourneyType.SIGN_IN;
 
-        this.authAppCodeValidator =
-                new AuthAppCodeValidator(
+        this.authAppCodeProcessor =
+                new AuthAppCodeProcessor(
                         "blocked-email-address",
                         mockCodeStorageService,
                         mockConfigurationService,
@@ -195,8 +195,8 @@ class AuthAppCodeValidatorTest {
 
         var journeyType = isRegistration ? JourneyType.REGISTRATION : JourneyType.SIGN_IN;
 
-        this.authAppCodeValidator =
-                new AuthAppCodeValidator(
+        this.authAppCodeProcessor =
+                new AuthAppCodeProcessor(
                         "email-address",
                         mockCodeStorageService,
                         mockConfigurationService,
@@ -213,8 +213,8 @@ class AuthAppCodeValidatorTest {
         when(mockDynamoService.getUserCredentialsFromEmail("email-address"))
                 .thenReturn(mock(UserCredentials.class));
 
-        this.authAppCodeValidator =
-                new AuthAppCodeValidator(
+        this.authAppCodeProcessor =
+                new AuthAppCodeProcessor(
                         "email-address",
                         mockCodeStorageService,
                         mockConfigurationService,
@@ -243,8 +243,8 @@ class AuthAppCodeValidatorTest {
 
         var journeyType = isRegistration ? JourneyType.REGISTRATION : JourneyType.SIGN_IN;
 
-        this.authAppCodeValidator =
-                new AuthAppCodeValidator(
+        this.authAppCodeProcessor =
+                new AuthAppCodeProcessor(
                         "email-address",
                         mockCodeStorageService,
                         mockConfigurationService,

@@ -7,7 +7,7 @@ import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
-import uk.gov.di.authentication.shared.validation.AuthAppCodeValidator;
+import uk.gov.di.authentication.shared.validation.AuthAppCodeProcessor;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -15,7 +15,7 @@ import static org.mockito.Mockito.when;
 
 class AuthAppStubTest {
     private AuthAppStub authAppStub;
-    private AuthAppCodeValidator authAppCodeValidator;
+    private AuthAppCodeProcessor authAppCodeProcessor;
     private static ConfigurationService configurationService;
 
     @BeforeAll
@@ -27,8 +27,8 @@ class AuthAppStubTest {
     @BeforeEach
     void setUp() {
         this.authAppStub = new AuthAppStub();
-        this.authAppCodeValidator =
-                new AuthAppCodeValidator(
+        this.authAppCodeProcessor =
+                new AuthAppCodeProcessor(
                         "test-email@test.com",
                         mock(CodeStorageService.class),
                         configurationService,
@@ -38,13 +38,13 @@ class AuthAppStubTest {
     }
 
     @Test
-    void worksWithAuthAppCodeValidatorAlgorithm() {
+    void worksWithAuthAppCodeProcessorAlgorithm() {
         String generatedCode =
                 authAppStub.getAuthAppOneTimeCode(
                         "ABCDAAWOXKUQCDH5QMSPHAGJXMTXFZRZAKFTR6Y3Q5YRN5EVOYRQ");
 
         assertTrue(
-                authAppCodeValidator.isCodeValid(
+                authAppCodeProcessor.isCodeValid(
                         generatedCode, "ABCDAAWOXKUQCDH5QMSPHAGJXMTXFZRZAKFTR6Y3Q5YRN5EVOYRQ"));
     }
 }
