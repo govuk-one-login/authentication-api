@@ -274,10 +274,9 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(400));
         assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList(INVALID_CODE_SENT));
-        assertThat(
-                userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(!codeRequest.isRegistration()));
-        assertThat(
-                userStore.isAuthAppVerified(EMAIL_ADDRESS), equalTo(!codeRequest.isRegistration()));
+        var isAccountVerified = journeyType.equals(JourneyType.SIGN_IN);
+        assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(isAccountVerified));
+        assertThat(userStore.isAuthAppVerified(EMAIL_ADDRESS), equalTo(isAccountVerified));
     }
 
     @ParameterizedTest
