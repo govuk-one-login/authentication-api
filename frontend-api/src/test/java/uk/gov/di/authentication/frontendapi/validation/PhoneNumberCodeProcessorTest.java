@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.shared.validation;
+package uk.gov.di.authentication.frontendapi.validation;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -8,6 +8,8 @@ import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
@@ -27,6 +29,8 @@ class PhoneNumberCodeProcessorTest {
     private final Session session = mock(Session.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final UserContext userContext = mock(UserContext.class);
+    private final AuditService auditService = mock(AuditService.class);
+    private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@example.com";
     private static final String VALID_CODE = "123456";
@@ -130,7 +134,12 @@ class PhoneNumberCodeProcessorTest {
                 .thenReturn(false);
         phoneNumberCodeProcessor =
                 new PhoneNumberCodeProcessor(
-                        codeStorageService, userContext, configurationService, journeyType);
+                        codeStorageService,
+                        userContext,
+                        configurationService,
+                        journeyType,
+                        authenticationService,
+                        auditService);
     }
 
     public void setUpPhoneNumberCodeRetryLimitExceeded() {
@@ -148,7 +157,9 @@ class PhoneNumberCodeProcessorTest {
                         codeStorageService,
                         userContext,
                         configurationService,
-                        JourneyType.REGISTRATION);
+                        JourneyType.REGISTRATION,
+                        authenticationService,
+                        auditService);
     }
 
     public void setUpBlockedPhoneNumberCode() {
@@ -165,6 +176,8 @@ class PhoneNumberCodeProcessorTest {
                         codeStorageService,
                         userContext,
                         configurationService,
-                        JourneyType.REGISTRATION);
+                        JourneyType.REGISTRATION,
+                        authenticationService,
+                        auditService);
     }
 }

@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.shared.validation;
+package uk.gov.di.authentication.frontendapi.validation;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,9 +13,11 @@ import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.sharedtest.helper.AuthAppStub;
 
 import java.util.Collections;
@@ -36,6 +38,8 @@ class AuthAppCodeProcessorTest {
     CodeStorageService mockCodeStorageService;
     ConfigurationService mockConfigurationService;
     DynamoService mockDynamoService;
+    AuditService mockAuditService;
+    UserContext mockUserContext;
 
     private static final String AUTH_APP_SECRET =
             "JZ5PYIOWNZDAOBA65S5T77FEEKYCCIT2VE4RQDAJD7SO73T3LODA";
@@ -47,6 +51,9 @@ class AuthAppCodeProcessorTest {
         this.mockCodeStorageService = mock(CodeStorageService.class);
         this.mockConfigurationService = mock(ConfigurationService.class);
         this.mockDynamoService = mock(DynamoService.class);
+        this.mockAuditService = mock(AuditService.class);
+        this.mockUserContext = mock(UserContext.class);
+        when(mockUserContext.getSession()).thenReturn(mock(Session.class));
     }
 
     private static Stream<Arguments> validatorParams() {
@@ -170,6 +177,7 @@ class AuthAppCodeProcessorTest {
     }
 
     private void setUpBlockedUser(boolean isRegistration) {
+        when(mockUserContext.getSession().getEmailAddress()).thenReturn("blocked-email-address");
         when(mockCodeStorageService.isBlockedForEmail(
                         "blocked-email-address", CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
@@ -178,15 +186,17 @@ class AuthAppCodeProcessorTest {
 
         this.authAppCodeProcessor =
                 new AuthAppCodeProcessor(
-                        "blocked-email-address",
+                        mockUserContext,
                         mockCodeStorageService,
                         mockConfigurationService,
                         mockDynamoService,
                         MAX_RETRIES,
-                        journeyType);
+                        journeyType,
+                        mockAuditService);
     }
 
     private void setUpRetryLimitExceededUser(boolean isRegistration) {
+        when(mockUserContext.getSession().getEmailAddress()).thenReturn("email-address");
         when(mockCodeStorageService.isBlockedForEmail("email-address", CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(false);
         when(mockCodeStorageService.getIncorrectMfaCodeAttemptsCount(
@@ -197,15 +207,17 @@ class AuthAppCodeProcessorTest {
 
         this.authAppCodeProcessor =
                 new AuthAppCodeProcessor(
-                        "email-address",
+                        mockUserContext,
                         mockCodeStorageService,
                         mockConfigurationService,
                         mockDynamoService,
                         MAX_RETRIES,
-                        journeyType);
+                        journeyType,
+                        mockAuditService);
     }
 
     private void setUpNoAuthCodeForUser(boolean isRegistration) {
+        when(mockUserContext.getSession().getEmailAddress()).thenReturn("email-address");
         var journeyType = isRegistration ? JourneyType.REGISTRATION : JourneyType.SIGN_IN;
 
         when(mockCodeStorageService.isBlockedForEmail("email-address", CODE_BLOCKED_KEY_PREFIX))
@@ -215,15 +227,17 @@ class AuthAppCodeProcessorTest {
 
         this.authAppCodeProcessor =
                 new AuthAppCodeProcessor(
-                        "email-address",
+                        mockUserContext,
                         mockCodeStorageService,
                         mockConfigurationService,
                         mockDynamoService,
                         MAX_RETRIES,
-                        journeyType);
+                        journeyType,
+                        mockAuditService);
     }
 
     private void setUpValidAuthCode(boolean isRegistration) {
+        when(mockUserContext.getSession().getEmailAddress()).thenReturn("email-address");
         when(mockSession.getEmailAddress()).thenReturn("email-address");
         when(mockSession.getRetryCount()).thenReturn(0);
         when(mockCodeStorageService.isBlockedForEmail("email-address", CODE_BLOCKED_KEY_PREFIX))
@@ -245,11 +259,12 @@ class AuthAppCodeProcessorTest {
 
         this.authAppCodeProcessor =
                 new AuthAppCodeProcessor(
-                        "email-address",
+                        mockUserContext,
                         mockCodeStorageService,
                         mockConfigurationService,
                         mockDynamoService,
                         MAX_RETRIES,
-                        journeyType);
+                        journeyType,
+                        mockAuditService);
     }
 }

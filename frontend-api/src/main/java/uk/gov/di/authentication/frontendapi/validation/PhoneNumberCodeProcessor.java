@@ -1,11 +1,16 @@
-package uk.gov.di.authentication.shared.validation;
+package uk.gov.di.authentication.frontendapi.validation;
 
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import uk.gov.di.authentication.entity.CodeRequest;
+import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.ValidationHelper;
+import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
@@ -24,11 +29,15 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
             CodeStorageService codeStorageService,
             UserContext userContext,
             ConfigurationService configurationService,
-            JourneyType journeyType) {
+            JourneyType journeyType,
+            AuthenticationService dynamoService,
+            AuditService auditService) {
         super(
                 userContext.getSession().getEmailAddress(),
                 codeStorageService,
-                configurationService.getCodeMaxRetries());
+                configurationService.getCodeMaxRetries(),
+                dynamoService,
+                auditService);
         this.userContext = userContext;
         this.configurationService = configurationService;
         this.journeyType = journeyType;
@@ -67,5 +76,22 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
                 codeStorageService,
                 emailAddress,
                 configurationService.getCodeMaxRetries());
+    }
+
+    @Override
+    public void processSuccessfulCodeRequest(
+            CodeRequest codeRequest, APIGatewayProxyRequestEvent input) {
+        switch (codeRequest.getJourneyType()) {
+            case REGISTRATION:
+                dynamoService.updatePhoneNumberAndAccountVerifiedStatus(
+                        emailAddress, codeRequest.getProfileInformation(), true, true);
+                dynamoService.setMFAMethodEnabled(emailAddress, MFAMethodType.AUTH_APP, false);
+                submitAuditEvent(
+                        FrontendAuditableEvent.UPDATE_PROFILE_PHONE_NUMBER,
+                        userContext,
+                        MFAMethodType.SMS,
+                        codeRequest.getProfileInformation(),
+                        input);
+        }
     }
 }

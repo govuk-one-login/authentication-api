@@ -2,6 +2,9 @@ package uk.gov.di.authentication.shared.validation;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.frontendapi.validation.AuthAppCodeProcessor;
+import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessorFactory;
+import uk.gov.di.authentication.frontendapi.validation.PhoneNumberCodeProcessor;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;

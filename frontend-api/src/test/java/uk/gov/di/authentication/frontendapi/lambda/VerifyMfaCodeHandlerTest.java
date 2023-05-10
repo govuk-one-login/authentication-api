@@ -21,6 +21,9 @@ import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.services.DynamoAccountRecoveryBlockService;
+import uk.gov.di.authentication.frontendapi.validation.AuthAppCodeProcessor;
+import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessorFactory;
+import uk.gov.di.authentication.frontendapi.validation.PhoneNumberCodeProcessor;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
@@ -43,9 +46,6 @@ import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
-import uk.gov.di.authentication.shared.validation.AuthAppCodeProcessor;
-import uk.gov.di.authentication.shared.validation.MfaCodeProcessorFactory;
-import uk.gov.di.authentication.shared.validation.PhoneNumberCodeProcessor;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
@@ -58,7 +58,6 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -189,10 +188,9 @@ class VerifyMfaCodeHandlerTest {
         assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.AUTH_APP));
         assertThat(
                 session.getCurrentCredentialStrength(), equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
-        verify(authenticationService)
-                .updateMFAMethod(
-                        TEST_EMAIL_ADDRESS, MFAMethodType.AUTH_APP, true, true, AUTH_APP_SECRET);
-        verify(authenticationService).setAccountVerified(TEST_EMAIL_ADDRESS);
+        verify(authAppCodeProcessor)
+                .processSuccessfulCodeRequest(
+                        any(CodeRequest.class), any(APIGatewayProxyRequestEvent.class));
         verify(codeStorageService, never())
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
@@ -201,18 +199,6 @@ class VerifyMfaCodeHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_VERIFIED,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("mfa-type", MFAMethodType.AUTH_APP.getValue()));
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.UPDATE_PROFILE_AUTH_APP,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         CLIENT_ID,
@@ -250,15 +236,13 @@ class VerifyMfaCodeHandlerTest {
         assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
         assertThat(
                 session.getCurrentCredentialStrength(), equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
-        verify(authenticationService)
-                .updatePhoneNumberAndAccountVerifiedStatus(
-                        TEST_EMAIL_ADDRESS, PHONE_NUMBER, true, true);
+        verify(phoneNumberCodeProcessor)
+                .processSuccessfulCodeRequest(
+                        any(CodeRequest.class), any(APIGatewayProxyRequestEvent.class));
         verify(codeStorageService, never())
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
         verify(accountRecoveryBlockService).deleteBlockIfPresent(TEST_EMAIL_ADDRESS);
-        verify(authenticationService)
-                .setMFAMethodEnabled(TEST_EMAIL_ADDRESS, MFAMethodType.AUTH_APP, false);
 
         verify(auditService)
                 .submitAuditEvent(
@@ -270,18 +254,6 @@ class VerifyMfaCodeHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("mfa-type", MFAMethodType.SMS.getValue()));
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.UPDATE_PROFILE_PHONE_NUMBER,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        PHONE_NUMBER,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("mfa-type", MFAMethodType.SMS.getValue()));
         verify(cloudwatchMetricsService)
@@ -305,8 +277,6 @@ class VerifyMfaCodeHandlerTest {
         verify(codeStorageService, never())
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
-        verify(authenticationService, never())
-                .updateMFAMethod(any(), any(), anyBoolean(), anyBoolean(), any());
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_VERIFIED,
@@ -340,7 +310,6 @@ class VerifyMfaCodeHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1002));
         assertThat(session.getVerifiedMfaMethodType(), equalTo(null));
-        verify(authenticationService, never()).setAccountVerified(TEST_EMAIL_ADDRESS);
         verifyNoInteractions(auditService);
         verifyNoInteractions(authAppCodeProcessor);
         verifyNoInteractions(codeStorageService);
@@ -367,7 +336,6 @@ class VerifyMfaCodeHandlerTest {
         assertThat(session.getVerifiedMfaMethodType(), equalTo(null));
         verify(codeStorageService)
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
-        verify(authenticationService, never()).setAccountVerified(TEST_EMAIL_ADDRESS);
         verify(codeStorageService)
                 .deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS, MFAMethodType.AUTH_APP);
         verifyNoInteractions(accountRecoveryBlockService);
@@ -403,7 +371,6 @@ class VerifyMfaCodeHandlerTest {
         assertThat(session.getVerifiedMfaMethodType(), equalTo(null));
         verify(codeStorageService, never())
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
-        verify(authenticationService, never()).setAccountVerified(TEST_EMAIL_ADDRESS);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
         verifyNoInteractions(accountRecoveryBlockService);
         verify(auditService)
@@ -443,7 +410,6 @@ class VerifyMfaCodeHandlerTest {
         assertThat(session.getVerifiedMfaMethodType(), equalTo(null));
         verify(codeStorageService, never())
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
-        verify(authenticationService, never()).setAccountVerified(TEST_EMAIL_ADDRESS);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
         verifyNoInteractions(accountRecoveryBlockService);
         verify(auditService)
@@ -478,11 +444,6 @@ class VerifyMfaCodeHandlerTest {
         assertThat(session.getVerifiedMfaMethodType(), equalTo(null));
         verify(codeStorageService)
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
-        verify(authenticationService, never())
-                .updatePhoneNumberAndAccountVerifiedStatus(
-                        TEST_EMAIL_ADDRESS, PHONE_NUMBER, true, true);
-        verify(authenticationService, never())
-                .setMFAMethodEnabled(TEST_EMAIL_ADDRESS, MFAMethodType.AUTH_APP, false);
         verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
         verifyNoInteractions(accountRecoveryBlockService);
         verify(auditService)
@@ -519,11 +480,6 @@ class VerifyMfaCodeHandlerTest {
         assertThat(session.getVerifiedMfaMethodType(), equalTo(null));
         verify(codeStorageService, never())
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
-        verify(authenticationService, never())
-                .updatePhoneNumberAndAccountVerifiedStatus(
-                        TEST_EMAIL_ADDRESS, PHONE_NUMBER, true, true);
-        verify(authenticationService, never())
-                .setMFAMethodEnabled(TEST_EMAIL_ADDRESS, MFAMethodType.AUTH_APP, false);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
         verifyNoInteractions(accountRecoveryBlockService);
         verify(auditService)
@@ -557,11 +513,6 @@ class VerifyMfaCodeHandlerTest {
         assertThat(session.getVerifiedMfaMethodType(), equalTo(null));
         verify(codeStorageService, never())
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
-        verify(authenticationService, never())
-                .updatePhoneNumberAndAccountVerifiedStatus(
-                        TEST_EMAIL_ADDRESS, PHONE_NUMBER, true, true);
-        verify(authenticationService, never())
-                .setMFAMethodEnabled(TEST_EMAIL_ADDRESS, MFAMethodType.AUTH_APP, false);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
         verifyNoInteractions(accountRecoveryBlockService);
         verify(auditService)
@@ -597,10 +548,6 @@ class VerifyMfaCodeHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1041));
-        verify(authenticationService, never())
-                .updateMFAMethod(
-                        TEST_EMAIL_ADDRESS, MFAMethodType.AUTH_APP, true, true, AUTH_APP_SECRET);
-        verify(authenticationService, never()).setAccountVerified(TEST_EMAIL_ADDRESS);
         verify(codeStorageService, never())
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);

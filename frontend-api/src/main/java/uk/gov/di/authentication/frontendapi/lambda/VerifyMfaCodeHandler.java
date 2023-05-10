@@ -9,11 +9,12 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.services.DynamoAccountRecoveryBlockService;
+import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessor;
+import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessorFactory;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper;
@@ -29,7 +30,6 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
-import uk.gov.di.authentication.shared.validation.MfaCodeProcessorFactory;
 
 import java.util.List;
 import java.util.Map;
@@ -41,7 +41,6 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_VERIFIED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.INVALID_CODE_SENT;
 import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.NONE;
-import static uk.gov.di.authentication.shared.entity.MFAMethodType.AUTH_APP;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
@@ -94,7 +93,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 new MfaCodeProcessorFactory(
                         configurationService,
                         codeStorageService,
-                        new DynamoService(configurationService));
+                        new DynamoService(configurationService),
+                        auditService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.accountRecoveryBlockService =
                 new DynamoAccountRecoveryBlockService(configurationService);
@@ -129,7 +129,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1041);
             }
 
-            processCodeSession(errorResponse, session, input, userContext, codeRequest);
+            processCodeSession(
+                    errorResponse, session, input, userContext, codeRequest, mfaCodeProcessor);
 
             sessionService.save(session);
 
@@ -199,7 +200,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             Session session,
             APIGatewayProxyRequestEvent input,
             UserContext userContext,
-            VerifyMfaCodeRequest codeRequest) {
+            VerifyMfaCodeRequest codeRequest,
+            MfaCodeProcessor mfaCodeProcessor) {
         var emailAddress = session.getEmailAddress();
 
         var auditableEvent =
@@ -210,38 +212,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         submitAuditEvent(
                 auditableEvent, session, userContext, input, codeRequest.getMfaMethodType());
 
-        if (codeRequest.getJourneyType().equals(JourneyType.REGISTRATION)
-                && errorResponse.isEmpty()) {
-            switch (codeRequest.getMfaMethodType()) {
-                case AUTH_APP:
-                    authenticationService.setAccountVerified(emailAddress);
-                    authenticationService.updateMFAMethod(
-                            emailAddress,
-                            AUTH_APP,
-                            true,
-                            true,
-                            codeRequest.getProfileInformation());
-                    submitAuditEvent(
-                            FrontendAuditableEvent.UPDATE_PROFILE_AUTH_APP,
-                            session,
-                            userContext,
-                            input,
-                            codeRequest.getMfaMethodType());
-                    break;
-                case SMS:
-                    authenticationService.updatePhoneNumberAndAccountVerifiedStatus(
-                            emailAddress, codeRequest.getProfileInformation(), true, true);
-                    authenticationService.setMFAMethodEnabled(
-                            emailAddress, MFAMethodType.AUTH_APP, false);
-                    submitAuditEvent(
-                            FrontendAuditableEvent.UPDATE_PROFILE_PHONE_NUMBER,
-                            session,
-                            userContext,
-                            input,
-                            codeRequest.getMfaMethodType(),
-                            codeRequest.getProfileInformation());
-                    break;
-            }
+        if (errorResponse.isEmpty()) {
+            mfaCodeProcessor.processSuccessfulCodeRequest(codeRequest, input);
         }
 
         if (errorResponse
@@ -282,17 +254,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             UserContext userContext,
             APIGatewayProxyRequestEvent input,
             MFAMethodType mfaMethodType) {
-        submitAuditEvent(
-                auditableEvent, session, userContext, input, mfaMethodType, AuditService.UNKNOWN);
-    }
-
-    private void submitAuditEvent(
-            AuditableEvent auditableEvent,
-            Session session,
-            UserContext userContext,
-            APIGatewayProxyRequestEvent input,
-            MFAMethodType mfaMethodType,
-            String phoneNumber) {
         auditService.submitAuditEvent(
                 auditableEvent,
                 userContext.getClientSessionId(),
@@ -304,7 +265,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 session.getInternalCommonSubjectIdentifier(),
                 session.getEmailAddress(),
                 IpAddressHelper.extractIpAddress(input),
-                phoneNumber,
+                AuditService.UNKNOWN,
                 extractPersistentIdFromHeaders(input.getHeaders()),
                 pair("mfa-type", mfaMethodType.getValue()));
     }
