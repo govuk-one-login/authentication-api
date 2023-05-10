@@ -26,7 +26,6 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
     private final int windowTime;
     private final int allowedWindows;
     private final AuthenticationService dynamoService;
-    private final String emailAddress;
     private final JourneyType journeyType;
     private static final Base32 base32 = new Base32(0, null, false, (byte) '=', CodecPolicy.STRICT);
 
@@ -39,7 +38,6 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
             JourneyType journeyType) {
         super(emailAddress, codeStorageService, maxRetries);
         this.dynamoService = dynamoService;
-        this.emailAddress = emailAddress;
         this.windowTime = configurationService.getAuthAppCodeWindowLength();
         this.allowedWindows = configurationService.getAuthAppCodeAllowedWindows();
         this.journeyType = journeyType;
