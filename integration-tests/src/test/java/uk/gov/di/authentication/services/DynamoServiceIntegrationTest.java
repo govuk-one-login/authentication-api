@@ -182,6 +182,24 @@ class DynamoServiceIntegrationTest {
         assertThat(mfaMethod.getCredentialValue(), equalTo(TEST_MFA_APP_CREDENTIAL));
     }
 
+    @Test
+    void shouldSetAccountAndAuthVerifiedToTrue() {
+        setUpDynamo();
+
+        dynamoService.setAuthAppAndAccountVerified(TEST_EMAIL, TEST_MFA_APP_CREDENTIAL);
+
+        var updatedUserCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+        var updatedUserProfile = dynamoService.getUserProfileByEmail(TEST_EMAIL);
+
+        assertThat(updatedUserCredentials.getMfaMethods().size(), equalTo(1));
+        var mfaMethod = updatedUserCredentials.getMfaMethods().get(0);
+        assertThat(mfaMethod.getMfaMethodType(), equalTo(MFAMethodType.AUTH_APP.getValue()));
+        assertThat(mfaMethod.isMethodVerified(), equalTo(true));
+        assertThat(mfaMethod.isEnabled(), equalTo(true));
+        assertThat(mfaMethod.getCredentialValue(), equalTo(TEST_MFA_APP_CREDENTIAL));
+        assertThat(updatedUserProfile.getAccountVerified(), equalTo(1));
+    }
+
     private void testUpdateEmail(UserProfile userProfile, UserCredentials userCredentials) {
         dynamoService.updateEmail(TEST_EMAIL, UPDATED_TEST_EMAIL, CREATED_DATE_TIME);
 

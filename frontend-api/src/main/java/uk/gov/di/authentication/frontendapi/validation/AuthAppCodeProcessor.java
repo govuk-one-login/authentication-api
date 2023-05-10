@@ -1,6 +1,5 @@
 package uk.gov.di.authentication.frontendapi.validation;
 
-import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import org.apache.commons.codec.CodecPolicy;
 import org.apache.commons.codec.binary.Base32;
 import uk.gov.di.authentication.entity.CodeRequest;
@@ -96,7 +95,7 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
 
     @Override
     public void processSuccessfulCodeRequest(
-            CodeRequest codeRequest, APIGatewayProxyRequestEvent input) {
+            CodeRequest codeRequest, String ipAddress, String persistentSessionId) {
         switch (codeRequest.getJourneyType()) {
             case REGISTRATION:
                 dynamoService.setAuthAppAndAccountVerified(
@@ -106,7 +105,8 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
                         userContext,
                         AUTH_APP,
                         AuditService.UNKNOWN,
-                        input);
+                        ipAddress,
+                        persistentSessionId);
                 return;
         }
     }

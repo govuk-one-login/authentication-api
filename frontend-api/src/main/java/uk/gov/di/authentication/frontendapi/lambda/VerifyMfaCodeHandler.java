@@ -213,7 +213,10 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 auditableEvent, session, userContext, input, codeRequest.getMfaMethodType());
 
         if (errorResponse.isEmpty()) {
-            mfaCodeProcessor.processSuccessfulCodeRequest(codeRequest, input);
+            mfaCodeProcessor.processSuccessfulCodeRequest(
+                    codeRequest,
+                    IpAddressHelper.extractIpAddress(input),
+                    extractPersistentIdFromHeaders(input.getHeaders()));
         }
 
         if (errorResponse

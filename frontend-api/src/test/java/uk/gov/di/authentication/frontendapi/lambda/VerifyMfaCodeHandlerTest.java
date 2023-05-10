@@ -58,6 +58,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -189,8 +190,7 @@ class VerifyMfaCodeHandlerTest {
         assertThat(
                 session.getCurrentCredentialStrength(), equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
         verify(authAppCodeProcessor)
-                .processSuccessfulCodeRequest(
-                        any(CodeRequest.class), any(APIGatewayProxyRequestEvent.class));
+                .processSuccessfulCodeRequest(any(CodeRequest.class), anyString(), anyString());
         verify(codeStorageService, never())
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
@@ -237,8 +237,7 @@ class VerifyMfaCodeHandlerTest {
         assertThat(
                 session.getCurrentCredentialStrength(), equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
         verify(phoneNumberCodeProcessor)
-                .processSuccessfulCodeRequest(
-                        any(CodeRequest.class), any(APIGatewayProxyRequestEvent.class));
+                .processSuccessfulCodeRequest(any(CodeRequest.class), anyString(), anyString());
         verify(codeStorageService, never())
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);

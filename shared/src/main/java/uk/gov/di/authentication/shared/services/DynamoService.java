@@ -340,6 +340,7 @@ public class DynamoService implements AuthenticationService {
             String phoneNumber,
             boolean phoneNumberVerified,
             boolean accountVerified) {
+        var dateTime = NowHelper.toTimestampString(NowHelper.now());
         var formattedPhoneNumber = PhoneNumberHelper.formatPhoneNumber(phoneNumber);
         var userProfile =
                 dynamoUserProfileTable
@@ -349,6 +350,7 @@ public class DynamoService implements AuthenticationService {
                                         .build())
                         .withPhoneNumber(formattedPhoneNumber)
                         .withPhoneNumberVerified(phoneNumberVerified)
+                        .withUpdated(dateTime)
                         .withAccountVerified(accountVerified ? 1 : 0);
         var userCredentials =
                 dynamoUserCredentialsTable.getItem(
@@ -366,7 +368,9 @@ public class DynamoService implements AuthenticationService {
                 .findFirst()
                 .ifPresent(
                         t -> {
-                            userCredentials.setMfaMethod(t.withEnabled(false));
+                            userCredentials
+                                    .setMfaMethod(t.withEnabled(false).withUpdated(dateTime))
+                                    .withUpdated(dateTime);
                             transactWriteBuilder.addUpdateItem(
                                     dynamoUserCredentialsTable, userCredentials);
                         });
@@ -410,7 +414,7 @@ public class DynamoService implements AuthenticationService {
 
     @Override
     public void setAuthAppAndAccountVerified(String email, String credentialValue) {
-        String dateTime = NowHelper.toTimestampString(NowHelper.now());
+        var dateTime = NowHelper.toTimestampString(NowHelper.now());
         var mfaMethod =
                 new MFAMethod(
                         MFAMethodType.AUTH_APP.getValue(), credentialValue, true, true, dateTime);
@@ -420,10 +424,17 @@ public class DynamoService implements AuthenticationService {
                                 Key.builder()
                                         .partitionValue(email.toLowerCase(Locale.ROOT))
                                         .build())
-                        .setMfaMethod(mfaMethod);
+                        .setMfaMethod(mfaMethod)
+                        .withUpdated(dateTime);
         var userProfile =
-                dynamoUserProfileTable.getItem(
-                        Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
+                dynamoUserProfileTable
+                        .getItem(
+                                Key.builder()
+                                        .partitionValue(email.toLowerCase(Locale.ROOT))
+                                        .build())
+                        .withAccountVerified(1)
+                        .withUpdated(dateTime);
+        ;
 
         dynamoDbEnhancedClient.transactWriteItems(
                 TransactWriteItemsEnhancedRequest.builder()

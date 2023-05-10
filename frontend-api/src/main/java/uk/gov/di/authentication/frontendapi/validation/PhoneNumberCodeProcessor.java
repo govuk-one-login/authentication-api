@@ -1,6 +1,5 @@
 package uk.gov.di.authentication.frontendapi.validation;
 
-import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -80,8 +79,8 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
 
     @Override
     public void processSuccessfulCodeRequest(
-            CodeRequest codeRequest, APIGatewayProxyRequestEvent input) {
-        switch (codeRequest.getJourneyType()) {
+            CodeRequest codeRequest, String ipAddress, String persistentSessionId) {
+        switch (journeyType) {
             case REGISTRATION:
                 dynamoService.updatePhoneNumberAndAccountVerifiedStatus(
                         emailAddress, codeRequest.getProfileInformation(), true, true);
@@ -90,7 +89,8 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
                         userContext,
                         MFAMethodType.SMS,
                         codeRequest.getProfileInformation(),
-                        input);
+                        ipAddress,
+                        persistentSessionId);
         }
     }
 }

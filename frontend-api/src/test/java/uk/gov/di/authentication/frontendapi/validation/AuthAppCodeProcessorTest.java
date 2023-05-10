@@ -6,12 +6,14 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
+import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
+import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
@@ -29,7 +31,10 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 
 class AuthAppCodeProcessorTest {
@@ -43,6 +48,12 @@ class AuthAppCodeProcessorTest {
 
     private static final String AUTH_APP_SECRET =
             "JZ5PYIOWNZDAOBA65S5T77FEEKYCCIT2VE4RQDAJD7SO73T3LODA";
+    private static final String PERSISTENT_ID = "some-persistent-session-id";
+    private static final String CLIENT_SESSION_ID = "a-client-session-id";
+    private static final String SESSION_ID = "a-session-id";
+    private static final String IP_ADDRESS = "123.123.123.123";
+    private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@example.com";
+    private static final String INTERNAL_SUB_ID = "urn:fdc:gov.uk:2022:" + IdGenerator.generate();
     private final int MAX_RETRIES = 5;
 
     @BeforeEach
@@ -174,6 +185,84 @@ class AuthAppCodeProcessorTest {
                                 true,
                                 JourneyType.REGISTRATION,
                                 authAppSecret)));
+    }
+
+    @Test
+    void shouldUpdateDynamoAndCreateAuditEventWhenRegistration() {
+        setUpSuccessfulCodeRequest(JourneyType.REGISTRATION);
+        var codeRequest =
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.AUTH_APP,
+                        "111111",
+                        true,
+                        JourneyType.REGISTRATION,
+                        AUTH_APP_SECRET);
+
+        authAppCodeProcessor.processSuccessfulCodeRequest(codeRequest, IP_ADDRESS, PERSISTENT_ID);
+
+        verify(mockDynamoService).setAuthAppAndAccountVerified(TEST_EMAIL_ADDRESS, AUTH_APP_SECRET);
+        verify(mockAuditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.UPDATE_PROFILE_AUTH_APP,
+                        CLIENT_SESSION_ID,
+                        SESSION_ID,
+                        AuditService.UNKNOWN,
+                        INTERNAL_SUB_ID,
+                        TEST_EMAIL_ADDRESS,
+                        IP_ADDRESS,
+                        AuditService.UNKNOWN,
+                        PERSISTENT_ID,
+                        pair("mfa-type", MFAMethodType.AUTH_APP.getValue()));
+    }
+
+    @Test
+    void shouldNotUpdateDynamoOrCreateAuditEventWhenAccountRecovery() {
+        setUpSuccessfulCodeRequest(JourneyType.ACCOUNT_RECOVERY);
+
+        var codeRequest =
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.AUTH_APP,
+                        "111111",
+                        true,
+                        JourneyType.ACCOUNT_RECOVERY,
+                        AUTH_APP_SECRET);
+
+        authAppCodeProcessor.processSuccessfulCodeRequest(codeRequest, IP_ADDRESS, PERSISTENT_ID);
+
+        verifyNoInteractions(mockDynamoService);
+        verifyNoInteractions(mockAuditService);
+    }
+
+    @Test
+    void shouldNotUpdateDynamoOrCreateAuditEventWhenSignIn() {
+        setUpSuccessfulCodeRequest(JourneyType.SIGN_IN);
+
+        var codeRequest =
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.AUTH_APP, "111111", true, JourneyType.SIGN_IN);
+
+        authAppCodeProcessor.processSuccessfulCodeRequest(codeRequest, IP_ADDRESS, PERSISTENT_ID);
+
+        verifyNoInteractions(mockDynamoService);
+        verifyNoInteractions(mockAuditService);
+    }
+
+    private void setUpSuccessfulCodeRequest(JourneyType journeyType) {
+        when(mockSession.getEmailAddress()).thenReturn(TEST_EMAIL_ADDRESS);
+        when(mockSession.getSessionId()).thenReturn(SESSION_ID);
+        when(mockSession.getInternalCommonSubjectIdentifier()).thenReturn(INTERNAL_SUB_ID);
+        when(mockUserContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
+        when(mockUserContext.getSession()).thenReturn(mockSession);
+
+        this.authAppCodeProcessor =
+                new AuthAppCodeProcessor(
+                        mockUserContext,
+                        mockCodeStorageService,
+                        mockConfigurationService,
+                        mockDynamoService,
+                        MAX_RETRIES,
+                        journeyType,
+                        mockAuditService);
     }
 
     private void setUpBlockedUser(boolean isRegistration) {
