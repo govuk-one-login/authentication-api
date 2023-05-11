@@ -340,6 +340,7 @@ public class DynamoService implements AuthenticationService {
             String phoneNumber,
             boolean phoneNumberVerified,
             boolean accountVerified) {
+        var dateTime = NowHelper.toTimestampString(NowHelper.now());
         var formattedPhoneNumber = PhoneNumberHelper.formatPhoneNumber(phoneNumber);
         var userProfile =
                 dynamoUserProfileTable
@@ -349,12 +350,38 @@ public class DynamoService implements AuthenticationService {
                                         .build())
                         .withPhoneNumber(formattedPhoneNumber)
                         .withPhoneNumberVerified(phoneNumberVerified)
+                        .withUpdated(dateTime)
                         .withAccountVerified(accountVerified ? 1 : 0);
+        var userCredentials =
+                dynamoUserCredentialsTable.getItem(
+                        Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
 
-        dynamoDbEnhancedClient.transactWriteItems(
+        var transactWriteBuilder =
                 TransactWriteItemsEnhancedRequest.builder()
-                        .addUpdateItem(dynamoUserProfileTable, userProfile)
-                        .build());
+                        .addUpdateItem(dynamoUserProfileTable, userProfile);
+
+        Optional.ofNullable(userCredentials.getMfaMethods())
+                .flatMap(
+                        mf ->
+                                mf.stream()
+                                        .filter(
+                                                method ->
+                                                        method.getMfaMethodType()
+                                                                        .equals(
+                                                                                MFAMethodType
+                                                                                        .AUTH_APP
+                                                                                        .getValue())
+                                                                && method.isEnabled())
+                                        .findFirst())
+                .ifPresent(
+                        t -> {
+                            userCredentials
+                                    .setMfaMethod(t.withEnabled(false).withUpdated(dateTime))
+                                    .withUpdated(dateTime);
+                            transactWriteBuilder.addUpdateItem(
+                                    dynamoUserCredentialsTable, userCredentials);
+                        });
+        dynamoDbEnhancedClient.transactWriteItems(transactWriteBuilder.build());
     }
 
     @Override
@@ -393,25 +420,33 @@ public class DynamoService implements AuthenticationService {
     }
 
     @Override
-    public void setMFAMethodEnabled(String email, MFAMethodType mfaMethodType, boolean enabled) {
+    public void setAuthAppAndAccountVerified(String email, String credentialValue) {
+        var dateTime = NowHelper.toTimestampString(NowHelper.now());
+        var mfaMethod =
+                new MFAMethod(
+                        MFAMethodType.AUTH_APP.getValue(), credentialValue, true, true, dateTime);
         var userCredentials =
-                dynamoUserCredentialsTable.getItem(
-                        Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
-        var mfaMethods = userCredentials.getMfaMethods();
-        if (mfaMethods != null) {
-            var mfaMethod =
-                    mfaMethods.stream()
-                            .filter(
-                                    method ->
-                                            method.getMfaMethodType()
-                                                    .equals(mfaMethodType.getValue()))
-                            .findFirst();
-            mfaMethod.ifPresent(
-                    mfa -> {
-                        mfa.withEnabled(enabled);
-                        dynamoUserCredentialsTable.updateItem(userCredentials);
-                    });
-        }
+                dynamoUserCredentialsTable
+                        .getItem(
+                                Key.builder()
+                                        .partitionValue(email.toLowerCase(Locale.ROOT))
+                                        .build())
+                        .setMfaMethod(mfaMethod)
+                        .withUpdated(dateTime);
+        var userProfile =
+                dynamoUserProfileTable
+                        .getItem(
+                                Key.builder()
+                                        .partitionValue(email.toLowerCase(Locale.ROOT))
+                                        .build())
+                        .withAccountVerified(1)
+                        .withUpdated(dateTime);
+
+        dynamoDbEnhancedClient.transactWriteItems(
+                TransactWriteItemsEnhancedRequest.builder()
+                        .addUpdateItem(dynamoUserProfileTable, userProfile)
+                        .addUpdateItem(dynamoUserCredentialsTable, userCredentials)
+                        .build());
     }
 
     @Override

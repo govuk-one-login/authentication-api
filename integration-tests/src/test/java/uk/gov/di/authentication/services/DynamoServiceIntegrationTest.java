@@ -165,13 +165,15 @@ class DynamoServiceIntegrationTest {
     }
 
     @Test
-    void shoulSetAuthAppMFAMethodNotEnabled() {
+    void
+            shouldSetAuthAppMFAMethodNotEnabledAndSetPhoneNumberAndAccountVerifiedWhenMfaMethodExists() {
         setUpDynamo();
         dynamoService.updateMFAMethod(
                 TEST_EMAIL, MFAMethodType.AUTH_APP, true, true, TEST_MFA_APP_CREDENTIAL);
-        dynamoService.setMFAMethodEnabled(TEST_EMAIL, MFAMethodType.AUTH_APP, false);
-        UserCredentials updatedUserCredentials =
-                dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+        dynamoService.updatePhoneNumberAndAccountVerifiedStatus(
+                TEST_EMAIL, "+4407316763843", true, true);
+        var updatedUserCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+        var updatedUserUserProfile = dynamoService.getUserProfileByEmail(TEST_EMAIL);
 
         assertThat(updatedUserCredentials.getMfaMethods().size(), equalTo(1));
         MFAMethod mfaMethod = updatedUserCredentials.getMfaMethods().get(0);
@@ -179,6 +181,41 @@ class DynamoServiceIntegrationTest {
         assertThat(mfaMethod.isMethodVerified(), equalTo(true));
         assertThat(mfaMethod.isEnabled(), equalTo(false));
         assertThat(mfaMethod.getCredentialValue(), equalTo(TEST_MFA_APP_CREDENTIAL));
+        assertThat(updatedUserUserProfile.getAccountVerified(), equalTo(1));
+        assertThat(updatedUserUserProfile.getPhoneNumber(), equalTo("+447316763843"));
+        assertThat(updatedUserUserProfile.isPhoneNumberVerified(), equalTo(true));
+    }
+
+    @Test
+    void shouldSetSetPhoneNumberAndAccountVerifiedWhenMfaMethodDoesNotExists() {
+        setUpDynamo();
+        dynamoService.updatePhoneNumberAndAccountVerifiedStatus(
+                TEST_EMAIL, "+4407316763843", true, true);
+        var updatedUserCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+        var updatedUserUserProfile = dynamoService.getUserProfileByEmail(TEST_EMAIL);
+
+        assertThat(updatedUserCredentials.getMfaMethods(), equalTo(null));
+        assertThat(updatedUserUserProfile.getAccountVerified(), equalTo(1));
+        assertThat(updatedUserUserProfile.getPhoneNumber(), equalTo("+447316763843"));
+        assertThat(updatedUserUserProfile.isPhoneNumberVerified(), equalTo(true));
+    }
+
+    @Test
+    void shouldSetAccountAndAuthVerifiedToTrue() {
+        setUpDynamo();
+
+        dynamoService.setAuthAppAndAccountVerified(TEST_EMAIL, TEST_MFA_APP_CREDENTIAL);
+
+        var updatedUserCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
+        var updatedUserProfile = dynamoService.getUserProfileByEmail(TEST_EMAIL);
+
+        assertThat(updatedUserCredentials.getMfaMethods().size(), equalTo(1));
+        var mfaMethod = updatedUserCredentials.getMfaMethods().get(0);
+        assertThat(mfaMethod.getMfaMethodType(), equalTo(MFAMethodType.AUTH_APP.getValue()));
+        assertThat(mfaMethod.isMethodVerified(), equalTo(true));
+        assertThat(mfaMethod.isEnabled(), equalTo(true));
+        assertThat(mfaMethod.getCredentialValue(), equalTo(TEST_MFA_APP_CREDENTIAL));
+        assertThat(updatedUserProfile.getAccountVerified(), equalTo(1));
     }
 
     private void testUpdateEmail(UserProfile userProfile, UserCredentials userCredentials) {

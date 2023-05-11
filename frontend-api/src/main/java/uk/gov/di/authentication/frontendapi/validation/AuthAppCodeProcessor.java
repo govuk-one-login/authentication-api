@@ -1,16 +1,19 @@
-package uk.gov.di.authentication.shared.validation;
+package uk.gov.di.authentication.frontendapi.validation;
 
 import org.apache.commons.codec.CodecPolicy;
 import org.apache.commons.codec.binary.Base32;
 import uk.gov.di.authentication.entity.CodeRequest;
+import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.state.UserContext;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -21,32 +24,38 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
+import static uk.gov.di.authentication.shared.entity.MFAMethodType.AUTH_APP;
+
 public class AuthAppCodeProcessor extends MfaCodeProcessor {
 
+    private final UserContext userContext;
     private final int windowTime;
     private final int allowedWindows;
-    private final AuthenticationService dynamoService;
-    private final String emailAddress;
-    private final JourneyType journeyType;
+    private final CodeRequest codeRequest;
     private static final Base32 base32 = new Base32(0, null, false, (byte) '=', CodecPolicy.STRICT);
 
     public AuthAppCodeProcessor(
-            String emailAddress,
+            UserContext userContext,
             CodeStorageService codeStorageService,
             ConfigurationService configurationService,
             AuthenticationService dynamoService,
             int maxRetries,
-            JourneyType journeyType) {
-        super(emailAddress, codeStorageService, maxRetries);
-        this.dynamoService = dynamoService;
-        this.emailAddress = emailAddress;
+            CodeRequest codeRequest,
+            AuditService auditService) {
+        super(
+                userContext.getSession().getEmailAddress(),
+                codeStorageService,
+                maxRetries,
+                dynamoService,
+                auditService);
+        this.userContext = userContext;
         this.windowTime = configurationService.getAuthAppCodeWindowLength();
         this.allowedWindows = configurationService.getAuthAppCodeAllowedWindows();
-        this.journeyType = journeyType;
+        this.codeRequest = codeRequest;
     }
 
     @Override
-    public Optional<ErrorResponse> validateCode(CodeRequest codeRequest) {
+    public Optional<ErrorResponse> validateCode() {
         if (isCodeBlockedForSession()) {
             LOG.info("Code blocked for session");
             return Optional.of(ErrorResponse.ERROR_1042);
@@ -60,7 +69,7 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
         }
 
         var authAppSecret =
-                journeyType.equals(JourneyType.SIGN_IN)
+                codeRequest.getJourneyType().equals(JourneyType.SIGN_IN)
                         ? getMfaCredentialValue().orElse(null)
                         : codeRequest.getProfileInformation();
 
@@ -69,7 +78,7 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
             return Optional.of(ErrorResponse.ERROR_1043);
         }
 
-        if (!journeyType.equals(JourneyType.SIGN_IN)
+        if (!codeRequest.getJourneyType().equals(JourneyType.SIGN_IN)
                 && !base32.isInAlphabet(codeRequest.getProfileInformation())) {
             return Optional.of(ErrorResponse.ERROR_1041);
         }
@@ -82,6 +91,21 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
         resetCodeIncorrectEntryCount(MFAMethodType.AUTH_APP);
 
         return Optional.empty();
+    }
+
+    @Override
+    public void processSuccessfulCodeRequest(String ipAddress, String persistentSessionId) {
+        if (codeRequest.getJourneyType().equals(JourneyType.REGISTRATION)) {
+            dynamoService.setAuthAppAndAccountVerified(
+                    emailAddress, codeRequest.getProfileInformation());
+            submitAuditEvent(
+                    FrontendAuditableEvent.UPDATE_PROFILE_AUTH_APP,
+                    userContext,
+                    AUTH_APP,
+                    AuditService.UNKNOWN,
+                    ipAddress,
+                    persistentSessionId);
+        }
     }
 
     public boolean isCodeValid(String code, String secret) {

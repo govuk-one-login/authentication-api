@@ -1,10 +1,12 @@
-package uk.gov.di.authentication.shared.validation;
+package uk.gov.di.authentication.frontendapi.validation;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -18,11 +20,12 @@ class MfaCodeProcessorFactoryTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
+    private final AuditService auditService = mock(AuditService.class);
     private final UserContext userContext = mock(UserContext.class);
     private final Session session = mock(Session.class);
     private final MfaCodeProcessorFactory mfaCodeProcessorFactory =
             new MfaCodeProcessorFactory(
-                    configurationService, codeStorageService, authenticationService);
+                    configurationService, codeStorageService, authenticationService, auditService);
 
     @BeforeEach
     void setUp() {
@@ -36,9 +39,13 @@ class MfaCodeProcessorFactoryTest {
     void whenMfaMethodGeneratesAuthAppCodeProcessor() {
         when(session.getEmailAddress()).thenReturn("test@test.com");
         when(userContext.getSession()).thenReturn(session);
+
         var mfaCodeProcessor =
                 mfaCodeProcessorFactory.getMfaCodeProcessor(
-                        MFAMethodType.AUTH_APP, JourneyType.REGISTRATION, userContext);
+                        MFAMethodType.AUTH_APP,
+                        new VerifyMfaCodeRequest(
+                                MFAMethodType.AUTH_APP, "111111", JourneyType.REGISTRATION),
+                        userContext);
 
         assertInstanceOf(AuthAppCodeProcessor.class, mfaCodeProcessor.get());
     }
@@ -49,7 +56,10 @@ class MfaCodeProcessorFactoryTest {
         when(userContext.getSession()).thenReturn(session);
         var mfaCodeProcessor =
                 mfaCodeProcessorFactory.getMfaCodeProcessor(
-                        MFAMethodType.SMS, JourneyType.REGISTRATION, userContext);
+                        MFAMethodType.SMS,
+                        new VerifyMfaCodeRequest(
+                                MFAMethodType.SMS, "111111", JourneyType.REGISTRATION),
+                        userContext);
 
         assertInstanceOf(PhoneNumberCodeProcessor.class, mfaCodeProcessor.get());
     }

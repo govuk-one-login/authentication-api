@@ -1,11 +1,15 @@
-package uk.gov.di.authentication.shared.validation;
+package uk.gov.di.authentication.frontendapi.validation;
 
 import uk.gov.di.authentication.entity.CodeRequest;
+import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.ValidationHelper;
+import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.state.UserContext;
@@ -18,30 +22,34 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
 
     private final ConfigurationService configurationService;
     private final UserContext userContext;
-    private final JourneyType journeyType;
+    private final CodeRequest codeRequest;
 
     PhoneNumberCodeProcessor(
             CodeStorageService codeStorageService,
             UserContext userContext,
             ConfigurationService configurationService,
-            JourneyType journeyType) {
+            CodeRequest codeRequest,
+            AuthenticationService dynamoService,
+            AuditService auditService) {
         super(
                 userContext.getSession().getEmailAddress(),
                 codeStorageService,
-                configurationService.getCodeMaxRetries());
+                configurationService.getCodeMaxRetries(),
+                dynamoService,
+                auditService);
         this.userContext = userContext;
         this.configurationService = configurationService;
-        this.journeyType = journeyType;
+        this.codeRequest = codeRequest;
     }
 
     @Override
-    public Optional<ErrorResponse> validateCode(CodeRequest codeRequest) {
-        if (journeyType.equals(JourneyType.SIGN_IN)) {
+    public Optional<ErrorResponse> validateCode() {
+        if (codeRequest.getJourneyType().equals(JourneyType.SIGN_IN)) {
             LOG.error("Sign In Phone number codes are not supported");
             throw new RuntimeException("Sign In Phone number codes are not supported");
         }
         var notificationType =
-                journeyType.equals(JourneyType.REGISTRATION)
+                codeRequest.getJourneyType().equals(JourneyType.REGISTRATION)
                         ? NotificationType.VERIFY_PHONE_NUMBER
                         : NotificationType.MFA_SMS;
         if (isCodeBlockedForSession()) {
@@ -67,5 +75,20 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
                 codeStorageService,
                 emailAddress,
                 configurationService.getCodeMaxRetries());
+    }
+
+    @Override
+    public void processSuccessfulCodeRequest(String ipAddress, String persistentSessionId) {
+        if (codeRequest.getJourneyType().equals(JourneyType.REGISTRATION)) {
+            dynamoService.updatePhoneNumberAndAccountVerifiedStatus(
+                    emailAddress, codeRequest.getProfileInformation(), true, true);
+            submitAuditEvent(
+                    FrontendAuditableEvent.UPDATE_PROFILE_PHONE_NUMBER,
+                    userContext,
+                    MFAMethodType.SMS,
+                    codeRequest.getProfileInformation(),
+                    ipAddress,
+                    persistentSessionId);
+        }
     }
 }
