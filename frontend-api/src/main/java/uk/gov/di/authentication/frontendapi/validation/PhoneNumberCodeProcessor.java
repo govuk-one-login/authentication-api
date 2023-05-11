@@ -79,17 +79,16 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
 
     @Override
     public void processSuccessfulCodeRequest(String ipAddress, String persistentSessionId) {
-        switch (codeRequest.getJourneyType()) {
-            case REGISTRATION:
-                dynamoService.updatePhoneNumberAndAccountVerifiedStatus(
-                        emailAddress, codeRequest.getProfileInformation(), true, true);
-                submitAuditEvent(
-                        FrontendAuditableEvent.UPDATE_PROFILE_PHONE_NUMBER,
-                        userContext,
-                        MFAMethodType.SMS,
-                        codeRequest.getProfileInformation(),
-                        ipAddress,
-                        persistentSessionId);
+        if (codeRequest.getJourneyType().equals(JourneyType.REGISTRATION)) {
+            dynamoService.updatePhoneNumberAndAccountVerifiedStatus(
+                    emailAddress, codeRequest.getProfileInformation(), true, true);
+            submitAuditEvent(
+                    FrontendAuditableEvent.UPDATE_PROFILE_PHONE_NUMBER,
+                    userContext,
+                    MFAMethodType.SMS,
+                    codeRequest.getProfileInformation(),
+                    ipAddress,
+                    persistentSessionId);
         }
     }
 }

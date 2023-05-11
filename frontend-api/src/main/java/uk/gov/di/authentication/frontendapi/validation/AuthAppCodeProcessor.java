@@ -95,18 +95,16 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
 
     @Override
     public void processSuccessfulCodeRequest(String ipAddress, String persistentSessionId) {
-        switch (codeRequest.getJourneyType()) {
-            case REGISTRATION:
-                dynamoService.setAuthAppAndAccountVerified(
-                        emailAddress, codeRequest.getProfileInformation());
-                submitAuditEvent(
-                        FrontendAuditableEvent.UPDATE_PROFILE_AUTH_APP,
-                        userContext,
-                        AUTH_APP,
-                        AuditService.UNKNOWN,
-                        ipAddress,
-                        persistentSessionId);
-                return;
+        if (codeRequest.getJourneyType().equals(JourneyType.REGISTRATION)) {
+            dynamoService.setAuthAppAndAccountVerified(
+                    emailAddress, codeRequest.getProfileInformation());
+            submitAuditEvent(
+                    FrontendAuditableEvent.UPDATE_PROFILE_AUTH_APP,
+                    userContext,
+                    AUTH_APP,
+                    AuditService.UNKNOWN,
+                    ipAddress,
+                    persistentSessionId);
         }
     }
 

@@ -441,7 +441,6 @@ public class DynamoService implements AuthenticationService {
                                         .build())
                         .withAccountVerified(1)
                         .withUpdated(dateTime);
-        ;
 
         dynamoDbEnhancedClient.transactWriteItems(
                 TransactWriteItemsEnhancedRequest.builder()

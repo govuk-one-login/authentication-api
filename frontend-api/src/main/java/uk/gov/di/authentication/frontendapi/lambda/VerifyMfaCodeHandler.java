@@ -111,7 +111,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         try {
             var session = userContext.getSession();
             var mfaMethodType = codeRequest.getMfaMethodType();
-            var journeyType = codeRequest.getJourneyType();
 
             var mfaCodeProcessor =
                     mfaCodeProcessorFactory
