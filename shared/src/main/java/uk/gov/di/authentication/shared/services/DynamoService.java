@@ -497,6 +497,33 @@ public class DynamoService implements AuthenticationService {
     }
 
     @Override
+    public void setVerifiedAuthAppAndRemoveExistingMfaMethod(String email, String credentialValue) {
+        var dateTime = NowHelper.toTimestampString(NowHelper.now());
+        var mfaMethod =
+                new MFAMethod(
+                        MFAMethodType.AUTH_APP.getValue(), credentialValue, true, true, dateTime);
+        var userCredentials =
+                dynamoUserCredentialsTable
+                        .getItem(
+                                Key.builder()
+                                        .partitionValue(email.toLowerCase(Locale.ROOT))
+                                        .build())
+                        .setMfaMethod(mfaMethod);
+
+        var userProfile =
+                dynamoUserProfileTable.getItem(
+                        Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
+        userProfile.setPhoneNumber(null);
+        userProfile.setPhoneNumberVerified(false);
+
+        dynamoDbEnhancedClient.transactWriteItems(
+                TransactWriteItemsEnhancedRequest.builder()
+                        .addUpdateItem(dynamoUserCredentialsTable, userCredentials)
+                        .addUpdateItem(dynamoUserProfileTable, userProfile)
+                        .build());
+    }
+
+    @Override
     public UserProfile getUserProfileFromSubject(String subject) {
         QueryConditional q =
                 QueryConditional.keyEqualTo(Key.builder().partitionValue(subject).build());

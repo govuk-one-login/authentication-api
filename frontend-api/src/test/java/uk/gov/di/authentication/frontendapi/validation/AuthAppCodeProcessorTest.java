@@ -31,7 +31,9 @@ import java.util.stream.Stream;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -171,6 +173,8 @@ class AuthAppCodeProcessorTest {
 
         authAppCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
 
+        verify(mockDynamoService, never())
+                .setVerifiedAuthAppAndRemoveExistingMfaMethod(anyString(), anyString());
         verify(mockDynamoService).setAuthAppAndAccountVerified(TEST_EMAIL_ADDRESS, AUTH_APP_SECRET);
         verify(mockAuditService)
                 .submitAuditEvent(
@@ -188,7 +192,7 @@ class AuthAppCodeProcessorTest {
     }
 
     @Test
-    void shouldNotUpdateDynamoOrCreateAuditEventWhenAccountRecovery() {
+    void shouldCallDynamoToUpdateMfaMethodAndCreateAuditEventWhenAccountRecovery() {
         setUpSuccessfulCodeRequest(
                 new VerifyMfaCodeRequest(
                         MFAMethodType.AUTH_APP,
@@ -198,8 +202,22 @@ class AuthAppCodeProcessorTest {
 
         authAppCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
 
-        verifyNoInteractions(mockDynamoService);
-        verifyNoInteractions(mockAuditService);
+        verify(mockDynamoService, never()).setAuthAppAndAccountVerified(anyString(), anyString());
+        verify(mockDynamoService)
+                .setVerifiedAuthAppAndRemoveExistingMfaMethod(TEST_EMAIL_ADDRESS, AUTH_APP_SECRET);
+        verify(mockAuditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.UPDATE_PROFILE_AUTH_APP,
+                        CLIENT_SESSION_ID,
+                        SESSION_ID,
+                        AuditService.UNKNOWN,
+                        INTERNAL_SUB_ID,
+                        TEST_EMAIL_ADDRESS,
+                        IP_ADDRESS,
+                        AuditService.UNKNOWN,
+                        PERSISTENT_ID,
+                        pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
+                        pair("account-recovery", true));
     }
 
     @Test
