@@ -82,7 +82,7 @@ class AuthAppCodeProcessorTest {
                 authAppStub.getAuthAppOneTimeCode(AUTH_APP_SECRET, NowHelper.now().getTime());
         setUpValidAuthCode(
                 new VerifyMfaCodeRequest(
-                        MFAMethodType.AUTH_APP, authCode, false, journeyType, authAppSecret));
+                        MFAMethodType.AUTH_APP, authCode, journeyType, authAppSecret));
 
         assertEquals(Optional.empty(), authAppCodeProcessor.validateCode());
     }
@@ -93,7 +93,7 @@ class AuthAppCodeProcessorTest {
             JourneyType journeyType, String authAppSecret) {
         setUpBlockedUser(
                 new VerifyMfaCodeRequest(
-                        MFAMethodType.AUTH_APP, "000000", false, journeyType, authAppSecret));
+                        MFAMethodType.AUTH_APP, "000000", journeyType, authAppSecret));
 
         assertEquals(Optional.of(ErrorResponse.ERROR_1042), authAppCodeProcessor.validateCode());
     }
@@ -103,7 +103,7 @@ class AuthAppCodeProcessorTest {
     void returnsCorrectErrorWhenRetryLimitExceeded(JourneyType journeyType, String authAppSecret) {
         setUpRetryLimitExceededUser(
                 new VerifyMfaCodeRequest(
-                        MFAMethodType.AUTH_APP, "000000", false, journeyType, authAppSecret));
+                        MFAMethodType.AUTH_APP, "000000", journeyType, authAppSecret));
 
         assertEquals(Optional.of(ErrorResponse.ERROR_1042), authAppCodeProcessor.validateCode());
     }
@@ -112,7 +112,7 @@ class AuthAppCodeProcessorTest {
     @MethodSource("validatorParams")
     void returnsCorrectErrorWhenNoAuthCodeIsFound(JourneyType journeyType) {
         setUpNoAuthCodeForUser(
-                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, "000000", false, journeyType));
+                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, "000000", journeyType));
 
         assertEquals(Optional.of(ErrorResponse.ERROR_1043), authAppCodeProcessor.validateCode());
     }
@@ -123,7 +123,6 @@ class AuthAppCodeProcessorTest {
                 new VerifyMfaCodeRequest(
                         MFAMethodType.AUTH_APP,
                         "000000",
-                        true,
                         JourneyType.REGISTRATION,
                         "not-base-32-encoded-secret"));
 
@@ -137,7 +136,7 @@ class AuthAppCodeProcessorTest {
     void returnsCorrectErrorWhenAuthCodeIsInvalid(JourneyType journeyType, String authAppSecret) {
         setUpValidAuthCode(
                 new VerifyMfaCodeRequest(
-                        MFAMethodType.AUTH_APP, "111111", true, journeyType, authAppSecret));
+                        MFAMethodType.AUTH_APP, "111111", journeyType, authAppSecret));
 
         assertEquals(Optional.of(ErrorResponse.ERROR_1043), authAppCodeProcessor.validateCode());
     }
@@ -146,8 +145,7 @@ class AuthAppCodeProcessorTest {
     @MethodSource("validatorParams")
     void returnsCorrectErrorWhenOtpCodeIsMissing(JourneyType journeyType, String authAppSecret) {
         setUpValidAuthCode(
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.AUTH_APP, "", true, journeyType, authAppSecret));
+                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, "", journeyType, authAppSecret));
 
         assertEquals(Optional.of(ErrorResponse.ERROR_1043), authAppCodeProcessor.validateCode());
     }
@@ -157,7 +155,7 @@ class AuthAppCodeProcessorTest {
     void returnsCorrectErrorWhenOtpCodeIsTooLong(JourneyType journeyType, String authAppSecret) {
         setUpValidAuthCode(
                 new VerifyMfaCodeRequest(
-                        MFAMethodType.AUTH_APP, "999999999999", true, journeyType, authAppSecret));
+                        MFAMethodType.AUTH_APP, "999999999999", journeyType, authAppSecret));
 
         assertEquals(Optional.of(ErrorResponse.ERROR_1043), authAppCodeProcessor.validateCode());
     }
@@ -168,7 +166,6 @@ class AuthAppCodeProcessorTest {
                 new VerifyMfaCodeRequest(
                         MFAMethodType.AUTH_APP,
                         "111111",
-                        true,
                         JourneyType.REGISTRATION,
                         AUTH_APP_SECRET));
 
@@ -195,7 +192,6 @@ class AuthAppCodeProcessorTest {
                 new VerifyMfaCodeRequest(
                         MFAMethodType.AUTH_APP,
                         "111111",
-                        true,
                         JourneyType.ACCOUNT_RECOVERY,
                         AUTH_APP_SECRET));
 
@@ -208,8 +204,7 @@ class AuthAppCodeProcessorTest {
     @Test
     void shouldNotUpdateDynamoOrCreateAuditEventWhenSignIn() {
         setUpSuccessfulCodeRequest(
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.AUTH_APP, "111111", true, JourneyType.SIGN_IN));
+                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, "111111", JourneyType.SIGN_IN));
 
         authAppCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
 

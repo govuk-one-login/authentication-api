@@ -44,7 +44,7 @@ class MfaCodeProcessorFactoryTest {
                 mfaCodeProcessorFactory.getMfaCodeProcessor(
                         MFAMethodType.AUTH_APP,
                         new VerifyMfaCodeRequest(
-                                MFAMethodType.AUTH_APP, "111111", false, JourneyType.REGISTRATION),
+                                MFAMethodType.AUTH_APP, "111111", JourneyType.REGISTRATION),
                         userContext);
 
         assertInstanceOf(AuthAppCodeProcessor.class, mfaCodeProcessor.get());
@@ -58,7 +58,7 @@ class MfaCodeProcessorFactoryTest {
                 mfaCodeProcessorFactory.getMfaCodeProcessor(
                         MFAMethodType.SMS,
                         new VerifyMfaCodeRequest(
-                                MFAMethodType.SMS, "111111", false, JourneyType.REGISTRATION),
+                                MFAMethodType.SMS, "111111", JourneyType.REGISTRATION),
                         userContext);
 
         assertInstanceOf(PhoneNumberCodeProcessor.class, mfaCodeProcessor.get());

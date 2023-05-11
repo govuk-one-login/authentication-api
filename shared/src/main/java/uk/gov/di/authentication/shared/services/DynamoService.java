@@ -360,12 +360,19 @@ public class DynamoService implements AuthenticationService {
                 TransactWriteItemsEnhancedRequest.builder()
                         .addUpdateItem(dynamoUserProfileTable, userProfile);
 
-        userCredentials.getMfaMethods().stream()
-                .filter(
-                        method ->
-                                method.getMfaMethodType().equals(MFAMethodType.AUTH_APP.getValue())
-                                        && method.isEnabled())
-                .findFirst()
+        Optional.ofNullable(userCredentials.getMfaMethods())
+                .flatMap(
+                        mf ->
+                                mf.stream()
+                                        .filter(
+                                                method ->
+                                                        method.getMfaMethodType()
+                                                                        .equals(
+                                                                                MFAMethodType
+                                                                                        .AUTH_APP
+                                                                                        .getValue())
+                                                                && method.isEnabled())
+                                        .findFirst())
                 .ifPresent(
                         t -> {
                             userCredentials

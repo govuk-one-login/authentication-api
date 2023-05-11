@@ -180,7 +180,6 @@ class VerifyMfaCodeHandlerTest {
                         new VerifyMfaCodeRequest(
                                 MFAMethodType.AUTH_APP,
                                 CODE,
-                                true,
                                 JourneyType.REGISTRATION,
                                 AUTH_APP_SECRET));
 
@@ -223,11 +222,7 @@ class VerifyMfaCodeHandlerTest {
         var result =
                 makeCallWithCode(
                         new VerifyMfaCodeRequest(
-                                MFAMethodType.SMS,
-                                CODE,
-                                true,
-                                JourneyType.REGISTRATION,
-                                PHONE_NUMBER));
+                                MFAMethodType.SMS, CODE, JourneyType.REGISTRATION, PHONE_NUMBER));
 
         assertThat(result, hasStatus(204));
         assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
@@ -263,7 +258,7 @@ class VerifyMfaCodeHandlerTest {
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
         session.setNewAccount(Session.AccountState.EXISTING);
         var codeRequest =
-                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, false, JourneyType.SIGN_IN);
+                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, JourneyType.SIGN_IN);
         var result = makeCallWithCode(codeRequest);
 
         assertThat(result, hasStatus(204));
@@ -294,11 +289,7 @@ class VerifyMfaCodeHandlerTest {
                 .thenReturn(Optional.empty());
         var codeRequest =
                 new VerifyMfaCodeRequest(
-                        MFAMethodType.AUTH_APP,
-                        CODE,
-                        true,
-                        JourneyType.REGISTRATION,
-                        AUTH_APP_SECRET);
+                        MFAMethodType.AUTH_APP, CODE, JourneyType.REGISTRATION, AUTH_APP_SECRET);
         var result = makeCallWithCode(codeRequest);
 
         assertThat(result, hasStatus(400));
@@ -321,7 +312,7 @@ class VerifyMfaCodeHandlerTest {
                 .thenReturn(Optional.of(authAppCodeProcessor));
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.of(ErrorResponse.ERROR_1042));
         var codeRequest =
-                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, false, JourneyType.SIGN_IN);
+                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, JourneyType.SIGN_IN);
         var result = makeCallWithCode(codeRequest);
 
         assertThat(result, hasStatus(400));
@@ -355,7 +346,7 @@ class VerifyMfaCodeHandlerTest {
         when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
         var codeRequest =
-                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, false, JourneyType.SIGN_IN);
+                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, JourneyType.SIGN_IN);
         var result = makeCallWithCode(codeRequest);
 
         assertThat(result, hasStatus(400));
@@ -389,11 +380,7 @@ class VerifyMfaCodeHandlerTest {
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.of(ErrorResponse.ERROR_1043));
         var codeRequest =
                 new VerifyMfaCodeRequest(
-                        MFAMethodType.AUTH_APP,
-                        CODE,
-                        false,
-                        JourneyType.SIGN_IN,
-                        profileInformation);
+                        MFAMethodType.AUTH_APP, CODE, JourneyType.SIGN_IN, profileInformation);
         var result = makeCallWithCode(codeRequest);
 
         assertThat(result, hasStatus(400));
@@ -427,7 +414,7 @@ class VerifyMfaCodeHandlerTest {
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1034));
         var codeRequest =
                 new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS, CODE, true, JourneyType.REGISTRATION, PHONE_NUMBER);
+                        MFAMethodType.SMS, CODE, JourneyType.REGISTRATION, PHONE_NUMBER);
         var result = makeCallWithCode(codeRequest);
 
         assertThat(result, hasStatus(400));
@@ -463,7 +450,7 @@ class VerifyMfaCodeHandlerTest {
                 .thenReturn(true);
         var codeRequest =
                 new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS, CODE, true, JourneyType.REGISTRATION, PHONE_NUMBER);
+                        MFAMethodType.SMS, CODE, JourneyType.REGISTRATION, PHONE_NUMBER);
         var result = makeCallWithCode(codeRequest);
 
         assertThat(result, hasStatus(400));
@@ -496,7 +483,7 @@ class VerifyMfaCodeHandlerTest {
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1037));
         var codeRequest =
                 new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS, CODE, true, JourneyType.REGISTRATION, PHONE_NUMBER);
+                        MFAMethodType.SMS, CODE, JourneyType.REGISTRATION, PHONE_NUMBER);
         var result = makeCallWithCode(codeRequest);
 
         assertThat(result, hasStatus(400));
@@ -532,7 +519,6 @@ class VerifyMfaCodeHandlerTest {
                         new VerifyMfaCodeRequest(
                                 MFAMethodType.AUTH_APP,
                                 CODE,
-                                true,
                                 JourneyType.REGISTRATION,
                                 "not-base-32-encoded-secret"));
 

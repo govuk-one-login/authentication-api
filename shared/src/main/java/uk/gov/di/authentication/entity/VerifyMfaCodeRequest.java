@@ -10,23 +10,17 @@ public class VerifyMfaCodeRequest extends CodeRequest {
 
     public VerifyMfaCodeRequest() {}
 
-    public VerifyMfaCodeRequest(
-            MFAMethodType mfaMethodType,
-            String code,
-            boolean isRegistration,
-            JourneyType journeyType) {
-        this(mfaMethodType, code, isRegistration, journeyType, null);
+    public VerifyMfaCodeRequest(MFAMethodType mfaMethodType, String code, JourneyType journeyType) {
+        this(mfaMethodType, code, journeyType, null);
     }
 
     public VerifyMfaCodeRequest(
             MFAMethodType mfaMethodType,
             String code,
-            boolean isRegistration,
             JourneyType journeyType,
             String profileInformation) {
         this.mfaMethodType = mfaMethodType;
         this.code = code;
-        this.isRegistration = isRegistration;
         this.journeyType = journeyType;
         this.profileInformation = profileInformation;
     }
@@ -36,15 +30,7 @@ public class VerifyMfaCodeRequest extends CodeRequest {
     @Required
     private MFAMethodType mfaMethodType;
 
-    @SerializedName("isRegistration")
-    @Expose
-    private boolean isRegistration;
-
     public MFAMethodType getMfaMethodType() {
         return mfaMethodType;
-    }
-
-    public boolean isRegistration() {
-        return isRegistration;
     }
 }
