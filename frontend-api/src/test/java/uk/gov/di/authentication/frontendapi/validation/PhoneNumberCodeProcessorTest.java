@@ -22,7 +22,10 @@ import java.util.Optional;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -122,6 +125,8 @@ class PhoneNumberCodeProcessorTest {
         verify(authenticationService)
                 .updatePhoneNumberAndAccountVerifiedStatus(
                         TEST_EMAIL_ADDRESS, PHONE_NUMBER, true, true);
+        verify(authenticationService, never())
+                .setVerifiedPhoneNumberAndRemoveAuthAppIfPresent(anyString(), anyString());
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.UPDATE_PROFILE_PHONE_NUMBER,
@@ -133,19 +138,36 @@ class PhoneNumberCodeProcessorTest {
                         IP_ADDRESS,
                         PHONE_NUMBER,
                         PERSISTENT_ID,
-                        pair("mfa-type", MFAMethodType.SMS.getValue()));
+                        pair("mfa-type", MFAMethodType.SMS.getValue()),
+                        pair("account-recovery", false));
     }
 
     @Test
-    void shouldNotUpdateDynamoOrCreateAuditEventWhenAccountRecovery() {
+    void shouldCallDynamoToUpdateMfaMethodAndCreateAuditEventWhenAccountRecovery() {
         setupPhoneNumberCode(
                 new VerifyMfaCodeRequest(
                         MFAMethodType.SMS, VALID_CODE, JourneyType.ACCOUNT_RECOVERY, PHONE_NUMBER));
 
         phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
 
-        verifyNoInteractions(authenticationService);
-        verifyNoInteractions(auditService);
+        verify(authenticationService)
+                .setVerifiedPhoneNumberAndRemoveAuthAppIfPresent(TEST_EMAIL_ADDRESS, PHONE_NUMBER);
+        verify(authenticationService, never())
+                .updatePhoneNumberAndAccountVerifiedStatus(
+                        anyString(), anyString(), anyBoolean(), anyBoolean());
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.UPDATE_PROFILE_PHONE_NUMBER,
+                        CLIENT_SESSION_ID,
+                        SESSION_ID,
+                        AuditService.UNKNOWN,
+                        INTERNAL_SUB_ID,
+                        TEST_EMAIL_ADDRESS,
+                        IP_ADDRESS,
+                        PHONE_NUMBER,
+                        PERSISTENT_ID,
+                        pair("mfa-type", MFAMethodType.SMS.getValue()),
+                        pair("account-recovery", true));
     }
 
     @Test

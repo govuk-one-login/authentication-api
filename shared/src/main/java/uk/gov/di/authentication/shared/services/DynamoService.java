@@ -385,6 +385,53 @@ public class DynamoService implements AuthenticationService {
     }
 
     @Override
+    public void setVerifiedPhoneNumberAndRemoveAuthAppIfPresent(String email, String phoneNumber) {
+        var dateTime = NowHelper.toTimestampString(NowHelper.now());
+        var formattedPhoneNumber = PhoneNumberHelper.formatPhoneNumber(phoneNumber);
+        var userProfile =
+                dynamoUserProfileTable
+                        .getItem(
+                                Key.builder()
+                                        .partitionValue(email.toLowerCase(Locale.ROOT))
+                                        .build())
+                        .withPhoneNumber(formattedPhoneNumber)
+                        .withPhoneNumberVerified(true)
+                        .withUpdated(dateTime);
+
+        var userCredentials =
+                dynamoUserCredentialsTable.getItem(
+                        Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
+
+        var transactWriteBuilder =
+                TransactWriteItemsEnhancedRequest.builder()
+                        .addUpdateItem(dynamoUserProfileTable, userProfile);
+
+        Optional.ofNullable(userCredentials.getMfaMethods())
+                .flatMap(
+                        mf ->
+                                mf.stream()
+                                        .filter(
+                                                method ->
+                                                        method.getMfaMethodType()
+                                                                        .equals(
+                                                                                MFAMethodType
+                                                                                        .AUTH_APP
+                                                                                        .getValue())
+                                                                && method.isEnabled()
+                                                                && method.isMethodVerified())
+                                        .findFirst())
+                .ifPresent(
+                        t -> {
+                            userCredentials
+                                    .removeAuthAppByCredentialIfPresent(t.getCredentialValue())
+                                    .withUpdated(dateTime);
+                            transactWriteBuilder.addUpdateItem(
+                                    dynamoUserCredentialsTable, userCredentials);
+                        });
+        dynamoDbEnhancedClient.transactWriteItems(transactWriteBuilder.build());
+    }
+
+    @Override
     public Optional<String> getPhoneNumber(String email) {
         return Optional.ofNullable(
                 dynamoUserProfileTable

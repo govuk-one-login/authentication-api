@@ -49,9 +49,9 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
             throw new RuntimeException("Sign In Phone number codes are not supported");
         }
         var notificationType =
-                codeRequest.getJourneyType().equals(JourneyType.REGISTRATION)
-                        ? NotificationType.VERIFY_PHONE_NUMBER
-                        : NotificationType.MFA_SMS;
+                codeRequest.getJourneyType().equals(JourneyType.SIGN_IN)
+                        ? NotificationType.MFA_SMS
+                        : NotificationType.VERIFY_PHONE_NUMBER;
         if (isCodeBlockedForSession()) {
             LOG.info("Code blocked for session");
             return Optional.of(ErrorResponse.ERROR_1034);
@@ -79,16 +79,31 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
 
     @Override
     public void processSuccessfulCodeRequest(String ipAddress, String persistentSessionId) {
-        if (codeRequest.getJourneyType().equals(JourneyType.REGISTRATION)) {
-            dynamoService.updatePhoneNumberAndAccountVerifiedStatus(
-                    emailAddress, codeRequest.getProfileInformation(), true, true);
-            submitAuditEvent(
-                    FrontendAuditableEvent.UPDATE_PROFILE_PHONE_NUMBER,
-                    userContext,
-                    MFAMethodType.SMS,
-                    codeRequest.getProfileInformation(),
-                    ipAddress,
-                    persistentSessionId);
+        switch (codeRequest.getJourneyType()) {
+            case REGISTRATION:
+                dynamoService.updatePhoneNumberAndAccountVerifiedStatus(
+                        emailAddress, codeRequest.getProfileInformation(), true, true);
+                submitAuditEvent(
+                        FrontendAuditableEvent.UPDATE_PROFILE_PHONE_NUMBER,
+                        userContext,
+                        MFAMethodType.SMS,
+                        codeRequest.getProfileInformation(),
+                        ipAddress,
+                        persistentSessionId,
+                        false);
+                break;
+            case ACCOUNT_RECOVERY:
+                dynamoService.setVerifiedPhoneNumberAndRemoveAuthAppIfPresent(
+                        emailAddress, codeRequest.getProfileInformation());
+                submitAuditEvent(
+                        FrontendAuditableEvent.UPDATE_PROFILE_PHONE_NUMBER,
+                        userContext,
+                        MFAMethodType.SMS,
+                        codeRequest.getProfileInformation(),
+                        ipAddress,
+                        persistentSessionId,
+                        true);
+                break;
         }
     }
 }

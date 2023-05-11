@@ -140,6 +140,15 @@ public class UserCredentials {
         return this;
     }
 
+    public UserCredentials removeAuthAppByCredentialIfPresent(String authAppCredential) {
+        if (this.mfaMethods == null) {
+            return this;
+        } else {
+            this.mfaMethods.removeIf(t -> t.getCredentialValue().equals(authAppCredential));
+            return this;
+        }
+    }
+
     @DynamoDbAttribute(ATTRIBUTE_TEST_USER)
     @DynamoDbSecondaryPartitionKey(indexNames = {"TestUserIndex"})
     public int getTestUser() {

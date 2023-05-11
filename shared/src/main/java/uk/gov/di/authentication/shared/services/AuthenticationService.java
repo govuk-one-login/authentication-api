@@ -41,6 +41,8 @@ public interface AuthenticationService {
     void updatePhoneNumberAndAccountVerifiedStatus(
             String email, String phoneNumber, boolean phoneNumberVerified, boolean accountVerified);
 
+    void setVerifiedPhoneNumberAndRemoveAuthAppIfPresent(String email, String phoneNumber);
+
     void setAccountVerified(String email);
 
     Optional<String> getPhoneNumber(String email);

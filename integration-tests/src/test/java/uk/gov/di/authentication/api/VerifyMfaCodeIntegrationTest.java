@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.lambda.VerifyMfaCodeHandler;
@@ -57,6 +58,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     public static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final String AUTH_APP_SECRET_BASE_32 = "ORSXG5BNORSXQ5A=";
     private static final String PHONE_NUMBER = "+447700900000";
+    private static final String ALTERNATIVE_PHONE_NUMBER = "+447316763843";
     private static final AuthAppStub AUTH_APP_STUB = new AuthAppStub();
     private static final String CLIENT_NAME = "test-client-name";
     private String sessionId;
@@ -449,6 +451,61 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
+    void whenValidPhoneNumberOtpCodeForAccountRecoveryReturn204AndUpdatePhoneNumber() {
+        var code = redis.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 900);
+        userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, ALTERNATIVE_PHONE_NUMBER);
+        var codeRequest =
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.SMS, code, JourneyType.ACCOUNT_RECOVERY, PHONE_NUMBER);
+
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
+
+        assertThat(response, hasStatus(204));
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue, List.of(CODE_VERIFIED, UPDATE_PROFILE_PHONE_NUMBER));
+        assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));
+        assertTrue(
+                userStore
+                        .getPhoneNumberForUser(EMAIL_ADDRESS)
+                        .filter(t -> t.equals(PHONE_NUMBER))
+                        .isPresent());
+        assertTrue(userStore.isPhoneNumberVerified(EMAIL_ADDRESS));
+        assertThat(Objects.isNull(userStore.getMfaMethod(EMAIL_ADDRESS)), equalTo(true));
+    }
+
+    @Test
+    void
+            whenValidPhoneNumberOtpCodeForAccountRecoveryReturn204UpdatePhoneNumberAndRemoveAuthAppWhenPresent() {
+        var code = redis.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 900);
+        setUpAuthAppRequest(JourneyType.ACCOUNT_RECOVERY);
+        var codeRequest =
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.SMS, code, JourneyType.ACCOUNT_RECOVERY, PHONE_NUMBER);
+
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
+
+        assertThat(response, hasStatus(204));
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue, List.of(CODE_VERIFIED, UPDATE_PROFILE_PHONE_NUMBER));
+        assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));
+        assertTrue(
+                userStore
+                        .getPhoneNumberForUser(EMAIL_ADDRESS)
+                        .filter(t -> t.equals(PHONE_NUMBER))
+                        .isPresent());
+        assertTrue(userStore.isPhoneNumberVerified(EMAIL_ADDRESS));
+        assertThat(userStore.getMfaMethod(EMAIL_ADDRESS).isEmpty(), equalTo(true));
+    }
+
+    @Test
     void shouldReturn204WhenSuccessfulSMSRegistrationRequestAndOverwriteExistingPhoneNumber() {
         userStore.addVerifiedPhoneNumber(EMAIL_ADDRESS, "+447700900111");
         var code = redis.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 900);
@@ -494,11 +551,13 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertTrue(userStore.isPhoneNumberVerified(EMAIL_ADDRESS));
     }
 
-    @Test
-    void whenInvalidPhoneNumberCodeHasExpiredForRegistrationReturn400() {
+    @ParameterizedTest
+    @EnumSource(
+            value = JourneyType.class,
+            names = {"REGISTRATION", "ACCOUNT_RECOVERY"})
+    void whenInvalidPhoneNumberCodeHasExpiredReturn400(JourneyType accountRecovery) {
         var code = redis.generateAndSavePhoneNumberCode(EMAIL_ADDRESS, 1);
-        var codeRequest =
-                new VerifyMfaCodeRequest(MFAMethodType.SMS, code, JourneyType.REGISTRATION);
+        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.SMS, code, accountRecovery);
 
         await().pollDelay(Duration.ofSeconds(2)).untilAsserted(() -> assertTrue(true));
 
@@ -513,10 +572,12 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(INVALID_CODE_SENT));
     }
 
-    @Test
-    void whenInvalidPhoneNumberCodeForRegistrationReturn400() {
-        var codeRequest =
-                new VerifyMfaCodeRequest(MFAMethodType.SMS, "123456", JourneyType.REGISTRATION);
+    @ParameterizedTest
+    @EnumSource(
+            value = JourneyType.class,
+            names = {"REGISTRATION", "ACCOUNT_RECOVERY"})
+    void whenInvalidPhoneNumberCodeReturn400(JourneyType journeyType) {
+        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.SMS, "123456", journeyType);
 
         var response =
                 makeRequest(
@@ -529,13 +590,15 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(INVALID_CODE_SENT));
     }
 
-    @Test
-    void whenPhoneNumberCodeIsBlockedForRegistrationReturn400() throws Json.JsonException {
+    @ParameterizedTest
+    @EnumSource(
+            value = JourneyType.class,
+            names = {"REGISTRATION", "ACCOUNT_RECOVERY"})
+    void whenPhoneNumberCodeIsBlockedReturn400(JourneyType journeyType) throws Json.JsonException {
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
         redis.blockMfaCodesForEmail(EMAIL_ADDRESS);
 
-        var codeRequest =
-                new VerifyMfaCodeRequest(MFAMethodType.SMS, "123456", JourneyType.REGISTRATION);
+        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.SMS, "123456", journeyType);
 
         var response =
                 makeRequest(
@@ -546,13 +609,15 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList(CODE_MAX_RETRIES_REACHED));
     }
 
-    @Test
-    void whenPhoneNumberCodeRetriesLimitExceededForRegistrationBlockEmailAndReturn400()
+    @ParameterizedTest
+    @EnumSource(
+            value = JourneyType.class,
+            names = {"REGISTRATION", "ACCOUNT_RECOVERY"})
+    void whenPhoneNumberCodeRetriesLimitExceededBlockEmailAndReturn400(JourneyType journeyType)
             throws Json.JsonException {
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
 
-        var codeRequest =
-                new VerifyMfaCodeRequest(MFAMethodType.SMS, "123456", JourneyType.REGISTRATION);
+        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.SMS, "123456", journeyType);
 
         for (int i = 0; i < 5; i++) {
             makeRequest(

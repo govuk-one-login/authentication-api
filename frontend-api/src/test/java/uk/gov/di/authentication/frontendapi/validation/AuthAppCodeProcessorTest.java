@@ -183,7 +183,8 @@ class AuthAppCodeProcessorTest {
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
-                        pair("mfa-type", MFAMethodType.AUTH_APP.getValue()));
+                        pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
+                        pair("account-recovery", false));
     }
 
     @Test

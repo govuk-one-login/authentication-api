@@ -104,7 +104,8 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
                     AUTH_APP,
                     AuditService.UNKNOWN,
                     ipAddress,
-                    persistentSessionId);
+                    persistentSessionId,
+                    false);
         }
     }
 
