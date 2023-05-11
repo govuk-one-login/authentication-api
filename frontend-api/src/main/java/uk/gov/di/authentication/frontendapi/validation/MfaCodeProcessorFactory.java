@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.frontendapi.validation;
 
+import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -29,12 +30,12 @@ public class MfaCodeProcessorFactory {
     }
 
     public Optional<MfaCodeProcessor> getMfaCodeProcessor(
-            MFAMethodType mfaMethodType, JourneyType journeyType, UserContext userContext) {
+            MFAMethodType mfaMethodType, CodeRequest codeRequest, UserContext userContext) {
 
         switch (mfaMethodType) {
             case AUTH_APP:
                 int codeMaxRetries =
-                        journeyType.equals(JourneyType.REGISTRATION)
+                        codeRequest.getJourneyType().equals(JourneyType.REGISTRATION)
                                 ? configurationService.getCodeMaxRetriesRegistration()
                                 : configurationService.getCodeMaxRetries();
                 return Optional.of(
@@ -44,7 +45,7 @@ public class MfaCodeProcessorFactory {
                                 configurationService,
                                 authenticationService,
                                 codeMaxRetries,
-                                journeyType,
+                                codeRequest,
                                 auditService));
             case SMS:
                 return Optional.of(
@@ -52,7 +53,7 @@ public class MfaCodeProcessorFactory {
                                 codeStorageService,
                                 userContext,
                                 configurationService,
-                                journeyType,
+                                codeRequest,
                                 authenticationService,
                                 auditService));
             default:

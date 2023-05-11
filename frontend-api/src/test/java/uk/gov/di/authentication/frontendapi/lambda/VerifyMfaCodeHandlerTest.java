@@ -170,10 +170,9 @@ class VerifyMfaCodeHandlerTest {
     @MethodSource("credentialTrustLevels")
     void shouldReturn204WhenSuccessfulAuthAppCodeRegistrationRequestAndSetMfaMethod(
             CredentialTrustLevel credentialTrustLevel) throws Json.JsonException {
-        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(JourneyType.class), any()))
+        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(authAppCodeProcessor));
-        when(authAppCodeProcessor.validateCode(any(CodeRequest.class)))
-                .thenReturn(Optional.empty());
+        when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
         session.setNewAccount(Session.AccountState.NEW);
         session.setCurrentCredentialStrength(credentialTrustLevel);
         var result =
@@ -189,8 +188,7 @@ class VerifyMfaCodeHandlerTest {
         assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.AUTH_APP));
         assertThat(
                 session.getCurrentCredentialStrength(), equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
-        verify(authAppCodeProcessor)
-                .processSuccessfulCodeRequest(any(CodeRequest.class), anyString(), anyString());
+        verify(authAppCodeProcessor).processSuccessfulCodeRequest(anyString(), anyString());
         verify(codeStorageService, never())
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
@@ -217,10 +215,9 @@ class VerifyMfaCodeHandlerTest {
     @MethodSource("credentialTrustLevels")
     void shouldReturn204WhenSuccessfulPhoneCodeRegistrationRequestAndSetPhoneNumber(
             CredentialTrustLevel credentialTrustLevel) throws Json.JsonException {
-        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(JourneyType.class), any()))
+        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(phoneNumberCodeProcessor));
-        when(phoneNumberCodeProcessor.validateCode(any(CodeRequest.class)))
-                .thenReturn(Optional.empty());
+        when(phoneNumberCodeProcessor.validateCode()).thenReturn(Optional.empty());
         session.setNewAccount(Session.AccountState.NEW);
         session.setCurrentCredentialStrength(credentialTrustLevel);
         var result =
@@ -236,8 +233,7 @@ class VerifyMfaCodeHandlerTest {
         assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
         assertThat(
                 session.getCurrentCredentialStrength(), equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
-        verify(phoneNumberCodeProcessor)
-                .processSuccessfulCodeRequest(any(CodeRequest.class), anyString(), anyString());
+        verify(phoneNumberCodeProcessor).processSuccessfulCodeRequest(anyString(), anyString());
         verify(codeStorageService, never())
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
@@ -262,10 +258,9 @@ class VerifyMfaCodeHandlerTest {
 
     @Test
     void shouldReturn204WhenSuccessfulAuthAppCodeLoginRequest() throws Json.JsonException {
-        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(JourneyType.class), any()))
+        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(authAppCodeProcessor));
-        when(authAppCodeProcessor.validateCode(any(CodeRequest.class)))
-                .thenReturn(Optional.empty());
+        when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
         session.setNewAccount(Session.AccountState.EXISTING);
         var codeRequest =
                 new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, false, JourneyType.SIGN_IN);
@@ -295,7 +290,7 @@ class VerifyMfaCodeHandlerTest {
 
     @Test
     void shouldReturn400IfMfaCodeProcessorCannotBeFound() throws Json.JsonException {
-        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(JourneyType.class), any()))
+        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.empty());
         var codeRequest =
                 new VerifyMfaCodeRequest(
@@ -322,10 +317,9 @@ class VerifyMfaCodeHandlerTest {
     @Test
     void shouldReturn400AndBlockCodeWhenUserEnteredInvalidAuthAppCodeTooManyTimes()
             throws Json.JsonException {
-        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(JourneyType.class), any()))
+        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(authAppCodeProcessor));
-        when(authAppCodeProcessor.validateCode(any(CodeRequest.class)))
-                .thenReturn(Optional.of(ErrorResponse.ERROR_1042));
+        when(authAppCodeProcessor.validateCode()).thenReturn(Optional.of(ErrorResponse.ERROR_1042));
         var codeRequest =
                 new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, false, JourneyType.SIGN_IN);
         var result = makeCallWithCode(codeRequest);
@@ -355,10 +349,9 @@ class VerifyMfaCodeHandlerTest {
     @Test
     void shouldReturn400AndNotBlockCodeWhenUserEnteredInvalidAuthAppCodeAndBlockAlreadyExists()
             throws Json.JsonException {
-        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(JourneyType.class), any()))
+        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(authAppCodeProcessor));
-        when(authAppCodeProcessor.validateCode(any(CodeRequest.class)))
-                .thenReturn(Optional.of(ErrorResponse.ERROR_1042));
+        when(authAppCodeProcessor.validateCode()).thenReturn(Optional.of(ErrorResponse.ERROR_1042));
         when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
         var codeRequest =
@@ -390,11 +383,10 @@ class VerifyMfaCodeHandlerTest {
     @MethodSource("registration")
     void shouldReturn400WhenUserEnteredInvalidAuthAppCode(boolean registration)
             throws Json.JsonException {
-        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(JourneyType.class), any()))
+        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(authAppCodeProcessor));
         var profileInformation = registration ? AUTH_APP_SECRET : null;
-        when(authAppCodeProcessor.validateCode(any(CodeRequest.class)))
-                .thenReturn(Optional.of(ErrorResponse.ERROR_1043));
+        when(authAppCodeProcessor.validateCode()).thenReturn(Optional.of(ErrorResponse.ERROR_1043));
         var codeRequest =
                 new VerifyMfaCodeRequest(
                         MFAMethodType.AUTH_APP,
@@ -429,9 +421,9 @@ class VerifyMfaCodeHandlerTest {
     void
             shouldReturn400AndBlockCodeWhenUserEnteredInvalidPhoneNumberCodeDuringRegistrationTooManyTimes()
                     throws Json.JsonException {
-        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(JourneyType.class), any()))
+        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(phoneNumberCodeProcessor));
-        when(phoneNumberCodeProcessor.validateCode(any(CodeRequest.class)))
+        when(phoneNumberCodeProcessor.validateCode())
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1034));
         var codeRequest =
                 new VerifyMfaCodeRequest(
@@ -463,9 +455,9 @@ class VerifyMfaCodeHandlerTest {
     void
             shouldReturn400AndNotBlockCodeWhenInvalidPhoneNumberCodeEnteredDuringRegistrationAndBlockAlreadyExists()
                     throws Json.JsonException {
-        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(JourneyType.class), any()))
+        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(phoneNumberCodeProcessor));
-        when(phoneNumberCodeProcessor.validateCode(any(CodeRequest.class)))
+        when(phoneNumberCodeProcessor.validateCode())
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1034));
         when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
@@ -498,9 +490,9 @@ class VerifyMfaCodeHandlerTest {
     @Test
     void shouldReturn400WhenUserEnteredInvalidPhoneNumberCodeForRegistration()
             throws Json.JsonException {
-        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(JourneyType.class), any()))
+        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(phoneNumberCodeProcessor));
-        when(phoneNumberCodeProcessor.validateCode(any(CodeRequest.class)))
+        when(phoneNumberCodeProcessor.validateCode())
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1037));
         var codeRequest =
                 new VerifyMfaCodeRequest(
@@ -530,10 +522,9 @@ class VerifyMfaCodeHandlerTest {
 
     @Test
     void shouldReturn400WhenAuthAppSecretIsInvalid() throws Json.JsonException {
-        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(JourneyType.class), any()))
+        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(authAppCodeProcessor));
-        when(authAppCodeProcessor.validateCode(any(CodeRequest.class)))
-                .thenReturn(Optional.of(ErrorResponse.ERROR_1041));
+        when(authAppCodeProcessor.validateCode()).thenReturn(Optional.of(ErrorResponse.ERROR_1041));
         session.setNewAccount(Session.AccountState.NEW);
         session.setCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL);
         var result =

@@ -31,7 +31,7 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
     private final UserContext userContext;
     private final int windowTime;
     private final int allowedWindows;
-    private final JourneyType journeyType;
+    private final CodeRequest codeRequest;
     private static final Base32 base32 = new Base32(0, null, false, (byte) '=', CodecPolicy.STRICT);
 
     public AuthAppCodeProcessor(
@@ -40,7 +40,7 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
             ConfigurationService configurationService,
             AuthenticationService dynamoService,
             int maxRetries,
-            JourneyType journeyType,
+            CodeRequest codeRequest,
             AuditService auditService) {
         super(
                 userContext.getSession().getEmailAddress(),
@@ -51,11 +51,11 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
         this.userContext = userContext;
         this.windowTime = configurationService.getAuthAppCodeWindowLength();
         this.allowedWindows = configurationService.getAuthAppCodeAllowedWindows();
-        this.journeyType = journeyType;
+        this.codeRequest = codeRequest;
     }
 
     @Override
-    public Optional<ErrorResponse> validateCode(CodeRequest codeRequest) {
+    public Optional<ErrorResponse> validateCode() {
         if (isCodeBlockedForSession()) {
             LOG.info("Code blocked for session");
             return Optional.of(ErrorResponse.ERROR_1042);
@@ -69,7 +69,7 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
         }
 
         var authAppSecret =
-                journeyType.equals(JourneyType.SIGN_IN)
+                codeRequest.getJourneyType().equals(JourneyType.SIGN_IN)
                         ? getMfaCredentialValue().orElse(null)
                         : codeRequest.getProfileInformation();
 
@@ -78,7 +78,7 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
             return Optional.of(ErrorResponse.ERROR_1043);
         }
 
-        if (!journeyType.equals(JourneyType.SIGN_IN)
+        if (!codeRequest.getJourneyType().equals(JourneyType.SIGN_IN)
                 && !base32.isInAlphabet(codeRequest.getProfileInformation())) {
             return Optional.of(ErrorResponse.ERROR_1041);
         }
@@ -94,8 +94,7 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
     }
 
     @Override
-    public void processSuccessfulCodeRequest(
-            CodeRequest codeRequest, String ipAddress, String persistentSessionId) {
+    public void processSuccessfulCodeRequest(String ipAddress, String persistentSessionId) {
         switch (codeRequest.getJourneyType()) {
             case REGISTRATION:
                 dynamoService.setAuthAppAndAccountVerified(

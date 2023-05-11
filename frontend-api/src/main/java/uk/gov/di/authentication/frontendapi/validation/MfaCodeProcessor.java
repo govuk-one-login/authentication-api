@@ -2,7 +2,6 @@ package uk.gov.di.authentication.frontendapi.validation;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -79,8 +78,7 @@ public abstract class MfaCodeProcessor {
                 pair("mfa-type", mfaMethodType.getValue()));
     }
 
-    public abstract Optional<ErrorResponse> validateCode(CodeRequest codeRequest);
+    public abstract Optional<ErrorResponse> validateCode();
 
-    public abstract void processSuccessfulCodeRequest(
-            CodeRequest codeRequest, String ipAddress, String persistentSessionId);
+    public abstract void processSuccessfulCodeRequest(String ipAddress, String persistentSessionId);
 }

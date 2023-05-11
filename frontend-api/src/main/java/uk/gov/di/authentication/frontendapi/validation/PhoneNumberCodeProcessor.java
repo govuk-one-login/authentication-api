@@ -22,13 +22,13 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
 
     private final ConfigurationService configurationService;
     private final UserContext userContext;
-    private final JourneyType journeyType;
+    private final CodeRequest codeRequest;
 
     PhoneNumberCodeProcessor(
             CodeStorageService codeStorageService,
             UserContext userContext,
             ConfigurationService configurationService,
-            JourneyType journeyType,
+            CodeRequest codeRequest,
             AuthenticationService dynamoService,
             AuditService auditService) {
         super(
@@ -39,17 +39,17 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
                 auditService);
         this.userContext = userContext;
         this.configurationService = configurationService;
-        this.journeyType = journeyType;
+        this.codeRequest = codeRequest;
     }
 
     @Override
-    public Optional<ErrorResponse> validateCode(CodeRequest codeRequest) {
-        if (journeyType.equals(JourneyType.SIGN_IN)) {
+    public Optional<ErrorResponse> validateCode() {
+        if (codeRequest.getJourneyType().equals(JourneyType.SIGN_IN)) {
             LOG.error("Sign In Phone number codes are not supported");
             throw new RuntimeException("Sign In Phone number codes are not supported");
         }
         var notificationType =
-                journeyType.equals(JourneyType.REGISTRATION)
+                codeRequest.getJourneyType().equals(JourneyType.REGISTRATION)
                         ? NotificationType.VERIFY_PHONE_NUMBER
                         : NotificationType.MFA_SMS;
         if (isCodeBlockedForSession()) {
@@ -78,9 +78,8 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
     }
 
     @Override
-    public void processSuccessfulCodeRequest(
-            CodeRequest codeRequest, String ipAddress, String persistentSessionId) {
-        switch (journeyType) {
+    public void processSuccessfulCodeRequest(String ipAddress, String persistentSessionId) {
+        switch (codeRequest.getJourneyType()) {
             case REGISTRATION:
                 dynamoService.updatePhoneNumberAndAccountVerifiedStatus(
                         emailAddress, codeRequest.getProfileInformation(), true, true);

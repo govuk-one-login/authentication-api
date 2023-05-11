@@ -2,6 +2,7 @@ package uk.gov.di.authentication.frontendapi.validation;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -54,78 +55,72 @@ class PhoneNumberCodeProcessorTest {
 
     @Test
     void shouldReturnNoErrorForValidRegistrationPhoneNumberCode() {
-        setupPhoneNumberCode(JourneyType.REGISTRATION);
+        setupPhoneNumberCode(
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.SMS,
+                        VALID_CODE,
+                        true,
+                        JourneyType.REGISTRATION,
+                        PHONE_NUMBER));
 
-        assertThat(
-                phoneNumberCodeProcessor.validateCode(
-                        new VerifyMfaCodeRequest(
-                                MFAMethodType.SMS,
-                                VALID_CODE,
-                                true,
-                                JourneyType.REGISTRATION,
-                                PHONE_NUMBER)),
-                equalTo(Optional.empty()));
+        assertThat(phoneNumberCodeProcessor.validateCode(), equalTo(Optional.empty()));
     }
 
     @Test
     void shouldReturnErrorForInvalidRegistrationPhoneNumberCode() {
-        setupPhoneNumberCode(JourneyType.REGISTRATION);
+        setupPhoneNumberCode(
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.SMS,
+                        INVALID_CODE,
+                        true,
+                        JourneyType.REGISTRATION,
+                        PHONE_NUMBER));
 
         assertThat(
-                phoneNumberCodeProcessor.validateCode(
-                        new VerifyMfaCodeRequest(
-                                MFAMethodType.SMS,
-                                INVALID_CODE,
-                                true,
-                                JourneyType.REGISTRATION,
-                                PHONE_NUMBER)),
+                phoneNumberCodeProcessor.validateCode(),
                 equalTo(Optional.of(ErrorResponse.ERROR_1037)));
     }
 
     @Test
     void shouldReturnErrorWhenInvalidRegistrationPhoneNumberCodeUsedTooManyTimes() {
-        setUpPhoneNumberCodeRetryLimitExceeded();
+        setUpPhoneNumberCodeRetryLimitExceeded(
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.SMS,
+                        INVALID_CODE,
+                        true,
+                        JourneyType.REGISTRATION,
+                        PHONE_NUMBER));
 
         assertThat(
-                phoneNumberCodeProcessor.validateCode(
-                        new VerifyMfaCodeRequest(
-                                MFAMethodType.SMS,
-                                INVALID_CODE,
-                                true,
-                                JourneyType.REGISTRATION,
-                                PHONE_NUMBER)),
+                phoneNumberCodeProcessor.validateCode(),
                 equalTo(Optional.of(ErrorResponse.ERROR_1034)));
     }
 
     @Test
     void shouldReturnErrorWhenUserIsBlockedFromEnteringRegistrationPhoneNumberCodes() {
-        setUpBlockedPhoneNumberCode();
+        setUpBlockedPhoneNumberCode(
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.SMS,
+                        INVALID_CODE,
+                        true,
+                        JourneyType.REGISTRATION,
+                        PHONE_NUMBER));
 
         assertThat(
-                phoneNumberCodeProcessor.validateCode(
-                        new VerifyMfaCodeRequest(
-                                MFAMethodType.SMS,
-                                INVALID_CODE,
-                                true,
-                                JourneyType.REGISTRATION,
-                                PHONE_NUMBER)),
+                phoneNumberCodeProcessor.validateCode(),
                 equalTo(Optional.of(ErrorResponse.ERROR_1034)));
     }
 
     @Test
     void shouldThrowExceptionForSignInPhoneNumberCode() {
-        setupPhoneNumberCode(JourneyType.SIGN_IN);
+        setupPhoneNumberCode(
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.SMS, INVALID_CODE, true, JourneyType.SIGN_IN));
 
         var expectedException =
                 assertThrows(
                         RuntimeException.class,
-                        () ->
-                                phoneNumberCodeProcessor.validateCode(
-                                        new VerifyMfaCodeRequest(
-                                                MFAMethodType.SMS,
-                                                INVALID_CODE,
-                                                true,
-                                                JourneyType.SIGN_IN)),
+                        () -> phoneNumberCodeProcessor.validateCode(),
                         "Expected to throw exception");
 
         assertThat(
@@ -135,17 +130,15 @@ class PhoneNumberCodeProcessorTest {
 
     @Test
     void shouldUpdateDynamoAndCreateAuditEventWhenRegistration() {
-        setupPhoneNumberCode(JourneyType.REGISTRATION);
-        var codeRequest =
+        setupPhoneNumberCode(
                 new VerifyMfaCodeRequest(
                         MFAMethodType.SMS,
                         VALID_CODE,
                         true,
                         JourneyType.REGISTRATION,
-                        PHONE_NUMBER);
+                        PHONE_NUMBER));
 
-        phoneNumberCodeProcessor.processSuccessfulCodeRequest(
-                codeRequest, IP_ADDRESS, PERSISTENT_ID);
+        phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
 
         verify(authenticationService)
                 .updatePhoneNumberAndAccountVerifiedStatus(
@@ -166,18 +159,15 @@ class PhoneNumberCodeProcessorTest {
 
     @Test
     void shouldNotUpdateDynamoOrCreateAuditEventWhenAccountRecovery() {
-        setupPhoneNumberCode(JourneyType.ACCOUNT_RECOVERY);
-
-        var codeRequest =
+        setupPhoneNumberCode(
                 new VerifyMfaCodeRequest(
                         MFAMethodType.SMS,
                         VALID_CODE,
                         true,
                         JourneyType.ACCOUNT_RECOVERY,
-                        PHONE_NUMBER);
+                        PHONE_NUMBER));
 
-        phoneNumberCodeProcessor.processSuccessfulCodeRequest(
-                codeRequest, IP_ADDRESS, PERSISTENT_ID);
+        phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
 
         verifyNoInteractions(authenticationService);
         verifyNoInteractions(auditService);
@@ -185,19 +175,16 @@ class PhoneNumberCodeProcessorTest {
 
     @Test
     void shouldNotUpdateDynamoOrCreateAuditEventWhenSignIn() {
-        setupPhoneNumberCode(JourneyType.SIGN_IN);
+        setupPhoneNumberCode(
+                new VerifyMfaCodeRequest(MFAMethodType.SMS, VALID_CODE, true, JourneyType.SIGN_IN));
 
-        var codeRequest =
-                new VerifyMfaCodeRequest(MFAMethodType.SMS, VALID_CODE, true, JourneyType.SIGN_IN);
-
-        phoneNumberCodeProcessor.processSuccessfulCodeRequest(
-                codeRequest, IP_ADDRESS, PERSISTENT_ID);
+        phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
 
         verifyNoInteractions(authenticationService);
         verifyNoInteractions(auditService);
     }
 
-    public void setupPhoneNumberCode(JourneyType journeyType) {
+    public void setupPhoneNumberCode(CodeRequest codeRequest) {
         when(session.getEmailAddress()).thenReturn(TEST_EMAIL_ADDRESS);
         when(session.getSessionId()).thenReturn(SESSION_ID);
         when(session.getInternalCommonSubjectIdentifier()).thenReturn(INTERNAL_SUB_ID);
@@ -214,12 +201,12 @@ class PhoneNumberCodeProcessorTest {
                         codeStorageService,
                         userContext,
                         configurationService,
-                        journeyType,
+                        codeRequest,
                         authenticationService,
                         auditService);
     }
 
-    public void setUpPhoneNumberCodeRetryLimitExceeded() {
+    public void setUpPhoneNumberCodeRetryLimitExceeded(CodeRequest codeRequest) {
         when(codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS)).thenReturn(6);
         when(session.getEmailAddress()).thenReturn(TEST_EMAIL_ADDRESS);
         when(userContext.getSession()).thenReturn(session);
@@ -234,12 +221,12 @@ class PhoneNumberCodeProcessorTest {
                         codeStorageService,
                         userContext,
                         configurationService,
-                        JourneyType.REGISTRATION,
+                        codeRequest,
                         authenticationService,
                         auditService);
     }
 
-    public void setUpBlockedPhoneNumberCode() {
+    public void setUpBlockedPhoneNumberCode(CodeRequest codeRequest) {
         when(session.getEmailAddress()).thenReturn(TEST_EMAIL_ADDRESS);
         when(userContext.getSession()).thenReturn(session);
         when(configurationService.isTestClientsEnabled()).thenReturn(false);
@@ -253,7 +240,7 @@ class PhoneNumberCodeProcessorTest {
                         codeStorageService,
                         userContext,
                         configurationService,
-                        JourneyType.REGISTRATION,
+                        codeRequest,
                         authenticationService,
                         auditService);
     }

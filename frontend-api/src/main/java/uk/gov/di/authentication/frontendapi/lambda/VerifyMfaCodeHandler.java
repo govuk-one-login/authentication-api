@@ -115,7 +115,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
             var mfaCodeProcessor =
                     mfaCodeProcessorFactory
-                            .getMfaCodeProcessor(mfaMethodType, journeyType, userContext)
+                            .getMfaCodeProcessor(mfaMethodType, codeRequest, userContext)
                             .orElse(null);
 
             if (Objects.isNull(mfaCodeProcessor)) {
@@ -123,7 +123,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1002);
             }
 
-            var errorResponse = mfaCodeProcessor.validateCode(codeRequest);
+            var errorResponse = mfaCodeProcessor.validateCode();
 
             if (errorResponse.filter(ErrorResponse.ERROR_1041::equals).isPresent()) {
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1041);
@@ -214,7 +214,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
 
         if (errorResponse.isEmpty()) {
             mfaCodeProcessor.processSuccessfulCodeRequest(
-                    codeRequest,
                     IpAddressHelper.extractIpAddress(input),
                     extractPersistentIdFromHeaders(input.getHeaders()));
         }
