@@ -61,7 +61,8 @@ public abstract class MfaCodeProcessor {
             MFAMethodType mfaMethodType,
             String phoneNumber,
             String ipAddress,
-            String persistentSessionId) {
+            String persistentSessionId,
+            boolean accountRecovery) {
         auditService.submitAuditEvent(
                 auditableEvent,
                 userContext.getClientSessionId(),
@@ -75,7 +76,8 @@ public abstract class MfaCodeProcessor {
                 ipAddress,
                 phoneNumber,
                 persistentSessionId,
-                pair("mfa-type", mfaMethodType.getValue()));
+                pair("mfa-type", mfaMethodType.getValue()),
+                pair("account-recovery", accountRecovery));
     }
 
     public abstract Optional<ErrorResponse> validateCode();
