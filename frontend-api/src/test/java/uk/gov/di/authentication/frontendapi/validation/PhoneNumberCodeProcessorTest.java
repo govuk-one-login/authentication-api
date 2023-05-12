@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
+import uk.gov.di.authentication.frontendapi.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
@@ -41,6 +42,8 @@ class PhoneNumberCodeProcessorTest {
     private final AuditService auditService = mock(AuditService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final DynamoAccountModifiersService accountModifiersService =
+            mock(DynamoAccountModifiersService.class);
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@example.com";
     private static final String VALID_CODE = "123456";
     private static final String INVALID_CODE = "826272";
@@ -200,7 +203,8 @@ class PhoneNumberCodeProcessorTest {
                         configurationService,
                         codeRequest,
                         authenticationService,
-                        auditService);
+                        auditService,
+                        accountModifiersService);
     }
 
     public void setUpPhoneNumberCodeRetryLimitExceeded(CodeRequest codeRequest) {
@@ -220,7 +224,8 @@ class PhoneNumberCodeProcessorTest {
                         configurationService,
                         codeRequest,
                         authenticationService,
-                        auditService);
+                        auditService,
+                        accountModifiersService);
     }
 
     public void setUpBlockedPhoneNumberCode(CodeRequest codeRequest) {
@@ -239,6 +244,7 @@ class PhoneNumberCodeProcessorTest {
                         configurationService,
                         codeRequest,
                         authenticationService,
-                        auditService);
+                        auditService,
+                        accountModifiersService);
     }
 }

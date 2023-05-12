@@ -2,6 +2,8 @@ package uk.gov.di.authentication.frontendapi.validation;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
+import uk.gov.di.authentication.frontendapi.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -19,22 +21,27 @@ import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_B
 public abstract class MfaCodeProcessor {
     protected final Logger LOG = LogManager.getLogger(this.getClass());
     public final CodeStorageService codeStorageService;
+    public final DynamoAccountModifiersService accountModifiersService;
     private final int maxRetries;
     public final String emailAddress;
+    private final UserContext userContext;
     protected final AuthenticationService dynamoService;
     protected final AuditService auditService;
 
     MfaCodeProcessor(
-            String emailAddress,
+            UserContext userContext,
             CodeStorageService codeStorageService,
             int maxRetries,
             AuthenticationService dynamoService,
-            AuditService auditService) {
-        this.emailAddress = emailAddress;
+            AuditService auditService,
+            DynamoAccountModifiersService accountModifiersService) {
+        this.emailAddress = userContext.getSession().getEmailAddress();
+        this.userContext = userContext;
         this.codeStorageService = codeStorageService;
         this.maxRetries = maxRetries;
         this.dynamoService = dynamoService;
         this.auditService = auditService;
+        this.accountModifiersService = accountModifiersService;
     }
 
     boolean isCodeBlockedForSession() {
@@ -57,7 +64,6 @@ public abstract class MfaCodeProcessor {
 
     void submitAuditEvent(
             AuditableEvent auditableEvent,
-            UserContext userContext,
             MFAMethodType mfaMethodType,
             String phoneNumber,
             String ipAddress,
@@ -78,6 +84,32 @@ public abstract class MfaCodeProcessor {
                 persistentSessionId,
                 pair("mfa-type", mfaMethodType.getValue()),
                 pair("account-recovery", accountRecovery));
+    }
+
+    void clearAccountRecoveryBlockIfPresent(
+            MFAMethodType mfaMethodType, String ipAddress, String persistentSessionId) {
+        var accountRecoveryBlockPresent =
+                accountModifiersService.isAccountRecoveryBlockPresent(
+                        userContext.getSession().getInternalCommonSubjectIdentifier());
+        if (accountRecoveryBlockPresent) {
+            LOG.info("AccountRecovery block is present. Removing block");
+            accountModifiersService.removeAccountRecoveryBlockIfPresent(
+                    userContext.getSession().getInternalCommonSubjectIdentifier());
+            auditService.submitAuditEvent(
+                    FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_REMOVED,
+                    userContext.getClientSessionId(),
+                    userContext.getSession().getSessionId(),
+                    userContext
+                            .getClient()
+                            .map(ClientRegistry::getClientID)
+                            .orElse(AuditService.UNKNOWN),
+                    userContext.getSession().getInternalCommonSubjectIdentifier(),
+                    emailAddress,
+                    ipAddress,
+                    AuditService.UNKNOWN,
+                    persistentSessionId,
+                    pair("mfa-type", mfaMethodType.getValue()));
+        }
     }
 
     public abstract Optional<ErrorResponse> validateCode();

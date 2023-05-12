@@ -60,7 +60,8 @@ public class MfaCodeProcessorFactory {
                                 configurationService,
                                 codeRequest,
                                 authenticationService,
-                                auditService));
+                                auditService,
+                                accountModifiersService));
             default:
                 return Optional.empty();
         }
