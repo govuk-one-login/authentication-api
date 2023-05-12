@@ -3,6 +3,7 @@ package uk.gov.di.authentication.frontendapi.validation;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
+import uk.gov.di.authentication.frontendapi.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -23,9 +24,15 @@ class MfaCodeProcessorFactoryTest {
     private final AuditService auditService = mock(AuditService.class);
     private final UserContext userContext = mock(UserContext.class);
     private final Session session = mock(Session.class);
+    private final DynamoAccountModifiersService accountModifiersService =
+            mock(DynamoAccountModifiersService.class);
     private final MfaCodeProcessorFactory mfaCodeProcessorFactory =
             new MfaCodeProcessorFactory(
-                    configurationService, codeStorageService, authenticationService, auditService);
+                    configurationService,
+                    codeStorageService,
+                    authenticationService,
+                    auditService,
+                    accountModifiersService);
 
     @BeforeEach
     void setUp() {

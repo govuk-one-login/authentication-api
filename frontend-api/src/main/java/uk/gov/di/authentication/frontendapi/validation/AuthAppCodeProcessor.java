@@ -4,6 +4,8 @@ import org.apache.commons.codec.CodecPolicy;
 import org.apache.commons.codec.binary.Base32;
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
+import uk.gov.di.authentication.frontendapi.services.DynamoAccountModifiersService;
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
@@ -25,6 +27,7 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import static uk.gov.di.authentication.shared.entity.MFAMethodType.AUTH_APP;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class AuthAppCodeProcessor extends MfaCodeProcessor {
 
@@ -32,6 +35,7 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
     private final int windowTime;
     private final int allowedWindows;
     private final CodeRequest codeRequest;
+    private final DynamoAccountModifiersService accountModifiersService;
     private static final Base32 base32 = new Base32(0, null, false, (byte) '=', CodecPolicy.STRICT);
 
     public AuthAppCodeProcessor(
@@ -41,7 +45,8 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
             AuthenticationService dynamoService,
             int maxRetries,
             CodeRequest codeRequest,
-            AuditService auditService) {
+            AuditService auditService,
+            DynamoAccountModifiersService accountModifiersService) {
         super(
                 userContext.getSession().getEmailAddress(),
                 codeStorageService,
@@ -52,6 +57,7 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
         this.windowTime = configurationService.getAuthAppCodeWindowLength();
         this.allowedWindows = configurationService.getAuthAppCodeAllowedWindows();
         this.codeRequest = codeRequest;
+        this.accountModifiersService = accountModifiersService;
     }
 
     @Override
@@ -120,6 +126,28 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
                         persistentSessionId,
                         true);
                 break;
+            case SIGN_IN:
+                var accountRecoveryBlockPresent =
+                        accountModifiersService.isAccountRecoveryBlockPresent(
+                                userContext.getSession().getInternalCommonSubjectIdentifier());
+                if (accountRecoveryBlockPresent) {
+                    accountModifiersService.removeAccountRecoveryBlockIfPresent(
+                            userContext.getSession().getInternalCommonSubjectIdentifier());
+                    auditService.submitAuditEvent(
+                            FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_REMOVED,
+                            userContext.getClientSessionId(),
+                            userContext.getSession().getSessionId(),
+                            userContext
+                                    .getClient()
+                                    .map(ClientRegistry::getClientID)
+                                    .orElse(AuditService.UNKNOWN),
+                            userContext.getSession().getInternalCommonSubjectIdentifier(),
+                            emailAddress,
+                            ipAddress,
+                            AuditService.UNKNOWN,
+                            persistentSessionId,
+                            pair("mfa-type", AUTH_APP.getValue()));
+                }
         }
     }
 

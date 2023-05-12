@@ -8,7 +8,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
-import uk.gov.di.authentication.frontendapi.services.DynamoAccountRecoveryBlockService;
+import uk.gov.di.authentication.frontendapi.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessor;
 import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessorFactory;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
@@ -54,7 +54,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     private final AuditService auditService;
     private final MfaCodeProcessorFactory mfaCodeProcessorFactory;
     private final CloudwatchMetricsService cloudwatchMetricsService;
-    private final DynamoAccountRecoveryBlockService accountRecoveryBlockService;
 
     public VerifyMfaCodeHandler(
             ConfigurationService configurationService,
@@ -65,8 +64,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             CodeStorageService codeStorageService,
             AuditService auditService,
             MfaCodeProcessorFactory mfaCodeProcessorFactory,
-            CloudwatchMetricsService cloudwatchMetricsService,
-            DynamoAccountRecoveryBlockService accountRecoveryBlockService) {
+            CloudwatchMetricsService cloudwatchMetricsService) {
         super(
                 VerifyMfaCodeRequest.class,
                 configurationService,
@@ -78,7 +76,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         this.auditService = auditService;
         this.mfaCodeProcessorFactory = mfaCodeProcessorFactory;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
-        this.accountRecoveryBlockService = accountRecoveryBlockService;
     }
 
     public VerifyMfaCodeHandler() {
@@ -94,10 +91,9 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         configurationService,
                         codeStorageService,
                         new DynamoService(configurationService),
-                        auditService);
+                        auditService,
+                        new DynamoAccountModifiersService(configurationService));
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
-        this.accountRecoveryBlockService =
-                new DynamoAccountRecoveryBlockService(configurationService);
     }
 
     @Override
@@ -152,8 +148,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                                         "MFA code has been successfully verified for MFA type: {}. JourneyType: {}",
                                         codeRequest.getMfaMethodType().getValue(),
                                         codeRequest.getJourneyType().getValue());
-                                accountRecoveryBlockService.deleteBlockIfPresent(
-                                        session.getEmailAddress());
                                 sessionService.save(
                                         session.setCurrentCredentialStrength(
                                                         CredentialTrustLevel.MEDIUM_LEVEL)
