@@ -36,6 +36,7 @@ import java.util.stream.Stream;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_REMOVED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_VERIFIED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.INVALID_CODE_SENT;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
@@ -242,7 +243,8 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
         assertThat(response, hasStatus(204));
         assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(false));
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_VERIFIED));
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue, List.of(CODE_VERIFIED, ACCOUNT_RECOVERY_BLOCK_REMOVED));
     }
 
     @Test

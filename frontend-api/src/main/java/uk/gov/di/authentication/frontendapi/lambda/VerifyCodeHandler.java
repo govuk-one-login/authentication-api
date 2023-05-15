@@ -203,8 +203,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                         pair("notification-type", notificationType.name()),
                         pair("mfa-type", MFAMethodType.SMS.getValue())
                     };
-            accountModifiersService.removeAccountRecoveryBlockIfPresent(
-                    session.getInternalCommonSubjectIdentifier());
+            clearAccountRecoveryBlockIfPresent(userContext, input);
             cloudwatchMetricsService.incrementAuthenticationSuccess(
                     session.isNewAccount(),
                     clientId,
@@ -288,6 +287,32 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 LOG.error(
                         "Invalid NotificationType: {} configured for TestClient", notificationType);
                 throw new RuntimeException("Invalid NotificationType for use with TestClient");
+        }
+    }
+
+    private void clearAccountRecoveryBlockIfPresent(
+            UserContext userContext, APIGatewayProxyRequestEvent input) {
+        var accountRecoveryBlockPresent =
+                accountModifiersService.isAccountRecoveryBlockPresent(
+                        userContext.getSession().getInternalCommonSubjectIdentifier());
+        if (accountRecoveryBlockPresent) {
+            LOG.info("AccountRecovery block is present. Removing block");
+            accountModifiersService.removeAccountRecoveryBlockIfPresent(
+                    userContext.getSession().getInternalCommonSubjectIdentifier());
+            auditService.submitAuditEvent(
+                    FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_REMOVED,
+                    userContext.getClientSessionId(),
+                    userContext.getSession().getSessionId(),
+                    userContext
+                            .getClient()
+                            .map(ClientRegistry::getClientID)
+                            .orElse(AuditService.UNKNOWN),
+                    userContext.getSession().getInternalCommonSubjectIdentifier(),
+                    userContext.getSession().getEmailAddress(),
+                    IpAddressHelper.extractIpAddress(input),
+                    AuditService.UNKNOWN,
+                    extractPersistentIdFromHeaders(input.getHeaders()),
+                    pair("mfa-type", MFAMethodType.SMS.getValue()));
         }
     }
 }
