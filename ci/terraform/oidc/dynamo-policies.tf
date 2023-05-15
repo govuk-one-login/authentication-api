@@ -22,10 +22,6 @@ data "aws_dynamodb_table" "common_passwords_table" {
   name = "${var.environment}-common-passwords"
 }
 
-data "aws_dynamodb_table" "account_recovery_block_table" {
-  name = "${var.environment}-account-recovery-block"
-}
-
 data "aws_dynamodb_table" "account_modifiers_table" {
   name = "${var.environment}-account-modifiers"
 }
