@@ -199,7 +199,11 @@ class VerifyCodeHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("notification-type", emailNotificationType.name()));
+                        pair("notification-type", emailNotificationType.name()),
+                        pair(
+                                "account-recovery",
+                                emailNotificationType.equals(
+                                        VERIFY_CHANGE_HOW_GET_SECURITY_CODES)));
     }
 
     @ParameterizedTest
@@ -285,7 +289,11 @@ class VerifyCodeHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("notification-type", emailNotificationType.name()));
+                        pair("notification-type", emailNotificationType.name()),
+                        pair(
+                                "account-recovery",
+                                emailNotificationType.equals(
+                                        VERIFY_CHANGE_HOW_GET_SECURITY_CODES)));
     }
 
     @ParameterizedTest
@@ -330,7 +338,8 @@ class VerifyCodeHandlerTest {
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("notification-type", MFA_SMS.name()),
-                        pair("mfa-type", MFAMethodType.SMS.getValue()));
+                        pair("mfa-type", MFAMethodType.SMS.getValue()),
+                        pair("account-recovery", false));
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_REMOVED,
@@ -376,7 +385,8 @@ class VerifyCodeHandlerTest {
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("notification-type", MFA_SMS.name()),
-                        pair("mfa-type", MFAMethodType.SMS.getValue()));
+                        pair("mfa-type", MFAMethodType.SMS.getValue()),
+                        pair("account-recovery", false));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
                         Session.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false, true);
@@ -425,7 +435,8 @@ class VerifyCodeHandlerTest {
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("notification-type", MFA_SMS.name()),
-                        pair("mfa-type", MFAMethodType.SMS.getValue()));
+                        pair("mfa-type", MFAMethodType.SMS.getValue()),
+                        pair("account-recovery", false));
     }
 
     @Test

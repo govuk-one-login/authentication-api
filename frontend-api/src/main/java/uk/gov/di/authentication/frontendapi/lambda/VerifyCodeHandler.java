@@ -134,15 +134,10 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
             if (errorResponse.isPresent()) {
                 processBlockedCodeSession(
-                        errorResponse.get(),
-                        session,
-                        codeRequest.getNotificationType(),
-                        input,
-                        userContext);
+                        errorResponse.get(), session, codeRequest, input, userContext);
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
             }
-            processSuccessfulCodeRequest(
-                    session, codeRequest.getNotificationType(), input, userContext);
+            processSuccessfulCodeRequest(session, codeRequest, input, userContext);
 
             return generateEmptySuccessApiGatewayResponse();
         } catch (ClientNotFoundException e) {
@@ -178,12 +173,16 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
     private void processSuccessfulCodeRequest(
             Session session,
-            NotificationType notificationType,
+            VerifyCodeRequest codeRequest,
             APIGatewayProxyRequestEvent input,
             UserContext userContext) {
+        var notificationType = codeRequest.getNotificationType();
+        var accountRecoveryJourney =
+                codeRequest.getNotificationType().equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES);
         var metadataPairs =
                 new AuditService.MetadataPair[] {
-                    pair("notification-type", notificationType.name())
+                    pair("notification-type", notificationType.name()),
+                    pair("account-recovery", accountRecoveryJourney)
                 };
         var clientSession = userContext.getClientSession();
         var clientId = userContext.getClient().get().getClientID();
@@ -201,7 +200,8 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             metadataPairs =
                     new AuditService.MetadataPair[] {
                         pair("notification-type", notificationType.name()),
-                        pair("mfa-type", MFAMethodType.SMS.getValue())
+                        pair("mfa-type", MFAMethodType.SMS.getValue()),
+                        pair("account-recovery", accountRecoveryJourney)
                     };
             clearAccountRecoveryBlockIfPresent(userContext, input);
             cloudwatchMetricsService.incrementAuthenticationSuccess(
@@ -232,18 +232,23 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     private void processBlockedCodeSession(
             ErrorResponse errorResponse,
             Session session,
-            NotificationType notificationType,
+            VerifyCodeRequest codeRequest,
             APIGatewayProxyRequestEvent input,
             UserContext userContext) {
+        var notificationType = codeRequest.getNotificationType();
+        var accountRecoveryJourney =
+                codeRequest.getNotificationType().equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES);
         var metadataPairs =
                 new AuditService.MetadataPair[] {
-                    pair("notification-type", notificationType.name())
+                    pair("notification-type", notificationType.name()),
+                    pair("account-recovery", accountRecoveryJourney)
                 };
         if (notificationType.equals(MFA_SMS)) {
             metadataPairs =
                     new AuditService.MetadataPair[] {
                         pair("notification-type", notificationType.name()),
-                        pair("mfa-type", MFAMethodType.SMS.getValue())
+                        pair("mfa-type", MFAMethodType.SMS.getValue()),
+                        pair("account-recovery", accountRecoveryJourney)
                     };
         }
         AuditableEvent auditableEvent;
