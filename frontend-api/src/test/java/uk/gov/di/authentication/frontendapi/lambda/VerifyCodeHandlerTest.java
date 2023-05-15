@@ -52,6 +52,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -302,10 +303,12 @@ class VerifyCodeHandlerTest {
     }
 
     @Test
-    void shouldReturn204ForValidMfaSmsRequest() {
+    void shouldReturn204ForValidMfaSmsRequestAndRemoveBlockWhenPresent() {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS))
                 .thenReturn(Optional.of(CODE));
+        when(accountModifiersService.isAccountRecoveryBlockPresent(expectedCommonSubject))
+                .thenReturn(true);
         session.setNewAccount(Session.AccountState.EXISTING);
 
         APIGatewayProxyResponseEvent result = makeCallWithCode(CODE, MFA_SMS.toString());
@@ -314,6 +317,52 @@ class VerifyCodeHandlerTest {
         assertThat(result, hasStatus(204));
         assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
         verify(accountModifiersService).removeAccountRecoveryBlockIfPresent(expectedCommonSubject);
+        verify(sessionService, times(2)).save(session);
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.CODE_VERIFIED,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        CLIENT_ID,
+                        expectedCommonSubject,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        pair("notification-type", MFA_SMS.name()),
+                        pair("mfa-type", MFAMethodType.SMS.getValue()));
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_REMOVED,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        CLIENT_ID,
+                        expectedCommonSubject,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        pair("mfa-type", MFAMethodType.SMS.getValue()));
+        verify(cloudwatchMetricsService)
+                .incrementAuthenticationSuccess(
+                        Session.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false, true);
+    }
+
+    @Test
+    void shouldReturn204ForValidMfaSmsRequestAndDontRemoveBlockWhenNotPresent() {
+        when(configurationService.getCodeMaxRetries()).thenReturn(5);
+        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS))
+                .thenReturn(Optional.of(CODE));
+        when(accountModifiersService.isAccountRecoveryBlockPresent(expectedCommonSubject))
+                .thenReturn(false);
+        session.setNewAccount(Session.AccountState.EXISTING);
+
+        APIGatewayProxyResponseEvent result = makeCallWithCode(CODE, MFA_SMS.toString());
+
+        verify(codeStorageService).deleteOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS);
+        assertThat(result, hasStatus(204));
+        assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
+        verify(accountModifiersService, never()).removeAccountRecoveryBlockIfPresent(anyString());
         verify(sessionService, times(2)).save(session);
         verify(auditService)
                 .submitAuditEvent(
