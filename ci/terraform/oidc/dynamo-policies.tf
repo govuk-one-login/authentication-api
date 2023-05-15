@@ -250,52 +250,6 @@ data "aws_iam_policy_document" "dynamo_account_modifiers_write_access_policy_doc
   }
 }
 
-data "aws_iam_policy_document" "dynamo_account_recovery_block_read_access_policy_document" {
-  statement {
-    sid    = "AllowAccessToDynamoTables"
-    effect = "Allow"
-
-    actions = [
-      "dynamodb:DescribeTable",
-      "dynamodb:Get*",
-
-    ]
-    resources = [
-      data.aws_dynamodb_table.account_recovery_block_table.arn,
-    ]
-  }
-}
-
-data "aws_iam_policy_document" "dynamo_account_recovery_block_delete_access_policy_document" {
-  statement {
-    sid    = "AllowAccessToDynamoTables"
-    effect = "Allow"
-
-    actions = [
-      "dynamodb:DeleteItem",
-
-    ]
-    resources = [
-      data.aws_dynamodb_table.account_recovery_block_table.arn,
-    ]
-  }
-}
-
-data "aws_iam_policy_document" "dynamo_account_recovery_block_write_access_policy_document" {
-  statement {
-    sid    = "AllowAccessToDynamoTables"
-    effect = "Allow"
-
-    actions = [
-      "dynamodb:UpdateItem",
-      "dynamodb:PutItem",
-    ]
-    resources = [
-      data.aws_dynamodb_table.account_recovery_block_table.arn,
-    ]
-  }
-}
-
 resource "aws_iam_policy" "dynamo_client_registry_write_access_policy" {
   name_prefix = "dynamo-client-registry-write-policy"
   path        = "/${var.environment}/oidc-default/"
@@ -374,30 +328,6 @@ resource "aws_iam_policy" "dynamo_common_passwords_read_access_policy" {
   description = "IAM policy for managing read permissions to the Dynamo Common Passwords table"
 
   policy = data.aws_iam_policy_document.dynamo_common_passwords_read_access_policy_document.json
-}
-
-resource "aws_iam_policy" "dynamo_account_recovery_block_read_access_policy" {
-  name_prefix = "dynamo-account-recovery-read"
-  path        = "/${var.environment}/oidc-default/"
-  description = "IAM policy for managing read permissions to the Dynamo Account Recovery Block table"
-
-  policy = data.aws_iam_policy_document.dynamo_account_recovery_block_read_access_policy_document.json
-}
-
-resource "aws_iam_policy" "dynamo_account_recovery_block_delete_access_policy" {
-  name_prefix = "dynamo-account-recovery-delete"
-  path        = "/${var.environment}/oidc-default/"
-  description = "IAM policy for managing delete permissions to the Dynamo Account Recovery Block table"
-
-  policy = data.aws_iam_policy_document.dynamo_account_recovery_block_delete_access_policy_document.json
-}
-
-resource "aws_iam_policy" "dynamo_account_recovery_block_write_access_policy" {
-  name_prefix = "dynamo-account-recovery-write"
-  path        = "/${var.environment}/oidc-default/"
-  description = "IAM policy for managing write permissions to the Dynamo Account Recovery Block table"
-
-  policy = data.aws_iam_policy_document.dynamo_account_recovery_block_write_access_policy_document.json
 }
 
 resource "aws_iam_policy" "dynamo_account_modifiers_read_access_policy" {
