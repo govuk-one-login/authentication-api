@@ -20,7 +20,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
-import uk.gov.di.authentication.frontendapi.services.DynamoAccountRecoveryBlockService;
 import uk.gov.di.authentication.frontendapi.validation.AuthAppCodeProcessor;
 import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessorFactory;
 import uk.gov.di.authentication.frontendapi.validation.PhoneNumberCodeProcessor;
@@ -97,8 +96,6 @@ class VerifyMfaCodeHandlerTest {
     private final SessionService sessionService = mock(SessionService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final DynamoAccountRecoveryBlockService accountRecoveryBlockService =
-            mock(DynamoAccountRecoveryBlockService.class);
     private final MfaCodeProcessorFactory mfaCodeProcessorFactory =
             mock(MfaCodeProcessorFactory.class);
     private final AuthAppCodeProcessor authAppCodeProcessor = mock(AuthAppCodeProcessor.class);
@@ -145,8 +142,7 @@ class VerifyMfaCodeHandlerTest {
                         codeStorageService,
                         auditService,
                         mfaCodeProcessorFactory,
-                        cloudwatchMetricsService,
-                        accountRecoveryBlockService);
+                        cloudwatchMetricsService);
     }
 
     @AfterEach
@@ -191,7 +187,6 @@ class VerifyMfaCodeHandlerTest {
         verify(codeStorageService, never())
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
-        verify(accountRecoveryBlockService).deleteBlockIfPresent(TEST_EMAIL_ADDRESS);
 
         verify(auditService)
                 .submitAuditEvent(
@@ -232,7 +227,6 @@ class VerifyMfaCodeHandlerTest {
         verify(codeStorageService, never())
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
-        verify(accountRecoveryBlockService).deleteBlockIfPresent(TEST_EMAIL_ADDRESS);
 
         verify(auditService)
                 .submitAuditEvent(
@@ -298,7 +292,6 @@ class VerifyMfaCodeHandlerTest {
         verifyNoInteractions(auditService);
         verifyNoInteractions(authAppCodeProcessor);
         verifyNoInteractions(codeStorageService);
-        verifyNoInteractions(accountRecoveryBlockService);
     }
 
     private static Stream<Boolean> registration() {
@@ -322,7 +315,6 @@ class VerifyMfaCodeHandlerTest {
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService)
                 .deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS, MFAMethodType.AUTH_APP);
-        verifyNoInteractions(accountRecoveryBlockService);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
@@ -355,7 +347,6 @@ class VerifyMfaCodeHandlerTest {
         verify(codeStorageService, never())
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
-        verifyNoInteractions(accountRecoveryBlockService);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
@@ -389,7 +380,6 @@ class VerifyMfaCodeHandlerTest {
         verify(codeStorageService, never())
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
-        verifyNoInteractions(accountRecoveryBlockService);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.INVALID_CODE_SENT,
@@ -423,7 +413,6 @@ class VerifyMfaCodeHandlerTest {
         verify(codeStorageService)
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
-        verifyNoInteractions(accountRecoveryBlockService);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
@@ -459,7 +448,6 @@ class VerifyMfaCodeHandlerTest {
         verify(codeStorageService, never())
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
-        verifyNoInteractions(accountRecoveryBlockService);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
@@ -492,7 +480,6 @@ class VerifyMfaCodeHandlerTest {
         verify(codeStorageService, never())
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
-        verifyNoInteractions(accountRecoveryBlockService);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.INVALID_CODE_SENT,
@@ -527,7 +514,6 @@ class VerifyMfaCodeHandlerTest {
         verify(codeStorageService, never())
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
-        verify(accountRecoveryBlockService, never()).deleteBlockIfPresent(TEST_EMAIL_ADDRESS);
         verifyNoInteractions(auditService);
         verifyNoInteractions(cloudwatchMetricsService);
     }

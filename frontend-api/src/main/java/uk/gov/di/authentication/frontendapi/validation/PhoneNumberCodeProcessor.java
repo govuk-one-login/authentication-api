@@ -2,6 +2,7 @@ package uk.gov.di.authentication.frontendapi.validation;
 
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
+import uk.gov.di.authentication.frontendapi.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
@@ -30,13 +31,15 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
             ConfigurationService configurationService,
             CodeRequest codeRequest,
             AuthenticationService dynamoService,
-            AuditService auditService) {
+            AuditService auditService,
+            DynamoAccountModifiersService dynamoAccountModifiersService) {
         super(
-                userContext.getSession().getEmailAddress(),
+                userContext,
                 codeStorageService,
                 configurationService.getCodeMaxRetries(),
                 dynamoService,
-                auditService);
+                auditService,
+                dynamoAccountModifiersService);
         this.userContext = userContext;
         this.configurationService = configurationService;
         this.codeRequest = codeRequest;
@@ -85,7 +88,6 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
                         emailAddress, codeRequest.getProfileInformation(), true, true);
                 submitAuditEvent(
                         FrontendAuditableEvent.UPDATE_PROFILE_PHONE_NUMBER,
-                        userContext,
                         MFAMethodType.SMS,
                         codeRequest.getProfileInformation(),
                         ipAddress,
@@ -97,7 +99,6 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
                         emailAddress, codeRequest.getProfileInformation());
                 submitAuditEvent(
                         FrontendAuditableEvent.UPDATE_PROFILE_PHONE_NUMBER,
-                        userContext,
                         MFAMethodType.SMS,
                         codeRequest.getProfileInformation(),
                         ipAddress,

@@ -4,6 +4,7 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
@@ -20,7 +21,9 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.ServiceType;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
+import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.AuthAppStub;
@@ -41,6 +44,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_REMOVED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_VERIFIED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.INVALID_CODE_SENT;
@@ -62,7 +66,12 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String PHONE_NUMBER = "+447700900000";
     private static final String ALTERNATIVE_PHONE_NUMBER = "+447316763843";
     private static final AuthAppStub AUTH_APP_STUB = new AuthAppStub();
+    private static final Subject SUBJECT = new Subject();
+    private static final String INTERNAl_SECTOR_HOST = "test.account.gov.uk";
     private static final String CLIENT_NAME = "test-client-name";
+    private final String internalCommonSubjectId =
+            ClientSubjectHelper.calculatePairwiseIdentifier(
+                    SUBJECT.getValue(), INTERNAl_SECTOR_HOST, SaltHelper.generateNewSalt());
     private String sessionId;
 
     @BeforeEach
@@ -72,6 +81,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         txmaAuditQueue.clear();
 
         this.sessionId = redis.createSession();
+        redis.addInternalCommonSubjectIdToSession(this.sessionId, internalCommonSubjectId);
         setUpTest(sessionId, withScope());
     }
 
@@ -124,7 +134,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue, List.of(CODE_VERIFIED, UPDATE_PROFILE_AUTH_APP));
-        assertThat(accountRecoveryStore.isBlockPresent(EMAIL_ADDRESS), equalTo(false));
+        assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(false));
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));
         assertThat(userStore.isAuthAppVerified(EMAIL_ADDRESS), equalTo(true));
         assertThat(
@@ -154,7 +164,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(204));
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue, List.of(CODE_VERIFIED, UPDATE_PROFILE_AUTH_APP));
-        assertThat(accountRecoveryStore.isBlockPresent(EMAIL_ADDRESS), equalTo(false));
+        assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(false));
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));
         assertThat(userStore.getMfaMethod(EMAIL_ADDRESS).size(), equalTo(1));
         assertThat(userStore.isAuthAppVerified(EMAIL_ADDRESS), equalTo(true));
@@ -181,7 +191,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue, List.of(CODE_VERIFIED, UPDATE_PROFILE_AUTH_APP));
-        assertThat(accountRecoveryStore.isBlockPresent(EMAIL_ADDRESS), equalTo(false));
+        assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(false));
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));
 
         var mfaMethod = userStore.getMfaMethod(EMAIL_ADDRESS);
@@ -209,7 +219,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1041));
-        assertThat(accountRecoveryStore.isBlockPresent(EMAIL_ADDRESS), equalTo(false));
+        assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(false));
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(false));
         assertTrue(Objects.isNull(userStore.getMfaMethod(EMAIL_ADDRESS)));
     }
@@ -230,7 +240,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1041));
-        assertThat(accountRecoveryStore.isBlockPresent(EMAIL_ADDRESS), equalTo(false));
+        assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(false));
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));
         assertThat(userStore.isAuthAppVerified(EMAIL_ADDRESS), equalTo(true));
         assertThat(userStore.getMfaMethod(EMAIL_ADDRESS).size(), equalTo(1));
@@ -263,7 +273,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue, List.of(CODE_VERIFIED, UPDATE_PROFILE_AUTH_APP));
-        assertThat(accountRecoveryStore.isBlockPresent(EMAIL_ADDRESS), equalTo(false));
+        assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(false));
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));
 
         var mfaMethod = userStore.getMfaMethod(EMAIL_ADDRESS);
@@ -280,20 +290,13 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                                 && t.isMethodVerified()));
     }
 
-    @ParameterizedTest
-    @MethodSource("verifyMfaCodeRequest")
-    void whenValidAuthAppOtpCodeReturn204AndClearAccountRecoveryBlockWhenPresent(
-            JourneyType journeyType, String profileInformation) {
-        accountRecoveryStore.addBlockWithoutTTL(EMAIL_ADDRESS);
-        setUpAuthAppRequest(journeyType);
-        var code =
-                AUTH_APP_STUB.getAuthAppOneTimeCode(
-                        journeyType.equals(JourneyType.SIGN_IN)
-                                ? AUTH_APP_SECRET_BASE_32
-                                : profileInformation);
+    @Test
+    void whenValidAuthAppOtpReturn204AndClearAccountRecoveryBlockForSignIn() {
+        accountModifiersStore.setAccountRecoveryBlock(internalCommonSubjectId);
+        setUpAuthAppRequest(JourneyType.SIGN_IN);
+        var code = AUTH_APP_STUB.getAuthAppOneTimeCode(AUTH_APP_SECRET_BASE_32);
         var codeRequest =
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.AUTH_APP, code, journeyType, profileInformation);
+                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, code, JourneyType.SIGN_IN);
 
         var response =
                 makeRequest(
@@ -303,11 +306,9 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(204));
 
         List<AuditableEvent> expectedAuditableEvents =
-                journeyType.equals(JourneyType.SIGN_IN)
-                        ? singletonList(CODE_VERIFIED)
-                        : List.of(CODE_VERIFIED, UPDATE_PROFILE_AUTH_APP);
+                List.of(CODE_VERIFIED, ACCOUNT_RECOVERY_BLOCK_REMOVED);
         assertTxmaAuditEventsReceived(txmaAuditQueue, expectedAuditableEvents);
-        assertThat(accountRecoveryStore.isBlockPresent(EMAIL_ADDRESS), equalTo(false));
+        assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(false));
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));
         assertThat(userStore.isAuthAppVerified(EMAIL_ADDRESS), equalTo(true));
     }
@@ -411,7 +412,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void whenWrongSecretUsedByAuthAppReturn400AndNotClearAccountRecoveryBlockWhenPresent() {
-        accountRecoveryStore.addBlockWithoutTTL(EMAIL_ADDRESS);
+        accountModifiersStore.setAccountRecoveryBlock(internalCommonSubjectId);
         setUpAuthAppRequest(JourneyType.SIGN_IN);
         String invalidCode = AUTH_APP_STUB.getAuthAppOneTimeCode("O5ZG63THFVZWKY3SMV2A====");
         VerifyMfaCodeRequest codeRequest =
@@ -426,7 +427,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1043));
         assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList(INVALID_CODE_SENT));
-        assertThat(accountRecoveryStore.isBlockPresent(EMAIL_ADDRESS), equalTo(true));
+        assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(true));
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));
         assertThat(userStore.isAuthAppVerified(EMAIL_ADDRESS), equalTo(true));
     }

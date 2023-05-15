@@ -8,6 +8,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
+import uk.gov.di.authentication.frontendapi.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
@@ -48,6 +49,7 @@ class AuthAppCodeProcessorTest {
     DynamoService mockDynamoService;
     AuditService mockAuditService;
     UserContext mockUserContext;
+    DynamoAccountModifiersService mockAccountModifiersService;
 
     private static final String AUTH_APP_SECRET =
             "JZ5PYIOWNZDAOBA65S5T77FEEKYCCIT2VE4RQDAJD7SO73T3LODA";
@@ -67,6 +69,7 @@ class AuthAppCodeProcessorTest {
         this.mockDynamoService = mock(DynamoService.class);
         this.mockAuditService = mock(AuditService.class);
         this.mockUserContext = mock(UserContext.class);
+        this.mockAccountModifiersService = mock(DynamoAccountModifiersService.class);
         when(mockUserContext.getSession()).thenReturn(mock(Session.class));
     }
 
@@ -221,13 +224,42 @@ class AuthAppCodeProcessorTest {
     }
 
     @Test
-    void shouldNotUpdateDynamoOrCreateAuditEventWhenSignIn() {
+    void shouldClearAccountRecoveryBlockAndCreateAuditEventWhenSignInAndBlockIsPresent() {
+        when(mockAccountModifiersService.isAccountRecoveryBlockPresent(INTERNAL_SUB_ID))
+                .thenReturn(true);
         setUpSuccessfulCodeRequest(
                 new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, "111111", JourneyType.SIGN_IN));
 
         authAppCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
 
         verifyNoInteractions(mockDynamoService);
+        verify(mockAccountModifiersService).removeAccountRecoveryBlockIfPresent(INTERNAL_SUB_ID);
+        verify(mockAuditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_REMOVED,
+                        CLIENT_SESSION_ID,
+                        SESSION_ID,
+                        AuditService.UNKNOWN,
+                        INTERNAL_SUB_ID,
+                        TEST_EMAIL_ADDRESS,
+                        IP_ADDRESS,
+                        AuditService.UNKNOWN,
+                        PERSISTENT_ID,
+                        pair("mfa-type", MFAMethodType.AUTH_APP.getValue()));
+    }
+
+    @Test
+    void shouldNotClearAccountRecoveryBlockAndCreateAuditEventWhenSignInAndBlockIsNotresent() {
+        when(mockAccountModifiersService.isAccountRecoveryBlockPresent(INTERNAL_SUB_ID))
+                .thenReturn(false);
+        setUpSuccessfulCodeRequest(
+                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, "111111", JourneyType.SIGN_IN));
+
+        authAppCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+
+        verifyNoInteractions(mockDynamoService);
+        verify(mockAccountModifiersService, never())
+                .removeAccountRecoveryBlockIfPresent(anyString());
         verifyNoInteractions(mockAuditService);
     }
 
@@ -246,7 +278,8 @@ class AuthAppCodeProcessorTest {
                         mockDynamoService,
                         MAX_RETRIES,
                         codeRequest,
-                        mockAuditService);
+                        mockAuditService,
+                        mockAccountModifiersService);
     }
 
     private void setUpBlockedUser(CodeRequest codeRequest) {
@@ -263,7 +296,8 @@ class AuthAppCodeProcessorTest {
                         mockDynamoService,
                         MAX_RETRIES,
                         codeRequest,
-                        mockAuditService);
+                        mockAuditService,
+                        mockAccountModifiersService);
     }
 
     private void setUpRetryLimitExceededUser(CodeRequest codeRequest) {
@@ -282,7 +316,8 @@ class AuthAppCodeProcessorTest {
                         mockDynamoService,
                         MAX_RETRIES,
                         codeRequest,
-                        mockAuditService);
+                        mockAuditService,
+                        mockAccountModifiersService);
     }
 
     private void setUpNoAuthCodeForUser(CodeRequest codeRequest) {
@@ -301,7 +336,8 @@ class AuthAppCodeProcessorTest {
                         mockDynamoService,
                         MAX_RETRIES,
                         codeRequest,
-                        mockAuditService);
+                        mockAuditService,
+                        mockAccountModifiersService);
     }
 
     private void setUpValidAuthCode(CodeRequest codeRequest) {
@@ -331,6 +367,7 @@ class AuthAppCodeProcessorTest {
                         mockDynamoService,
                         MAX_RETRIES,
                         codeRequest,
-                        mockAuditService);
+                        mockAuditService,
+                        mockAccountModifiersService);
     }
 }

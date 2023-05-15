@@ -4,6 +4,7 @@ import org.apache.commons.codec.CodecPolicy;
 import org.apache.commons.codec.binary.Base32;
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
+import uk.gov.di.authentication.frontendapi.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
@@ -28,7 +29,6 @@ import static uk.gov.di.authentication.shared.entity.MFAMethodType.AUTH_APP;
 
 public class AuthAppCodeProcessor extends MfaCodeProcessor {
 
-    private final UserContext userContext;
     private final int windowTime;
     private final int allowedWindows;
     private final CodeRequest codeRequest;
@@ -41,14 +41,15 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
             AuthenticationService dynamoService,
             int maxRetries,
             CodeRequest codeRequest,
-            AuditService auditService) {
+            AuditService auditService,
+            DynamoAccountModifiersService accountModifiersService) {
         super(
-                userContext.getSession().getEmailAddress(),
+                userContext,
                 codeStorageService,
                 maxRetries,
                 dynamoService,
-                auditService);
-        this.userContext = userContext;
+                auditService,
+                accountModifiersService);
         this.windowTime = configurationService.getAuthAppCodeWindowLength();
         this.allowedWindows = configurationService.getAuthAppCodeAllowedWindows();
         this.codeRequest = codeRequest;
@@ -101,7 +102,6 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
                         emailAddress, codeRequest.getProfileInformation());
                 submitAuditEvent(
                         FrontendAuditableEvent.UPDATE_PROFILE_AUTH_APP,
-                        userContext,
                         AUTH_APP,
                         AuditService.UNKNOWN,
                         ipAddress,
@@ -113,13 +113,14 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
                         emailAddress, codeRequest.getProfileInformation());
                 submitAuditEvent(
                         FrontendAuditableEvent.UPDATE_PROFILE_AUTH_APP,
-                        userContext,
                         AUTH_APP,
                         AuditService.UNKNOWN,
                         ipAddress,
                         persistentSessionId,
                         true);
                 break;
+            case SIGN_IN:
+                clearAccountRecoveryBlockIfPresent(AUTH_APP, ipAddress, persistentSessionId);
         }
     }
 

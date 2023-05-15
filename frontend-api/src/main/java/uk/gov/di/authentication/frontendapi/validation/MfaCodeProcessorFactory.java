@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.frontendapi.validation;
 
 import uk.gov.di.authentication.entity.CodeRequest;
+import uk.gov.di.authentication.frontendapi.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -17,16 +18,19 @@ public class MfaCodeProcessorFactory {
     private final CodeStorageService codeStorageService;
     private final AuthenticationService authenticationService;
     private final AuditService auditService;
+    private final DynamoAccountModifiersService accountModifiersService;
 
     public MfaCodeProcessorFactory(
             ConfigurationService configurationService,
             CodeStorageService codeStorageService,
             AuthenticationService authenticationService,
-            AuditService auditService) {
+            AuditService auditService,
+            DynamoAccountModifiersService accountModifiersService) {
         this.configurationService = configurationService;
         this.codeStorageService = codeStorageService;
         this.authenticationService = authenticationService;
         this.auditService = auditService;
+        this.accountModifiersService = accountModifiersService;
     }
 
     public Optional<MfaCodeProcessor> getMfaCodeProcessor(
@@ -46,7 +50,8 @@ public class MfaCodeProcessorFactory {
                                 authenticationService,
                                 codeMaxRetries,
                                 codeRequest,
-                                auditService));
+                                auditService,
+                                accountModifiersService));
             case SMS:
                 return Optional.of(
                         new PhoneNumberCodeProcessor(
@@ -55,7 +60,8 @@ public class MfaCodeProcessorFactory {
                                 configurationService,
                                 codeRequest,
                                 authenticationService,
-                                auditService));
+                                auditService,
+                                accountModifiersService));
             default:
                 return Optional.empty();
         }
