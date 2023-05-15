@@ -16,6 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
@@ -164,7 +165,7 @@ class VerifyMfaCodeHandlerTest {
 
     @ParameterizedTest
     @MethodSource("credentialTrustLevels")
-    void shouldReturn204WhenSuccessfulAuthAppCodeRegistrationRequestAndSetMfaMethod(
+    void shouldReturn204WhenSuccessfulAuthAppCodeRegistrationRequest(
             CredentialTrustLevel credentialTrustLevel) throws Json.JsonException {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(authAppCodeProcessor));
@@ -199,7 +200,8 @@ class VerifyMfaCodeHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("mfa-type", MFAMethodType.AUTH_APP.getValue()));
+                        pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
+                        pair("account-recovery", false));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
                         Session.AccountState.NEW, CLIENT_ID, CLIENT_NAME, "P0", false, true);
@@ -207,7 +209,7 @@ class VerifyMfaCodeHandlerTest {
 
     @ParameterizedTest
     @MethodSource("credentialTrustLevels")
-    void shouldReturn204WhenSuccessfulPhoneCodeRegistrationRequestAndSetPhoneNumber(
+    void shouldReturn204WhenSuccessfulPhoneCodeRegistrationRequest(
             CredentialTrustLevel credentialTrustLevel) throws Json.JsonException {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(phoneNumberCodeProcessor));
@@ -239,14 +241,103 @@ class VerifyMfaCodeHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("mfa-type", MFAMethodType.SMS.getValue()));
+                        pair("mfa-type", MFAMethodType.SMS.getValue()),
+                        pair("account-recovery", false));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
                         Session.AccountState.NEW, CLIENT_ID, CLIENT_NAME, "P0", false, true);
     }
 
+    @ParameterizedTest
+    @MethodSource("credentialTrustLevels")
+    void shouldReturn204WhenSuccessfulAuthAppCodeForAccountRecovery(
+            CredentialTrustLevel credentialTrustLevel) throws Json.JsonException {
+        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                .thenReturn(Optional.of(authAppCodeProcessor));
+        when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
+        session.setNewAccount(Session.AccountState.EXISTING);
+        session.setCurrentCredentialStrength(credentialTrustLevel);
+        var result =
+                makeCallWithCode(
+                        new VerifyMfaCodeRequest(
+                                MFAMethodType.AUTH_APP,
+                                CODE,
+                                JourneyType.ACCOUNT_RECOVERY,
+                                AUTH_APP_SECRET));
+
+        assertThat(result, hasStatus(204));
+        assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.AUTH_APP));
+        assertThat(
+                session.getCurrentCredentialStrength(), equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
+        verify(authAppCodeProcessor).processSuccessfulCodeRequest(anyString(), anyString());
+        verify(codeStorageService, never())
+                .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
+        verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.CODE_VERIFIED,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        CLIENT_ID,
+                        expectedCommonSubject,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
+                        pair("account-recovery", true));
+        verify(cloudwatchMetricsService)
+                .incrementAuthenticationSuccess(
+                        Session.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false, true);
+    }
+
+    @ParameterizedTest
+    @MethodSource("credentialTrustLevels")
+    void shouldReturn204WhenSuccessfulSMSCodeForAccountRecovery(
+            CredentialTrustLevel credentialTrustLevel) throws Json.JsonException {
+        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                .thenReturn(Optional.of(authAppCodeProcessor));
+        when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
+        session.setNewAccount(Session.AccountState.EXISTING);
+        session.setCurrentCredentialStrength(credentialTrustLevel);
+        var result =
+                makeCallWithCode(
+                        new VerifyMfaCodeRequest(
+                                MFAMethodType.SMS,
+                                CODE,
+                                JourneyType.ACCOUNT_RECOVERY,
+                                PHONE_NUMBER));
+
+        assertThat(result, hasStatus(204));
+        assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
+        assertThat(
+                session.getCurrentCredentialStrength(), equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
+        verify(authAppCodeProcessor).processSuccessfulCodeRequest(anyString(), anyString());
+        verify(codeStorageService, never())
+                .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
+        verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.CODE_VERIFIED,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        CLIENT_ID,
+                        expectedCommonSubject,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        pair("mfa-type", MFAMethodType.SMS.getValue()),
+                        pair("account-recovery", true));
+        verify(cloudwatchMetricsService)
+                .incrementAuthenticationSuccess(
+                        Session.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false, true);
+    }
+
     @Test
-    void shouldReturn204WhenSuccessfulAuthAppCodeLoginRequest() throws Json.JsonException {
+    void shouldReturn204WhenSuccessfulAuthAppCodeSignInRequest() throws Json.JsonException {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(authAppCodeProcessor));
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
@@ -271,19 +362,22 @@ class VerifyMfaCodeHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("mfa-type", MFAMethodType.AUTH_APP.getValue()));
+                        pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
+                        pair("account-recovery", false));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
                         Session.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false, true);
     }
 
-    @Test
-    void shouldReturn400IfMfaCodeProcessorCannotBeFound() throws Json.JsonException {
+    @ParameterizedTest
+    @EnumSource(JourneyType.class)
+    void shouldReturn400IfMfaCodeProcessorCannotBeFound(JourneyType journeyType)
+            throws Json.JsonException {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.empty());
+        var authAppSecret = journeyType.equals(JourneyType.SIGN_IN) ? null : AUTH_APP_SECRET;
         var codeRequest =
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.AUTH_APP, CODE, JourneyType.REGISTRATION, AUTH_APP_SECRET);
+                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, journeyType, authAppSecret);
         var result = makeCallWithCode(codeRequest);
 
         assertThat(result, hasStatus(400));
@@ -292,20 +386,39 @@ class VerifyMfaCodeHandlerTest {
         verifyNoInteractions(auditService);
         verifyNoInteractions(authAppCodeProcessor);
         verifyNoInteractions(codeStorageService);
+        verifyNoInteractions(cloudwatchMetricsService);
     }
 
-    private static Stream<Boolean> registration() {
-        return Stream.of(true, false);
-    }
-
-    @Test
-    void shouldReturn400AndBlockCodeWhenUserEnteredInvalidAuthAppCodeTooManyTimes()
+    @ParameterizedTest
+    @EnumSource(JourneyType.class)
+    void shouldReturn400IfPhoneCodeProcessorCannotBeFound(JourneyType journeyType)
             throws Json.JsonException {
+        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                .thenReturn(Optional.empty());
+        var phoneNumber = journeyType.equals(JourneyType.SIGN_IN) ? null : PHONE_NUMBER;
+        var codeRequest =
+                new VerifyMfaCodeRequest(MFAMethodType.SMS, CODE, journeyType, phoneNumber);
+        var result = makeCallWithCode(codeRequest);
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1002));
+        assertThat(session.getVerifiedMfaMethodType(), equalTo(null));
+        verifyNoInteractions(auditService);
+        verifyNoInteractions(authAppCodeProcessor);
+        verifyNoInteractions(codeStorageService);
+        verifyNoInteractions(cloudwatchMetricsService);
+    }
+
+    @ParameterizedTest
+    @EnumSource(JourneyType.class)
+    void shouldReturn400AndBlockCodeWhenUserEnteredInvalidAuthAppCodeTooManyTimes(
+            JourneyType journeyType) throws Json.JsonException {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(authAppCodeProcessor));
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.of(ErrorResponse.ERROR_1042));
+        var authAppSecret = journeyType.equals(JourneyType.SIGN_IN) ? null : AUTH_APP_SECRET;
         var codeRequest =
-                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, JourneyType.SIGN_IN);
+                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, journeyType, authAppSecret);
         var result = makeCallWithCode(codeRequest);
 
         assertThat(result, hasStatus(400));
@@ -315,6 +428,7 @@ class VerifyMfaCodeHandlerTest {
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService)
                 .deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS, MFAMethodType.AUTH_APP);
+        verifyNoInteractions(cloudwatchMetricsService);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
@@ -326,19 +440,22 @@ class VerifyMfaCodeHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("mfa-type", MFAMethodType.AUTH_APP.getValue()));
+                        pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
+                        pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)));
     }
 
-    @Test
-    void shouldReturn400AndNotBlockCodeWhenUserEnteredInvalidAuthAppCodeAndBlockAlreadyExists()
-            throws Json.JsonException {
+    @ParameterizedTest
+    @EnumSource(JourneyType.class)
+    void shouldReturn400AndNotBlockCodeWhenUserEnteredInvalidAuthAppCodeAndBlockAlreadyExists(
+            JourneyType journeyType) throws Json.JsonException {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(authAppCodeProcessor));
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.of(ErrorResponse.ERROR_1042));
         when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
+        var authAppSecret = journeyType.equals(JourneyType.SIGN_IN) ? null : AUTH_APP_SECRET;
         var codeRequest =
-                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, JourneyType.SIGN_IN);
+                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, journeyType, authAppSecret);
         var result = makeCallWithCode(codeRequest);
 
         assertThat(result, hasStatus(400));
@@ -347,6 +464,7 @@ class VerifyMfaCodeHandlerTest {
         verify(codeStorageService, never())
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
+        verifyNoInteractions(cloudwatchMetricsService);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
@@ -358,20 +476,21 @@ class VerifyMfaCodeHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("mfa-type", MFAMethodType.AUTH_APP.getValue()));
+                        pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
+                        pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)));
     }
 
     @ParameterizedTest
-    @MethodSource("registration")
-    void shouldReturn400WhenUserEnteredInvalidAuthAppCode(boolean registration)
+    @EnumSource(JourneyType.class)
+    void shouldReturn400WhenUserEnteredInvalidAuthAppOtpCode(JourneyType journeyType)
             throws Json.JsonException {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(authAppCodeProcessor));
-        var profileInformation = registration ? AUTH_APP_SECRET : null;
+        var profileInformation = journeyType.equals(JourneyType.SIGN_IN) ? null : AUTH_APP_SECRET;
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.of(ErrorResponse.ERROR_1043));
         var codeRequest =
                 new VerifyMfaCodeRequest(
-                        MFAMethodType.AUTH_APP, CODE, JourneyType.SIGN_IN, profileInformation);
+                        MFAMethodType.AUTH_APP, CODE, journeyType, profileInformation);
         var result = makeCallWithCode(codeRequest);
 
         assertThat(result, hasStatus(400));
@@ -380,6 +499,7 @@ class VerifyMfaCodeHandlerTest {
         verify(codeStorageService, never())
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
+        verifyNoInteractions(cloudwatchMetricsService);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.INVALID_CODE_SENT,
@@ -391,20 +511,23 @@ class VerifyMfaCodeHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("mfa-type", MFAMethodType.AUTH_APP.getValue()));
+                        pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
+                        pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)));
     }
 
-    @Test
-    void
-            shouldReturn400AndBlockCodeWhenUserEnteredInvalidPhoneNumberCodeDuringRegistrationTooManyTimes()
-                    throws Json.JsonException {
+    @ParameterizedTest
+    @EnumSource(
+            value = JourneyType.class,
+            names = {"SIGN_IN"},
+            mode = EnumSource.Mode.EXCLUDE)
+    void shouldReturn400AndBlockCodeWhenUserEnteredInvalidPhoneNumberCodeTooManyTimes(
+            JourneyType journeyType) throws Json.JsonException {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(phoneNumberCodeProcessor));
         when(phoneNumberCodeProcessor.validateCode())
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1034));
         var codeRequest =
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS, CODE, JourneyType.REGISTRATION, PHONE_NUMBER);
+                new VerifyMfaCodeRequest(MFAMethodType.SMS, CODE, journeyType, PHONE_NUMBER);
         var result = makeCallWithCode(codeRequest);
 
         assertThat(result, hasStatus(400));
@@ -413,6 +536,7 @@ class VerifyMfaCodeHandlerTest {
         verify(codeStorageService)
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
+        verifyNoInteractions(cloudwatchMetricsService);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
@@ -424,13 +548,17 @@ class VerifyMfaCodeHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("mfa-type", MFAMethodType.SMS.getValue()));
+                        pair("mfa-type", MFAMethodType.SMS.getValue()),
+                        pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)));
     }
 
-    @Test
-    void
-            shouldReturn400AndNotBlockCodeWhenInvalidPhoneNumberCodeEnteredDuringRegistrationAndBlockAlreadyExists()
-                    throws Json.JsonException {
+    @ParameterizedTest
+    @EnumSource(
+            value = JourneyType.class,
+            names = {"SIGN_IN"},
+            mode = EnumSource.Mode.EXCLUDE)
+    void shouldReturn400AndNotBlockCodeWhenInvalidPhoneNumberCodeEnteredAndBlockAlreadyExists(
+            JourneyType journeyType) throws Json.JsonException {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(phoneNumberCodeProcessor));
         when(phoneNumberCodeProcessor.validateCode())
@@ -438,8 +566,7 @@ class VerifyMfaCodeHandlerTest {
         when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
         var codeRequest =
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS, CODE, JourneyType.REGISTRATION, PHONE_NUMBER);
+                new VerifyMfaCodeRequest(MFAMethodType.SMS, CODE, journeyType, PHONE_NUMBER);
         var result = makeCallWithCode(codeRequest);
 
         assertThat(result, hasStatus(400));
@@ -448,6 +575,7 @@ class VerifyMfaCodeHandlerTest {
         verify(codeStorageService, never())
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
+        verifyNoInteractions(cloudwatchMetricsService);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
@@ -459,19 +587,23 @@ class VerifyMfaCodeHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("mfa-type", MFAMethodType.SMS.getValue()));
+                        pair("mfa-type", MFAMethodType.SMS.getValue()),
+                        pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)));
     }
 
-    @Test
-    void shouldReturn400WhenUserEnteredInvalidPhoneNumberCodeForRegistration()
+    @ParameterizedTest
+    @EnumSource(
+            value = JourneyType.class,
+            names = {"SIGN_IN"},
+            mode = EnumSource.Mode.EXCLUDE)
+    void shouldReturn400WhenUserEnteredInvalidPhoneNumberOtpCode(JourneyType journeyType)
             throws Json.JsonException {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(phoneNumberCodeProcessor));
         when(phoneNumberCodeProcessor.validateCode())
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1037));
         var codeRequest =
-                new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS, CODE, JourneyType.REGISTRATION, PHONE_NUMBER);
+                new VerifyMfaCodeRequest(MFAMethodType.SMS, CODE, journeyType, PHONE_NUMBER);
         var result = makeCallWithCode(codeRequest);
 
         assertThat(result, hasStatus(400));
@@ -480,6 +612,7 @@ class VerifyMfaCodeHandlerTest {
         verify(codeStorageService, never())
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
+        verifyNoInteractions(cloudwatchMetricsService);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.INVALID_CODE_SENT,
@@ -491,11 +624,17 @@ class VerifyMfaCodeHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("mfa-type", MFAMethodType.SMS.getValue()));
+                        pair("mfa-type", MFAMethodType.SMS.getValue()),
+                        pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)));
     }
 
-    @Test
-    void shouldReturn400WhenAuthAppSecretIsInvalid() throws Json.JsonException {
+    @ParameterizedTest
+    @EnumSource(
+            value = JourneyType.class,
+            names = {"SIGN_IN"},
+            mode = EnumSource.Mode.EXCLUDE)
+    void shouldReturn400WhenAuthAppSecretIsInvalid(JourneyType journeyType)
+            throws Json.JsonException {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(authAppCodeProcessor));
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.of(ErrorResponse.ERROR_1041));
@@ -506,7 +645,7 @@ class VerifyMfaCodeHandlerTest {
                         new VerifyMfaCodeRequest(
                                 MFAMethodType.AUTH_APP,
                                 CODE,
-                                JourneyType.REGISTRATION,
+                                journeyType,
                                 "not-base-32-encoded-secret"));
 
         assertThat(result, hasStatus(400));
