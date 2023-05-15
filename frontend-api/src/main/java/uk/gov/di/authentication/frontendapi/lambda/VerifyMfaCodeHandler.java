@@ -15,6 +15,7 @@ import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper;
@@ -203,7 +204,12 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         .orElse(CODE_VERIFIED);
 
         submitAuditEvent(
-                auditableEvent, session, userContext, input, codeRequest.getMfaMethodType());
+                auditableEvent,
+                session,
+                userContext,
+                input,
+                codeRequest.getMfaMethodType(),
+                codeRequest.getJourneyType().equals(JourneyType.ACCOUNT_RECOVERY));
 
         if (errorResponse.isEmpty()) {
             mfaCodeProcessor.processSuccessfulCodeRequest(
@@ -248,7 +254,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             Session session,
             UserContext userContext,
             APIGatewayProxyRequestEvent input,
-            MFAMethodType mfaMethodType) {
+            MFAMethodType mfaMethodType,
+            boolean isAccountRecovery) {
         auditService.submitAuditEvent(
                 auditableEvent,
                 userContext.getClientSessionId(),
@@ -262,6 +269,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 IpAddressHelper.extractIpAddress(input),
                 AuditService.UNKNOWN,
                 extractPersistentIdFromHeaders(input.getHeaders()),
-                pair("mfa-type", mfaMethodType.getValue()));
+                pair("mfa-type", mfaMethodType.getValue()),
+                pair("account-recovery", isAccountRecovery));
     }
 }
