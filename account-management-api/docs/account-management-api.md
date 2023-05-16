@@ -1,344 +1,240 @@
-# Account Management API
+Status 16/05/2023
 
-Date: 2023-05-03
+# Understand the account management API
 
-## Context
+The account management API is an internal interface used by the account management relying party (RP) to access the authentication database. It provides functionality to 
 
-API overview of the Account Management API.
+* authenticate a user
+* update a user’s password or email address
+* delete a user’s account 
+* find out which multi-factor authentication (MFA) method a user selected
+* change a user’s selected MFA method
+* send a one-time passcode (OTP) notification to a user
 
-## Authorization
-Access of the Account Management API is restricted to the Account Management RP. Authentication to the Account Management API is handled via an API Gateway Lambda Authorizer. The Account Management Client sends the Access token it received from the Orchestration `/token` endpoint in the Authorization header. The Authorizer will perform validation such as checking the signature of the token and checking that the Scopes contain the custom `am` scope.
+
+## Accessing the account management API
+
+The account management API is restricted to the account management RP using an API Gateway Lambda authoriser to control access.
+
+To use the API, the account management RP needs to:
+
+1. Get an access token from the /token endpoint - find more [information on how to request an access token](https://docs.sign-in.service.gov.uk/integrate-with-integration-environment/integrate-with-code-flow/#make-a-post-request-to-the-token-endpoint).
+2. Include the access token in the header of the API request. 
+
+This example shows how to include the access token in the header of the request: 
 ```
-Authorization: Bearer <access-token>
+Authorization: Bearer <YOUR_ACCESS_TOKEN>
 ```
- 
-## Endpoints
 
-### Authenticate the user
-Checks that the account exists and the password is valid. This is used in circumstances such as prior to users updating their password.
-#### Example request
+## Using the account management API
+
+### Authenticate a user
+
+You can make a `POST` request to the `/authenticate` endpoint to check that the user’s account exists and the password is valid. This is commonly used before a user changes their password.
+
+Example request: 
+
 ```
 POST /authenticate
-```
-
-<table class="tg">
-<thead>
-  <tr>
-    <th class="tg-ktyi"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#000;background-color:transparent">Request Parameter</span></th>
-    <th class="tg-ktyi"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#000;background-color:transparent">Required or optional</span></th>
-    <th class="tg-ktyi"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#000;background-color:transparent">Description</span></th>
-  </tr>
-</thead>
-<tbody>
-  <tr>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">email</span></td>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">Required</span></td>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">The email address of the user.</span></td>
-  </tr>
-  <tr>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">password</span></td>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">Required</span></td>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">The current password of the user.</span></td>
-  </tr>
-</tbody>
-</table>
-
-```json
 {
- "email": "",
- "password": ""
+ "email": "test@example.com",
+ "password": "examplePassword"
 }
 ```
 
-#### Example of a successful response
+Request Parameters:
 
+| Parameter       | Required or optional | Description               |
+|-----------------|----------------------|---------------------------|
+| `email`         | Required             | The user's email address. |
+| `password`      | Required             | The user's password.      |
+
+
+If the request is successful, the account management API returns this response:
 ```
 204 No Content
 ```
 
+### Update a user’s password
 
-### Update the users password
-This will update the user's password with the new password provided. 
+You can make a `POST` request to the `/update-password` endpoint to change a user’s password.
 
-If successful, an email will be sent to the users email address that their password has changed.
-#### Example request
+If successful, GOV.UK Notify sends an email to the user's email address confirming that their password has changed.
+
+Example request:
 ```
 POST /update-password
-```
-
-<table class="tg">
-<thead>
-  <tr>
-    <th class="tg-ktyi"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#000;background-color:transparent">Request Parameter</span></th>
-    <th class="tg-ktyi"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#000;background-color:transparent">Required or optional</span></th>
-    <th class="tg-ktyi"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#000;background-color:transparent">Description</span></th>
-  </tr>
-</thead>
-<tbody>
-  <tr>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">email</span></td>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">Required</span></td>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">The email address of the user.</span></td>
-  </tr>
-  <tr>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">password</span></td>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">Required</span></td>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">The new password entered by the user.</span></td>
-  </tr>
-</tbody>
-</table>
-
-```json
 {
- "email": "",
- "newPassword": ""
+ "email": "test@example.com",
+ "newPassword": "newExamplePassword"
 }
 ```
 
-#### Example of a successful response
+Request parameters: 
+
+| Parameter       | Required or optional | Description               |
+|-----------------|----------------------|---------------------------|
+| `email`         | Required             | The user's email address. |
+| `newPassword`   | Required             | The new password entered by the user. |
+
+
+If the request is successful, the account management API returns this response:
 ```
 204 No Content
 ```
 
+### Update a user’s email address
 
-### Update the users email address
-This will update the existing users email address with the replacement email address provided. You will need to ensure that the `/send-otp-notification` endpoint is called first with the `VERIFY_EMAIL` notification type so that an OTP is sent to the users new email address. 
+You can update an existing user’s email address by using the `/update-email` endpoint and providing the new email address. 
 
-If successful, an email will be sent to the users old AND new email address that their email address has changed.  
+Before updating a user’s email address, you must call the [`/send-otp-notification` endpoint](https://github.com/alphagov/di-authentication-api/edit/bau-draft-account-management-api-doc/account-management-api/docs/account-management-api.md#send-an-otp-notification-to-a-user) and include the `VERIFY_EMAIL` notification type to send an OTP to the user’s new email address.
 
-#### Example request
+If successful, GOV.UK Notify sends an email to the `existingEmailAddress` and `replacementEmailAddress` confirming that the user’s email address has changed.
+
+Example request:
 ```
 POST /update-email
-```
-
-<table class="tg">
-<thead>
-  <tr>
-    <th class="tg-ktyi"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#000;background-color:transparent">Request Parameter</span></th>
-    <th class="tg-ktyi"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#000;background-color:transparent">Required or optional</span></th>
-    <th class="tg-ktyi"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#000;background-color:transparent">Description</span></th>
-  </tr>
-</thead>
-<tbody>
-  <tr>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">existingEmailAddress</span></td>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">Required</span></td>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">The current email address of the user.</span></td>
-  </tr>
-  <tr>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">replacementEmailAddress</span></td>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">Required</span></td>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">The new email address for the user.</span></td>
-  </tr>
-  <tr>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">otp</span></td>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">Required</span></td>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">The OTP entered by the user. This will be the OTP sent to the new email address.</span></td>
-  </tr>
-</tbody>
-</table>
-
-```json
 {
- "existingEmailAddress": "",
- "replacementEmailAddress": "",
-  "otp": ""
+ "existingEmailAddress": "test@example.com",
+ "replacementEmailAddress": "test@newExample.com", 
+  "otp": "123456"
 }
 ```
 
-#### Example of a successful response
+Request parameters: 
+| Parameter       | Required or optional | Description               |
+|-----------------|----------------------|---------------------------|
+| `existingEmailAddress`    | Required   | The user’s current email address. |
+| `replacementEmailAddress` | Required   | The user’s new email address. |
+| `otp`                     | Required   | The OTP that we sent to the user’s new email address and was entered by the user when requesting the update. |
+
+If the request is successful, the account management API returns this response:
 ```
 204 No Content
 ```
 
+### Delete a user’s account
 
-### Delete the users account
-This will delete the account for the email provided in the request. 
+You can make a `POST` request to the `/delete-account` endpoint and delete a user’s account by providing the user’s email address.
 
-If successful, an email will be sent to the users email address that their account has been deleted.
-#### Example request
+If successful, GOV.UK Notify sends an email to the user’s email address confirming the deletion of the user’s account.
+
+Example request:
 ```
 POST /delete-account
-```
-
-<table class="tg">
-<thead>
-  <tr>
-    <th class="tg-ktyi"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#000;background-color:transparent">Request Parameter</span></th>
-    <th class="tg-ktyi"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#000;background-color:transparent">Required or optional</span></th>
-    <th class="tg-ktyi"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#000;background-color:transparent">Description</span></th>
-  </tr>
-</thead>
-<tbody>
-  <tr>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">email</span></td>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">Required</span></td>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">The email address of the user to be deleted.</span></td>
-  </tr>
-</tbody>
-</table>
-
-```json
 {
- "email": ""
+ "email": "test@example.com"
 }
 ```
 
-#### Example of a successful response
+Request parameters: 
+| Parameter       | Required or optional | Description               |
+|-----------------|----------------------|---------------------------|
+| `email`         | Required             | The user's email address. |
+
+
+If the request is successful, the account management API returns this response:
 ```
 204 No Content
 ```
 
+### Getting a user’s selected MFA method 
 
-### Retrieve the users MFA method
-This will retrieve the users primary MFA method. 
-#### Example request
+You can make a `POST` request to the `/mfa-method` endpoint to find out a user’s selected MFA method by providing the user’s email address.
+
+The only 2 MFA methods available are to: 
+* get an OPT sent by text message to your mobile phone 
+* use an authenticator app 
+
+Example request:
 ```
 GET /mfa-method
-```
-<table class="tg">
-<thead>
-  <tr>
-    <th class="tg-ktyi"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#000;background-color:transparent">Request Parameter</span></th>
-    <th class="tg-ktyi"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#000;background-color:transparent">Description</span></th>
-  </tr>
-</thead>
-<tbody>
-  <tr>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">email</span></td>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">The email address of the user.</span></td>
-  </tr>
-</tbody>
-</table>
-
-```json
 {
- "email": ""
+ "email": "test@example.com"
 }
 ```
 
-#### Example of a successful response
-<table class="tg">
-<thead>
-  <tr>
-    <th class="tg-ktyi"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#000;background-color:transparent">Response Parameter</span></th>
-    <th class="tg-ktyi"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#000;background-color:transparent">Description</span></th>
-  </tr>
-</thead>
-<tbody>
-  <tr>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">primaryMfaMethod</span></td>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">The primary MFA method used by the user when signing in to GOV.UK One Login medium level services. This can be AUTH_APP or SMS.</span></td>
-  </tr>
-</tbody>
-</table>
+Request parameters: 
+| Parameter       | Required or optional | Description               |
+|-----------------|----------------------|---------------------------|
+| `email`         | Required             | The user's email address. |
 
-```json
+Example response for a successful request: 
+```
 {
  "primaryMfaMethod": "AUTH_APP"
 }
 ```
 
-### Update the users MFA method
-This is used to update the users primary MFA method. Bear in mind that this will remove the users existing MFA method, if the code sent in the request is valid. When updating to `SMS`, you will need to ensure that the `/send-otp-notification` endpoint is called first so that an OTP is sent to the users mobile phone. 
+Response parameters:
+| Parameter          | Description               |
+|--------------------|---------------------------|
+| `primaryMfaMethod` | The user’s primary MFA method when signing in to [GOV.UK One Login services at medium Cl.Cm protection level](https://docs.sign-in.service.gov.uk/integrate-with-integration-environment/choose-the-level-of-authentication/#choose-the-level-of-authentication-for-your-service). <br><br> The 2 available methods are: <ul><li>`AUTH_APP` for users wanting to use an authenticator app</li><li>`SMS` for users wanting to receive OTPs on their mobile phone</li></ul> |
 
-If successful, an email will be sent to the users email address that their MFA method has changed.
-#### Example request
+### Update a user’s MFA method
+
+You can make a `POST` request to the `/update-mfa-method` endpoint to change a user’s MFA method. 
+
+When changing the MFA method from authenticator app to SMS, you must call the [`/send-otp-notification` endpoint](https://github.com/alphagov/di-authentication-api/edit/bau-draft-account-management-api-doc/account-management-api/docs/account-management-api.md#send-an-otp-notification-to-a-user) first to send an OTP to the user's mobile phone.
+
+If successful,
+* we remove the existing MFA method 
+* GOV.UK Notify sends an email to the user’s email address confirming that their MFA method has changed
+
+Example request:
 ```
 POST /update-mfa-method
-```
-
-<table class="tg">
-<thead>
-  <tr>
-    <th class="tg-ktyi"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#000;background-color:transparent">Request Parameter</span></th>
-    <th class="tg-ktyi"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#000;background-color:transparent">Required or optional</span></th>
-    <th class="tg-ktyi"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#000;background-color:transparent">Description</span></th>
-  </tr>
-</thead>
-<tbody>
-  <tr>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">email</span></td>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">Required</span></td>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">The email address of the user.</span></td>
-  </tr>
-  <tr>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">profileInformation</span></td>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">Required</span></td>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">When <span style="font-weight:400;font-style:normal;text-decoration:none;color:#A71D5D;background-color:#F5F5F5">mfaType</span> is SMS this will the phone number and when <span style="font-weight:400;font-style:normal;text-decoration:none;color:#A71D5D;background-color:#F5F5F5">mfaType</span> is AUTH_APP this will be the Auth App Secret.</span></td>
-  </tr>
-  <tr>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">mfaType</span></td>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">Required</span></td>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">The users new MFA Method. This can be either SMS or AUTH_APP</span></td>
-  </tr>
-  <tr>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">code</span></td>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">Required</span></td>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">The 6 digit OTP code entered by the user.</span></td>
-  </tr>
-</tbody>
-</table>
-
-```json
 {
-  "email": "",
-  "profileInformation": "",
-  "mfaType": "",
-  "code": ""
+  "email": "test@example.com",
+  "profileInformation": "07891234567",
+  "mfaType": "SMS",
+  "code": "123456"
 }
 ```
 
-#### Example of a successful response
+Request parameters:
+| Parameter              | Required or optional | Description               |
+|------------------------|----------------------|---------------------------|
+| `email`                | Required             | The user's email address. |
+| `profileInformation`   | Required             | This is dependent on what mfaType is set to and must be one of the following: <br><br> <ul><li>phone number if `mfaType` is set to `SMS`</li><li>auth app secret if `mfaType` is set to `AUTH_APP`</li></ul> |
+| `mfaType`              | Required             | The user’s new MFA method and must be set to one of the following: <br><br> <ul><li>`SMS`</li><li>`AUTH_APP`</li></ul> |
+| `code`                 | Required             | The 6-digit OTP code entered by the user. |
+
+If the request is successful, the account management API returns this response:
 ```
 204 No Content
 ```
 
+### Send an OTP notification to a user
 
-### Send a OTP notification to the user
-If you need to send an OTP in an email or text message, you can use the send notification lambda. It currently only supports 2 notification types `VERIFY_PHONE_NUMBER` and `VERIFY_EMAIL`. Phone number is only required when using the `VERIFY_PHONE_NUMBER` notification type.  
+To send an OTP in an email or text message, you must send a send notification lambda to the `/send-otp-notification` endpoint. The send notification lambda currently only supports 2 notification types: 
 
-#### Example request
+* `VERIFY_PHONE_NUMBER`
+* `VERIFY_EMAIL`
+
+You must provide a phone number when using the `VERIFY_PHONE_NUMBER` notification type.
+
+Example request:
 ```
 POST /send-otp-notification
-```
-
-<table class="tg">
-<thead>
-  <tr>
-    <th class="tg-ktyi"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#000;background-color:transparent">Request Parameter</span></th>
-    <th class="tg-ktyi"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#000;background-color:transparent">Required or optional</span></th>
-    <th class="tg-ktyi"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#000;background-color:transparent">Description</span></th>
-  </tr>
-</thead>
-<tbody>
-  <tr>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">email</span></td>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">Required</span></td>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">The email address of the user.</span></td>
-  </tr>
-  <tr>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">notificationType</span></td>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">Required</span></td>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">Determines whether to send a 6 digit OTP to an email address using VERIFY_EMAIL or to send an SMS to a Mobile Phone Number using VERIFY_PHONE_NUMBER</span></td>
-  </tr>
-  <tr>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">phoneNumber</span></td>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">Optional</span></td>
-    <td class="tg-n81y"><span style="font-weight:400;font-style:normal;text-decoration:none;color:#0B0C0C;background-color:transparent">The Mobile Phone Number where to send the user a 6 digit OTP. This is only required when <span style="font-weight:400;font-style:normal;text-decoration:none;color:#A71D5D;background-color:#F5F5F5">notificationType</span> is VERIFY_PHONE_NUMBER.</span></td>
-  </tr>
-</tbody>
-</table>
-
-```json
 {
-  "email": "",
-  "notificationType": "",
-  "phoneNumber": ""
+  "email": "test@example.com",
+  "notificationType": "VERIFY_PHONE_NUMBER",
+  "phoneNumber": "07891234567"
 }
 ```
 
-#### Example of a successful response
+Request parameters: 
+| Parameter          | Required or optional | Description               |
+|--------------------|----------------------|---------------------------|
+| `email`            | Required             | The user's email address. |
+| `notificationType` | Required             | The notification type used to decide where to send the 6-digit OTP to. It must be set to: <br><br><ul> <li>`VERIFY_PHONE_NUMBER` to send the code in an SMS to the user’s mobile `phoneNumber`</li> <li>`VERIFY_EMAIL` to send the code to the user’s `email` </li></ul> |
+| `phoneNumber`      | Optional             | The phone number receiving the 6-digit OTP. This is only required when notificationType is `VERIFY_PHONE_NUMBER`. |
+
+If the request is successful, the account management API returns this response:
 ```
 204 No Content
 ```
+
+
+
