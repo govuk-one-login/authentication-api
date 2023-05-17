@@ -8,7 +8,9 @@ module "account_management_api_remove_account_role" {
     aws_iam_policy.dynamo_am_user_read_access_policy.arn,
     aws_iam_policy.dynamo_am_user_delete_access_policy.arn,
     aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
-    module.account_management_txma_audit.access_policy_arn
+    module.account_management_txma_audit.access_policy_arn,
+    aws_iam_policy.dynamo_am_account_modifiers_read_access_policy.arn,
+    aws_iam_policy.dynamo_am_account_modifiers_delete_access_policy.arn,
   ]
 }
 

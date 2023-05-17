@@ -1,12 +1,11 @@
-package uk.gov.di.authentication.frontendapi.services;
+package uk.gov.di.authentication.shared.services;
 
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
-import uk.gov.di.authentication.frontendapi.entity.AccountModifiers;
-import uk.gov.di.authentication.frontendapi.entity.AccountRecovery;
+import uk.gov.di.authentication.shared.entity.AccountModifiers;
+import uk.gov.di.authentication.shared.entity.AccountRecovery;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.Objects;
 import java.util.Optional;
