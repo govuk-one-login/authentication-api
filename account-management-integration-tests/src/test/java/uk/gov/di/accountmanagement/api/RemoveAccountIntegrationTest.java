@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.accountmanagement.entity.RemoveAccountRequest;
 import uk.gov.di.accountmanagement.lambda.RemoveAccountHandler;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
@@ -28,6 +29,10 @@ import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyRespon
 
 public class RemoveAccountIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
+    private static final String INTERNAl_SECTOR_HOST = "test.account.gov.uk";
+    private static final Subject SUBJECT = new Subject();
+    private static final String EMAIL = "joe.bloggs+3@digital.cabinet-office.gov.uk";
+
     @BeforeEach
     void setup() {
         handler = new RemoveAccountHandler(TXMA_ENABLED_CONFIGURATION_SERVICE);
@@ -36,23 +41,42 @@ public class RemoveAccountIntegrationTest extends ApiGatewayHandlerIntegrationTe
     }
 
     @Test
-    void shouldRemoveAccountAndReturn204WhenUserExists() {
-        String email = "joe.bloggs+3@digital.cabinet-office.gov.uk";
-        String password = "password-1";
-        Subject subject = new Subject();
-        String subjectId = userStore.signUp(email, password, subject);
+    void shouldRemoveAccountAndAccountModifiersEntryAndReturn204WhenUserExists() {
+        var internalCommonSubjectId = setupUserAndRetrieveInternalCommonSubId();
+        accountModifiersStore.setAccountRecoveryBlock(internalCommonSubjectId);
 
         var response =
                 makeRequest(
-                        Optional.of(new RemoveAccountRequest(email)),
+                        Optional.of(new RemoveAccountRequest(EMAIL)),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
-                        Map.of("principalId", subjectId));
+                        Map.of("principalId", internalCommonSubjectId));
 
         assertThat(response, hasStatus(HttpStatus.SC_NO_CONTENT));
 
-        assertFalse(userStore.userExists(email));
+        assertFalse(userStore.userExists(EMAIL));
+        assertFalse(accountModifiersStore.isEntryForSubjectIdPresent(internalCommonSubjectId));
+
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(DELETE_ACCOUNT));
+    }
+
+    @Test
+    void shouldRemoveAccountAndReturn204WhenUserExists() {
+        var internalCommonSubjectId = setupUserAndRetrieveInternalCommonSubId();
+
+        var response =
+                makeRequest(
+                        Optional.of(new RemoveAccountRequest(EMAIL)),
+                        Collections.emptyMap(),
+                        Collections.emptyMap(),
+                        Collections.emptyMap(),
+                        Map.of("principalId", internalCommonSubjectId));
+
+        assertThat(response, hasStatus(HttpStatus.SC_NO_CONTENT));
+
+        assertFalse(userStore.userExists(EMAIL));
+        assertFalse(accountModifiersStore.isEntryForSubjectIdPresent(internalCommonSubjectId));
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(DELETE_ACCOUNT));
     }
@@ -98,5 +122,15 @@ public class RemoveAccountIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
         assertNoNotificationsReceived(notificationsQueue);
         AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
+    }
+
+    private String setupUserAndRetrieveInternalCommonSubId() {
+        userStore.signUp(EMAIL, "password-1", SUBJECT);
+        byte[] salt = userStore.addSalt(EMAIL);
+        var internalCommonSubjectId =
+                ClientSubjectHelper.calculatePairwiseIdentifier(
+                        SUBJECT.getValue(), INTERNAl_SECTOR_HOST, salt);
+        accountModifiersStore.setAccountRecoveryBlock(internalCommonSubjectId);
+        return internalCommonSubjectId;
     }
 }

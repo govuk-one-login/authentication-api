@@ -42,6 +42,12 @@ public class AccountModifiersStoreExtension extends DynamoExtension implements A
         return dynamoAccountModifiersService.isAccountRecoveryBlockPresent(internalCommonSubjectId);
     }
 
+    public boolean isEntryForSubjectIdPresent(String internalCommonSubjectId) {
+        return dynamoAccountModifiersService
+                .getAccountModifiers(internalCommonSubjectId)
+                .isPresent();
+    }
+
     public void setAccountRecoveryBlock(String internalCommonSubjectId) {
         dynamoAccountModifiersService.setAccountRecoveryBlock(internalCommonSubjectId, true);
     }
