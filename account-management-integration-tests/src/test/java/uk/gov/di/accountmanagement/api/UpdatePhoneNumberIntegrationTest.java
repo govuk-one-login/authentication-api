@@ -12,6 +12,7 @@ import uk.gov.di.accountmanagement.entity.UpdatePhoneNumberRequest;
 import uk.gov.di.accountmanagement.lambda.UpdatePhoneNumberHandler;
 import uk.gov.di.accountmanagement.testsupport.helpers.NotificationAssertionHelper;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
@@ -41,6 +42,7 @@ class UpdatePhoneNumberIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                     PhoneNumberUtil.getInstance()
                             .getExampleNumberForType("GB", MOBILE)
                             .getNationalNumber());
+    private static final String INTERNAl_SECTOR_HOST = "test.account.gov.uk";
     private static final Subject SUBJECT = new Subject();
 
     @BeforeEach
@@ -64,8 +66,8 @@ class UpdatePhoneNumberIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     @ParameterizedTest
     @MethodSource("phoneNumbers")
     void shouldSendNotificationAndReturn204WhenUpdatingPhoneNumberIsSuccessful(String phoneNumber) {
-        String publicSubjectID = userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
-        String otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 300);
+        var internalSubId = setupUserAndRetrieveInternalCommonSubId();
+        var otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 300);
 
         var response =
                 makeRequest(
@@ -73,7 +75,7 @@ class UpdatePhoneNumberIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
-                        Map.of("principalId", publicSubjectID));
+                        Map.of("principalId", internalSubId));
 
         assertThat(response, hasStatus(HttpStatus.SC_NO_CONTENT));
 
@@ -98,9 +100,9 @@ class UpdatePhoneNumberIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
     @Test
     void shouldReturn400WhenOtpIsInvalid() throws Exception {
-        String publicSubjectID = userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
+        var internalSubId = setupUserAndRetrieveInternalCommonSubId();
         redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 300);
-        String badOtp = "This is not the correct OTP";
+        var badOtp = "012345";
 
         var response =
                 makeRequest(
@@ -109,7 +111,7 @@ class UpdatePhoneNumberIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                         Collections.emptyMap(),
                         Collections.emptyMap(),
                         Collections.emptyMap(),
-                        Map.of("principalId", publicSubjectID));
+                        Map.of("principalId", internalSubId));
 
         assertThat(response, hasStatus(HttpStatus.SC_BAD_REQUEST));
         assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1020)));
@@ -121,11 +123,11 @@ class UpdatePhoneNumberIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
     @Test
     void shouldThrowExceptionWhenUserAttemptsToUpdateDifferentAccount() {
-        userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
-        String otherSubjectID =
-                userStore.signUp(
-                        "other.user@digital.cabinet-office.gov.uk", "password-2", new Subject());
-        String otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 300);
+        var internalSubId = setupUserAndRetrieveInternalCommonSubId();
+        userStore.signUp("other.user@digital.cabinet-office.gov.uk", "password-2", new Subject());
+        var otp =
+                redis.generateAndSavePhoneNumberCode(
+                        "other.user@digital.cabinet-office.gov.uk", 300);
 
         Exception ex =
                 assertThrows(
@@ -134,19 +136,21 @@ class UpdatePhoneNumberIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                                 makeRequest(
                                         Optional.of(
                                                 new UpdatePhoneNumberRequest(
-                                                        TEST_EMAIL, NEW_PHONE_NUMBER, otp)),
+                                                        "other.user@digital.cabinet-office.gov.uk",
+                                                        NEW_PHONE_NUMBER,
+                                                        otp)),
                                         Collections.emptyMap(),
                                         Collections.emptyMap(),
                                         Collections.emptyMap(),
-                                        Map.of("principalId", otherSubjectID)));
+                                        Map.of("principalId", internalSubId)));
 
         assertThat(ex.getMessage(), is("Invalid Principal in request"));
     }
 
     @Test
     void shouldThrowExceptionWhenSubjectIdMissing() {
-        userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
-        String otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 300);
+        setupUserAndRetrieveInternalCommonSubId();
+        var otp = redis.generateAndSavePhoneNumberCode(TEST_EMAIL, 300);
 
         Exception ex =
                 assertThrows(
@@ -160,5 +164,15 @@ class UpdatePhoneNumberIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                                         Collections.emptyMap()));
 
         assertThat(ex.getMessage(), is("Invalid Principal in request"));
+    }
+
+    private String setupUserAndRetrieveInternalCommonSubId() {
+        userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
+        byte[] salt = userStore.addSalt(TEST_EMAIL);
+        var internalCommonSubjectId =
+                ClientSubjectHelper.calculatePairwiseIdentifier(
+                        SUBJECT.getValue(), INTERNAl_SECTOR_HOST, salt);
+        accountModifiersStore.setAccountRecoveryBlock(internalCommonSubjectId);
+        return internalCommonSubjectId;
     }
 }

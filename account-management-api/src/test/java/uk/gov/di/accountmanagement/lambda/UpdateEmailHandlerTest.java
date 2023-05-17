@@ -59,7 +59,6 @@ class UpdateEmailHandlerTest {
     private static final String PERSISTENT_ID = "some-persistent-session-id";
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private static final String OTP = "123456";
-    private static final Subject PUBLIC_SUBJECT = new Subject();
     private static final Subject INTERNAL_SUBJECT = new Subject();
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
@@ -79,43 +78,6 @@ class UpdateEmailHandlerTest {
                         configurationService);
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
         when(dynamoService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
-    }
-
-    @Test
-    void shouldReturn204WhenPrincipalContainsPublicSubjectId() throws Json.JsonException {
-        var userProfile =
-                new UserProfile()
-                        .withPublicSubjectID(PUBLIC_SUBJECT.getValue())
-                        .withSubjectID(INTERNAL_SUBJECT.getValue());
-        when(dynamoService.getUserProfileByEmailMaybe(EXISTING_EMAIL_ADDRESS))
-                .thenReturn(Optional.of(userProfile));
-        when(codeStorageService.isValidOtpCode(NEW_EMAIL_ADDRESS, OTP, VERIFY_EMAIL))
-                .thenReturn(true);
-
-        var event = generateApiGatewayEvent(NEW_EMAIL_ADDRESS, PUBLIC_SUBJECT.getValue());
-        var result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(204));
-        verify(dynamoService).updateEmail(EXISTING_EMAIL_ADDRESS, NEW_EMAIL_ADDRESS);
-        NotifyRequest notifyExistingEmailAddressRequest =
-                new NotifyRequest(EXISTING_EMAIL_ADDRESS, EMAIL_UPDATED, SupportedLanguage.EN);
-        verify(sqsClient).send(objectMapper.writeValueAsString(notifyExistingEmailAddressRequest));
-
-        NotifyRequest notifyNewEmailAddressRequest =
-                new NotifyRequest(NEW_EMAIL_ADDRESS, EMAIL_UPDATED, SupportedLanguage.EN);
-        verify(sqsClient).send(objectMapper.writeValueAsString(notifyNewEmailAddressRequest));
-
-        verify(auditService)
-                .submitAuditEvent(
-                        AccountManagementAuditableEvent.UPDATE_EMAIL,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        expectedCommonSubject,
-                        NEW_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        userProfile.getPhoneNumber(),
-                        PERSISTENT_ID);
     }
 
     @Test
@@ -161,7 +123,7 @@ class UpdateEmailHandlerTest {
         when(codeStorageService.isValidOtpCode(NEW_EMAIL_ADDRESS, OTP, VERIFY_EMAIL))
                 .thenReturn(true);
         when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(SaltHelper.generateNewSalt());
-        var event = generateApiGatewayEvent(NEW_EMAIL_ADDRESS, PUBLIC_SUBJECT.getValue());
+        var event = generateApiGatewayEvent(NEW_EMAIL_ADDRESS, expectedCommonSubject);
 
         var expectedException =
                 assertThrows(
@@ -180,7 +142,7 @@ class UpdateEmailHandlerTest {
                 .thenReturn(true);
         when(dynamoService.userExists(NEW_EMAIL_ADDRESS)).thenReturn(true);
 
-        var event = generateApiGatewayEvent(NEW_EMAIL_ADDRESS, PUBLIC_SUBJECT.getValue());
+        var event = generateApiGatewayEvent(NEW_EMAIL_ADDRESS, expectedCommonSubject);
         var result = handler.handleRequest(event, context);
 
         verify(dynamoService, never()).updateEmail(EXISTING_EMAIL_ADDRESS, NEW_EMAIL_ADDRESS);
@@ -195,7 +157,7 @@ class UpdateEmailHandlerTest {
         APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =
                 new APIGatewayProxyRequestEvent.ProxyRequestContext();
         Map<String, Object> authorizerParams = new HashMap<>();
-        authorizerParams.put("principalId", PUBLIC_SUBJECT.getValue());
+        authorizerParams.put("principalId", expectedCommonSubject);
         proxyRequestContext.setAuthorizer(authorizerParams);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(proxyRequestContext);
@@ -214,7 +176,7 @@ class UpdateEmailHandlerTest {
         when(codeStorageService.isValidOtpCode(INVALID_EMAIL_ADDRESS, OTP, VERIFY_EMAIL))
                 .thenReturn(false);
 
-        var event = generateApiGatewayEvent(NEW_EMAIL_ADDRESS, PUBLIC_SUBJECT.getValue());
+        var event = generateApiGatewayEvent(NEW_EMAIL_ADDRESS, expectedCommonSubject);
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -229,7 +191,7 @@ class UpdateEmailHandlerTest {
         when(codeStorageService.isValidOtpCode(INVALID_EMAIL_ADDRESS, OTP, VERIFY_EMAIL))
                 .thenReturn(true);
 
-        var event = generateApiGatewayEvent(INVALID_EMAIL_ADDRESS, PUBLIC_SUBJECT.getValue());
+        var event = generateApiGatewayEvent(INVALID_EMAIL_ADDRESS, expectedCommonSubject);
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -246,7 +208,7 @@ class UpdateEmailHandlerTest {
         when(codeStorageService.isValidOtpCode(NEW_EMAIL_ADDRESS, OTP, VERIFY_EMAIL))
                 .thenReturn(true);
 
-        var event = generateApiGatewayEvent(NEW_EMAIL_ADDRESS, PUBLIC_SUBJECT.getValue());
+        var event = generateApiGatewayEvent(NEW_EMAIL_ADDRESS, expectedCommonSubject);
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));

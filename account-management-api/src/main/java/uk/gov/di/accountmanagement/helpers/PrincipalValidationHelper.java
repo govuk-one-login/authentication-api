@@ -7,7 +7,6 @@ import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 
 import java.util.Map;
-import java.util.Objects;
 
 public class PrincipalValidationHelper {
 
@@ -24,15 +23,8 @@ public class PrincipalValidationHelper {
         if (!authorizerParams.containsKey(PRINCIPAL_ID_KEY)) {
             LOG.warn("principalId is missing");
             return true;
-        } else if (Objects.nonNull(userProfile.getPublicSubjectID())
-                && userProfile
-                        .getPublicSubjectID()
-                        .equals(authorizerParams.get(PRINCIPAL_ID_KEY))) {
-            LOG.info("principalId contains publicSubjectID");
-            return false;
         } else {
-            LOG.info(
-                    "principalId does not contain publicSubjectID. Validating principalId against internal pairwise subject id");
+            LOG.info("Validating principalId against internal pairwise subject id");
             var internalSubjectId =
                     ClientSubjectHelper.getSubjectWithSectorIdentifier(
                             userProfile, internalSectorUri, authenticationService);

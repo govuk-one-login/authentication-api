@@ -75,38 +75,6 @@ class RemoveAccountHandlerTest {
     }
 
     @Test
-    void shouldReturn204IfAccountRemovalIsSuccessfulAndPrincipalContainsPublicSubjectId()
-            throws Json.JsonException {
-        var userProfile =
-                new UserProfile()
-                        .withSubjectID(INTERNAL_SUBJECT.getValue())
-                        .withPublicSubjectID(PUBLIC_SUBJECT.getValue());
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
-
-        var event = generateApiGatewayEvent(PUBLIC_SUBJECT.getValue());
-        var result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(204));
-        verify(dynamoDeleteService).deleteAccount(EMAIL, expectedCommonSubject);
-        verify(sqsClient)
-                .send(
-                        objectMapper.writeValueAsString(
-                                new NotifyRequest(EMAIL, DELETE_ACCOUNT, SupportedLanguage.EN)));
-        verify(auditService)
-                .submitAuditEvent(
-                        AccountManagementAuditableEvent.DELETE_ACCOUNT,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        expectedCommonSubject,
-                        userProfile.getEmail(),
-                        "123.123.123.123",
-                        userProfile.getPhoneNumber(),
-                        PERSISTENT_ID);
-    }
-
-    @Test
     void shouldReturn204IfAccountRemovalIsSuccessfulAndPrincipalContainsInternalPairwiseSubjectId()
             throws Json.JsonException {
         var userProfile =

@@ -83,14 +83,11 @@ public class RemoveAccountIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
     @Test
     void shouldThrowExceptionWhenUserAttemptsToDeleteDifferentAccount() {
-        String user1Email = "joe.bloggs+3@digital.cabinet-office.gov.uk";
         String user2Email = "i-do-not-exist@example.com";
-        String password1 = "password-1";
         String password2 = "password-2";
-        Subject subject1 = new Subject();
         Subject subject2 = new Subject();
 
-        String subjectId1 = userStore.signUp(user1Email, password1, subject1);
+        var subjectId1 = setupUserAndRetrieveInternalCommonSubId();
         userStore.signUp(user2Email, password2, subject2);
 
         Exception ex =
