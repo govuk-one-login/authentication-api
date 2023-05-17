@@ -1,7 +1,8 @@
 resource "aws_lambda_code_signing_config" "code_signing_config" {
   allowed_publishers {
     signing_profile_version_arns = [
-      var.di_tools_signing_profile_version_arn
+      var.di_tools_signing_profile_version_arn,
+      local.dynatrace_layer_signing_profile_arn
     ]
   }
 
@@ -10,4 +11,8 @@ resource "aws_lambda_code_signing_config" "code_signing_config" {
   policies {
     untrusted_artifact_on_deployment = var.enforce_code_signing ? "Enforce" : "Warn"
   }
+}
+
+locals {
+  dynatrace_layer_signing_profile_arn = "arn:aws:signer:eu-west-2:985486846182:/signing-profiles/SigningProfile_2LIsnoqFX0BU/IE6arNMuby"
 }
