@@ -25,9 +25,9 @@ data "aws_iam_policy_document" "lambda_can_assume_role" {
 }
 
 resource "aws_iam_role_policy_attachment" "provided_policies" {
-  for_each   = toset(var.policies_to_attach)
+  count      = length(var.policies_to_attach)
   role       = aws_iam_role.lambda_role.name
-  policy_arn = each.key
+  policy_arn = var.policies_to_attach[count.index]
 
   depends_on = [
     aws_iam_role.lambda_role
