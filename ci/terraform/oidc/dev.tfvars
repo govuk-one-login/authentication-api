@@ -1,0 +1,11 @@
+oidc_api_lambda_zip_file             = "./artifacts/oidc-api.zip"
+frontend_api_lambda_zip_file         = "./artifacts/frontend-api.zip"
+client_registry_api_lambda_zip_file  = "./artifacts/client-registry-api.zip"
+ipv_api_lambda_zip_file              = "./artifacts/ipv-api.zip"
+doc_checking_app_api_lambda_zip_file = "./artifacts/doc-checking-app-api.zip"
+deployer_role_arn                    = "arn:aws:iam::761723964695:role/deployer-role-pipeline-dev"
+logging_endpoint_arn                 = ""
+logging_endpoint_arns                = []
+shared_state_bucket                  = "digital-identity-dev-tfstate"
+test_clients_enabled                 = true
+internal_sector_uri                  = "https://identity.dev.account.gov.uk"
