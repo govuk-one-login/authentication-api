@@ -30,7 +30,7 @@ Authorization: Bearer <YOUR_ACCESS_TOKEN>
 
 ### Authenticate a user
 
-You can make a `POST` request to the `/authenticate` endpoint to check that the user’s account exists and the password is valid. This is commonly used before a user changes their password.
+You can make a `POST` request to the `/authenticate` endpoint to check that the user’s account exists and the password is valid. This is commonly used before a user changes their password or deletes their account.
 
 Example request: 
 
