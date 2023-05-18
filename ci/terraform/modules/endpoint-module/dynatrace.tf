@@ -28,7 +28,7 @@ data "aws_secretsmanager_secret_version" "dynatrace_tenant" {
 
 locals {
   dynatrace_account_region = "eu-west-2"
-  dynatrace_account_id     = "98415292996982"
+  dynatrace_account_id     = "985486846182"
   dynatrace_layer_arn      = "arn:aws:lambda:eu-west-2:985486846182:layer:DTOneAgentJavaLayer:1"
   dynatrace_environment_variables = {
     AWS_LAMBDA_EXEC_WRAPPER = "/opt/dynatrace"
