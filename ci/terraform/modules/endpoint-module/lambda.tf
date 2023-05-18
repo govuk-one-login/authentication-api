@@ -3,8 +3,10 @@ resource "aws_lambda_function" "endpoint_lambda" {
   role          = var.lambda_role_arn
   handler       = var.handler_function_name
   timeout       = 30
-  memory_size   = var.memory_size
-  publish       = true
+  # Dynatrace documentation suggests an additional 1.5GiB RAM for Java OneAgent,
+  # if this is a bad idea, will revert.
+  memory_size = var.memory_size + 1536
+  publish     = true
 
   tracing_config {
     mode = "Active"
@@ -16,13 +18,18 @@ resource "aws_lambda_function" "endpoint_lambda" {
 
   code_signing_config_arn = var.code_signing_config_arn
 
+  layers = local.lambda_layers
+
   vpc_config {
     security_group_ids = var.security_group_ids
     subnet_ids         = var.subnet_id
   }
   environment {
-    variables = merge(var.handler_environment_variables, {
-      JAVA_TOOL_OPTIONS = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1"
+    variables = merge(
+      var.handler_environment_variables,
+      local.dynatrace_environment_variables,
+      {
+        JAVA_TOOL_OPTIONS = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1"
     })
   }
   kms_key_arn = var.lambda_env_vars_encryption_kms_key_arn
@@ -112,4 +119,9 @@ resource "aws_appautoscaling_policy" "provisioned-concurrency-policy" {
       predefined_metric_type = "LambdaProvisionedConcurrencyUtilization"
     }
   }
+}
+
+locals {
+  deploy_dynatrace = var.environment == "staging"
+  lambda_layers    = flatten(local.deploy_dynatrace ? [local.dynatrace_layer_arn] : [])
 }
