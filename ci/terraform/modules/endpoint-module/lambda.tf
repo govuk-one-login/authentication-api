@@ -18,7 +18,7 @@ resource "aws_lambda_function" "endpoint_lambda" {
 
   code_signing_config_arn = var.code_signing_config_arn
 
-  layers = [local.dynatrace_layer_arn]
+  layers = local.lambda_layers
 
   vpc_config {
     security_group_ids = var.security_group_ids
@@ -119,4 +119,9 @@ resource "aws_appautoscaling_policy" "provisioned-concurrency-policy" {
       predefined_metric_type = "LambdaProvisionedConcurrencyUtilization"
     }
   }
+}
+
+locals {
+  deploy_dynatrace = var.environment == "staging"
+  lambda_layers    = flatten(local.deploy_dynatrace ? [local.dynatrace_layer_arn] : [])
 }
