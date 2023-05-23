@@ -129,6 +129,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             userContext.getSession().setEmailAddress(emailAddress);
             AuditableEvent auditableEvent;
             var rpPairwiseId = AuditService.UNKNOWN;
+            var internalPairwiseId = AuditService.UNKNOWN;
             if (userExists) {
                 auditableEvent = FrontendAuditableEvent.CHECK_USER_KNOWN_EMAIL;
                 rpPairwiseId =
@@ -137,6 +138,12 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                                         userContext.getClient().get(),
                                         authenticationService,
                                         configurationService.getInternalSectorUri())
+                                .getValue();
+                internalPairwiseId =
+                        ClientSubjectHelper.getSubjectWithSectorIdentifier(
+                                        userProfile.get(),
+                                        configurationService.getInternalSectorUri(),
+                                        authenticationService)
                                 .getValue();
             } else {
                 auditableEvent = FrontendAuditableEvent.CHECK_USER_NO_ACCOUNT_WITH_EMAIL;
@@ -149,7 +156,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                             .getClient()
                             .map(ClientRegistry::getClientID)
                             .orElse(AuditService.UNKNOWN),
-                    AuditService.UNKNOWN,
+                    internalPairwiseId,
                     emailAddress,
                     IpAddressHelper.extractIpAddress(input),
                     AuditService.UNKNOWN,

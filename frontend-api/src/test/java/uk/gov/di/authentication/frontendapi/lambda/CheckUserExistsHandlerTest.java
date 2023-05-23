@@ -104,6 +104,7 @@ class CheckUserExistsHandlerTest {
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(configurationService.getMaxPasswordRetries()).thenReturn(5);
         when(codeStorageService.getIncorrectPasswordCount(EMAIL_ADDRESS)).thenReturn(0);
+        when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
 
         handler =
                 new CheckUserExistsHandler(
@@ -150,13 +151,16 @@ class CheckUserExistsHandlerTest {
         var expectedRpPairwiseId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         SUBJECT.getValue(), "sector-identifier", SALT.array());
+        var expectedInternalPairwiseId =
+                ClientSubjectHelper.calculatePairwiseIdentifier(
+                        SUBJECT.getValue(), "test.account.gov.uk", SALT.array());
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CHECK_USER_KNOWN_EMAIL,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         CLIENT_ID,
-                        AuditService.UNKNOWN,
+                        expectedInternalPairwiseId,
                         EMAIL_ADDRESS,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
