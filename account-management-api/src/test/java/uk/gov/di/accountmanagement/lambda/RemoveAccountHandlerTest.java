@@ -9,6 +9,7 @@ import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.exceptions.InvalidPrincipalException;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
+import uk.gov.di.accountmanagement.services.DynamoDeleteService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -30,9 +31,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -60,46 +59,19 @@ class RemoveAccountHandlerTest {
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final AuditService auditService = mock(AuditService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final DynamoDeleteService dynamoDeleteService = mock(DynamoDeleteService.class);
 
     @BeforeEach
     public void setUp() {
         handler =
                 new RemoveAccountHandler(
-                        authenticationService, sqsClient, auditService, configurationService);
+                        authenticationService,
+                        sqsClient,
+                        auditService,
+                        configurationService,
+                        dynamoDeleteService);
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
-    }
-
-    @Test
-    void shouldReturn204IfAccountRemovalIsSuccessfulAndPrincipalContainsPublicSubjectId()
-            throws Json.JsonException {
-        var userProfile =
-                new UserProfile()
-                        .withSubjectID(INTERNAL_SUBJECT.getValue())
-                        .withPublicSubjectID(PUBLIC_SUBJECT.getValue());
-        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(Optional.of(userProfile));
-
-        var event = generateApiGatewayEvent(PUBLIC_SUBJECT.getValue());
-        var result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(204));
-        verify(authenticationService).removeAccount(eq(EMAIL));
-        verify(sqsClient)
-                .send(
-                        objectMapper.writeValueAsString(
-                                new NotifyRequest(EMAIL, DELETE_ACCOUNT, SupportedLanguage.EN)));
-        verify(auditService)
-                .submitAuditEvent(
-                        AccountManagementAuditableEvent.DELETE_ACCOUNT,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        expectedCommonSubject,
-                        userProfile.getEmail(),
-                        "123.123.123.123",
-                        userProfile.getPhoneNumber(),
-                        PERSISTENT_ID);
     }
 
     @Test
@@ -116,7 +88,7 @@ class RemoveAccountHandlerTest {
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(204));
-        verify(authenticationService).removeAccount(EMAIL);
+        verify(dynamoDeleteService).deleteAccount(EMAIL, expectedCommonSubject);
         verify(sqsClient)
                 .send(
                         objectMapper.writeValueAsString(
@@ -165,7 +137,7 @@ class RemoveAccountHandlerTest {
         var event = generateApiGatewayEvent(PUBLIC_SUBJECT.getValue());
         var result = handler.handleRequest(event, context);
 
-        verify(authenticationService, never()).removeAccount(EMAIL);
+        verifyNoInteractions(dynamoDeleteService);
         verifyNoInteractions(auditService);
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1010));

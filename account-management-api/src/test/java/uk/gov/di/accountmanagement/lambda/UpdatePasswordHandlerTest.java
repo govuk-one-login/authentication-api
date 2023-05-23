@@ -61,7 +61,6 @@ class UpdatePasswordHandlerTest {
     private static final String NEW_PASSWORD = "password2";
     private static final String CURRENT_PASSWORD = "password1";
     private static final String INVALID_PASSWORD = "pwd";
-    private static final Subject PUBLIC_SUBJECT = new Subject();
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private static final String PERSISTENT_ID = "some-persistent-session-id";
     private static final Subject INTERNAL_SUBJECT = new Subject();
@@ -82,44 +81,6 @@ class UpdatePasswordHandlerTest {
                         configurationService);
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
         when(dynamoService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
-    }
-
-    @Test
-    void shouldReturn204WhenPrincipalContainsPublicSubjectId() throws Json.JsonException {
-        var userProfile =
-                new UserProfile()
-                        .withPublicSubjectID(PUBLIC_SUBJECT.getValue())
-                        .withSubjectID(INTERNAL_SUBJECT.getValue());
-        var userCredentials = new UserCredentials().withPassword(CURRENT_PASSWORD);
-        when(dynamoService.getUserProfileByEmailMaybe(EXISTING_EMAIL_ADDRESS))
-                .thenReturn(Optional.of(userProfile));
-        when(dynamoService.getUserCredentialsFromEmail(EXISTING_EMAIL_ADDRESS))
-                .thenReturn(userCredentials);
-
-        var event = generateApiGatewayEvent(NEW_PASSWORD, PUBLIC_SUBJECT.getValue());
-        var result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(204));
-        verify(dynamoService).updatePassword(EXISTING_EMAIL_ADDRESS, NEW_PASSWORD);
-        verify(sqsClient)
-                .send(
-                        objectMapper.writeValueAsString(
-                                new NotifyRequest(
-                                        EXISTING_EMAIL_ADDRESS,
-                                        NotificationType.PASSWORD_UPDATED,
-                                        SupportedLanguage.EN)));
-
-        verify(auditService)
-                .submitAuditEvent(
-                        AccountManagementAuditableEvent.UPDATE_PASSWORD,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        expectedCommonSubject,
-                        userProfile.getEmail(),
-                        "123.123.123.123",
-                        userProfile.getPhoneNumber(),
-                        PERSISTENT_ID);
     }
 
     @Test
@@ -158,15 +119,12 @@ class UpdatePasswordHandlerTest {
 
     @Test
     void shouldThrowIfPrincipalIdIsInvalid() {
-        var userProfile =
-                new UserProfile()
-                        .withPublicSubjectID(new Subject().getValue())
-                        .withSubjectID(new Subject().getValue());
+        var userProfile = new UserProfile().withSubjectID(new Subject().getValue());
         when(dynamoService.getUserProfileByEmailMaybe(EXISTING_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(userProfile));
         when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(SaltHelper.generateNewSalt());
 
-        var event = generateApiGatewayEvent(NEW_PASSWORD, PUBLIC_SUBJECT.getValue());
+        var event = generateApiGatewayEvent(NEW_PASSWORD, expectedCommonSubject);
 
         var expectedException =
                 assertThrows(
@@ -184,7 +142,7 @@ class UpdatePasswordHandlerTest {
         APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =
                 new APIGatewayProxyRequestEvent.ProxyRequestContext();
         Map<String, Object> authorizerParams = new HashMap<>();
-        authorizerParams.put("principalId", PUBLIC_SUBJECT.getValue());
+        authorizerParams.put("principalId", expectedCommonSubject);
         proxyRequestContext.setAuthorizer(authorizerParams);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(proxyRequestContext);
@@ -200,7 +158,7 @@ class UpdatePasswordHandlerTest {
 
     @Test
     void shouldReturn400WhenNewPasswordEqualsExistingPassword() {
-        var userProfile = new UserProfile().withPublicSubjectID(PUBLIC_SUBJECT.getValue());
+        var userProfile = new UserProfile().withSubjectID(INTERNAL_SUBJECT.getValue());
         var userCredentials =
                 new UserCredentials().withPassword(Argon2EncoderHelper.argon2Hash(NEW_PASSWORD));
         when(dynamoService.getUserProfileByEmailMaybe(EXISTING_EMAIL_ADDRESS))
@@ -208,7 +166,7 @@ class UpdatePasswordHandlerTest {
         when(dynamoService.getUserCredentialsFromEmail(EXISTING_EMAIL_ADDRESS))
                 .thenReturn(userCredentials);
 
-        var event = generateApiGatewayEvent(NEW_PASSWORD, PUBLIC_SUBJECT.getValue());
+        var event = generateApiGatewayEvent(NEW_PASSWORD, expectedCommonSubject);
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -223,7 +181,7 @@ class UpdatePasswordHandlerTest {
         when(dynamoService.getUserProfileByEmailMaybe(EXISTING_EMAIL_ADDRESS))
                 .thenReturn(Optional.empty());
 
-        var event = generateApiGatewayEvent(NEW_PASSWORD, PUBLIC_SUBJECT.getValue());
+        var event = generateApiGatewayEvent(NEW_PASSWORD, expectedCommonSubject);
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -239,7 +197,7 @@ class UpdatePasswordHandlerTest {
                 .when(passwordValidator)
                 .validate(INVALID_PASSWORD);
 
-        var event = generateApiGatewayEvent(INVALID_PASSWORD, PUBLIC_SUBJECT.getValue());
+        var event = generateApiGatewayEvent(INVALID_PASSWORD, expectedCommonSubject);
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));

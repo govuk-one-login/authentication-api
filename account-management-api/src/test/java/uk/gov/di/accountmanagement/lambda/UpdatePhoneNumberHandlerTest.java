@@ -54,7 +54,6 @@ class UpdatePhoneNumberHandlerTest {
     private static final String NEW_PHONE_NUMBER = "07755551084";
     private static final String OLD_PHONE_NUMBER = "09876543219";
     private static final String OTP = "123456";
-    private static final Subject PUBLIC_SUBJECT = new Subject();
     private static final String PERSISTENT_ID = "some-persistent-session-id";
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private static final Subject INTERNAL_SUBJECT = new Subject();
@@ -77,43 +76,6 @@ class UpdatePhoneNumberHandlerTest {
                         configurationService);
         when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
         when(dynamoService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
-    }
-
-    @Test
-    void shouldReturn204WhenPrincipalContainsPublicSubjectId() throws Json.JsonException {
-        when(codeStorageService.isValidOtpCode(EMAIL_ADDRESS, OTP, VERIFY_PHONE_NUMBER))
-                .thenReturn(true);
-        var userProfile =
-                new UserProfile()
-                        .withPublicSubjectID(PUBLIC_SUBJECT.getValue())
-                        .withSubjectID(INTERNAL_SUBJECT.getValue())
-                        .withPhoneNumber(OLD_PHONE_NUMBER);
-        when(dynamoService.getUserProfileByEmailMaybe(EMAIL_ADDRESS))
-                .thenReturn(Optional.of(userProfile));
-
-        var event = generateApiGatewayEvent(PUBLIC_SUBJECT.getValue());
-        var result = handler.handleRequest(event, context);
-
-        assertThat(result, hasStatus(204));
-        verify(dynamoService).updatePhoneNumber(EMAIL_ADDRESS, NEW_PHONE_NUMBER);
-        verify(sqsClient)
-                .send(
-                        objectMapper.writeValueAsString(
-                                new NotifyRequest(
-                                        EMAIL_ADDRESS,
-                                        PHONE_NUMBER_UPDATED,
-                                        SupportedLanguage.EN)));
-        verify(auditService)
-                .submitAuditEvent(
-                        AccountManagementAuditableEvent.UPDATE_PHONE_NUMBER,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        expectedCommonSubject,
-                        userProfile.getEmail(),
-                        "123.123.123.123",
-                        NEW_PHONE_NUMBER,
-                        PERSISTENT_ID);
     }
 
     @Test
@@ -164,7 +126,7 @@ class UpdatePhoneNumberHandlerTest {
         when(dynamoService.getUserProfileByEmailMaybe(EMAIL_ADDRESS))
                 .thenReturn(Optional.of(userProfile));
         when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(SaltHelper.generateNewSalt());
-        var event = generateApiGatewayEvent(PUBLIC_SUBJECT.getValue());
+        var event = generateApiGatewayEvent(expectedCommonSubject);
 
         var expectedException =
                 assertThrows(
@@ -182,7 +144,7 @@ class UpdatePhoneNumberHandlerTest {
         APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext =
                 new APIGatewayProxyRequestEvent.ProxyRequestContext();
         Map<String, Object> authorizerParams = new HashMap<>();
-        authorizerParams.put("principalId", PUBLIC_SUBJECT.getValue());
+        authorizerParams.put("principalId", expectedCommonSubject);
         proxyRequestContext.setAuthorizer(authorizerParams);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(proxyRequestContext);
@@ -200,7 +162,7 @@ class UpdatePhoneNumberHandlerTest {
         when(codeStorageService.isValidOtpCode(EMAIL_ADDRESS, OTP, VERIFY_PHONE_NUMBER))
                 .thenReturn(false);
 
-        var event = generateApiGatewayEvent(PUBLIC_SUBJECT.getValue());
+        var event = generateApiGatewayEvent(expectedCommonSubject);
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
@@ -216,7 +178,7 @@ class UpdatePhoneNumberHandlerTest {
                 .thenReturn(true);
         when(dynamoService.getUserProfileByEmailMaybe(EMAIL_ADDRESS)).thenReturn(Optional.empty());
 
-        var event = generateApiGatewayEvent(PUBLIC_SUBJECT.getValue());
+        var event = generateApiGatewayEvent(expectedCommonSubject);
         var result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));

@@ -14,6 +14,7 @@ import uk.gov.di.accountmanagement.entity.RemoveAccountRequest;
 import uk.gov.di.accountmanagement.exceptions.InvalidPrincipalException;
 import uk.gov.di.accountmanagement.helpers.PrincipalValidationHelper;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
+import uk.gov.di.accountmanagement.services.DynamoDeleteService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.exceptions.UserNotFoundException;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -48,17 +49,20 @@ public class RemoveAccountHandler
     private final AwsSqsClient sqsClient;
     private final AuditService auditService;
     private final ConfigurationService configurationService;
+    private final DynamoDeleteService dynamoDeleteService;
     private final Json objectMapper = SerializationService.getInstance();
 
     public RemoveAccountHandler(
             AuthenticationService authenticationService,
             AwsSqsClient sqsClient,
             AuditService auditService,
-            ConfigurationService configurationService) {
+            ConfigurationService configurationService,
+            DynamoDeleteService dynamoDeleteService) {
         this.authenticationService = authenticationService;
         this.sqsClient = sqsClient;
         this.auditService = auditService;
         this.configurationService = configurationService;
+        this.dynamoDeleteService = dynamoDeleteService;
     }
 
     public RemoveAccountHandler(ConfigurationService configurationService) {
@@ -70,6 +74,7 @@ public class RemoveAccountHandler
                         configurationService.getSqsEndpointUri());
         this.auditService = new AuditService(configurationService);
         this.configurationService = configurationService;
+        this.dynamoDeleteService = new DynamoDeleteService(configurationService);
     }
 
     public RemoveAccountHandler() {
@@ -125,7 +130,8 @@ public class RemoveAccountHandler
                             configurationService.getInternalSectorUri(),
                             authenticationService);
 
-            authenticationService.removeAccount(email);
+            LOG.info("Deleting user account");
+            dynamoDeleteService.deleteAccount(email, internalCommonSubjectIdentifier.getValue());
             LOG.info("User account removed. Adding message to SQS queue");
 
             NotifyRequest notifyRequest =

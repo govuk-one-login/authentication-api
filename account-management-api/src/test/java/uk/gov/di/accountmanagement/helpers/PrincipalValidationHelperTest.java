@@ -32,18 +32,7 @@ class PrincipalValidationHelperTest {
     }
 
     @Test
-    void shouldReturnFalseWhenPublicSubjectIdEqualsPrinciple() {
-        var publicSubject = new Subject();
-        var userProfile = new UserProfile().withPublicSubjectID(publicSubject.getValue());
-        authorizerParams.put("principalId", publicSubject.getValue());
-
-        assertFalse(
-                PrincipalValidationHelper.principleIsInvalid(
-                        userProfile, INTERNAL_SECTOR_URI, authenticationService, authorizerParams));
-    }
-
-    @Test
-    void shouldReturnFalseWhenPrincipalDoesNotMatchPublicSubjectIdButMatchesPairwiseSubjectId() {
+    void shouldReturnFalseWhenPrincipalMatchesPairwiseSubjectId() {
         var internalSubject = new Subject();
         var salt = SaltHelper.generateNewSalt();
         var userProfile = new UserProfile().withSubjectID(internalSubject.getValue());
@@ -59,7 +48,7 @@ class PrincipalValidationHelperTest {
     }
 
     @Test
-    void shouldReturnTrueWhenPrincipalDoesNotMatchPublicSubjectIdOrPairwiseSubjectId() {
+    void shouldReturnTrueWhenPrincipalDoesNotMatchPairwiseSubjectId() {
         var salt = SaltHelper.generateNewSalt();
         var userProfile =
                 new UserProfile()
