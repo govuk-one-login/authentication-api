@@ -167,7 +167,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
             throws Json.JsonException {
         String sessionId = redis.createSession();
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
-        redis.blockMfaCodesForEmail(EMAIL_ADDRESS);
+        redis.blockMfaCodesForEmail(EMAIL_ADDRESS, emailNotificationType);
 
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(emailNotificationType, "123456");
 

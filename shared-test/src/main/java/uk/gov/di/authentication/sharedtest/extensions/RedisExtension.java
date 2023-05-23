@@ -30,10 +30,12 @@ import java.util.Map;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
+import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.services.AuthorisationCodeService.AUTH_CODE_PREFIX;
 import static uk.gov.di.authentication.shared.services.ClientSessionService.CLIENT_SESSION_PREFIX;
+import static uk.gov.di.authentication.shared.services.CodeStorageService.ACCOUNT_RECOVERY_CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 
 public class RedisExtension
@@ -226,10 +228,27 @@ public class RedisExtension
     }
 
     public void blockMfaCodesForEmail(String email) {
-        codeStorageService.saveBlockedForEmail(email, CODE_BLOCKED_KEY_PREFIX, 10);
+        blockMfaCodesForEmail(email, null);
+    }
+
+    public void blockMfaCodesForEmail(String email, NotificationType notificationType) {
+        var codeBlockedTime = 10;
+        if (notificationType == VERIFY_CHANGE_HOW_GET_SECURITY_CODES) {
+            codeStorageService.saveBlockedForEmail(
+                    email, ACCOUNT_RECOVERY_CODE_BLOCKED_KEY_PREFIX, codeBlockedTime);
+        }
+        codeStorageService.saveBlockedForEmail(email, CODE_BLOCKED_KEY_PREFIX, codeBlockedTime);
     }
 
     public boolean isBlockedMfaCodesForEmail(String email) {
+        return isBlockedMfaCodesForEmail(email, null);
+    }
+
+    public boolean isBlockedMfaCodesForEmail(String email, NotificationType notificationType) {
+        if (notificationType == VERIFY_CHANGE_HOW_GET_SECURITY_CODES) {
+            return codeStorageService.isBlockedForEmail(
+                    email, ACCOUNT_RECOVERY_CODE_BLOCKED_KEY_PREFIX);
+        }
         return codeStorageService.isBlockedForEmail(email, CODE_BLOCKED_KEY_PREFIX);
     }
 
