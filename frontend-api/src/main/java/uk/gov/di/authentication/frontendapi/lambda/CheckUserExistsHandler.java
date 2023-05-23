@@ -12,6 +12,7 @@ import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.ValidationHelper;
@@ -31,6 +32,7 @@ import java.util.Optional;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -122,11 +124,20 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1045);
             }
 
-            boolean userExists = authenticationService.userExists(emailAddress);
+            var userProfile = authenticationService.getUserProfileByEmailMaybe(emailAddress);
+            var userExists = userProfile.isPresent();
             userContext.getSession().setEmailAddress(emailAddress);
             AuditableEvent auditableEvent;
+            var rpPairwiseId = AuditService.UNKNOWN;
             if (userExists) {
                 auditableEvent = FrontendAuditableEvent.CHECK_USER_KNOWN_EMAIL;
+                rpPairwiseId =
+                        ClientSubjectHelper.getSubject(
+                                        userProfile.get(),
+                                        userContext.getClient().get(),
+                                        authenticationService,
+                                        configurationService.getInternalSectorUri())
+                                .getValue();
             } else {
                 auditableEvent = FrontendAuditableEvent.CHECK_USER_NO_ACCOUNT_WITH_EMAIL;
             }
@@ -142,7 +153,8 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                     emailAddress,
                     IpAddressHelper.extractIpAddress(input),
                     AuditService.UNKNOWN,
-                    persistentSessionId);
+                    persistentSessionId,
+                    pair("rpPairwiseId", rpPairwiseId));
             CheckUserExistsResponse checkUserExistsResponse =
                     new CheckUserExistsResponse(emailAddress, userExists);
             sessionService.save(userContext.getSession());
