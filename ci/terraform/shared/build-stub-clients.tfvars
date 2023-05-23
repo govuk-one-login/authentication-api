@@ -81,10 +81,10 @@ stub_rp_clients = [
   {
     client_name = "di-auth-stub-relying-party-dev"
     callback_urls = [
-      "https://di-auth-stub-relying-party-dev.london.cloudapps.digital/oidc/authorization-code/callback",
+      "https://di-auth-stub-relying-party-build-dev.london.cloudapps.digital/oidc/authorization-code/callback",
     ]
     logout_urls = [
-      "https://di-auth-stub-relying-party-dev.london.cloudapps.digital/signed-out",
+      "https://di-auth-stub-relying-party-build-dev.london.cloudapps.digital/signed-out",
     ]
     test_client                     = "1"
     consent_required                = "0"
