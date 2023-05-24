@@ -21,6 +21,7 @@ import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -155,6 +156,21 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
             var ipvAuthorisationRequest = authRequestBuilder.build();
             authorisationService.storeState(userContext.getSession().getSessionId(), state);
             noSessionOrchestrationService.storeClientSessionIdAgainstState(clientSessionId, state);
+
+            LOG.info("Calculating RP pairwise identifier");
+            var rpPairwiseId =
+                    ClientSubjectHelper.getSubject(
+                                    userContext.getUserProfile().orElseThrow(),
+                                    userContext
+                                            .getClient()
+                                            .orElseThrow(
+                                                    () ->
+                                                            new ClientNotFoundException(
+                                                                    userContext.getSession())),
+                                    authenticationService,
+                                    configurationService.getInternalSectorUri())
+                            .getValue();
+
             auditService.submitAuditEvent(
                     IPVAuditableEvent.IPV_AUTHORISATION_REQUESTED,
                     clientSessionId,
@@ -170,7 +186,8 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
                             userContext
                                     .getClient()
                                     .map(ClientRegistry::getLandingPageUrl)
-                                    .orElse(AuditService.UNKNOWN)));
+                                    .orElse(AuditService.UNKNOWN)),
+                    pair("rpPairwiseId", rpPairwiseId));
 
             LOG.info(
                     "IPVAuthorisationHandler successfully processed request, redirect URI {}",
@@ -182,6 +199,8 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
 
         } catch (ParseException | JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+        } catch (ClientNotFoundException e) {
+            return generateApiGatewayProxyErrorResponse(500, ErrorResponse.ERROR_1015);
         }
     }
 

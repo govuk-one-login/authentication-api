@@ -210,6 +210,9 @@ public class IPVAuthorisationHandlerTest {
         verify(authorisationService).storeState(eq(session.getSessionId()), any(State.class));
         verify(noSessionOrchestrationService)
                 .storeClientSessionIdAgainstState(eq(CLIENT_SESSION_ID), any(State.class));
+        var expectedRpPairwiseId =
+                ClientSubjectHelper.calculatePairwiseIdentifier(
+                        SUBJECT_ID, "sector-identifier", SALT.array());
         verify(auditService)
                 .submitAuditEvent(
                         IPVAuditableEvent.IPV_AUTHORISATION_REQUESTED,
@@ -221,7 +224,8 @@ public class IPVAuthorisationHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_SESSION_ID,
-                        pair("clientLandingPageUrl", LANDING_PAGE_URL));
+                        pair("clientLandingPageUrl", LANDING_PAGE_URL),
+                        pair("rpPairwiseId", expectedRpPairwiseId));
         verify(cloudwatchMetricsService)
                 .incrementCounter("IPVHandoff", Map.of("Environment", ENVIRONMENT));
     }
