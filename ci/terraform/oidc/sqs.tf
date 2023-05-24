@@ -179,6 +179,7 @@ resource "aws_lambda_function" "email_sqs_lambda" {
       NOTIFY_TEMPLATE_PER_LANGUAGE = var.notify_template_per_language
       SMOKETEST_SMS_BUCKET_NAME    = local.sms_bucket_name
       JAVA_TOOL_OPTIONS            = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1"
+      ENVIRONMENT                  = var.environment
     })
   }
   kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
