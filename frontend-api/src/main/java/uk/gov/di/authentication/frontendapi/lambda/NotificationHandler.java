@@ -268,6 +268,9 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                 var putObjectRequest =
                         PutObjectRequest.builder().bucket(bucketName).key(destination).build();
                 s3Client.putObject(putObjectRequest, RequestBody.fromString(otp));
+                if ("integration".equals(configurationService.getEnvironment())) {
+                    LOG.info("Writing OTP to S3 bucket: {}", otp);
+                }
             } catch (Exception e) {
                 LOG.error(
                         "Exception thrown when writing to S3 bucket: {}",
