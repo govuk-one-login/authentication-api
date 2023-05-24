@@ -166,10 +166,7 @@ class SignUpHandlerTest {
         verify(sessionService).save(argThat((session) -> session.getEmailAddress().equals(EMAIL)));
 
         assertThat(result, hasStatus(200));
-
-        SignUpResponse signUpResponse =
-                objectMapper.readValue(result.getBody(), SignUpResponse.class);
-
+        var signUpResponse = objectMapper.readValue(result.getBody(), SignUpResponse.class);
         assertThat(signUpResponse.isConsentRequired(), equalTo(consentRequired));
         verify(authenticationService)
                 .signUp(
@@ -177,7 +174,9 @@ class SignUpHandlerTest {
                         eq("computer-1"),
                         any(Subject.class),
                         any(TermsAndConditions.class));
-
+        var expectedRpPairwiseId =
+                ClientSubjectHelper.calculatePairwiseIdentifier(
+                        INTERNAL_SUBJECT_ID.getValue(), "test.com", SALT);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CREATE_ACCOUNT,
@@ -189,7 +188,8 @@ class SignUpHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         persistentId,
-                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
+                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
+                        pair("rpPairwiseId", expectedRpPairwiseId));
 
         verify(sessionService)
                 .save(argThat(session -> session.isNewAccount() == Session.AccountState.NEW));
@@ -310,6 +310,6 @@ class SignUpHandlerTest {
                 .withConsentRequired(consentRequired)
                 .withClientName("test-client")
                 .withSectorIdentifierUri("https://test.com")
-                .withSubjectType("public");
+                .withSubjectType("pairwise");
     }
 }
