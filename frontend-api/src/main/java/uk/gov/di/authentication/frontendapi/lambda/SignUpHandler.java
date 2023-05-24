@@ -129,6 +129,22 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                             user.getUserProfile(),
                             configurationService.getInternalSectorUri(),
                             authenticationService);
+
+            LOG.info("Calculating RP pairwise identifier");
+            var rpPairwiseId =
+                    userContext
+                            .getClient()
+                            .map(
+                                    t ->
+                                            ClientSubjectHelper.getSubject(
+                                                            user.getUserProfile(),
+                                                            t,
+                                                            authenticationService,
+                                                            configurationService
+                                                                    .getInternalSectorUri())
+                                                    .getValue())
+                            .orElse(AuditService.UNKNOWN);
+
             var consentRequired = ConsentHelper.userHasNotGivenConsent(userContext);
 
             auditService.submitAuditEvent(
@@ -144,7 +160,8 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
                     IpAddressHelper.extractIpAddress(input),
                     AuditService.UNKNOWN,
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                    pair("internalSubjectId", user.getUserProfile().getSubjectID()));
+                    pair("internalSubjectId", user.getUserProfile().getSubjectID()),
+                    pair("rpPairwiseId", rpPairwiseId));
 
             LOG.info("Setting internal common subject identifier in user session");
             sessionService.save(
