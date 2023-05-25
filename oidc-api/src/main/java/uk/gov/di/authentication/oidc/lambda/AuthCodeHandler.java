@@ -20,9 +20,10 @@ import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
+import uk.gov.di.authentication.shared.exceptions.UserNotFoundException;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
@@ -31,6 +32,7 @@ import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
@@ -70,6 +72,7 @@ public class AuthCodeHandler
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final ConfigurationService configurationService;
     private final DynamoService dynamoService;
+    private final DynamoClientService dynamoClientService;
 
     public AuthCodeHandler(
             SessionService sessionService,
@@ -79,7 +82,8 @@ public class AuthCodeHandler
             AuditService auditService,
             CloudwatchMetricsService cloudwatchMetricsService,
             ConfigurationService configurationService,
-            DynamoService dynamoService) {
+            DynamoService dynamoService,
+            DynamoClientService dynamoClientService) {
         this.sessionService = sessionService;
         this.authorisationCodeService = authorisationCodeService;
         this.authorizationService = authorizationService;
@@ -88,6 +92,7 @@ public class AuthCodeHandler
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.configurationService = configurationService;
         this.dynamoService = dynamoService;
+        this.dynamoClientService = dynamoClientService;
     }
 
     public AuthCodeHandler(ConfigurationService configurationService) {
@@ -99,6 +104,7 @@ public class AuthCodeHandler
         cloudwatchMetricsService = new CloudwatchMetricsService();
         this.configurationService = configurationService;
         dynamoService = new DynamoService(configurationService);
+        dynamoClientService = new DynamoClientService(configurationService);
     }
 
     public AuthCodeHandler() {
@@ -164,10 +170,11 @@ public class AuthCodeHandler
                             e.getResponseMode(),
                             e.getErrorObject());
             LOG.warn("Authentication request could not be parsed", e);
-            return generateResponse(new AuthCodeResponse(errorResponse.toURI().toString()));
+            return generateResponse(400, new AuthCodeResponse(errorResponse.toURI().toString()));
         }
 
-        attachLogFieldToLogs(CLIENT_ID, authenticationRequest.getClientID().getValue());
+        var clientID = authenticationRequest.getClientID();
+        attachLogFieldToLogs(CLIENT_ID, clientID.getValue());
         attachLogFieldToLogs(
                 PERSISTENT_SESSION_ID,
                 PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
@@ -177,8 +184,7 @@ public class AuthCodeHandler
         URI redirectUri = authenticationRequest.getRedirectionURI();
         State state = authenticationRequest.getState();
         try {
-            if (!authorizationService.isClientRedirectUriValid(
-                    authenticationRequest.getClientID(), redirectUri)) {
+            if (!authorizationService.isClientRedirectUriValid(clientID, redirectUri)) {
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1016);
             }
             VectorOfTrust requestedVectorOfTrust = clientSession.getEffectiveVectorOfTrust();
@@ -213,7 +219,7 @@ public class AuthCodeHandler
                                     "Environment",
                                     configurationService.getEnvironment(),
                                     "Client",
-                                    authenticationRequest.getClientID().getValue(),
+                                    clientID.getValue(),
                                     "IsTest",
                                     Boolean.toString(isTestJourney),
                                     "IsDocApp",
@@ -229,6 +235,7 @@ public class AuthCodeHandler
             }
 
             var internalSubjectId = AuditService.UNKNOWN;
+            var rpPairwiseId = AuditService.UNKNOWN;
             String internalCommonPairwiseSubjectId;
             if (docAppJourney) {
                 LOG.info("Session not saved for DocCheckingAppUser");
@@ -250,20 +257,36 @@ public class AuthCodeHandler
                 dimensions.put("MfaRequired", mfaNotRequired ? "No" : "Yes");
                 dimensions.put("RequestedLevelOfConfidence", levelOfConfidence);
                 internalCommonPairwiseSubjectId = session.getInternalCommonSubjectIdentifier();
+                var userProfile =
+                        dynamoService
+                                .getUserProfileByEmailMaybe(session.getEmailAddress())
+                                .orElseThrow(
+                                        () ->
+                                                new UserNotFoundException(
+                                                        "Unable to find user with given email address"));
+                var client =
+                        dynamoClientService
+                                .getClient(clientID.getValue())
+                                .orElseThrow(
+                                        () -> new ClientNotFoundException(clientID.getValue()));
                 internalSubjectId =
                         Objects.isNull(session.getEmailAddress())
                                 ? AuditService.UNKNOWN
-                                : dynamoService
-                                        .getUserProfileByEmailMaybe(session.getEmailAddress())
-                                        .map(UserProfile::getSubjectID)
-                                        .orElse(AuditService.UNKNOWN);
+                                : userProfile.getSubjectID();
+                rpPairwiseId =
+                        ClientSubjectHelper.getSubject(
+                                        userProfile,
+                                        client,
+                                        dynamoService,
+                                        configurationService.getInternalSectorUri())
+                                .getValue();
             }
 
             auditService.submitAuditEvent(
                     OidcAuditableEvent.AUTH_CODE_ISSUED,
                     clientSessionId,
                     session.getSessionId(),
-                    authenticationRequest.getClientID().getValue(),
+                    clientID.getValue(),
                     internalCommonPairwiseSubjectId,
                     Objects.isNull(session.getEmailAddress())
                             ? AuditService.UNKNOWN
@@ -272,12 +295,13 @@ public class AuthCodeHandler
                     AuditService.UNKNOWN,
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
                     pair("internalSubjectId", internalSubjectId),
-                    pair("isNewAccount", session.isNewAccount()));
+                    pair("isNewAccount", session.isNewAccount()),
+                    pair("rpPairwiseId", rpPairwiseId));
 
             cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
             cloudwatchMetricsService.incrementSignInByClient(
                     session.isNewAccount(),
-                    authenticationRequest.getClientID().getValue(),
+                    clientID.getValue(),
                     clientSession.getClientName(),
                     isTestJourney);
 
@@ -288,19 +312,23 @@ public class AuthCodeHandler
             }
 
             return generateResponse(
-                    new AuthCodeResponse(authenticationResponse.toURI().toString()));
+                    200, new AuthCodeResponse(authenticationResponse.toURI().toString()));
         } catch (ClientNotFoundException e) {
             var errorResponse =
                     authorizationService.generateAuthenticationErrorResponse(
                             authenticationRequest, OAuth2Error.INVALID_CLIENT, redirectUri, state);
-            return generateResponse(new AuthCodeResponse(errorResponse.toURI().toString()));
+            return generateResponse(500, new AuthCodeResponse(errorResponse.toURI().toString()));
+        } catch (UserNotFoundException e) {
+            LOG.error(e);
+            throw new RuntimeException(e);
         }
     }
 
-    private APIGatewayProxyResponseEvent generateResponse(AuthCodeResponse response) {
+    private APIGatewayProxyResponseEvent generateResponse(
+            int httpStatus, AuthCodeResponse response) {
         try {
             LOG.info("Generating successful auth code response");
-            return generateApiGatewayProxyResponse(200, response);
+            return generateApiGatewayProxyResponse(httpStatus, response);
         } catch (JsonException e) {
             throw new RuntimeException(e);
         }
