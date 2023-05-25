@@ -14,6 +14,8 @@ public class CodeStorageService {
 
     public static final String CODE_REQUEST_BLOCKED_KEY_PREFIX = "code-request-blocked:";
     public static final String CODE_BLOCKED_KEY_PREFIX = "code-blocked:";
+    public static final String ACCOUNT_RECOVERY_CODE_BLOCKED_KEY_PREFIX =
+            "account-recovery-code-blocked:";
     public static final String PASSWORD_RESET_BLOCKED_KEY_PREFIX = "password-reset-blocked:";
 
     private static final Logger LOG = LogManager.getLogger(CodeStorageService.class);
