@@ -157,8 +157,11 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
     private boolean isCodeBlockedForSession(Session session, NotificationType notificationType) {
         if (notificationType.equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES)) {
-            return codeStorageService.isBlockedForEmail(
-                    session.getEmailAddress(), ACCOUNT_RECOVERY_CODE_BLOCKED_KEY_PREFIX);
+            var blockedForAccountRecovery =
+                    codeStorageService.isBlockedForEmail(
+                            session.getEmailAddress(), ACCOUNT_RECOVERY_CODE_BLOCKED_KEY_PREFIX);
+            LOG.info("Code is blocked for AccountRecovery: {}", blockedForAccountRecovery);
+            return blockedForAccountRecovery;
         }
         return codeStorageService.isBlockedForEmail(
                 session.getEmailAddress(), CODE_BLOCKED_KEY_PREFIX);
