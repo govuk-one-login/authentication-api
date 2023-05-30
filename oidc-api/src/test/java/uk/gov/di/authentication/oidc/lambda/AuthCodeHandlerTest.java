@@ -28,6 +28,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AuthCodeResponse;
 import uk.gov.di.authentication.oidc.services.AuthorizationService;
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
@@ -47,6 +48,7 @@ import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
@@ -102,6 +104,7 @@ class AuthCodeHandlerTest {
     private static final String AUDIENCE = "oidc-audience";
     private static final State STATE = new State();
     private static final Nonce NONCE = new Nonce();
+    private static final byte[] SALT = SaltHelper.generateNewSalt();
     private static final Json objectMapper = SerializationService.getInstance();
 
     private final AuthorizationService authorizationService = mock(AuthorizationService.class);
@@ -117,6 +120,7 @@ class AuthCodeHandlerTest {
             mock(CloudwatchMetricsService.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private AuthCodeHandler handler;
 
     private final Session session = new Session(SESSION_ID).addClientSession(CLIENT_SESSION_ID);
@@ -150,7 +154,8 @@ class AuthCodeHandlerTest {
                         auditService,
                         cloudwatchMetricsService,
                         configurationService,
-                        dynamoService);
+                        dynamoService,
+                        dynamoClientService);
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(configurationService.getEnvironment()).thenReturn("unit-test");
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
@@ -173,6 +178,10 @@ class AuthCodeHandlerTest {
             CredentialTrustLevel finalLevel,
             MFAMethodType mfaMethodType)
             throws ClientNotFoundException, Json.JsonException, JOSEException {
+        var userProfile = new UserProfile().withEmail(EMAIL).withSubjectID(SUBJECT.getValue());
+        when(dynamoClientService.getClient(CLIENT_ID.getValue()))
+                .thenReturn(Optional.of(generateClientRegistry()));
+        when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
         var expectedCommonSubject =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         SUBJECT.getValue(), "test.account.gov.uk", SaltHelper.generateNewSalt());
@@ -192,12 +201,7 @@ class AuthCodeHandlerTest {
                         authRequest.getState(),
                         null,
                         authRequest.getResponseMode());
-        when(dynamoService.getUserProfileByEmailMaybe(EMAIL))
-                .thenReturn(
-                        Optional.of(
-                                new UserProfile()
-                                        .withEmail(EMAIL)
-                                        .withSubjectID(SUBJECT.getValue())));
+        when(dynamoService.getUserProfileByEmailMaybe(EMAIL)).thenReturn(Optional.of(userProfile));
         when(authorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
                 .thenReturn(true);
         when(authorisationCodeService.generateAuthorisationCode(
@@ -220,6 +224,9 @@ class AuthCodeHandlerTest {
 
         verify(sessionService, times(1)).save(session);
 
+        var expectedRpPairwiseId =
+                ClientSubjectHelper.calculatePairwiseIdentifier(
+                        SUBJECT.getValue(), "rp-sector-uri", SALT);
         verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.AUTH_CODE_ISSUED,
@@ -232,7 +239,8 @@ class AuthCodeHandlerTest {
                         AuditService.UNKNOWN,
                         PERSISTENT_SESSION_ID,
                         pair("internalSubjectId", SUBJECT.getValue()),
-                        pair("isNewAccount", AccountState.NEW));
+                        pair("isNewAccount", AccountState.NEW),
+                        pair("rpPairwiseId", expectedRpPairwiseId));
 
         var dimensions =
                 Map.of(
@@ -312,7 +320,8 @@ class AuthCodeHandlerTest {
                         AuditService.UNKNOWN,
                         PERSISTENT_SESSION_ID,
                         pair("internalSubjectId", AuditService.UNKNOWN),
-                        pair("isNewAccount", AccountState.UNKNOWN));
+                        pair("isNewAccount", AccountState.UNKNOWN),
+                        pair("rpPairwiseId", AuditService.UNKNOWN));
 
         var expectedDimensions =
                 Map.of(
@@ -377,7 +386,7 @@ class AuthCodeHandlerTest {
 
         APIGatewayProxyResponseEvent response = generateApiRequest();
 
-        assertThat(response, hasStatus(200));
+        assertThat(response, hasStatus(500));
         AuthCodeResponse authCodeResponse =
                 objectMapper.readValue(response.getBody(), AuthCodeResponse.class);
         assertThat(
@@ -406,7 +415,7 @@ class AuthCodeHandlerTest {
         generateValidSession(customParams, MEDIUM_LEVEL);
         APIGatewayProxyResponseEvent response = generateApiRequest();
 
-        assertThat(response, hasStatus(200));
+        assertThat(response, hasStatus(400));
         AuthCodeResponse authCodeResponse =
                 objectMapper.readValue(response.getBody(), AuthCodeResponse.class);
         assertThat(
@@ -516,5 +525,15 @@ class AuthCodeHandlerTest {
                 .nonce(NONCE)
                 .requestObject(signedJWT)
                 .build();
+    }
+
+    private ClientRegistry generateClientRegistry() {
+        return new ClientRegistry()
+                .withRedirectUrls(singletonList(REDIRECT_URI.toString()))
+                .withClientID(CLIENT_ID.getValue())
+                .withSectorIdentifierUri("https://rp-sector-uri")
+                .withContacts(singletonList("joe.bloggs@digital.cabinet-office.gov.uk"))
+                .withTestClient(false)
+                .withScopes(singletonList("openid"));
     }
 }
