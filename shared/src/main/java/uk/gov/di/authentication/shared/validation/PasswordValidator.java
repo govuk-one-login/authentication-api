@@ -1,14 +1,13 @@
 package uk.gov.di.authentication.shared.validation;
 
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 
 import java.util.Optional;
 
 public class PasswordValidator {
 
-    private CommonPasswordsService commonPasswordsService;
+    private final CommonPasswordsService commonPasswordsService;
 
     public PasswordValidator(CommonPasswordsService commonPasswordsService) {
         this.commonPasswordsService = commonPasswordsService;
@@ -22,7 +21,7 @@ public class PasswordValidator {
         if (password.length() < 8 || password.length() > 256) {
             return Optional.of(ErrorResponse.ERROR_1006);
         }
-        if (!ValidationHelper.hasAtLeastOneDigitAndOneNonDigit(password)) {
+        if (!hasAtLeastOneDigitAndOneNonDigit(password)) {
             return Optional.of(ErrorResponse.ERROR_1007);
         }
 
@@ -31,5 +30,22 @@ public class PasswordValidator {
         }
 
         return Optional.empty();
+    }
+
+    private boolean hasAtLeastOneDigitAndOneNonDigit(String string) {
+        char[] charArray = string.toCharArray();
+        boolean hasDigit = false;
+        boolean hasNonDigit = false;
+        for (char c : charArray) {
+            if (hasDigit && hasNonDigit) {
+                break;
+            }
+            if (Character.isDigit(c)) {
+                hasDigit = true;
+                continue;
+            }
+            hasNonDigit = true;
+        }
+        return hasDigit && hasNonDigit;
     }
 }

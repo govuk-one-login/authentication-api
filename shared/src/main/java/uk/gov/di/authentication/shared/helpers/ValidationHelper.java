@@ -20,7 +20,6 @@ import static com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType.MOBIL
 
 public class ValidationHelper {
     private static final Logger LOG = LogManager.getLogger(ValidationHelper.class);
-    private static final Pattern PASSWORD_REGEX = Pattern.compile(".*\\d.*");
     private static final Pattern EMAIL_NOTIFY_REGEX =
             Pattern.compile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~\\-]+@([^.@][^@\\s]+)$");
     private static final Pattern HOSTNAME_REGEX =
@@ -88,36 +87,6 @@ public class ValidationHelper {
 
     static boolean isAcceptedPhoneNumberType(PhoneNumberType phoneNumberType) {
         return MOBILE.equals(phoneNumberType) || FIXED_LINE_OR_MOBILE.equals(phoneNumberType);
-    }
-
-    public static Optional<ErrorResponse> validatePassword(String password) {
-        if (password == null || password.isBlank()) {
-            return Optional.of(ErrorResponse.ERROR_1005);
-        }
-        if (password.length() < 8) {
-            return Optional.of(ErrorResponse.ERROR_1006);
-        }
-        if (!PASSWORD_REGEX.matcher(password).matches()) {
-            return Optional.of(ErrorResponse.ERROR_1007);
-        }
-        return Optional.empty();
-    }
-
-    public static boolean hasAtLeastOneDigitAndOneNonDigit(String string) {
-        char[] charArray = string.toCharArray();
-        boolean hasDigit = false;
-        boolean hasNonDigit = false;
-        for (char c : charArray) {
-            if (hasDigit && hasNonDigit) {
-                break;
-            }
-            if (Character.isDigit(c)) {
-                hasDigit = true;
-                continue;
-            }
-            hasNonDigit = true;
-        }
-        return hasDigit && hasNonDigit;
     }
 
     public static Optional<ErrorResponse> validateEmailAddressUpdate(

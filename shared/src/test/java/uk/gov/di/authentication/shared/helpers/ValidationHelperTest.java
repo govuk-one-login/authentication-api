@@ -98,29 +98,6 @@ class ValidationHelperTest {
                 equalTo(Optional.of(ErrorResponse.ERROR_1012)));
     }
 
-    private static Stream<Arguments> invalidPasswords() {
-        return Stream.of(
-                Arguments.of("", ErrorResponse.ERROR_1005),
-                Arguments.of(null, ErrorResponse.ERROR_1005),
-                Arguments.of("passw0r", ErrorResponse.ERROR_1006));
-    }
-
-    @ParameterizedTest
-    @MethodSource("invalidPasswords")
-    void shouldRejectInvalidPasswords(String password, ErrorResponse expectedResponse) {
-        assertEquals(Optional.of(expectedResponse), ValidationHelper.validatePassword(password));
-    }
-
-    private static Stream<String> validPasswords() {
-        return Stream.of("+pa?55worD", "computer-1", "passsssssssssssswwwwoooordddd-2");
-    }
-
-    @ParameterizedTest
-    @MethodSource("validPasswords")
-    void shouldAcceptValidPassword(String password) {
-        assertEquals(Optional.empty(), ValidationHelper.validatePassword(password));
-    }
-
     private static Stream<String> blankEmailAddresses() {
         return Stream.of("", "  ", "\t\t", System.lineSeparator() + System.lineSeparator(), null);
     }
@@ -397,21 +374,5 @@ class ValidationHelperTest {
                 expectedResult,
                 ValidationHelper.validateVerificationCode(
                         notificationType, storedCode, input, codeStorageService, EMAIL_ADDRESS, 5));
-    }
-
-    private static Stream<Arguments> testPasswords() {
-        return Stream.of(
-                arguments("12345896", false),
-                arguments("12a458Z6", true),
-                arguments("a12458Z6", true),
-                arguments("aZZZZkdfndsf!!@", false));
-    }
-
-    @ParameterizedTest
-    @MethodSource("testPasswords")
-    void shouldReturnFalseIfNoDigitOrOnlyDigits(String testPhoneNumber, boolean expectedResponse) {
-        assertEquals(
-                expectedResponse,
-                ValidationHelper.hasAtLeastOneDigitAndOneNonDigit(testPhoneNumber));
     }
 }
