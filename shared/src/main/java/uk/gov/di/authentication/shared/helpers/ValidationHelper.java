@@ -157,8 +157,9 @@ public class ValidationHelper {
                 case MFA_SMS:
                     return Optional.of(ErrorResponse.ERROR_1027);
                 case VERIFY_EMAIL:
-                case VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
                     return Optional.of(ErrorResponse.ERROR_1033);
+                case VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
+                    return Optional.of(ErrorResponse.ERROR_1048);
                 case VERIFY_PHONE_NUMBER:
                     return Optional.of(ErrorResponse.ERROR_1034);
                 case RESET_PASSWORD_WITH_CODE:
