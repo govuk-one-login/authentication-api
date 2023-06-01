@@ -37,6 +37,7 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_REMOVED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_VERIFIED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.INVALID_CODE_SENT;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
@@ -161,15 +162,15 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_VERIFIED, INVALID_CODE_SENT));
     }
 
-    @ParameterizedTest
-    @MethodSource("emailNotificationTypes")
-    void shouldReturnMaxCodesReachedIfEmailCodeIsBlocked(NotificationType emailNotificationType)
+    @Test
+    void shouldReturnMaxReachedButNotSetBlockWhenVerifyEmailCodeAttemptsExceedMaxRetryCount()
             throws Json.JsonException {
         String sessionId = redis.createSession();
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
-        redis.blockMfaCodesForEmail(EMAIL_ADDRESS, emailNotificationType);
-
-        VerifyCodeRequest codeRequest = new VerifyCodeRequest(emailNotificationType, "123456");
+        for (int i = 0; i < 5; i++) {
+            redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS);
+        }
+        var codeRequest = new VerifyCodeRequest(VERIFY_EMAIL, "123456");
 
         var response =
                 makeRequest(
@@ -177,8 +178,50 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1033));
+        assertThat(redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, VERIFY_EMAIL), equalTo(false));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_MAX_RETRIES_REACHED));
+    }
+
+    @Test
+    void shouldReturnMaxCodesReachedIfAccountRecoveryEmailCodeIsBlocked()
+            throws Json.JsonException {
+        String sessionId = redis.createSession();
+        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        redis.blockMfaCodesForEmail(EMAIL_ADDRESS, VERIFY_CHANGE_HOW_GET_SECURITY_CODES);
+
+        var codeRequest = new VerifyCodeRequest(VERIFY_CHANGE_HOW_GET_SECURITY_CODES, "123456");
+
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest), constructFrontendHeaders(sessionId), Map.of());
+
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1048));
 
         AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
+    }
+
+    @Test
+    void shouldReturnMaxReachedAndSetBlockWhenAccountRecoveryEmailCodeAttemptsExceedMaxRetryCount()
+            throws Json.JsonException {
+        String sessionId = redis.createSession();
+        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        for (int i = 0; i < 5; i++) {
+            redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS);
+        }
+        var codeRequest = new VerifyCodeRequest(VERIFY_CHANGE_HOW_GET_SECURITY_CODES, "123456");
+
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest), constructFrontendHeaders(sessionId), Map.of());
+
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1048));
+        assertThat(
+                redis.isBlockedMfaCodesForEmail(
+                        EMAIL_ADDRESS, VERIFY_CHANGE_HOW_GET_SECURITY_CODES),
+                equalTo(true));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_MAX_RETRIES_REACHED));
     }
 
     @Test

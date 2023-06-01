@@ -149,7 +149,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
     private ErrorResponse blockedCodeBehaviour(VerifyCodeRequest codeRequest) {
         return Map.ofEntries(
-                        entry(VERIFY_CHANGE_HOW_GET_SECURITY_CODES, ErrorResponse.ERROR_1033),
+                        entry(VERIFY_CHANGE_HOW_GET_SECURITY_CODES, ErrorResponse.ERROR_1048),
                         entry(VERIFY_EMAIL, ErrorResponse.ERROR_1033),
                         entry(MFA_SMS, ErrorResponse.ERROR_1027))
                 .get(codeRequest.getNotificationType());
@@ -268,13 +268,12 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     };
         }
         AuditableEvent auditableEvent;
-        if (List.of(ErrorResponse.ERROR_1027, ErrorResponse.ERROR_1033).contains(errorResponse)) {
-            if (!List.of(VERIFY_EMAIL, VERIFY_CHANGE_HOW_GET_SECURITY_CODES)
-                            .contains(notificationType)
-                    && !errorResponse.equals(ErrorResponse.ERROR_1033)) {
+        if (List.of(ErrorResponse.ERROR_1027, ErrorResponse.ERROR_1033, ErrorResponse.ERROR_1048)
+                .contains(errorResponse)) {
+            if (errorResponse.equals(ErrorResponse.ERROR_1027)) {
                 blockCodeForSession(session);
             }
-            if (accountRecoveryJourney) {
+            if (errorResponse.equals(ErrorResponse.ERROR_1048)) {
                 blockCodeForAccountRecoverySession(session);
             }
             resetIncorrectMfaCodeAttemptsCount(session);
