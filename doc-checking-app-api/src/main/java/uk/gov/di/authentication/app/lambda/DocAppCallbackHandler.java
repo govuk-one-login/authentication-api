@@ -296,7 +296,7 @@ public class DocAppCallbackHandler
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN);
-                LOG.error("Doc App sendCriDataRequest was not successful: {}", e.getMessage());
+                LOG.warn("Doc App sendCriDataRequest was not successful: {}", e.getMessage());
                 return redirectToFrontendErrorPage();
             }
         } catch (DocAppCallbackException | NoSessionException e) {
