@@ -21,7 +21,6 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mockito;
 import software.amazon.awssdk.core.exception.SdkClientException;
-import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -82,6 +81,8 @@ import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.PERSI
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
+import static uk.gov.di.authentication.shared.services.CodeStorageService.ACCOUNT_RECOVERY_CODE_BLOCKED_KEY_PREFIX;
+import static uk.gov.di.authentication.shared.services.CodeStorageService.ACCOUNT_RECOVERY_CODE_REQUEST_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
@@ -180,7 +181,7 @@ class SendNotificationHandlerTest {
     @EnumSource(
             value = NotificationType.class,
             names = {"VERIFY_EMAIL", "VERIFY_CHANGE_HOW_GET_SECURITY_CODES"})
-    void shouldReturn204ForValidVerifyEmailRequest(NotificationType notificationType)
+    void shouldReturn204ForValidEmailOtpRequest(NotificationType notificationType)
             throws Json.JsonException {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
@@ -537,12 +538,8 @@ class SendNotificationHandlerTest {
         verifyNoInteractions(auditService);
     }
 
-    @ParameterizedTest
-    @EnumSource(
-            value = NotificationType.class,
-            names = {"VERIFY_EMAIL", "VERIFY_CHANGE_HOW_GET_SECURITY_CODES"})
-    void shouldReturn400IfUserHasReachedTheEmailCodeRequestLimit(
-            NotificationType notificationType) {
+    @Test
+    void shouldReturn400IfUserHasReachedTheRegistrationEmailOtpRequestLimit() {
         maxOutCodeRequestCount();
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
@@ -551,17 +548,10 @@ class SendNotificationHandlerTest {
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS, notificationType));
+                                TEST_EMAIL_ADDRESS, VERIFY_EMAIL));
 
         assertEquals(400, result.getStatusCode());
-        FrontendAuditableEvent expectedAuditableEvent = null;
-        if (VERIFY_EMAIL.equals(notificationType)) {
-            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1029));
-            expectedAuditableEvent = EMAIL_INVALID_CODE_REQUEST;
-        } else if (VERIFY_CHANGE_HOW_GET_SECURITY_CODES.equals(notificationType)) {
-            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1046));
-            expectedAuditableEvent = ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST;
-        }
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1029));
         verify(codeStorageService)
                 .saveBlockedForEmail(
                         TEST_EMAIL_ADDRESS,
@@ -569,14 +559,50 @@ class SendNotificationHandlerTest {
                         BLOCKED_EMAIL_DURATION);
         verify(codeStorageService, never())
                 .saveOtpCode(
-                        TEST_EMAIL_ADDRESS,
-                        TEST_SIX_DIGIT_CODE,
-                        CODE_EXPIRY_TIME,
-                        notificationType);
+                        TEST_EMAIL_ADDRESS, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, VERIFY_EMAIL);
         verifyNoInteractions(awsSqsClient);
         verify(auditService)
                 .submitAuditEvent(
-                        expectedAuditableEvent,
+                        EMAIL_INVALID_CODE_REQUEST,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        CLIENT_ID,
+                        expectedCommonSubject,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_ID);
+    }
+
+    @Test
+    void shouldReturn400IfUserHasReachedTheAccountRecoveryEmailOtpRequestLimit() {
+        maxOutCodeRequestCount();
+        usingValidSession();
+        usingValidClientSession(CLIENT_ID);
+
+        var result =
+                sendRequest(
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS, VERIFY_CHANGE_HOW_GET_SECURITY_CODES));
+
+        assertEquals(400, result.getStatusCode());
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1046));
+        verify(codeStorageService)
+                .saveBlockedForEmail(
+                        TEST_EMAIL_ADDRESS,
+                        ACCOUNT_RECOVERY_CODE_REQUEST_BLOCKED_KEY_PREFIX,
+                        BLOCKED_EMAIL_DURATION);
+        verify(codeStorageService, never())
+                .saveOtpCode(
+                        TEST_EMAIL_ADDRESS,
+                        TEST_SIX_DIGIT_CODE,
+                        CODE_EXPIRY_TIME,
+                        VERIFY_CHANGE_HOW_GET_SECURITY_CODES);
+        verifyNoInteractions(awsSqsClient);
+        verify(auditService)
+                .submitAuditEvent(
+                        ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         CLIENT_ID,
@@ -626,12 +652,8 @@ class SendNotificationHandlerTest {
                         PERSISTENT_ID);
     }
 
-    @ParameterizedTest
-    @EnumSource(
-            value = NotificationType.class,
-            names = {"VERIFY_EMAIL", "VERIFY_CHANGE_HOW_GET_SECURITY_CODES"})
-    void shouldReturn400IfUserIsBlockedFromRequestingAnyMoreEmailOtpCodes(
-            NotificationType notificationType) {
+    @Test
+    void shouldReturn400IfUserIsBlockedFromRequestingAnyMoreRegistrationEmailOtps() {
         when(codeStorageService.isBlockedForEmail(
                         TEST_EMAIL_ADDRESS, CODE_REQUEST_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
@@ -642,21 +664,44 @@ class SendNotificationHandlerTest {
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS, notificationType));
+                                TEST_EMAIL_ADDRESS, VERIFY_EMAIL));
 
         assertEquals(400, result.getStatusCode());
-        FrontendAuditableEvent expectedAuditableEvent = null;
-        if (VERIFY_EMAIL.equals(notificationType)) {
-            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1031));
-            expectedAuditableEvent = EMAIL_INVALID_CODE_REQUEST;
-        } else if (VERIFY_CHANGE_HOW_GET_SECURITY_CODES.equals(notificationType)) {
-            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1047));
-            expectedAuditableEvent = ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST;
-        }
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1031));
         verifyNoInteractions(awsSqsClient);
         verify(auditService)
                 .submitAuditEvent(
-                        expectedAuditableEvent,
+                        EMAIL_INVALID_CODE_REQUEST,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        CLIENT_ID,
+                        expectedCommonSubject,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_ID);
+    }
+
+    @Test
+    void shouldReturn400IfUserIsBlockedFromRequestingAnyMoreAccountRecoveryEmailOtps() {
+        when(codeStorageService.isBlockedForEmail(
+                        TEST_EMAIL_ADDRESS, ACCOUNT_RECOVERY_CODE_REQUEST_BLOCKED_KEY_PREFIX))
+                .thenReturn(true);
+        usingValidSession();
+        usingValidClientSession(CLIENT_ID);
+
+        var result =
+                sendRequest(
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS, VERIFY_CHANGE_HOW_GET_SECURITY_CODES));
+
+        assertEquals(400, result.getStatusCode());
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1047));
+        verifyNoInteractions(awsSqsClient);
+        verify(auditService)
+                .submitAuditEvent(
+                        ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         CLIENT_ID,
@@ -698,12 +743,8 @@ class SendNotificationHandlerTest {
                         PERSISTENT_ID);
     }
 
-    @ParameterizedTest
-    @EnumSource(
-            value = NotificationType.class,
-            names = {"VERIFY_EMAIL", "VERIFY_CHANGE_HOW_GET_SECURITY_CODES"})
-    void shouldReturn400IfUserIsBlockedFromEnteringEmailOtpCodes(
-            NotificationType notificationType) {
+    @Test
+    void shouldReturn400IfUserIsBlockedFromEnteringRegistrationEmailOtpCodes() {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
         when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
@@ -713,22 +754,44 @@ class SendNotificationHandlerTest {
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS, notificationType));
+                                TEST_EMAIL_ADDRESS, VERIFY_EMAIL));
 
         assertEquals(400, result.getStatusCode());
-        if (VERIFY_EMAIL.equals(notificationType)) {
-            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1033));
-        } else if (VERIFY_CHANGE_HOW_GET_SECURITY_CODES.equals(notificationType)) {
-            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1048));
-        }
-        var expectedAuditableEvent =
-                notificationType.equals(VERIFY_EMAIL)
-                        ? EMAIL_INVALID_CODE_REQUEST
-                        : ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST;
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1033));
         verifyNoInteractions(awsSqsClient);
         verify(auditService)
                 .submitAuditEvent(
-                        expectedAuditableEvent,
+                        EMAIL_INVALID_CODE_REQUEST,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        CLIENT_ID,
+                        expectedCommonSubject,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_ID);
+    }
+
+    @Test
+    void shouldReturn400IfUserIsBlockedFromEnteringAccountRecoveryEmailOtpCodes() {
+        usingValidSession();
+        usingValidClientSession(CLIENT_ID);
+        when(codeStorageService.isBlockedForEmail(
+                        TEST_EMAIL_ADDRESS, ACCOUNT_RECOVERY_CODE_BLOCKED_KEY_PREFIX))
+                .thenReturn(true);
+
+        var result =
+                sendRequest(
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS, VERIFY_CHANGE_HOW_GET_SECURITY_CODES));
+
+        assertEquals(400, result.getStatusCode());
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1048));
+        verifyNoInteractions(awsSqsClient);
+        verify(auditService)
+                .submitAuditEvent(
+                        ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST,
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
                         CLIENT_ID,

@@ -58,6 +58,8 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.TestClientHelper.isTestClientWithAllowedEmail;
+import static uk.gov.di.authentication.shared.services.CodeStorageService.ACCOUNT_RECOVERY_CODE_BLOCKED_KEY_PREFIX;
+import static uk.gov.di.authentication.shared.services.CodeStorageService.ACCOUNT_RECOVERY_CODE_REQUEST_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 
@@ -278,20 +280,28 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
 
     private Optional<ErrorResponse> isCodeRequestAttemptValid(
             String email, Session session, NotificationType notificationType) {
+        var codeRequestBlockedPrefix =
+                notificationType.equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES)
+                        ? ACCOUNT_RECOVERY_CODE_REQUEST_BLOCKED_KEY_PREFIX
+                        : CODE_REQUEST_BLOCKED_KEY_PREFIX;
+        var codeAttemptsBlockedPrefix =
+                notificationType.equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES)
+                        ? ACCOUNT_RECOVERY_CODE_BLOCKED_KEY_PREFIX
+                        : CODE_BLOCKED_KEY_PREFIX;
         if (session.getCodeRequestCount() == configurationService.getCodeMaxRetries()) {
             LOG.info("User has requested too many OTP codes");
             codeStorageService.saveBlockedForEmail(
                     email,
-                    CODE_REQUEST_BLOCKED_KEY_PREFIX,
+                    codeRequestBlockedPrefix,
                     configurationService.getBlockedEmailDuration());
             sessionService.save(session.resetCodeRequestCount());
             return Optional.of(getErrorResponseForCodeRequestLimitReached(notificationType));
         }
-        if (codeStorageService.isBlockedForEmail(email, CODE_REQUEST_BLOCKED_KEY_PREFIX)) {
+        if (codeStorageService.isBlockedForEmail(email, codeRequestBlockedPrefix)) {
             LOG.info("User is blocked from requesting any OTP codes");
             return Optional.of(getErrorResponseForMaxCodeRequests(notificationType));
         }
-        if (codeStorageService.isBlockedForEmail(email, CODE_BLOCKED_KEY_PREFIX)) {
+        if (codeStorageService.isBlockedForEmail(email, codeAttemptsBlockedPrefix)) {
             LOG.info("User is blocked from requesting any OTP codes");
             return Optional.of(getErrorResponseForMaxCodeAttempts(notificationType));
         }
