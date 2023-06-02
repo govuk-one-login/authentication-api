@@ -6,7 +6,7 @@ resource "aws_cloudwatch_metric_alarm" "sqs_deadletter_cloudwatch_alarm" {
   metric_name         = "ApproximateNumberOfMessagesVisible"
   namespace           = "AWS/SQS"
   period              = "300"
-  statistic           = "Sum"
+  statistic           = "Average"
   threshold           = var.dlq_alarm_threshold
 
   dimensions = {
@@ -24,7 +24,7 @@ resource "aws_cloudwatch_metric_alarm" "spot_request_sqs_dlq_cloudwatch_alarm" {
   metric_name         = "ApproximateNumberOfMessagesVisible"
   namespace           = "AWS/SQS"
   period              = "300"
-  statistic           = "Sum"
+  statistic           = "Average"
   threshold           = var.dlq_alarm_threshold
 
   dimensions = {
