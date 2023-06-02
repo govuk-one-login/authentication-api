@@ -563,6 +563,30 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertTrue(userStore.isAuthAppVerified(EMAIL_ADDRESS));
     }
 
+    @ParameterizedTest
+    @EnumSource(
+            value = JourneyType.class,
+            names = {"REGISTRATION", "ACCOUNT_RECOVERY"})
+    void whenAuthAppCodeRetriesExceedFiveDontBlockAndReturn400(JourneyType journeyType) {
+        for (int i = 0; i < 5; i++) {
+            redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS, MFAMethodType.AUTH_APP);
+        }
+
+        String invalidCode = "999999";
+        VerifyMfaCodeRequest codeRequest =
+                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, invalidCode, journeyType);
+
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
+
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1043));
+        assertFalse(redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS));
+    }
+
     @Test
     void
             whenIncorrectAuthCodesInputtedUpToSmsRetriesLimitAllowSmsAttemptAndReturn400WithoutBlockingFurtherRetries() {
