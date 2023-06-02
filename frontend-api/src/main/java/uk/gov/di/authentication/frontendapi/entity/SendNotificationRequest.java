@@ -3,6 +3,7 @@ package uk.gov.di.authentication.frontendapi.entity;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import uk.gov.di.authentication.shared.entity.BaseFrontendRequest;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.validation.Required;
 
@@ -21,6 +22,10 @@ public class SendNotificationRequest extends BaseFrontendRequest {
     @Expose
     private Boolean requestNewCode;
 
+    @SerializedName("journeyType")
+    @Expose
+    private JourneyType journeyType;
+
     public NotificationType getNotificationType() {
         return notificationType;
     }
@@ -33,20 +38,7 @@ public class SendNotificationRequest extends BaseFrontendRequest {
         return requestNewCode;
     }
 
-    @Override
-    public String toString() {
-        return "SendNotificationRequest{"
-                + "notificationType="
-                + notificationType
-                + ", phoneNumber='"
-                + phoneNumber
-                + '\''
-                + ", email='"
-                + email
-                + '\''
-                + ", requestNewCode='"
-                + requestNewCode
-                + '\''
-                + '}';
+    public JourneyType getJourneyType() {
+        return journeyType;
     }
 }
