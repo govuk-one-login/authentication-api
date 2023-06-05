@@ -17,7 +17,7 @@ public final class RequestHeaderHelper {
             LOG.warn("All headers are missing or empty when looking for header {}", headerName);
             return false;
         } else if (!matchLowerCase && headers.containsKey(headerName)) {
-            LOG.info("Found header {}, matchLowerCase={}", headerName, matchLowerCase);
+            LOG.trace("Found header {}, matchLowerCase={}", headerName, matchLowerCase);
             return true;
         } else if (matchLowerCase
                 && (headers.containsKey(headerName)
@@ -30,7 +30,7 @@ public final class RequestHeaderHelper {
         } else if (matchLowerCase
                 && (headers.containsKey(headerName)
                         || headers.containsKey(headerName.toLowerCase()))) {
-            LOG.info(
+            LOG.trace(
                     "Found header {} lowercase version, matchLowerCase={}",
                     headerName,
                     matchLowerCase);

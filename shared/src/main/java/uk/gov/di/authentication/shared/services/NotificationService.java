@@ -28,7 +28,7 @@ public class NotificationService {
             TemplateAware type,
             SupportedLanguage userLanguage)
             throws NotificationClientException {
-        LOG.info("sendEmail language {}", userLanguage);
+        LOG.trace("sendEmail language {}", userLanguage);
         notifyClient.sendEmail(
                 type.getTemplateId(userLanguage, configurationService), email, personalisation, "");
     }
@@ -39,7 +39,7 @@ public class NotificationService {
             TemplateAware type,
             SupportedLanguage userLanguage)
             throws NotificationClientException {
-        LOG.info("sendText language {}", userLanguage);
+        LOG.trace("sendText language {}", userLanguage);
         notifyClient.sendSms(
                 type.getTemplateId(userLanguage, configurationService),
                 phoneNumber,
