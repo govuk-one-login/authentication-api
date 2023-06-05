@@ -126,7 +126,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             }
             if (CONFIRMATION_NOTIFICATION_TYPES.contains(request.getNotificationType())) {
                 LOG.info("Placing message on queue for {}", request.getNotificationType());
-                NotifyRequest notifyRequest =
+                var notifyRequest =
                         new NotifyRequest(
                                 request.getEmail(),
                                 request.getNotificationType(),
@@ -225,10 +225,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                                                         session.getEmailAddress(),
                                                         notificationType));
 
-        var notifyRequest =
-                new NotifyRequest(
-                        destination, notificationType, code, userContext.getUserLanguage());
-
+        LOG.info("Incrementing code request count");
         sessionService.save(session.incrementCodeRequestCount());
         var testClientWithAllowedEmail =
                 isTestClientWithAllowedEmail(userContext, configurationService);
@@ -244,8 +241,11 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                                 "Country",
                                 PhoneNumberHelper.getCountry(destination)));
             }
-
+            var notifyRequest =
+                    new NotifyRequest(
+                            destination, notificationType, code, userContext.getUserLanguage());
             sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
+            LOG.info("{} placed on queue", request.getNotificationType());
             LOG.info("Successfully processed request");
         }
         auditService.submitAuditEvent(
@@ -288,21 +288,29 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 notificationType.equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES)
                         ? ACCOUNT_RECOVERY_CODE_BLOCKED_KEY_PREFIX
                         : CODE_BLOCKED_KEY_PREFIX;
+        LOG.info("CodeRequestCount is: {}", session.getCodeRequestCount());
         if (session.getCodeRequestCount() == configurationService.getCodeMaxRetries()) {
-            LOG.info("User has requested too many OTP codes");
+            LOG.info(
+                    "User has requested too many OTP codes. Setting block with prefix: {}",
+                    codeRequestBlockedPrefix);
             codeStorageService.saveBlockedForEmail(
                     email,
                     codeRequestBlockedPrefix,
                     configurationService.getBlockedEmailDuration());
+            LOG.info("Resetting code request count");
             sessionService.save(session.resetCodeRequestCount());
             return Optional.of(getErrorResponseForCodeRequestLimitReached(notificationType));
         }
         if (codeStorageService.isBlockedForEmail(email, codeRequestBlockedPrefix)) {
-            LOG.info("User is blocked from requesting any OTP codes");
+            LOG.info(
+                    "User is blocked from requesting any OTP codes. Code request block prefix: {}",
+                    codeRequestBlockedPrefix);
             return Optional.of(getErrorResponseForMaxCodeRequests(notificationType));
         }
         if (codeStorageService.isBlockedForEmail(email, codeAttemptsBlockedPrefix)) {
-            LOG.info("User is blocked from requesting any OTP codes");
+            LOG.info(
+                    "User is blocked from entering any OTP codes. Code attempt block prefix: {}",
+                    codeAttemptsBlockedPrefix);
             return Optional.of(getErrorResponseForMaxCodeAttempts(notificationType));
         }
         return Optional.empty();
