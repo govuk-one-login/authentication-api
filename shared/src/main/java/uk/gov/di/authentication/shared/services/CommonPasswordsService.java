@@ -67,7 +67,8 @@ public class CommonPasswordsService {
 
             List<CommonPassword> unprocessedCommonPasswordPutItems =
                     result.unprocessedPutItemsForTable(dynamoCommonPasswordTable);
-            if (Objects.nonNull(unprocessedCommonPasswordPutItems)) {
+            if (Objects.nonNull(unprocessedCommonPasswordPutItems)
+                    && !unprocessedCommonPasswordPutItems.isEmpty()) {
                 LOG.error(
                         "Dynamo batch write returned failed batch, with {} failed batches",
                         unprocessedCommonPasswordPutItems.size());
