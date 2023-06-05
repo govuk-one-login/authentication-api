@@ -84,13 +84,16 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
 
     public Void notifcationRequestHandler(SQSEvent event, Context context) {
 
-        Map<String, Object> notifyPersonalisation = new HashMap<>();
-
+        if (event != null && event.getRecords() != null) {
+            LOG.info("Processing Notification batch size: {}", event.getRecords().size());
+        }
         for (SQSMessage msg : event.getRecords()) {
+            LOG.info("Processing Notification message with id: {}", msg.getMessageId());
             try {
                 NotifyRequest notifyRequest =
                         objectMapper.readValue(msg.getBody(), NotifyRequest.class);
                 try {
+                    Map<String, Object> notifyPersonalisation = new HashMap<>();
                     switch (notifyRequest.getNotificationType()) {
                         case ACCOUNT_CREATED_CONFIRMATION:
                             notifyPersonalisation.put(
