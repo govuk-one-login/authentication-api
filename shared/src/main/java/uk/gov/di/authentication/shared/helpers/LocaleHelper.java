@@ -79,7 +79,6 @@ public class LocaleHelper {
             Map<String, String> headers, ConfigurationService configurationService) {
         if (!headersContainValidHeader(
                 headers, USER_LANGUAGE_HEADER, configurationService.getHeadersCaseInsensitive())) {
-            LOG.warn("Headers are missing User-Language header");
             return Optional.empty();
         }
         String language =
