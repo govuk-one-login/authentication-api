@@ -6,10 +6,11 @@ module "account_management_sqs_role" {
 }
 
 resource "aws_sqs_queue" "email_queue" {
-  name                      = "${var.environment}-account-management-notification-queue"
-  max_message_size          = 2048
-  message_retention_seconds = 1209600
-  receive_wait_time_seconds = 10
+  name                       = "${var.environment}-account-management-notification-queue"
+  max_message_size           = 2048
+  message_retention_seconds  = 1209600
+  receive_wait_time_seconds  = 10
+  visibility_timeout_seconds = 180
 
   kms_master_key_id                 = var.use_localstack ? null : "alias/aws/sqs"
   kms_data_key_reuse_period_seconds = var.use_localstack ? null : 300
