@@ -2,8 +2,9 @@ name: Deploy Delivery Receipts to Dev
 
 env:
   # DevPlatform recommend that the below vars are added to GitHub secrets
-  DEPLOYER_ROLE: arn:aws:iam::761723964695:role/deployer-role-pipeline-dev
+  GHA_ROLE: arn:aws:iam::761723964695:role/dev-auth-deploy-pipeline-GitHubActionsRole-1IIFWOJDUI5B9
   DESTINATION_BUCKET: di-auth-lambda-signed-20220215170204376200000002
+  ARTIFACT_BUCKET: dev-auth-deploy-pipeline-githubartifactsourcebuck-1nh86k5wimx9n
 
 on:
   push:
@@ -31,25 +32,25 @@ jobs:
       - name: Set up AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: ${{ env.DEPLOYER_ROLE }}
+          role-to-assume: ${{ env.GHA_ROLE }}
           aws-region: eu-west-2
       
-      - name: Download and copy Audit Processors signed lambda zip
+      - name: Download and copy Delivery Receipts signed lambda zip
         working-directory: ci/terraform/delivery-receipts
         run: |
-          aws s3 cp s3://dev-platform-destination-test/ ./artifacts 
-          --recursive --exclude "*" 
-          --include "signed-delivery-receipts-${{ github.sha }}-*"
-          mv artifacts/signed-delivery-receipts-*.zip artifacts/delivery-receipts.zip
+          aws s3 cp s3://${{ env.DESTINATION_BUCKET }} ./artifacts \
+            --recursive --exclude "*" \
+            --include "signed-delivery-receipts-api-${{ github.sha }}-*"
+          mv artifacts/signed-delivery-receipts-api-*.zip artifacts/delivery-receipts.zip
 
       - name: Upload Delivery Receipts Terraform files
         working-directory: ci/terraform
         run: |
-          zip -r template.zip .
+          zip -r delivery-receipts.zip .
           S3_RESPONSE=`aws s3api put-object \
-            --bucket dev-auth-deploy-pipeline-githubartifactsourcebuck-1nh86k5wimx9n \
-            --key template.zip \
-            --body template.zip`
+            --bucket $ARTIFACT_BUCKET \
+            --key delivery-receipts.zip \
+            --body delivery-receipts.zip`
           VERSION=`echo $S3_RESPONSE | jq .VersionId -r`
           echo "VERSION=$VERSION" >> $GITHUB_ENV
  
