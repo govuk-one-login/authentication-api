@@ -191,11 +191,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                                                 notificationType);
                                         return newCode;
                                     });
-
+            LOG.info("Incrementing code request count");
             sessionService.save(userContext.getSession().incrementCodeRequestCount());
-            NotifyRequest notifyRequest =
-                    new NotifyRequest(
-                            phoneNumber, notificationType, code, userContext.getUserLanguage());
             AuditableEvent auditableEvent;
             if (TestClientHelper.isTestClientWithAllowedEmail(userContext, configurationService)) {
                 LOG.info(
@@ -204,6 +201,9 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                 auditableEvent = FrontendAuditableEvent.MFA_CODE_SENT_FOR_TEST_CLIENT;
             } else {
                 LOG.info("Placing message on queue with NotificationType {}", notificationType);
+                var notifyRequest =
+                        new NotifyRequest(
+                                phoneNumber, notificationType, code, userContext.getUserLanguage());
                 sqsClient.send(objectMapper.writeValueAsString(notifyRequest));
                 auditableEvent = FrontendAuditableEvent.MFA_CODE_SENT;
             }
@@ -234,21 +234,29 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
     private Optional<ErrorResponse> validateCodeRequestAttempts(
             String email, UserContext userContext) {
         Session session = userContext.getSession();
+        LOG.info("CodeRequestCount is: {}", session.getCodeRequestCount());
         if (session.getCodeRequestCount() == configurationService.getCodeMaxRetries()) {
-            LOG.info("User has requested too many OTP codes");
+            LOG.info(
+                    "User has requested too many OTP codes. Setting block with prefix: {}",
+                    CODE_REQUEST_BLOCKED_KEY_PREFIX);
             codeStorageService.saveBlockedForEmail(
                     email,
                     CODE_REQUEST_BLOCKED_KEY_PREFIX,
                     configurationService.getBlockedEmailDuration());
+            LOG.info("Resetting code request count");
             sessionService.save(session.resetCodeRequestCount());
             return Optional.of(ErrorResponse.ERROR_1025);
         }
         if (codeStorageService.isBlockedForEmail(email, CODE_REQUEST_BLOCKED_KEY_PREFIX)) {
-            LOG.info("User is blocked from requesting any OTP codes");
+            LOG.info(
+                    "User is blocked from requesting any OTP codes. Code request block prefix: {}",
+                    CODE_REQUEST_BLOCKED_KEY_PREFIX);
             return Optional.of(ErrorResponse.ERROR_1026);
         }
         if (codeStorageService.isBlockedForEmail(email, CODE_BLOCKED_KEY_PREFIX)) {
-            LOG.info("User is blocked from requesting any OTP codes");
+            LOG.info(
+                    "User is blocked from entering any OTP codes. Code attempt block prefix: {}",
+                    CODE_BLOCKED_KEY_PREFIX);
             return Optional.of(ErrorResponse.ERROR_1027);
         }
         return Optional.empty();
