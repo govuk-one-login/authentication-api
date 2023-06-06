@@ -41,7 +41,7 @@ jobs:
           aws s3 cp s3://di-auth-lambda-signed-20220215170204376200000002 ./artifacts \
             --recursive --exclude "*" \
             --include "signed-test-services-api-${{ github.sha }}-*"
-          mv artifacts/signed-test-services-api-*.zip artifacts/test-services.zip
+          mv artifacts/signed-test-services-api-*.zip artifacts/test-services-api.zip
 
       - name: Upload Test Services Terraform files
         working-directory: ci/terraform

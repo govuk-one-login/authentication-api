@@ -41,7 +41,7 @@ jobs:
           aws s3 cp s3://${{ env.DESTINATION_BUCKET }} ./artifacts \
             --recursive --exclude "*" \
             --include "signed-oidc-api-${{ github.sha }}-*"
-          mv artifacts/signed-oidc-api-*.zip artifacts/oidc.zip
+          mv artifacts/signed-oidc-api-*.zip artifacts/oidc-api.zip
 
       - name: Download and copy Client Registry API signed artifact
         working-directory: ci/terraform/oidc
