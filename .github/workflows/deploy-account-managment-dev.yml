@@ -36,12 +36,12 @@ jobs:
           aws-region: eu-west-2
       
       - name: Download and copy Account Management signed lambda zip
-        working-directory: ci/terraform/audit-processors
+        working-directory: ci/terraform/account-management
         run: |
           aws s3 cp s3://${{ env.DESTINATION_BUCKET }} ./artifacts \
             --recursive --exclude "*" \
             --include "signed-account-management-api-${{ github.sha }}-*"
-          mv artifacts/signed-account-management-*.zip artifacts/account-management.zip
+          mv artifacts/signed-account-management-*.zip artifacts/account-management-api.zip
 
       - name: Upload Account Management Terraform files
         working-directory: ci/terraform

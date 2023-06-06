@@ -208,8 +208,8 @@ resource "aws_lambda_alias" "active_processor" {
 
 resource "aws_s3_bucket" "audit_storage_bucket" {
   count  = var.use_localstack ? 0 : 1
-  bucket = "${var.environment}-audit-storage"
-
+  bucket = var.environment == "dev" ? "${var.environment}-audit-storage-bucket" : "${var.environment}-audit-storage"
+  # Bucket name "dev-audit-storage" is not available
   acl = "private"
 
   server_side_encryption_configuration {

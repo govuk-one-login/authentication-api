@@ -41,7 +41,7 @@ jobs:
           aws s3 cp s3://${{ env.DESTINATION_BUCKET }} ./artifacts \
             --recursive --exclude "*" \
             --include "signed-delivery-receipts-api-${{ github.sha }}-*"
-          mv artifacts/signed-delivery-receipts-api-*.zip artifacts/delivery-receipts.zip
+          mv artifacts/signed-delivery-receipts-api-*.zip artifacts/delivery-receipts-api.zip
 
       - name: Upload Delivery Receipts Terraform files
         working-directory: ci/terraform
