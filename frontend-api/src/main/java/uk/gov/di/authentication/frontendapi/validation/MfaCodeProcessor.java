@@ -44,8 +44,9 @@ public abstract class MfaCodeProcessor {
         this.accountModifiersService = accountModifiersService;
     }
 
-    boolean isCodeBlockedForSession() {
-        return codeStorageService.isBlockedForEmail(emailAddress, CODE_BLOCKED_KEY_PREFIX);
+    boolean isCodeBlockedForSession(MFAMethodType mfaMethodType) {
+        return codeStorageService.isBlockedForEmail(
+                emailAddress, CODE_BLOCKED_KEY_PREFIX + mfaMethodType.getValue());
     }
 
     boolean hasExceededRetryLimit(MFAMethodType mfaMethodType) {

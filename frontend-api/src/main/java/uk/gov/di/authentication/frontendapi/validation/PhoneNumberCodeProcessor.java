@@ -55,7 +55,7 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
                 codeRequest.getJourneyType().equals(JourneyType.SIGN_IN)
                         ? NotificationType.MFA_SMS
                         : NotificationType.VERIFY_PHONE_NUMBER;
-        if (isCodeBlockedForSession()) {
+        if (isCodeBlockedForSession(MFAMethodType.SMS)) {
             LOG.info("Code blocked for session");
             return Optional.of(ErrorResponse.ERROR_1034);
         }

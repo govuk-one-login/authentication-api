@@ -285,7 +285,8 @@ class AuthAppCodeProcessorTest {
     private void setUpBlockedUser(CodeRequest codeRequest) {
         when(mockUserContext.getSession().getEmailAddress()).thenReturn("blocked-email-address");
         when(mockCodeStorageService.isBlockedForEmail(
-                        "blocked-email-address", CODE_BLOCKED_KEY_PREFIX))
+                        "blocked-email-address",
+                        CODE_BLOCKED_KEY_PREFIX + MFAMethodType.AUTH_APP.getValue()))
                 .thenReturn(true);
 
         this.authAppCodeProcessor =

@@ -513,7 +513,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 new VerifyMfaCodeRequest(
                         MFAMethodType.AUTH_APP, code, journeyType, profileInformation);
 
-        redis.blockMfaCodesForEmail(EMAIL_ADDRESS);
+        redis.blockAllMfaCodeTypesForEmail(EMAIL_ADDRESS);
 
         var response =
                 makeRequest(
@@ -558,7 +558,9 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1042));
         assertEquals(0, redis.getMfaCodeAttemptsCount(EMAIL_ADDRESS, MFAMethodType.AUTH_APP));
-        assertTrue(redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS));
+        assertTrue(
+                redis.isBlockedMfaCodesForEmailAndSingleMfaMethodType(
+                        EMAIL_ADDRESS, MFAMethodType.AUTH_APP));
         assertTrue(userStore.isAccountVerified(EMAIL_ADDRESS));
         assertTrue(userStore.isAuthAppVerified(EMAIL_ADDRESS));
     }
@@ -584,7 +586,9 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1043));
-        assertFalse(redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS));
+        assertFalse(
+                redis.isBlockedMfaCodesForEmailAndSingleMfaMethodType(
+                        EMAIL_ADDRESS, MFAMethodType.AUTH_APP));
     }
 
     @Test
@@ -607,7 +611,9 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1037));
         assertEquals(1, redis.getMfaCodeAttemptsCount(EMAIL_ADDRESS));
-        assertFalse(redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS));
+        assertFalse(
+                redis.isBlockedMfaCodesForEmailAndSingleMfaMethodType(
+                        EMAIL_ADDRESS, MFAMethodType.AUTH_APP));
     }
 
     @Test
@@ -808,7 +814,8 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         setUpSmsRequest(journeyType, PHONE_NUMBER);
 
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
-        redis.blockMfaCodesForEmail(EMAIL_ADDRESS);
+
+        redis.blockAllMfaCodeTypesForEmail(EMAIL_ADDRESS);
 
         var codeRequest =
                 new VerifyMfaCodeRequest(

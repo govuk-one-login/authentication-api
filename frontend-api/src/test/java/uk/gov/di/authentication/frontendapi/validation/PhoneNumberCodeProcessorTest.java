@@ -235,7 +235,8 @@ class PhoneNumberCodeProcessorTest {
         when(codeStorageService.getOtpCode(
                         TEST_EMAIL_ADDRESS, NotificationType.VERIFY_PHONE_NUMBER))
                 .thenReturn(Optional.of(VALID_CODE));
-        when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
+        when(codeStorageService.isBlockedForEmail(
+                        TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX + MFAMethodType.SMS.getValue()))
                 .thenReturn(true);
         phoneNumberCodeProcessor =
                 new PhoneNumberCodeProcessor(

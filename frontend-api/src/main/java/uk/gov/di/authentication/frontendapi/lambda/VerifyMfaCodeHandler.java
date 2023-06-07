@@ -228,14 +228,10 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     private void blockCodeForSessionAndResetCountIfBlockDoesNotExist(
             String emailAddress, MFAMethodType mfaMethodType) {
 
-        if (codeStorageService.isBlockedForEmail(emailAddress, CODE_BLOCKED_KEY_PREFIX)) {
+        if (codeStorageService.isBlockedForEmail(
+                emailAddress, CODE_BLOCKED_KEY_PREFIX + mfaMethodType.getValue())) {
             return;
         }
-
-        codeStorageService.saveBlockedForEmail(
-                emailAddress,
-                CODE_BLOCKED_KEY_PREFIX,
-                configurationService.getBlockedEmailDuration());
 
         codeStorageService.saveBlockedForEmail(
                 emailAddress,

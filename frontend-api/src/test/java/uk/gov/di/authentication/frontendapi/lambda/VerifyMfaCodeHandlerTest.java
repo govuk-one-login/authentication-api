@@ -425,7 +425,10 @@ class VerifyMfaCodeHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1042));
         assertThat(session.getVerifiedMfaMethodType(), equalTo(null));
         verify(codeStorageService)
-                .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
+                .saveBlockedForEmail(
+                        TEST_EMAIL_ADDRESS,
+                        CODE_BLOCKED_KEY_PREFIX + MFAMethodType.AUTH_APP.getValue(),
+                        900L);
         verify(codeStorageService)
                 .deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS, MFAMethodType.AUTH_APP);
         verifyNoInteractions(cloudwatchMetricsService);
@@ -451,7 +454,9 @@ class VerifyMfaCodeHandlerTest {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(authAppCodeProcessor));
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.of(ErrorResponse.ERROR_1042));
-        when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
+        when(codeStorageService.isBlockedForEmail(
+                        TEST_EMAIL_ADDRESS,
+                        CODE_BLOCKED_KEY_PREFIX + MFAMethodType.AUTH_APP.getValue()))
                 .thenReturn(true);
         var authAppSecret = journeyType.equals(JourneyType.SIGN_IN) ? null : AUTH_APP_SECRET;
         var codeRequest =
@@ -463,6 +468,11 @@ class VerifyMfaCodeHandlerTest {
         assertThat(session.getVerifiedMfaMethodType(), equalTo(null));
         verify(codeStorageService, never())
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
+        verify(codeStorageService, never())
+                .saveBlockedForEmail(
+                        TEST_EMAIL_ADDRESS,
+                        CODE_BLOCKED_KEY_PREFIX + MFAMethodType.AUTH_APP.getValue(),
+                        900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
         verifyNoInteractions(cloudwatchMetricsService);
         verify(auditService)
@@ -534,7 +544,10 @@ class VerifyMfaCodeHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1034));
         assertThat(session.getVerifiedMfaMethodType(), equalTo(null));
         verify(codeStorageService)
-                .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
+                .saveBlockedForEmail(
+                        TEST_EMAIL_ADDRESS,
+                        CODE_BLOCKED_KEY_PREFIX + MFAMethodType.SMS.getValue(),
+                        900L);
         verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
         verifyNoInteractions(cloudwatchMetricsService);
         verify(auditService)
@@ -563,7 +576,8 @@ class VerifyMfaCodeHandlerTest {
                 .thenReturn(Optional.of(phoneNumberCodeProcessor));
         when(phoneNumberCodeProcessor.validateCode())
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1034));
-        when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
+        when(codeStorageService.isBlockedForEmail(
+                        TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX + MFAMethodType.SMS.getValue()))
                 .thenReturn(true);
         var codeRequest =
                 new VerifyMfaCodeRequest(MFAMethodType.SMS, CODE, journeyType, PHONE_NUMBER);
@@ -574,6 +588,11 @@ class VerifyMfaCodeHandlerTest {
         assertThat(session.getVerifiedMfaMethodType(), equalTo(null));
         verify(codeStorageService, never())
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
+        verify(codeStorageService, never())
+                .saveBlockedForEmail(
+                        TEST_EMAIL_ADDRESS,
+                        CODE_BLOCKED_KEY_PREFIX + MFAMethodType.SMS.getValue(),
+                        900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
         verifyNoInteractions(cloudwatchMetricsService);
         verify(auditService)

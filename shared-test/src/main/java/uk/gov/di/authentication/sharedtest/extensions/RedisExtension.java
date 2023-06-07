@@ -25,6 +25,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 
 import java.time.LocalDateTime;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -227,8 +228,16 @@ public class RedisExtension
         return code;
     }
 
-    public void blockMfaCodesForEmail(String email) {
-        blockMfaCodesForEmail(email, null);
+    public void blockAllMfaCodeTypesForEmail(String email) {
+        int codeBlockedTime = 10;
+        EnumSet.allOf(MFAMethodType.class)
+                .forEach(
+                        mfaMethodType ->
+                                codeStorageService.saveBlockedForEmail(
+                                        email,
+                                        CODE_BLOCKED_KEY_PREFIX + mfaMethodType.getValue(),
+                                        codeBlockedTime));
+        codeStorageService.saveBlockedForEmail(email, CODE_BLOCKED_KEY_PREFIX, codeBlockedTime);
     }
 
     public void blockMfaCodesForEmail(String email, NotificationType notificationType) {
@@ -240,8 +249,10 @@ public class RedisExtension
         codeStorageService.saveBlockedForEmail(email, CODE_BLOCKED_KEY_PREFIX, codeBlockedTime);
     }
 
-    public boolean isBlockedMfaCodesForEmail(String email) {
-        return isBlockedMfaCodesForEmail(email, null);
+    public boolean isBlockedMfaCodesForEmailAndSingleMfaMethodType(
+            String email, MFAMethodType mfaMethodType) {
+        return codeStorageService.isBlockedForEmail(
+                email, CODE_BLOCKED_KEY_PREFIX + mfaMethodType.getValue());
     }
 
     public boolean isBlockedMfaCodesForEmail(String email, NotificationType notificationType) {

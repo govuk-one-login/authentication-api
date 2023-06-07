@@ -57,7 +57,7 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
 
     @Override
     public Optional<ErrorResponse> validateCode() {
-        if (isCodeBlockedForSession()) {
+        if (isCodeBlockedForSession(MFAMethodType.AUTH_APP)) {
             LOG.info("Code blocked for session");
             return Optional.of(ErrorResponse.ERROR_1042);
         }
