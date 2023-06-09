@@ -71,6 +71,10 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
                         ? configurationService.getTestClientVerifyPhoneNumberOTP()
                         : codeStorageService.getOtpCode(emailAddress, notificationType);
 
+        if (!storedCode.isPresent()) {
+            LOG.info("No stored code returned from the codeStorageService");
+        }
+
         return ValidationHelper.validateVerificationCode(
                 notificationType,
                 storedCode,
