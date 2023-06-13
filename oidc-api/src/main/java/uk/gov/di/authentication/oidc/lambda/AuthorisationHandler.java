@@ -4,9 +4,12 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseMode;
+import com.nimbusds.oauth2.sdk.ResponseType;
+import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
@@ -228,11 +231,20 @@ public class AuthorisationHandler
             updateAttachedSessionIdToLogs(session.getSessionId());
             LOG.info("Updated session id from {} - new", oldSessionId);
         }
-        var clientName =
+
+        ClientRegistry fullClientDetailsFromRegistry =
                 clientService
                         .getClient(authenticationRequest.getClientID().getValue())
-                        .map(ClientRegistry::getClientName)
-                        .orElse("");
+                        .orElseThrow(
+                                () ->
+                                        new RuntimeException(
+                                                "Client not found: "
+                                                        + authenticationRequest
+                                                                .getClientID()
+                                                                .getValue()));
+
+        var clientName = fullClientDetailsFromRegistry.getClientName();
+
         auditService.submitAuditEvent(
                 OidcAuditableEvent.AUTHORISATION_INITIATED,
                 clientSessionId,
@@ -258,18 +270,28 @@ public class AuthorisationHandler
         updateAttachedLogFieldToLogs(CLIENT_ID, authenticationRequest.getClientID().getValue());
         sessionService.save(session);
         LOG.info("Session saved successfully");
-        return redirect(session, clientSessionId, authenticationRequest, persistentSessionId);
+        return redirect(
+                session,
+                clientSessionId,
+                authenticationRequest,
+                persistentSessionId,
+                fullClientDetailsFromRegistry);
     }
 
     private APIGatewayProxyResponseEvent redirect(
             Session session,
             String clientSessionID,
             AuthenticationRequest authenticationRequest,
-            String persistentSessionId) {
+            String persistentSessionId,
+            ClientRegistry client) {
         LOG.info("Redirecting");
         String redirectURI;
         try {
             var redirectUriBuilder = new URIBuilder(configurationService.getLoginURI());
+
+            if (configurationService.isAuthOrchSplitEnabled()) {
+                redirectUriBuilder.setPath("authorize");
+            }
 
             if (Objects.nonNull(authenticationRequest.getPrompt())
                     && authenticationRequest.getPrompt().contains(Prompt.Type.LOGIN)) {
@@ -307,6 +329,23 @@ public class AuthorisationHandler
                                             configurationService.getSessionCookieAttributes(),
                                             configurationService.getDomainName()));
                         });
+
+        if (configurationService.isAuthOrchSplitEnabled()) {
+            var encryptedJWT =
+                    authorizationService.getSignedAndEncryptedJWT(client.getClientName());
+
+            var authorizationRequest =
+                    new AuthorizationRequest.Builder(
+                                    new ResponseType(ResponseType.Value.CODE),
+                                    new ClientID(
+                                            configurationService
+                                                    .getOrchestrationClientIdForAuthenticationOauthFlow()))
+                            .endpointURI(URI.create(redirectURI))
+                            .requestObject(encryptedJWT)
+                            .build();
+
+            redirectURI = authorizationRequest.toURI().toString();
+        }
 
         return generateApiGatewayProxyResponse(
                 302,
