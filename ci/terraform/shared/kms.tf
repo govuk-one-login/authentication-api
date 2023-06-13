@@ -317,3 +317,19 @@ resource "aws_kms_alias" "doc_app_auth_signing_key_alias" {
   name          = "alias/${var.environment}-doc-app-auth-kms-key-alias"
   target_key_id = aws_kms_key.doc_app_auth_signing_key.key_id
 }
+
+# Orchestration to Authentication Signing KMS key
+
+resource "aws_kms_key" "orchestration_to_auth_signing_key" {
+  description              = "KMS signing key for Orchestration signing requests to Authentication"
+  deletion_window_in_days  = 30
+  key_usage                = "SIGN_VERIFY"
+  customer_master_key_spec = "ECC_NIST_P256"
+
+  tags = local.default_tags
+}
+
+resource "aws_kms_alias" "orchestration_to_auth_signing_key_alias" {
+  name          = "alias/${var.environment}-orch-signing-key-alias"
+  target_key_id = aws_kms_key.orchestration_to_auth_signing_key.key_id
+}

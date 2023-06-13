@@ -39,6 +39,31 @@ resource "aws_iam_policy" "audit_signing_key_lambda_kms_signing_policy" {
   policy = data.aws_iam_policy_document.audit_payload_kms_signing_policy_document.json
 }
 
+### Signing key access for OIDC/Orch API to send signed authorize payload to Authentication
+
+data "aws_iam_policy_document" "orch_to_auth_kms_policy_document" {
+  statement {
+    sid    = "AllowAccessToKmsSigningKey"
+    effect = "Allow"
+
+    actions = [
+      "kms:Sign",
+      "kms:GetPublicKey",
+    ]
+    resources = [
+      local.orch_to_auth_signing_key_arn
+    ]
+  }
+}
+
+resource "aws_iam_policy" "orch_to_auth_kms_policy" {
+  name_prefix = "kms-orch-to-auth-policy"
+  path        = "/${var.environment}/orch-to-auth-kms-signing/"
+  description = "IAM policy for managing Orch/OIDC API's authorize endpoint KMS key access"
+
+  policy = data.aws_iam_policy_document.orch_to_auth_kms_policy_document.json
+}
+
 ### IPV Token signing key access
 
 data "aws_iam_policy_document" "ipv_token_auth_kms_policy_document" {
@@ -51,7 +76,7 @@ data "aws_iam_policy_document" "ipv_token_auth_kms_policy_document" {
       "kms:GetPublicKey",
     ]
     resources = [
-      local.ipv_token_auth_signing_key_arn
+      local.orch_to_auth_signing_key_arn
     ]
   }
 }

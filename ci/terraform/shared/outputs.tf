@@ -88,6 +88,14 @@ output "doc_app_auth_signing_key_arn" {
   value = aws_kms_key.doc_app_auth_signing_key.arn
 }
 
+output "orch_to_auth_signing_key_alias_name" {
+  value = aws_kms_alias.orchestration_to_auth_signing_key_alias.name
+}
+
+output "orch_to_auth_signing_key_arn" {
+  value = aws_kms_key.orchestration_to_auth_signing_key.arn
+}
+
 output "audit_signing_key_alias_name" {
   value = aws_kms_alias.audit_payload_signing_key_alias.name
 }
