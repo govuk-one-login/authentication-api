@@ -25,6 +25,17 @@ account_recovery_block_enabled  = false
 custom_doc_app_claim_enabled    = true
 ipv_no_session_response_enabled = true
 
+auth_frontend_public_encryption_key = <<-EOT
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAojSigrHTBqF/2xuSptZo
+rifAahfOOD6BKOfRMZauLYLITU7+AASC+oIUU8vfJ6yMstuLbrpFHQ5lPgnbNQ4h
+Hp91wzXl2w/4TPgx9sH6AIVEe0nzM7w808jzGK1xkqeDN24TSdTCS9uU340K+1lg
+vHJ6RPURwpGKmwi/yQs4aEdBswK1qjdwtyz3KQF6a5sI3d4uCwtsLYfwD+yxIVnX
+L5tIdMLWFTMX7PCN24cwWFMz8JJr5D/3Gujy3oEJgaBLVSkBEQcGcR9zTcF46e0x
+qZM9NOP2fgb26CFV/vGQj21Jo+z4NK9+3doXwVESaw+8iTvlavUg1l91cJ1iHzde
+UQIDAQAB
+-----END PUBLIC KEY-----
+EOT
 
 ipv_auth_public_encryption_key = <<-EOT
 -----BEGIN PUBLIC KEY-----
@@ -37,6 +48,7 @@ cX8yiRmHf7ID9br2MsdrTO9YyVWfI0z7OZB1GnNe5lJhGBXvd3xg4UjWbnHikliE
 NQIDAQAB
 -----END PUBLIC KEY-----
 EOT
+
 logging_endpoint_arns = [
   "arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython"
 ]

@@ -49,6 +49,18 @@ swIDAQAB
 -----END PUBLIC KEY-----
 EOT
 
+auth_frontend_public_encryption_key = <<-EOT
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAppKCOhyLiKs5QTB1L+XK
+Tgs9kosxma0PuagvNkP+UEPd0KumWc4sWlYUzR1D1aPX8AGDSQ1awOIb7PhlE5Ss
+5LilounpT9Pi+FvHFlGKgQzRO63j9CRXzYxhgHGpruzAAKUQ+6D0cuOdao3YF0zz
+RmaMSdHB4HsNhxV5DHY+2Rr7GeEfl6lQB8EHTAQzoagsIxihxNieUIGhHcegbCv6
+X5aV67lUEbjjfvGu888GL8qJakOPNoIn/pMBB5LIKVxbyoCB9nfFZ5fPFxBpLdvy
+p0qsf76XAFuA3nhupIqkXl8jOIDN3U79V1kAgyS8uoilhhblqAtCoJElEiDYQh1M
+NQIDAQAB
+-----END PUBLIC KEY-----
+EOT
+
 performance_tuning = {
   register = {
     memory          = 512

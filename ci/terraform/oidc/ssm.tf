@@ -86,6 +86,37 @@ resource "aws_iam_policy" "ipv_public_encryption_key_parameter_policy" {
   name_prefix = "ipv-public-encryption-key-parameter-store-policy"
 }
 
+## Authentication public encryption key parameter
+
+resource "aws_ssm_parameter" "auth_public_encryption_key" {
+  name  = "${var.environment}-auth-public-encryption-key"
+  type  = "String"
+  value = var.auth_frontend_public_encryption_key
+}
+
+data "aws_iam_policy_document" "auth_public_encryption_key_parameter_policy_document" {
+  statement {
+    sid    = "AllowGetParameters"
+    effect = "Allow"
+
+    actions = [
+      "ssm:GetParameter",
+      "ssm:GetParameters",
+    ]
+
+    resources = [
+      aws_ssm_parameter.auth_public_encryption_key.arn
+    ]
+  }
+}
+
+resource "aws_iam_policy" "auth_public_encryption_key_parameter_policy" {
+  description = "Policy to allow Orchestration to access Authentication's public encryption key in order to send encrypted JWTs that can be decrypted by Authentication (frontend)"
+  policy      = data.aws_iam_policy_document.auth_public_encryption_key_parameter_policy_document.json
+  path        = "/${var.environment}/lambda-parameters/"
+  name_prefix = "auth-public-encryption-key-parameter-store-policy"
+}
+
 ## SPOT
 
 resource "aws_ssm_parameter" "spot_account_number" {

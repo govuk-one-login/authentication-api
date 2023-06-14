@@ -319,6 +319,12 @@ variable "ipv_auth_public_encryption_key" {
   default = "undefined"
 }
 
+variable "auth_frontend_public_encryption_key" {
+  type        = string
+  default     = "undefined"
+  description = "Public encryption key which should be used to encrypt JWTs sent to Authentication (frontend)"
+}
+
 variable "doc_app_authorisation_uri" {
   type    = string
   default = "undefined"
