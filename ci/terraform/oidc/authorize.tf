@@ -11,7 +11,6 @@ module "oidc_authorize_role" {
     aws_iam_policy.lambda_sns_policy.arn,
     aws_iam_policy.ipv_capacity_parameter_policy.arn,
     aws_iam_policy.redis_parameter_policy.arn,
-    aws_iam_policy.orch_to_auth_kms_policy.arn,
     module.oidc_txma_audit.access_policy_arn
   ]
 }
@@ -25,20 +24,19 @@ module "authorize" {
   environment     = var.environment
 
   handler_environment_variables = {
-    DOMAIN_NAME                          = local.service_domain
-    DOC_APP_API_ENABLED                  = var.doc_app_api_enabled
-    DYNAMO_ENDPOINT                      = var.use_localstack ? var.lambda_dynamo_endpoint : null
-    TXMA_AUDIT_QUEUE_URL                 = module.oidc_txma_audit.queue_url
-    ENVIRONMENT                          = var.environment
-    HEADERS_CASE_INSENSITIVE             = var.use_localstack ? "true" : "false"
-    LOCALSTACK_ENDPOINT                  = var.use_localstack ? var.localstack_endpoint : null
-    LOGIN_URI                            = "https://${local.frontend_fqdn}/"
-    OIDC_API_BASE_URL                    = local.api_base_url
-    REDIS_KEY                            = local.redis_key
-    TERMS_CONDITIONS_VERSION             = var.terms_and_conditions
-    SUPPORT_LANGUAGE_CY                  = tostring(var.language_cy_enabled)
-    INTERNAl_SECTOR_URI                  = var.internal_sector_uri
-    ORCH_TO_AUTH_TOKEN_SIGNING_KEY_ALIAS = local.orch_to_auth_signing_key_alias_name
+    DOMAIN_NAME              = local.service_domain
+    DOC_APP_API_ENABLED      = var.doc_app_api_enabled
+    DYNAMO_ENDPOINT          = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    TXMA_AUDIT_QUEUE_URL     = module.oidc_txma_audit.queue_url
+    ENVIRONMENT              = var.environment
+    HEADERS_CASE_INSENSITIVE = var.use_localstack ? "true" : "false"
+    LOCALSTACK_ENDPOINT      = var.use_localstack ? var.localstack_endpoint : null
+    LOGIN_URI                = "https://${local.frontend_fqdn}/"
+    OIDC_API_BASE_URL        = local.api_base_url
+    REDIS_KEY                = local.redis_key
+    TERMS_CONDITIONS_VERSION = var.terms_and_conditions
+    SUPPORT_LANGUAGE_CY      = tostring(var.language_cy_enabled)
+    INTERNAl_SECTOR_URI      = var.internal_sector_uri
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.AuthorisationHandler::handleRequest"
   rest_api_id           = aws_api_gateway_rest_api.di_authentication_api.id
