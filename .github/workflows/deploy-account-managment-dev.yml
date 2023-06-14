@@ -46,11 +46,11 @@ jobs:
       - name: Upload Account Management Terraform files
         working-directory: ci/terraform
         run: |
-          zip -r acct-mgmt.zip .
+          zip -r account-management.zip .
           S3_RESPONSE=`aws s3api put-object \
             --bucket $ARTIFACT_BUCKET \
-            --key acct-mgmt.zip \
-            --body acct-mgmt.zip`
+            --key account-management.zip \
+            --body account-management.zip`
           VERSION=`echo $S3_RESPONSE | jq .VersionId -r`
           echo "VERSION=$VERSION" >> $GITHUB_ENV
  

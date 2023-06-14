@@ -37,11 +37,11 @@ jobs:
       - name: Upload Shared Terraform files
         working-directory: ci/terraform
         run: |
-          zip -r shared-api.zip .
+          zip -r shared.zip .
           S3_RESPONSE=`aws s3api put-object \
             --bucket $ARTIFACT_BUCKET \
-            --key shared-api.zip \
-            --body shared-api.zip`
+            --key shared.zip \
+            --body shared.zip`
           VERSION=`echo $S3_RESPONSE | jq .VersionId -r`
           echo "VERSION=$VERSION" >> $GITHUB_ENV
  
