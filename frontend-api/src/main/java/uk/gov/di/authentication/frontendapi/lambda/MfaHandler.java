@@ -250,7 +250,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                     CODE_REQUEST_BLOCKED_KEY_PREFIX,
                     configurationService.getBlockedEmailDuration());
             LOG.info("Resetting code request count");
-            sessionService.save(session.resetCodeRequestCount());
+            sessionService.save(
+                    session.resetCodeRequestCount(NotificationType.MFA_SMS, JourneyType.SIGN_IN));
             return Optional.of(ErrorResponse.ERROR_1025);
         }
         if (codeStorageService.isBlockedForEmail(email, CODE_REQUEST_BLOCKED_KEY_PREFIX)) {

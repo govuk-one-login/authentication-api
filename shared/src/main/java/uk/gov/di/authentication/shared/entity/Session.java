@@ -124,7 +124,11 @@ public class Session {
         return this;
     }
 
-    public Session resetCodeRequestCount() {
+    public Session resetCodeRequestCount(
+            NotificationType notificationType, JourneyType journeyType) {
+        CodeRequestType requestType =
+                CodeRequestType.getCodeRequestType(notificationType, journeyType);
+        codeRequestCounts.put(requestType, 0);
         this.codeRequestCount = 0;
         return this;
     }

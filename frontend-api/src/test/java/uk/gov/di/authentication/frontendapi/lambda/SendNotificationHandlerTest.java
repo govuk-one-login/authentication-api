@@ -921,7 +921,7 @@ class SendNotificationHandlerTest {
 
     private void maxOutCodeRequestCount(
             NotificationType notificationType, JourneyType journeyType) {
-        session.resetCodeRequestCount();
+        session.resetCodeRequestCount(notificationType, journeyType);
         session.incrementCodeRequestCount(notificationType, journeyType);
         session.incrementCodeRequestCount(notificationType, journeyType);
         session.incrementCodeRequestCount(notificationType, journeyType);
