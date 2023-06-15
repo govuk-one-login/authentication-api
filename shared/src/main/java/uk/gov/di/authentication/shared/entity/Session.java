@@ -3,7 +3,9 @@ package uk.gov.di.authentication.shared.entity;
 import com.google.gson.annotations.Expose;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class Session {
 
@@ -25,6 +27,7 @@ public class Session {
     @Expose private int passwordResetCount;
 
     @Expose private int codeRequestCount;
+    @Expose private Map<CodeRequestType, Integer> codeRequestCounts;
 
     @Expose private CredentialTrustLevel currentCredentialStrength;
 
@@ -43,13 +46,8 @@ public class Session {
         this.clientSessions = new ArrayList<>();
         this.isNewAccount = AccountState.UNKNOWN;
         this.processingIdentityAttempts = 0;
-    }
-
-    public Session(String sessionId, List<String> clientSessions, String emailAddress) {
-        this.sessionId = sessionId;
-        this.clientSessions = clientSessions;
-        this.emailAddress = emailAddress;
-        this.isNewAccount = AccountState.UNKNOWN;
+        this.codeRequestCounts = new HashMap<>();
+        initializeCodeRequestCounts();
     }
 
     public String getSessionId() {
@@ -170,5 +168,11 @@ public class Session {
     public Session setInternalCommonSubjectIdentifier(String internalCommonSubjectIdentifier) {
         this.internalCommonSubjectIdentifier = internalCommonSubjectIdentifier;
         return this;
+    }
+
+    private void initializeCodeRequestCounts() {
+        for (CodeRequestType requestType : CodeRequestType.values()) {
+            codeRequestCounts.put(requestType, 0);
+        }
     }
 }
