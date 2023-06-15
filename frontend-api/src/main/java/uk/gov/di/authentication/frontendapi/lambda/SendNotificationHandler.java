@@ -226,7 +226,9 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                                                         notificationType));
 
         LOG.info("Incrementing code request count");
-        sessionService.save(session.incrementCodeRequestCount());
+        sessionService.save(
+                session.incrementCodeRequestCount(
+                        request.getNotificationType(), request.getJourneyType()));
         var testClientWithAllowedEmail =
                 isTestClientWithAllowedEmail(userContext, configurationService);
         if (!testClientWithAllowedEmail) {

@@ -3,7 +3,9 @@ package uk.gov.di.authentication.shared.entity;
 import com.google.gson.annotations.Expose;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class Session {
 
@@ -26,6 +28,8 @@ public class Session {
 
     @Expose private int codeRequestCount;
 
+    @Expose private Map<CodeRequestType, Integer> codeRequestCounts;
+
     @Expose private CredentialTrustLevel currentCredentialStrength;
 
     @Expose private AccountState isNewAccount;
@@ -43,13 +47,8 @@ public class Session {
         this.clientSessions = new ArrayList<>();
         this.isNewAccount = AccountState.UNKNOWN;
         this.processingIdentityAttempts = 0;
-    }
-
-    public Session(String sessionId, List<String> clientSessions, String emailAddress) {
-        this.sessionId = sessionId;
-        this.clientSessions = clientSessions;
-        this.emailAddress = emailAddress;
-        this.isNewAccount = AccountState.UNKNOWN;
+        this.codeRequestCounts = new HashMap<>();
+        initializeCodeRequestCounts();
     }
 
     public String getSessionId() {
@@ -104,7 +103,23 @@ public class Session {
         return codeRequestCount;
     }
 
-    public Session incrementCodeRequestCount() {
+    public int getCodeRequestCount(NotificationType notificationType, JourneyType journeyType) {
+        CodeRequestType requestType =
+                CodeRequestType.getCodeRequestType(notificationType, journeyType);
+        return getCodeRequestCount(requestType);
+    }
+
+    public int getCodeRequestCount(CodeRequestType requestType) {
+        return codeRequestCounts.getOrDefault(requestType, 0);
+    }
+
+    public Session incrementCodeRequestCount(
+            NotificationType notificationType, JourneyType journeyType) {
+        CodeRequestType requestType =
+                CodeRequestType.getCodeRequestType(notificationType, journeyType);
+        int currentCount = getCodeRequestCount(requestType);
+        codeRequestCounts.put(requestType, currentCount + 1);
+
         this.codeRequestCount = codeRequestCount + 1;
         return this;
     }
@@ -170,5 +185,11 @@ public class Session {
     public Session setInternalCommonSubjectIdentifier(String internalCommonSubjectIdentifier) {
         this.internalCommonSubjectIdentifier = internalCommonSubjectIdentifier;
         return this;
+    }
+
+    private void initializeCodeRequestCounts() {
+        for (CodeRequestType requestType : CodeRequestType.values()) {
+            codeRequestCounts.put(requestType, 0);
+        }
     }
 }

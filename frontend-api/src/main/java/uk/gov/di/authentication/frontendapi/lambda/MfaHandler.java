@@ -11,6 +11,8 @@ import uk.gov.di.authentication.frontendapi.entity.MfaRequest;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
@@ -192,7 +194,11 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                                         return newCode;
                                     });
             LOG.info("Incrementing code request count");
-            sessionService.save(userContext.getSession().incrementCodeRequestCount());
+            sessionService.save(
+                    userContext
+                            .getSession()
+                            .incrementCodeRequestCount(
+                                    NotificationType.MFA_SMS, JourneyType.SIGN_IN));
             AuditableEvent auditableEvent;
             if (TestClientHelper.isTestClientWithAllowedEmail(userContext, configurationService)) {
                 LOG.info(

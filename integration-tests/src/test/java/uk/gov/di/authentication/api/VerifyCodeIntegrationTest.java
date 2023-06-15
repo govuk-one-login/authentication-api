@@ -16,6 +16,7 @@ import uk.gov.di.authentication.frontendapi.entity.VerifyCodeRequest;
 import uk.gov.di.authentication.frontendapi.lambda.VerifyCodeHandler;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
@@ -90,9 +91,12 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     void shouldResetCodeRequestCountWhenSuccessfulEmailCodeAndReturn204(
             NotificationType emailNotificationType) throws Json.JsonException {
         var sessionId = redis.createSession();
-        redis.incrementSessionCodeRequestCount(sessionId);
-        redis.incrementSessionCodeRequestCount(sessionId);
-        redis.incrementSessionCodeRequestCount(sessionId);
+        redis.incrementSessionCodeRequestCount(
+                sessionId, emailNotificationType, JourneyType.ACCOUNT_RECOVERY);
+        redis.incrementSessionCodeRequestCount(
+                sessionId, emailNotificationType, JourneyType.ACCOUNT_RECOVERY);
+        redis.incrementSessionCodeRequestCount(
+                sessionId, emailNotificationType, JourneyType.ACCOUNT_RECOVERY);
         setUpTestWithoutSignUp(sessionId, withScope());
         String code = redis.generateAndSaveEmailCode(EMAIL_ADDRESS, 900, emailNotificationType);
         VerifyCodeRequest codeRequest = new VerifyCodeRequest(emailNotificationType, code);
