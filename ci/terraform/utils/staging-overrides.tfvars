@@ -3,3 +3,5 @@ logging_endpoint_arns = [
 ]
 
 allow_bulk_test_users = true
+
+shared_state_bucket = "di-auth-staging-tfvars"

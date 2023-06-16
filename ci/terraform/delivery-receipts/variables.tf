@@ -17,7 +17,8 @@ variable "lambda_min_concurrency" {
 }
 
 variable "common_state_bucket" {
-  type = string
+  type    = string
+  default = "digital-identity-dev-tfstate"
 }
 
 variable "environment" {
