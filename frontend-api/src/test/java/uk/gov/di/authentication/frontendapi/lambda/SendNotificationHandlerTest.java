@@ -179,11 +179,9 @@ class SendNotificationHandlerTest {
     }
 
     @ParameterizedTest
-    @EnumSource(
-            value = NotificationType.class,
-            names = {"VERIFY_EMAIL", "VERIFY_CHANGE_HOW_GET_SECURITY_CODES"})
-    void shouldReturn204ForValidEmailOtpRequest(NotificationType notificationType)
-            throws Json.JsonException {
+    @MethodSource("notificationTypeAndJourneyTypeArgs")
+    void shouldReturn204ForValidEmailOtpRequest(
+            NotificationType notificationType, JourneyType journeyType) throws Json.JsonException {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
 
@@ -191,9 +189,7 @@ class SendNotificationHandlerTest {
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS,
-                                notificationType,
-                                JourneyType.ACCOUNT_RECOVERY));
+                                TEST_EMAIL_ADDRESS, notificationType, journeyType));
 
         assertEquals(204, result.getStatusCode());
         verify(awsSqsClient)
@@ -212,7 +208,12 @@ class SendNotificationHandlerTest {
                         TEST_SIX_DIGIT_CODE,
                         CODE_EXPIRY_TIME,
                         notificationType);
-        verify(sessionService).save(argThat(this::isSessionWithEmailSent));
+        verify(sessionService)
+                .save(
+                        argThat(
+                                session ->
+                                        isSessionWithEmailSent(
+                                                session, notificationType, journeyType)));
         verify(auditService)
                 .submitAuditEvent(
                         notificationType.equals(VERIFY_EMAIL)
@@ -325,11 +326,9 @@ class SendNotificationHandlerTest {
     }
 
     @ParameterizedTest
-    @EnumSource(
-            value = NotificationType.class,
-            names = {"VERIFY_EMAIL", "VERIFY_CHANGE_HOW_GET_SECURITY_CODES"})
+    @MethodSource("notificationTypeAndJourneyTypeArgs")
     void shouldReturn204AndNotPutMessageOnQueueForAValidRequestUsingTestClientWithAllowedEmail(
-            NotificationType notificationType) {
+            NotificationType notificationType, JourneyType journeyType) {
         usingValidSession();
         usingValidClientSession(TEST_CLIENT_ID);
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
@@ -338,9 +337,7 @@ class SendNotificationHandlerTest {
                 sendRequest(
                         format(
                                 "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS,
-                                notificationType,
-                                JourneyType.ACCOUNT_RECOVERY));
+                                TEST_EMAIL_ADDRESS, notificationType, journeyType));
 
         assertEquals(204, result.getStatusCode());
         verifyNoInteractions(awsSqsClient);
@@ -351,7 +348,12 @@ class SendNotificationHandlerTest {
                         TEST_SIX_DIGIT_CODE,
                         CODE_EXPIRY_TIME,
                         notificationType);
-        verify(sessionService).save(argThat(this::isSessionWithEmailSent));
+        verify(sessionService)
+                .save(
+                        argThat(
+                                session ->
+                                        isSessionWithEmailSent(
+                                                session, notificationType, journeyType)));
         verify(auditService)
                 .submitAuditEvent(
                         notificationType.equals(VERIFY_EMAIL)
@@ -368,20 +370,24 @@ class SendNotificationHandlerTest {
     }
 
     @ParameterizedTest
-    @EnumSource(
-            value = NotificationType.class,
-            names = {"VERIFY_EMAIL", "VERIFY_CHANGE_HOW_GET_SECURITY_CODES"})
-    void shouldReturn400IfInvalidSessionProvided(NotificationType notificationType) {
+    @MethodSource("notificationTypeAndJourneyTypeArgs")
+    void shouldReturn400IfInvalidSessionProvided(
+            NotificationType notificationType, JourneyType journeyType) {
         var result =
                 sendRequest(
                         format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS, notificationType));
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS, notificationType, journeyType));
 
         assertEquals(400, result.getStatusCode());
         verifyNoInteractions(awsSqsClient);
         verifyNoInteractions(codeStorageService);
-        verify(sessionService, never()).save(argThat(this::isSessionWithEmailSent));
+        verify(sessionService, never())
+                .save(
+                        argThat(
+                                session ->
+                                        isSessionWithEmailSent(
+                                                session, notificationType, journeyType)));
         verifyNoInteractions(auditService);
     }
 
@@ -593,7 +599,7 @@ class SendNotificationHandlerTest {
 
     @Test
     void shouldReturn400IfUserHasReachedTheAccountRecoveryEmailOtpRequestLimit() {
-        maxOutCodeRequestCount(VERIFY_EMAIL, JourneyType.ACCOUNT_RECOVERY);
+        maxOutCodeRequestCount(VERIFY_CHANGE_HOW_GET_SECURITY_CODES, JourneyType.ACCOUNT_RECOVERY);
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
 
@@ -949,8 +955,15 @@ class SendNotificationHandlerTest {
         when(clientSession.getAuthRequestParams()).thenReturn(authRequest.toParameters());
     }
 
-    private boolean isSessionWithEmailSent(Session session) {
+    private boolean isSessionWithEmailSent(
+            Session session, NotificationType notificationType, JourneyType journeyType) {
         return session.getEmailAddress().equals(TEST_EMAIL_ADDRESS)
-                && session.getCodeRequestCount() == 1;
+                && session.getCodeRequestCount(notificationType, journeyType) == 1;
+    }
+
+    private static Stream<Arguments> notificationTypeAndJourneyTypeArgs() {
+        return Stream.of(
+                Arguments.of(VERIFY_EMAIL, JourneyType.REGISTRATION),
+                Arguments.of(VERIFY_CHANGE_HOW_GET_SECURITY_CODES, JourneyType.ACCOUNT_RECOVERY));
     }
 }

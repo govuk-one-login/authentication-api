@@ -295,8 +295,9 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 notificationType.equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES)
                         ? ACCOUNT_RECOVERY_CODE_BLOCKED_KEY_PREFIX
                         : CODE_BLOCKED_KEY_PREFIX;
-        LOG.info("CodeRequestCount is: {}", session.getCodeRequestCount());
-        if (session.getCodeRequestCount() == configurationService.getCodeMaxRetries()) {
+        var codeRequestCount = session.getCodeRequestCount(notificationType, journeyType);
+        LOG.info("CodeRequestCount is: {}", codeRequestCount);
+        if (codeRequestCount == configurationService.getCodeMaxRetries()) {
             LOG.info(
                     "User has requested too many OTP codes. Setting block with prefix: {}",
                     codeRequestBlockedPrefix);
