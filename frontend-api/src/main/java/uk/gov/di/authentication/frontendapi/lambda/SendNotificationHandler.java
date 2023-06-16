@@ -10,6 +10,7 @@ import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.authentication.frontendapi.entity.SendNotificationRequest;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
@@ -98,6 +99,18 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         this.codeGeneratorService = codeGeneratorService;
         this.codeStorageService = codeStorageService;
         this.auditService = auditService;
+    }
+
+    public SendNotificationHandler(ConfigurationService configurationService) {
+        super(SendNotificationRequest.class, configurationService);
+        this.sqsClient =
+                new AwsSqsClient(
+                        configurationService.getAwsRegion(),
+                        configurationService.getEmailQueueUri(),
+                        configurationService.getSqsEndpointUri());
+        this.codeGeneratorService = new CodeGeneratorService();
+        this.codeStorageService = new CodeStorageService(configurationService);
+        this.auditService = new AuditService(configurationService);
     }
 
     public SendNotificationHandler() {
@@ -298,6 +311,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         var codeRequestCount = session.getCodeRequestCount(notificationType, journeyType);
         LOG.info("CodeRequestCount is: {}", codeRequestCount);
         if (codeRequestCount == configurationService.getCodeMaxRetries()) {
+            var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
+            var newCodeRequestBlockPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
             LOG.info(
                     "User has requested too many OTP codes. Setting block with prefix: {}",
                     codeRequestBlockedPrefix);
@@ -305,6 +320,15 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                     email,
                     codeRequestBlockedPrefix,
                     configurationService.getBlockedEmailDuration());
+
+            LOG.info(
+                    "User has requested too many OTP codes. Setting block with new prefix: {}",
+                    newCodeRequestBlockPrefix);
+            codeStorageService.saveBlockedForEmail(
+                    email,
+                    newCodeRequestBlockPrefix,
+                    configurationService.getBlockedEmailDuration());
+
             LOG.info("Resetting code request count");
             sessionService.save(session.resetCodeRequestCount(notificationType, journeyType));
             return Optional.of(getErrorResponseForCodeRequestLimitReached(notificationType));

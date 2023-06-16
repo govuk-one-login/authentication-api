@@ -23,6 +23,7 @@ import org.mockito.Mockito;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
@@ -208,6 +209,7 @@ class SendNotificationHandlerTest {
                         TEST_SIX_DIGIT_CODE,
                         CODE_EXPIRY_TIME,
                         notificationType);
+        verify(codeStorageService).getOtpCode(TEST_EMAIL_ADDRESS, notificationType);
         verify(sessionService)
                 .save(
                         argThat(
@@ -580,6 +582,11 @@ class SendNotificationHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         CODE_REQUEST_BLOCKED_KEY_PREFIX,
                         BLOCKED_EMAIL_DURATION);
+        verify(codeStorageService)
+                .saveBlockedForEmail(
+                        TEST_EMAIL_ADDRESS,
+                        CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_REGISTRATION,
+                        BLOCKED_EMAIL_DURATION);
         verify(codeStorageService, never())
                 .saveOtpCode(
                         TEST_EMAIL_ADDRESS, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, VERIFY_EMAIL);
@@ -617,6 +624,11 @@ class SendNotificationHandlerTest {
                 .saveBlockedForEmail(
                         TEST_EMAIL_ADDRESS,
                         ACCOUNT_RECOVERY_CODE_REQUEST_BLOCKED_KEY_PREFIX,
+                        BLOCKED_EMAIL_DURATION);
+        verify(codeStorageService)
+                .saveBlockedForEmail(
+                        TEST_EMAIL_ADDRESS,
+                        CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_ACCOUNT_RECOVERY,
                         BLOCKED_EMAIL_DURATION);
         verify(codeStorageService, never())
                 .saveOtpCode(
@@ -659,6 +671,11 @@ class SendNotificationHandlerTest {
                 .saveBlockedForEmail(
                         TEST_EMAIL_ADDRESS,
                         CODE_REQUEST_BLOCKED_KEY_PREFIX,
+                        BLOCKED_EMAIL_DURATION);
+        verify(codeStorageService)
+                .saveBlockedForEmail(
+                        TEST_EMAIL_ADDRESS,
+                        CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.SMS_REGISTRATION,
                         BLOCKED_EMAIL_DURATION);
         verify(codeStorageService, never())
                 .saveOtpCode(

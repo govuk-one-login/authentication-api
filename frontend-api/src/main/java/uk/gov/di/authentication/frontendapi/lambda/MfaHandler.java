@@ -10,6 +10,7 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.MfaRequest;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
@@ -249,6 +250,15 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             codeStorageService.saveBlockedForEmail(
                     email,
                     CODE_REQUEST_BLOCKED_KEY_PREFIX,
+                    configurationService.getBlockedEmailDuration());
+            var codeRequestType = CodeRequestType.getCodeRequestType(MFA_SMS, JourneyType.SIGN_IN);
+            var newCodeRequestBlockPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
+            LOG.info(
+                    "User has requested too many OTP codes. Setting block with new prefix: {}",
+                    newCodeRequestBlockPrefix);
+            codeStorageService.saveBlockedForEmail(
+                    email,
+                    newCodeRequestBlockPrefix,
                     configurationService.getBlockedEmailDuration());
             LOG.info("Resetting code request count");
             sessionService.save(
