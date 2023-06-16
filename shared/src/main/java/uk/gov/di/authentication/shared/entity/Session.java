@@ -27,7 +27,6 @@ public class Session {
     @Expose private int passwordResetCount;
 
     @Expose private int codeRequestCount;
-    @Expose private Map<CodeRequestType, Integer> codeRequestCounts;
 
     @Expose private Map<CodeRequestType, Integer> codeRequestCounts;
 
