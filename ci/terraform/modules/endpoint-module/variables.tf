@@ -144,6 +144,11 @@ variable "lambda_log_alarm_error_rate_threshold" {
   default     = 10
 }
 
+variable "lambda_error_rate_alarm_disabled" {
+  type    = bool
+  default = false
+}
+
 variable "lambda_env_vars_encryption_kms_key_arn" {
   type = string
 }
