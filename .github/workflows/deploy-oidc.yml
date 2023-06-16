@@ -81,7 +81,8 @@ jobs:
           S3_RESPONSE=`aws s3api put-object \
             --bucket $ARTIFACT_BUCKET \
             --key oidc.zip \
-            --body oidc.zip`
+            --body oidc.zip \
+            --metadata "repository=$GITHUB_REPOSITORY,commitsha=$GITHUB_SHA,committag=$GIT_TAG,commitmessage=$COMMIT_MSG"`
           VERSION=`echo $S3_RESPONSE | jq .VersionId -r`
           echo "VERSION=$VERSION" >> $GITHUB_ENV
  
