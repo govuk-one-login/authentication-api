@@ -45,7 +45,7 @@ module "authorize" {
   root_resource_id      = aws_api_gateway_rest_api.di_authentication_api.root_resource_id
   execution_arn         = aws_api_gateway_rest_api.di_authentication_api.execution_arn
 
-  lambda_log_alarm_error_rate_threshold = 100
+  lambda_error_rate_alarm_disabled = true
 
   memory_size                 = lookup(var.performance_tuning, "authorize", local.default_performance_parameters).memory
   provisioned_concurrency     = lookup(var.performance_tuning, "authorize", local.default_performance_parameters).concurrency
