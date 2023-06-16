@@ -138,6 +138,12 @@ variable "lambda_log_alarm_threshold" {
   default     = 5
 }
 
+variable "lambda_log_alarm_error_rate_threshold" {
+  type        = number
+  description = "The rate of errors in a lambda before generating a Cloudwatch alarm. Calculated by dividing the number of errors in a lambda divided by the number of invocations in a 60 second period"
+  default     = 10
+}
+
 variable "lambda_env_vars_encryption_kms_key_arn" {
   type = string
 }
