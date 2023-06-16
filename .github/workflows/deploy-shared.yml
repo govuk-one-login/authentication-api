@@ -1,0 +1,46 @@
+name: Deploy Shared
+
+env:
+  GHA_ROLE: arn:aws:iam::761723964695:role/build-auth-deploy-pipeline-GitHubActionsRole-160U5ADTRKQ2O
+  ARTIFACT_BUCKET: build-auth-deploy-pipeli-githubartifactsourcebuck-1o4hcrnik6ayv
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "shared"
+  workflow_run:
+    workflows: ["Build modules"]
+    types:
+      - completed
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ env.GHA_ROLE }}
+          aws-region: eu-west-2
+
+      - name: Upload Shared Terraform files
+        working-directory: ci/terraform
+        run: |
+          zip -r shared.zip .
+          S3_RESPONSE=`aws s3api put-object \
+            --bucket $ARTIFACT_BUCKET \
+            --key shared.zip \
+            --body shared.zip`
+          VERSION=`echo $S3_RESPONSE | jq .VersionId -r`
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+ 
