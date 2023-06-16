@@ -29,6 +29,8 @@ public class Session {
     @Expose private int codeRequestCount;
     @Expose private Map<CodeRequestType, Integer> codeRequestCounts;
 
+    @Expose private Map<CodeRequestType, Integer> codeRequestCounts;
+
     @Expose private CredentialTrustLevel currentCredentialStrength;
 
     @Expose private AccountState isNewAccount;
@@ -102,12 +104,32 @@ public class Session {
         return codeRequestCount;
     }
 
-    public Session incrementCodeRequestCount() {
+    public int getCodeRequestCount(NotificationType notificationType, JourneyType journeyType) {
+        CodeRequestType requestType =
+                CodeRequestType.getCodeRequestType(notificationType, journeyType);
+        return getCodeRequestCount(requestType);
+    }
+
+    public int getCodeRequestCount(CodeRequestType requestType) {
+        return codeRequestCounts.getOrDefault(requestType, 0);
+    }
+
+    public Session incrementCodeRequestCount(
+            NotificationType notificationType, JourneyType journeyType) {
+        CodeRequestType requestType =
+                CodeRequestType.getCodeRequestType(notificationType, journeyType);
+        int currentCount = getCodeRequestCount(requestType);
+        codeRequestCounts.put(requestType, currentCount + 1);
+
         this.codeRequestCount = codeRequestCount + 1;
         return this;
     }
 
-    public Session resetCodeRequestCount() {
+    public Session resetCodeRequestCount(
+            NotificationType notificationType, JourneyType journeyType) {
+        CodeRequestType requestType =
+                CodeRequestType.getCodeRequestType(notificationType, journeyType);
+        codeRequestCounts.put(requestType, 0);
         this.codeRequestCount = 0;
         return this;
     }

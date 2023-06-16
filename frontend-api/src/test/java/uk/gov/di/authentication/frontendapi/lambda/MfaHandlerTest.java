@@ -19,6 +19,7 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -339,14 +340,14 @@ public class MfaHandlerTest {
     }
 
     @Test
-    void shouldReturn400IfUserHasReachedTheMfaCodeRequestLimit() {
+    void shouldReturn400IfUserHasReachedTheSmsSignInCodeRequestLimit() {
         usingValidSession();
         when(configurationService.getBlockedEmailDuration()).thenReturn(BLOCKED_EMAIL_DURATION);
-        session.incrementCodeRequestCount();
-        session.incrementCodeRequestCount();
-        session.incrementCodeRequestCount();
-        session.incrementCodeRequestCount();
-        session.incrementCodeRequestCount();
+        session.incrementCodeRequestCount(NotificationType.MFA_SMS, JourneyType.SIGN_IN);
+        session.incrementCodeRequestCount(NotificationType.MFA_SMS, JourneyType.SIGN_IN);
+        session.incrementCodeRequestCount(NotificationType.MFA_SMS, JourneyType.SIGN_IN);
+        session.incrementCodeRequestCount(NotificationType.MFA_SMS, JourneyType.SIGN_IN);
+        session.incrementCodeRequestCount(NotificationType.MFA_SMS, JourneyType.SIGN_IN);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(

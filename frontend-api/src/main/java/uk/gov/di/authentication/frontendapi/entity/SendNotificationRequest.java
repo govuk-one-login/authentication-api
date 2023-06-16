@@ -24,6 +24,7 @@ public class SendNotificationRequest extends BaseFrontendRequest {
 
     @SerializedName("journeyType")
     @Expose
+    @Required
     private JourneyType journeyType;
 
     public NotificationType getNotificationType() {

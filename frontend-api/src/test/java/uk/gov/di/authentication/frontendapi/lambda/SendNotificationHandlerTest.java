@@ -24,6 +24,7 @@ import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -189,8 +190,10 @@ class SendNotificationHandlerTest {
         var result =
                 sendRequest(
                         format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS, notificationType));
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS,
+                                notificationType,
+                                JourneyType.ACCOUNT_RECOVERY));
 
         assertEquals(204, result.getStatusCode());
         verify(awsSqsClient)
@@ -237,8 +240,11 @@ class SendNotificationHandlerTest {
         var result =
                 sendRequest(
                         format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"requestNewCode\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS, notificationType, true));
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"requestNewCode\": \"%s\", \"journeyType\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS,
+                                notificationType,
+                                true,
+                                JourneyType.ACCOUNT_RECOVERY));
 
         assertThat(result, hasStatus(204));
         verify(codeGeneratorService).sixDigitCode();
@@ -283,8 +289,11 @@ class SendNotificationHandlerTest {
         var result =
                 sendRequest(
                         format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER));
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS,
+                                VERIFY_PHONE_NUMBER,
+                                TEST_PHONE_NUMBER,
+                                JourneyType.REGISTRATION));
 
         assertThat(result, hasStatus(204));
         verify(codeGeneratorService, never()).sixDigitCode();
@@ -328,8 +337,10 @@ class SendNotificationHandlerTest {
         var result =
                 sendRequest(
                         format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS, notificationType));
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS,
+                                notificationType,
+                                JourneyType.ACCOUNT_RECOVERY));
 
         assertEquals(204, result.getStatusCode());
         verifyNoInteractions(awsSqsClient);
@@ -394,8 +405,11 @@ class SendNotificationHandlerTest {
         var result =
                 sendRequest(
                         format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, phoneNumber));
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS,
+                                VERIFY_PHONE_NUMBER,
+                                phoneNumber,
+                                JourneyType.REGISTRATION));
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1012));
@@ -438,8 +452,8 @@ class SendNotificationHandlerTest {
         var result =
                 sendRequest(
                         format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS, notificationType));
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS, notificationType, JourneyType.REGISTRATION));
 
         assertEquals(500, result.getStatusCode());
         assertTrue(result.getBody().contains("Error sending message to queue"));
@@ -488,8 +502,11 @@ class SendNotificationHandlerTest {
         var result =
                 sendRequest(
                         format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, phoneNumber));
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS,
+                                VERIFY_PHONE_NUMBER,
+                                phoneNumber,
+                                JourneyType.REGISTRATION));
 
         assertEquals(204, result.getStatusCode());
         verify(codeGeneratorService).sixDigitCode();
@@ -529,8 +546,8 @@ class SendNotificationHandlerTest {
         var result =
                 sendRequest(
                         format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER));
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, JourneyType.REGISTRATION));
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1011));
@@ -540,15 +557,15 @@ class SendNotificationHandlerTest {
 
     @Test
     void shouldReturn400IfUserHasReachedTheRegistrationEmailOtpRequestLimit() {
-        maxOutCodeRequestCount();
+        maxOutCodeRequestCount(VERIFY_EMAIL, JourneyType.REGISTRATION);
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
 
         var result =
                 sendRequest(
                         format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS, VERIFY_EMAIL));
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS, VERIFY_EMAIL, JourneyType.REGISTRATION));
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1029));
@@ -576,15 +593,17 @@ class SendNotificationHandlerTest {
 
     @Test
     void shouldReturn400IfUserHasReachedTheAccountRecoveryEmailOtpRequestLimit() {
-        maxOutCodeRequestCount();
+        maxOutCodeRequestCount(VERIFY_EMAIL, JourneyType.ACCOUNT_RECOVERY);
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
 
         var result =
                 sendRequest(
                         format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS, VERIFY_CHANGE_HOW_GET_SECURITY_CODES));
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS,
+                                VERIFY_CHANGE_HOW_GET_SECURITY_CODES,
+                                JourneyType.ACCOUNT_RECOVERY));
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1046));
@@ -615,15 +634,18 @@ class SendNotificationHandlerTest {
 
     @Test
     void shouldReturn400IfUserHasReachedThePhoneCodeRequestLimit() {
-        maxOutCodeRequestCount();
+        maxOutCodeRequestCount(VERIFY_PHONE_NUMBER, JourneyType.REGISTRATION);
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
 
         var result =
                 sendRequest(
                         format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\",  \"phoneNumber\": \"%s\"  }",
-                                TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER));
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\",  \"phoneNumber\": \"%s\", \"journeyType\": \"%s\"  }",
+                                TEST_EMAIL_ADDRESS,
+                                VERIFY_PHONE_NUMBER,
+                                TEST_PHONE_NUMBER,
+                                JourneyType.REGISTRATION));
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1030));
@@ -663,8 +685,8 @@ class SendNotificationHandlerTest {
         var result =
                 sendRequest(
                         format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS, VERIFY_EMAIL));
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS, VERIFY_EMAIL, JourneyType.REGISTRATION));
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1031));
@@ -693,8 +715,10 @@ class SendNotificationHandlerTest {
         var result =
                 sendRequest(
                         format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS, VERIFY_CHANGE_HOW_GET_SECURITY_CODES));
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS,
+                                VERIFY_CHANGE_HOW_GET_SECURITY_CODES,
+                                JourneyType.ACCOUNT_RECOVERY));
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1047));
@@ -723,8 +747,11 @@ class SendNotificationHandlerTest {
         var result =
                 sendRequest(
                         format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\",  \"phoneNumber\": \"%s\"  }",
-                                TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, TEST_PHONE_NUMBER));
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\",  \"phoneNumber\": \"%s\", \"journeyType\": \"%s\"  }",
+                                TEST_EMAIL_ADDRESS,
+                                VERIFY_PHONE_NUMBER,
+                                TEST_PHONE_NUMBER,
+                                JourneyType.REGISTRATION));
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1032));
@@ -753,8 +780,8 @@ class SendNotificationHandlerTest {
         var result =
                 sendRequest(
                         format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS, VERIFY_EMAIL));
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS, VERIFY_EMAIL, JourneyType.REGISTRATION));
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1033));
@@ -783,8 +810,10 @@ class SendNotificationHandlerTest {
         var result =
                 sendRequest(
                         format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS, VERIFY_CHANGE_HOW_GET_SECURITY_CODES));
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS,
+                                VERIFY_CHANGE_HOW_GET_SECURITY_CODES,
+                                JourneyType.ACCOUNT_RECOVERY));
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1048));
@@ -812,8 +841,8 @@ class SendNotificationHandlerTest {
         var result =
                 sendRequest(
                         format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER));
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS, VERIFY_PHONE_NUMBER, JourneyType.REGISTRATION));
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1034));
@@ -843,8 +872,8 @@ class SendNotificationHandlerTest {
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(
                 format(
-                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                        TEST_EMAIL_ADDRESS, notificationType));
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
+                        TEST_EMAIL_ADDRESS, notificationType, JourneyType.REGISTRATION));
         var result = handler.handleRequest(event, context);
 
         var notifyRequest =
@@ -869,8 +898,8 @@ class SendNotificationHandlerTest {
         var result =
                 sendRequest(
                         format(
-                                "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
-                                TEST_EMAIL_ADDRESS, notificationType));
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS, notificationType, JourneyType.REGISTRATION));
 
         assertEquals(204, result.getStatusCode());
         verifyNoInteractions(awsSqsClient);
@@ -890,13 +919,14 @@ class SendNotificationHandlerTest {
         return handler.handleRequest(event, context);
     }
 
-    private void maxOutCodeRequestCount() {
-        session.resetCodeRequestCount();
-        session.incrementCodeRequestCount();
-        session.incrementCodeRequestCount();
-        session.incrementCodeRequestCount();
-        session.incrementCodeRequestCount();
-        session.incrementCodeRequestCount();
+    private void maxOutCodeRequestCount(
+            NotificationType notificationType, JourneyType journeyType) {
+        session.resetCodeRequestCount(notificationType, journeyType);
+        session.incrementCodeRequestCount(notificationType, journeyType);
+        session.incrementCodeRequestCount(notificationType, journeyType);
+        session.incrementCodeRequestCount(notificationType, journeyType);
+        session.incrementCodeRequestCount(notificationType, journeyType);
+        session.incrementCodeRequestCount(notificationType, journeyType);
     }
 
     private void usingValidSession() {

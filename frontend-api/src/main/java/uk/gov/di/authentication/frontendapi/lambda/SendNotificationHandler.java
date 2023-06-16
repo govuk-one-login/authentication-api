@@ -11,6 +11,7 @@ import uk.gov.di.authentication.frontendapi.entity.SendNotificationRequest;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -141,7 +142,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                     isCodeRequestAttemptValid(
                             request.getEmail(),
                             userContext.getSession(),
-                            request.getNotificationType());
+                            request.getNotificationType(),
+                            request.getJourneyType());
             if (codeRequestValid.isPresent()) {
                 auditService.submitAuditEvent(
                         getInvalidCodeAuditEventFromNotificationType(request.getNotificationType()),
@@ -226,7 +228,9 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                                                         notificationType));
 
         LOG.info("Incrementing code request count");
-        sessionService.save(session.incrementCodeRequestCount());
+        sessionService.save(
+                session.incrementCodeRequestCount(
+                        request.getNotificationType(), request.getJourneyType()));
         var testClientWithAllowedEmail =
                 isTestClientWithAllowedEmail(userContext, configurationService);
         if (!testClientWithAllowedEmail) {
@@ -279,7 +283,10 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
     }
 
     private Optional<ErrorResponse> isCodeRequestAttemptValid(
-            String email, Session session, NotificationType notificationType) {
+            String email,
+            Session session,
+            NotificationType notificationType,
+            JourneyType journeyType) {
         var codeRequestBlockedPrefix =
                 notificationType.equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES)
                         ? ACCOUNT_RECOVERY_CODE_REQUEST_BLOCKED_KEY_PREFIX
@@ -298,7 +305,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                     codeRequestBlockedPrefix,
                     configurationService.getBlockedEmailDuration());
             LOG.info("Resetting code request count");
-            sessionService.save(session.resetCodeRequestCount());
+            sessionService.save(session.resetCodeRequestCount(notificationType, journeyType));
             return Optional.of(getErrorResponseForCodeRequestLimitReached(notificationType));
         }
         if (codeStorageService.isBlockedForEmail(email, codeRequestBlockedPrefix)) {

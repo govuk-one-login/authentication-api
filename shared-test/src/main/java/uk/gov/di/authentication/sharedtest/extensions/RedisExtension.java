@@ -13,6 +13,7 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import uk.gov.di.authentication.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -190,11 +191,13 @@ public class RedisExtension
         return objectMapper.readValue(redis.getValue(sessionId), Session.class);
     }
 
-    public void incrementSessionCodeRequestCount(String sessionId) throws Json.JsonException {
+    public void incrementSessionCodeRequestCount(
+            String sessionId, NotificationType notificationType, JourneyType journeyType)
+            throws Json.JsonException {
         var session =
                 objectMapper
                         .readValue(redis.getValue(sessionId), Session.class)
-                        .incrementCodeRequestCount();
+                        .incrementCodeRequestCount(notificationType, journeyType);
         redis.saveWithExpiry(sessionId, objectMapper.writeValueAsString(session), 3600);
     }
 
