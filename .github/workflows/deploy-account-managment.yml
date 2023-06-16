@@ -1,17 +1,16 @@
-name: Deploy Audit Processors to Dev
+name: Deploy Account Management
 
 env:
-  # DevPlatform recommend that the below vars are added to GitHub secrets
-  GHA_ROLE: arn:aws:iam::761723964695:role/dev-auth-deploy-pipeline-GitHubActionsRole-1IIFWOJDUI5B9
+  GHA_ROLE: arn:aws:iam::761723964695:role/build-auth-deploy-pipeline-GitHubActionsRole-160U5ADTRKQ2O
   DESTINATION_BUCKET: di-auth-lambda-signed-20220215170204376200000002
-  ARTIFACT_BUCKET: dev-auth-deploy-pipeline-githubartifactsourcebuck-1nh86k5wimx9n
+  ARTIFACT_BUCKET: build-auth-deploy-pipeli-githubartifactsourcebuck-1o4hcrnik6ayv
 
 on:
   push:
     branches:
       - main
     paths:
-      - "audit-processors"
+      - "account-management"
   workflow_run:
     workflows: ["Build modules"]
     types:
@@ -35,22 +34,22 @@ jobs:
           role-to-assume: ${{ env.GHA_ROLE }}
           aws-region: eu-west-2
       
-      - name: Download and copy Audit Processors signed lambda zip
-        working-directory: ci/terraform/audit-processors
+      - name: Download and copy Account Management signed lambda zip
+        working-directory: ci/terraform/account-management
         run: |
           aws s3 cp s3://${{ env.DESTINATION_BUCKET }} ./artifacts \
             --recursive --exclude "*" \
-            --include "signed-audit-processors-${{ github.sha }}-*"
-          mv artifacts/signed-audit-processors-*.zip artifacts/audit-processors.zip
+            --include "signed-account-management-api-${{ github.sha }}-*"
+          mv artifacts/signed-account-management-*.zip artifacts/account-management-api.zip
 
-      - name: Upload Audit Processors Terraform files
+      - name: Upload Account Management Terraform files
         working-directory: ci/terraform
         run: |
-          zip -r audit-processors.zip .
+          zip -r account-management.zip .
           S3_RESPONSE=`aws s3api put-object \
             --bucket $ARTIFACT_BUCKET \
-            --key audit-processors.zip \
-            --body audit-processors.zip`
+            --key account-management.zip \
+            --body account-management.zip`
           VERSION=`echo $S3_RESPONSE | jq .VersionId -r`
           echo "VERSION=$VERSION" >> $GITHUB_ENV
  

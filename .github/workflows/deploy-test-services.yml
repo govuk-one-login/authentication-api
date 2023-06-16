@@ -1,17 +1,16 @@
-name: Deploy Delivery Receipts to Dev
+name: Deploy Test Services
 
 env:
-  # DevPlatform recommend that the below vars are added to GitHub secrets
-  GHA_ROLE: arn:aws:iam::761723964695:role/dev-auth-deploy-pipeline-GitHubActionsRole-1IIFWOJDUI5B9
+  GHA_ROLE: arn:aws:iam::761723964695:role/build-auth-deploy-pipeline-GitHubActionsRole-160U5ADTRKQ2O
   DESTINATION_BUCKET: di-auth-lambda-signed-20220215170204376200000002
-  ARTIFACT_BUCKET: dev-auth-deploy-pipeline-githubartifactsourcebuck-1nh86k5wimx9n
+  ARTIFACT_BUCKET: build-auth-deploy-pipeli-githubartifactsourcebuck-1o4hcrnik6ayv
 
 on:
   push:
     branches:
       - main
     paths:
-      - "delivery-receipts"
+      - "test-services"
   workflow_run:
     workflows: ["Build modules"]
     types:
@@ -35,22 +34,22 @@ jobs:
           role-to-assume: ${{ env.GHA_ROLE }}
           aws-region: eu-west-2
       
-      - name: Download and copy Delivery Receipts signed lambda zip
-        working-directory: ci/terraform/delivery-receipts
+      - name: Download and copy Test Services signed lambda zip
+        working-directory: ci/terraform/test-services
         run: |
-          aws s3 cp s3://${{ env.DESTINATION_BUCKET }} ./artifacts \
+          aws s3 cp s3://di-auth-lambda-signed-20220215170204376200000002 ./artifacts \
             --recursive --exclude "*" \
-            --include "signed-delivery-receipts-api-${{ github.sha }}-*"
-          mv artifacts/signed-delivery-receipts-api-*.zip artifacts/delivery-receipts-api.zip
+            --include "signed-test-services-api-${{ github.sha }}-*"
+          mv artifacts/signed-test-services-api-*.zip artifacts/test-services-api.zip
 
-      - name: Upload Delivery Receipts Terraform files
+      - name: Upload Test Services Terraform files
         working-directory: ci/terraform
         run: |
-          zip -r delivery-receipts.zip .
+          zip -r test-services.zip .
           S3_RESPONSE=`aws s3api put-object \
             --bucket $ARTIFACT_BUCKET \
-            --key delivery-receipts.zip \
-            --body delivery-receipts.zip`
+            --key test-services.zip \
+            --body test-services.zip`
           VERSION=`echo $S3_RESPONSE | jq .VersionId -r`
           echo "VERSION=$VERSION" >> $GITHUB_ENV
  

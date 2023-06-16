@@ -1,10 +1,9 @@
-name: Deploy OIDC to Dev
+name: Deploy OIDC
 
 env:
-  # DevPlatform recommend that the below vars are added to GitHub secrets
-  GHA_ROLE: arn:aws:iam::761723964695:role/dev-auth-deploy-pipeline-GitHubActionsRole-1IIFWOJDUI5B9
+  GHA_ROLE: arn:aws:iam::761723964695:role/build-auth-deploy-pipeline-GitHubActionsRole-160U5ADTRKQ2O
   DESTINATION_BUCKET: di-auth-lambda-signed-20220215170204376200000002
-  ARTIFACT_BUCKET: dev-auth-deploy-pipeline-githubartifactsourcebuck-1nh86k5wimx9n
+  ARTIFACT_BUCKET: build-auth-deploy-pipeli-githubartifactsourcebuck-1o4hcrnik6ayv
 
 on:
   push:
