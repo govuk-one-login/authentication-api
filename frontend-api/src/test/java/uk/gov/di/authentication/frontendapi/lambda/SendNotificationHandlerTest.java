@@ -80,11 +80,11 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.PERSISTENT_ID;
+import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.ACCOUNT_RECOVERY_CODE_BLOCKED_KEY_PREFIX;
-import static uk.gov.di.authentication.shared.services.CodeStorageService.ACCOUNT_RECOVERY_CODE_REQUEST_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
@@ -563,6 +563,84 @@ class SendNotificationHandlerTest {
         verifyNoInteractions(auditService);
     }
 
+    private static Stream<Arguments> contrastingNotificationTypeAndJourneyTypeArgs() {
+        return Stream.of(
+                Arguments.of(MFA_SMS, JourneyType.SIGN_IN, VERIFY_EMAIL, JourneyType.REGISTRATION),
+                Arguments.of(
+                        VERIFY_PHONE_NUMBER,
+                        JourneyType.REGISTRATION,
+                        VERIFY_EMAIL,
+                        JourneyType.REGISTRATION),
+                Arguments.of(
+                        VERIFY_EMAIL,
+                        JourneyType.REGISTRATION,
+                        VERIFY_PHONE_NUMBER,
+                        JourneyType.REGISTRATION),
+                Arguments.of(
+                        VERIFY_EMAIL,
+                        JourneyType.REGISTRATION,
+                        VERIFY_CHANGE_HOW_GET_SECURITY_CODES,
+                        JourneyType.ACCOUNT_RECOVERY),
+                Arguments.of(
+                        VERIFY_CHANGE_HOW_GET_SECURITY_CODES,
+                        JourneyType.ACCOUNT_RECOVERY,
+                        VERIFY_EMAIL,
+                        JourneyType.REGISTRATION));
+    }
+
+    @ParameterizedTest
+    @MethodSource("contrastingNotificationTypeAndJourneyTypeArgs")
+    void
+            shouldReturn204IfUserHasReachedTheOtpRequestLimitForADifferentOtpTypeToThatCurrentlyBeingRequested(
+                    NotificationType notificationTypeOne,
+                    JourneyType journeyTypeOne,
+                    NotificationType notificationTypeTwo,
+                    JourneyType journeyTypeTwo) {
+        maxOutCodeRequestCount(notificationTypeOne, journeyTypeOne);
+        usingValidSession();
+        usingValidClientSession(CLIENT_ID);
+
+        var result =
+                sendRequest(
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS,
+                                notificationTypeTwo,
+                                TEST_PHONE_NUMBER,
+                                journeyTypeTwo));
+
+        assertEquals(204, result.getStatusCode());
+    }
+
+    @ParameterizedTest
+    @MethodSource("contrastingNotificationTypeAndJourneyTypeArgs")
+    void shouldReturn204IfUserIsBlockedForRequestingADifferentOtpTypeToThatCurrentlyBeingRequested(
+            NotificationType notificationTypeOne,
+            JourneyType journeyTypeOne,
+            NotificationType notificationTypeTwo,
+            JourneyType journeyTypeTwo) {
+        CodeRequestType codeRequestTypeForBlockedOtpRequestType =
+                CodeRequestType.getCodeRequestType(notificationTypeOne, journeyTypeOne);
+        when(codeStorageService.isBlockedForEmail(
+                        TEST_EMAIL_ADDRESS,
+                        CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestTypeForBlockedOtpRequestType))
+                .thenReturn(true);
+
+        usingValidSession();
+        usingValidClientSession(CLIENT_ID);
+
+        var result =
+                sendRequest(
+                        format(
+                                "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"phoneNumber\": \"%s\", \"journeyType\": \"%s\" }",
+                                TEST_EMAIL_ADDRESS,
+                                notificationTypeTwo,
+                                TEST_PHONE_NUMBER,
+                                journeyTypeTwo));
+
+        assertEquals(204, result.getStatusCode());
+    }
+
     @Test
     void shouldReturn400IfUserHasReachedTheRegistrationEmailOtpRequestLimit() {
         maxOutCodeRequestCount(VERIFY_EMAIL, JourneyType.REGISTRATION);
@@ -577,11 +655,6 @@ class SendNotificationHandlerTest {
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1029));
-        verify(codeStorageService)
-                .saveBlockedForEmail(
-                        TEST_EMAIL_ADDRESS,
-                        CODE_REQUEST_BLOCKED_KEY_PREFIX,
-                        BLOCKED_EMAIL_DURATION);
         verify(codeStorageService)
                 .saveBlockedForEmail(
                         TEST_EMAIL_ADDRESS,
@@ -620,11 +693,6 @@ class SendNotificationHandlerTest {
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1046));
-        verify(codeStorageService)
-                .saveBlockedForEmail(
-                        TEST_EMAIL_ADDRESS,
-                        ACCOUNT_RECOVERY_CODE_REQUEST_BLOCKED_KEY_PREFIX,
-                        BLOCKED_EMAIL_DURATION);
         verify(codeStorageService)
                 .saveBlockedForEmail(
                         TEST_EMAIL_ADDRESS,
@@ -670,11 +738,6 @@ class SendNotificationHandlerTest {
         verify(codeStorageService)
                 .saveBlockedForEmail(
                         TEST_EMAIL_ADDRESS,
-                        CODE_REQUEST_BLOCKED_KEY_PREFIX,
-                        BLOCKED_EMAIL_DURATION);
-        verify(codeStorageService)
-                .saveBlockedForEmail(
-                        TEST_EMAIL_ADDRESS,
                         CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.SMS_REGISTRATION,
                         BLOCKED_EMAIL_DURATION);
         verify(codeStorageService, never())
@@ -700,7 +763,8 @@ class SendNotificationHandlerTest {
     @Test
     void shouldReturn400IfUserIsBlockedFromRequestingAnyMoreRegistrationEmailOtps() {
         when(codeStorageService.isBlockedForEmail(
-                        TEST_EMAIL_ADDRESS, CODE_REQUEST_BLOCKED_KEY_PREFIX))
+                        TEST_EMAIL_ADDRESS,
+                        CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_REGISTRATION))
                 .thenReturn(true);
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
@@ -730,7 +794,8 @@ class SendNotificationHandlerTest {
     @Test
     void shouldReturn400IfUserIsBlockedFromRequestingAnyMoreAccountRecoveryEmailOtps() {
         when(codeStorageService.isBlockedForEmail(
-                        TEST_EMAIL_ADDRESS, ACCOUNT_RECOVERY_CODE_REQUEST_BLOCKED_KEY_PREFIX))
+                        TEST_EMAIL_ADDRESS,
+                        CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_ACCOUNT_RECOVERY))
                 .thenReturn(true);
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
@@ -762,7 +827,8 @@ class SendNotificationHandlerTest {
     @Test
     void shouldReturn400IfUserIsBlockedFromRequestingAnyMorePhoneOtpCodes() {
         when(codeStorageService.isBlockedForEmail(
-                        TEST_EMAIL_ADDRESS, CODE_REQUEST_BLOCKED_KEY_PREFIX))
+                        TEST_EMAIL_ADDRESS,
+                        CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.SMS_REGISTRATION))
                 .thenReturn(true);
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
