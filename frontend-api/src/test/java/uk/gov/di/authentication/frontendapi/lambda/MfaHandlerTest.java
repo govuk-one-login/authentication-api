@@ -18,6 +18,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
@@ -368,6 +369,12 @@ public class MfaHandlerTest {
                 .saveBlockedForEmail(
                         TEST_EMAIL_ADDRESS,
                         CODE_REQUEST_BLOCKED_KEY_PREFIX,
+                        BLOCKED_EMAIL_DURATION);
+
+        verify(codeStorageService)
+                .saveBlockedForEmail(
+                        TEST_EMAIL_ADDRESS,
+                        CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.SMS_SIGN_IN,
                         BLOCKED_EMAIL_DURATION);
 
         verify(auditService)

@@ -27,6 +27,13 @@ public class SendNotificationRequest extends BaseFrontendRequest {
     @Required
     private JourneyType journeyType;
 
+    public SendNotificationRequest(
+            String email, NotificationType notificationType, JourneyType journeyType) {
+        this.email = email;
+        this.notificationType = notificationType;
+        this.journeyType = journeyType;
+    }
+
     public NotificationType getNotificationType() {
         return notificationType;
     }
