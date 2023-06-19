@@ -26,7 +26,7 @@ resource "aws_cloudwatch_metric_alarm" "lambda_error_cloudwatch_alarm" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "lambda_error_rate_cloudwatch_alarm" {
-  count               = var.use_localstack || var.environment == "production" || var.lambda_error_rate_alarm_disabled ? 0 : 1
+  count               = var.use_localstack || var.lambda_error_rate_alarm_disabled ? 0 : 1
   alarm_name          = replace("${var.environment}-${var.endpoint_name}-error-rate-alarm", ".", "")
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = "1"
