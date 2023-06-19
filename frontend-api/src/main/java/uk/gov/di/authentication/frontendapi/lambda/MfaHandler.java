@@ -240,8 +240,9 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
     private Optional<ErrorResponse> validateCodeRequestAttempts(
             String email, UserContext userContext) {
         Session session = userContext.getSession();
-        LOG.info("CodeRequestCount is: {}", session.getCodeRequestCount());
-        if (session.getCodeRequestCount() == configurationService.getCodeMaxRetries()) {
+        var codeRequestCount = session.getCodeRequestCount(MFA_SMS, JourneyType.SIGN_IN);
+        LOG.info("CodeRequestCount is: {}", codeRequestCount);
+        if (codeRequestCount == configurationService.getCodeMaxRetries()) {
             LOG.info(
                     "User has requested too many OTP codes. Setting block with prefix: {}",
                     CODE_REQUEST_BLOCKED_KEY_PREFIX);

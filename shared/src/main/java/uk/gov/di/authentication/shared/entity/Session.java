@@ -26,9 +26,7 @@ public class Session {
 
     @Expose private int passwordResetCount;
 
-    @Expose private int codeRequestCount;
-
-    @Expose private Map<CodeRequestType, Integer> codeRequestCounts;
+    @Expose private Map<CodeRequestType, Integer> codeRequestCountMap;
 
     @Expose private CredentialTrustLevel currentCredentialStrength;
 
@@ -47,8 +45,8 @@ public class Session {
         this.clientSessions = new ArrayList<>();
         this.isNewAccount = AccountState.UNKNOWN;
         this.processingIdentityAttempts = 0;
-        this.codeRequestCounts = new HashMap<>();
-        initializeCodeRequestCounts();
+        this.codeRequestCountMap = new HashMap<>();
+        initializeCodeRequestMap();
     }
 
     public String getSessionId() {
@@ -99,10 +97,6 @@ public class Session {
         return this;
     }
 
-    public int getCodeRequestCount() {
-        return codeRequestCount;
-    }
-
     public int getCodeRequestCount(NotificationType notificationType, JourneyType journeyType) {
         CodeRequestType requestType =
                 CodeRequestType.getCodeRequestType(notificationType, journeyType);
@@ -110,7 +104,7 @@ public class Session {
     }
 
     public int getCodeRequestCount(CodeRequestType requestType) {
-        return codeRequestCounts.getOrDefault(requestType, 0);
+        return codeRequestCountMap.getOrDefault(requestType, 0);
     }
 
     public Session incrementCodeRequestCount(
@@ -118,9 +112,8 @@ public class Session {
         CodeRequestType requestType =
                 CodeRequestType.getCodeRequestType(notificationType, journeyType);
         int currentCount = getCodeRequestCount(requestType);
-        codeRequestCounts.put(requestType, currentCount + 1);
+        codeRequestCountMap.put(requestType, currentCount + 1);
 
-        this.codeRequestCount = codeRequestCount + 1;
         return this;
     }
 
@@ -128,8 +121,7 @@ public class Session {
             NotificationType notificationType, JourneyType journeyType) {
         CodeRequestType requestType =
                 CodeRequestType.getCodeRequestType(notificationType, journeyType);
-        codeRequestCounts.put(requestType, 0);
-        this.codeRequestCount = 0;
+        codeRequestCountMap.put(requestType, 0);
         return this;
     }
 
@@ -191,9 +183,9 @@ public class Session {
         return this;
     }
 
-    private void initializeCodeRequestCounts() {
+    private void initializeCodeRequestMap() {
         for (CodeRequestType requestType : CodeRequestType.values()) {
-            codeRequestCounts.put(requestType, 0);
+            codeRequestCountMap.put(requestType, 0);
         }
     }
 }
