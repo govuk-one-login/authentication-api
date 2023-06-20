@@ -341,6 +341,67 @@ public class MfaHandlerTest {
     }
 
     @Test
+    void
+            shouldReturn204IfUserHasReachedTheOtpRequestLimitsInADifferentLambdaButNotSmsSignInOtpRequestLimit() {
+        when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
+                .thenReturn(Optional.of(PHONE_NUMBER));
+
+        usingValidSession();
+        when(configurationService.getBlockedEmailDuration()).thenReturn(BLOCKED_EMAIL_DURATION);
+        session.incrementCodeRequestCount(NotificationType.VERIFY_EMAIL, JourneyType.REGISTRATION);
+        session.incrementCodeRequestCount(NotificationType.VERIFY_EMAIL, JourneyType.REGISTRATION);
+        session.incrementCodeRequestCount(NotificationType.VERIFY_EMAIL, JourneyType.REGISTRATION);
+        session.incrementCodeRequestCount(NotificationType.VERIFY_EMAIL, JourneyType.REGISTRATION);
+        session.incrementCodeRequestCount(NotificationType.VERIFY_EMAIL, JourneyType.REGISTRATION);
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(
+                Map.of(
+                        "Session-Id",
+                        session.getSessionId(),
+                        CLIENT_SESSION_ID_HEADER,
+                        CLIENT_SESSION_ID));
+        event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertEquals(204, result.getStatusCode());
+    }
+
+    @Test
+    void shouldReturn204IfUserIsBlockedForRequestingADifferentOtpTypeThanSmsSignInOtpRequest() {
+        when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
+                .thenReturn(Optional.of(PHONE_NUMBER));
+
+        usingValidSession();
+
+        when(configurationService.getBlockedEmailDuration()).thenReturn(BLOCKED_EMAIL_DURATION);
+
+        CodeRequestType codeRequestTypeForBlockedOtpRequestType =
+                CodeRequestType.getCodeRequestType(
+                        NotificationType.VERIFY_EMAIL, JourneyType.REGISTRATION);
+        when(codeStorageService.isBlockedForEmail(
+                        TEST_EMAIL_ADDRESS,
+                        CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestTypeForBlockedOtpRequestType))
+                .thenReturn(true);
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(
+                Map.of(
+                        "Session-Id",
+                        session.getSessionId(),
+                        CLIENT_SESSION_ID_HEADER,
+                        CLIENT_SESSION_ID));
+        event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertEquals(204, result.getStatusCode());
+    }
+
+    @Test
     void shouldReturn400IfUserHasReachedTheSmsSignInCodeRequestLimit() {
         usingValidSession();
         when(configurationService.getBlockedEmailDuration()).thenReturn(BLOCKED_EMAIL_DURATION);
@@ -368,12 +429,6 @@ public class MfaHandlerTest {
         verify(codeStorageService)
                 .saveBlockedForEmail(
                         TEST_EMAIL_ADDRESS,
-                        CODE_REQUEST_BLOCKED_KEY_PREFIX,
-                        BLOCKED_EMAIL_DURATION);
-
-        verify(codeStorageService)
-                .saveBlockedForEmail(
-                        TEST_EMAIL_ADDRESS,
                         CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.SMS_SIGN_IN,
                         BLOCKED_EMAIL_DURATION);
 
@@ -394,7 +449,8 @@ public class MfaHandlerTest {
     void shouldReturn400IfUserIsBlockedFromRequestingAnyMoreMfaCodes() {
         usingValidSession();
         when(codeStorageService.isBlockedForEmail(
-                        TEST_EMAIL_ADDRESS, CODE_REQUEST_BLOCKED_KEY_PREFIX))
+                        TEST_EMAIL_ADDRESS,
+                        CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.SMS_SIGN_IN))
                 .thenReturn(true);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();

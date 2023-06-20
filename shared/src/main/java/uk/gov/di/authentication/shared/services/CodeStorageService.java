@@ -13,8 +13,6 @@ import static java.lang.String.format;
 public class CodeStorageService {
 
     public static final String CODE_REQUEST_BLOCKED_KEY_PREFIX = "code-request-blocked:";
-    public static final String ACCOUNT_RECOVERY_CODE_REQUEST_BLOCKED_KEY_PREFIX =
-            "account-recovery-code-request-blocked:";
     public static final String CODE_BLOCKED_KEY_PREFIX = "code-blocked:";
     public static final String ACCOUNT_RECOVERY_CODE_BLOCKED_KEY_PREFIX =
             "account-recovery-code-blocked:";

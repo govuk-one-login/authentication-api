@@ -61,7 +61,6 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.TestClientHelper.isTestClientWithAllowedEmail;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.ACCOUNT_RECOVERY_CODE_BLOCKED_KEY_PREFIX;
-import static uk.gov.di.authentication.shared.services.CodeStorageService.ACCOUNT_RECOVERY_CODE_REQUEST_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 
@@ -300,29 +299,19 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             Session session,
             NotificationType notificationType,
             JourneyType journeyType) {
-        var codeRequestBlockedPrefix =
-                notificationType.equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES)
-                        ? ACCOUNT_RECOVERY_CODE_REQUEST_BLOCKED_KEY_PREFIX
-                        : CODE_REQUEST_BLOCKED_KEY_PREFIX;
+
         var codeAttemptsBlockedPrefix =
                 notificationType.equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES)
                         ? ACCOUNT_RECOVERY_CODE_BLOCKED_KEY_PREFIX
                         : CODE_BLOCKED_KEY_PREFIX;
         var codeRequestCount = session.getCodeRequestCount(notificationType, journeyType);
         LOG.info("CodeRequestCount is: {}", codeRequestCount);
+
+        var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
+        var newCodeRequestBlockPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
         if (codeRequestCount == configurationService.getCodeMaxRetries()) {
-            var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
-            var newCodeRequestBlockPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
             LOG.info(
                     "User has requested too many OTP codes. Setting block with prefix: {}",
-                    codeRequestBlockedPrefix);
-            codeStorageService.saveBlockedForEmail(
-                    email,
-                    codeRequestBlockedPrefix,
-                    configurationService.getBlockedEmailDuration());
-
-            LOG.info(
-                    "User has requested too many OTP codes. Setting block with new prefix: {}",
                     newCodeRequestBlockPrefix);
             codeStorageService.saveBlockedForEmail(
                     email,
@@ -333,10 +322,10 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             sessionService.save(session.resetCodeRequestCount(notificationType, journeyType));
             return Optional.of(getErrorResponseForCodeRequestLimitReached(notificationType));
         }
-        if (codeStorageService.isBlockedForEmail(email, codeRequestBlockedPrefix)) {
+        if (codeStorageService.isBlockedForEmail(email, newCodeRequestBlockPrefix)) {
             LOG.info(
                     "User is blocked from requesting any OTP codes. Code request block prefix: {}",
-                    codeRequestBlockedPrefix);
+                    newCodeRequestBlockPrefix);
             return Optional.of(getErrorResponseForMaxCodeRequests(notificationType));
         }
         if (codeStorageService.isBlockedForEmail(email, codeAttemptsBlockedPrefix)) {
