@@ -123,7 +123,8 @@ variable "redis_node_size" {
 }
 
 variable "common_state_bucket" {
-  type = string
+  type    = string
+  default = "digital-identity-dev-tfstate"
 }
 
 variable "cloudwatch_log_retention" {

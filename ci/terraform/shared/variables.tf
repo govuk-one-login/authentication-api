@@ -137,16 +137,19 @@ variable "password_pepper" {
 }
 
 variable "common_state_bucket" {
-  type = string
+  type    = string
+  default = "digital-identity-dev-tfstate"
 }
 
 variable "di_tools_signing_profile_version_arn" {
   description = "The AWS Signer profile version to use from the `di-tools-prod` account"
+  default     = "arn:aws:signer:eu-west-2:114407264696:/signing-profiles/di_auth_lambda_signing_20220215170204371800000001/zLiNn2Hi1I"
 }
 
 variable "tools_account_id" {
   description = "AWS Account for the corresponding tools account to this environment"
   type        = string
+  default     = "706615647326"
 }
 
 variable "enforce_code_signing" {

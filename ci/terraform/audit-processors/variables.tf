@@ -24,7 +24,8 @@ variable "aws_endpoint" {
 }
 
 variable "shared_state_bucket" {
-  type = string
+  type    = string
+  default = "digital-identity-dev-tfstate"
 }
 
 variable "lambda_zip_file" {
