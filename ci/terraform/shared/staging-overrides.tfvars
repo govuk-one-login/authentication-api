@@ -1,1 +1,1 @@
-common_state_bucket = "di-auth-staging-tfvars"
+common_state_bucket = "di-auth-staging-tfstate"
