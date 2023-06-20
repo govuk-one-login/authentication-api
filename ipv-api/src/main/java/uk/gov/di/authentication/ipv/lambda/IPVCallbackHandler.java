@@ -169,18 +169,18 @@ public class IPVCallbackHandler
                         noSessionEntity.getClientSessionId(),
                         AuditService.UNKNOWN);
             }
+            var clientSessionId = sessionCookiesIds.getClientSessionId();
+            var persistentId =
+                    PersistentIdHelper.extractPersistentIdFromCookieHeader(input.getHeaders());
+            attachLogFieldToLogs(PERSISTENT_SESSION_ID, persistentId);
+            attachSessionIdToLogs(sessionCookiesIds.getSessionId());
+            attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
+            attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
             var session =
                     sessionService
                             .readSessionFromRedis(sessionCookiesIds.getSessionId())
                             .orElseThrow(() -> new IpvCallbackException("Session not found"));
 
-            attachSessionIdToLogs(session);
-            var persistentId =
-                    PersistentIdHelper.extractPersistentIdFromCookieHeader(input.getHeaders());
-            attachLogFieldToLogs(PERSISTENT_SESSION_ID, persistentId);
-            var clientSessionId = sessionCookiesIds.getClientSessionId();
-            attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
-            attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
             var clientSession =
                     clientSessionService
                             .getClientSession(clientSessionId)
