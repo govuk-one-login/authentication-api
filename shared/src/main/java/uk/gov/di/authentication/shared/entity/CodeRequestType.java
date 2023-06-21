@@ -4,12 +4,11 @@ import java.util.HashMap;
 import java.util.Map;
 
 public enum CodeRequestType {
-    EMAIL_REGISTRATION(NotificationType.VERIFY_EMAIL, JourneyType.REGISTRATION),
-    EMAIL_ACCOUNT_RECOVERY(
-            NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES, JourneyType.ACCOUNT_RECOVERY),
-    SMS_ACCOUNT_RECOVERY(NotificationType.VERIFY_PHONE_NUMBER, JourneyType.ACCOUNT_RECOVERY),
-    SMS_REGISTRATION(NotificationType.VERIFY_PHONE_NUMBER, JourneyType.REGISTRATION),
-    SMS_SIGN_IN(NotificationType.MFA_SMS, JourneyType.SIGN_IN);
+    EMAIL_REGISTRATION(MFAMethodType.EMAIL, JourneyType.REGISTRATION),
+    EMAIL_ACCOUNT_RECOVERY(MFAMethodType.EMAIL, JourneyType.ACCOUNT_RECOVERY),
+    SMS_ACCOUNT_RECOVERY(MFAMethodType.SMS, JourneyType.ACCOUNT_RECOVERY),
+    SMS_REGISTRATION(MFAMethodType.SMS, JourneyType.REGISTRATION),
+    SMS_SIGN_IN(MFAMethodType.SMS, JourneyType.SIGN_IN);
 
     private static final Map<CodeRequestTypeKey, CodeRequestType> codeRequestTypeMap =
             new HashMap<>();
@@ -18,28 +17,32 @@ public enum CodeRequestType {
         for (CodeRequestType codeRequestType : CodeRequestType.values()) {
             CodeRequestTypeKey key =
                     new CodeRequestTypeKey(
-                            codeRequestType.getNotificationType(),
-                            codeRequestType.getJourneyType());
+                            codeRequestType.getMfaMethodType(), codeRequestType.getJourneyType());
             codeRequestTypeMap.put(key, codeRequestType);
         }
     }
 
-    private final NotificationType notificationType;
+    private final MFAMethodType mfaMethodType;
     private final JourneyType journeyType;
 
-    CodeRequestType(NotificationType notificationType, JourneyType journeyType) {
-        this.notificationType = notificationType;
+    CodeRequestType(MFAMethodType mfaMethodType, JourneyType journeyType) {
+        this.mfaMethodType = mfaMethodType;
         this.journeyType = journeyType;
     }
 
     public static CodeRequestType getCodeRequestType(
             NotificationType notificationType, JourneyType journeyType) {
-        CodeRequestTypeKey key = new CodeRequestTypeKey(notificationType, journeyType);
+        return getCodeRequestType(notificationType.getMfaMethodType(), journeyType);
+    }
+
+    public static CodeRequestType getCodeRequestType(
+            MFAMethodType mfaMethodType, JourneyType journeyType) {
+        CodeRequestTypeKey key = new CodeRequestTypeKey(mfaMethodType, journeyType);
         return codeRequestTypeMap.get(key);
     }
 
-    private NotificationType getNotificationType() {
-        return notificationType;
+    public MFAMethodType getMfaMethodType() {
+        return mfaMethodType;
     }
 
     private JourneyType getJourneyType() {
@@ -47,11 +50,11 @@ public enum CodeRequestType {
     }
 
     private static class CodeRequestTypeKey {
-        private final NotificationType notificationType;
+        private final MFAMethodType mfaMethodType;
         private final JourneyType journeyType;
 
-        CodeRequestTypeKey(NotificationType notificationType, JourneyType journeyType) {
-            this.notificationType = notificationType;
+        CodeRequestTypeKey(MFAMethodType mfaMethodType, JourneyType journeyType) {
+            this.mfaMethodType = mfaMethodType;
             this.journeyType = journeyType;
         }
 
@@ -64,12 +67,12 @@ public enum CodeRequestType {
                 return false;
             }
             CodeRequestTypeKey other = (CodeRequestTypeKey) obj;
-            return notificationType == other.notificationType && journeyType == other.journeyType;
+            return mfaMethodType == other.mfaMethodType && journeyType == other.journeyType;
         }
 
         @Override
         public int hashCode() {
-            return 31 * notificationType.hashCode() + journeyType.hashCode();
+            return 31 * mfaMethodType.hashCode() + journeyType.hashCode();
         }
     }
 }

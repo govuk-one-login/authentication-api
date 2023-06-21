@@ -9,43 +9,58 @@ import java.util.Map;
 public enum NotificationType implements TemplateAware {
     VERIFY_EMAIL(
             "VERIFY_EMAIL_TEMPLATE_ID",
-            Map.of(SupportedLanguage.CY, "VERIFY_EMAIL_TEMPLATE_ID_CY")),
+            Map.of(SupportedLanguage.CY, "VERIFY_EMAIL_TEMPLATE_ID_CY"),
+            MFAMethodType.EMAIL),
     VERIFY_PHONE_NUMBER(
             "VERIFY_PHONE_NUMBER_TEMPLATE_ID",
-            Map.of(SupportedLanguage.CY, "VERIFY_PHONE_NUMBER_TEMPLATE_ID_CY")),
-    MFA_SMS("MFA_SMS_TEMPLATE_ID", Map.of(SupportedLanguage.CY, "MFA_SMS_TEMPLATE_ID_CY")),
+            Map.of(SupportedLanguage.CY, "VERIFY_PHONE_NUMBER_TEMPLATE_ID_CY"),
+            MFAMethodType.SMS),
+    MFA_SMS(
+            "MFA_SMS_TEMPLATE_ID",
+            Map.of(SupportedLanguage.CY, "MFA_SMS_TEMPLATE_ID_CY"),
+            MFAMethodType.SMS),
     PASSWORD_RESET_CONFIRMATION(
             "PASSWORD_RESET_CONFIRMATION_TEMPLATE_ID",
-            Map.of(SupportedLanguage.CY, "PASSWORD_RESET_CONFIRMATION_TEMPLATE_ID_CY")),
+            Map.of(SupportedLanguage.CY, "PASSWORD_RESET_CONFIRMATION_TEMPLATE_ID_CY"),
+            MFAMethodType.NONE),
     PASSWORD_RESET_CONFIRMATION_SMS(
             "PASSWORD_RESET_CONFIRMATION_SMS_TEMPLATE_ID",
-            Map.of(SupportedLanguage.CY, "PASSWORD_RESET_CONFIRMATION_SMS_TEMPLATE_ID_CY")),
+            Map.of(SupportedLanguage.CY, "PASSWORD_RESET_CONFIRMATION_SMS_TEMPLATE_ID_CY"),
+            MFAMethodType.NONE),
     ACCOUNT_CREATED_CONFIRMATION(
             "ACCOUNT_CREATED_CONFIRMATION_TEMPLATE_ID",
-            Map.of(SupportedLanguage.CY, "ACCOUNT_CREATED_CONFIRMATION_TEMPLATE_ID_CY")),
+            Map.of(SupportedLanguage.CY, "ACCOUNT_CREATED_CONFIRMATION_TEMPLATE_ID_CY"),
+            MFAMethodType.NONE),
     RESET_PASSWORD_WITH_CODE(
             "RESET_PASSWORD_WITH_CODE_TEMPLATE_ID",
-            Map.of(SupportedLanguage.CY, "RESET_PASSWORD_WITH_CODE_TEMPLATE_ID_CY")),
+            Map.of(SupportedLanguage.CY, "RESET_PASSWORD_WITH_CODE_TEMPLATE_ID_CY"),
+            MFAMethodType.NONE),
     VERIFY_CHANGE_HOW_GET_SECURITY_CODES(
             "VERIFY_CHANGE_HOW_GET_SECURITY_CODES_TEMPLATE_ID",
-            Map.of(SupportedLanguage.CY, "VERIFY_CHANGE_HOW_GET_SECURITY_CODES_TEMPLATE_ID_CY")),
+            Map.of(SupportedLanguage.CY, "VERIFY_CHANGE_HOW_GET_SECURITY_CODES_TEMPLATE_ID_CY"),
+            MFAMethodType.EMAIL),
     CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION(
             "CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION_TEMPLATE_ID",
             Map.of(
                     SupportedLanguage.CY,
-                    "CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION_TEMPLATE_ID_CY"));
+                    "CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION_TEMPLATE_ID_CY"),
+            MFAMethodType.NONE);
 
     private final String templateName;
+    private final MFAMethodType mfaMethodType;
 
     private Map<SupportedLanguage, String> languageSpecificTemplates = new HashMap<>();
 
-    NotificationType(String templateName) {
+    NotificationType(String templateName, MFAMethodType mfaMethodType) {
         this.templateName = templateName;
+        this.mfaMethodType = mfaMethodType;
     }
 
     NotificationType(
-            String templateName, Map<SupportedLanguage, String> languageSpecificTemplates) {
-        this(templateName);
+            String templateName,
+            Map<SupportedLanguage, String> languageSpecificTemplates,
+            MFAMethodType mfaMethodType) {
+        this(templateName, mfaMethodType);
         this.languageSpecificTemplates = languageSpecificTemplates;
     }
 
@@ -63,5 +78,9 @@ public enum NotificationType implements TemplateAware {
 
     String getTemplateName(SupportedLanguage language) {
         return languageSpecificTemplates.getOrDefault(language, templateName);
+    }
+
+    public MFAMethodType getMfaMethodType() {
+        return mfaMethodType;
     }
 }
