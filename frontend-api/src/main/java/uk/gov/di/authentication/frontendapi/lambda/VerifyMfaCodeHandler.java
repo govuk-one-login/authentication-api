@@ -12,6 +12,7 @@ import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessor;
 import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessorFactory;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -221,12 +222,15 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 .map(t -> List.of(ErrorResponse.ERROR_1034, ErrorResponse.ERROR_1042).contains(t))
                 .orElse(false)) {
             blockCodeForSessionAndResetCountIfBlockDoesNotExist(
-                    emailAddress, codeRequest.getMfaMethodType());
+                    emailAddress, codeRequest.getMfaMethodType(), codeRequest.getJourneyType());
         }
     }
 
     private void blockCodeForSessionAndResetCountIfBlockDoesNotExist(
-            String emailAddress, MFAMethodType mfaMethodType) {
+            String emailAddress, MFAMethodType mfaMethodType, JourneyType journeyType) {
+
+        var codeRequestType = CodeRequestType.getCodeRequestType(mfaMethodType, journeyType);
+        var newCodeBlockedPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
 
         if (codeStorageService.isBlockedForEmail(emailAddress, CODE_BLOCKED_KEY_PREFIX)) {
             return;
@@ -236,6 +240,9 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 emailAddress,
                 CODE_BLOCKED_KEY_PREFIX,
                 configurationService.getBlockedEmailDuration());
+
+        codeStorageService.saveBlockedForEmail(
+                emailAddress, newCodeBlockedPrefix, configurationService.getBlockedEmailDuration());
 
         if (mfaMethodType == MFAMethodType.SMS) {
             codeStorageService.deleteIncorrectMfaCodeAttemptsCount(emailAddress);
