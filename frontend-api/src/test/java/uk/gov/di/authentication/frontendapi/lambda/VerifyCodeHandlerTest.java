@@ -21,7 +21,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
-import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
@@ -407,8 +406,8 @@ class VerifyCodeHandlerTest {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(configurationService.getBlockedEmailDuration()).thenReturn(BLOCKED_EMAIL_DURATION);
 
-        var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_ACCOUNT_RECOVERY;
-        when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, codeBlockedKeyPrefix))
+        when(codeStorageService.isBlockedForEmail(
+                        TEST_EMAIL_ADDRESS, ACCOUNT_RECOVERY_CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(false);
         when(codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS)).thenReturn(6);
 
@@ -418,7 +417,9 @@ class VerifyCodeHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1048));
         verify(codeStorageService)
                 .saveBlockedForEmail(
-                        TEST_EMAIL_ADDRESS, codeBlockedKeyPrefix, BLOCKED_EMAIL_DURATION);
+                        TEST_EMAIL_ADDRESS,
+                        ACCOUNT_RECOVERY_CODE_BLOCKED_KEY_PREFIX,
+                        BLOCKED_EMAIL_DURATION);
         verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
         verifyNoInteractions(accountModifiersService);
         verify(auditService)
@@ -560,9 +561,7 @@ class VerifyCodeHandlerTest {
         assertThat(session.getRetryCount(), equalTo(0));
         verify(codeStorageService)
                 .saveBlockedForEmail(
-                        TEST_EMAIL_ADDRESS,
-                        CODE_BLOCKED_KEY_PREFIX + CodeRequestType.SMS_REGISTRATION,
-                        BLOCKED_EMAIL_DURATION);
+                        TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, BLOCKED_EMAIL_DURATION);
         verifyNoInteractions(accountModifiersService);
         verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
         verify(auditService)

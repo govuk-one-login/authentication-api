@@ -20,7 +20,6 @@ import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
-import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -559,9 +558,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1042));
         assertEquals(0, redis.getMfaCodeAttemptsCount(EMAIL_ADDRESS, MFAMethodType.AUTH_APP));
-        assertTrue(
-                redis.isBlockedMfaCodeAttemptsForEmail(
-                        EMAIL_ADDRESS, MFAMethodType.AUTH_APP, JourneyType.SIGN_IN));
+        assertTrue(redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS));
         assertTrue(userStore.isAccountVerified(EMAIL_ADDRESS));
         assertTrue(userStore.isAuthAppVerified(EMAIL_ADDRESS));
     }
@@ -587,9 +584,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1043));
-        assertFalse(
-                redis.isBlockedMfaCodeAttemptsForEmail(
-                        EMAIL_ADDRESS, MFAMethodType.AUTH_APP, journeyType));
+        assertFalse(redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS));
     }
 
     @Test
@@ -612,9 +607,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1037));
         assertEquals(1, redis.getMfaCodeAttemptsCount(EMAIL_ADDRESS));
-        assertFalse(
-                redis.isBlockedMfaCodeAttemptsForEmail(
-                        EMAIL_ADDRESS, NotificationType.MFA_SMS, JourneyType.REGISTRATION));
+        assertFalse(redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS));
     }
 
     @Test
