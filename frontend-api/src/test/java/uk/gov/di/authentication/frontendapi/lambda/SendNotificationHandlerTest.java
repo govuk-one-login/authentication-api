@@ -84,7 +84,6 @@ import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
-import static uk.gov.di.authentication.shared.services.CodeStorageService.ACCOUNT_RECOVERY_CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
@@ -863,7 +862,9 @@ class SendNotificationHandlerTest {
     void shouldReturn400IfUserIsBlockedFromEnteringRegistrationEmailOtpCodes() {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
-        when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
+        when(codeStorageService.isBlockedForEmail(
+                        TEST_EMAIL_ADDRESS,
+                        CODE_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_REGISTRATION))
                 .thenReturn(true);
 
         var result =
@@ -893,7 +894,8 @@ class SendNotificationHandlerTest {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
         when(codeStorageService.isBlockedForEmail(
-                        TEST_EMAIL_ADDRESS, ACCOUNT_RECOVERY_CODE_BLOCKED_KEY_PREFIX))
+                        TEST_EMAIL_ADDRESS,
+                        CODE_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_ACCOUNT_RECOVERY))
                 .thenReturn(true);
 
         var result =
@@ -922,7 +924,9 @@ class SendNotificationHandlerTest {
 
     @Test
     void shouldReturn400IfUserIsBlockedFromEnteringPhoneOtpCodes() {
-        when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
+        when(codeStorageService.isBlockedForEmail(
+                        TEST_EMAIL_ADDRESS,
+                        CODE_BLOCKED_KEY_PREFIX + CodeRequestType.SMS_REGISTRATION))
                 .thenReturn(true);
         usingValidSession();
         usingValidClientSession(CLIENT_ID);

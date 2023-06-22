@@ -172,24 +172,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
     private void blockCodeForSession(Session session, String codeBlockPrefix) {
         codeStorageService.saveBlockedForEmail(
                 session.getEmailAddress(),
-                CODE_BLOCKED_KEY_PREFIX,
-                configurationService.getBlockedEmailDuration());
-
-        codeStorageService.saveBlockedForEmail(
-                session.getEmailAddress(),
-                codeBlockPrefix,
-                configurationService.getBlockedEmailDuration());
-        LOG.info("Email is blocked");
-    }
-
-    private void blockCodeForAccountRecoverySession(Session session, String codeBlockPrefix) {
-        codeStorageService.saveBlockedForEmail(
-                session.getEmailAddress(),
-                ACCOUNT_RECOVERY_CODE_BLOCKED_KEY_PREFIX,
-                configurationService.getBlockedEmailDuration());
-
-        codeStorageService.saveBlockedForEmail(
-                session.getEmailAddress(),
                 codeBlockPrefix,
                 configurationService.getBlockedEmailDuration());
         LOG.info("Email is blocked");
@@ -270,7 +252,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         var journeyType =
                 accountRecoveryJourney ? JourneyType.ACCOUNT_RECOVERY : JourneyType.REGISTRATION;
         var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
-        var newCodeBlockPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
+        var codeAttemptsBlockPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
         var metadataPairs =
                 new AuditService.MetadataPair[] {
                     pair("notification-type", notificationType.name()),
@@ -284,20 +266,19 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                         pair("account-recovery", accountRecoveryJourney)
                     };
         }
-        AuditableEvent auditableEvent;
+        AuditableEvent auditableEvent = FrontendAuditableEvent.INVALID_CODE_SENT;
+
         if (List.of(ErrorResponse.ERROR_1027, ErrorResponse.ERROR_1033, ErrorResponse.ERROR_1048)
                 .contains(errorResponse)) {
-            if (errorResponse.equals(ErrorResponse.ERROR_1027)) {
-                blockCodeForSession(session, newCodeBlockPrefix);
-            }
-            if (errorResponse.equals(ErrorResponse.ERROR_1048)) {
-                blockCodeForAccountRecoverySession(session, newCodeBlockPrefix);
-            }
             resetIncorrectMfaCodeAttemptsCount(session);
             auditableEvent = FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED;
-        } else {
-            auditableEvent = FrontendAuditableEvent.INVALID_CODE_SENT;
         }
+
+        if (errorResponse.equals(ErrorResponse.ERROR_1027)
+                || errorResponse.equals(ErrorResponse.ERROR_1048)) {
+            blockCodeForSession(session, codeAttemptsBlockPrefix);
+        }
+
         auditService.submitAuditEvent(
                 auditableEvent,
                 userContext.getClientSessionId(),

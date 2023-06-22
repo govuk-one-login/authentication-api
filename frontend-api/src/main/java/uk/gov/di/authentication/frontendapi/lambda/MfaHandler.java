@@ -244,31 +244,30 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
         var codeRequestCount = session.getCodeRequestCount(MFA_SMS, JourneyType.SIGN_IN);
         LOG.info("CodeRequestCount is: {}", codeRequestCount);
         var codeRequestType = CodeRequestType.getCodeRequestType(MFA_SMS, JourneyType.SIGN_IN);
-        var newCodeRequestBlockPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
+        var codeRequestBlockPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
+        var codeAttemptsBlockPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
 
         if (codeRequestCount == configurationService.getCodeMaxRetries()) {
             LOG.info(
                     "User has requested too many OTP codes. Setting block with prefix: {}",
-                    newCodeRequestBlockPrefix);
+                    codeRequestBlockPrefix);
             codeStorageService.saveBlockedForEmail(
-                    email,
-                    newCodeRequestBlockPrefix,
-                    configurationService.getBlockedEmailDuration());
+                    email, codeRequestBlockPrefix, configurationService.getBlockedEmailDuration());
             LOG.info("Resetting code request count");
             sessionService.save(
                     session.resetCodeRequestCount(NotificationType.MFA_SMS, JourneyType.SIGN_IN));
             return Optional.of(ErrorResponse.ERROR_1025);
         }
-        if (codeStorageService.isBlockedForEmail(email, newCodeRequestBlockPrefix)) {
+        if (codeStorageService.isBlockedForEmail(email, codeRequestBlockPrefix)) {
             LOG.info(
                     "User is blocked from requesting any OTP codes. Code request block prefix: {}",
-                    newCodeRequestBlockPrefix);
+                    codeRequestBlockPrefix);
             return Optional.of(ErrorResponse.ERROR_1026);
         }
-        if (codeStorageService.isBlockedForEmail(email, CODE_BLOCKED_KEY_PREFIX)) {
+        if (codeStorageService.isBlockedForEmail(email, codeAttemptsBlockPrefix)) {
             LOG.info(
                     "User is blocked from entering any OTP codes. Code attempt block prefix: {}",
-                    CODE_BLOCKED_KEY_PREFIX);
+                    codeAttemptsBlockPrefix);
             return Optional.of(ErrorResponse.ERROR_1027);
         }
         return Optional.empty();

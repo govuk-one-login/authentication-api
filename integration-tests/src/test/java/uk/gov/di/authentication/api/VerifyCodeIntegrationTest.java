@@ -182,7 +182,10 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1033));
-        assertThat(redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, VERIFY_EMAIL), equalTo(false));
+        assertThat(
+                redis.isBlockedMfaCodeAttemptsForEmail(
+                        EMAIL_ADDRESS, VERIFY_EMAIL, JourneyType.REGISTRATION),
+                equalTo(false));
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_MAX_RETRIES_REACHED));
     }
 
@@ -222,8 +225,10 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1048));
         assertThat(
-                redis.isBlockedMfaCodesForEmail(
-                        EMAIL_ADDRESS, VERIFY_CHANGE_HOW_GET_SECURITY_CODES),
+                redis.isBlockedMfaCodeAttemptsForEmail(
+                        EMAIL_ADDRESS,
+                        VERIFY_CHANGE_HOW_GET_SECURITY_CODES,
+                        JourneyType.ACCOUNT_RECOVERY),
                 equalTo(true));
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_MAX_RETRIES_REACHED));
     }
