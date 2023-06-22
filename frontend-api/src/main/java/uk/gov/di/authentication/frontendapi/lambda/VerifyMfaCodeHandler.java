@@ -230,19 +230,14 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             String emailAddress, MFAMethodType mfaMethodType, JourneyType journeyType) {
 
         var codeRequestType = CodeRequestType.getCodeRequestType(mfaMethodType, journeyType);
-        var newCodeBlockedPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
+        var codeBlockedPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
 
-        if (codeStorageService.isBlockedForEmail(emailAddress, CODE_BLOCKED_KEY_PREFIX)) {
+        if (codeStorageService.isBlockedForEmail(emailAddress, codeBlockedPrefix)) {
             return;
         }
 
         codeStorageService.saveBlockedForEmail(
-                emailAddress,
-                CODE_BLOCKED_KEY_PREFIX,
-                configurationService.getBlockedEmailDuration());
-
-        codeStorageService.saveBlockedForEmail(
-                emailAddress, newCodeBlockedPrefix, configurationService.getBlockedEmailDuration());
+                emailAddress, codeBlockedPrefix, configurationService.getBlockedEmailDuration());
 
         if (mfaMethodType == MFAMethodType.SMS) {
             codeStorageService.deleteIncorrectMfaCodeAttemptsCount(emailAddress);

@@ -484,9 +484,9 @@ public class MfaHandlerTest {
     @Test
     void shouldReturn400IfUserIsBlockedFromAttemptingMfaCodes() {
         usingValidSession();
-        when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
+        when(codeStorageService.isBlockedForEmail(
+                        TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX + CodeRequestType.SMS_SIGN_IN))
                 .thenReturn(true);
-
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(
                 Map.of(
