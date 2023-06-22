@@ -46,7 +46,6 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessio
 import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
 import static uk.gov.di.authentication.shared.helpers.TestClientHelper.isTestClientWithAllowedEmail;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
-import static uk.gov.di.authentication.shared.services.CodeStorageService.ACCOUNT_RECOVERY_CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 
 public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
@@ -108,8 +107,14 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
             var session = userContext.getSession();
             var notificationType = codeRequest.getNotificationType();
+            var journeyType =
+                    notificationType.equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES)
+                            ? JourneyType.ACCOUNT_RECOVERY
+                            : JourneyType.REGISTRATION;
+            var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
+            var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
 
-            if (isCodeBlockedForSession(session, notificationType)) {
+            if (isCodeBlockedForSession(session, codeBlockedKeyPrefix)) {
                 ErrorResponse errorResponse = blockedCodeBehaviour(codeRequest);
                 return generateApiGatewayProxyErrorResponse(400, errorResponse);
             }
@@ -157,37 +162,12 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 .get(codeRequest.getNotificationType());
     }
 
-    private boolean isCodeBlockedForSession(Session session, NotificationType notificationType) {
-        if (notificationType.equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES)) {
-            var blockedForAccountRecovery =
-                    codeStorageService.isBlockedForEmail(
-                            session.getEmailAddress(), ACCOUNT_RECOVERY_CODE_BLOCKED_KEY_PREFIX);
-            LOG.info("Code is blocked for AccountRecovery: {}", blockedForAccountRecovery);
-            return blockedForAccountRecovery;
-        }
+    private boolean isCodeBlockedForSession(Session session, String codeBlockedKeyPrefix) {
         return codeStorageService.isBlockedForEmail(
-                session.getEmailAddress(), CODE_BLOCKED_KEY_PREFIX);
+                session.getEmailAddress(), codeBlockedKeyPrefix);
     }
 
     private void blockCodeForSession(Session session, String codeBlockPrefix) {
-        codeStorageService.saveBlockedForEmail(
-                session.getEmailAddress(),
-                CODE_BLOCKED_KEY_PREFIX,
-                configurationService.getBlockedEmailDuration());
-
-        codeStorageService.saveBlockedForEmail(
-                session.getEmailAddress(),
-                codeBlockPrefix,
-                configurationService.getBlockedEmailDuration());
-        LOG.info("Email is blocked");
-    }
-
-    private void blockCodeForAccountRecoverySession(Session session, String codeBlockPrefix) {
-        codeStorageService.saveBlockedForEmail(
-                session.getEmailAddress(),
-                ACCOUNT_RECOVERY_CODE_BLOCKED_KEY_PREFIX,
-                configurationService.getBlockedEmailDuration());
-
         codeStorageService.saveBlockedForEmail(
                 session.getEmailAddress(),
                 codeBlockPrefix,
@@ -270,7 +250,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         var journeyType =
                 accountRecoveryJourney ? JourneyType.ACCOUNT_RECOVERY : JourneyType.REGISTRATION;
         var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
-        var newCodeBlockPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
+        var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
         var metadataPairs =
                 new AuditService.MetadataPair[] {
                     pair("notification-type", notificationType.name()),
@@ -287,11 +267,9 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         AuditableEvent auditableEvent;
         if (List.of(ErrorResponse.ERROR_1027, ErrorResponse.ERROR_1033, ErrorResponse.ERROR_1048)
                 .contains(errorResponse)) {
-            if (errorResponse.equals(ErrorResponse.ERROR_1027)) {
-                blockCodeForSession(session, newCodeBlockPrefix);
-            }
-            if (errorResponse.equals(ErrorResponse.ERROR_1048)) {
-                blockCodeForAccountRecoverySession(session, newCodeBlockPrefix);
+            if (errorResponse.equals(ErrorResponse.ERROR_1027)
+                    || errorResponse.equals(ErrorResponse.ERROR_1048)) {
+                blockCodeForSession(session, codeBlockedKeyPrefix);
             }
             resetIncorrectMfaCodeAttemptsCount(session);
             auditableEvent = FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED;

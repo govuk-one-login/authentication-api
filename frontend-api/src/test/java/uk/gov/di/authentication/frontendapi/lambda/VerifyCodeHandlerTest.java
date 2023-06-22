@@ -21,6 +21,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
@@ -65,7 +66,6 @@ import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASS
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
-import static uk.gov.di.authentication.shared.services.CodeStorageService.ACCOUNT_RECOVERY_CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
@@ -388,8 +388,8 @@ class VerifyCodeHandlerTest {
 
     @Test
     void shouldReturnMaxReachedAndNotSetBlockWhenAccountRecoveryEmailCodeIsBlocked() {
-        when(codeStorageService.isBlockedForEmail(
-                        TEST_EMAIL_ADDRESS, ACCOUNT_RECOVERY_CODE_BLOCKED_KEY_PREFIX))
+        var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_ACCOUNT_RECOVERY;
+        when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, codeBlockedKeyPrefix))
                 .thenReturn(true);
 
         var result = makeCallWithCode(CODE, VERIFY_CHANGE_HOW_GET_SECURITY_CODES.name());
@@ -406,8 +406,8 @@ class VerifyCodeHandlerTest {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(configurationService.getBlockedEmailDuration()).thenReturn(BLOCKED_EMAIL_DURATION);
 
-        when(codeStorageService.isBlockedForEmail(
-                        TEST_EMAIL_ADDRESS, ACCOUNT_RECOVERY_CODE_BLOCKED_KEY_PREFIX))
+        var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_ACCOUNT_RECOVERY;
+        when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, codeBlockedKeyPrefix))
                 .thenReturn(false);
         when(codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS)).thenReturn(6);
 
@@ -417,9 +417,7 @@ class VerifyCodeHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1048));
         verify(codeStorageService)
                 .saveBlockedForEmail(
-                        TEST_EMAIL_ADDRESS,
-                        ACCOUNT_RECOVERY_CODE_BLOCKED_KEY_PREFIX,
-                        BLOCKED_EMAIL_DURATION);
+                        TEST_EMAIL_ADDRESS, codeBlockedKeyPrefix, BLOCKED_EMAIL_DURATION);
         verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
         verifyNoInteractions(accountModifiersService);
         verify(auditService)
@@ -561,7 +559,9 @@ class VerifyCodeHandlerTest {
         assertThat(session.getRetryCount(), equalTo(0));
         verify(codeStorageService)
                 .saveBlockedForEmail(
-                        TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, BLOCKED_EMAIL_DURATION);
+                        TEST_EMAIL_ADDRESS,
+                        CODE_BLOCKED_KEY_PREFIX + CodeRequestType.SMS_REGISTRATION,
+                        BLOCKED_EMAIL_DURATION);
         verifyNoInteractions(accountModifiersService);
         verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
         verify(auditService)
@@ -582,7 +582,8 @@ class VerifyCodeHandlerTest {
 
     @Test
     void shouldReturnMaxReachedWhenMfaCodeIsBlocked() {
-        when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
+        var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + CodeRequestType.SMS_REGISTRATION;
+        when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, codeBlockedKeyPrefix))
                 .thenReturn(true);
 
         var result = makeCallWithCode(CODE, MFA_SMS.toString());
