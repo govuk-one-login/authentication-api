@@ -12,7 +12,6 @@ import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import uk.gov.di.authentication.shared.entity.AuthCodeExchangeData;
 import uk.gov.di.authentication.shared.entity.ClientSession;
-import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
@@ -244,18 +243,16 @@ public class RedisExtension
         codeStorageService.saveBlockedForEmail(email, CODE_BLOCKED_KEY_PREFIX, codeBlockedTime);
     }
 
-    public boolean isBlockedMfaCodeAttemptsForEmail(
-            String email, NotificationType notificationType, JourneyType journeyType) {
-        var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
-        String prefixToCheck = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
-        return codeStorageService.isBlockedForEmail(email, prefixToCheck);
+    public boolean isBlockedMfaCodesForEmail(String email) {
+        return isBlockedMfaCodesForEmail(email, null);
     }
 
-    public boolean isBlockedMfaCodeAttemptsForEmail(
-            String email, MFAMethodType mfaMethodType, JourneyType journeyType) {
-        var codeRequestType = CodeRequestType.getCodeRequestType(mfaMethodType, journeyType);
-        String prefixToCheck = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
-        return codeStorageService.isBlockedForEmail(email, prefixToCheck);
+    public boolean isBlockedMfaCodesForEmail(String email, NotificationType notificationType) {
+        if (notificationType == VERIFY_CHANGE_HOW_GET_SECURITY_CODES) {
+            return codeStorageService.isBlockedForEmail(
+                    email, ACCOUNT_RECOVERY_CODE_BLOCKED_KEY_PREFIX);
+        }
+        return codeStorageService.isBlockedForEmail(email, CODE_BLOCKED_KEY_PREFIX);
     }
 
     public int getMfaCodeAttemptsCount(String email) {

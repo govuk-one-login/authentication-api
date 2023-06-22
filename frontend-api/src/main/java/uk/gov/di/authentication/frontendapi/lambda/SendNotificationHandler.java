@@ -60,6 +60,7 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.TestClientHelper.isTestClientWithAllowedEmail;
+import static uk.gov.di.authentication.shared.services.CodeStorageService.ACCOUNT_RECOVERY_CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 
@@ -299,13 +300,15 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             NotificationType notificationType,
             JourneyType journeyType) {
 
+        var codeAttemptsBlockedPrefix =
+                notificationType.equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES)
+                        ? ACCOUNT_RECOVERY_CODE_BLOCKED_KEY_PREFIX
+                        : CODE_BLOCKED_KEY_PREFIX;
         var codeRequestCount = session.getCodeRequestCount(notificationType, journeyType);
         LOG.info("CodeRequestCount is: {}", codeRequestCount);
 
         var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
         var newCodeRequestBlockPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
-        var codeAttemptsBlockedPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
-
         if (codeRequestCount == configurationService.getCodeMaxRetries()) {
             LOG.info(
                     "User has requested too many OTP codes. Setting block with prefix: {}",

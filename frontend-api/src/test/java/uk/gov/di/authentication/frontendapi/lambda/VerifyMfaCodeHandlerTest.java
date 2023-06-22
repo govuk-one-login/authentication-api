@@ -16,7 +16,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.entity.CodeRequest;
@@ -27,7 +26,6 @@ import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessorFactory;
 import uk.gov.di.authentication.frontendapi.validation.PhoneNumberCodeProcessor;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
-import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -411,18 +409,10 @@ class VerifyMfaCodeHandlerTest {
         verifyNoInteractions(cloudwatchMetricsService);
     }
 
-    private static Stream<Arguments> blockedCodeForAuthAppOTPEnteredTooManyTimes() {
-        return Stream.of(
-                Arguments.of(
-                        JourneyType.ACCOUNT_RECOVERY, CodeRequestType.AUTH_APP_ACCOUNT_RECOVERY),
-                Arguments.of(JourneyType.REGISTRATION, CodeRequestType.AUTH_APP_REGISTRATION),
-                Arguments.of(JourneyType.SIGN_IN, CodeRequestType.AUTH_APP_SIGN_IN));
-    }
-
     @ParameterizedTest
-    @MethodSource("blockedCodeForAuthAppOTPEnteredTooManyTimes")
+    @EnumSource(JourneyType.class)
     void shouldReturn400AndBlockCodeWhenUserEnteredInvalidAuthAppCodeTooManyTimes(
-            JourneyType journeyType, CodeRequestType codeRequestType) throws Json.JsonException {
+            JourneyType journeyType) throws Json.JsonException {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(authAppCodeProcessor));
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.of(ErrorResponse.ERROR_1042));
@@ -435,8 +425,7 @@ class VerifyMfaCodeHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1042));
         assertThat(session.getVerifiedMfaMethodType(), equalTo(null));
         verify(codeStorageService)
-                .saveBlockedForEmail(
-                        TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX + codeRequestType, 900L);
+                .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService)
                 .deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS, MFAMethodType.AUTH_APP);
         verifyNoInteractions(cloudwatchMetricsService);
@@ -526,16 +515,13 @@ class VerifyMfaCodeHandlerTest {
                         pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)));
     }
 
-    private static Stream<Arguments> blockedCodeForInvalidPhoneNumberTooManyTimes() {
-        return Stream.of(
-                Arguments.of(JourneyType.ACCOUNT_RECOVERY, CodeRequestType.SMS_ACCOUNT_RECOVERY),
-                Arguments.of(JourneyType.REGISTRATION, CodeRequestType.SMS_REGISTRATION));
-    }
-
     @ParameterizedTest
-    @MethodSource("blockedCodeForInvalidPhoneNumberTooManyTimes")
+    @EnumSource(
+            value = JourneyType.class,
+            names = {"SIGN_IN"},
+            mode = EnumSource.Mode.EXCLUDE)
     void shouldReturn400AndBlockCodeWhenUserEnteredInvalidPhoneNumberCodeTooManyTimes(
-            JourneyType journeyType, CodeRequestType codeRequestType) throws Json.JsonException {
+            JourneyType journeyType) throws Json.JsonException {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(phoneNumberCodeProcessor));
         when(phoneNumberCodeProcessor.validateCode())
@@ -548,8 +534,7 @@ class VerifyMfaCodeHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1034));
         assertThat(session.getVerifiedMfaMethodType(), equalTo(null));
         verify(codeStorageService)
-                .saveBlockedForEmail(
-                        TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX + codeRequestType, 900L);
+                .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
         verifyNoInteractions(cloudwatchMetricsService);
         verify(auditService)
@@ -568,15 +553,17 @@ class VerifyMfaCodeHandlerTest {
     }
 
     @ParameterizedTest
-    @MethodSource("blockedCodeForInvalidPhoneNumberTooManyTimes")
+    @EnumSource(
+            value = JourneyType.class,
+            names = {"SIGN_IN"},
+            mode = EnumSource.Mode.EXCLUDE)
     void shouldReturn400AndNotBlockCodeWhenInvalidPhoneNumberCodeEnteredAndBlockAlreadyExists(
-            JourneyType journeyType, CodeRequestType codeRequestType) throws Json.JsonException {
+            JourneyType journeyType) throws Json.JsonException {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(phoneNumberCodeProcessor));
         when(phoneNumberCodeProcessor.validateCode())
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1034));
-        var codeBlockedPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
-        when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, codeBlockedPrefix))
+        when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
         var codeRequest =
                 new VerifyMfaCodeRequest(MFAMethodType.SMS, CODE, journeyType, PHONE_NUMBER);
@@ -586,7 +573,7 @@ class VerifyMfaCodeHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1034));
         assertThat(session.getVerifiedMfaMethodType(), equalTo(null));
         verify(codeStorageService, never())
-                .saveBlockedForEmail(TEST_EMAIL_ADDRESS, codeBlockedPrefix, 900L);
+                .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
         verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
         verifyNoInteractions(cloudwatchMetricsService);
         verify(auditService)
