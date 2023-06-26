@@ -118,7 +118,7 @@ public class IPVCallbackHandler
     }
 
     public IPVCallbackHandler(ConfigurationService configurationService) {
-        var kmsConnectionService = new KmsConnectionService(configurationService);
+        var kmsConnectionService = new KmsConnectionService(configurationService, false);
         this.configurationService = configurationService;
         this.ipvAuthorisationService =
                 new IPVAuthorisationService(

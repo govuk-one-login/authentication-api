@@ -97,7 +97,7 @@ public class DocAppCallbackHandler
     }
 
     public DocAppCallbackHandler(ConfigurationService configurationService) {
-        var kmsConnectionService = new KmsConnectionService(configurationService);
+        var kmsConnectionService = new KmsConnectionService(configurationService, false);
         this.configurationService = configurationService;
         this.authorisationService =
                 new DocAppAuthorisationService(
