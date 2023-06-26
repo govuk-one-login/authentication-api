@@ -403,7 +403,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public long getSessionExpiry() {
-        return Long.parseLong(System.getenv().getOrDefault("SESSION_EXPIRY", "7200"));
+        return Long.parseLong(System.getenv().getOrDefault("SESSION_EXPIRY", "3600"));
     }
 
     public String getSmoketestBucketName() {
