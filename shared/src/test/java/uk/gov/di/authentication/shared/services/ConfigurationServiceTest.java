@@ -20,7 +20,7 @@ class ConfigurationServiceTest {
     @Test
     void sessionCookieMaxAgeShouldEqualDefaultWhenEnvVarUnset() {
         ConfigurationService configurationService = new ConfigurationService();
-        assertEquals(7200, configurationService.getSessionCookieMaxAge());
+        assertEquals(3600, configurationService.getSessionCookieMaxAge());
     }
 
     @Test

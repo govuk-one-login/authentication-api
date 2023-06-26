@@ -389,7 +389,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public int getSessionCookieMaxAge() {
-        return Integer.parseInt(System.getenv().getOrDefault("SESSION_COOKIE_MAX_AGE", "7200"));
+        return Integer.parseInt(System.getenv().getOrDefault("SESSION_COOKIE_MAX_AGE", "3600"));
     }
 
     public int getPersistentCookieMaxAge() {
