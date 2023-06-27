@@ -86,7 +86,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public long getEmailAccountCreationOtpCodeExpiry() {
         return Long.parseLong(
-                System.getenv().getOrDefault("EMAIL_OTP_ACCOUNT_CREATION_CODE_EXPIRY", "7200"));
+                System.getenv().getOrDefault("EMAIL_OTP_ACCOUNT_CREATION_CODE_EXPIRY", "3600"));
     }
 
     public int getCodeMaxRetries() {
