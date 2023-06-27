@@ -197,7 +197,7 @@ variable "otp_code_ttl_duration" {
 
 variable "email_acct_creation_otp_code_ttl_duration" {
   type    = number
-  default = 7200
+  default = 3600
 }
 
 variable "contact_us_link_route" {
