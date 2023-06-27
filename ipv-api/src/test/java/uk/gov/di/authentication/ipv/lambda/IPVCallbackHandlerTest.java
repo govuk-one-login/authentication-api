@@ -183,7 +183,7 @@ class IPVCallbackHandlerTest {
 
         var event = getApiGatewayProxyRequestEvent(null);
 
-        assertDoesRedirectToFrontendErrorPage(event);
+        assertDoesRedirectToFrontendErrorPage(event, "error");
 
         verifyNoInteractions(auditService);
     }
@@ -328,7 +328,7 @@ class IPVCallbackHandlerTest {
 
         var event = getApiGatewayProxyRequestEvent(userIdentityUserInfo);
 
-        assertDoesRedirectToFrontendErrorPage(event);
+        assertDoesRedirectToFrontendErrorPage(event, "error");
 
         verifyAuditEvent(IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED);
         verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
@@ -346,7 +346,7 @@ class IPVCallbackHandlerTest {
 
         when(sessionService.readSessionFromRedis(SESSION_ID)).thenReturn(Optional.empty());
 
-        assertDoesRedirectToFrontendErrorPage(event);
+        assertDoesRedirectToFrontendErrorPage(event, "ipv-callback-session-expiry-error");
         verifyNoInteractions(auditService);
     }
 
@@ -368,7 +368,7 @@ class IPVCallbackHandlerTest {
         event.setQueryStringParameters(responseHeaders);
         event.setHeaders(Map.of(COOKIE, buildCookieString()));
 
-        assertDoesRedirectToFrontendErrorPage(event);
+        assertDoesRedirectToFrontendErrorPage(event, "error");
 
         verifyNoInteractions(auditService);
         verifyNoInteractions(dynamoIdentityService);
@@ -401,7 +401,7 @@ class IPVCallbackHandlerTest {
                                 "Error when attempting to parse http response to UserInfoResponse"))
                 .when(ipvTokenService)
                 .sendIpvUserIdentityRequest(any(UserInfoRequest.class));
-        assertDoesRedirectToFrontendErrorPage(event);
+        assertDoesRedirectToFrontendErrorPage(event, "error");
     }
 
     @Test
@@ -465,7 +465,7 @@ class IPVCallbackHandlerTest {
         event.setHeaders(Map.of(COOKIE, buildCookieString()));
         event.setQueryStringParameters(responseHeaders);
 
-        assertDoesRedirectToFrontendErrorPage(event);
+        assertDoesRedirectToFrontendErrorPage(event, "ipv-callback-session-expiry-error");
 
         verifyNoInteractions(ipvTokenService);
         verifyNoInteractions(auditService);
@@ -482,7 +482,7 @@ class IPVCallbackHandlerTest {
 
         when(dynamoClientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.empty());
 
-        assertDoesRedirectToFrontendErrorPage(event);
+        assertDoesRedirectToFrontendErrorPage(event, "error");
 
         verifyNoInteractions(ipvTokenService);
         verifyNoInteractions(auditService);
@@ -517,7 +517,7 @@ class IPVCallbackHandlerTest {
         event.setQueryStringParameters(responseHeaders);
         event.setHeaders(Map.of(COOKIE, buildCookieString()));
 
-        assertDoesRedirectToFrontendErrorPage(event);
+        assertDoesRedirectToFrontendErrorPage(event, "error");
 
         verify(auditService)
                 .submitAuditEvent(
@@ -619,7 +619,8 @@ class IPVCallbackHandlerTest {
                                 .withQueryStringParameters(queryParameters),
                         context);
 
-        var expectedRedirectURI = new URIBuilder(LOGIN_URL).setPath("error").build();
+        var expectedRedirectURI =
+                new URIBuilder(LOGIN_URL).setPath("ipv-callback-session-expiry-error").build();
         assertThat(response, hasStatus(302));
         assertThat(response.getHeaders().get("Location"), equalTo(expectedRedirectURI.toString()));
         assertThat(
@@ -729,12 +730,12 @@ class IPVCallbackHandlerTest {
         return event;
     }
 
-    private void assertDoesRedirectToFrontendErrorPage(APIGatewayProxyRequestEvent event)
-            throws URISyntaxException {
+    private void assertDoesRedirectToFrontendErrorPage(
+            APIGatewayProxyRequestEvent event, String errorPagePath) throws URISyntaxException {
         var response = handler.handleRequest(event, context);
         assertThat(response, hasStatus(302));
 
-        var expectedRedirectURI = new URIBuilder(LOGIN_URL).setPath("error").build();
+        var expectedRedirectURI = new URIBuilder(LOGIN_URL).setPath(errorPagePath).build();
         assertThat(response.getHeaders().get("Location"), equalTo(expectedRedirectURI.toString()));
     }
 }
