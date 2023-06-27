@@ -17,9 +17,8 @@ ipv_no_session_response_enabled    = true
 doc_app_cri_data_v2_endpoint       = "credentials/issue"
 doc_app_use_cri_data_v2_endpoint   = true
 
-blocked_email_duration                    = 30
-otp_code_ttl_duration                     = 120
-email_acct_creation_otp_code_ttl_duration = 60
+blocked_email_duration = 30
+otp_code_ttl_duration  = 120
 
 logging_endpoint_arns = [
   "arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython"
