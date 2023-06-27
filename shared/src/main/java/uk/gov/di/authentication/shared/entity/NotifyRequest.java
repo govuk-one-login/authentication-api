@@ -18,6 +18,10 @@ public class NotifyRequest {
 
     @Expose private SupportedLanguage language;
 
+    @Expose private String sessionId;
+
+    @Expose private String clientSessionId;
+
     public NotifyRequest() {}
 
     public NotifyRequest(
@@ -32,8 +36,31 @@ public class NotifyRequest {
     }
 
     public NotifyRequest(
+            String destination,
+            NotificationType notificationType,
+            String code,
+            SupportedLanguage language,
+            String sessionId,
+            String clientSessionId) {
+        this(destination, notificationType, code, language);
+        this.sessionId = sessionId;
+        this.clientSessionId = clientSessionId;
+    }
+
+    public NotifyRequest(
             String destination, NotificationType notificationType, SupportedLanguage language) {
         this(destination, notificationType, null, language);
+    }
+
+    public NotifyRequest(
+            String destination,
+            NotificationType notificationType,
+            SupportedLanguage language,
+            String sessionId,
+            String clientSessionId) {
+        this(destination, notificationType, null, language);
+        this.sessionId = sessionId;
+        this.clientSessionId = clientSessionId;
     }
 
     public NotificationType getNotificationType() {
@@ -50,5 +77,13 @@ public class NotifyRequest {
 
     public SupportedLanguage getLanguage() {
         return language;
+    }
+
+    public String getSessionId() {
+        return sessionId;
+    }
+
+    public String getClientSessionId() {
+        return clientSessionId;
     }
 }
