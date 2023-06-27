@@ -17,6 +17,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.lambda.VerifyMfaCodeHandler;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
+import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
@@ -50,6 +51,7 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.INVALID_CODE_SENT;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_AUTH_APP;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_PHONE_NUMBER;
+import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -513,7 +515,10 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 new VerifyMfaCodeRequest(
                         MFAMethodType.AUTH_APP, code, journeyType, profileInformation);
 
-        redis.blockMfaCodesForEmail(EMAIL_ADDRESS);
+        var codeRequestType =
+                CodeRequestType.getCodeRequestType(MFAMethodType.AUTH_APP, journeyType);
+        var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
+        redis.blockMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix);
 
         var response =
                 makeRequest(
@@ -555,10 +560,15 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
                         Map.of());
 
+        var codeRequestType =
+                CodeRequestType.getCodeRequestType(
+                        codeRequest.getMfaMethodType(), codeRequest.getJourneyType());
+        var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
+
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1042));
         assertEquals(0, redis.getMfaCodeAttemptsCount(EMAIL_ADDRESS, MFAMethodType.AUTH_APP));
-        assertTrue(redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS));
+        assertTrue(redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix));
         assertTrue(userStore.isAccountVerified(EMAIL_ADDRESS));
         assertTrue(userStore.isAuthAppVerified(EMAIL_ADDRESS));
     }
@@ -581,10 +591,14 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Optional.of(codeRequest),
                         constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
                         Map.of());
+        var codeRequestType =
+                CodeRequestType.getCodeRequestType(
+                        codeRequest.getMfaMethodType(), codeRequest.getJourneyType());
+        var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1043));
-        assertFalse(redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS));
+        assertFalse(redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix));
     }
 
     @Test
@@ -603,11 +617,15 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Optional.of(codeRequest),
                         constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
                         Map.of());
+        var codeRequestType =
+                CodeRequestType.getCodeRequestType(
+                        codeRequest.getMfaMethodType(), codeRequest.getJourneyType());
+        var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1037));
         assertEquals(1, redis.getMfaCodeAttemptsCount(EMAIL_ADDRESS));
-        assertFalse(redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS));
+        assertFalse(redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix));
     }
 
     @Test
@@ -808,7 +826,9 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         setUpSmsRequest(journeyType, PHONE_NUMBER);
 
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
-        redis.blockMfaCodesForEmail(EMAIL_ADDRESS);
+        var codeRequestType = CodeRequestType.getCodeRequestType(MFAMethodType.SMS, journeyType);
+        var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
+        redis.blockMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix);
 
         var codeRequest =
                 new VerifyMfaCodeRequest(

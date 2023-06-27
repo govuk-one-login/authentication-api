@@ -15,6 +15,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.frontendapi.entity.VerifyCodeRequest;
 import uk.gov.di.authentication.frontendapi.lambda.VerifyCodeHandler;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
+import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
@@ -43,6 +44,7 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.INVALID_CODE_SENT;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
+import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -180,9 +182,16 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                 makeRequest(
                         Optional.of(codeRequest), constructFrontendHeaders(sessionId), Map.of());
 
+        var codeRequestType =
+                CodeRequestType.getCodeRequestType(
+                        codeRequest.getNotificationType(), JourneyType.REGISTRATION);
+        var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
+
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1033));
-        assertThat(redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, VERIFY_EMAIL), equalTo(false));
+        assertThat(
+                redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix),
+                equalTo(false));
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_MAX_RETRIES_REACHED));
     }
 
@@ -191,7 +200,12 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
             throws Json.JsonException {
         String sessionId = redis.createSession();
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
-        redis.blockMfaCodesForEmail(EMAIL_ADDRESS, VERIFY_CHANGE_HOW_GET_SECURITY_CODES);
+
+        var codeRequestType =
+                CodeRequestType.getCodeRequestType(
+                        VERIFY_CHANGE_HOW_GET_SECURITY_CODES, JourneyType.ACCOUNT_RECOVERY);
+        var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
+        redis.blockMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix);
 
         var codeRequest = new VerifyCodeRequest(VERIFY_CHANGE_HOW_GET_SECURITY_CODES, "123456");
 
@@ -218,12 +232,15 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         var response =
                 makeRequest(
                         Optional.of(codeRequest), constructFrontendHeaders(sessionId), Map.of());
+        var codeRequestType =
+                CodeRequestType.getCodeRequestType(
+                        codeRequest.getNotificationType(), JourneyType.ACCOUNT_RECOVERY);
+        var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
 
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1048));
         assertThat(
-                redis.isBlockedMfaCodesForEmail(
-                        EMAIL_ADDRESS, VERIFY_CHANGE_HOW_GET_SECURITY_CODES),
+                redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix),
                 equalTo(true));
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_MAX_RETRIES_REACHED));
     }

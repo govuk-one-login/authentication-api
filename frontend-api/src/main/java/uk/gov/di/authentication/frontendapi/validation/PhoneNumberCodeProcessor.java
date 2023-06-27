@@ -2,6 +2,7 @@ package uk.gov.di.authentication.frontendapi.validation;
 
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
+import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
@@ -18,6 +19,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.helpers.TestClientHelper.isTestClientWithAllowedEmail;
+import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 
 public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
 
@@ -55,7 +57,12 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
                 codeRequest.getJourneyType().equals(JourneyType.SIGN_IN)
                         ? NotificationType.MFA_SMS
                         : NotificationType.VERIFY_PHONE_NUMBER;
-        if (isCodeBlockedForSession()) {
+
+        var codeRequestType =
+                CodeRequestType.getCodeRequestType(notificationType, codeRequest.getJourneyType());
+        var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
+
+        if (isCodeBlockedForSession(codeBlockedKeyPrefix)) {
             LOG.info("Code blocked for session");
             return Optional.of(ErrorResponse.ERROR_1034);
         }

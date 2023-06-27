@@ -16,7 +16,6 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
-import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 
 public abstract class MfaCodeProcessor {
     protected final Logger LOG = LogManager.getLogger(this.getClass());
@@ -44,8 +43,8 @@ public abstract class MfaCodeProcessor {
         this.accountModifiersService = accountModifiersService;
     }
 
-    boolean isCodeBlockedForSession() {
-        return codeStorageService.isBlockedForEmail(emailAddress, CODE_BLOCKED_KEY_PREFIX);
+    boolean isCodeBlockedForSession(String codeBlockedKeyPrefix) {
+        return codeStorageService.isBlockedForEmail(emailAddress, codeBlockedKeyPrefix);
     }
 
     boolean hasExceededRetryLimit(MFAMethodType mfaMethodType) {

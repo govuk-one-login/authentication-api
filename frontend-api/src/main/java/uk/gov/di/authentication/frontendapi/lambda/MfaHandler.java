@@ -245,6 +245,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
         LOG.info("CodeRequestCount is: {}", codeRequestCount);
         var codeRequestType = CodeRequestType.getCodeRequestType(MFA_SMS, JourneyType.SIGN_IN);
         var newCodeRequestBlockPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
+        var newCodeBlockPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
 
         if (codeRequestCount == configurationService.getCodeMaxRetries()) {
             LOG.info(
@@ -265,10 +266,10 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                     newCodeRequestBlockPrefix);
             return Optional.of(ErrorResponse.ERROR_1026);
         }
-        if (codeStorageService.isBlockedForEmail(email, CODE_BLOCKED_KEY_PREFIX)) {
+        if (codeStorageService.isBlockedForEmail(email, newCodeBlockPrefix)) {
             LOG.info(
                     "User is blocked from entering any OTP codes. Code attempt block prefix: {}",
-                    CODE_BLOCKED_KEY_PREFIX);
+                    newCodeBlockPrefix);
             return Optional.of(ErrorResponse.ERROR_1027);
         }
         return Optional.empty();

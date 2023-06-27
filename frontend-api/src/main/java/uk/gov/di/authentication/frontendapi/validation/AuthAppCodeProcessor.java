@@ -4,6 +4,7 @@ import org.apache.commons.codec.CodecPolicy;
 import org.apache.commons.codec.binary.Base32;
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
+import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
@@ -26,6 +27,7 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import static uk.gov.di.authentication.shared.entity.MFAMethodType.AUTH_APP;
+import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 
 public class AuthAppCodeProcessor extends MfaCodeProcessor {
 
@@ -57,7 +59,11 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
 
     @Override
     public Optional<ErrorResponse> validateCode() {
-        if (isCodeBlockedForSession()) {
+        var codeRequestType =
+                CodeRequestType.getCodeRequestType(AUTH_APP, codeRequest.getJourneyType());
+        var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
+
+        if (isCodeBlockedForSession(codeBlockedKeyPrefix)) {
             LOG.info("Code blocked for session");
             return Optional.of(ErrorResponse.ERROR_1042);
         }

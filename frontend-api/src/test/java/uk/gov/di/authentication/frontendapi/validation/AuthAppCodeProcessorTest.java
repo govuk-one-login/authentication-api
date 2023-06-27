@@ -8,6 +8,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
+import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
@@ -75,8 +76,11 @@ class AuthAppCodeProcessorTest {
 
     private static Stream<Arguments> validatorParams() {
         return Stream.of(
-                Arguments.of(JourneyType.SIGN_IN, null),
-                Arguments.of(JourneyType.REGISTRATION, AUTH_APP_SECRET));
+                Arguments.of(JourneyType.SIGN_IN, null, CodeRequestType.AUTH_APP_SIGN_IN),
+                Arguments.of(
+                        JourneyType.REGISTRATION,
+                        AUTH_APP_SECRET,
+                        CodeRequestType.AUTH_APP_REGISTRATION));
     }
 
     @ParameterizedTest
@@ -95,10 +99,11 @@ class AuthAppCodeProcessorTest {
     @ParameterizedTest
     @MethodSource("validatorParams")
     void returnsCorrectErrorWhenCodeBlockedForEmailAddress(
-            JourneyType journeyType, String authAppSecret) {
+            JourneyType journeyType, String authAppSecret, CodeRequestType codeRequestType) {
         setUpBlockedUser(
                 new VerifyMfaCodeRequest(
-                        MFAMethodType.AUTH_APP, "000000", journeyType, authAppSecret));
+                        MFAMethodType.AUTH_APP, "000000", journeyType, authAppSecret),
+                codeRequestType);
 
         assertEquals(Optional.of(ErrorResponse.ERROR_1042), authAppCodeProcessor.validateCode());
     }
@@ -282,10 +287,10 @@ class AuthAppCodeProcessorTest {
                         mockAccountModifiersService);
     }
 
-    private void setUpBlockedUser(CodeRequest codeRequest) {
+    private void setUpBlockedUser(CodeRequest codeRequest, CodeRequestType codeRequestType) {
         when(mockUserContext.getSession().getEmailAddress()).thenReturn("blocked-email-address");
         when(mockCodeStorageService.isBlockedForEmail(
-                        "blocked-email-address", CODE_BLOCKED_KEY_PREFIX))
+                        "blocked-email-address", CODE_BLOCKED_KEY_PREFIX + codeRequestType))
                 .thenReturn(true);
 
         this.authAppCodeProcessor =

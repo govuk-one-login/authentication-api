@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
+import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
@@ -63,7 +64,8 @@ class PhoneNumberCodeProcessorTest {
     void shouldReturnNoErrorForValidRegistrationPhoneNumberCode() {
         setupPhoneNumberCode(
                 new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS, VALID_CODE, JourneyType.REGISTRATION, PHONE_NUMBER));
+                        MFAMethodType.SMS, VALID_CODE, JourneyType.REGISTRATION, PHONE_NUMBER),
+                CodeRequestType.SMS_REGISTRATION);
 
         assertThat(phoneNumberCodeProcessor.validateCode(), equalTo(Optional.empty()));
     }
@@ -72,7 +74,8 @@ class PhoneNumberCodeProcessorTest {
     void shouldReturnErrorForInvalidRegistrationPhoneNumberCode() {
         setupPhoneNumberCode(
                 new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS, INVALID_CODE, JourneyType.REGISTRATION, PHONE_NUMBER));
+                        MFAMethodType.SMS, INVALID_CODE, JourneyType.REGISTRATION, PHONE_NUMBER),
+                CodeRequestType.SMS_REGISTRATION);
 
         assertThat(
                 phoneNumberCodeProcessor.validateCode(),
@@ -94,7 +97,8 @@ class PhoneNumberCodeProcessorTest {
     void shouldReturnErrorWhenUserIsBlockedFromEnteringRegistrationPhoneNumberCodes() {
         setUpBlockedPhoneNumberCode(
                 new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS, INVALID_CODE, JourneyType.REGISTRATION, PHONE_NUMBER));
+                        MFAMethodType.SMS, INVALID_CODE, JourneyType.REGISTRATION, PHONE_NUMBER),
+                CodeRequestType.SMS_REGISTRATION);
 
         assertThat(
                 phoneNumberCodeProcessor.validateCode(),
@@ -104,7 +108,8 @@ class PhoneNumberCodeProcessorTest {
     @Test
     void shouldThrowExceptionForSignInPhoneNumberCode() {
         setupPhoneNumberCode(
-                new VerifyMfaCodeRequest(MFAMethodType.SMS, INVALID_CODE, JourneyType.SIGN_IN));
+                new VerifyMfaCodeRequest(MFAMethodType.SMS, INVALID_CODE, JourneyType.SIGN_IN),
+                CodeRequestType.SMS_SIGN_IN);
 
         var expectedException =
                 assertThrows(
@@ -121,7 +126,8 @@ class PhoneNumberCodeProcessorTest {
     void shouldUpdateDynamoAndCreateAuditEventWhenRegistration() {
         setupPhoneNumberCode(
                 new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS, VALID_CODE, JourneyType.REGISTRATION, PHONE_NUMBER));
+                        MFAMethodType.SMS, VALID_CODE, JourneyType.REGISTRATION, PHONE_NUMBER),
+                CodeRequestType.SMS_REGISTRATION);
 
         phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
 
@@ -149,7 +155,8 @@ class PhoneNumberCodeProcessorTest {
     void shouldCallDynamoToUpdateMfaMethodAndCreateAuditEventWhenAccountRecovery() {
         setupPhoneNumberCode(
                 new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS, VALID_CODE, JourneyType.ACCOUNT_RECOVERY, PHONE_NUMBER));
+                        MFAMethodType.SMS, VALID_CODE, JourneyType.ACCOUNT_RECOVERY, PHONE_NUMBER),
+                CodeRequestType.SMS_ACCOUNT_RECOVERY);
 
         phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
 
@@ -176,7 +183,8 @@ class PhoneNumberCodeProcessorTest {
     @Test
     void shouldNotUpdateDynamoOrCreateAuditEventWhenSignIn() {
         setupPhoneNumberCode(
-                new VerifyMfaCodeRequest(MFAMethodType.SMS, VALID_CODE, JourneyType.SIGN_IN));
+                new VerifyMfaCodeRequest(MFAMethodType.SMS, VALID_CODE, JourneyType.SIGN_IN),
+                CodeRequestType.SMS_REGISTRATION);
 
         phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
 
@@ -184,7 +192,7 @@ class PhoneNumberCodeProcessorTest {
         verifyNoInteractions(auditService);
     }
 
-    public void setupPhoneNumberCode(CodeRequest codeRequest) {
+    public void setupPhoneNumberCode(CodeRequest codeRequest, CodeRequestType codeRequestType) {
         when(session.getEmailAddress()).thenReturn(TEST_EMAIL_ADDRESS);
         when(session.getSessionId()).thenReturn(SESSION_ID);
         when(session.getInternalCommonSubjectIdentifier()).thenReturn(INTERNAL_SUB_ID);
@@ -194,7 +202,8 @@ class PhoneNumberCodeProcessorTest {
         when(codeStorageService.getOtpCode(
                         TEST_EMAIL_ADDRESS, NotificationType.VERIFY_PHONE_NUMBER))
                 .thenReturn(Optional.of(VALID_CODE));
-        when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
+        when(codeStorageService.isBlockedForEmail(
+                        TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX + codeRequestType))
                 .thenReturn(false);
         phoneNumberCodeProcessor =
                 new PhoneNumberCodeProcessor(
@@ -228,14 +237,16 @@ class PhoneNumberCodeProcessorTest {
                         accountModifiersService);
     }
 
-    public void setUpBlockedPhoneNumberCode(CodeRequest codeRequest) {
+    public void setUpBlockedPhoneNumberCode(
+            CodeRequest codeRequest, CodeRequestType codeRequestType) {
         when(session.getEmailAddress()).thenReturn(TEST_EMAIL_ADDRESS);
         when(userContext.getSession()).thenReturn(session);
         when(configurationService.isTestClientsEnabled()).thenReturn(false);
         when(codeStorageService.getOtpCode(
                         TEST_EMAIL_ADDRESS, NotificationType.VERIFY_PHONE_NUMBER))
                 .thenReturn(Optional.of(VALID_CODE));
-        when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
+        when(codeStorageService.isBlockedForEmail(
+                        TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX + codeRequestType))
                 .thenReturn(true);
         phoneNumberCodeProcessor =
                 new PhoneNumberCodeProcessor(
