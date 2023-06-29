@@ -126,7 +126,7 @@ jobs:
         ports:
           - 6379:6379
       dynamodb:
-        image: amazon/dynamodb-local:latest
+        image: amazon/dynamodb-local:1.22.0
         options: >-
           --health-cmd "curl http://localhost:8000"
           --health-interval 10s
