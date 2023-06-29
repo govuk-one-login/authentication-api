@@ -7,6 +7,7 @@ import uk.gov.di.authentication.shared.validation.Required;
 
 public class NotifyRequest {
 
+    // I'm an extra comment!
     @Expose
     @SerializedName("notificationType")
     @Required
