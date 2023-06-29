@@ -33,7 +33,7 @@ services:
   dynamodb:
     command: "-jar DynamoDBLocal.jar -sharedDb -optimizeDbBeforeStartup -dbPath ."
     working_dir: /home/dynamodblocal
-    image: amazon/dynamodb-local:latest
+    image: amazon/dynamodb-local:1.22.0
     healthcheck:
       test: curl http://localhost:8000
       interval: 5s
