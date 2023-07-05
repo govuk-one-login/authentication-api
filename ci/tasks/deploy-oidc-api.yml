@@ -61,8 +61,6 @@ run:
         -var "deployer_role_arn=${DEPLOYER_ROLE_ARN}" \
         -var "notify_api_key=${NOTIFY_API_KEY}" \
         -var "environment=${DEPLOY_ENVIRONMENT}" \
-        -var 'logging_endpoint_arn=arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prod' \
-        -var 'logging_endpoint_arns=["arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prod"]' \
         -var "shared_state_bucket=${STATE_BUCKET}" \
         -var "test_client_verify_email_otp=${TEST_CLIENT_VERIFY_EMAIL_OTP}" \
         -var "test_client_verify_phone_number_otp=${TEST_CLIENT_VERIFY_PHONE_NUMBER_OTP}" \
