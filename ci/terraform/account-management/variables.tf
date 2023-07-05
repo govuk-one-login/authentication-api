@@ -146,7 +146,7 @@ variable "waf_alarm_blocked_reqeuest_threshold" {
 }
 
 variable "lambda_min_concurrency" {
-  default     = 10
+  default     = 1
   type        = number
   description = "The number of lambda instance to keep 'warm'"
 }
@@ -162,7 +162,7 @@ variable "localstack_endpoint" {
 }
 
 variable "endpoint_memory_size" {
-  default = 4096
+  default = 1024
   type    = number
 }
 
@@ -183,7 +183,7 @@ variable "performance_tuning" {
 }
 
 variable "lambda_max_concurrency" {
-  default = 5
+  default = 0
 }
 
 variable "scaling_trigger" {

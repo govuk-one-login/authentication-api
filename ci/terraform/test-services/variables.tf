@@ -11,7 +11,7 @@ variable "test_services-api-lambda_zip_file" {
 }
 
 variable "lambda_min_concurrency" {
-  default     = 10
+  default     = 1
   type        = number
   description = "The number of lambda instance to keep 'warm'"
 }
