@@ -45,8 +45,8 @@ run:
         -var "deployer_role_arn=${DEPLOYER_ROLE_ARN}" \
         -var "environment=${DEPLOY_ENVIRONMENT}" \
         -var "shared_state_bucket=${STATE_BUCKET}" \
-        -var 'logging_endpoint_arn=arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prod' \
-        -var 'logging_endpoint_arns=["arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prod"]' \
+        -var 'logging_endpoint_arn=arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython' \
+        -var 'logging_endpoint_arns=["arn:aws:logs:eu-west-2:885513274347:destination:csls_cw_logs_destination_prodpython"]' \
         -var "audit_storage_expiry_days=${AUDIT_STORE_EXPIRY_DAYS}" \
         -var "txma_obfuscation_secret_arn=${TXMA_OBFUSCATION_SECRET_ARN}" \
         -var "txma_obfuscation_secret_kms_key_arn=${TXMA_OBFUSCATION_SECRET_KMS_KEY_ARN}" \
