@@ -34,6 +34,8 @@ import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
+import uk.gov.di.authentication.oidc.exceptions.InvalidJWEException;
+import uk.gov.di.authentication.oidc.exceptions.InvalidPublicKeyException;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
@@ -232,7 +234,7 @@ public class AuthorizationService {
             return encryptedJWT;
         } catch (ParseException | JOSEException e) {
             LOG.error("Error when generating SignedJWT", e);
-            throw new RuntimeException(e);
+            throw new InvalidJWEException("Error when generating SignedJWT", e);
         }
     }
 
@@ -252,10 +254,10 @@ public class AuthorizationService {
             return EncryptedJWT.parse(jweObject.serialize());
         } catch (JOSEException e) {
             LOG.error("Error when encrypting SignedJWT", e);
-            throw new RuntimeException(e);
+            throw new InvalidJWEException("Error when encrypting SignedJWT", e);
         } catch (ParseException e) {
             LOG.error("Error when parsing JWE object to EncryptedJWT", e);
-            throw new RuntimeException(e);
+            throw new InvalidJWEException("Error when parsing JWE object to EncryptedJWT", e);
         }
     }
 
@@ -270,7 +272,7 @@ public class AuthorizationService {
                     .toRSAPublicKey();
         } catch (JOSEException e) {
             LOG.error("Error parsing the public key to RSAPublicKey", e);
-            throw new RuntimeException();
+            throw new InvalidPublicKeyException("Error parsing the public key to RSAPublicKey", e);
         }
     }
 

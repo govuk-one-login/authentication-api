@@ -13,6 +13,7 @@ import software.amazon.awssdk.services.ssm.model.ParameterNotFoundException;
 import uk.gov.di.authentication.shared.configuration.AuditPublisherConfiguration;
 import uk.gov.di.authentication.shared.configuration.BaseLambdaConfiguration;
 import uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType;
+import uk.gov.di.authentication.shared.exceptions.SSMParameterNotFoundException;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 
 import java.net.URI;
@@ -207,8 +208,9 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                     GetParameterRequest.builder().withDecryption(true).name(paramName).build();
             return getSsmClient().getParameter(request).parameter().value();
         } catch (ParameterNotFoundException e) {
-            LOG.error("No parameter exists with name: {}", paramName);
-            throw new RuntimeException(e);
+            String message = String.format("No parameter exists with name: %s", paramName);
+            LOG.error(message);
+            throw new SSMParameterNotFoundException(message, e);
         }
     }
 
