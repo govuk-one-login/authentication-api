@@ -5,9 +5,23 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent.ProxyRequestContext;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent.RequestIdentity;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.jose.EncryptionMethod;
 import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWEAlgorithm;
+import com.nimbusds.jose.JWEHeader;
+import com.nimbusds.jose.JWEObject;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.Payload;
+import com.nimbusds.jose.crypto.ECDSASigner;
+import com.nimbusds.jose.crypto.RSAEncrypter;
+import com.nimbusds.jose.jwk.Curve;
+import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
+import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
+import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.PlainJWT;
+import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
@@ -49,6 +63,7 @@ import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
+import java.text.ParseException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -102,6 +117,18 @@ class AuthorisationHandlerTest {
     private static final String REDIRECT_URI = "https://localhost:8080";
     private static final String SCOPE = "email,openid,profile";
     private static final String RESPONSE_TYPE = "code";
+    private static final String TEST_ORCHESTRATOR_CLIENT_ID = "test-orch-client-id";
+    private static final String RP_CLIENT_NAME = "test-rp-client-name";
+    private static final EncryptedJWT TEST_ENCRYPTED_JWT;
+
+    static {
+        try {
+            TEST_ENCRYPTED_JWT = createEncryptedJWT();
+        } catch (JOSEException | ParseException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private Session session;
     private static final String CLIENT_SESSION_ID = "client-session-id";
     private static final State STATE = new State();
@@ -117,6 +144,8 @@ class AuthorisationHandlerTest {
     public void setUp() {
         when(configService.getDomainName()).thenReturn("auth.ida.digital.cabinet-office.gov.uk");
         when(configService.getLoginURI()).thenReturn(LOGIN_URL);
+        when(configService.getOrchestrationClientIdForAuthenticationOauthFlow())
+                .thenReturn(TEST_ORCHESTRATOR_CLIENT_ID);
         when(configService.getSessionCookieAttributes()).thenReturn("Secure; HttpOnly;");
         when(configService.getSessionCookieMaxAge()).thenReturn(3600);
         when(configService.getPersistentCookieMaxAge()).thenReturn(34190000);
@@ -186,6 +215,24 @@ class AuthorisationHandlerTest {
                         AuditService.UNKNOWN,
                         PERSISTENT_SESSION_ID,
                         pair("client-name", "client-name"));
+    }
+
+    @Test
+    void
+            shouldRedirectToLoginWhenUserHasNoExistingSessionWithSignedAndEncryptedJwtInBodyWhenAuthOrchSplitFeatureFlagEnabled() {
+        when(configService.isAuthOrchSplitEnabled()).thenReturn(true);
+        when(authorizationService.getSignedAndEncryptedJWT(any())).thenReturn(TEST_ENCRYPTED_JWT);
+        Map<String, String> requestParams = buildRequestParams(null);
+        APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+        event.setRequestContext(
+                new ProxyRequestContext()
+                        .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+        APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
+
+        assertThat(response, hasStatus(302));
+
+        var locationHeader = response.getHeaders().get(ResponseHeaders.LOCATION);
+        assertThat(locationHeader, containsString(TEST_ENCRYPTED_JWT.serialize()));
     }
 
     @ParameterizedTest
@@ -727,5 +774,28 @@ class AuthorisationHandlerTest {
                 .withClientName("test-client")
                 .withSectorIdentifierUri("https://test.com")
                 .withSubjectType("public");
+    }
+
+    private static EncryptedJWT createEncryptedJWT() throws JOSEException, ParseException {
+        var ecSigningKey =
+                new ECKeyGenerator(Curve.P_256)
+                        .keyID("key-id")
+                        .algorithm(JWSAlgorithm.ES256)
+                        .generate();
+        var ecdsaSigner = new ECDSASigner(ecSigningKey);
+        var jwtClaimsSet = new JWTClaimsSet.Builder().claim("client-name", RP_CLIENT_NAME).build();
+        var jwsHeader = new JWSHeader(JWSAlgorithm.ES256);
+        var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSet);
+        signedJWT.sign(ecdsaSigner);
+        var rsaEncryptionKey =
+                new RSAKeyGenerator(2048).keyID("encrytion-key-id").generate().toRSAPublicKey();
+        var jweObject =
+                new JWEObject(
+                        new JWEHeader.Builder(JWEAlgorithm.RSA_OAEP_256, EncryptionMethod.A256GCM)
+                                .contentType("JWT")
+                                .build(),
+                        new Payload(signedJWT));
+        jweObject.encrypt(new RSAEncrypter(rsaEncryptionKey));
+        return EncryptedJWT.parse(jweObject.serialize());
     }
 }

@@ -13,6 +13,7 @@ import software.amazon.awssdk.services.ssm.model.ParameterNotFoundException;
 import uk.gov.di.authentication.shared.configuration.AuditPublisherConfiguration;
 import uk.gov.di.authentication.shared.configuration.BaseLambdaConfiguration;
 import uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType;
+import uk.gov.di.authentication.shared.exceptions.SSMParameterNotFoundException;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 
 import java.net.URI;
@@ -106,6 +107,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Integer.parseInt(System.getenv().getOrDefault("CODE_AUTH_APP_ALLOWED_WINDOWS", "9"));
     }
 
+    public boolean isAuthOrchSplitEnabled() {
+        return System.getenv().getOrDefault("SUPPORT_AUTH_ORCH_SPLIT", "false").equals("true");
+    }
+
     public String getContactUsLinkRoute() {
         return System.getenv().getOrDefault("CONTACT_US_LINK_ROUTE", "");
     }
@@ -190,6 +195,27 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public String getFrontendBaseUrl() {
         return System.getenv().getOrDefault("FRONTEND_BASE_URL", "");
+    }
+
+    public String getOrchestrationToAuthenticationTokenSigningKeyAlias() {
+        return System.getenv("ORCH_TO_AUTH_TOKEN_SIGNING_KEY_ALIAS");
+    }
+
+    public String getOrchestrationToAuthenticationEncryptionPublicKey() {
+        var paramName = format("{0}-auth-public-encryption-key", getEnvironment());
+        try {
+            var request =
+                    GetParameterRequest.builder().withDecryption(true).name(paramName).build();
+            return getSsmClient().getParameter(request).parameter().value();
+        } catch (ParameterNotFoundException e) {
+            String message = String.format("No parameter exists with name: %s", paramName);
+            LOG.error(message);
+            throw new SSMParameterNotFoundException(message, e);
+        }
+    }
+
+    public String getOrchestrationClientIdForAuthenticationOauthFlow() {
+        return System.getenv().getOrDefault("ORCH_TO_AUTHORISATION_CLIENT_ID", "");
     }
 
     public URI getGovUKAccountsURL() {

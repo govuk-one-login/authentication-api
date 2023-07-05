@@ -1,5 +1,21 @@
 package uk.gov.di.authentication.oidc.services;
 
+import com.nimbusds.jose.EncryptionMethod;
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWEAlgorithm;
+import com.nimbusds.jose.JWEHeader;
+import com.nimbusds.jose.JWEObject;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.Payload;
+import com.nimbusds.jose.crypto.RSAEncrypter;
+import com.nimbusds.jose.crypto.impl.ECDSA;
+import com.nimbusds.jose.jwk.JWK;
+import com.nimbusds.jose.jwk.RSAKey;
+import com.nimbusds.jose.util.Base64URL;
+import com.nimbusds.jwt.EncryptedJWT;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
@@ -14,7 +30,12 @@ import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.services.kms.model.SignRequest;
+import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
+import uk.gov.di.authentication.oidc.exceptions.InvalidJWEException;
+import uk.gov.di.authentication.oidc.exceptions.InvalidPublicKeyException;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
@@ -23,8 +44,11 @@ import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
+import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
 import java.net.URI;
+import java.security.interfaces.RSAPublicKey;
+import java.text.ParseException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -37,20 +61,30 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFie
 public class AuthorizationService {
 
     public static final String VTR_PARAM = "vtr";
+    private static final JWSAlgorithm SIGNING_ALGORITHM = JWSAlgorithm.ES256;
+    private final ConfigurationService configurationService;
     private final DynamoClientService dynamoClientService;
     private final IPVCapacityService ipvCapacityService;
+    private final KmsConnectionService kmsConnectionService;
     private static final Logger LOG = LogManager.getLogger(AuthorizationService.class);
 
     public AuthorizationService(
-            DynamoClientService dynamoClientService, IPVCapacityService ipvCapacityService) {
+            ConfigurationService configurationService,
+            DynamoClientService dynamoClientService,
+            IPVCapacityService ipvCapacityService,
+            KmsConnectionService kmsConnectionService) {
+        this.configurationService = configurationService;
         this.dynamoClientService = dynamoClientService;
         this.ipvCapacityService = ipvCapacityService;
+        this.kmsConnectionService = kmsConnectionService;
     }
 
     public AuthorizationService(ConfigurationService configurationService) {
         this(
+                configurationService,
                 new DynamoClientService(configurationService),
-                new IPVCapacityService(configurationService));
+                new IPVCapacityService(configurationService),
+                new KmsConnectionService(configurationService));
     }
 
     public boolean isClientRedirectUriValid(ClientID clientID, URI redirectURI)
@@ -167,6 +201,79 @@ public class AuthorizationService {
                             redirectURI));
         }
         return Optional.empty();
+    }
+
+    public EncryptedJWT getSignedAndEncryptedJWT(String clientName) {
+        LOG.info("Generating signed and encrypted JWT");
+        var jwsHeader = new JWSHeader(SIGNING_ALGORITHM);
+        var claimsBuilder = new JWTClaimsSet.Builder().claim("client-name", clientName);
+        var encodedHeader = jwsHeader.toBase64URL();
+        var encodedClaims = Base64URL.encode(claimsBuilder.build().toString());
+        var message = encodedHeader + "." + encodedClaims;
+        var signRequest =
+                SignRequest.builder()
+                        .message(SdkBytes.fromByteArray(message.getBytes()))
+                        .keyId(
+                                configurationService
+                                        .getOrchestrationToAuthenticationTokenSigningKeyAlias())
+                        .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
+                        .build();
+        try {
+            LOG.info("Signing request JWT");
+            var signResult = kmsConnectionService.sign(signRequest);
+            LOG.info("Request JWT has been signed successfully");
+            var signature =
+                    Base64URL.encode(
+                                    ECDSA.transcodeSignatureToConcat(
+                                            signResult.signature().asByteArray(),
+                                            ECDSA.getSignatureByteArrayLength(SIGNING_ALGORITHM)))
+                            .toString();
+            var signedJWT = SignedJWT.parse(message + "." + signature);
+            var encryptedJWT = encryptJWT(signedJWT);
+            LOG.info("Encrypted request JWT has been generated");
+            return encryptedJWT;
+        } catch (ParseException | JOSEException e) {
+            LOG.error("Error when generating SignedJWT", e);
+            throw new InvalidJWEException("Error when generating SignedJWT", e);
+        }
+    }
+
+    private EncryptedJWT encryptJWT(SignedJWT signedJWT) {
+        try {
+            LOG.info("Encrypting SignedJWT");
+            var publicEncryptionKey = getPublicKey();
+            var jweObject =
+                    new JWEObject(
+                            new JWEHeader.Builder(
+                                            JWEAlgorithm.RSA_OAEP_256, EncryptionMethod.A256GCM)
+                                    .contentType("JWT")
+                                    .build(),
+                            new Payload(signedJWT));
+            jweObject.encrypt(new RSAEncrypter(publicEncryptionKey));
+            LOG.info("SignedJWT has been successfully encrypted");
+            return EncryptedJWT.parse(jweObject.serialize());
+        } catch (JOSEException e) {
+            LOG.error("Error when encrypting SignedJWT", e);
+            throw new InvalidJWEException("Error when encrypting SignedJWT", e);
+        } catch (ParseException e) {
+            LOG.error("Error when parsing JWE object to EncryptedJWT", e);
+            throw new InvalidJWEException("Error when parsing JWE object to EncryptedJWT", e);
+        }
+    }
+
+    private RSAPublicKey getPublicKey() {
+        try {
+            LOG.info("Getting Orchestration to Authentication Encryption Public Key");
+            var orchToAuthEncryptionPublicKey =
+                    configurationService.getOrchestrationToAuthenticationEncryptionPublicKey();
+            return new RSAKey.Builder(
+                            (RSAKey) JWK.parseFromPEMEncodedObjects(orchToAuthEncryptionPublicKey))
+                    .build()
+                    .toRSAPublicKey();
+        } catch (JOSEException e) {
+            LOG.error("Error parsing the public key to RSAPublicKey", e);
+            throw new InvalidPublicKeyException("Error parsing the public key to RSAPublicKey", e);
+        }
     }
 
     public AuthenticationErrorResponse generateAuthenticationErrorResponse(

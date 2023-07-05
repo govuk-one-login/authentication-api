@@ -1,7 +1,17 @@
 package uk.gov.di.authentication.oidc.services;
 
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.crypto.ECDSASigner;
+import com.nimbusds.jose.crypto.RSADecrypter;
+import com.nimbusds.jose.crypto.impl.ECDSA;
+import com.nimbusds.jose.jwk.Curve;
+import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
+import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.PlainJWT;
+import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
@@ -22,15 +32,27 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.services.kms.model.SignRequest;
+import software.amazon.awssdk.services.kms.model.SignResponse;
+import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
+import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.text.ParseException;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -44,6 +66,7 @@ import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
@@ -55,9 +78,14 @@ class AuthorizationServiceTest {
     private static final ClientID CLIENT_ID = new ClientID();
     private static final State STATE = new State();
     private static final Nonce NONCE = new Nonce();
+    private static final String KEY_ID = "14342354354353";
+    private static final String CLIENT_NAME = "test-client-name";
     private AuthorizationService authorizationService;
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final IPVCapacityService ipvCapacityService = mock(IPVCapacityService.class);
+    private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
+    private PrivateKey privateKey;
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
@@ -65,7 +93,20 @@ class AuthorizationServiceTest {
 
     @BeforeEach
     void setUp() {
-        authorizationService = new AuthorizationService(dynamoClientService, ipvCapacityService);
+        authorizationService =
+                new AuthorizationService(
+                        configurationService,
+                        dynamoClientService,
+                        ipvCapacityService,
+                        kmsConnectionService);
+        var keyPair = generateRsaKeyPair();
+        privateKey = keyPair.getPrivate();
+        String publicCertificateAsPem =
+                "-----BEGIN PUBLIC KEY-----\n"
+                        + Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded())
+                        + "\n-----END PUBLIC KEY-----\n";
+        when(configurationService.getOrchestrationToAuthenticationEncryptionPublicKey())
+                .thenReturn(publicCertificateAsPem);
     }
 
     @AfterEach
@@ -599,6 +640,35 @@ class AuthorizationServiceTest {
                 equalTo(dynamoClientServiceReturns));
     }
 
+    @Test
+    void shouldConstructASignedAndEncryptedRequestJWT() throws JOSEException, ParseException {
+        var ecSigningKey =
+                new ECKeyGenerator(Curve.P_256)
+                        .keyID(KEY_ID)
+                        .algorithm(JWSAlgorithm.ES256)
+                        .generate();
+        var ecdsaSigner = new ECDSASigner(ecSigningKey);
+        var jwtClaimsSet = new JWTClaimsSet.Builder().build();
+        var jwsHeader = new JWSHeader(JWSAlgorithm.ES256);
+        var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSet);
+        signedJWT.sign(ecdsaSigner);
+        byte[] signatureToDER = ECDSA.transcodeSignatureToDER(signedJWT.getSignature().decode());
+        var signResult =
+                SignResponse.builder()
+                        .signature(SdkBytes.fromByteArray(signatureToDER))
+                        .keyId(KEY_ID)
+                        .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
+                        .build();
+        when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(signResult);
+
+        var encryptedJWT = authorizationService.getSignedAndEncryptedJWT(CLIENT_NAME);
+
+        var signedJWTResponse = decryptJWT(encryptedJWT);
+
+        assertThat(
+                signedJWTResponse.getJWTClaimsSet().getClaim("client-name"), equalTo(CLIENT_NAME));
+    }
+
     private ClientRegistry generateClientRegistry(String redirectURI, String clientID) {
         return generateClientRegistry(redirectURI, clientID, singletonList("openid"), false);
     }
@@ -640,5 +710,21 @@ class AuthorizationServiceTest {
         claimsRequest.ifPresent(authRequestBuilder::claims);
 
         return authRequestBuilder.build();
+    }
+
+    private SignedJWT decryptJWT(EncryptedJWT encryptedJWT) throws JOSEException {
+        encryptedJWT.decrypt(new RSADecrypter(privateKey));
+        return encryptedJWT.getPayload().toSignedJWT();
+    }
+
+    private KeyPair generateRsaKeyPair() {
+        KeyPairGenerator kpg;
+        try {
+            kpg = KeyPairGenerator.getInstance("RSA");
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
+        kpg.initialize(2048);
+        return kpg.generateKeyPair();
     }
 }
