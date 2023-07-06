@@ -59,6 +59,7 @@ import static uk.gov.di.authentication.shared.entity.IdentityClaims.VTM;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ClientSubjectHelper.getSectorIdentifierForClient;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
+import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
@@ -198,8 +199,12 @@ public class IPVCallbackHandler
                                                     "Client registry not found with given clientId"));
 
             var errorObject =
-                    ipvAuthorisationService.validateResponse(
-                            input.getQueryStringParameters(), session.getSessionId());
+                    segmentedFunctionCall(
+                            "validateIpvAuthResponse",
+                            () ->
+                                    ipvAuthorisationService.validateResponse(
+                                            input.getQueryStringParameters(),
+                                            session.getSessionId()));
             if (errorObject.isPresent()) {
                 return generateAuthenticationErrorResponse(
                         authRequest,
@@ -228,9 +233,15 @@ public class IPVCallbackHandler
                     persistentId);
 
             var tokenRequest =
-                    ipvTokenService.constructTokenRequest(
-                            input.getQueryStringParameters().get("code"));
-            var tokenResponse = ipvTokenService.sendTokenRequest(tokenRequest);
+                    segmentedFunctionCall(
+                            "constructTokenRequest",
+                            () ->
+                                    ipvTokenService.constructTokenRequest(
+                                            input.getQueryStringParameters().get("code")));
+            var tokenResponse =
+                    segmentedFunctionCall(
+                            "sendIpvTokenRequest",
+                            () -> ipvTokenService.sendTokenRequest(tokenRequest));
             if (!tokenResponse.indicatesSuccess()) {
                 LOG.error(
                         "IPV TokenResponse was not successful: {}",
@@ -258,11 +269,14 @@ public class IPVCallbackHandler
                     userProfile.getPhoneNumber(),
                     persistentId);
             var pairwiseSubject =
-                    ClientSubjectHelper.getSubject(
-                            userProfile,
-                            clientRegistry,
-                            dynamoService,
-                            configurationService.getInternalSectorUri());
+                    segmentedFunctionCall(
+                            "calculatePairwiseSubject",
+                            () ->
+                                    ClientSubjectHelper.getSubject(
+                                            userProfile,
+                                            clientRegistry,
+                                            dynamoService,
+                                            configurationService.getInternalSectorUri()));
 
             var userIdentityUserInfo =
                     ipvTokenService.sendIpvUserIdentityRequest(
@@ -329,7 +343,9 @@ public class IPVCallbackHandler
                     AuditService.UNKNOWN,
                     userProfile.getPhoneNumber(),
                     persistentId);
-            saveIdentityClaimsToDynamo(pairwiseSubject, userIdentityUserInfo);
+            segmentedFunctionCall(
+                    "saveIdentityClaims",
+                    () -> saveIdentityClaimsToDynamo(pairwiseSubject, userIdentityUserInfo));
             var redirectURI =
                     ConstructUriHelper.buildURI(
                             configurationService.getLoginURI().toString(), REDIRECT_PATH);
