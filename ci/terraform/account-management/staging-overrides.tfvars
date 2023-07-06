@@ -1,3 +1,4 @@
+internal_sector_uri    = "https://identity.staging.account.gov.uk"
 lambda_max_concurrency = 3
 lambda_min_concurrency = 1
 endpoint_memory_size   = 1024
