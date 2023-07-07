@@ -215,7 +215,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public String getOrchestrationClientIdForAuthenticationOauthFlow() {
-        return System.getenv().getOrDefault("ORCH_TO_AUTHORISATION_CLIENT_ID", "");
+        return System.getenv()
+                .getOrDefault("ORCH_TO_AUTHORISATION_CLIENT_ID", "orchestration-client-default");
     }
 
     public URI getGovUKAccountsURL() {
