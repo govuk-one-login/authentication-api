@@ -31,13 +31,3 @@ stub_rp_clients = [
 
 logging_endpoint_enabled = false
 enforce_code_signing     = false
-
-test_users = [
-  {
-    username                     = "user.with.auth.app@digital.cabinet-office.gov.uk"
-    hashed_password              = "hashedpassword"
-    phone                        = "1234"
-    terms_and_conditions_version = "1.0"
-    auth_app_secret              = "authappsecret"
-  }
-]
