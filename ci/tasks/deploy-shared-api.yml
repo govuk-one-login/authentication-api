@@ -18,7 +18,6 @@ params:
   DI_TOOLS_ACCOUNT_NUMBER: ((di-tools-account-id-non-prod))
 inputs:
   - name: api-terraform-src
-  - name: test-users-seed-data
 outputs:
   - name: terraform-outputs
 run:
@@ -26,12 +25,6 @@ run:
   args:
     - -euc
     - |
-      if test -f "test-users-seed-data/test-users.vars"; then
-        TEST_USERS=$(cat test-users-seed-data/test-users.vars)
-      else
-        TEST_USERS="[]"
-      fi
-
       if [[ "${DEPLOY_ENVIRONMENT}" == "build" ]]; then
         ENABLE_STATE_LOCKING=true
       else
@@ -51,7 +44,6 @@ run:
         -var "deployer_role_arn=${DEPLOYER_ROLE_ARN}" \
         -var "environment=${DEPLOY_ENVIRONMENT}" \
         -var "test_client_email_allowlist=${TEST_CLIENT_EMAIL_ALLOWLIST}" \
-        -var "test_users=${TEST_USERS}" \
         -var "password_pepper=${PASSWORD_PEPPER}" \
         -var "common_state_bucket=${STATE_BUCKET}" \
         -var "di_tools_signing_profile_version_arn=${DI_TOOLS_SIGNING_PROFILE_VERSION_ARN}" \
