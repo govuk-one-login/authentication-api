@@ -9,6 +9,7 @@ import uk.gov.di.authentication.shared.entity.NoSessionEntity;
 import uk.gov.di.authentication.shared.exceptions.NoSessionException;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import static java.lang.String.format;
@@ -100,6 +101,7 @@ public class NoSessionOrchestrationService {
     private boolean isAccessDeniedErrorAndStatePresent(
             Map<String, String> queryStringParameters, boolean noSessionResponseEnabled) {
         return noSessionResponseEnabled
+                && Objects.nonNull(queryStringParameters)
                 && queryStringParameters.containsKey("error")
                 && queryStringParameters.get("error").equals(OAuth2Error.ACCESS_DENIED.getCode())
                 && queryStringParameters.containsKey("state")
