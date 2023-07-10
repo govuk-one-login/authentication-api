@@ -306,7 +306,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         var newCodeRequestBlockPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
         var codeAttemptsBlockedPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
 
-        if (codeRequestCount == configurationService.getCodeMaxRetries()) {
+        if (codeRequestCount > configurationService.getCodeMaxRetries()) {
             LOG.info(
                     "User has requested too many OTP codes. Setting block with prefix: {}",
                     newCodeRequestBlockPrefix);

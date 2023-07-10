@@ -1020,6 +1020,7 @@ class SendNotificationHandlerTest {
         session.incrementCodeRequestCount(notificationType, journeyType);
         session.incrementCodeRequestCount(notificationType, journeyType);
         session.incrementCodeRequestCount(notificationType, journeyType);
+        session.incrementCodeRequestCount(notificationType, journeyType);
     }
 
     private void usingValidSession() {
