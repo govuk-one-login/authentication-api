@@ -42,7 +42,7 @@ jobs:
         run: |
           aws s3 cp s3://${{ env.DESTINATION_BUCKET }} ./artifacts \
             --recursive --exclude "*" \
-            --include "signed-client-registry-api-0445957fe88d1b3224442a8d3935e877753c5d77-*"
+            --include "signed-client-registry-api-${{ github.sha }}-*"
           mv artifacts/signed-client-registry-api-*.zip artifacts/client-registry-api.zip
 
       - name: Download and copy Doc Checking App API signed artifact
@@ -50,7 +50,7 @@ jobs:
         run: |
           aws s3 cp s3://${{ env.DESTINATION_BUCKET }} ./artifacts \
             --recursive --exclude "*" \
-            --include "signed-doc-checking-app-api-0445957fe88d1b3224442a8d3935e877753c5d77-*"
+            --include "signed-doc-checking-app-api-${{ github.sha }}-*"
           mv artifacts/signed-doc-checking-app-api-*.zip artifacts/doc-checking-app-api.zip
 
       - name: Download and copy Frontend API signed artifact
@@ -58,7 +58,7 @@ jobs:
         run: |
           aws s3 cp s3://${{ env.DESTINATION_BUCKET }} ./artifacts \
             --recursive --exclude "*" \
-            --include "signed-frontend-api-0445957fe88d1b3224442a8d3935e877753c5d77-*"
+            --include "signed-frontend-api-${{ github.sha }}-*"
           mv artifacts/signed-frontend-api-*.zip artifacts/frontend-api.zip
 
       - name: Download and copy IPV API signed artifact
@@ -66,7 +66,7 @@ jobs:
         run: |
           aws s3 cp s3://${{ env.DESTINATION_BUCKET }} ./artifacts \
             --recursive --exclude "*" \
-            --include "signed-ipv-api-0445957fe88d1b3224442a8d3935e877753c5d77-*"
+            --include "signed-ipv-api-${{ github.sha }}-*"
           mv artifacts/signed-ipv-api-*.zip artifacts/ipv-api.zip
 
       - name: Upload OIDC Terraform files
