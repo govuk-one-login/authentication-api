@@ -8,6 +8,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordRequest;
+import uk.gov.di.authentication.frontendapi.exceptions.SerializationException;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
@@ -32,7 +33,6 @@ import java.util.Optional;
 
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PASSWORD_RESET_REQUESTED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PASSWORD_RESET_REQUESTED_FOR_TEST_CLIENT;
-import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1001;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -123,12 +123,11 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
 
             return validatePasswordResetCount(request.getEmail(), userContext)
                     .map(t -> generateApiGatewayProxyErrorResponse(400, t))
-                    .orElse(processPasswordResetRequest(request, userContext, isTestClient));
+                    .orElseGet(
+                            () -> processPasswordResetRequest(request, userContext, isTestClient));
         } catch (SdkClientException ex) {
             LOG.error("Error sending message to queue", ex);
             return generateApiGatewayProxyResponse(500, "Error sending message to queue");
-        } catch (JsonException e) {
-            return generateApiGatewayProxyErrorResponse(400, ERROR_1001);
         } catch (ClientNotFoundException e) {
             LOG.warn("Client not found");
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
@@ -138,8 +137,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
     private APIGatewayProxyResponseEvent processPasswordResetRequest(
             ResetPasswordRequest resetPasswordRequest,
             UserContext userContext,
-            boolean isTestClient)
-            throws JsonException {
+            boolean isTestClient) {
         var code =
                 codeStorageService
                         .getOtpCode(resetPasswordRequest.getEmail(), RESET_PASSWORD_WITH_CODE)
@@ -155,7 +153,9 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                                 });
         sessionService.save(userContext.getSession().incrementPasswordResetCount());
 
-        if (!isTestClient) {
+        if (isTestClient) {
+            LOG.info("User is a TestClient so will NOT place message on queue");
+        } else {
             LOG.info("Placing message on queue");
             var notifyRequest =
                     new NotifyRequest(
@@ -163,9 +163,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                             RESET_PASSWORD_WITH_CODE,
                             code,
                             userContext.getUserLanguage());
-            sqsClient.send(serialiseRequest(notifyRequest));
-        } else {
-            LOG.info("User is a TestClient so will NOT place message on queue");
+            sqsClient.send(serialiseNotifyRequest(notifyRequest));
         }
         LOG.info("Successfully processed request");
         return generateEmptySuccessApiGatewayResponse();
@@ -190,7 +188,13 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         return Optional.empty();
     }
 
-    private String serialiseRequest(Object request) throws JsonException {
-        return objectMapper.writeValueAsString(request);
+    private String serialiseNotifyRequest(Object request) {
+        try {
+            return objectMapper.writeValueAsString(request);
+        } catch (JsonException e) {
+            LOG.error("Unexpected exception when serializing Notify request");
+            throw new SerializationException(
+                    "Unexpected exception when serializing Notify request");
+        }
     }
 }
