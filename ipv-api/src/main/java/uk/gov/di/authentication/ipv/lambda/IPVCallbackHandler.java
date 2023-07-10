@@ -16,7 +16,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
-import uk.gov.di.authentication.ipv.entity.IPVCallbackNoSessionException;
 import uk.gov.di.authentication.ipv.entity.IpvCallbackException;
 import uk.gov.di.authentication.ipv.entity.LogIds;
 import uk.gov.di.authentication.ipv.entity.SPOTClaims;
@@ -86,8 +85,6 @@ public class IPVCallbackHandler
     protected final Json objectMapper = SerializationService.getInstance();
     private static final String REDIRECT_PATH = "ipv-callback";
     private static final String ERROR_PAGE_REDIRECT_PATH = "error";
-    private static final String ERROR_PAGE_REDIRECT_PATH_NO_SESSION =
-            "ipv-callback-session-expiry-error";
     private final CookieHelper cookieHelper;
 
     public IPVCallbackHandler() {
@@ -176,8 +173,7 @@ public class IPVCallbackHandler
             var session =
                     sessionService
                             .readSessionFromRedis(sessionCookiesIds.getSessionId())
-                            .orElseThrow(
-                                    () -> new IPVCallbackNoSessionException("Session not found"));
+                            .orElseThrow(() -> new IpvCallbackException("Session not found"));
 
             attachSessionIdToLogs(session);
             var persistentId =
@@ -189,10 +185,7 @@ public class IPVCallbackHandler
             var clientSession =
                     clientSessionService
                             .getClientSession(clientSessionId)
-                            .orElseThrow(
-                                    () ->
-                                            new IPVCallbackNoSessionException(
-                                                    "ClientSession not found"));
+                            .orElseThrow(() -> new IpvCallbackException("ClientSession not found"));
 
             var authRequest = AuthenticationRequest.parse(clientSession.getAuthRequestParams());
             var clientId = authRequest.getClientID().getValue();
@@ -359,10 +352,9 @@ public class IPVCallbackHandler
             LOG.info("Successful IPV callback. Redirecting to frontend");
             return generateApiGatewayProxyResponse(
                     302, "", Map.of(ResponseHeaders.LOCATION, redirectURI.toString()), null);
-        } catch (NoSessionException e) {
-            LOG.warn(e.getMessage());
-            return redirectToFrontendErrorPage(ERROR_PAGE_REDIRECT_PATH_NO_SESSION);
-        } catch (IpvCallbackException | UnsuccessfulCredentialResponseException e) {
+        } catch (IpvCallbackException
+                | NoSessionException
+                | UnsuccessfulCredentialResponseException e) {
             LOG.warn(e.getMessage());
             return redirectToFrontendErrorPage();
         } catch (ParseException e) {
@@ -463,11 +455,7 @@ public class IPVCallbackHandler
     }
 
     private APIGatewayProxyResponseEvent redirectToFrontendErrorPage() {
-        return redirectToFrontendErrorPage(ERROR_PAGE_REDIRECT_PATH);
-    }
-
-    private APIGatewayProxyResponseEvent redirectToFrontendErrorPage(String errorPagePath) {
-        LOG.info("Redirecting to frontend error page: {}", errorPagePath);
+        LOG.info("Redirecting to frontend error page");
         return generateApiGatewayProxyResponse(
                 302,
                 "",
@@ -475,7 +463,7 @@ public class IPVCallbackHandler
                         ResponseHeaders.LOCATION,
                         ConstructUriHelper.buildURI(
                                         configurationService.getLoginURI().toString(),
-                                        errorPagePath)
+                                        ERROR_PAGE_REDIRECT_PATH)
                                 .toString()),
                 null);
     }
