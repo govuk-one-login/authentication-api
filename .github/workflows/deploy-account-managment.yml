@@ -6,11 +6,6 @@ env:
   ARTIFACT_BUCKET: build-auth-deploy-pipeli-githubartifactsourcebuck-1o4hcrnik6ayv
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "account-management"
   workflow_run:
     workflows: ["Build modules"]
     types:
