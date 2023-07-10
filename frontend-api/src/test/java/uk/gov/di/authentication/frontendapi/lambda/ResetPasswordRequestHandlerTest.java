@@ -282,6 +282,7 @@ class ResetPasswordRequestHandlerTest {
         verify(codeStorageService, never())
                 .saveOtpCode(anyString(), anyString(), anyLong(), any(NotificationType.class));
         verify(sessionService, never()).save(argThat(this::isSessionWithEmailSent));
+        verifyNoInteractions(awsSqsClient);
     }
 
     @Test
@@ -294,6 +295,7 @@ class ResetPasswordRequestHandlerTest {
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
+        verifyNoInteractions(awsSqsClient);
     }
 
     @Test
@@ -343,13 +345,14 @@ class ResetPasswordRequestHandlerTest {
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1022));
         verify(codeStorageService)
                 .saveBlockedForEmail(
                         TEST_EMAIL_ADDRESS,
                         PASSWORD_RESET_BLOCKED_KEY_PREFIX,
                         BLOCKED_EMAIL_DURATION);
         verify(session).resetPasswordResetCount();
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1022));
+        verifyNoInteractions(awsSqsClient);
     }
 
     @Test
@@ -368,13 +371,14 @@ class ResetPasswordRequestHandlerTest {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
 
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        var event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", sessionId));
         event.setBody(format("{ \"email\": \"%s\" }", TEST_EMAIL_ADDRESS));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        var result = handler.handleRequest(event, context);
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1023));
+        verifyNoInteractions(awsSqsClient);
     }
 
     private void usingValidSession() {
