@@ -342,7 +342,7 @@ task utilsTerraform (type: Terraform) {
     dependsOn "oidcTerraform"
 }
 
-sonarqube {
+sonar {
     properties {
         property "sonar.projectKey", "alphagov_di-authentication-api"
         property "sonar.organization", "alphagov"
