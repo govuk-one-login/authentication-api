@@ -27,7 +27,7 @@ public class VectorOfTrust {
 
     @Expose private LevelOfConfidence levelOfConfidence;
 
-    private VectorOfTrust(CredentialTrustLevel credentialTrustLevel) {
+    public VectorOfTrust(CredentialTrustLevel credentialTrustLevel) {
         this(credentialTrustLevel, Optional.empty());
     }
 

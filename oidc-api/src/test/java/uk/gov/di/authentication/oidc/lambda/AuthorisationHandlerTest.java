@@ -34,7 +34,6 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCError;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.apache.logging.log4j.core.LogEvent;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -74,6 +73,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -115,11 +115,15 @@ class AuthorisationHandlerTest {
     private static final String AWS_REQUEST_ID = "aws-request-id";
     private static final ClientID CLIENT_ID = new ClientID("test-id");
     private static final String REDIRECT_URI = "https://localhost:8080";
-    private static final String SCOPE = "email,openid,profile";
+    private static final String SCOPE = "email openid profile";
     private static final String RESPONSE_TYPE = "code";
     private static final String TEST_ORCHESTRATOR_CLIENT_ID = "test-orch-client-id";
     private static final String RP_CLIENT_NAME = "test-rp-client-name";
     private static final EncryptedJWT TEST_ENCRYPTED_JWT;
+    private static final Boolean IS_ONE_LOGIN = false;
+    private static final Boolean IS_COOKIE_CONSENT_SHARED = false;
+    private static final Boolean IS_CONSENT_REQUIRED = true;
+    private static final String RP_SERVICE_TYPE = "MANDATORY";
 
     static {
         try {
@@ -154,6 +158,8 @@ class AuthorisationHandlerTest {
                 .thenReturn(Optional.empty());
         when(authorizationService.getExistingOrCreateNewPersistentSessionId(any()))
                 .thenReturn(PERSISTENT_SESSION_ID);
+        when(authorizationService.getEffectiveVectorOfTrust(any()))
+                .thenReturn(new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL));
         when(userContext.getClient()).thenReturn(Optional.of(generateClientRegistry()));
         when(context.getAwsRequestId()).thenReturn(AWS_REQUEST_ID);
         handler =
@@ -171,12 +177,7 @@ class AuthorisationHandlerTest {
         when(clientSessionService.generateClientSession(any(), any(), any(), any()))
                 .thenReturn(clientSession);
         when(clientService.getClient(any())).thenReturn(Optional.of(clientRegistry));
-        when(clientRegistry.getClientName()).thenReturn("client-name");
-    }
-
-    @AfterEach
-    public void afterEach() {
-        //        verifyNoMoreInteractions(auditService);
+        populateRegistry();
     }
 
     @Test
@@ -214,7 +215,7 @@ class AuthorisationHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_SESSION_ID,
-                        pair("client-name", "client-name"));
+                        pair("client-name", RP_CLIENT_NAME));
     }
 
     @Test
@@ -281,8 +282,8 @@ class AuthorisationHandlerTest {
                             .get(ResponseHeaders.SET_COOKIE)
                             .contains(EXPECTED_LANGUAGE_COOKIE_STRING));
         } else {
-            assertTrue(
-                    !response.getMultiValueHeaders()
+            assertFalse(
+                    response.getMultiValueHeaders()
                             .get(ResponseHeaders.SET_COOKIE)
                             .contains("lng="));
         }
@@ -301,7 +302,7 @@ class AuthorisationHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_SESSION_ID,
-                        pair("client-name", "client-name"));
+                        pair("client-name", RP_CLIENT_NAME));
     }
 
     @Test
@@ -343,7 +344,7 @@ class AuthorisationHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_SESSION_ID,
-                        pair("client-name", "client-name"));
+                        pair("client-name", RP_CLIENT_NAME));
     }
 
     @Test
@@ -386,7 +387,7 @@ class AuthorisationHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_SESSION_ID,
-                        pair("client-name", "client-name"));
+                        pair("client-name", RP_CLIENT_NAME));
     }
 
     @Test
@@ -428,7 +429,7 @@ class AuthorisationHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_SESSION_ID,
-                        pair("client-name", "client-name"));
+                        pair("client-name", RP_CLIENT_NAME));
     }
 
     @Test
@@ -669,7 +670,7 @@ class AuthorisationHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PERSISTENT_SESSION_ID,
-                        pair("client-name", "client-name"));
+                        pair("client-name", RP_CLIENT_NAME));
     }
 
     private static Stream<Arguments> invalidPromptValues() {
@@ -783,12 +784,22 @@ class AuthorisationHandlerTest {
                         .algorithm(JWSAlgorithm.ES256)
                         .generate();
         var ecdsaSigner = new ECDSASigner(ecSigningKey);
-        var jwtClaimsSet = new JWTClaimsSet.Builder().claim("client-name", RP_CLIENT_NAME).build();
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .claim("client-name", RP_CLIENT_NAME)
+                        .claim("cookie-consent-shared", IS_COOKIE_CONSENT_SHARED)
+                        .claim("consent-required", IS_CONSENT_REQUIRED)
+                        .claim("is-one-login-service", IS_ONE_LOGIN)
+                        .claim("service-type", RP_SERVICE_TYPE)
+                        .claim("state", STATE)
+                        .claim("scopes", SCOPE)
+                        .claim("redirect-uri", REDIRECT_URI)
+                        .build();
         var jwsHeader = new JWSHeader(JWSAlgorithm.ES256);
         var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSet);
         signedJWT.sign(ecdsaSigner);
         var rsaEncryptionKey =
-                new RSAKeyGenerator(2048).keyID("encrytion-key-id").generate().toRSAPublicKey();
+                new RSAKeyGenerator(2048).keyID("encryption-key-id").generate().toRSAPublicKey();
         var jweObject =
                 new JWEObject(
                         new JWEHeader.Builder(JWEAlgorithm.RSA_OAEP_256, EncryptionMethod.A256GCM)
@@ -797,5 +808,13 @@ class AuthorisationHandlerTest {
                         new Payload(signedJWT));
         jweObject.encrypt(new RSAEncrypter(rsaEncryptionKey));
         return EncryptedJWT.parse(jweObject.serialize());
+    }
+
+    private void populateRegistry() {
+        when(clientRegistry.getClientName()).thenReturn(RP_CLIENT_NAME);
+        when(clientRegistry.isCookieConsentShared()).thenReturn(IS_COOKIE_CONSENT_SHARED);
+        when(clientRegistry.isConsentRequired()).thenReturn(IS_CONSENT_REQUIRED);
+        when(clientRegistry.isOneLoginService()).thenReturn(IS_ONE_LOGIN);
+        when(clientRegistry.getServiceType()).thenReturn(RP_SERVICE_TYPE);
     }
 }

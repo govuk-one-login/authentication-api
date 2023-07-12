@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.ParseException;
@@ -28,7 +29,9 @@ import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
+import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -39,6 +42,7 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -331,8 +335,37 @@ public class AuthorisationHandler
                         });
 
         if (configurationService.isAuthOrchSplitEnabled()) {
-            var encryptedJWT =
-                    authorizationService.getSignedAndEncryptedJWT(client.getClientName());
+            var jwtID = IdGenerator.generate();
+            var expiryDate = NowHelper.nowPlus(3, ChronoUnit.MINUTES);
+            var claims =
+                    new JWTClaimsSet.Builder()
+                            .issuer(configurationService.getOrchestrationClientId())
+                            .audience(configurationService.getAuthAudience())
+                            .expirationTime(expiryDate)
+                            .issueTime(NowHelper.now())
+                            .notBeforeTime(NowHelper.now())
+                            .jwtID(jwtID)
+                            .claim("client_name", client.getClientName())
+                            .claim("cookie_consent_shared", client.isCookieConsentShared())
+                            .claim("consent_required", client.isConsentRequired())
+                            .claim("is_one_login_service", client.isOneLoginService())
+                            .claim("service_type", client.getServiceType())
+                            .claim("govuk_signin_journey_id", clientSessionID)
+                            .claim(
+                                    "confidence",
+                                    authorizationService
+                                            .getEffectiveVectorOfTrust(authenticationRequest)
+                                            .getCredentialTrustLevel()
+                                            .getValue())
+                            .claim("state", new State())
+                            .claim("client_id", configurationService.getOrchestrationClientId())
+                            .claim("scope", authenticationRequest.getScope().toString())
+                            .claim(
+                                    "redirect_uri",
+                                    configurationService.getOrchestrationRedirectUri())
+                            .build();
+
+            var encryptedJWT = authorizationService.getSignedAndEncryptedJWT(claims);
 
             var authorizationRequest =
                     new AuthorizationRequest.Builder(
