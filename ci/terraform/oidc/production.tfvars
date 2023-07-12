@@ -6,5 +6,5 @@ doc_checking_app_api_lambda_zip_file = "./artifacts/doc-checking-app-api.zip"
 logging_endpoint_arn                 = ""
 logging_endpoint_arns                = []
 shared_state_bucket                  = "digital-identity-prod-tfstate"
-test_clients_enabled                 = true
+test_clients_enabled                 = false
 internal_sector_uri                  = "https://identity.account.gov.uk"
