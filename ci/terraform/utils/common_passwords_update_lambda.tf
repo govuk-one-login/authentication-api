@@ -42,11 +42,12 @@ resource "aws_s3_bucket_notification" "common_passwords_dynamo_update_lambda_tri
 }
 
 resource "aws_lambda_permission" "common_passwords_dynamo_update_lambda_invoke_permission" {
-  statement_id  = "AllowS3Invoke"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.common_passwords_dynamo_update_lambda.function_name
-  principal     = "s3.amazonaws.com"
-  source_arn    = "arn:aws:s3:::${aws_s3_bucket.common_passwords.id}"
+  statement_id   = "AllowS3Invoke"
+  action         = "lambda:InvokeFunction"
+  function_name  = aws_lambda_function.common_passwords_dynamo_update_lambda.function_name
+  principal      = "s3.amazonaws.com"
+  source_arn     = "arn:aws:s3:::${aws_s3_bucket.common_passwords.id}"
+  source_account = data.aws_caller_identity.current.account_id
 }
 
 resource "aws_cloudwatch_log_group" "common_passwords_update_lambda_log_group" {
