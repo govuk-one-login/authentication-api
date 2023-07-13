@@ -128,7 +128,7 @@ variable "use_localstack" {
 
 variable "terms_and_conditions" {
   type    = string
-  default = "1.4"
+  default = "1.5"
 }
 
 variable "localstack_endpoint" {
