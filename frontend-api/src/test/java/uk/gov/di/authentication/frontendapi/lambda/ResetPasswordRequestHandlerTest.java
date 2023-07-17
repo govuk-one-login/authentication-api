@@ -381,6 +381,30 @@ class ResetPasswordRequestHandlerTest {
         verifyNoInteractions(awsSqsClient);
     }
 
+    @Test
+    public void shouldReturn400IfUserIsBlockedFromEnteringAnyMorePasswordResetsOTP() {
+        Subject subject = new Subject("subject_1");
+        String sessionId = "1233455677";
+        when(authenticationService.getSubjectFromEmail(TEST_EMAIL_ADDRESS)).thenReturn(subject);
+        Session session = mock(Session.class);
+        when(session.getEmailAddress()).thenReturn(TEST_EMAIL_ADDRESS);
+        when(session.getSessionId()).thenReturn(sessionId);
+        when(session.validateSession(TEST_EMAIL_ADDRESS)).thenReturn(true);
+        when(session.getPasswordResetCount()).thenReturn(0);
+        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS)).thenReturn(6);
+        when(sessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(session));
+
+        var event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Session-Id", sessionId));
+        event.setBody(format("{ \"email\": \"%s\" }", TEST_EMAIL_ADDRESS));
+        var result = handler.handleRequest(event, context);
+
+        assertEquals(400, result.getStatusCode());
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1039));
+        verifyNoInteractions(awsSqsClient);
+    }
+
     private void usingValidSession() {
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));

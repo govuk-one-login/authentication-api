@@ -172,11 +172,14 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
     private Optional<ErrorResponse> validatePasswordResetCount(
             String email, UserContext userContext) {
         LOG.info("Validating Password Reset Count");
-        if (codeStorageService.isBlockedForEmail(email, PASSWORD_RESET_BLOCKED_KEY_PREFIX)) {
+        var maxRetries = configurationService.getCodeMaxRetries();
+        if (codeStorageService.getIncorrectMfaCodeAttemptsCount(email) > maxRetries) {
+            LOG.info("User entered invalid password reset code too many times");
+            return Optional.of(ErrorResponse.ERROR_1039);
+        } else if (codeStorageService.isBlockedForEmail(email, PASSWORD_RESET_BLOCKED_KEY_PREFIX)) {
             LOG.info("Code is blocked for email as user has requested too many OTPs");
             return Optional.of(ErrorResponse.ERROR_1023);
-        } else if (userContext.getSession().getPasswordResetCount()
-                >= configurationService.getCodeMaxRetries()) {
+        } else if (userContext.getSession().getPasswordResetCount() >= maxRetries) {
             LOG.info("Setting block for email as user has requested too many OTPs");
             codeStorageService.saveBlockedForEmail(
                     userContext.getSession().getEmailAddress(),
