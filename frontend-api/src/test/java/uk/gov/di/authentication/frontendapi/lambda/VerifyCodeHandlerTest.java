@@ -415,7 +415,7 @@ class VerifyCodeHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1048));
-        verify(codeStorageService)
+        verify(codeStorageService, times(2))
                 .saveBlockedForEmail(
                         TEST_EMAIL_ADDRESS, codeBlockedKeyPrefix, BLOCKED_EMAIL_DURATION);
         verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
@@ -545,7 +545,7 @@ class VerifyCodeHandlerTest {
     }
 
     @Test
-    void shouldReturnMaxReachedAndSetBlockedMfaCodeAttemptsExceedMaxRetryCount() {
+    void shouldReturnMaxReachedAndSetBlockedMfaCodeAttemptsWhenSignInExceedMaxRetryCount() {
         when(configurationService.getCodeMaxRetries()).thenReturn(0);
         when(configurationService.getBlockedEmailDuration()).thenReturn(BLOCKED_EMAIL_DURATION);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS))
@@ -560,7 +560,7 @@ class VerifyCodeHandlerTest {
         verify(codeStorageService)
                 .saveBlockedForEmail(
                         TEST_EMAIL_ADDRESS,
-                        CODE_BLOCKED_KEY_PREFIX + CodeRequestType.SMS_REGISTRATION,
+                        CODE_BLOCKED_KEY_PREFIX + CodeRequestType.SMS_SIGN_IN,
                         BLOCKED_EMAIL_DURATION);
         verifyNoInteractions(accountModifiersService);
         verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
@@ -578,20 +578,6 @@ class VerifyCodeHandlerTest {
                         pair("notification-type", MFA_SMS.name()),
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
                         pair("account-recovery", false));
-    }
-
-    @Test
-    void shouldReturnMaxReachedWhenMfaCodeIsBlocked() {
-        var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + CodeRequestType.SMS_REGISTRATION;
-        when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, codeBlockedKeyPrefix))
-                .thenReturn(true);
-
-        var result = makeCallWithCode(CODE, MFA_SMS.toString());
-
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1027));
-        verifyNoInteractions(accountModifiersService);
-        verify(codeStorageService, never()).getOtpCode(session.getEmailAddress(), MFA_SMS);
     }
 
     @Test
