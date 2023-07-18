@@ -251,6 +251,23 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 accountRecoveryJourney ? JourneyType.ACCOUNT_RECOVERY : JourneyType.REGISTRATION;
         var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
         var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
+
+        JourneyType newJourneyType;
+        switch (notificationType) {
+            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
+                newJourneyType = JourneyType.ACCOUNT_RECOVERY;
+                break;
+            case MFA_SMS:
+                newJourneyType = JourneyType.SIGN_IN;
+                break;
+            default:
+                newJourneyType = JourneyType.REGISTRATION;
+                break;
+        }
+        var newCodeRequestType =
+                CodeRequestType.getCodeRequestType(notificationType, newJourneyType);
+        var newCodeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + newCodeRequestType;
+
         var metadataPairs =
                 new AuditService.MetadataPair[] {
                     pair("notification-type", notificationType.name()),
@@ -270,6 +287,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             if (errorResponse.equals(ErrorResponse.ERROR_1027)
                     || errorResponse.equals(ErrorResponse.ERROR_1048)) {
                 blockCodeForSession(session, codeBlockedKeyPrefix);
+                blockCodeForSession(session, newCodeBlockedKeyPrefix);
             }
             resetIncorrectMfaCodeAttemptsCount(session);
             auditableEvent = FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED;
