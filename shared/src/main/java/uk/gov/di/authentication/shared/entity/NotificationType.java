@@ -34,7 +34,7 @@ public enum NotificationType implements TemplateAware {
     RESET_PASSWORD_WITH_CODE(
             "RESET_PASSWORD_WITH_CODE_TEMPLATE_ID",
             Map.of(SupportedLanguage.CY, "RESET_PASSWORD_WITH_CODE_TEMPLATE_ID_CY"),
-            MFAMethodType.NONE),
+            MFAMethodType.EMAIL),
     VERIFY_CHANGE_HOW_GET_SECURITY_CODES(
             "VERIFY_CHANGE_HOW_GET_SECURITY_CODES_TEMPLATE_ID",
             Map.of(SupportedLanguage.CY, "VERIFY_CHANGE_HOW_GET_SECURITY_CODES_TEMPLATE_ID_CY"),
