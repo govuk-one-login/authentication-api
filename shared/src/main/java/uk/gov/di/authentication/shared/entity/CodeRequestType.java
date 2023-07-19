@@ -6,6 +6,7 @@ import java.util.Map;
 public enum CodeRequestType {
     EMAIL_REGISTRATION(MFAMethodType.EMAIL, JourneyType.REGISTRATION),
     EMAIL_ACCOUNT_RECOVERY(MFAMethodType.EMAIL, JourneyType.ACCOUNT_RECOVERY),
+    EMAIL_PASSWORD_RESET(MFAMethodType.EMAIL, JourneyType.PASSWORD_RESET),
     SMS_ACCOUNT_RECOVERY(MFAMethodType.SMS, JourneyType.ACCOUNT_RECOVERY),
     SMS_REGISTRATION(MFAMethodType.SMS, JourneyType.REGISTRATION),
     SMS_SIGN_IN(MFAMethodType.SMS, JourneyType.SIGN_IN),
