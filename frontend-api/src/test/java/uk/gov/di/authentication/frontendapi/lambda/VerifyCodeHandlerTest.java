@@ -401,6 +401,20 @@ class VerifyCodeHandlerTest {
     }
 
     @Test
+    void shouldReturnMaxReachedAndNotSetBlockWhenSignInCodeIsBlocked() {
+        var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + CodeRequestType.SMS_SIGN_IN;
+        when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, codeBlockedKeyPrefix))
+                .thenReturn(true);
+
+        var result = makeCallWithCode(CODE, MFA_SMS.name());
+
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1027));
+        verifyNoInteractions(accountModifiersService);
+        verifyNoInteractions(auditService);
+    }
+
+    @Test
     void
             shouldReturnMaxReachedAndSetBlockWhenAccountRecoveryEmailCodeAttemptsExceedMaxRetryCount() {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
@@ -415,7 +429,7 @@ class VerifyCodeHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1048));
-        verify(codeStorageService, times(2))
+        verify(codeStorageService)
                 .saveBlockedForEmail(
                         TEST_EMAIL_ADDRESS, codeBlockedKeyPrefix, BLOCKED_EMAIL_DURATION);
         verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);

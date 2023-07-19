@@ -107,10 +107,18 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
             var session = userContext.getSession();
             var notificationType = codeRequest.getNotificationType();
-            var journeyType =
-                    notificationType.equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES)
-                            ? JourneyType.ACCOUNT_RECOVERY
-                            : JourneyType.REGISTRATION;
+            JourneyType journeyType;
+            switch (notificationType) {
+                case VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
+                    journeyType = JourneyType.ACCOUNT_RECOVERY;
+                    break;
+                case MFA_SMS:
+                    journeyType = JourneyType.SIGN_IN;
+                    break;
+                default:
+                    journeyType = JourneyType.REGISTRATION;
+                    break;
+            }
             var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
             var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
 
@@ -143,7 +151,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
             if (errorResponse.isPresent()) {
                 processBlockedCodeSession(
-                        errorResponse.get(), session, codeRequest, input, userContext);
+                        errorResponse.get(), session, codeRequest, input, userContext, journeyType);
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
             }
             processSuccessfulCodeRequest(session, codeRequest, input, userContext);
@@ -243,31 +251,12 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             Session session,
             VerifyCodeRequest codeRequest,
             APIGatewayProxyRequestEvent input,
-            UserContext userContext) {
+            UserContext userContext,
+            JourneyType journeyType) {
         var notificationType = codeRequest.getNotificationType();
-        var accountRecoveryJourney = notificationType.equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES);
-
-        var journeyType =
-                accountRecoveryJourney ? JourneyType.ACCOUNT_RECOVERY : JourneyType.REGISTRATION;
+        var accountRecoveryJourney = journeyType.equals(JourneyType.ACCOUNT_RECOVERY);
         var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
         var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
-
-        JourneyType newJourneyType;
-        switch (notificationType) {
-            case VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
-                newJourneyType = JourneyType.ACCOUNT_RECOVERY;
-                break;
-            case MFA_SMS:
-                newJourneyType = JourneyType.SIGN_IN;
-                break;
-            default:
-                newJourneyType = JourneyType.REGISTRATION;
-                break;
-        }
-        var newCodeRequestType =
-                CodeRequestType.getCodeRequestType(notificationType, newJourneyType);
-        var newCodeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + newCodeRequestType;
-
         var metadataPairs =
                 new AuditService.MetadataPair[] {
                     pair("notification-type", notificationType.name()),
@@ -287,7 +276,6 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             if (errorResponse.equals(ErrorResponse.ERROR_1027)
                     || errorResponse.equals(ErrorResponse.ERROR_1048)) {
                 blockCodeForSession(session, codeBlockedKeyPrefix);
-                blockCodeForSession(session, newCodeBlockedKeyPrefix);
             }
             resetIncorrectMfaCodeAttemptsCount(session);
             auditableEvent = FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED;
