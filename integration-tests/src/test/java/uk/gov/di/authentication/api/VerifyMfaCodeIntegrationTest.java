@@ -21,6 +21,7 @@ import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
+import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -645,6 +646,9 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue, List.of(CODE_VERIFIED, UPDATE_PROFILE_PHONE_NUMBER));
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(true));
+        assertThat(
+                redis.getMfaCode(EMAIL_ADDRESS, NotificationType.VERIFY_PHONE_NUMBER),
+                equalTo(Optional.empty()));
         assertTrue(
                 userStore
                         .getPhoneNumberForUser(EMAIL_ADDRESS)
