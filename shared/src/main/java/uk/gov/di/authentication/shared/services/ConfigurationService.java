@@ -107,6 +107,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Integer.parseInt(System.getenv().getOrDefault("CODE_AUTH_APP_ALLOWED_WINDOWS", "9"));
     }
 
+    public String getAuthAudience() {
+        return System.getenv().getOrDefault("AUTH_AUDIENCE", "UNKNOWN");
+    }
+
     public boolean isAuthOrchSplitEnabled() {
         return System.getenv().getOrDefault("SUPPORT_AUTH_ORCH_SPLIT", "false").equals("true");
     }
@@ -217,6 +221,14 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     public String getOrchestrationClientIdForAuthenticationOauthFlow() {
         return System.getenv()
                 .getOrDefault("ORCH_TO_AUTHORISATION_CLIENT_ID", "orchestration-client-default");
+    }
+
+    public String getOrchestrationRedirectUri() {
+        return System.getenv().getOrDefault("ORCH_REDIRECT_URI", "UNKNOWN");
+    }
+
+    public String getOrchestrationClientId() {
+        return System.getenv().getOrDefault("ORCH_CLIENT_ID", "UNKNOWN");
     }
 
     public URI getGovUKAccountsURL() {

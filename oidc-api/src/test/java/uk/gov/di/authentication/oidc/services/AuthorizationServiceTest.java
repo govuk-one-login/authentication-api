@@ -642,13 +642,14 @@ class AuthorizationServiceTest {
 
     @Test
     void shouldConstructASignedAndEncryptedRequestJWT() throws JOSEException, ParseException {
+        var claim1Value = "JWT claim 1";
         var ecSigningKey =
                 new ECKeyGenerator(Curve.P_256)
                         .keyID(KEY_ID)
                         .algorithm(JWSAlgorithm.ES256)
                         .generate();
         var ecdsaSigner = new ECDSASigner(ecSigningKey);
-        var jwtClaimsSet = new JWTClaimsSet.Builder().build();
+        var jwtClaimsSet = new JWTClaimsSet.Builder().claim("claim1", claim1Value).build();
         var jwsHeader = new JWSHeader(JWSAlgorithm.ES256);
         var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSet);
         signedJWT.sign(ecdsaSigner);
@@ -661,12 +662,11 @@ class AuthorizationServiceTest {
                         .build();
         when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(signResult);
 
-        var encryptedJWT = authorizationService.getSignedAndEncryptedJWT(CLIENT_NAME);
+        var encryptedJWT = authorizationService.getSignedAndEncryptedJWT(jwtClaimsSet);
 
         var signedJWTResponse = decryptJWT(encryptedJWT);
 
-        assertThat(
-                signedJWTResponse.getJWTClaimsSet().getClaim("client-name"), equalTo(CLIENT_NAME));
+        assertThat(signedJWTResponse.getJWTClaimsSet().getClaim("claim1"), equalTo(claim1Value));
     }
 
     private ClientRegistry generateClientRegistry(String redirectURI, String clientID) {
