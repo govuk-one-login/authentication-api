@@ -44,7 +44,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.InOrder;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
-import uk.gov.di.authentication.oidc.services.AuthorizationService;
+import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
 import uk.gov.di.authentication.oidc.services.RequestObjectService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
@@ -101,7 +101,8 @@ class AuthorisationHandlerTest {
     private final SessionService sessionService = mock(SessionService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ClientSession clientSession = mock(ClientSession.class);
-    private final AuthorizationService authorizationService = mock(AuthorizationService.class);
+    private final OrchestrationAuthorizationService orchestrationAuthorizationService =
+            mock(OrchestrationAuthorizationService.class);
     private final UserContext userContext = mock(UserContext.class);
     private final AuditService auditService = mock(AuditService.class);
     private final RequestObjectService requestObjectService = mock(RequestObjectService.class);
@@ -155,12 +156,12 @@ class AuthorisationHandlerTest {
         when(configService.getSessionCookieAttributes()).thenReturn("Secure; HttpOnly;");
         when(configService.getSessionCookieMaxAge()).thenReturn(3600);
         when(configService.getPersistentCookieMaxAge()).thenReturn(34190000);
-        when(authorizationService.validateAuthRequest(
+        when(orchestrationAuthorizationService.validateAuthRequest(
                         any(AuthenticationRequest.class), anyBoolean()))
                 .thenReturn(Optional.empty());
-        when(authorizationService.getExistingOrCreateNewPersistentSessionId(any()))
+        when(orchestrationAuthorizationService.getExistingOrCreateNewPersistentSessionId(any()))
                 .thenReturn(PERSISTENT_SESSION_ID);
-        when(authorizationService.getEffectiveVectorOfTrust(any()))
+        when(orchestrationAuthorizationService.getEffectiveVectorOfTrust(any()))
                 .thenReturn(new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL));
         when(userContext.getClient()).thenReturn(Optional.of(generateClientRegistry()));
         when(context.getAwsRequestId()).thenReturn(AWS_REQUEST_ID);
@@ -169,7 +170,7 @@ class AuthorisationHandlerTest {
                         configService,
                         sessionService,
                         clientSessionService,
-                        authorizationService,
+                        orchestrationAuthorizationService,
                         auditService,
                         requestObjectService,
                         clientService);
@@ -226,10 +227,13 @@ class AuthorisationHandlerTest {
         var orchClientId = "orchestration-client-id";
         when(configService.isAuthOrchSplitEnabled()).thenReturn(true);
         when(configService.getOrchestrationClientId()).thenReturn(orchClientId);
-        when(authorizationService.getSignedAndEncryptedJWT(any())).thenReturn(TEST_ENCRYPTED_JWT);
+        when(orchestrationAuthorizationService.getSignedAndEncryptedJWT(any()))
+                .thenReturn(TEST_ENCRYPTED_JWT);
 
         var requestParams = buildRequestParams(null);
         var event = withRequestEvent(requestParams);
+        when(orchestrationAuthorizationService.getSignedAndEncryptedJWT(any()))
+                .thenReturn(TEST_ENCRYPTED_JWT);
         event.setRequestContext(
                 new ProxyRequestContext()
                         .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
@@ -485,7 +489,7 @@ class AuthorisationHandlerTest {
 
     @Test
     void shouldReturn400WhenAuthorisationRequestContainsInvalidScope() {
-        when(authorizationService.validateAuthRequest(
+        when(orchestrationAuthorizationService.validateAuthRequest(
                         any(AuthenticationRequest.class), anyBoolean()))
                 .thenReturn(
                         Optional.of(

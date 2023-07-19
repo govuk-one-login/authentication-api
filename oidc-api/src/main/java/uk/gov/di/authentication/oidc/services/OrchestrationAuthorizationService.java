@@ -58,7 +58,7 @@ import static java.lang.String.format;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 
-public class AuthorizationService {
+public class OrchestrationAuthorizationService {
 
     public static final String VTR_PARAM = "vtr";
     private static final JWSAlgorithm SIGNING_ALGORITHM = JWSAlgorithm.ES256;
@@ -66,9 +66,9 @@ public class AuthorizationService {
     private final DynamoClientService dynamoClientService;
     private final IPVCapacityService ipvCapacityService;
     private final KmsConnectionService kmsConnectionService;
-    private static final Logger LOG = LogManager.getLogger(AuthorizationService.class);
+    private static final Logger LOG = LogManager.getLogger(OrchestrationAuthorizationService.class);
 
-    public AuthorizationService(
+    public OrchestrationAuthorizationService(
             ConfigurationService configurationService,
             DynamoClientService dynamoClientService,
             IPVCapacityService ipvCapacityService,
@@ -79,7 +79,7 @@ public class AuthorizationService {
         this.kmsConnectionService = kmsConnectionService;
     }
 
-    public AuthorizationService(ConfigurationService configurationService) {
+    public OrchestrationAuthorizationService(ConfigurationService configurationService) {
         this(
                 configurationService,
                 new DynamoClientService(configurationService),
@@ -204,6 +204,11 @@ public class AuthorizationService {
     }
 
     public EncryptedJWT getSignedAndEncryptedJWT(JWTClaimsSet jwtClaimsSet) {
+        var signedJwt = getSignedJWT(jwtClaimsSet);
+        return encryptJWT(signedJwt);
+    }
+
+    public SignedJWT getSignedJWT(JWTClaimsSet jwtClaimsSet) {
         LOG.info("Generating signed and encrypted JWT");
         var jwsHeader = new JWSHeader(SIGNING_ALGORITHM);
 
@@ -228,10 +233,7 @@ public class AuthorizationService {
                                             signResult.signature().asByteArray(),
                                             ECDSA.getSignatureByteArrayLength(SIGNING_ALGORITHM)))
                             .toString();
-            var signedJWT = SignedJWT.parse(message + "." + signature);
-            var encryptedJWT = encryptJWT(signedJWT);
-            LOG.info("Encrypted request JWT has been generated");
-            return encryptedJWT;
+            return SignedJWT.parse(message + "." + signature);
         } catch (ParseException | JOSEException e) {
             LOG.error("Error when generating SignedJWT", e);
             throw new InvalidJWEException("Error when generating SignedJWT", e);

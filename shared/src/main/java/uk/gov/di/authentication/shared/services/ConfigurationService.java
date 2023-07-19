@@ -144,6 +144,19 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 .equals("true");
     }
 
+    public URI getAuthenticationAuthCallbackURI() {
+        return URI.create(
+                System.getenv().getOrDefault("AUTHENTICATION_AUTHORIZATION_CALLBACK_URI", ""));
+    }
+
+    public URI getAuthenticationBackendURI() {
+        return URI.create(System.getenv().getOrDefault("AUTHENTICATION_BACKEND_URI", ""));
+    }
+
+    public String getAuthenticationUserInfoEndpoint() {
+        return System.getenv("AUTHENTICATION_USER_INFO_ENDPOINT");
+    }
+
     public String getContactUsLinkRoute() {
         return System.getenv().getOrDefault("CONTACT_US_LINK_ROUTE", "");
     }

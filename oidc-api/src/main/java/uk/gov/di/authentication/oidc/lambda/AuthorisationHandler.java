@@ -25,7 +25,7 @@ import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.oidc.helpers.RequestObjectToAuthRequestHelper;
-import uk.gov.di.authentication.oidc.services.AuthorizationService;
+import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
 import uk.gov.di.authentication.oidc.services.RequestObjectService;
 import uk.gov.di.authentication.shared.conditions.IdentityHelper;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -78,7 +78,7 @@ public class AuthorisationHandler
     private final SessionService sessionService;
     private final ConfigurationService configurationService;
     private final ClientSessionService clientSessionService;
-    private final AuthorizationService authorizationService;
+    private final OrchestrationAuthorizationService orchestrationAuthorizationService;
     private final RequestObjectService requestObjectService;
     private final AuditService auditService;
     private final ClientService clientService;
@@ -87,14 +87,14 @@ public class AuthorisationHandler
             ConfigurationService configurationService,
             SessionService sessionService,
             ClientSessionService clientSessionService,
-            AuthorizationService authorizationService,
+            OrchestrationAuthorizationService orchestrationAuthorizationService,
             AuditService auditService,
             RequestObjectService requestObjectService,
             ClientService clientService) {
         this.configurationService = configurationService;
         this.sessionService = sessionService;
         this.clientSessionService = clientSessionService;
-        this.authorizationService = authorizationService;
+        this.orchestrationAuthorizationService = orchestrationAuthorizationService;
         this.auditService = auditService;
         this.requestObjectService = requestObjectService;
         this.clientService = clientService;
@@ -104,7 +104,8 @@ public class AuthorisationHandler
         this.configurationService = configurationService;
         this.sessionService = new SessionService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
-        this.authorizationService = new AuthorizationService(configurationService);
+        this.orchestrationAuthorizationService =
+                new OrchestrationAuthorizationService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.requestObjectService = new RequestObjectService(configurationService);
         this.clientService = new DynamoClientService(configurationService);
@@ -126,7 +127,8 @@ public class AuthorisationHandler
     public APIGatewayProxyResponseEvent authoriseRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
         var persistentSessionId =
-                authorizationService.getExistingOrCreateNewPersistentSessionId(input.getHeaders());
+                orchestrationAuthorizationService.getExistingOrCreateNewPersistentSessionId(
+                        input.getHeaders());
         var ipAddress = IpAddressHelper.extractIpAddress(input);
         var clientSessionId = clientSessionService.generateClientSessionId();
         attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
@@ -183,7 +185,7 @@ public class AuthorisationHandler
             authRequestError = requestObjectService.validateRequestObject(authRequest);
         } else {
             authRequestError =
-                    authorizationService.validateAuthRequest(
+                    orchestrationAuthorizationService.validateAuthRequest(
                             authRequest, configurationService.isNonceRequired());
         }
 
@@ -270,7 +272,8 @@ public class AuthorisationHandler
                 clientSessionService.generateClientSession(
                         authenticationRequest.toParameters(),
                         LocalDateTime.now(),
-                        authorizationService.getEffectiveVectorOfTrust(authenticationRequest),
+                        orchestrationAuthorizationService.getEffectiveVectorOfTrust(
+                                authenticationRequest),
                         clientName);
         clientSessionService.storeClientSession(clientSessionId, clientSession);
 
@@ -364,7 +367,7 @@ public class AuthorisationHandler
                             .claim("govuk_signin_journey_id", clientSessionID)
                             .claim(
                                     "confidence",
-                                    authorizationService
+                                    orchestrationAuthorizationService
                                             .getEffectiveVectorOfTrust(authenticationRequest)
                                             .getCredentialTrustLevel()
                                             .getValue())
@@ -382,7 +385,9 @@ public class AuthorisationHandler
             var claimsSetRequest =
                     constructAdditionalAuthenticationClaims(client, authenticationRequest);
             claimsSetRequest.ifPresent(t -> claimsBuilder.claim("claim", t.toJSONString()));
-            var encryptedJWT = authorizationService.getSignedAndEncryptedJWT(claimsBuilder.build());
+            var encryptedJWT =
+                    orchestrationAuthorizationService.getSignedAndEncryptedJWT(
+                            claimsBuilder.build());
 
             var authorizationRequest =
                     new AuthorizationRequest.Builder(

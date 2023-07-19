@@ -14,7 +14,7 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AuthCodeResponse;
-import uk.gov.di.authentication.oidc.services.AuthorizationService;
+import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -66,7 +66,7 @@ public class AuthCodeHandler
 
     private final SessionService sessionService;
     private final AuthorisationCodeService authorisationCodeService;
-    private final AuthorizationService authorizationService;
+    private final OrchestrationAuthorizationService orchestrationAuthorizationService;
     private final ClientSessionService clientSessionService;
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
@@ -77,7 +77,7 @@ public class AuthCodeHandler
     public AuthCodeHandler(
             SessionService sessionService,
             AuthorisationCodeService authorisationCodeService,
-            AuthorizationService authorizationService,
+            OrchestrationAuthorizationService orchestrationAuthorizationService,
             ClientSessionService clientSessionService,
             AuditService auditService,
             CloudwatchMetricsService cloudwatchMetricsService,
@@ -86,7 +86,7 @@ public class AuthCodeHandler
             DynamoClientService dynamoClientService) {
         this.sessionService = sessionService;
         this.authorisationCodeService = authorisationCodeService;
-        this.authorizationService = authorizationService;
+        this.orchestrationAuthorizationService = orchestrationAuthorizationService;
         this.clientSessionService = clientSessionService;
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
@@ -98,7 +98,8 @@ public class AuthCodeHandler
     public AuthCodeHandler(ConfigurationService configurationService) {
         sessionService = new SessionService(configurationService);
         authorisationCodeService = new AuthorisationCodeService(configurationService);
-        authorizationService = new AuthorizationService(configurationService);
+        orchestrationAuthorizationService =
+                new OrchestrationAuthorizationService(configurationService);
         clientSessionService = new ClientSessionService(configurationService);
         auditService = new AuditService(configurationService);
         cloudwatchMetricsService = new CloudwatchMetricsService();
@@ -164,7 +165,7 @@ public class AuthCodeHandler
                         "Redirect URI or Client ID is missing from auth request", e);
             }
             AuthenticationErrorResponse errorResponse =
-                    authorizationService.generateAuthenticationErrorResponse(
+                    orchestrationAuthorizationService.generateAuthenticationErrorResponse(
                             e.getRedirectionURI(),
                             e.getState(),
                             e.getResponseMode(),
@@ -184,7 +185,8 @@ public class AuthCodeHandler
         URI redirectUri = authenticationRequest.getRedirectionURI();
         State state = authenticationRequest.getState();
         try {
-            if (!authorizationService.isClientRedirectUriValid(clientID, redirectUri)) {
+            if (!orchestrationAuthorizationService.isClientRedirectUriValid(
+                    clientID, redirectUri)) {
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1016);
             }
             VectorOfTrust requestedVectorOfTrust = clientSession.getEffectiveVectorOfTrust();
@@ -201,13 +203,13 @@ public class AuthCodeHandler
                             clientSessionId, session.getEmailAddress(), clientSession);
 
             var authenticationResponse =
-                    authorizationService.generateSuccessfulAuthResponse(
+                    orchestrationAuthorizationService.generateSuccessfulAuthResponse(
                             authenticationRequest, authCode, redirectUri, state);
 
             LOG.info("Successfully processed request");
 
             var isTestJourney =
-                    authorizationService.isTestJourney(
+                    orchestrationAuthorizationService.isTestJourney(
                             authenticationRequest.getClientID(), session.getEmailAddress());
             var docAppJourney = isDocCheckingAppUserWithSubjectId(clientSession);
 
@@ -315,7 +317,7 @@ public class AuthCodeHandler
                     200, new AuthCodeResponse(authenticationResponse.toURI().toString()));
         } catch (ClientNotFoundException e) {
             var errorResponse =
-                    authorizationService.generateAuthenticationErrorResponse(
+                    orchestrationAuthorizationService.generateAuthenticationErrorResponse(
                             authenticationRequest, OAuth2Error.INVALID_CLIENT, redirectUri, state);
             return generateResponse(500, new AuthCodeResponse(errorResponse.toURI().toString()));
         } catch (UserNotFoundException e) {
