@@ -78,13 +78,20 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
                         ? configurationService.getTestClientVerifyPhoneNumberOTP()
                         : codeStorageService.getOtpCode(emailAddress, notificationType);
 
-        return ValidationHelper.validateVerificationCode(
-                notificationType,
-                storedCode,
-                codeRequest.getCode(),
-                codeStorageService,
-                emailAddress,
-                configurationService.getCodeMaxRetries());
+        var errorResponse =
+                ValidationHelper.validateVerificationCode(
+                        notificationType,
+                        storedCode,
+                        codeRequest.getCode(),
+                        codeStorageService,
+                        emailAddress,
+                        configurationService.getCodeMaxRetries());
+
+        if (errorResponse.isEmpty()) {
+            codeStorageService.deleteOtpCode(emailAddress, notificationType);
+        }
+
+        return errorResponse;
     }
 
     @Override

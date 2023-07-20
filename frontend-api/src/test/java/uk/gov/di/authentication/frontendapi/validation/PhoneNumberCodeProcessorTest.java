@@ -71,6 +71,18 @@ class PhoneNumberCodeProcessorTest {
     }
 
     @Test
+    void shouldDeleteMfaCodeFromDataStoreWhenValidRegistrationPhoneNumberCode() {
+        setupPhoneNumberCode(
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.SMS, VALID_CODE, JourneyType.REGISTRATION, PHONE_NUMBER),
+                CodeRequestType.SMS_REGISTRATION);
+
+        phoneNumberCodeProcessor.validateCode();
+        verify(codeStorageService)
+                .deleteOtpCode(TEST_EMAIL_ADDRESS, NotificationType.VERIFY_PHONE_NUMBER);
+    }
+
+    @Test
     void shouldReturnErrorForInvalidRegistrationPhoneNumberCode() {
         setupPhoneNumberCode(
                 new VerifyMfaCodeRequest(
@@ -80,6 +92,18 @@ class PhoneNumberCodeProcessorTest {
         assertThat(
                 phoneNumberCodeProcessor.validateCode(),
                 equalTo(Optional.of(ErrorResponse.ERROR_1037)));
+    }
+
+    @Test
+    void shouldNotDeleteMfaCodeFromDataStoreWhenInvalidRegistrationPhoneNumberCode() {
+        setupPhoneNumberCode(
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.SMS, INVALID_CODE, JourneyType.REGISTRATION, PHONE_NUMBER),
+                CodeRequestType.SMS_REGISTRATION);
+
+        phoneNumberCodeProcessor.validateCode();
+        verify(codeStorageService, never())
+                .deleteOtpCode(TEST_EMAIL_ADDRESS, NotificationType.VERIFY_PHONE_NUMBER);
     }
 
     @Test

@@ -227,6 +227,10 @@ public class RedisExtension
         return code;
     }
 
+    public Optional<String> getMfaCode(String email, NotificationType notificationType) {
+        return codeStorageService.getOtpCode(email, notificationType);
+    }
+
     public void blockMfaCodesForEmail(String email, String codeBlockedKeyPrefix) {
         var codeBlockedTime = 10;
         codeStorageService.saveBlockedForEmail(email, codeBlockedKeyPrefix, codeBlockedTime);
