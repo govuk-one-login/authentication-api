@@ -157,6 +157,8 @@ public class DocAppCallbackHandler
                                     });
             attachSessionIdToLogs(session);
             var clientSessionId = sessionCookiesIds.getClientSessionId();
+            attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
+            attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
             var clientSession =
                     clientSessionService
                             .getClientSession(clientSessionId)
@@ -165,8 +167,9 @@ public class DocAppCallbackHandler
                                         throw new DocAppCallbackException(
                                                 "ClientSession not found");
                                     });
-            attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
-            attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
+            if (Objects.isNull(clientSession.getDocAppSubjectId()))
+                throw new DocAppCallbackException("No DocAppSubjectId present in ClientSession");
+
             var persistentId =
                     PersistentIdHelper.extractPersistentIdFromCookieHeader(input.getHeaders());
             attachLogFieldToLogs(PERSISTENT_SESSION_ID, persistentId);
