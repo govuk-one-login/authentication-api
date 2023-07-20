@@ -192,6 +192,26 @@ class DocAppCallbackHandlerTest {
     }
 
     @Test
+    void shouldRedirectToFrontendErrorPageWhenNoDocAppSubjectIdIsPresentInClientSession()
+            throws URISyntaxException {
+        var event = new APIGatewayProxyRequestEvent();
+        event.setQueryStringParameters(Collections.emptyMap());
+        event.setHeaders(Map.of(COOKIE, buildCookieString()));
+        usingValidSession();
+        when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
+                .thenReturn(Optional.of(clientSession));
+
+        var response = handler.handleRequest(event, context);
+        assertThat(response, hasStatus(302));
+        var expectedRedirectURI = new URIBuilder(LOGIN_URL).setPath("error").build();
+        assertThat(response.getHeaders().get("Location"), equalTo(expectedRedirectURI.toString()));
+
+        verifyNoInteractions(auditService);
+        verifyNoInteractions(dynamoDocAppService);
+        verifyNoInteractions(cloudwatchMetricsService);
+    }
+
+    @Test
     void shouldRedirectToRPWhenAuthnResponseContainsError() {
         usingValidSession();
         usingValidClientSession();
