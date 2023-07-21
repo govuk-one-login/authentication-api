@@ -20,7 +20,9 @@ import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -66,6 +68,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
+import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.PASSWORD_RESET_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
@@ -343,6 +346,10 @@ class ResetPasswordRequestHandlerTest {
         event.setHeaders(Map.of("Session-Id", sessionId));
         event.setBody(format("{ \"email\": \"%s\" }", TEST_EMAIL_ADDRESS));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        var codeRequestType =
+                CodeRequestType.getCodeRequestType(
+                        RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
+        var codeAttemptsBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1022));
@@ -351,6 +358,9 @@ class ResetPasswordRequestHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         PASSWORD_RESET_BLOCKED_KEY_PREFIX,
                         BLOCKED_EMAIL_DURATION);
+        verify(codeStorageService)
+                .saveBlockedForEmail(
+                        TEST_EMAIL_ADDRESS, codeAttemptsBlockedKeyPrefix, BLOCKED_EMAIL_DURATION);
         verify(session).resetPasswordResetCount();
         verifyNoInteractions(awsSqsClient);
     }

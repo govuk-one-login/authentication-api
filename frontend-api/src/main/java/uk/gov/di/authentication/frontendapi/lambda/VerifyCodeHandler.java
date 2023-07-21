@@ -38,6 +38,7 @@ import java.util.Optional;
 import static java.util.Map.entry;
 import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.NONE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
+import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_CHANGE_HOW_GET_SECURITY_CODES;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
@@ -115,6 +116,9 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 case MFA_SMS:
                     journeyType = JourneyType.SIGN_IN;
                     break;
+                case RESET_PASSWORD_WITH_CODE:
+                    journeyType = JourneyType.PASSWORD_RESET;
+                    break;
                 default:
                     journeyType = JourneyType.REGISTRATION;
                     break;
@@ -166,6 +170,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         return Map.ofEntries(
                         entry(VERIFY_CHANGE_HOW_GET_SECURITY_CODES, ErrorResponse.ERROR_1048),
                         entry(VERIFY_EMAIL, ErrorResponse.ERROR_1033),
+                        entry(RESET_PASSWORD_WITH_CODE, ErrorResponse.ERROR_1039),
                         entry(MFA_SMS, ErrorResponse.ERROR_1027))
                 .get(codeRequest.getNotificationType());
     }
@@ -271,10 +276,15 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     };
         }
         AuditableEvent auditableEvent;
-        if (List.of(ErrorResponse.ERROR_1027, ErrorResponse.ERROR_1033, ErrorResponse.ERROR_1048)
+        if (List.of(
+                        ErrorResponse.ERROR_1027,
+                        ErrorResponse.ERROR_1033,
+                        ErrorResponse.ERROR_1039,
+                        ErrorResponse.ERROR_1048)
                 .contains(errorResponse)) {
             if (errorResponse.equals(ErrorResponse.ERROR_1027)
-                    || errorResponse.equals(ErrorResponse.ERROR_1048)) {
+                    || errorResponse.equals(ErrorResponse.ERROR_1048)
+                    || errorResponse.equals(ErrorResponse.ERROR_1039)) {
                 blockCodeForSession(session, codeBlockedKeyPrefix);
             }
             resetIncorrectMfaCodeAttemptsCount(session);
