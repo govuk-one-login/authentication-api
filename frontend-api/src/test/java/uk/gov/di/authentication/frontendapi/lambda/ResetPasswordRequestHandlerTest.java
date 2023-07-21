@@ -69,7 +69,7 @@ import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIEN
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
-import static uk.gov.di.authentication.shared.services.CodeStorageService.PASSWORD_RESET_BLOCKED_KEY_PREFIX;
+import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -328,7 +328,7 @@ class ResetPasswordRequestHandlerTest {
     }
 
     @Test
-    public void shouldReturn400IfUserHasExceededPasswordResetCount() {
+    public void shouldReturn400IfUserHasExceededPasswordResetRequestCount() {
         Subject subject = new Subject("subject_1");
         String sessionId = "1233455677";
         when(authenticationService.getSubjectFromEmail(TEST_EMAIL_ADDRESS)).thenReturn(subject);
@@ -349,18 +349,13 @@ class ResetPasswordRequestHandlerTest {
         var codeRequestType =
                 CodeRequestType.getCodeRequestType(
                         RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
-        var codeAttemptsBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
+        var codeRequestBlockedKeyPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1022));
         verify(codeStorageService)
                 .saveBlockedForEmail(
-                        TEST_EMAIL_ADDRESS,
-                        PASSWORD_RESET_BLOCKED_KEY_PREFIX,
-                        BLOCKED_EMAIL_DURATION);
-        verify(codeStorageService)
-                .saveBlockedForEmail(
-                        TEST_EMAIL_ADDRESS, codeAttemptsBlockedKeyPrefix, BLOCKED_EMAIL_DURATION);
+                        TEST_EMAIL_ADDRESS, codeRequestBlockedKeyPrefix, BLOCKED_EMAIL_DURATION);
         verify(session).resetPasswordResetCount();
         verifyNoInteractions(awsSqsClient);
     }
@@ -375,8 +370,11 @@ class ResetPasswordRequestHandlerTest {
         when(session.getSessionId()).thenReturn(sessionId);
         when(session.validateSession(TEST_EMAIL_ADDRESS)).thenReturn(true);
         when(session.getPasswordResetCount()).thenReturn(0);
-        when(codeStorageService.isBlockedForEmail(
-                        TEST_EMAIL_ADDRESS, PASSWORD_RESET_BLOCKED_KEY_PREFIX))
+        var codeRequestType =
+                CodeRequestType.getCodeRequestType(
+                        RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
+        var codeRequestBlockedKeyPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
+        when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, codeRequestBlockedKeyPrefix))
                 .thenReturn(true);
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
@@ -388,6 +386,35 @@ class ResetPasswordRequestHandlerTest {
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1023));
+        verifyNoInteractions(awsSqsClient);
+    }
+
+    @Test
+    public void shouldReturn400IfUserIsBlockedFromEnteringAnyMoreInvalidPasswordResetsOTPs() {
+        Subject subject = new Subject("subject_1");
+        String sessionId = "1233455677";
+        when(authenticationService.getSubjectFromEmail(TEST_EMAIL_ADDRESS)).thenReturn(subject);
+        Session session = mock(Session.class);
+        when(session.getEmailAddress()).thenReturn(TEST_EMAIL_ADDRESS);
+        when(session.getSessionId()).thenReturn(sessionId);
+        when(session.validateSession(TEST_EMAIL_ADDRESS)).thenReturn(true);
+        when(session.getPasswordResetCount()).thenReturn(0);
+        var codeRequestType =
+                CodeRequestType.getCodeRequestType(
+                        RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
+        var codeRequestBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
+        when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, codeRequestBlockedKeyPrefix))
+                .thenReturn(true);
+        when(sessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(session));
+
+        var event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Session-Id", sessionId));
+        event.setBody(format("{ \"email\": \"%s\" }", TEST_EMAIL_ADDRESS));
+        var result = handler.handleRequest(event, context);
+
+        assertEquals(400, result.getStatusCode());
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1039));
         verifyNoInteractions(awsSqsClient);
     }
 
