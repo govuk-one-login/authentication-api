@@ -10,7 +10,9 @@ import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordRequest;
 import uk.gov.di.authentication.frontendapi.exceptions.SerializationException;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
@@ -38,6 +40,7 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.PASSWORD_RESET_BLOCKED_KEY_PREFIX;
 
 public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswordRequest>
@@ -172,7 +175,12 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
     private Optional<ErrorResponse> validatePasswordResetCount(
             String email, UserContext userContext) {
         LOG.info("Validating Password Reset Count");
-        if (codeStorageService.isBlockedForEmail(email, PASSWORD_RESET_BLOCKED_KEY_PREFIX)) {
+        var codeRequestType =
+                CodeRequestType.getCodeRequestType(
+                        RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
+        var codeAttemptsBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
+        if (codeStorageService.isBlockedForEmail(email, PASSWORD_RESET_BLOCKED_KEY_PREFIX)
+                || codeStorageService.isBlockedForEmail(email, codeAttemptsBlockedKeyPrefix)) {
             LOG.info("Code is blocked for email as user has requested too many OTPs");
             return Optional.of(ErrorResponse.ERROR_1023);
         } else if (userContext.getSession().getPasswordResetCount()
@@ -181,6 +189,10 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
             codeStorageService.saveBlockedForEmail(
                     userContext.getSession().getEmailAddress(),
                     PASSWORD_RESET_BLOCKED_KEY_PREFIX,
+                    configurationService.getBlockedEmailDuration());
+            codeStorageService.saveBlockedForEmail(
+                    userContext.getSession().getEmailAddress(),
+                    codeAttemptsBlockedKeyPrefix,
                     configurationService.getBlockedEmailDuration());
             sessionService.save(userContext.getSession().resetPasswordResetCount());
             return Optional.of(ErrorResponse.ERROR_1022);

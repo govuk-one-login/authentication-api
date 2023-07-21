@@ -203,12 +203,12 @@ public class AuthorizationService {
         return Optional.empty();
     }
 
-    public EncryptedJWT getSignedAndEncryptedJWT(String clientName) {
+    public EncryptedJWT getSignedAndEncryptedJWT(JWTClaimsSet jwtClaimsSet) {
         LOG.info("Generating signed and encrypted JWT");
         var jwsHeader = new JWSHeader(SIGNING_ALGORITHM);
-        var claimsBuilder = new JWTClaimsSet.Builder().claim("client-name", clientName);
+
         var encodedHeader = jwsHeader.toBase64URL();
-        var encodedClaims = Base64URL.encode(claimsBuilder.build().toString());
+        var encodedClaims = Base64URL.encode(jwtClaimsSet.toString());
         var message = encodedHeader + "." + encodedClaims;
         var signRequest =
                 SignRequest.builder()
