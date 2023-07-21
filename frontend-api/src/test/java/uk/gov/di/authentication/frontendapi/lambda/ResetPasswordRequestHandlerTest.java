@@ -69,7 +69,6 @@ import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIEN
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
-import static uk.gov.di.authentication.shared.services.CodeStorageService.PASSWORD_RESET_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -355,11 +354,6 @@ class ResetPasswordRequestHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1022));
         verify(codeStorageService)
                 .saveBlockedForEmail(
-                        TEST_EMAIL_ADDRESS,
-                        PASSWORD_RESET_BLOCKED_KEY_PREFIX,
-                        BLOCKED_EMAIL_DURATION);
-        verify(codeStorageService)
-                .saveBlockedForEmail(
                         TEST_EMAIL_ADDRESS, codeAttemptsBlockedKeyPrefix, BLOCKED_EMAIL_DURATION);
         verify(session).resetPasswordResetCount();
         verifyNoInteractions(awsSqsClient);
@@ -375,8 +369,11 @@ class ResetPasswordRequestHandlerTest {
         when(session.getSessionId()).thenReturn(sessionId);
         when(session.validateSession(TEST_EMAIL_ADDRESS)).thenReturn(true);
         when(session.getPasswordResetCount()).thenReturn(0);
-        when(codeStorageService.isBlockedForEmail(
-                        TEST_EMAIL_ADDRESS, PASSWORD_RESET_BLOCKED_KEY_PREFIX))
+        var codeRequestType =
+                CodeRequestType.getCodeRequestType(
+                        RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
+        var codeAttemptsBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
+        when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, codeAttemptsBlockedKeyPrefix))
                 .thenReturn(true);
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
