@@ -41,7 +41,7 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
-import static uk.gov.di.authentication.shared.services.CodeStorageService.PASSWORD_RESET_BLOCKED_KEY_PREFIX;
+import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 
 public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswordRequest>
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -178,24 +178,25 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
         var codeRequestType =
                 CodeRequestType.getCodeRequestType(
                         RESET_PASSWORD_WITH_CODE, JourneyType.PASSWORD_RESET);
+        var codeRequestCount = userContext.getSession().getPasswordResetCount();
+        var codeRequestBlockedKeyPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
         var codeAttemptsBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
-        if (codeStorageService.isBlockedForEmail(email, PASSWORD_RESET_BLOCKED_KEY_PREFIX)
-                || codeStorageService.isBlockedForEmail(email, codeAttemptsBlockedKeyPrefix)) {
-            LOG.info("Code is blocked for email as user has requested too many OTPs");
-            return Optional.of(ErrorResponse.ERROR_1023);
-        } else if (userContext.getSession().getPasswordResetCount()
-                >= configurationService.getCodeMaxRetries()) {
+        if (codeRequestCount >= configurationService.getCodeMaxRetries()) {
             LOG.info("Setting block for email as user has requested too many OTPs");
             codeStorageService.saveBlockedForEmail(
                     userContext.getSession().getEmailAddress(),
-                    PASSWORD_RESET_BLOCKED_KEY_PREFIX,
-                    configurationService.getBlockedEmailDuration());
-            codeStorageService.saveBlockedForEmail(
-                    userContext.getSession().getEmailAddress(),
-                    codeAttemptsBlockedKeyPrefix,
+                    codeRequestBlockedKeyPrefix,
                     configurationService.getBlockedEmailDuration());
             sessionService.save(userContext.getSession().resetPasswordResetCount());
             return Optional.of(ErrorResponse.ERROR_1022);
+        }
+        if (codeStorageService.isBlockedForEmail(email, codeRequestBlockedKeyPrefix)) {
+            LOG.info("Code is blocked for email as user has requested too many OTPs");
+            return Optional.of(ErrorResponse.ERROR_1023);
+        }
+        if (codeStorageService.isBlockedForEmail(email, codeAttemptsBlockedKeyPrefix)) {
+            LOG.info("Code is blocked for email as user has entered too many invalid OTPs");
+            return Optional.of(ErrorResponse.ERROR_1039);
         }
         return Optional.empty();
     }
