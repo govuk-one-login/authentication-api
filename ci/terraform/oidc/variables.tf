@@ -449,6 +449,16 @@ variable "extended_feature_flags_enabled" {
   type    = bool
 }
 
+variable "orch_client_id" {
+  type    = string
+  default = ""
+}
+
+variable "auth_audience" {
+  type    = string
+  default = ""
+}
+
 locals {
   default_performance_parameters = {
     memory          = var.endpoint_memory_size

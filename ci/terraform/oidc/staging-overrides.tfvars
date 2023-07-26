@@ -24,6 +24,8 @@ account_recovery_block_enabled     = true
 ipv_no_session_response_enabled    = true
 doc_app_cri_data_v2_endpoint       = "userinfo/v2"
 doc_app_use_cri_data_v2_endpoint   = true
+orch_client_id                     = "orchestrationAuth"
+auth_audience                      = "https://auth.staging.account.gov.uk"
 
 ipv_auth_public_encryption_key = <<-EOT
 -----BEGIN PUBLIC KEY-----

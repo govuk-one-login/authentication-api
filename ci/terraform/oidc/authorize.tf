@@ -26,6 +26,7 @@ module "authorize" {
   environment     = var.environment
 
   handler_environment_variables = {
+    AUTH_AUDIENCE                        = var.auth_audience
     DOMAIN_NAME                          = local.service_domain
     DOC_APP_API_ENABLED                  = var.doc_app_api_enabled
     DYNAMO_ENDPOINT                      = var.use_localstack ? var.lambda_dynamo_endpoint : null
@@ -35,6 +36,7 @@ module "authorize" {
     LOCALSTACK_ENDPOINT                  = var.use_localstack ? var.localstack_endpoint : null
     LOGIN_URI                            = "https://${local.frontend_fqdn}/"
     OIDC_API_BASE_URL                    = local.api_base_url
+    ORCH_CLIENT_ID                       = var.orch_client_id
     REDIS_KEY                            = local.redis_key
     TERMS_CONDITIONS_VERSION             = var.terms_and_conditions
     SUPPORT_LANGUAGE_CY                  = tostring(var.language_cy_enabled)
