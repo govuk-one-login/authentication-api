@@ -3,7 +3,7 @@ name: checkov
 on:
   push:
     branches:
-    - checkov
+    - main
   pull_request:
     branches:
     - main
