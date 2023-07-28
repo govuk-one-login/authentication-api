@@ -357,7 +357,7 @@ public class AuthorisationHandler
                                             .getEffectiveVectorOfTrust(authenticationRequest)
                                             .getCredentialTrustLevel()
                                             .getValue())
-                            .claim("state", new State())
+                            .claim("state", new State().getValue())
                             .claim("client_id", configurationService.getOrchestrationClientId())
                             .claim("scope", authenticationRequest.getScope().toString())
                             .claim(
