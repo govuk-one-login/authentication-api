@@ -14,6 +14,7 @@ import software.amazon.awssdk.services.dynamodb.model.ScanResponse;
 
 import java.net.URI;
 import java.util.Map;
+import java.util.Optional;
 
 public abstract class DynamoExtension extends BaseAwsResourceExtension
         implements BeforeAllCallback {
@@ -60,15 +61,20 @@ public abstract class DynamoExtension extends BaseAwsResourceExtension
     }
 
     protected void clearDynamoTable(DynamoDbClient dynamoDB, String tableName, String key) {
+        clearDynamoTable(dynamoDB, tableName, key, Optional.empty());
+    }
+
+    protected void clearDynamoTable(
+            DynamoDbClient dynamoDB, String tableName, String key, Optional<String> sortKey) {
         var scanRequest = ScanRequest.builder().tableName(tableName).build();
         ScanResponse result = dynamoDB.scan(scanRequest);
 
         for (Map<String, AttributeValue> item : result.items()) {
+            Map<String, AttributeValue> keyMap =
+                    sortKey.map(sk -> Map.of(key, item.get(key), sk, item.get(sk)))
+                            .orElse(Map.of(key, item.get(key)));
             dynamoDB.deleteItem(
-                    DeleteItemRequest.builder()
-                            .tableName(tableName)
-                            .key(Map.of(key, item.get(key)))
-                            .build());
+                    DeleteItemRequest.builder().tableName(tableName).key(keyMap).build());
         }
     }
 }
