@@ -1,7 +1,7 @@
 locals {
   extra_policies = [
-    aws_iam_policy.audit_storage_s3_access[0].arn,
-    aws_iam_policy.audit_storage_events_encryption_key_access[0].arn
+    aws_iam_policy.audit_storage_s3_access.arn,
+    aws_iam_policy.audit_storage_events_encryption_key_access.arn
   ]
 }
 
@@ -256,8 +256,8 @@ resource "aws_iam_policy" "audit_storage_s3_access" {
       ]
 
       Resource = [
-        aws_s3_bucket.audit_storage_bucket[0].arn,
-        "${aws_s3_bucket.audit_storage_bucket[0].arn}/*"
+        aws_s3_bucket.audit_storage_bucket.arn,
+        "${aws_s3_bucket.audit_storage_bucket.arn}/*"
       ]
     }]
   })

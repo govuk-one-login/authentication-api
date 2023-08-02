@@ -302,7 +302,7 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_frontend_api" {
 
 resource "aws_wafv2_web_acl_association" "waf_association_frontend_api" {
   resource_arn = aws_api_gateway_stage.endpoint_frontend_stage.arn
-  web_acl_arn  = aws_wafv2_web_acl.wafregional_web_acl_frontend_api[count.index].arn
+  web_acl_arn  = aws_wafv2_web_acl.wafregional_web_acl_frontend_api.arn
 
   depends_on = [
     aws_api_gateway_stage.endpoint_frontend_stage,
@@ -311,8 +311,8 @@ resource "aws_wafv2_web_acl_association" "waf_association_frontend_api" {
 }
 
 resource "aws_wafv2_web_acl_logging_configuration" "waf_logging_config_frontend_api" {
-  log_destination_configs = [aws_cloudwatch_log_group.frontend_waf_logs[count.index].arn]
-  resource_arn            = aws_wafv2_web_acl.wafregional_web_acl_frontend_api[count.index].arn
+  log_destination_configs = [aws_cloudwatch_log_group.frontend_waf_logs.arn]
+  resource_arn            = aws_wafv2_web_acl.wafregional_web_acl_frontend_api.arn
 
   logging_filter {
     default_behavior = "DROP"

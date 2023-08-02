@@ -75,6 +75,6 @@ resource "aws_iam_policy" "metrics_access_policy" {
 
 resource "aws_iam_role_policy_attachment" "metrics_access" {
   count      = contains(["integration", "production", "staging"], var.environment) ? 1 : 0
-  role       = aws_iam_role.grafana_metrics_read_only_role.name
-  policy_arn = aws_iam_policy.metrics_access_policy.arn
+  role       = aws_iam_role.grafana_metrics_read_only_role[0].name
+  policy_arn = aws_iam_policy.metrics_access_policy[0].arn
 }
