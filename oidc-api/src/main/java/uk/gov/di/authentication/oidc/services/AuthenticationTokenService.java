@@ -42,8 +42,6 @@ import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildUR
 import static uk.gov.di.authentication.shared.helpers.HashHelper.hashSha256String;
 
 public class AuthenticationTokenService {
-
-    public static final String CREDENTIAL_SUBJECT_KEY = "credential_subject";
     private final ConfigurationService configurationService;
     private final KmsConnectionService kmsService;
     private static final JWSAlgorithm TOKEN_ALGORITHM = JWSAlgorithm.ES256;
@@ -131,11 +129,11 @@ public class AuthenticationTokenService {
             return parseUserInfoFromResponse(response);
         } catch (IOException e) {
             throw new UnsuccessfulCredentialResponseException(
-                    "Error when attempting to call CRI data endpoint", e);
+                    "Error when attempting to call Authentication userinfo endpoint", e);
         }
     }
 
-    private UserInfo parseUserInfoFromResponse(HTTPResponse response)
+    UserInfo parseUserInfoFromResponse(HTTPResponse response)
             throws UnsuccessfulCredentialResponseException {
         try {
             String content = response.getContent();
@@ -146,7 +144,7 @@ public class AuthenticationTokenService {
         } catch (Json.JsonException e) {
             LOG.warn("Unable to parse userinfo response as UserInfo object");
             throw new UnsuccessfulCredentialResponseException(
-                    "Error Authentication userinfo response", e);
+                    "Error parsing authentication userinfo response as JSON", e);
         }
     }
 
