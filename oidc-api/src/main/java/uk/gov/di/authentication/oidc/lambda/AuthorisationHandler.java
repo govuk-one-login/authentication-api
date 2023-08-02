@@ -26,8 +26,10 @@ import uk.gov.di.authentication.oidc.helpers.RequestObjectToAuthRequestHelper;
 import uk.gov.di.authentication.oidc.services.AuthorizationService;
 import uk.gov.di.authentication.oidc.services.RequestObjectService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
@@ -279,7 +281,8 @@ public class AuthorisationHandler
                 clientSessionId,
                 authenticationRequest,
                 persistentSessionId,
-                fullClientDetailsFromRegistry);
+                fullClientDetailsFromRegistry,
+                clientSession);
     }
 
     private APIGatewayProxyResponseEvent redirect(
@@ -287,7 +290,8 @@ public class AuthorisationHandler
             String clientSessionID,
             AuthenticationRequest authenticationRequest,
             String persistentSessionId,
-            ClientRegistry client) {
+            ClientRegistry client,
+            ClientSession clientSession) {
         LOG.info("Redirecting");
         String redirectURI;
         try {
@@ -359,7 +363,10 @@ public class AuthorisationHandler
                                             .getValue())
                             .claim("state", new State())
                             .claim("client_id", configurationService.getOrchestrationClientId())
-                            .claim("scope", authenticationRequest.getScope().toString())
+                            .claim(
+                                    "scope",
+                                    ValidScopes.extractAuthScopesFromRequestedScopes(
+                                            authenticationRequest.getScope()))
                             .claim(
                                     "redirect_uri",
                                     configurationService.getOrchestrationRedirectUri())
