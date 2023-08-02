@@ -30,16 +30,6 @@ variable "aws_endpoint" {
   default = null
 }
 
-variable "use_localstack" {
-  type    = bool
-  default = false
-}
-
-variable "localstack_endpoint" {
-  type    = string
-  default = "http://localhost:45678/"
-}
-
 variable "redis_use_tls" {
   type    = string
   default = "true"

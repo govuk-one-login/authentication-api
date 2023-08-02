@@ -23,9 +23,7 @@ module "register" {
 
   handler_environment_variables = {
     ENVIRONMENT          = var.environment
-    DYNAMO_ENDPOINT      = var.use_localstack ? var.lambda_dynamo_endpoint : null
     TXMA_AUDIT_QUEUE_URL = module.oidc_txma_audit.queue_url
-    LOCALSTACK_ENDPOINT  = var.use_localstack ? var.localstack_endpoint : null
   }
   handler_function_name = "uk.gov.di.authentication.clientregistry.lambda.ClientRegistrationHandler::handleRequest"
 
@@ -56,8 +54,7 @@ module "register" {
   default_tags                           = local.default_tags
   api_key_required                       = true
 
-  use_localstack = var.use_localstack
-
+  
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_api,
     aws_api_gateway_resource.connect_resource,

@@ -1,6 +1,5 @@
 resource "aws_cloudwatch_metric_alarm" "sqs_deadletter_cloudwatch_alarm" {
-  count               = var.use_localstack ? 0 : 1
-  alarm_name          = replace("${var.environment}-account-managament-dlq-alarm", ".", "")
+    alarm_name          = replace("${var.environment}-account-managament-dlq-alarm", ".", "")
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = "1"
   metric_name         = "ApproximateNumberOfMessagesVisible"
@@ -18,7 +17,6 @@ resource "aws_cloudwatch_metric_alarm" "sqs_deadletter_cloudwatch_alarm" {
 
 # Turning WAF blocked alerts off until we figure out how best to utilise them
 #resource "aws_cloudwatch_metric_alarm" "waf_am_blocked_request_cloudwatch_alarm" {
-#  count               = var.use_localstack ? 0 : 1
 #  alarm_name          = replace("${var.environment}-account-management-waf-blocked-requests-alarm", ".", "")
 #  comparison_operator = "GreaterThanOrEqualToThreshold"
 #  evaluation_periods  = "1"

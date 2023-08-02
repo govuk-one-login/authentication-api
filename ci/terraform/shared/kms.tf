@@ -13,8 +13,7 @@ resource "aws_kms_alias" "id_token_signing_key_alias" {
 }
 
 data "aws_iam_policy_document" "kms_policy_document" {
-  count = var.use_localstack ? 0 : 1
-  statement {
+    statement {
     sid    = "AllowAccessToKmsSigningKey"
     effect = "Allow"
 
@@ -28,8 +27,7 @@ data "aws_iam_policy_document" "kms_policy_document" {
 }
 
 data "aws_iam_policy_document" "kms_signing_policy_document" {
-  count = var.use_localstack ? 0 : 1
-  statement {
+    statement {
     sid    = "AllowAccessToKmsSigningKey"
     effect = "Allow"
 
@@ -44,8 +42,7 @@ data "aws_iam_policy_document" "kms_signing_policy_document" {
 }
 
 resource "aws_iam_policy" "lambda_kms_signing_policy" {
-  count       = var.use_localstack ? 0 : 1
-  name        = "${var.environment}-standard-lambda-kms-signing-policy"
+    name        = "${var.environment}-standard-lambda-kms-signing-policy"
   path        = "/"
   description = "IAM policy for managing KMS connection for a lambda which allows signing"
 
@@ -54,8 +51,7 @@ resource "aws_iam_policy" "lambda_kms_signing_policy" {
 
 
 resource "aws_iam_policy" "lambda_kms_policy" {
-  count       = var.use_localstack ? 0 : 1
-  name        = "${var.environment}-standard-lambda-kms-policy"
+    name        = "${var.environment}-standard-lambda-kms-policy"
   path        = "/"
   description = "IAM policy for managing KMS connection for a lambda"
 
@@ -63,14 +59,12 @@ resource "aws_iam_policy" "lambda_kms_policy" {
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_kms" {
-  count      = var.use_localstack ? 0 : 1
-  role       = aws_iam_role.lambda_iam_role.name
+    role       = aws_iam_role.lambda_iam_role.name
   policy_arn = aws_iam_policy.lambda_kms_policy[0].arn
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_kms_signing_policy" {
-  count      = var.use_localstack ? 0 : 1
-  role       = aws_iam_role.token_lambda_iam_role.name
+    role       = aws_iam_role.token_lambda_iam_role.name
   policy_arn = aws_iam_policy.lambda_kms_signing_policy[0].arn
 }
 
@@ -91,8 +85,7 @@ resource "aws_kms_alias" "audit_payload_signing_key_alias" {
 }
 
 data "aws_iam_policy_document" "audit_payload_kms_signing_policy_document" {
-  count = var.use_localstack ? 0 : 1
-  statement {
+    statement {
     sid    = "AllowAccessToKmsAuditSigningKey"
     effect = "Allow"
 
@@ -108,8 +101,7 @@ data "aws_iam_policy_document" "audit_payload_kms_signing_policy_document" {
 }
 
 resource "aws_iam_policy" "audit_signing_key_lambda_kms_signing_policy" {
-  count       = var.use_localstack ? 0 : 1
-  name        = "${var.environment}-standard-lambda-audit-payload-kms-signing-policy"
+    name        = "${var.environment}-standard-lambda-audit-payload-kms-signing-policy"
   path        = "/"
   description = "IAM policy for managing KMS connection for a lambda which allows signing of audit payloads"
 
@@ -117,20 +109,17 @@ resource "aws_iam_policy" "audit_signing_key_lambda_kms_signing_policy" {
 }
 
 resource "aws_iam_role_policy_attachment" "attach_audit_signing_key_policy_default" {
-  count      = var.use_localstack ? 0 : 1
-  role       = aws_iam_role.lambda_iam_role.name
+    role       = aws_iam_role.lambda_iam_role.name
   policy_arn = aws_iam_policy.audit_signing_key_lambda_kms_signing_policy[0].arn
 }
 
 resource "aws_iam_role_policy_attachment" "attach_audit_signing_key_policy_token" {
-  count      = var.use_localstack ? 0 : 1
-  role       = aws_iam_role.token_lambda_iam_role.name
+    role       = aws_iam_role.token_lambda_iam_role.name
   policy_arn = aws_iam_policy.audit_signing_key_lambda_kms_signing_policy[0].arn
 }
 
 resource "aws_iam_role_policy_attachment" "attach_audit_signing_key_policy_dynamo" {
-  count      = var.use_localstack ? 0 : 1
-  role       = aws_iam_role.dynamo_sqs_lambda_iam_role.name
+    role       = aws_iam_role.dynamo_sqs_lambda_iam_role.name
   policy_arn = aws_iam_policy.audit_signing_key_lambda_kms_signing_policy[0].arn
 }
 
@@ -206,8 +195,7 @@ resource "aws_kms_alias" "lambda_env_vars_encryption_key_alias" {
 }
 
 data "aws_iam_policy_document" "lambda_env_vars_encryption_key_policy_document" {
-  count = var.use_localstack ? 0 : 1
-  statement {
+    statement {
     sid    = "AllowAccessToLambdaEnvVarsKmsEncryptionKey"
     effect = "Allow"
 
@@ -223,8 +211,7 @@ data "aws_iam_policy_document" "lambda_env_vars_encryption_key_policy_document" 
 }
 
 resource "aws_iam_policy" "lambda_env_vars_encryption_kms_policy" {
-  count       = var.use_localstack ? 0 : 1
-  name        = "${var.environment}-lambda-env-vars-encryption-key-kms-policy"
+    name        = "${var.environment}-lambda-env-vars-encryption-key-kms-policy"
   path        = "/"
   description = "IAM policy for managing KMS connection for a lambda environment variable encryption"
 
@@ -232,8 +219,7 @@ resource "aws_iam_policy" "lambda_env_vars_encryption_kms_policy" {
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_env_vars_encryption_kms_policy" {
-  count      = var.use_localstack ? 0 : 1
-  role       = aws_iam_role.lambda_iam_role.name
+    role       = aws_iam_role.lambda_iam_role.name
   policy_arn = aws_iam_policy.lambda_env_vars_encryption_kms_policy[0].arn
 }
 ### Events flow encryption key

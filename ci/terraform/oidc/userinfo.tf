@@ -27,9 +27,7 @@ module "userinfo" {
   handler_environment_variables = {
     ENVIRONMENT                 = var.environment
     TXMA_AUDIT_QUEUE_URL        = module.oidc_txma_audit.queue_url
-    LOCALSTACK_ENDPOINT         = var.use_localstack ? var.localstack_endpoint : null
     REDIS_KEY                   = local.redis_key
-    DYNAMO_ENDPOINT             = var.use_localstack ? var.lambda_dynamo_endpoint : null
     TOKEN_SIGNING_KEY_ALIAS     = local.id_token_signing_key_alias_name
     TOKEN_SIGNING_KEY_RSA_ALIAS = aws_kms_alias.id_token_signing_key_alias.name
     IDENTITY_ENABLED            = var.ipv_api_enabled
@@ -64,8 +62,7 @@ module "userinfo" {
   lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
   default_tags                           = local.default_tags
 
-  use_localstack = var.use_localstack
-
+  
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_api,
     aws_api_gateway_resource.connect_resource,

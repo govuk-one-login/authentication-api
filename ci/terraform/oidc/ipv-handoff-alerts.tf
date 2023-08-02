@@ -1,6 +1,5 @@
 data "aws_cloudwatch_log_group" "ipv_authorize_lambda_log_group" {
-  count = var.use_localstack ? 0 : 1
-  name  = replace("/aws/lambda/${var.environment}-ipv-authorize-lambda", ".", "")
+    name  = replace("/aws/lambda/${var.environment}-ipv-authorize-lambda", ".", "")
 
   depends_on = [
     module.ipv-authorize
@@ -8,8 +7,7 @@ data "aws_cloudwatch_log_group" "ipv_authorize_lambda_log_group" {
 }
 
 resource "aws_cloudwatch_log_metric_filter" "ipv_authorize_metric_filter" {
-  count          = var.use_localstack ? 0 : 1
-  name           = replace("${var.environment}-ipv-handoff-p1-errors", ".", "")
+    name           = replace("${var.environment}-ipv-handoff-p1-errors", ".", "")
   pattern        = "{($.level = \"ERROR\")}"
   log_group_name = data.aws_cloudwatch_log_group.ipv_authorize_lambda_log_group[0].name
 
@@ -21,8 +19,7 @@ resource "aws_cloudwatch_log_metric_filter" "ipv_authorize_metric_filter" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "ipv_handoff_p1_cloudwatch_alarm" {
-  count               = var.use_localstack ? 0 : 1
-  alarm_name          = replace("${var.environment}-P1-ipv-handoff-alarm", ".", "")
+    alarm_name          = replace("${var.environment}-P1-ipv-handoff-alarm", ".", "")
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = "1"
   metric_name         = aws_cloudwatch_log_metric_filter.ipv_authorize_metric_filter[0].metric_transformation[0].name

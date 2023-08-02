@@ -24,8 +24,6 @@ module "send_otp_notification" {
   handler_environment_variables = {
     ENVIRONMENT                            = var.environment
     EMAIL_QUEUE_URL                        = aws_sqs_queue.email_queue.id
-    DYNAMO_ENDPOINT                        = var.use_localstack ? var.lambda_dynamo_endpoint : null
-    LOCALSTACK_ENDPOINT                    = var.use_localstack ? var.localstack_endpoint : null
     REDIS_KEY                              = local.redis_key
     TXMA_AUDIT_QUEUE_URL                   = module.account_management_txma_audit.queue_url
     BLOCKED_EMAIL_DURATION                 = var.blocked_email_duration
@@ -65,8 +63,7 @@ module "send_otp_notification" {
   lambda_env_vars_encryption_kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
   default_tags                           = local.default_tags
   authorizer_id                          = aws_api_gateway_authorizer.di_account_management_api.id
-  use_localstack                         = var.use_localstack
-
+  
   depends_on = [
     aws_api_gateway_rest_api.di_account_management_api,
     aws_sqs_queue.email_queue,

@@ -154,7 +154,6 @@ resource "aws_lambda_function" "fraud_realtime_logging_lambda" {
   }
   environment {
     variables = {
-      LOCALSTACK_ENDPOINT         = var.use_localstack ? var.localstack_endpoint : null
       TXMA_OBFUSCATION_SECRET_ARN = var.txma_obfuscation_secret_arn == "" ? aws_secretsmanager_secret.hmac_secret[0].arn : var.txma_obfuscation_secret_arn
     }
   }
@@ -174,8 +173,7 @@ resource "aws_lambda_permission" "sns_can_execute_subscriber_fraud_realtime_logg
 }
 
 resource "aws_cloudwatch_log_group" "fraud_realtime_logging_lambda_log_group" {
-  count = var.use_localstack ? 0 : 1
-
+  
   name              = "/aws/lambda/${aws_lambda_function.fraud_realtime_logging_lambda.function_name}"
   tags              = local.default_tags
   kms_key_id        = local.cloudwatch_key_arn

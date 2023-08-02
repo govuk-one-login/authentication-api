@@ -28,11 +28,9 @@ module "authorize" {
   handler_environment_variables = {
     DOMAIN_NAME                          = local.service_domain
     DOC_APP_API_ENABLED                  = var.doc_app_api_enabled
-    DYNAMO_ENDPOINT                      = var.use_localstack ? var.lambda_dynamo_endpoint : null
     TXMA_AUDIT_QUEUE_URL                 = module.oidc_txma_audit.queue_url
     ENVIRONMENT                          = var.environment
-    HEADERS_CASE_INSENSITIVE             = var.use_localstack ? "true" : "false"
-    LOCALSTACK_ENDPOINT                  = var.use_localstack ? var.localstack_endpoint : null
+    HEADERS_CASE_INSENSITIVE             = "false"
     LOGIN_URI                            = "https://${local.frontend_fqdn}/"
     OIDC_API_BASE_URL                    = local.api_base_url
     REDIS_KEY                            = local.redis_key
@@ -71,8 +69,7 @@ module "authorize" {
   lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
   default_tags                           = local.default_tags
 
-  use_localstack = var.use_localstack
-  depends_on = [
+    depends_on = [
     aws_api_gateway_rest_api.di_authentication_api,
     aws_api_gateway_resource.connect_resource,
     aws_api_gateway_resource.wellknown_resource,

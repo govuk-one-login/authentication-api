@@ -17,9 +17,7 @@ module "trustmarks" {
   handler_environment_variables = {
     ENVIRONMENT              = var.environment
     OIDC_API_BASE_URL        = local.api_base_url
-    LOCALSTACK_ENDPOINT      = var.use_localstack ? var.localstack_endpoint : null
-    DYNAMO_ENDPOINT          = var.use_localstack ? var.lambda_dynamo_endpoint : null
-    HEADERS_CASE_INSENSITIVE = var.use_localstack ? "true" : "false"
+    HEADERS_CASE_INSENSITIVE = "false"
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.TrustMarkHandler::handleRequest"
 
@@ -47,8 +45,7 @@ module "trustmarks" {
   lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
   default_tags                           = local.default_tags
 
-  use_localstack = var.use_localstack
-
+  
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_api,
     aws_api_gateway_resource.connect_resource,

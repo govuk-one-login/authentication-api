@@ -19,7 +19,6 @@ module "notify_callback" {
 
   handler_environment_variables = merge(var.notify_template_map, {
     ENVIRONMENT         = var.environment
-    LOCALSTACK_ENDPOINT = var.use_localstack ? var.localstack_endpoint : null
   })
   handler_function_name = "uk.gov.di.authentication.deliveryreceiptsapi.lambda.NotifyCallbackHandler::handleRequest"
 
@@ -46,8 +45,7 @@ module "notify_callback" {
   default_tags                           = local.default_tags
   api_key_required                       = false
 
-  use_localstack = var.use_localstack
-
+  
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_delivery_receipts_api,
   ]

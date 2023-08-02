@@ -85,8 +85,7 @@ resource "aws_iam_role" "invocation_role" {
 }
 
 resource "aws_cloudwatch_log_group" "lambda_log_group" {
-  count             = var.use_localstack ? 0 : 1
-  name              = "/aws/lambda/${aws_lambda_function.authorizer.function_name}"
+    name              = "/aws/lambda/${aws_lambda_function.authorizer.function_name}"
   tags              = local.default_tags
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   retention_in_days = var.cloudwatch_log_retention
@@ -119,7 +118,7 @@ data "aws_region" "current" {
 }
 
 locals {
-  oidc_api_base_url = var.use_localstack ? "${var.aws_endpoint}/restapis/${aws_api_gateway_rest_api.di_account_management_api.id}/${var.environment}/_user_request_" : "https://${local.oidc_api_fqdn}/"
+  oidc_api_base_url = "https://${local.oidc_api_fqdn}/"
 }
 
 resource "aws_api_gateway_deployment" "deployment" {
@@ -153,8 +152,7 @@ resource "aws_api_gateway_deployment" "deployment" {
 }
 
 resource "aws_cloudwatch_log_group" "account_management_stage_execution_logs" {
-  count = var.use_localstack ? 0 : 1
-
+  
   name              = "API-Gateway-Execution-Logs_${aws_api_gateway_rest_api.di_account_management_api.id}/${var.environment}"
   retention_in_days = var.cloudwatch_log_retention
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
@@ -173,8 +171,7 @@ resource "aws_cloudwatch_log_subscription_filter" "account_management_execution_
 }
 
 resource "aws_cloudwatch_log_group" "account_management_access_logs" {
-  count = var.use_localstack ? 0 : 1
-
+  
   name              = "${var.environment}-account-management_-api-access-logs"
   retention_in_days = var.cloudwatch_log_retention
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
@@ -193,8 +190,7 @@ resource "aws_cloudwatch_log_subscription_filter" "account_management_access_log
 }
 
 resource "aws_cloudwatch_log_group" "account_management_waf_logs" {
-  count = var.use_localstack ? 0 : 1
-
+  
   name              = "aws-waf-logs-account-management-${var.environment}"
   retention_in_days = var.cloudwatch_log_retention
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
@@ -220,7 +216,7 @@ resource "aws_api_gateway_stage" "stage" {
   xray_tracing_enabled = true
 
   dynamic "access_log_settings" {
-    for_each = var.use_localstack ? [] : aws_cloudwatch_log_group.account_management_access_logs
+    for_each = aws_cloudwatch_log_group.account_management_access_logs
     iterator = log_group
     content {
       destination_arn = log_group.value.arn
@@ -260,8 +256,7 @@ resource "aws_api_gateway_method_settings" "api_gateway_logging_settings" {
 }
 
 resource "aws_api_gateway_base_path_mapping" "api" {
-  count = var.use_localstack ? 0 : 1
-
+  
   api_id      = aws_api_gateway_rest_api.di_account_management_api.id
   stage_name  = aws_api_gateway_stage.stage.stage_name
   domain_name = local.account_management_api_fqdn
@@ -270,13 +265,11 @@ resource "aws_api_gateway_base_path_mapping" "api" {
 module "dashboard" {
   source           = "../modules/dashboards"
   api_gateway_name = aws_api_gateway_rest_api.di_account_management_api.name
-  use_localstack   = var.use_localstack
-}
+  }
 
 
 resource "aws_wafv2_web_acl" "wafregional_web_acl_am_api" {
-  count = var.use_localstack ? 0 : 1
-  name  = "${var.environment}-am-waf-web-acl"
+    name  = "${var.environment}-am-waf-web-acl"
   scope = "REGIONAL"
 
   default_action {
@@ -352,8 +345,7 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_am_api" {
 }
 
 resource "aws_wafv2_web_acl_association" "waf_association_am_api" {
-  count        = var.use_localstack ? 0 : 1
-  resource_arn = aws_api_gateway_stage.stage.arn
+    resource_arn = aws_api_gateway_stage.stage.arn
   web_acl_arn  = aws_wafv2_web_acl.wafregional_web_acl_am_api[count.index].arn
 
   depends_on = [
@@ -363,8 +355,7 @@ resource "aws_wafv2_web_acl_association" "waf_association_am_api" {
 }
 
 resource "aws_wafv2_web_acl_logging_configuration" "waf_logging_config_am_api" {
-  count                   = var.use_localstack ? 0 : 1
-  log_destination_configs = [aws_cloudwatch_log_group.account_management_waf_logs[count.index].arn]
+    log_destination_configs = [aws_cloudwatch_log_group.account_management_waf_logs[count.index].arn]
   resource_arn            = aws_wafv2_web_acl.wafregional_web_acl_am_api[count.index].arn
 
   logging_filter {

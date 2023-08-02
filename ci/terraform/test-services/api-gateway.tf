@@ -43,12 +43,11 @@ resource "aws_api_gateway_deployment" "test_services_api_deployment" {
 }
 
 locals {
-  api_test_services_api_base_url = var.use_localstack ? "${var.aws_endpoint}/restapis/${aws_api_gateway_rest_api.di_authentication_test_services_api.id}/${var.environment}/_user_request_" : aws_api_gateway_rest_api.di_authentication_test_services_api.id
+  api_test_services_api_base_url = aws_api_gateway_rest_api.di_authentication_test_services_api.id
 }
 
 resource "aws_cloudwatch_log_group" "test_services_api_stage_execution_logs" {
-  count = var.use_localstack ? 0 : 1
-
+  
   name              = "API-Gateway-Execution-Logs_${aws_api_gateway_rest_api.di_authentication_test_services_api.id}/${var.environment}"
   retention_in_days = var.cloudwatch_log_retention
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
@@ -67,8 +66,7 @@ resource "aws_cloudwatch_log_subscription_filter" "test_services_api_execution_l
 }
 
 resource "aws_cloudwatch_log_group" "test_services_stage_access_logs" {
-  count = var.use_localstack ? 0 : 1
-
+  
   name              = "${var.environment}-test-services-api-access-logs"
   retention_in_days = var.cloudwatch_log_retention
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
@@ -94,7 +92,7 @@ resource "aws_api_gateway_stage" "endpoint_test_services_stage" {
   xray_tracing_enabled = true
 
   dynamic "access_log_settings" {
-    for_each = var.use_localstack ? [] : aws_cloudwatch_log_group.test_services_stage_access_logs
+    for_each = aws_cloudwatch_log_group.test_services_stage_access_logs
     iterator = log_group
     content {
       destination_arn = log_group.value.arn

@@ -28,7 +28,6 @@ resource "aws_lambda_function" "backchannel_logout_request_lambda" {
       ENVIRONMENT             = var.environment
       OIDC_API_BASE_URL       = local.api_base_url
       TOKEN_SIGNING_KEY_ALIAS = local.id_token_signing_key_alias_name
-      LOCALSTACK_ENDPOINT     = var.use_localstack ? var.localstack_endpoint : null
     })
   }
   kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
@@ -37,8 +36,7 @@ resource "aws_lambda_function" "backchannel_logout_request_lambda" {
 }
 
 resource "aws_cloudwatch_log_group" "backchannel_logout_request_lambda_log_group" {
-  count = var.use_localstack ? 0 : 1
-
+  
   name              = "/aws/lambda/${aws_lambda_function.backchannel_logout_request_lambda.function_name}"
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   retention_in_days = var.cloudwatch_log_retention

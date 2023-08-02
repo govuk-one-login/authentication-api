@@ -1,6 +1,5 @@
 resource "aws_cloudwatch_metric_alarm" "sqs_deadletter_cloudwatch_alarm" {
-  count               = var.use_localstack ? 0 : 1
-  alarm_name          = replace("${var.environment}-email-notification-dlq-alarm", ".", "")
+    alarm_name          = replace("${var.environment}-email-notification-dlq-alarm", ".", "")
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = "1"
   metric_name         = "ApproximateNumberOfMessagesVisible"
@@ -17,8 +16,7 @@ resource "aws_cloudwatch_metric_alarm" "sqs_deadletter_cloudwatch_alarm" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "spot_request_sqs_dlq_cloudwatch_alarm" {
-  count               = var.use_localstack ? 0 : 1
-  alarm_name          = replace("${var.environment}-spot-request-queue-dlq-alarm", ".", "")
+    alarm_name          = replace("${var.environment}-spot-request-queue-dlq-alarm", ".", "")
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = "1"
   metric_name         = "ApproximateNumberOfMessagesVisible"
@@ -37,8 +35,7 @@ resource "aws_cloudwatch_metric_alarm" "spot_request_sqs_dlq_cloudwatch_alarm" {
 
 # Turning WAF blocked alerts off until we figure out how best to utilise them
 #resource "aws_cloudwatch_metric_alarm" "waf_oidc_blocked_request_cloudwatch_alarm" {
-#  count               = var.use_localstack ? 0 : 1
-#  alarm_name          = replace("${var.environment}-oidc-waf-blocked-requests-alarm", ".", "")
+#  #  alarm_name          = replace("${var.environment}-oidc-waf-blocked-requests-alarm", ".", "")
 #  comparison_operator = "GreaterThanOrEqualToThreshold"
 #  evaluation_periods  = "1"
 #  metric_name         = "BlockedRequests"
@@ -59,8 +56,7 @@ resource "aws_cloudwatch_metric_alarm" "spot_request_sqs_dlq_cloudwatch_alarm" {
 
 # Turning WAF blocked alerts off until we figure out how best to utilise them
 #resource "aws_cloudwatch_metric_alarm" "waf_frontend_blocked_request_cloudwatch_alarm" {
-#  count               = var.use_localstack ? 0 : 1
-#  alarm_name          = replace("${var.environment}-frontend-waf-blocked-requests-alarm", ".", "")
+#  #  alarm_name          = replace("${var.environment}-frontend-waf-blocked-requests-alarm", ".", "")
 #  comparison_operator = "GreaterThanOrEqualToThreshold"
 #  evaluation_periods  = "1"
 #  metric_name         = "BlockedRequests"

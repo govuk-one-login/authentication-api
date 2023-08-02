@@ -19,12 +19,12 @@ provider "aws" {
     role_arn = var.deployer_role_arn
   }
 
-  insecure = var.use_localstack
+  insecure = false
 
-  s3_force_path_style         = var.use_localstack
-  skip_credentials_validation = var.use_localstack
-  skip_metadata_api_check     = var.use_localstack
-  skip_requesting_account_id  = var.use_localstack
+  s3_force_path_style         = false
+  skip_credentials_validation = false
+  skip_metadata_api_check     = false
+  skip_requesting_account_id  = false
 
   endpoints {
     apigateway  = var.aws_endpoint
@@ -40,7 +40,7 @@ provider "aws" {
 
 locals {
   // Using a local rather than the default_tags option on the AWS provider, as the latter has known issues which produce errors on apply.
-  default_tags = var.use_localstack ? null : {
+  default_tags = {
     environment = var.environment
     application = "delivery-receipts-api"
   }

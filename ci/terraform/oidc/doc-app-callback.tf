@@ -34,10 +34,8 @@ module "doc-app-callback" {
     DOC_APP_JWKS_URL                   = var.doc_app_jwks_endpoint
     DOC_APP_CRI_DATA_V2_ENDPOINT       = var.doc_app_cri_data_v2_endpoint
     DOC_APP_V2_DATA_ENDPOINT_ENABLED   = var.doc_app_use_cri_data_v2_endpoint
-    DYNAMO_ENDPOINT                    = var.use_localstack ? var.lambda_dynamo_endpoint : null
     ENVIRONMENT                        = var.environment
     INTERNAl_SECTOR_URI                = var.internal_sector_uri
-    LOCALSTACK_ENDPOINT                = var.use_localstack ? var.localstack_endpoint : null
     LOGIN_URI                          = "https://${local.frontend_fqdn}/"
     REDIS_KEY                          = local.redis_key
     TXMA_AUDIT_QUEUE_URL               = module.oidc_txma_audit.queue_url
@@ -74,8 +72,7 @@ module "doc-app-callback" {
   api_key_required                       = false
   lambda_log_alarm_threshold             = 10
 
-  use_localstack = var.use_localstack
-
+  
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_api,
   ]

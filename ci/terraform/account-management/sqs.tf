@@ -12,8 +12,8 @@ resource "aws_sqs_queue" "email_queue" {
   receive_wait_time_seconds  = 10
   visibility_timeout_seconds = 180
 
-  kms_master_key_id                 = var.use_localstack ? null : "alias/aws/sqs"
-  kms_data_key_reuse_period_seconds = var.use_localstack ? null : 300
+  kms_master_key_id                 = "alias/aws/sqs"
+  kms_data_key_reuse_period_seconds = 300
 
   redrive_policy = jsonencode({
     deadLetterTargetArn = aws_sqs_queue.email_dead_letter_queue.arn
@@ -27,8 +27,8 @@ resource "aws_sqs_queue" "email_queue" {
 resource "aws_sqs_queue" "email_dead_letter_queue" {
   name = "${var.environment}-account-management-dlq"
 
-  kms_master_key_id                 = var.use_localstack ? null : "alias/aws/sqs"
-  kms_data_key_reuse_period_seconds = var.use_localstack ? null : 300
+  kms_master_key_id                 = "alias/aws/sqs"
+  kms_data_key_reuse_period_seconds = 300
 
   message_retention_seconds = 3600 * 6
 
@@ -37,8 +37,7 @@ resource "aws_sqs_queue" "email_dead_letter_queue" {
 
 resource "time_sleep" "wait_60_seconds" {
   depends_on = [aws_sqs_queue.email_queue]
-  count      = var.use_localstack ? 0 : 1
-
+  
   create_duration = "60s"
 }
 
@@ -198,8 +197,7 @@ resource "aws_lambda_function" "email_sqs_lambda" {
 }
 
 resource "aws_cloudwatch_log_group" "sqs_lambda_log_group" {
-  count = var.use_localstack ? 0 : 1
-
+  
   name              = "/aws/lambda/${aws_lambda_function.email_sqs_lambda.function_name}"
   tags              = local.default_tags
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn

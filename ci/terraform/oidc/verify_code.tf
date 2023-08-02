@@ -29,9 +29,7 @@ module "verify_code" {
     ENVIRONMENT                         = var.environment
     BLOCKED_EMAIL_DURATION              = var.blocked_email_duration
     TXMA_AUDIT_QUEUE_URL                = module.oidc_txma_audit.queue_url
-    LOCALSTACK_ENDPOINT                 = var.use_localstack ? var.localstack_endpoint : null
     REDIS_KEY                           = local.redis_key
-    DYNAMO_ENDPOINT                     = var.use_localstack ? var.lambda_dynamo_endpoint : null
     TERMS_CONDITIONS_VERSION            = var.terms_and_conditions
     TEST_CLIENT_VERIFY_EMAIL_OTP        = var.test_client_verify_email_otp
     TEST_CLIENT_VERIFY_PHONE_NUMBER_OTP = var.test_client_verify_phone_number_otp
@@ -68,8 +66,7 @@ module "verify_code" {
   default_tags                           = local.default_tags
   api_key_required                       = true
 
-  use_localstack = var.use_localstack
-
+  
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_frontend_api,
     aws_api_gateway_resource.connect_resource,

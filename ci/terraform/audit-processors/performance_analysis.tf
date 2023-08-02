@@ -67,7 +67,6 @@ resource "aws_lambda_function" "performance_analysis_logging_lambda" {
   }
   environment {
     variables = {
-      LOCALSTACK_ENDPOINT = var.use_localstack ? var.localstack_endpoint : null
       AUDIT_HMAC_SECRET   = random_password.performance_analysis_hmac_key.result
     }
   }
@@ -87,8 +86,7 @@ resource "aws_lambda_permission" "sns_can_execute_subscriber_performance_analysi
 }
 
 resource "aws_cloudwatch_log_group" "performance_analysis_logging_lambda_log_group" {
-  count = var.use_localstack ? 0 : 1
-
+  
   name              = "/aws/lambda/${aws_lambda_function.performance_analysis_logging_lambda.function_name}"
   tags              = local.default_tags
   kms_key_id        = local.cloudwatch_key_arn

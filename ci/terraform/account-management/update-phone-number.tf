@@ -21,9 +21,7 @@ module "update_phone_number" {
   endpoint_method = "POST"
   handler_environment_variables = {
     ENVIRONMENT          = var.environment
-    DYNAMO_ENDPOINT      = var.use_localstack ? var.lambda_dynamo_endpoint : null
     EMAIL_QUEUE_URL      = aws_sqs_queue.email_queue.id
-    LOCALSTACK_ENDPOINT  = var.use_localstack ? var.localstack_endpoint : null
     REDIS_KEY            = local.redis_key
     TXMA_AUDIT_QUEUE_URL = module.account_management_txma_audit.queue_url
     INTERNAl_SECTOR_URI  = var.internal_sector_uri
@@ -53,8 +51,7 @@ module "update_phone_number" {
   subnet_id                              = local.private_subnet_ids
   environment                            = var.environment
   lambda_role_arn                        = module.account_management_api_update_phone_number_role.arn
-  use_localstack                         = var.use_localstack
-  default_tags                           = local.default_tags
+    default_tags                           = local.default_tags
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
