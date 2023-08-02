@@ -36,7 +36,7 @@ resource "aws_lambda_function" "backchannel_logout_request_lambda" {
 }
 
 resource "aws_cloudwatch_log_group" "backchannel_logout_request_lambda_log_group" {
-  
+
   name              = "/aws/lambda/${aws_lambda_function.backchannel_logout_request_lambda.function_name}"
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   retention_in_days = var.cloudwatch_log_retention

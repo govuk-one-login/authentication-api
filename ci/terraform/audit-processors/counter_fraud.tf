@@ -173,7 +173,7 @@ resource "aws_lambda_permission" "sns_can_execute_subscriber_fraud_realtime_logg
 }
 
 resource "aws_cloudwatch_log_group" "fraud_realtime_logging_lambda_log_group" {
-  
+
   name              = "/aws/lambda/${aws_lambda_function.fraud_realtime_logging_lambda.function_name}"
   tags              = local.default_tags
   kms_key_id        = local.cloudwatch_key_arn

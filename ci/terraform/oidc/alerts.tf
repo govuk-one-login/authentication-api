@@ -1,5 +1,5 @@
 resource "aws_cloudwatch_metric_alarm" "sqs_deadletter_cloudwatch_alarm" {
-    alarm_name          = replace("${var.environment}-email-notification-dlq-alarm", ".", "")
+  alarm_name          = replace("${var.environment}-email-notification-dlq-alarm", ".", "")
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = "1"
   metric_name         = "ApproximateNumberOfMessagesVisible"
@@ -16,7 +16,7 @@ resource "aws_cloudwatch_metric_alarm" "sqs_deadletter_cloudwatch_alarm" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "spot_request_sqs_dlq_cloudwatch_alarm" {
-    alarm_name          = replace("${var.environment}-spot-request-queue-dlq-alarm", ".", "")
+  alarm_name          = replace("${var.environment}-spot-request-queue-dlq-alarm", ".", "")
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = "1"
   metric_name         = "ApproximateNumberOfMessagesVisible"

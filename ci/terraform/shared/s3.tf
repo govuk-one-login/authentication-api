@@ -15,7 +15,7 @@ resource "aws_s3_bucket" "smoketest_sms_bucket" {
 }
 
 resource "aws_iam_policy" "s3_smoketest_policy" {
-    name        = "${var.environment}-s3-smoketest-policy"
+  name        = "${var.environment}-s3-smoketest-policy"
   path        = "/"
   description = "IAM policy for managing S3 connection to the S3 Smoketest bucket"
 
@@ -23,7 +23,7 @@ resource "aws_iam_policy" "s3_smoketest_policy" {
 }
 
 data "aws_iam_policy_document" "s3_smoketest_policy_document" {
-    statement {
+  statement {
     sid    = "AllowAccessToWriteToS3"
     effect = "Allow"
 
@@ -38,6 +38,6 @@ data "aws_iam_policy_document" "s3_smoketest_policy_document" {
 }
 
 resource "aws_iam_role_policy_attachment" "notification_lambda_smoketest_s3" {
-    role       = aws_iam_role.email_lambda_iam_role.name
+  role       = aws_iam_role.email_lambda_iam_role.name
   policy_arn = aws_iam_policy.s3_smoketest_policy[0].arn
 }

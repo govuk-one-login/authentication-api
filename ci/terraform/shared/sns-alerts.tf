@@ -99,7 +99,7 @@ resource "aws_iam_role_policy_attachment" "api_gateway_logging_logs" {
 }
 
 resource "aws_cloudwatch_log_group" "sns_log_group" {
-  
+
   name              = "/aws/lambda/${aws_sns_topic.slack_events.name}"
   tags              = local.default_tags
   kms_key_id        = aws_kms_key.cloudwatch_log_encryption.arn

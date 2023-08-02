@@ -72,7 +72,7 @@ module "doc-app-callback" {
   api_key_required                       = false
   lambda_log_alarm_threshold             = 10
 
-  
+
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_api,
   ]

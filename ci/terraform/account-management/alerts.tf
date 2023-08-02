@@ -1,5 +1,5 @@
 resource "aws_cloudwatch_metric_alarm" "sqs_deadletter_cloudwatch_alarm" {
-    alarm_name          = replace("${var.environment}-account-managament-dlq-alarm", ".", "")
+  alarm_name          = replace("${var.environment}-account-managament-dlq-alarm", ".", "")
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = "1"
   metric_name         = "ApproximateNumberOfMessagesVisible"

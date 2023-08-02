@@ -1,5 +1,5 @@
 resource "aws_cloudwatch_log_metric_filter" "lambda_error_metric_filter" {
-    name           = replace("${var.environment}-${var.endpoint_name}-errors", ".", "")
+  name           = replace("${var.environment}-${var.endpoint_name}-errors", ".", "")
   pattern        = "{($.level = \"ERROR\")}"
   log_group_name = aws_cloudwatch_log_group.lambda_log_group[0].name
 
@@ -11,7 +11,7 @@ resource "aws_cloudwatch_log_metric_filter" "lambda_error_metric_filter" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "lambda_error_cloudwatch_alarm" {
-    alarm_name          = replace("${var.environment}-${var.endpoint_name}-alarm", ".", "")
+  alarm_name          = replace("${var.environment}-${var.endpoint_name}-alarm", ".", "")
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = "1"
   metric_name         = aws_cloudwatch_log_metric_filter.lambda_error_metric_filter[0].metric_transformation[0].name

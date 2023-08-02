@@ -47,7 +47,7 @@ locals {
 }
 
 resource "aws_cloudwatch_log_group" "test_services_api_stage_execution_logs" {
-  
+
   name              = "API-Gateway-Execution-Logs_${aws_api_gateway_rest_api.di_authentication_test_services_api.id}/${var.environment}"
   retention_in_days = var.cloudwatch_log_retention
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
@@ -66,7 +66,7 @@ resource "aws_cloudwatch_log_subscription_filter" "test_services_api_execution_l
 }
 
 resource "aws_cloudwatch_log_group" "test_services_stage_access_logs" {
-  
+
   name              = "${var.environment}-test-services-api-access-logs"
   retention_in_days = var.cloudwatch_log_retention
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn

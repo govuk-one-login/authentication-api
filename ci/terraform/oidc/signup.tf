@@ -62,7 +62,7 @@ module "signup" {
   api_key_required                       = true
 
 
-  
+
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_frontend_api,
     aws_api_gateway_resource.connect_resource,

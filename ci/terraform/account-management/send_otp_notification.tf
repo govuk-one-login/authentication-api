@@ -63,7 +63,7 @@ module "send_otp_notification" {
   lambda_env_vars_encryption_kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
   default_tags                           = local.default_tags
   authorizer_id                          = aws_api_gateway_authorizer.di_account_management_api.id
-  
+
   depends_on = [
     aws_api_gateway_rest_api.di_account_management_api,
     aws_sqs_queue.email_queue,

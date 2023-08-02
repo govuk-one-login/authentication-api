@@ -128,7 +128,7 @@ resource "aws_iam_policy" "read_from_queue_policy" {
 }
 
 resource "aws_iam_role_policy_attachment" "read_from_queue_attachment" {
-  
+
   role       = local.lambda_iam_role_name
   policy_arn = aws_iam_policy.read_from_queue_policy.arn
 }
@@ -173,7 +173,7 @@ resource "aws_lambda_permission" "sqs_can_execute_subscriber_lambda" {
 }
 
 resource "aws_cloudwatch_log_group" "lambda_log_group" {
-  
+
   name              = "/aws/lambda/${aws_lambda_function.audit_processor_lambda.function_name}"
   tags              = local.default_tags
   kms_key_id        = local.cloudwatch_key_arn
@@ -204,7 +204,7 @@ resource "aws_lambda_alias" "active_processor" {
 }
 
 resource "aws_s3_bucket" "audit_storage_bucket" {
-    bucket = var.environment == "dev" ? "${var.environment}-audit-storage-bucket" : "${var.environment}-audit-storage"
+  bucket = var.environment == "dev" ? "${var.environment}-audit-storage-bucket" : "${var.environment}-audit-storage"
   # Bucket name "dev-audit-storage" is not available
   acl = "private"
 
@@ -234,7 +234,7 @@ resource "aws_s3_bucket" "audit_storage_bucket" {
 }
 
 resource "aws_s3_bucket_public_access_block" "audit_storage_bucket_access" {
-    bucket                  = aws_s3_bucket.audit_storage_bucket[0].id
+  bucket                  = aws_s3_bucket.audit_storage_bucket[0].id
   block_public_acls       = true
   block_public_policy     = true
   ignore_public_acls      = true
@@ -242,7 +242,7 @@ resource "aws_s3_bucket_public_access_block" "audit_storage_bucket_access" {
 }
 
 resource "aws_iam_policy" "audit_storage_s3_access" {
-    name_prefix = "lambda-s3-access"
+  name_prefix = "lambda-s3-access"
   path        = "/${var.environment}/audit-storage/"
   description = "IAM policy for managing s3 access from audit-storage lambda"
 
@@ -264,7 +264,7 @@ resource "aws_iam_policy" "audit_storage_s3_access" {
 }
 
 resource "aws_iam_policy" "audit_storage_events_encryption_key_access" {
-    name_prefix = "events-encryption-key-access"
+  name_prefix = "events-encryption-key-access"
   path        = "/${var.environment}/audit-storage/"
   description = "IAM policy for managing kms access to event stream encryption key"
 
@@ -285,7 +285,7 @@ resource "aws_iam_policy" "audit_storage_events_encryption_key_access" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "audit_storage_error_alarm" {
-    alarm_name          = "${var.environment}-audit-storage-error-alarm"
+  alarm_name          = "${var.environment}-audit-storage-error-alarm"
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = "1"
   metric_name         = "Errors"

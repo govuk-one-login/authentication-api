@@ -40,7 +40,7 @@ resource "aws_lambda_function" "endpoint_lambda" {
 }
 
 resource "aws_cloudwatch_log_group" "lambda_log_group" {
-  
+
   name              = "/aws/lambda/${aws_lambda_function.endpoint_lambda.function_name}"
   tags              = var.default_tags
   kms_key_id        = var.cloudwatch_key_arn

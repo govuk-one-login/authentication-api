@@ -65,4 +65,4 @@ module "processing-identity" {
     aws_api_gateway_rest_api.di_authentication_frontend_api,
   ]
 
-  }
+}

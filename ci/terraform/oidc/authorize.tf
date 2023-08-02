@@ -69,7 +69,7 @@ module "authorize" {
   lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
   default_tags                           = local.default_tags
 
-    depends_on = [
+  depends_on = [
     aws_api_gateway_rest_api.di_authentication_api,
     aws_api_gateway_resource.connect_resource,
     aws_api_gateway_resource.wellknown_resource,

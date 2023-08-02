@@ -101,7 +101,7 @@ resource "aws_api_gateway_deployment" "frontend_deployment" {
 }
 
 resource "aws_cloudwatch_log_group" "frontend_api_stage_execution_logs" {
-  
+
   name              = "API-Gateway-Execution-Logs_${aws_api_gateway_rest_api.di_authentication_frontend_api.id}/${var.environment}"
   retention_in_days = var.cloudwatch_log_retention
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
@@ -120,7 +120,7 @@ resource "aws_cloudwatch_log_subscription_filter" "frontend_api_execution_log_su
 }
 
 resource "aws_cloudwatch_log_group" "frontend_stage_access_logs" {
-  
+
   name              = "${var.environment}-frontend-api-access-logs"
   retention_in_days = var.cloudwatch_log_retention
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
@@ -139,7 +139,7 @@ resource "aws_cloudwatch_log_subscription_filter" "frontend_api_access_log_subsc
 }
 
 resource "aws_cloudwatch_log_group" "frontend_waf_logs" {
-  
+
   name              = "aws-waf-logs-frontend-${var.environment}"
   retention_in_days = var.cloudwatch_log_retention
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
@@ -213,7 +213,7 @@ resource "aws_api_gateway_method_settings" "api_gateway_frontend_logging_setting
 }
 
 resource "aws_api_gateway_base_path_mapping" "frontend_api" {
-  
+
   api_id      = aws_api_gateway_rest_api.di_authentication_frontend_api.id
   stage_name  = aws_api_gateway_stage.endpoint_frontend_stage.stage_name
   domain_name = local.frontend_api_fqdn
@@ -222,10 +222,10 @@ resource "aws_api_gateway_base_path_mapping" "frontend_api" {
 module "dashboard_frontend_api" {
   source           = "../modules/dashboards"
   api_gateway_name = aws_api_gateway_rest_api.di_authentication_frontend_api.name
-  }
+}
 
 resource "aws_wafv2_web_acl" "wafregional_web_acl_frontend_api" {
-    name  = "${var.environment}-frontend-waf-web-acl"
+  name  = "${var.environment}-frontend-waf-web-acl"
   scope = "REGIONAL"
 
   default_action {
@@ -301,7 +301,7 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_frontend_api" {
 }
 
 resource "aws_wafv2_web_acl_association" "waf_association_frontend_api" {
-    resource_arn = aws_api_gateway_stage.endpoint_frontend_stage.arn
+  resource_arn = aws_api_gateway_stage.endpoint_frontend_stage.arn
   web_acl_arn  = aws_wafv2_web_acl.wafregional_web_acl_frontend_api[count.index].arn
 
   depends_on = [
@@ -311,7 +311,7 @@ resource "aws_wafv2_web_acl_association" "waf_association_frontend_api" {
 }
 
 resource "aws_wafv2_web_acl_logging_configuration" "waf_logging_config_frontend_api" {
-    log_destination_configs = [aws_cloudwatch_log_group.frontend_waf_logs[count.index].arn]
+  log_destination_configs = [aws_cloudwatch_log_group.frontend_waf_logs[count.index].arn]
   resource_arn            = aws_wafv2_web_acl.wafregional_web_acl_frontend_api[count.index].arn
 
   logging_filter {

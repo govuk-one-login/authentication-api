@@ -1,5 +1,5 @@
 data "aws_cloudwatch_log_group" "ipv_callback_lambda_log_group" {
-    name  = replace("/aws/lambda/${var.environment}-ipv-callback-lambda", ".", "")
+  name = replace("/aws/lambda/${var.environment}-ipv-callback-lambda", ".", "")
 
   depends_on = [
     module.ipv-callback
@@ -7,14 +7,14 @@ data "aws_cloudwatch_log_group" "ipv_callback_lambda_log_group" {
 }
 
 data "aws_cloudwatch_log_group" "spot_response_lambda_log_group" {
-    name  = replace("/aws/lambda/${var.environment}-spot-response-lambda", ".", "")
+  name = replace("/aws/lambda/${var.environment}-spot-response-lambda", ".", "")
   depends_on = [
     module.ipv_spot_response_role
   ]
 }
 
 data "aws_cloudwatch_log_group" "processing_identity_lambda_log_group" {
-    name  = replace("/aws/lambda/${var.environment}-processing-identity-lambda", ".", "")
+  name = replace("/aws/lambda/${var.environment}-processing-identity-lambda", ".", "")
 
   depends_on = [
     module.processing-identity
@@ -22,7 +22,7 @@ data "aws_cloudwatch_log_group" "processing_identity_lambda_log_group" {
 }
 
 resource "aws_cloudwatch_log_metric_filter" "ipv_callback_metric_filter" {
-    name           = replace("${var.environment}-ipv-callback-p1-errors", ".", "")
+  name           = replace("${var.environment}-ipv-callback-p1-errors", ".", "")
   pattern        = "{($.level = \"ERROR\")}"
   log_group_name = data.aws_cloudwatch_log_group.ipv_callback_lambda_log_group[0].name
 
@@ -34,7 +34,7 @@ resource "aws_cloudwatch_log_metric_filter" "ipv_callback_metric_filter" {
 }
 
 resource "aws_cloudwatch_log_metric_filter" "spot_response_metric_filter" {
-    name           = replace("${var.environment}-spot-response-p1-errors", ".", "")
+  name           = replace("${var.environment}-spot-response-p1-errors", ".", "")
   pattern        = "{($.level = \"ERROR\")}"
   log_group_name = data.aws_cloudwatch_log_group.spot_response_lambda_log_group[0].name
 
@@ -46,7 +46,7 @@ resource "aws_cloudwatch_log_metric_filter" "spot_response_metric_filter" {
 }
 
 resource "aws_cloudwatch_log_metric_filter" "processing_identity_metric_filter" {
-    name           = replace("${var.environment}-processing-identity-p1-errors", ".", "")
+  name           = replace("${var.environment}-processing-identity-p1-errors", ".", "")
   pattern        = "{($.level = \"ERROR\")}"
   log_group_name = data.aws_cloudwatch_log_group.processing_identity_lambda_log_group[0].name
 
@@ -58,7 +58,7 @@ resource "aws_cloudwatch_log_metric_filter" "processing_identity_metric_filter" 
 }
 
 resource "aws_cloudwatch_metric_alarm" "ipv_handback_p1_cloudwatch_alarm" {
-    alarm_name          = replace("${var.environment}-P1-ipv-handback-alarm", ".", "")
+  alarm_name          = replace("${var.environment}-P1-ipv-handback-alarm", ".", "")
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = "1"
   metric_name         = aws_cloudwatch_log_metric_filter.processing_identity_metric_filter[0].metric_transformation[0].name

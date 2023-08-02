@@ -51,7 +51,7 @@ resource "aws_lambda_permission" "common_passwords_dynamo_update_lambda_invoke_p
 }
 
 resource "aws_cloudwatch_log_group" "common_passwords_update_lambda_log_group" {
-  
+
   name              = "/aws/lambda/${aws_lambda_function.common_passwords_dynamo_update_lambda.function_name}"
   kms_key_id        = local.cloudwatch_encryption_key_arn
   retention_in_days = var.cloudwatch_log_retention

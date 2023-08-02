@@ -1,5 +1,5 @@
 data "aws_cloudwatch_log_group" "doc_app_callback_lambda_log_group" {
-    name  = replace("/aws/lambda/${var.environment}-doc-app-callback-lambda", ".", "")
+  name = replace("/aws/lambda/${var.environment}-doc-app-callback-lambda", ".", "")
 
   depends_on = [
     module.doc-app-callback
@@ -7,7 +7,7 @@ data "aws_cloudwatch_log_group" "doc_app_callback_lambda_log_group" {
 }
 
 data "aws_cloudwatch_log_group" "doc_app_authorize_lambda_log_group" {
-    name  = replace("/aws/lambda/${var.environment}-doc-app-authorize-lambda", ".", "")
+  name = replace("/aws/lambda/${var.environment}-doc-app-authorize-lambda", ".", "")
 
   depends_on = [
     module.doc-app-authorize
@@ -15,7 +15,7 @@ data "aws_cloudwatch_log_group" "doc_app_authorize_lambda_log_group" {
 }
 
 resource "aws_cloudwatch_log_metric_filter" "doc_app_callback_metric_filter" {
-    name           = replace("${var.environment}-doc-app-callback-p1-errors", ".", "")
+  name           = replace("${var.environment}-doc-app-callback-p1-errors", ".", "")
   pattern        = "{($.level = \"ERROR\")}"
   log_group_name = data.aws_cloudwatch_log_group.doc_app_callback_lambda_log_group[0].name
 
@@ -27,7 +27,7 @@ resource "aws_cloudwatch_log_metric_filter" "doc_app_callback_metric_filter" {
 }
 
 resource "aws_cloudwatch_log_metric_filter" "doc_app_authorize_metric_filter" {
-    name           = replace("${var.environment}-doc-app-authorize-p1-errors", ".", "")
+  name           = replace("${var.environment}-doc-app-authorize-p1-errors", ".", "")
   pattern        = "{($.level = \"ERROR\")}"
   log_group_name = data.aws_cloudwatch_log_group.doc_app_authorize_lambda_log_group[0].name
 
@@ -39,7 +39,7 @@ resource "aws_cloudwatch_log_metric_filter" "doc_app_authorize_metric_filter" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "doc_app_p1_cloudwatch_alarm" {
-    alarm_name          = replace("${var.environment}-P1-doc-app-alarm", ".", "")
+  alarm_name          = replace("${var.environment}-P1-doc-app-alarm", ".", "")
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = "1"
   metric_name         = aws_cloudwatch_log_metric_filter.doc_app_authorize_metric_filter[0].metric_transformation[0].name

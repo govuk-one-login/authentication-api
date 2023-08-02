@@ -62,4 +62,4 @@ module "account_recovery" {
   default_tags                           = local.default_tags
   api_key_required                       = true
 
-  }
+}

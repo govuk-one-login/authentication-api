@@ -37,7 +37,7 @@ resource "aws_sqs_queue" "email_dead_letter_queue" {
 
 resource "time_sleep" "wait_60_seconds" {
   depends_on = [aws_sqs_queue.email_queue]
-  
+
   create_duration = "60s"
 }
 
@@ -197,7 +197,7 @@ resource "aws_lambda_function" "email_sqs_lambda" {
 }
 
 resource "aws_cloudwatch_log_group" "sqs_lambda_log_group" {
-  
+
   name              = "/aws/lambda/${aws_lambda_function.email_sqs_lambda.function_name}"
   tags              = local.default_tags
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
