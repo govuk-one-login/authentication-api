@@ -54,7 +54,7 @@ resource "aws_cloudwatch_log_group" "bulk_test_user_delete_lambda_log_group" {
 resource "aws_cloudwatch_log_subscription_filter" "bulk_test_user_delete_lambda_log_subscription" {
   count           = var.allow_bulk_test_users ? length(var.logging_endpoint_arns) : 0
   name            = "${aws_lambda_function.bulk_test_user_delete_lambda[count.index].function_name}-log-subscription-${count.index}"
-  log_group_name  = aws_cloudwatch_log_group.bulk_test_user_delete_lambda_log_group[0].name
+  log_group_name  = aws_cloudwatch_log_group.bulk_test_user_delete_lambda_log_group.name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
 

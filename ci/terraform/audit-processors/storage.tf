@@ -66,7 +66,7 @@ resource "aws_lambda_function" "audit_processor_lambda" {
   environment {
     variables = {
       TOKEN_SIGNING_KEY_ALIAS = local.audit_signing_key_alias_name,
-      AUDIT_STORAGE_S3_BUCKET = aws_s3_bucket.audit_storage_bucket[0].bucket
+      AUDIT_STORAGE_S3_BUCKET = aws_s3_bucket.audit_storage_bucket.bucket
     }
   }
   kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
@@ -187,7 +187,7 @@ resource "aws_cloudwatch_log_group" "lambda_log_group" {
 resource "aws_cloudwatch_log_subscription_filter" "log_subscription" {
   count           = length(var.logging_endpoint_arns)
   name            = "${aws_lambda_function.audit_processor_lambda.function_name}-log-subscription-${count.index}"
-  log_group_name  = aws_cloudwatch_log_group.lambda_log_group[0].name
+  log_group_name  = aws_cloudwatch_log_group.lambda_log_group.name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
 
@@ -234,7 +234,7 @@ resource "aws_s3_bucket" "audit_storage_bucket" {
 }
 
 resource "aws_s3_bucket_public_access_block" "audit_storage_bucket_access" {
-  bucket                  = aws_s3_bucket.audit_storage_bucket[0].id
+  bucket                  = aws_s3_bucket.audit_storage_bucket.id
   block_public_acls       = true
   block_public_policy     = true
   ignore_public_acls      = true

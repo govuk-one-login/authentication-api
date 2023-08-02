@@ -95,7 +95,7 @@ resource "aws_iam_policy" "networking_policy" {
 resource "aws_iam_role_policy_attachment" "networking_policy" {
   count      = var.vpc_arn == "" ? 0 : 1
   role       = aws_iam_role.lambda_role.name
-  policy_arn = aws_iam_policy.networking_policy[0].arn
+  policy_arn = aws_iam_policy.networking_policy.arn
 
   depends_on = [
     aws_iam_role.lambda_role,

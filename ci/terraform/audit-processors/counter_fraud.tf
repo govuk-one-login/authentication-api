@@ -38,7 +38,7 @@ resource "aws_kms_key" "secrets_manager_key" {
   description             = "KMS key for secrets manager"
   deletion_window_in_days = 30
   enable_key_rotation     = true
-  policy                  = data.aws_iam_policy_document.key_policy[0].json
+  policy                  = data.aws_iam_policy_document.key_policy.json
 
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
   key_usage                = "ENCRYPT_DECRYPT"
@@ -50,13 +50,13 @@ resource "aws_secretsmanager_secret" "hmac_secret" {
   count = var.txma_obfuscation_secret_arn == "" ? 1 : 0
 
   name_prefix = "hmac-secret-key-"
-  kms_key_id  = aws_kms_key.secrets_manager_key[0].id
+  kms_key_id  = aws_kms_key.secrets_manager_key.id
 }
 
 resource "aws_secretsmanager_secret_version" "hmac_secret" {
   count = var.txma_obfuscation_secret_arn == "" ? 1 : 0
 
-  secret_id     = aws_secretsmanager_secret.hmac_secret[0].id
+  secret_id     = aws_secretsmanager_secret.hmac_secret.id
   secret_string = random_password.hmac_key.result
 }
 
@@ -187,7 +187,7 @@ resource "aws_cloudwatch_log_group" "fraud_realtime_logging_lambda_log_group" {
 resource "aws_cloudwatch_log_subscription_filter" "fraud_realtime_logging_log_subscription" {
   count           = length(var.logging_endpoint_arns)
   name            = "${aws_lambda_function.fraud_realtime_logging_lambda.function_name}-log-subscription-${count.index}"
-  log_group_name  = aws_cloudwatch_log_group.fraud_realtime_logging_lambda_log_group[0].name
+  log_group_name  = aws_cloudwatch_log_group.fraud_realtime_logging_lambda_log_group.name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
 

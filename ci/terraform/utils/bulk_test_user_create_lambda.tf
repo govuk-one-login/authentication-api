@@ -43,7 +43,7 @@ resource "aws_s3_bucket_notification" "bulk_test_user_create_lambda_trigger" {
   count  = var.allow_bulk_test_users ? 1 : 0
   bucket = aws_s3_bucket.bulk_test_user.id
   lambda_function {
-    lambda_function_arn = aws_lambda_function.bulk_test_user_create_lambda[0].arn
+    lambda_function_arn = aws_lambda_function.bulk_test_user_create_lambda.arn
     events              = ["s3:ObjectCreated:*"]
   }
 }
@@ -52,7 +52,7 @@ resource "aws_lambda_permission" "bulk_test_user_create_lambda_invoke_permission
   count         = var.allow_bulk_test_users ? 1 : 0
   statement_id  = "AllowS3Invoke"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.bulk_test_user_create_lambda[0].function_name
+  function_name = aws_lambda_function.bulk_test_user_create_lambda.function_name
   principal     = "s3.amazonaws.com"
   source_arn    = "arn:aws:s3:::${aws_s3_bucket.bulk_test_user.id}"
 }
@@ -74,7 +74,7 @@ resource "aws_cloudwatch_log_group" "bulk_test_user_create_lambda_log_group" {
 resource "aws_cloudwatch_log_subscription_filter" "bulk_test_user_create_lambda_log_subscription" {
   count           = var.allow_bulk_test_users ? length(var.logging_endpoint_arns) : 0
   name            = "${aws_lambda_function.bulk_test_user_create_lambda[0].function_name}-log-subscription-${count.index}"
-  log_group_name  = aws_cloudwatch_log_group.bulk_test_user_create_lambda_log_group[0].name
+  log_group_name  = aws_cloudwatch_log_group.bulk_test_user_create_lambda_log_group.name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
 

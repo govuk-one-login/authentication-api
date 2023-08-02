@@ -19,7 +19,7 @@ resource "aws_iam_policy" "s3_smoketest_policy" {
   path        = "/"
   description = "IAM policy for managing S3 connection to the S3 Smoketest bucket"
 
-  policy = data.aws_iam_policy_document.s3_smoketest_policy_document[0].json
+  policy = data.aws_iam_policy_document.s3_smoketest_policy_document.json
 }
 
 data "aws_iam_policy_document" "s3_smoketest_policy_document" {
@@ -39,5 +39,5 @@ data "aws_iam_policy_document" "s3_smoketest_policy_document" {
 
 resource "aws_iam_role_policy_attachment" "notification_lambda_smoketest_s3" {
   role       = aws_iam_role.email_lambda_iam_role.name
-  policy_arn = aws_iam_policy.s3_smoketest_policy[0].arn
+  policy_arn = aws_iam_policy.s3_smoketest_policy.arn
 }

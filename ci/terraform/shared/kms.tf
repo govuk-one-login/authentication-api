@@ -46,7 +46,7 @@ resource "aws_iam_policy" "lambda_kms_signing_policy" {
   path        = "/"
   description = "IAM policy for managing KMS connection for a lambda which allows signing"
 
-  policy = data.aws_iam_policy_document.kms_signing_policy_document[0].json
+  policy = data.aws_iam_policy_document.kms_signing_policy_document.json
 }
 
 
@@ -55,17 +55,17 @@ resource "aws_iam_policy" "lambda_kms_policy" {
   path        = "/"
   description = "IAM policy for managing KMS connection for a lambda"
 
-  policy = data.aws_iam_policy_document.kms_policy_document[0].json
+  policy = data.aws_iam_policy_document.kms_policy_document.json
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_kms" {
   role       = aws_iam_role.lambda_iam_role.name
-  policy_arn = aws_iam_policy.lambda_kms_policy[0].arn
+  policy_arn = aws_iam_policy.lambda_kms_policy.arn
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_kms_signing_policy" {
   role       = aws_iam_role.token_lambda_iam_role.name
-  policy_arn = aws_iam_policy.lambda_kms_signing_policy[0].arn
+  policy_arn = aws_iam_policy.lambda_kms_signing_policy.arn
 }
 
 # Audit signing key
@@ -105,22 +105,22 @@ resource "aws_iam_policy" "audit_signing_key_lambda_kms_signing_policy" {
   path        = "/"
   description = "IAM policy for managing KMS connection for a lambda which allows signing of audit payloads"
 
-  policy = data.aws_iam_policy_document.audit_payload_kms_signing_policy_document[0].json
+  policy = data.aws_iam_policy_document.audit_payload_kms_signing_policy_document.json
 }
 
 resource "aws_iam_role_policy_attachment" "attach_audit_signing_key_policy_default" {
   role       = aws_iam_role.lambda_iam_role.name
-  policy_arn = aws_iam_policy.audit_signing_key_lambda_kms_signing_policy[0].arn
+  policy_arn = aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn
 }
 
 resource "aws_iam_role_policy_attachment" "attach_audit_signing_key_policy_token" {
   role       = aws_iam_role.token_lambda_iam_role.name
-  policy_arn = aws_iam_policy.audit_signing_key_lambda_kms_signing_policy[0].arn
+  policy_arn = aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn
 }
 
 resource "aws_iam_role_policy_attachment" "attach_audit_signing_key_policy_dynamo" {
   role       = aws_iam_role.dynamo_sqs_lambda_iam_role.name
-  policy_arn = aws_iam_policy.audit_signing_key_lambda_kms_signing_policy[0].arn
+  policy_arn = aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn
 }
 
 # Cloudwatch Log Encryption
@@ -215,12 +215,12 @@ resource "aws_iam_policy" "lambda_env_vars_encryption_kms_policy" {
   path        = "/"
   description = "IAM policy for managing KMS connection for a lambda environment variable encryption"
 
-  policy = data.aws_iam_policy_document.lambda_env_vars_encryption_key_policy_document[0].json
+  policy = data.aws_iam_policy_document.lambda_env_vars_encryption_key_policy_document.json
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_env_vars_encryption_kms_policy" {
   role       = aws_iam_role.lambda_iam_role.name
-  policy_arn = aws_iam_policy.lambda_env_vars_encryption_kms_policy[0].arn
+  policy_arn = aws_iam_policy.lambda_env_vars_encryption_kms_policy.arn
 }
 ### Events flow encryption key
 

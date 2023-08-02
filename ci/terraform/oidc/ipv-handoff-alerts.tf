@@ -9,7 +9,7 @@ data "aws_cloudwatch_log_group" "ipv_authorize_lambda_log_group" {
 resource "aws_cloudwatch_log_metric_filter" "ipv_authorize_metric_filter" {
   name           = replace("${var.environment}-ipv-handoff-p1-errors", ".", "")
   pattern        = "{($.level = \"ERROR\")}"
-  log_group_name = data.aws_cloudwatch_log_group.ipv_authorize_lambda_log_group[0].name
+  log_group_name = data.aws_cloudwatch_log_group.ipv_authorize_lambda_log_group.name
 
   metric_transformation {
     name      = replace("${var.environment}-ipv-handoff-error-count", ".", "")
@@ -22,8 +22,8 @@ resource "aws_cloudwatch_metric_alarm" "ipv_handoff_p1_cloudwatch_alarm" {
   alarm_name          = replace("${var.environment}-P1-ipv-handoff-alarm", ".", "")
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = "1"
-  metric_name         = aws_cloudwatch_log_metric_filter.ipv_authorize_metric_filter[0].metric_transformation[0].name
-  namespace           = aws_cloudwatch_log_metric_filter.ipv_authorize_metric_filter[0].metric_transformation[0].namespace
+  metric_name         = aws_cloudwatch_log_metric_filter.ipv_authorize_metric_filter.metric_transformation[0].name
+  namespace           = aws_cloudwatch_log_metric_filter.ipv_authorize_metric_filter.metric_transformation[0].namespace
   period              = var.ipv_p1_alarm_error_time_period
   statistic           = "Sum"
   threshold           = var.ipv_p1_alarm_error_threshold

@@ -68,7 +68,7 @@ EOF
 resource "aws_cloudwatch_log_subscription_filter" "authorizer_log_subscription" {
   count           = length(var.logging_endpoint_arns)
   name            = "authorizer-log-subscription"
-  log_group_name  = aws_cloudwatch_log_group.lambda_log_group[0].name
+  log_group_name  = aws_cloudwatch_log_group.lambda_log_group.name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
 
@@ -161,7 +161,7 @@ resource "aws_cloudwatch_log_group" "account_management_stage_execution_logs" {
 resource "aws_cloudwatch_log_subscription_filter" "account_management_execution_log_subscription" {
   count           = length(var.logging_endpoint_arns)
   name            = "${var.environment}-oidc-api-execution-log-subscription"
-  log_group_name  = aws_cloudwatch_log_group.account_management_stage_execution_logs[0].name
+  log_group_name  = aws_cloudwatch_log_group.account_management_stage_execution_logs.name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
 
@@ -180,7 +180,7 @@ resource "aws_cloudwatch_log_group" "account_management_access_logs" {
 resource "aws_cloudwatch_log_subscription_filter" "account_management_access_log_subscription" {
   count           = length(var.logging_endpoint_arns)
   name            = "${var.environment}-account-management_-api-access-logs-subscription"
-  log_group_name  = aws_cloudwatch_log_group.account_management_access_logs[0].name
+  log_group_name  = aws_cloudwatch_log_group.account_management_access_logs.name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
 
@@ -199,7 +199,7 @@ resource "aws_cloudwatch_log_group" "account_management_waf_logs" {
 resource "aws_cloudwatch_log_subscription_filter" "account_management_waf_log_subscription" {
   count           = length(var.logging_endpoint_arns)
   name            = "${var.environment}-account-management-api-waf-logs-subscription"
-  log_group_name  = aws_cloudwatch_log_group.account_management_waf_logs[0].name
+  log_group_name  = aws_cloudwatch_log_group.account_management_waf_logs.name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
 

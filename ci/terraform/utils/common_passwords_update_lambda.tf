@@ -66,7 +66,7 @@ resource "aws_cloudwatch_log_group" "common_passwords_update_lambda_log_group" {
 resource "aws_cloudwatch_log_subscription_filter" "common_passwords_update_lambda_log_subscription" {
   count           = length(var.logging_endpoint_arns)
   name            = "${aws_lambda_function.common_passwords_dynamo_update_lambda.function_name}-log-subscription-${count.index}"
-  log_group_name  = aws_cloudwatch_log_group.common_passwords_update_lambda_log_group[0].name
+  log_group_name  = aws_cloudwatch_log_group.common_passwords_update_lambda_log_group.name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
 

@@ -54,7 +54,7 @@ resource "aws_cloudwatch_log_group" "lambda_log_group" {
 resource "aws_cloudwatch_log_subscription_filter" "log_subscription" {
   count           = length(var.logging_endpoint_arns)
   name            = "${var.endpoint_name}-log-subscription-${count.index}"
-  log_group_name  = aws_cloudwatch_log_group.lambda_log_group[0].name
+  log_group_name  = aws_cloudwatch_log_group.lambda_log_group.name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
 
@@ -107,9 +107,9 @@ resource "aws_appautoscaling_policy" "provisioned-concurrency-policy" {
   count = var.max_provisioned_concurrency > var.provisioned_concurrency ? 1 : 0
 
   name               = "LambdaProvisonedConcurrency:${aws_lambda_function.endpoint_lambda.function_name}"
-  resource_id        = aws_appautoscaling_target.lambda_target[0].resource_id
-  scalable_dimension = aws_appautoscaling_target.lambda_target[0].scalable_dimension
-  service_namespace  = aws_appautoscaling_target.lambda_target[0].service_namespace
+  resource_id        = aws_appautoscaling_target.lambda_target.resource_id
+  scalable_dimension = aws_appautoscaling_target.lambda_target.scalable_dimension
+  service_namespace  = aws_appautoscaling_target.lambda_target.service_namespace
   policy_type        = "TargetTrackingScaling"
 
   target_tracking_scaling_policy_configuration {

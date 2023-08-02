@@ -71,7 +71,7 @@ resource "aws_api_gateway_api_key" "client_registry_api_key" {
 
 resource "aws_api_gateway_usage_plan_key" "client_registry_usage_plan_key" {
   count         = var.client_registry_api_enabled ? 1 : 0
-  key_id        = aws_api_gateway_api_key.client_registry_api_key[0].id
+  key_id        = aws_api_gateway_api_key.client_registry_api_key.id
   key_type      = "API_KEY"
   usage_plan_id = aws_api_gateway_usage_plan.di_auth_usage_plan.id
 }
@@ -179,7 +179,7 @@ resource "aws_cloudwatch_log_group" "oidc_stage_execution_logs" {
 resource "aws_cloudwatch_log_subscription_filter" "oidc_api_execution_log_subscription" {
   count           = length(var.logging_endpoint_arns)
   name            = "${var.environment}-oidc-api-execution-log-subscription-${count.index}"
-  log_group_name  = aws_cloudwatch_log_group.oidc_stage_execution_logs[0].name
+  log_group_name  = aws_cloudwatch_log_group.oidc_stage_execution_logs.name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
 
@@ -198,7 +198,7 @@ resource "aws_cloudwatch_log_group" "oidc_stage_access_logs" {
 resource "aws_cloudwatch_log_subscription_filter" "oidc_access_log_subscription" {
   count           = length(var.logging_endpoint_arns)
   name            = "${var.environment}-oidc-api-access-logs-subscription-${count.index}"
-  log_group_name  = aws_cloudwatch_log_group.oidc_stage_access_logs[0].name
+  log_group_name  = aws_cloudwatch_log_group.oidc_stage_access_logs.name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
 
@@ -217,7 +217,7 @@ resource "aws_cloudwatch_log_group" "oidc_waf_logs" {
 resource "aws_cloudwatch_log_subscription_filter" "oidc_waf_log_subscription" {
   count           = length(var.logging_endpoint_arns)
   name            = "${var.environment}-oidc-api-waf-logs-subscription-${count.index}"
-  log_group_name  = aws_cloudwatch_log_group.oidc_waf_logs[0].name
+  log_group_name  = aws_cloudwatch_log_group.oidc_waf_logs.name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
 
@@ -413,7 +413,7 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_oidc_api" {
                     type     = "NONE"
                   }
                   positional_constraint = "EXACTLY"
-                  search_string         = data.aws_ssm_parameter.smoke_test_client_id[0].value
+                  search_string         = data.aws_ssm_parameter.smoke_test_client_id.value
                   field_to_match {
                     single_query_argument {
                       name = "client_id"
@@ -485,7 +485,7 @@ resource "aws_api_gateway_resource" "robots_txt_resource" {
 resource "aws_api_gateway_method" "robots_txt_method" {
   count       = var.use_robots_txt ? 1 : 0
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
-  resource_id = aws_api_gateway_resource.robots_txt_resource[0].id
+  resource_id = aws_api_gateway_resource.robots_txt_resource.id
   http_method = "GET"
 
   depends_on = [
@@ -497,8 +497,8 @@ resource "aws_api_gateway_method" "robots_txt_method" {
 resource "aws_api_gateway_integration" "robots_txt_integration" {
   count       = var.use_robots_txt ? 1 : 0
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
-  resource_id = aws_api_gateway_resource.robots_txt_resource[0].id
-  http_method = aws_api_gateway_method.robots_txt_method[0].http_method
+  resource_id = aws_api_gateway_resource.robots_txt_resource.id
+  http_method = aws_api_gateway_method.robots_txt_method.http_method
 
   type = "MOCK"
 
@@ -519,8 +519,8 @@ resource "aws_api_gateway_integration" "robots_txt_integration" {
 resource "aws_api_gateway_method_response" "robots_txt_method_response" {
   count       = var.use_robots_txt ? 1 : 0
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
-  resource_id = aws_api_gateway_resource.robots_txt_resource[0].id
-  http_method = aws_api_gateway_method.robots_txt_method[0].http_method
+  resource_id = aws_api_gateway_resource.robots_txt_resource.id
+  http_method = aws_api_gateway_method.robots_txt_method.http_method
   status_code = 200
   response_models = {
     "text/plain" = "Empty"
@@ -534,10 +534,10 @@ resource "aws_api_gateway_method_response" "robots_txt_method_response" {
 resource "aws_api_gateway_integration_response" "robots_txt_integration_response" {
   count       = var.use_robots_txt ? 1 : 0
   rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
-  resource_id = aws_api_gateway_resource.robots_txt_resource[0].id
-  http_method = aws_api_gateway_method.robots_txt_method[0].http_method
+  resource_id = aws_api_gateway_resource.robots_txt_resource.id
+  http_method = aws_api_gateway_method.robots_txt_method.http_method
 
-  status_code = aws_api_gateway_method_response.robots_txt_method_response[0].status_code
+  status_code = aws_api_gateway_method_response.robots_txt_method_response.status_code
 
   response_templates = {
     "text/plain" = <<EOF
