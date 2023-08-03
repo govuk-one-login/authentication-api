@@ -341,25 +341,42 @@ resource "aws_kms_key" "auth_code_store_signing_key" {
   deletion_window_in_days  = 30
   key_usage                = "SIGN_VERIFY"
   customer_master_key_spec = "ECC_NIST_P256"
-  policy                   = data.aws_iam_policy_document.auth_code_kms_policy_document.json
-  tags                     = local.default_tags
-}
-
-resource "aws_kms_alias" "auth_code_signing_key_alias" {
-  name          = "alias/${var.environment}-auth-code-signing-key-alias"
-  target_key_id = aws_kms_key.auth_code_store_signing_key.key_id
-}
-
-data "aws_iam_policy_document" "auth_code_kms_policy_document" {
-  statement {
-    sid    = "AllowAccessToKmsSigningKey"
-    effect = "Allow"
-
-    actions = [
-      "kms:GetPublicKey",
+  policy = jsonencode({
+    Version = "2012-10-17"
+    "Id" : "key-policy-dynamodb",
+    Statement = [
+      {
+        Sid : "Allow access through Amazon DynamoDB for all principals in the account that are authorized to use Amazon DynamoDB",
+        Effect    = "Allow"
+        Principal = { "AWS" : "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root" }
+        "Action" : [
+          "kms:Encrypt",
+          "kms:Decrypt",
+          "kms:ReEncrypt*",
+          "kms:GenerateDataKey*",
+          "kms:DescribeKey",
+          "kms:CreateGrant"
+        ],
+        Resource = "*"
+        "Condition" : {
+          "StringLike" : {
+            "kms:ViaService" : "dynamodb.*.amazonaws.com"
+          }
+        }
+      },
+      {
+        "Sid" : "Allow administrators to view the KMS key and revoke grants",
+        "Effect" : "Allow",
+        Principal = { "AWS" : "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root" }
+        "Action" : [
+          "kms:Describe*",
+          "kms:Get*",
+          "kms:List*",
+          "kms:RevokeGrant"
+        ],
+        Resource = "*"
+      }
     ]
-    resources = [
-      aws_kms_key.auth_code_store_signing_key.arn,
-    ]
-  }
+  })
+  tags = local.default_tags
 }
