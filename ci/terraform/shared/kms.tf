@@ -338,7 +338,7 @@ resource "aws_kms_alias" "orchestration_to_auth_signing_key_alias" {
 
 resource "aws_kms_key" "auth_code_store_signing_key" {
   description              = "KMS signing key for Authorization code store in DynamoDB"
-  deletion_window_in_days  = 30  
+  deletion_window_in_days  = 30
   key_usage                = "ENCRYPT_DECRYPT"
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
   policy = jsonencode({
