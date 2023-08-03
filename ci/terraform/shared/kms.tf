@@ -343,36 +343,14 @@ resource "aws_kms_key" "auth_code_store_signing_key" {
   customer_master_key_spec = "ECC_NIST_P256"
   policy = jsonencode({
     Version = "2012-10-17"
-    "Id" : "key-policy-dynamodb",
+    Id      = "key-policy-dynamodb",
     Statement = [
       {
-        Sid : "Allow access through Amazon DynamoDB for all principals in the account that are authorized to use Amazon DynamoDB",
-        Effect    = "Allow"
-        Principal = { "AWS" : "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root" }
-        "Action" : [
-          "kms:Encrypt",
-          "kms:Decrypt",
-          "kms:ReEncrypt*",
-          "kms:GenerateDataKey*",
-          "kms:DescribeKey",
-          "kms:CreateGrant"
-        ],
-        Resource = "*"
-        "Condition" : {
-          "StringLike" : {
-            "kms:ViaService" : "dynamodb.*.amazonaws.com"
-          }
-        }
-      },
-      {
-        "Sid" : "Allow administrators to view the KMS key and revoke grants",
-        "Effect" : "Allow",
-        Principal = { "AWS" : "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root" }
-        "Action" : [
-          "kms:Describe*",
-          "kms:Get*",
-          "kms:List*",
-          "kms:RevokeGrant"
+        Sid       = "Allow IAM to manage this key",
+        Effect    = "Allow",
+        Principal = { AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root" }
+        Action = [
+          "kms:*"
         ],
         Resource = "*"
       }
@@ -380,3 +358,4 @@ resource "aws_kms_key" "auth_code_store_signing_key" {
   })
   tags = local.default_tags
 }
+
