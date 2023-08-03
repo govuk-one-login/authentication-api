@@ -115,6 +115,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("SUPPORT_AUTH_ORCH_SPLIT", "false").equals("true");
     }
 
+    public boolean isAuthCodeStoreEnabled() {
+        return System.getenv().getOrDefault("SUPPORT_AUTH_CODE_STORE", "false").equals("true");
+    }
+
     public String getContactUsLinkRoute() {
         return System.getenv().getOrDefault("CONTACT_US_LINK_ROUTE", "");
     }
