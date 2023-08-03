@@ -66,6 +66,9 @@ class ConfigurationServiceTest {
     void shouldGetNotificationTypeFromTemplateId() {
         when(systemService.getenv("VERIFY_EMAIL_TEMPLATE_ID")).thenReturn("1234-abcd");
         when(systemService.getenv("EMAIL_UPDATED_TEMPLATE_ID")).thenReturn("1234-efgh,4567-ijkl");
+        when(systemService.getenv("TERMS_AND_CONDITIONS_BULK_EMAIL_TEMPLATE_ID"))
+                .thenReturn("1234-bulk");
+
         ConfigurationService configurationService = new ConfigurationService();
         configurationService.setSystemService(systemService);
 
@@ -81,5 +84,8 @@ class ConfigurationServiceTest {
         assertEquals(
                 Optional.of(DeliveryReceiptsNotificationType.EMAIL_UPDATED),
                 configurationService.getNotificationTypeFromTemplateId("1234-efgh"));
+        assertEquals(
+                Optional.of(DeliveryReceiptsNotificationType.TERMS_AND_CONDITIONS_BULK_EMAIL),
+                configurationService.getNotificationTypeFromTemplateId("1234-bulk"));
     }
 }

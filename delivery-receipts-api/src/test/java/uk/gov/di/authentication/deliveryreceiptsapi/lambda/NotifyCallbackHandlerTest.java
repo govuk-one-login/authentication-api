@@ -97,11 +97,19 @@ class NotifyCallbackHandlerTest {
         assertThat(response, hasStatus(204));
     }
 
-    @Test
-    void shouldCallCloudwatchMetricWithEmailNotificationType() throws Json.JsonException {
+    private static Stream<DeliveryReceiptsNotificationType> emailTemplates() {
+        return Stream.of(
+                DeliveryReceiptsNotificationType.TERMS_AND_CONDITIONS_BULK_EMAIL,
+                DeliveryReceiptsNotificationType.VERIFY_EMAIL);
+    }
+
+    @ParameterizedTest
+    @MethodSource("emailTemplates")
+    void shouldCallCloudwatchMetricWithEmailNotificationType(DeliveryReceiptsNotificationType type)
+            throws Json.JsonException {
         var templateID = IdGenerator.generate();
         when(configurationService.getNotificationTypeFromTemplateId(templateID))
-                .thenReturn(Optional.of(DeliveryReceiptsNotificationType.VERIFY_EMAIL));
+                .thenReturn(Optional.of(type));
         var deliveryReceipt =
                 createDeliveryReceipt("jim@test.com", "delivered", "email", templateID);
         var event = new APIGatewayProxyRequestEvent();
@@ -114,7 +122,7 @@ class NotifyCallbackHandlerTest {
                         "EmailSent",
                         Map.of(
                                 "EmailName",
-                                DeliveryReceiptsNotificationType.VERIFY_EMAIL.getTemplateAlias(),
+                                type.getTemplateAlias(),
                                 "Environment",
                                 ENVIRONMENT,
                                 "NotifyStatus",
