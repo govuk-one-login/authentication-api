@@ -367,7 +367,8 @@ public class AuthorisationHandler
                             .claim(
                                     "scope",
                                     ValidScopes.extractAuthScopesFromRequestedScopes(
-                                            authenticationRequest.getScope()))
+                                                    authenticationRequest.getScope())
+                                            .toString())
                             .claim(
                                     "redirect_uri",
                                     configurationService.getOrchestrationRedirectUri());
@@ -380,9 +381,7 @@ public class AuthorisationHandler
             var authorizationRequest =
                     new AuthorizationRequest.Builder(
                                     new ResponseType(ResponseType.Value.CODE),
-                                    new ClientID(
-                                            configurationService
-                                                    .getOrchestrationClientIdForAuthenticationOauthFlow()))
+                                    new ClientID(configurationService.getOrchestrationClientId()))
                             .endpointURI(URI.create(redirectURI))
                             .requestObject(encryptedJWT)
                             .build();
@@ -431,6 +430,7 @@ public class AuthorisationHandler
 
     private Optional<OIDCClaimsRequest> constructAdditionalAuthenticationClaims(
             ClientRegistry clientRegistry, AuthenticationRequest authenticationRequest) {
+        LOG.info("Constructing additional authentication claims");
         var identityRequired =
                 IdentityHelper.identityRequired(
                         authenticationRequest.toParameters(),
@@ -439,22 +439,26 @@ public class AuthorisationHandler
 
         var claimsSetRequest = new ClaimsSetRequest();
         if (identityRequired) {
-            claimsSetRequest.add("local_account_id").add("salt");
+            LOG.info("Identity is required. Adding the local_account_id and salt claims");
+            claimsSetRequest = claimsSetRequest.add("local_account_id").add("salt");
         }
         if (authenticationRequest
                 .getScope()
                 .toStringList()
                 .contains(CustomScopeValue.ACCOUNT_MANAGEMENT.getValue())) {
-            claimsSetRequest.add("public_subject_id");
+            LOG.info("am scope is present. Adding the public_subject_id claim");
+            claimsSetRequest = claimsSetRequest.add("public_subject_id");
         }
         if (authenticationRequest
                 .getScope()
                 .toStringList()
                 .contains(CustomScopeValue.GOVUK_ACCOUNT.getValue())) {
-            claimsSetRequest.add("legacy_subject_id");
+            LOG.info("govuk-account scope is present. Adding the legacy_subject_id claim");
+            claimsSetRequest = claimsSetRequest.add("legacy_subject_id");
         }
 
         if (claimsSetRequest.getEntries().isEmpty()) {
+            LOG.info("No additional claims to add to request");
             return Optional.empty();
         }
         return Optional.of(new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest));

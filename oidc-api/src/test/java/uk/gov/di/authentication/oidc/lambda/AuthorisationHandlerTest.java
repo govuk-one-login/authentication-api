@@ -148,8 +148,7 @@ class AuthorisationHandlerTest {
     public void setUp() {
         when(configService.getDomainName()).thenReturn("auth.ida.digital.cabinet-office.gov.uk");
         when(configService.getLoginURI()).thenReturn(LOGIN_URL);
-        when(configService.getOrchestrationClientIdForAuthenticationOauthFlow())
-                .thenReturn(TEST_ORCHESTRATOR_CLIENT_ID);
+        when(configService.getOrchestrationClientId()).thenReturn(TEST_ORCHESTRATOR_CLIENT_ID);
         when(configService.getSessionCookieAttributes()).thenReturn("Secure; HttpOnly;");
         when(configService.getSessionCookieMaxAge()).thenReturn(3600);
         when(configService.getPersistentCookieMaxAge()).thenReturn(34190000);
