@@ -21,7 +21,6 @@ public class AuthCodeStore {
 
     public AuthCodeStore() {}
 
-    @DynamoDbPartitionKey
     @DynamoDbAttribute(ATTRIBUTE_SUBJECT_ID)
     public String getSubjectID() {
         return subjectID;
@@ -36,6 +35,7 @@ public class AuthCodeStore {
         return this;
     }
 
+    @DynamoDbPartitionKey
     @DynamoDbAttribute(ATTRIBUTE_AUTH_CODE)
     public String getAuthCode() {
         return authCode;

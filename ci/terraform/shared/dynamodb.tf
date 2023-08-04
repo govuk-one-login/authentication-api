@@ -337,13 +337,13 @@ resource "aws_dynamodb_table" "access_token_store" {
 resource "aws_dynamodb_table" "auth_code_store" {
   name         = "${var.environment}-auth-code-store"
   billing_mode = var.provision_dynamo ? "PROVISIONED" : "PAY_PER_REQUEST"
-  hash_key     = "SubjectID"
+  hash_key     = "AuthCode"
 
   read_capacity  = var.provision_dynamo ? var.dynamo_default_read_capacity : null
   write_capacity = var.provision_dynamo ? var.dynamo_default_write_capacity : null
 
   attribute {
-    name = "SubjectID"
+    name = "AuthCode"
     type = "S"
   }
 
