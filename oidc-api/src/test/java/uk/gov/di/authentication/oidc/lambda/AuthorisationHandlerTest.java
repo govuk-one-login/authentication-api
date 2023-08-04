@@ -62,8 +62,11 @@ import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -219,20 +222,29 @@ class AuthorisationHandlerTest {
 
     @Test
     void
-            shouldRedirectToLoginWhenUserHasNoExistingSessionWithSignedAndEncryptedJwtInBodyWhenAuthOrchSplitFeatureFlagEnabled() {
+            shouldRedirectToLoginWhenUserHasNoExistingSessionWithSignedAndEncryptedJwtInBodyWhenAuthOrchSplitFeatureFlagEnabled()
+                    throws com.nimbusds.oauth2.sdk.ParseException {
+        var orchClientId = "orchestration-client-id";
         when(configService.isAuthOrchSplitEnabled()).thenReturn(true);
+        when(configService.getOrchestrationClientId()).thenReturn(orchClientId);
         when(authorizationService.getSignedAndEncryptedJWT(any())).thenReturn(TEST_ENCRYPTED_JWT);
-        Map<String, String> requestParams = buildRequestParams(null);
-        APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+
+        var requestParams = buildRequestParams(null);
+        var event = withRequestEvent(requestParams);
         event.setRequestContext(
                 new ProxyRequestContext()
                         .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-        APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
+        var response = makeHandlerRequest(event);
 
         assertThat(response, hasStatus(302));
-
         var locationHeader = response.getHeaders().get(ResponseHeaders.LOCATION);
         assertThat(locationHeader, containsString(TEST_ENCRYPTED_JWT.serialize()));
+        assertThat(
+                splitQuery(locationHeader).get("request"), equalTo(TEST_ENCRYPTED_JWT.serialize()));
+        assertThat(splitQuery(locationHeader).get("client_id"), equalTo(orchClientId));
+        assertThat(
+                splitQuery(locationHeader).get("response_type"),
+                equalTo(ResponseType.CODE.toString()));
     }
 
     @ParameterizedTest
@@ -815,5 +827,19 @@ class AuthorisationHandlerTest {
         when(clientRegistry.isConsentRequired()).thenReturn(IS_CONSENT_REQUIRED);
         when(clientRegistry.isOneLoginService()).thenReturn(IS_ONE_LOGIN);
         when(clientRegistry.getServiceType()).thenReturn(RP_SERVICE_TYPE);
+    }
+
+    public static Map<String, String> splitQuery(String stringUrl) {
+        var uri = URI.create(stringUrl);
+        Map<String, String> query_pairs = new LinkedHashMap<>();
+        var query = uri.getQuery();
+        var pairs = query.split("&");
+        for (String pair : pairs) {
+            int idx = pair.indexOf("=");
+            query_pairs.put(
+                    URLDecoder.decode(pair.substring(0, idx), StandardCharsets.UTF_8),
+                    URLDecoder.decode(pair.substring(idx + 1), StandardCharsets.UTF_8));
+        }
+        return query_pairs;
     }
 }
