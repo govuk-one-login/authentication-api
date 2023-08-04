@@ -14,8 +14,10 @@ import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.OIDCError;
 import com.nimbusds.openid.connect.sdk.Prompt;
+import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -25,9 +27,12 @@ import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.oidc.helpers.RequestObjectToAuthRequestHelper;
 import uk.gov.di.authentication.oidc.services.AuthorizationService;
 import uk.gov.di.authentication.oidc.services.RequestObjectService;
+import uk.gov.di.authentication.shared.conditions.IdentityHelper;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
@@ -337,7 +342,7 @@ public class AuthorisationHandler
         if (configurationService.isAuthOrchSplitEnabled()) {
             var jwtID = IdGenerator.generate();
             var expiryDate = NowHelper.nowPlus(3, ChronoUnit.MINUTES);
-            var claims =
+            var claimsBuilder =
                     new JWTClaimsSet.Builder()
                             .issuer(configurationService.getOrchestrationClientId())
                             .audience(configurationService.getAuthAudience())
@@ -359,13 +364,18 @@ public class AuthorisationHandler
                                             .getValue())
                             .claim("state", new State())
                             .claim("client_id", configurationService.getOrchestrationClientId())
-                            .claim("scope", authenticationRequest.getScope().toString())
+                            .claim(
+                                    "scope",
+                                    ValidScopes.extractAuthScopesFromRequestedScopes(
+                                            authenticationRequest.getScope()))
                             .claim(
                                     "redirect_uri",
-                                    configurationService.getOrchestrationRedirectUri())
-                            .build();
+                                    configurationService.getOrchestrationRedirectUri());
 
-            var encryptedJWT = authorizationService.getSignedAndEncryptedJWT(claims);
+            var claimsSetRequest =
+                    constructAdditionalAuthenticationClaims(client, authenticationRequest);
+            claimsSetRequest.ifPresent(t -> claimsBuilder.claim("claim", t.toJSONString()));
+            var encryptedJWT = authorizationService.getSignedAndEncryptedJWT(claimsBuilder.build());
 
             var authorizationRequest =
                     new AuthorizationRequest.Builder(
@@ -417,5 +427,36 @@ public class AuthorisationHandler
 
         return generateApiGatewayProxyResponse(
                 302, "", Map.of(ResponseHeaders.LOCATION, error.toURI().toString()), null);
+    }
+
+    private Optional<OIDCClaimsRequest> constructAdditionalAuthenticationClaims(
+            ClientRegistry clientRegistry, AuthenticationRequest authenticationRequest) {
+        var identityRequired =
+                IdentityHelper.identityRequired(
+                        authenticationRequest.toParameters(),
+                        clientRegistry.isIdentityVerificationSupported(),
+                        configurationService.isIdentityEnabled());
+
+        var claimsSetRequest = new ClaimsSetRequest();
+        if (identityRequired) {
+            claimsSetRequest.add("local_account_id").add("salt");
+        }
+        if (authenticationRequest
+                .getScope()
+                .toStringList()
+                .contains(CustomScopeValue.ACCOUNT_MANAGEMENT.getValue())) {
+            claimsSetRequest.add("public_subject_id");
+        }
+        if (authenticationRequest
+                .getScope()
+                .toStringList()
+                .contains(CustomScopeValue.GOVUK_ACCOUNT.getValue())) {
+            claimsSetRequest.add("legacy_subject_id");
+        }
+
+        if (claimsSetRequest.getEntries().isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest));
     }
 }

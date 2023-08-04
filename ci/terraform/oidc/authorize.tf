@@ -32,6 +32,7 @@ module "authorize" {
     TXMA_AUDIT_QUEUE_URL                 = module.oidc_txma_audit.queue_url
     ENVIRONMENT                          = var.environment
     HEADERS_CASE_INSENSITIVE             = var.use_localstack ? "true" : "false"
+    IDENTITY_ENABLED                     = var.ipv_api_enabled
     LOCALSTACK_ENDPOINT                  = var.use_localstack ? var.localstack_endpoint : null
     LOGIN_URI                            = "https://${local.frontend_fqdn}/"
     OIDC_API_BASE_URL                    = local.api_base_url
