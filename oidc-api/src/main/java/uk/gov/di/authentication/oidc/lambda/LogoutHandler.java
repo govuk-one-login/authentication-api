@@ -21,6 +21,7 @@ import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.JwksService;
@@ -53,6 +54,7 @@ public class LogoutHandler
     private final ClientSessionService clientSessionService;
     private final TokenValidationService tokenValidationService;
     private final AuditService auditService;
+    private final CloudwatchMetricsService cloudwatchMetricsService;
     private final BackChannelLogoutService backChannelLogoutService;
     private final CookieHelper cookieHelper;
 
@@ -72,6 +74,7 @@ public class LogoutHandler
                                 new KmsConnectionService(configurationService)),
                         configurationService);
         this.auditService = new AuditService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService();
         this.backChannelLogoutService = new BackChannelLogoutService(configurationService);
         this.cookieHelper = new CookieHelper();
     }
@@ -83,6 +86,7 @@ public class LogoutHandler
             ClientSessionService clientSessionService,
             TokenValidationService tokenValidationService,
             AuditService auditService,
+            CloudwatchMetricsService cloudwatchMetricsService,
             BackChannelLogoutService backChannelLogoutService) {
         this.configurationService = configurationService;
         this.sessionService = sessionService;
@@ -90,6 +94,7 @@ public class LogoutHandler
         this.clientSessionService = clientSessionService;
         this.tokenValidationService = tokenValidationService;
         this.auditService = auditService;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.backChannelLogoutService = backChannelLogoutService;
         this.cookieHelper = new CookieHelper();
     }
@@ -278,6 +283,7 @@ public class LogoutHandler
                                 LOG.info(
                                         "The post_logout_redirect_uri is present in logout request and client registry. Value is {}",
                                         uri);
+                                cloudwatchMetricsService.incrementLogout(Optional.of(clientID));
                                 return generateLogoutResponse(
                                         URI.create(uri),
                                         state,
@@ -304,6 +310,7 @@ public class LogoutHandler
             Optional<String> clientId,
             Optional<String> sessionId) {
         LOG.info("Generating default Logout Response");
+        cloudwatchMetricsService.incrementLogout(clientId);
         return generateLogoutResponse(
                 configurationService.getDefaultLogoutURI(),
                 state,
