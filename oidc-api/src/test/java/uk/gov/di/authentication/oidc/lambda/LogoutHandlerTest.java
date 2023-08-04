@@ -32,6 +32,7 @@ import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.SessionService;
@@ -58,6 +59,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
@@ -71,6 +73,9 @@ class LogoutHandlerTest {
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final AuditService auditService = mock(AuditService.class);
+
+    private final CloudwatchMetricsService cloudwatchMetricsService =
+            mock(CloudwatchMetricsService.class);
     private final TokenValidationService tokenValidationService =
             mock(TokenValidationService.class);
     private final BackChannelLogoutService backChannelLogoutService =
@@ -117,6 +122,7 @@ class LogoutHandlerTest {
                         clientSessionService,
                         tokenValidationService,
                         auditService,
+                        cloudwatchMetricsService,
                         backChannelLogoutService);
         when(configurationService.getDefaultLogoutURI()).thenReturn(DEFAULT_LOGOUT_URI);
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
@@ -151,6 +157,7 @@ class LogoutHandlerTest {
                 response.getHeaders().get(ResponseHeaders.LOCATION),
                 equalTo(CLIENT_LOGOUT_URI + "?state=" + STATE));
 
+        verify(cloudwatchMetricsService).incrementLogout(Optional.of("client-id"));
         verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.LOG_OUT_SUCCESS,
@@ -187,6 +194,7 @@ class LogoutHandlerTest {
                 response.getHeaders().get(ResponseHeaders.LOCATION),
                 equalTo(CLIENT_LOGOUT_URI + "?state=" + STATE));
 
+        verify(cloudwatchMetricsService).incrementLogout(Optional.of("client-id"));
         verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.LOG_OUT_SUCCESS,
@@ -219,6 +227,7 @@ class LogoutHandlerTest {
                 response.getHeaders().get(ResponseHeaders.LOCATION),
                 equalTo(DEFAULT_LOGOUT_URI.toString()));
 
+        verify(cloudwatchMetricsService).incrementLogout(Optional.of("client-id"));
         verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.LOG_OUT_SUCCESS,
@@ -252,6 +261,7 @@ class LogoutHandlerTest {
                 response.getHeaders().get(ResponseHeaders.LOCATION),
                 equalTo(DEFAULT_LOGOUT_URI.toString()));
 
+        verify(cloudwatchMetricsService).incrementLogout(Optional.empty());
         verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.LOG_OUT_SUCCESS,
@@ -283,6 +293,7 @@ class LogoutHandlerTest {
                 response.getHeaders().get(ResponseHeaders.LOCATION),
                 equalTo(DEFAULT_LOGOUT_URI.toString()));
 
+        verify(cloudwatchMetricsService).incrementLogout(Optional.empty());
         verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.LOG_OUT_SUCCESS,
@@ -311,6 +322,7 @@ class LogoutHandlerTest {
         setupClientSessionToken(signedIDToken);
         APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
 
+        verify(cloudwatchMetricsService).incrementLogout(Optional.of("client-id"));
         verify(sessionService, times(1)).deleteSessionFromRedis(SESSION_ID);
         verify(clientSessionService).deleteClientSessionFromRedis(CLIENT_SESSION_ID);
         assertThat(response, hasStatus(302));
@@ -349,6 +361,7 @@ class LogoutHandlerTest {
                 equalTo(DEFAULT_LOGOUT_URI + "?state=" + STATE));
         verify(sessionService, times(0)).deleteSessionFromRedis(SESSION_ID);
 
+        verify(cloudwatchMetricsService).incrementLogout(Optional.empty());
         verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.LOG_OUT_SUCCESS,
@@ -390,6 +403,7 @@ class LogoutHandlerTest {
                 response.getHeaders().get(ResponseHeaders.LOCATION),
                 equalTo(expectedUri.toString()));
 
+        verifyNoInteractions(cloudwatchMetricsService);
         verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.LOG_OUT_SUCCESS,
@@ -427,6 +441,7 @@ class LogoutHandlerTest {
                 response.getHeaders().get(ResponseHeaders.LOCATION),
                 equalTo(expectedUri.toString()));
 
+        verifyNoInteractions(cloudwatchMetricsService);
         verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.LOG_OUT_SUCCESS,
@@ -473,6 +488,7 @@ class LogoutHandlerTest {
                 response.getHeaders().get(ResponseHeaders.LOCATION),
                 equalTo(expectedUri.toString()));
 
+        verifyNoInteractions(cloudwatchMetricsService);
         verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.LOG_OUT_SUCCESS,
@@ -520,6 +536,7 @@ class LogoutHandlerTest {
                 response.getHeaders().get(ResponseHeaders.LOCATION),
                 equalTo(expectedUri.toString()));
 
+        verifyNoInteractions(cloudwatchMetricsService);
         verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.LOG_OUT_SUCCESS,
@@ -567,6 +584,7 @@ class LogoutHandlerTest {
                 equalTo(expectedUri.toString()));
         verify(sessionService, times(1)).deleteSessionFromRedis(SESSION_ID);
 
+        verifyNoInteractions(cloudwatchMetricsService);
         verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.LOG_OUT_SUCCESS,
