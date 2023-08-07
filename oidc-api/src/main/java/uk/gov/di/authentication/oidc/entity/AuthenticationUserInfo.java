@@ -1,6 +1,5 @@
 package uk.gov.di.authentication.oidc.entity;
 
-import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
@@ -9,10 +8,8 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbParti
 public class AuthenticationUserInfo {
 
     private String subjectID;
-    private UserInfo userInfo;
+    private String userInfo;
     private long timeToExist;
-
-    public AuthenticationUserInfo() {}
 
     @DynamoDbPartitionKey
     @DynamoDbAttribute("SubjectID")
@@ -30,15 +27,15 @@ public class AuthenticationUserInfo {
     }
 
     @DynamoDbAttribute("UserInfo")
-    public UserInfo getUserInfo() {
+    public String getUserInfo() {
         return userInfo;
     }
 
-    public void setUserInfo(UserInfo userInfo) {
+    public void setUserInfo(String userInfo) {
         this.userInfo = userInfo;
     }
 
-    public AuthenticationUserInfo withUserInfo(UserInfo userInfo) {
+    public AuthenticationUserInfo withUserInfo(String userInfo) {
         this.userInfo = userInfo;
         return this;
     }

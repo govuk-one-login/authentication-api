@@ -47,7 +47,6 @@ public class AuthenticationTokenService {
     private static final JWSAlgorithm TOKEN_ALGORITHM = JWSAlgorithm.ES256;
     private static final Long PRIVATE_KEY_JWT_EXPIRY = 5L;
     private static final Logger LOG = LogManager.getLogger(AuthenticationTokenService.class);
-    private final Json objectMapper;
 
     public AuthenticationTokenService(
             ConfigurationService configurationService,
@@ -140,8 +139,8 @@ public class AuthenticationTokenService {
             if (content == null) {
                 throw new UnsuccessfulCredentialResponseException("No content in HTTP response");
             }
-            return objectMapper.readValue(content, UserInfo.class);
-        } catch (Json.JsonException e) {
+            return UserInfo.parse(content);
+        } catch (ParseException e) {
             LOG.warn("Unable to parse userinfo response as UserInfo object");
             throw new UnsuccessfulCredentialResponseException(
                     "Error parsing authentication userinfo response as JSON", e);

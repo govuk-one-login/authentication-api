@@ -7,6 +7,7 @@ import uk.gov.di.authentication.shared.services.BaseDynamoService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.time.temporal.ChronoUnit;
+import java.util.Optional;
 
 public class AuthenticationUserInfoStorageService
         extends BaseDynamoService<AuthenticationUserInfo> {
@@ -22,15 +23,21 @@ public class AuthenticationUserInfoStorageService
     }
 
     public void addAuthenticationUserInfoData(String subjectID, UserInfo userInfo) {
+        String userInfoJson = userInfo.toJSONString();
         var userInfoDbObject =
                 new AuthenticationUserInfo()
                         .withSubjectID(subjectID)
-                        .withUserInfo(userInfo)
+                        .withUserInfo(userInfoJson)
                         .withTimeToExist(
                                 NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS)
                                         .toInstant()
                                         .getEpochSecond());
 
         put(userInfoDbObject);
+    }
+
+    public Optional<AuthenticationUserInfo> getAuthenticationUserInfoData(String subjectID) {
+        return get(subjectID)
+                .filter(t -> t.getTimeToExist() > NowHelper.now().toInstant().getEpochSecond());
     }
 }
