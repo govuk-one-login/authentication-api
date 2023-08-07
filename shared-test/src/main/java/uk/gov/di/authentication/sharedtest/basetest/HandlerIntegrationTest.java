@@ -88,6 +88,14 @@ public abstract class HandlerIntegrationTest<Q, S> {
             new TokenSigningExtension("doc-app-token-auth-key");
 
     @RegisterExtension
+    protected static final TokenSigningExtension orchestrationPrivateKeyJwtSigner =
+            new TokenSigningExtension("orchestration-token-auth-key");
+
+    @RegisterExtension
+    protected static final KmsKeyExtension authenticationEncryptionKey =
+            new KmsKeyExtension("authentication-encryption-key", KeyUsageType.ENCRYPT_DECRYPT);
+
+    @RegisterExtension
     protected static final ParameterStoreExtension configurationParameters =
             new ParameterStoreExtension(
                     Map.of(
