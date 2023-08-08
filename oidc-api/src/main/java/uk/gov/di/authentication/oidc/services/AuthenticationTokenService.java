@@ -27,7 +27,6 @@ import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
-import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
@@ -49,12 +48,9 @@ public class AuthenticationTokenService {
     private static final Logger LOG = LogManager.getLogger(AuthenticationTokenService.class);
 
     public AuthenticationTokenService(
-            ConfigurationService configurationService,
-            KmsConnectionService kmsService,
-            Json objectMapper) {
+            ConfigurationService configurationService, KmsConnectionService kmsService) {
         this.configurationService = configurationService;
         this.kmsService = kmsService;
-        this.objectMapper = objectMapper;
     }
 
     public TokenRequest constructTokenRequest(String authCode) {

@@ -27,7 +27,6 @@ import uk.gov.di.authentication.shared.exceptions.UnsuccessfulCredentialResponse
 import uk.gov.di.authentication.shared.helpers.ConstructUriHelper;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
-import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -37,7 +36,6 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
-import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.net.URI;
@@ -73,7 +71,6 @@ public class AuthenticationCallbackHandler
     private final AuthorisationCodeService authorisationCodeService;
     private final ClientService clientService;
     private final CookieHelper cookieHelper;
-    protected final Json objectMapper = SerializationService.getInstance();
     private static final String ERROR_PAGE_REDIRECT_PATH = "error";
 
     public AuthenticationCallbackHandler() {
@@ -87,8 +84,7 @@ public class AuthenticationCallbackHandler
                 new AuthenticationAuthorizationService(
                         new RedisConnectionService(configurationService));
         this.tokenService =
-                new AuthenticationTokenService(
-                        configurationService, kmsConnectionService, objectMapper);
+                new AuthenticationTokenService(configurationService, kmsConnectionService);
         this.sessionService = new SessionService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
         this.auditService = new AuditService(configurationService);

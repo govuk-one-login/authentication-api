@@ -33,7 +33,6 @@ import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
-import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.io.IOException;
 import java.net.URI;
@@ -62,8 +61,6 @@ class AuthenticationTokenServiceTest {
     private ConfigurationService configurationService = mock(ConfigurationService.class);
 
     private KmsConnectionService kmsService = mock(KmsConnectionService.class);
-
-    private SerializationService objectMapper = mock(SerializationService.class);
     private final HTTPRequest httpRequest = mock(HTTPRequest.class);
     private static final String SIGNING_KID = "14342354354353";
     private static final ClientID CLIENT_ID = new ClientID("some-client-id");
@@ -87,7 +84,7 @@ class AuthenticationTokenServiceTest {
         when(kmsService.getPublicKey(any())).thenReturn(PUBLIC_KEY_RESPONSE);
 
         authenticationTokenService =
-                new AuthenticationTokenService(configurationService, kmsService, objectMapper);
+                new AuthenticationTokenService(configurationService, kmsService);
     }
 
     @Test
@@ -167,8 +164,6 @@ class AuthenticationTokenServiceTest {
         headers.put("Content-Type", Collections.singletonList("application/json"));
         when(httpResponse.getHeaderMap()).thenReturn(headers);
 
-        when(objectMapper.readValue(userInfoJson, UserInfo.class)).thenReturn(USER_INFO);
-
         UserInfo result = authenticationTokenService.sendUserInfoDataRequest(httpRequest);
 
         assertThat(result.getSubject(), equalTo(USER_INFO.getSubject()));
@@ -217,12 +212,9 @@ class AuthenticationTokenServiceTest {
     }
 
     @Test
-    void shouldThrowUnsuccessfulCredentialResponseExceptionWhenObjectMapperThrowsJsonException()
-            throws Json.JsonException {
+    void shouldThrowUnsuccessfulCredentialResponseExceptionWhenObjectMapperThrowsException() {
         HTTPResponse httpResponse = mock(HTTPResponse.class);
         when(httpResponse.getContent()).thenReturn("{}");
-        when(objectMapper.readValue(any(), any()))
-                .thenThrow(new Json.JsonException("test-message"));
 
         UnsuccessfulCredentialResponseException thrown =
                 assertThrows(
