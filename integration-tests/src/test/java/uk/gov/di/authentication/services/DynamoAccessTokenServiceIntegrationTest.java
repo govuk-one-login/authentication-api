@@ -47,7 +47,7 @@ public class DynamoAccessTokenServiceIntegrationTest {
                     assertThat(t.getAccessToken(), equalTo(ACCESS_TOKEN_STRING));
                     assertThat(t.getSubjectID(), equalTo(SUBJECT_ID_1));
                     assertThat(t.isUsed(), equalTo(false));
-                    assertThat(t.getScopes(), equalTo(List.of("scope1")));
+                    assertThat(t.getClaims(), equalTo(List.of("scope1")));
                 });
     }
 
@@ -69,6 +69,25 @@ public class DynamoAccessTokenServiceIntegrationTest {
         updatedAccessToken.ifPresent(
                 t -> {
                     assertThat(t.isUsed(), equalTo(true));
+                });
+    }
+
+    @Test
+    void shouldUpdateTtl() {
+        setUpDynamo();
+
+        var accessToken = accessTokenService.getAccessTokenStore(ACCESS_TOKEN_STRING_3);
+        assertThat(accessToken.isPresent(), equalTo(true));
+
+        long newTtl = 4090552069L;
+        accessToken = accessTokenService.setAccessTokenTtlTestOnly(ACCESS_TOKEN_STRING_3, newTtl);
+        assertThat(accessToken.isPresent(), equalTo(true));
+
+        var updatedAccessToken = accessTokenService.getAccessTokenStore(ACCESS_TOKEN_STRING_3);
+        assertThat(updatedAccessToken.isPresent(), equalTo(true));
+        updatedAccessToken.ifPresent(
+                t -> {
+                    assertThat(t.getTimeToExist(), equalTo(newTtl));
                 });
     }
 }

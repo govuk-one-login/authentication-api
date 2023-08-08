@@ -92,6 +92,10 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
         return dynamoService.getAllBulkTestUsers();
     }
 
+    public Optional<UserProfile> getUserProfileFromEmail(String email) {
+        return dynamoService.getUserProfileFromEmail(email);
+    }
+
     public void updateConsent(String email, ClientConsent clientConsent) {
         dynamoService.updateConsent(email, clientConsent);
     }
