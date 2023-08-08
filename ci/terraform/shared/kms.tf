@@ -359,3 +359,18 @@ resource "aws_kms_key" "auth_code_store_signing_key" {
   tags = local.default_tags
 }
 
+# Authorization Token endpoint Signing KMS key
+
+resource "aws_kms_key" "auth_id_token_signing_key" {
+  description              = "KMS signing key for ID tokens issued by Authentication to Orchestration"
+  deletion_window_in_days  = 30
+  key_usage                = "SIGN_VERIFY"
+  customer_master_key_spec = "ECC_NIST_P256"
+
+  tags = local.default_tags
+}
+
+resource "aws_kms_alias" "auth_id_token_signing_key_alias" {
+  name          = "alias/${var.environment}-auth-id-token-signing-key-alias"
+  target_key_id = aws_kms_key.auth_id_token_signing_key.key_id
+}

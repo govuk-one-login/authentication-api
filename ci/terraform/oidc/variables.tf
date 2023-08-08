@@ -325,6 +325,12 @@ variable "auth_frontend_public_encryption_key" {
   description = "Public encryption key which should be used to encrypt JWTs sent to Authentication (frontend)"
 }
 
+variable "auth_to_orch_token_signing_public_key" {
+  type        = string
+  default     = "undefined"
+  description = "Public signing key which should be used to sign token responses sent from Authentication (external API) to Orchestration (callback lambda)"
+}
+
 variable "doc_app_authorisation_uri" {
   type    = string
   default = "undefined"

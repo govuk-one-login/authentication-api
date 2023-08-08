@@ -23,6 +23,13 @@ EwIDAQAB
 -----END PUBLIC KEY-----
 EOT
 
+auth_to_orch_token_signing_public_key = <<-EOT
+-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvvr/3/mHEPLpgsLR3ocLiGrVpVLJ
+AZUx4RCDu+VWAZpPi1NaF5XWvkFNFwH+MyLkATh90UEJDe+ayKW6AXFcRQ==
+-----END PUBLIC KEY-----
+EOT
+
 enable_api_gateway_execution_request_tracing = true
 spot_enabled                                 = false
 
