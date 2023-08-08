@@ -18,7 +18,7 @@ function usage() {
   Requires a GDS CLI, AWS CLI and jq installed and configured.
 
   Usage:
-    $0 [-b|--build] [-c|--clean] [-s|--shared] [-o|--oidc] [-a|--account-management] [-t|--test-services] [--audit] [--destroy] [-p|--prompt]
+    $0 [-b|--build] [-c|--clean] [-s|--shared] [-o|--oidc] [-a|--account-management] [-t|--test-services] [--audit] [--destroy] [-p|--prompt] [-x|--auth-external]
 
   Options:
     -b, --build               run gradle build and buildZip tasks (default)
@@ -32,6 +32,7 @@ function usage() {
     -t, --test-services       run the test services terraform
     --destroy                 run all terraform with the -destroy flag (destroys all managed resources)
     -p, --prompt              will prompt for plan review before applying any terraform
+    -x, --auth-external       run the auth external api terraform
 
     If no options specified the default actions above will be carried out without prompting.
 USAGE
@@ -39,6 +40,7 @@ USAGE
 
 AM=0
 AUDIT=0
+AUTH_EXTERNAL_API=0
 BUILD=0
 OIDC=0
 RECEIPTS=0
@@ -49,6 +51,7 @@ CLEAN=""
 TERRAFORM_OPTS="-auto-approve"
 if [[ $# == 0 ]]; then
   AM=1
+  AUTH_EXTERNAL_API=1
   BUILD=1
   OIDC=1
   SHARED=1
@@ -87,6 +90,9 @@ while [[ $# -gt 0 ]]; do
       ;;
     -p|--prompt)
       TERRAFORM_OPTS=""
+      ;;
+    -x|--auth-external)
+      AUTH_EXTERNAL_API=1
       ;;
     *)
       usage
@@ -141,4 +147,8 @@ fi
 
 if [[ $TEST_SERVICES == "1" ]]; then
   runTerraform "test-services" "${TERRAFORM_OPTS}"
+fi
+
+if [[ $AUTH_EXTERNAL_API == "1" ]]; then
+  runTerraform "auth-external-api" "${TERRAFORM_OPTS}"
 fi
