@@ -11,7 +11,6 @@ spot_enabled                        = false
 language_cy_enabled                 = true
 internal_sector_uri                 = "https://identity.build.account.gov.uk"
 extended_feature_flags_enabled      = true
-account_recovery_block_enabled      = true
 custom_doc_app_claim_enabled        = true
 ipv_no_session_response_enabled     = true
 doc_app_cri_data_v2_endpoint        = "credentials/issue"
