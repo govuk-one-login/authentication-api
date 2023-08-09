@@ -10,7 +10,7 @@ buildscript {
 
 plugins {
     id "com.diffplug.spotless" version "6.19.0"
-    id "com.avast.gradle.docker-compose" version "0.16.12"
+    id "com.avast.gradle.docker-compose" version "0.16.13"
     id "org.sonarqube" version "4.0.0.2929"
     id "jacoco"
 }
