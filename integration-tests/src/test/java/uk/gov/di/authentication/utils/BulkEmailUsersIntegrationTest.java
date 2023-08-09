@@ -38,8 +38,8 @@ public class BulkEmailUsersIntegrationTest {
                         .updateUserStatus(SUBJECT_ID_1, BulkEmailStatus.EMAIL_SENT)
                         .get();
 
-        assertEquals(updatedUser.getSubjectID(), SUBJECT_ID_1);
-        assertEquals(updatedUser.getBulkEmailStatus(), BulkEmailStatus.EMAIL_SENT);
+        assertEquals(SUBJECT_ID_1, updatedUser.getSubjectID());
+        assertEquals(BulkEmailStatus.EMAIL_SENT, updatedUser.getBulkEmailStatus());
 
         var bulkEmailStatusOfUserAfterUpdate =
                 bulkEmailUsersService
@@ -47,7 +47,7 @@ public class BulkEmailUsersIntegrationTest {
                         .map(BulkEmailUser::getBulkEmailStatus)
                         .get();
 
-        assertEquals(bulkEmailStatusOfUserAfterUpdate, bulkEmailStatusOfUserAfterUpdate.EMAIL_SENT);
+        assertEquals(BulkEmailStatus.EMAIL_SENT, bulkEmailStatusOfUserAfterUpdate);
     }
 
     @Test

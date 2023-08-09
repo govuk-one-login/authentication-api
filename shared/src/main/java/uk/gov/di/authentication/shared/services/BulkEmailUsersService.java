@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 
 public class BulkEmailUsersService extends BaseDynamoService<BulkEmailUser> {
 
-    public static ConfigurationService configurationService;
+    private final ConfigurationService configurationService;
 
     private static final String BULK_EMAIL_USERS_TABLE = "bulk-email-users";
     private static final String BULK_EMAIL_STATUS_INDEX = "BulkEmailStatusIndex";

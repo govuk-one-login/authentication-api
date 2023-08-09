@@ -13,9 +13,6 @@ import software.amazon.awssdk.services.dynamodb.model.ProjectionType;
 import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import uk.gov.di.authentication.shared.entity.BulkEmailStatus;
-import uk.gov.di.authentication.shared.services.BulkEmailUsersService;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.sharedtest.basetest.DynamoTestConfiguration;
 
 import java.util.Map;
 
@@ -27,19 +24,8 @@ public class BulkEmailUsersExtension extends DynamoExtension implements AfterEac
 
     public static final String BULK_EMAIL_USERS_TABLE = "local-bulk-email-users";
 
-    private BulkEmailUsersService dynamoService;
-    private final ConfigurationService configuration;
-
     public BulkEmailUsersExtension() {
         createInstance();
-        this.configuration = new DynamoTestConfiguration(REGION, ENVIRONMENT, DYNAMO_ENDPOINT) {};
-        dynamoService = new BulkEmailUsersService(configuration);
-    }
-
-    @Override
-    public void beforeAll(ExtensionContext context) throws Exception {
-        super.beforeAll(context);
-        dynamoService = new BulkEmailUsersService(configuration);
     }
 
     @Override
