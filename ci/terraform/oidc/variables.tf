@@ -98,7 +98,7 @@ variable "service_domain" {
 }
 
 variable "account_recovery_block_enabled" {
-  default = false
+  default = true
 }
 
 variable "aws_endpoint" {

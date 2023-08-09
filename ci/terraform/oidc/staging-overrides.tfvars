@@ -20,7 +20,6 @@ spot_enabled                       = true
 language_cy_enabled                = true
 extended_feature_flags_enabled     = true
 test_clients_enabled               = "true"
-account_recovery_block_enabled     = true
 ipv_no_session_response_enabled    = true
 doc_app_cri_data_v2_endpoint       = "userinfo/v2"
 doc_app_use_cri_data_v2_endpoint   = true
