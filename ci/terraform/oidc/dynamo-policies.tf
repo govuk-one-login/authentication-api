@@ -26,6 +26,10 @@ data "aws_dynamodb_table" "account_modifiers_table" {
   name = "${var.environment}-account-modifiers"
 }
 
+data "aws_dynamodb_table" "access_token_store" {
+  name = "${var.environment}-access-token-store"
+}
+
 data "aws_iam_policy_document" "dynamo_user_write_policy_document" {
   statement {
     sid    = "AllowAccessToDynamoTables"
@@ -246,6 +250,54 @@ data "aws_iam_policy_document" "dynamo_account_modifiers_write_access_policy_doc
   }
 }
 
+data "aws_iam_policy_document" "dynamo_access_token_write_access_policy_document" {
+  statement {
+    sid    = "AllowAccessToDynamoTables"
+    effect = "Allow"
+
+    actions = [
+      "dynamodb:UpdateItem",
+      "dynamodb:PutItem",
+    ]
+    resources = [
+      data.aws_dynamodb_table.access_token_store.arn,
+    ]
+  }
+}
+
+data "aws_iam_policy_document" "dynamo_access_token_delete_access_policy_document" {
+  statement {
+    sid    = "AllowAccessToDynamoTables"
+    effect = "Allow"
+
+    actions = [
+      "dynamodb:DeleteItem",
+    ]
+    resources = [
+      data.aws_dynamodb_table.access_token_store.arn,
+    ]
+  }
+}
+
+data "aws_iam_policy_document" "dynamo_access_token_read_access_policy_document" {
+  statement {
+    sid    = "AllowAccessToDynamoTables"
+    effect = "Allow"
+
+    actions = [
+      "dynamodb:BatchGetItem",
+      "dynamodb:DescribeTable",
+      "dynamodb:Get*",
+      "dynamodb:Query",
+      "dynamodb:Scan",
+    ]
+    resources = [
+      data.aws_dynamodb_table.access_token_store.arn,
+    ]
+  }
+}
+
+
 resource "aws_iam_policy" "dynamo_client_registry_write_access_policy" {
   name_prefix = "dynamo-client-registry-write-policy"
   path        = "/${var.environment}/oidc-default/"
@@ -348,4 +400,28 @@ resource "aws_iam_policy" "dynamo_account_modifiers_write_access_policy" {
   description = "IAM policy for managing write permissions to the Dynamo Account Modifiers table"
 
   policy = data.aws_iam_policy_document.dynamo_account_modifiers_write_access_policy_document.json
+}
+
+resource "aws_iam_policy" "dynamo_access_token_write_access_policy" {
+  name_prefix = "dynamo-access-policy"
+  path        = "/${var.environment}/oidc-default/"
+  description = "IAM policy for managing write permissions to the Dynamo access token store table"
+
+  policy = data.aws_iam_policy_document.dynamo_access_token_write_access_policy_document.json
+}
+
+resource "aws_iam_policy" "dynamo_access_token_read_access_policy" {
+  name_prefix = "dynamo-access-policy"
+  path        = "/${var.environment}/oidc-default/"
+  description = "IAM policy for managing read permissions to the Dynamo access token store table"
+
+  policy = data.aws_iam_policy_document.dynamo_access_token_read_access_policy_document.json
+}
+
+resource "aws_iam_policy" "dynamo_access_token_delete_access_policy" {
+  name_prefix = "dynamo-access-policy"
+  path        = "/${var.environment}/oidc-default/"
+  description = "IAM policy for managing delete permissions to the Dynamo access token store table"
+
+  policy = data.aws_iam_policy_document.dynamo_access_token_delete_access_policy_document.json
 }

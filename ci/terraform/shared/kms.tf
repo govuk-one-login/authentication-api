@@ -374,3 +374,27 @@ resource "aws_kms_alias" "auth_id_token_signing_key_alias" {
   name          = "alias/${var.environment}-auth-id-token-signing-key-alias"
   target_key_id = aws_kms_key.auth_id_token_signing_key.key_id
 }
+resource "aws_kms_key" "access_token_store_signing_key" {
+  description              = "KMS signing key for Authorization code store in DynamoDB"
+  deletion_window_in_days  = 30
+  key_usage                = "ENCRYPT_DECRYPT"
+  customer_master_key_spec = "SYMMETRIC_DEFAULT"
+  enable_key_rotation      = true
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Id      = "key-policy-dynamodb",
+    Statement = [
+      {
+        Sid       = "Allow IAM to manage this key",
+        Effect    = "Allow",
+        Principal = { AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root" }
+        Action = [
+          "kms:*"
+        ],
+        Resource = "*"
+      }
+    ]
+  })
+  tags = local.default_tags
+}
+

@@ -300,6 +300,40 @@ resource "aws_dynamodb_table" "account_modifiers_table" {
   tags = local.default_tags
 }
 
+resource "aws_dynamodb_table" "access_token_store" {
+  name         = "${var.environment}-access-token-store"
+  billing_mode = var.provision_dynamo ? "PROVISIONED" : "PAY_PER_REQUEST"
+  hash_key     = "AccessToken"
+
+  read_capacity  = var.provision_dynamo ? var.dynamo_default_read_capacity : null
+  write_capacity = var.provision_dynamo ? var.dynamo_default_write_capacity : null
+
+  attribute {
+    name = "AccessToken"
+    type = "S"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+
+  server_side_encryption {
+    enabled     = true
+    kms_key_arn = aws_kms_key.access_token_store_signing_key.arn
+  }
+
+  lifecycle {
+    prevent_destroy = false
+  }
+
+  ttl {
+    attribute_name = "TimeToExist"
+    enabled        = true
+  }
+
+  tags = local.default_tags
+}
+
 resource "aws_dynamodb_table" "auth_code_store" {
   name         = "${var.environment}-auth-code-store"
   billing_mode = var.provision_dynamo ? "PROVISIONED" : "PAY_PER_REQUEST"
