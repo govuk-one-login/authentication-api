@@ -33,6 +33,7 @@ import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
@@ -342,6 +343,9 @@ public class AuthorisationHandler
         if (configurationService.isAuthOrchSplitEnabled()) {
             var jwtID = IdGenerator.generate();
             var expiryDate = NowHelper.nowPlus(3, ChronoUnit.MINUTES);
+            var rpSectorIdentifierHost =
+                    ClientSubjectHelper.getSectorIdentifierForClient(
+                            client, configurationService.getInternalSectorUri());
             var claimsBuilder =
                     new JWTClaimsSet.Builder()
                             .issuer(configurationService.getOrchestrationClientId())
@@ -350,6 +354,8 @@ public class AuthorisationHandler
                             .issueTime(NowHelper.now())
                             .notBeforeTime(NowHelper.now())
                             .jwtID(jwtID)
+                            .claim("rp_client_id", client.getClientID())
+                            .claim("rp_sector_host", rpSectorIdentifierHost)
                             .claim("client_name", client.getClientName())
                             .claim("cookie_consent_shared", client.isCookieConsentShared())
                             .claim("consent_required", client.isConsentRequired())

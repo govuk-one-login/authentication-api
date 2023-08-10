@@ -81,6 +81,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
@@ -105,7 +106,6 @@ class AuthorisationHandlerTest {
     private final AuditService auditService = mock(AuditService.class);
     private final RequestObjectService requestObjectService = mock(RequestObjectService.class);
     private final ClientService clientService = mock(ClientService.class);
-    private final ClientRegistry clientRegistry = mock(ClientRegistry.class);
     private final InOrder inOrder = inOrder(auditService);
     private static final String EXPECTED_SESSION_COOKIE_STRING =
             "gs=a-session-id.client-session-id; Max-Age=3600; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;";
@@ -178,8 +178,8 @@ class AuthorisationHandlerTest {
         when(clientSessionService.generateClientSessionId()).thenReturn(CLIENT_SESSION_ID);
         when(clientSessionService.generateClientSession(any(), any(), any(), any()))
                 .thenReturn(clientSession);
-        when(clientService.getClient(any())).thenReturn(Optional.of(clientRegistry));
-        populateRegistry();
+        when(clientService.getClient(anyString()))
+                .thenReturn(Optional.of(generateClientRegistry()));
     }
 
     @Test
@@ -222,8 +222,7 @@ class AuthorisationHandlerTest {
 
     @Test
     void
-            shouldRedirectToLoginWhenUserHasNoExistingSessionWithSignedAndEncryptedJwtInBodyWhenAuthOrchSplitFeatureFlagEnabled()
-                    throws com.nimbusds.oauth2.sdk.ParseException {
+            shouldRedirectToLoginWhenUserHasNoExistingSessionWithSignedAndEncryptedJwtInBodyWhenAuthOrchSplitFeatureFlagEnabled() {
         var orchClientId = "orchestration-client-id";
         when(configService.isAuthOrchSplitEnabled()).thenReturn(true);
         when(configService.getOrchestrationClientId()).thenReturn(orchClientId);
@@ -782,9 +781,12 @@ class AuthorisationHandlerTest {
     private ClientRegistry generateClientRegistry() {
         return new ClientRegistry()
                 .withClientID(new ClientID().getValue())
-                .withConsentRequired(false)
-                .withClientName("test-client")
+                .withConsentRequired(IS_COOKIE_CONSENT_SHARED)
+                .withClientName(RP_CLIENT_NAME)
                 .withSectorIdentifierUri("https://test.com")
+                .withOneLoginService(IS_ONE_LOGIN)
+                .withServiceType(RP_SERVICE_TYPE)
+                .withConsentRequired(IS_CONSENT_REQUIRED)
                 .withSubjectType("public");
     }
 
@@ -819,14 +821,6 @@ class AuthorisationHandlerTest {
                         new Payload(signedJWT));
         jweObject.encrypt(new RSAEncrypter(rsaEncryptionKey));
         return EncryptedJWT.parse(jweObject.serialize());
-    }
-
-    private void populateRegistry() {
-        when(clientRegistry.getClientName()).thenReturn(RP_CLIENT_NAME);
-        when(clientRegistry.isCookieConsentShared()).thenReturn(IS_COOKIE_CONSENT_SHARED);
-        when(clientRegistry.isConsentRequired()).thenReturn(IS_CONSENT_REQUIRED);
-        when(clientRegistry.isOneLoginService()).thenReturn(IS_ONE_LOGIN);
-        when(clientRegistry.getServiceType()).thenReturn(RP_SERVICE_TYPE);
     }
 
     public static Map<String, String> splitQuery(String stringUrl) {

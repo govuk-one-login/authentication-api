@@ -55,6 +55,7 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
     private static final String CLIENT_ID = "gfdsfdsf7s323hfsd";
     private static final String CLIENT_NAME = "test-client";
     private static final String AUTH_INTERNAL_CLIENT_ID = "authentication-orch-client-id";
+    private static final String RP_SECTOR_URI = "https://rp-sector-uri.com";
     private static final String RP_REDIRECT_URI = "https://rp-uri/redirect";
     private static final String ORCHESTRATION_REDIRECT_URI = "https://orchestration/redirect";
     private static final KeyPair KEY_PAIR = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
@@ -261,6 +262,8 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
         assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("consent_required")));
         assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("is_one_login_service")));
         assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("service_type")));
+        assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("rp_client_id")));
+        assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("rp_sector_host")));
         assertTrue(
                 Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("govuk_signin_journey_id")));
         assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("confidence")));
@@ -292,6 +295,10 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
         assertThat(
                 signedJWT.getJWTClaimsSet().getClaim("redirect_uri"),
                 equalTo(ORCHESTRATION_REDIRECT_URI));
+        assertThat(signedJWT.getJWTClaimsSet().getClaim("rp_client_id"), equalTo(CLIENT_ID));
+        assertThat(
+                signedJWT.getJWTClaimsSet().getClaim("rp_sector_host"),
+                equalTo("rp-sector-uri.com"));
         assertThat(signedJWT.getHeader().getAlgorithm(), equalTo(JWSAlgorithm.ES256));
         var scope = Scope.parse((String) signedJWT.getJWTClaimsSet().getClaim("scope"));
         var expectedSentScopes = new Scope(OPENID, EMAIL, PHONE);
@@ -314,7 +321,7 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
                 singletonList("https://localhost/post-redirect-logout"),
                 "https://example.com",
                 String.valueOf(ServiceType.MANDATORY),
-                "https://test.com",
+                RP_SECTOR_URI,
                 "public",
                 false,
                 ClientType.WEB,
