@@ -370,7 +370,7 @@ resource "aws_dynamodb_table" "auth_code_store" {
 
 resource "aws_dynamodb_table" "bulk_email_users" {
   name         = "${var.environment}-bulk-email-users"
-  count        = contains(["build", "sandpit"], var.environment) ? 1 : 0
+  count        = local.deploy_bulk_email_users_count
   billing_mode = var.provision_dynamo ? "PROVISIONED" : "PAY_PER_REQUEST"
 
   hash_key = "SubjectID"
@@ -394,7 +394,7 @@ resource "aws_dynamodb_table" "bulk_email_users" {
 
   server_side_encryption {
     enabled     = true
-    kms_key_arn = aws_kms_key.auth_code_store_signing_key.arn
+    kms_key_arn = aws_kms_key.bulk_email_users_signing_key.arn
   }
 
   lifecycle {
