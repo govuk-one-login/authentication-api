@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.sharedtest.extensions;
 
+import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import software.amazon.awssdk.services.dynamodb.model.AttributeDefinition;
@@ -76,5 +77,9 @@ public class AuthenticationCallbackUserInfoStoreExtension extends DynamoExtensio
 
     public Optional<AuthenticationUserInfo> getUserInfoBySubjectId(String subjectId) {
         return userInfoService.getAuthenticationUserInfoData(subjectId);
+    }
+
+    public void addAuthenticationUserInfoData(String subjectId, UserInfo userInfo) {
+        userInfoService.addAuthenticationUserInfoData(subjectId, userInfo);
     }
 }
