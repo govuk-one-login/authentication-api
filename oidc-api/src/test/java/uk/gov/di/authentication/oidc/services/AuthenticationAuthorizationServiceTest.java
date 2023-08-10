@@ -1,7 +1,5 @@
 package uk.gov.di.authentication.oidc.services;
 
-import com.nimbusds.oauth2.sdk.ErrorObject;
-import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.id.State;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -9,10 +7,8 @@ import uk.gov.di.authentication.shared.services.RedisConnectionService;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -41,9 +37,9 @@ class AuthenticationAuthorizationServiceTest {
         queryParams.put("state", REDIS_STORED_STATE.getValue());
         queryParams.put("code", EXAMPLE_AUTH_CODE);
 
-        Optional<ErrorObject> result = authService.validateRequest(queryParams, SESSION_ID);
+        boolean result = authService.validateRequest(queryParams, SESSION_ID);
 
-        assertThat(result.isPresent(), is(false));
+        assertThat(result, is(true));
         verify(redisConnectionService)
                 .getValue(
                         AuthenticationAuthorizationService.AUTHENTICATION_STATE_STORAGE_PREFIX
@@ -51,50 +47,46 @@ class AuthenticationAuthorizationServiceTest {
     }
 
     @Test
-    void shouldReturnErrorObjectWhenNoQueryParametersPresent() {
+    void shouldReturnFalseWhenNoQueryParametersPresent() {
         Map<String, String> queryParams = new HashMap<>();
 
-        Optional<ErrorObject> result = authService.validateRequest(queryParams, SESSION_ID);
+        boolean result = authService.validateRequest(queryParams, SESSION_ID);
 
-        assertThat(result.isPresent(), is(true));
-        assertThat(result.get().getCode(), equalTo(OAuth2Error.INVALID_REQUEST_CODE));
+        assertThat(result, is(false));
         verify(redisConnectionService, never()).getValue(anyString());
     }
 
     @Test
-    void shouldReturnErrorObjectWhenErrorParamPresent() {
+    void shouldReturnFalseWhenErrorParamPresent() {
         Map<String, String> queryParams = new HashMap<>();
         queryParams.put("error", "some-error");
 
-        Optional<ErrorObject> result = authService.validateRequest(queryParams, SESSION_ID);
+        boolean result = authService.validateRequest(queryParams, SESSION_ID);
 
-        assertThat(result.isPresent(), is(true));
-        assertThat(result.get().getCode(), equalTo("some-error"));
+        assertThat(result, is(false));
         verify(redisConnectionService, never()).getValue(anyString());
     }
 
     @Test
-    void shouldReturnErrorObjectWhenNoStateParamPresent() {
+    void shouldReturnFalseWhenNoStateParamPresent() {
         Map<String, String> queryParams = new HashMap<>();
         queryParams.put("code", EXAMPLE_AUTH_CODE);
 
-        Optional<ErrorObject> result = authService.validateRequest(queryParams, SESSION_ID);
+        boolean result = authService.validateRequest(queryParams, SESSION_ID);
 
-        assertThat(result.isPresent(), is(true));
-        assertThat(result.get().getCode(), equalTo(OAuth2Error.INVALID_REQUEST_CODE));
+        assertThat(result, is(false));
         verify(redisConnectionService, never()).getValue(anyString());
     }
 
     @Test
-    void shouldReturnErrorObjectWhenInvalidStateParamPresent() {
+    void shouldReturnFalseWhenInvalidStateParamPresent() {
         Map<String, String> queryParams = new HashMap<>();
         queryParams.put("state", new State().getValue());
         queryParams.put("code", EXAMPLE_AUTH_CODE);
 
-        Optional<ErrorObject> result = authService.validateRequest(queryParams, SESSION_ID);
+        boolean result = authService.validateRequest(queryParams, SESSION_ID);
 
-        assertThat(result.isPresent(), is(true));
-        assertThat(result.get().getCode(), equalTo(OAuth2Error.INVALID_REQUEST_CODE));
+        assertThat(result, is(false));
         verify(redisConnectionService)
                 .getValue(
                         AuthenticationAuthorizationService.AUTHENTICATION_STATE_STORAGE_PREFIX
@@ -102,14 +94,13 @@ class AuthenticationAuthorizationServiceTest {
     }
 
     @Test
-    void shouldReturnErrorObjectWhenNoCodeParamPresent() {
+    void shouldReturnFalseWhenNoCodeParamPresent() {
         Map<String, String> queryParams = new HashMap<>();
         queryParams.put("code", EXAMPLE_AUTH_CODE);
 
-        Optional<ErrorObject> result = authService.validateRequest(queryParams, SESSION_ID);
+        boolean result = authService.validateRequest(queryParams, SESSION_ID);
 
-        assertThat(result.isPresent(), is(true));
-        assertThat(result.get().getCode(), equalTo(OAuth2Error.INVALID_REQUEST_CODE));
+        assertThat(result, is(false));
         verify(redisConnectionService, never()).getValue(anyString());
     }
 }

@@ -153,6 +153,7 @@ class AuthenticationCallbackHandlerTest {
         var event = new APIGatewayProxyRequestEvent();
         setValidHeadersAndQueryParameters(event);
 
+        when(authorizationService.validateRequest(any(), any())).thenReturn(true);
         when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
         when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class))).thenReturn(USER_INFO);
 
@@ -195,18 +196,14 @@ class AuthenticationCallbackHandlerTest {
 
         var event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of(COOKIE_HEADER_NAME, buildCookieString()));
-        when(authorizationService.validateRequest(any(), any()))
-                .thenReturn(
-                        Optional.of(
-                                new ErrorObject(
-                                        OAuth2Error.INVALID_REQUEST_CODE, TEST_ERROR_MESSAGE)));
+        when(authorizationService.validateRequest(any(), any())).thenReturn(false);
 
         var response = handler.handleRequest(event, null);
 
         assertThat(response, hasStatus(302));
         String locationHeaderRedirect = response.getHeaders().get("Location");
         assertThat(locationHeaderRedirect, containsString(REDIRECT_URI.toString()));
-        assertThat(locationHeaderRedirect, containsString(TEST_ERROR_MESSAGE));
+        assertThat(locationHeaderRedirect, containsString(OAuth2Error.SERVER_ERROR.getCode()));
         assertThat(locationHeaderRedirect, containsString("&state=" + RP_STATE));
 
         verifyAuditEvents(
@@ -224,6 +221,7 @@ class AuthenticationCallbackHandlerTest {
         var event = new APIGatewayProxyRequestEvent();
         setValidHeadersAndQueryParameters(event);
         when(tokenService.sendTokenRequest(any())).thenReturn(UNSUCCESSFUL_TOKEN_RESPONSE);
+        when(authorizationService.validateRequest(any(), any())).thenReturn(true);
 
         var response = handler.handleRequest(event, null);
 
@@ -250,6 +248,7 @@ class AuthenticationCallbackHandlerTest {
         when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
         when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
                 .thenThrow(new UnsuccessfulCredentialResponseException(TEST_ERROR_MESSAGE));
+        when(authorizationService.validateRequest(any(), any())).thenReturn(true);
 
         var response = handler.handleRequest(event, null);
 

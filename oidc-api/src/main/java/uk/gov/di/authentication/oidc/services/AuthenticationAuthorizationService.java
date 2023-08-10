@@ -1,7 +1,5 @@
 package uk.gov.di.authentication.oidc.services;
 
-import com.nimbusds.oauth2.sdk.ErrorObject;
-import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.id.State;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -24,41 +22,30 @@ public class AuthenticationAuthorizationService {
         this.redisConnectionService = redisConnectionService;
     }
 
-    public Optional<ErrorObject> validateRequest(
-            Map<String, String> queryParams, String sessionId) {
+    public boolean validateRequest(Map<String, String> queryParams, String sessionId) {
         LOG.info("Validating authentication callback request");
         if (queryParams == null || queryParams.isEmpty()) {
-            LOG.warn("No Query parameters in authentication callback request");
-            return Optional.of(
-                    new ErrorObject(
-                            OAuth2Error.INVALID_REQUEST_CODE, "No query parameters present"));
+            LOG.warn("No query parameters in authentication callback request");
+            return false;
         }
         if (queryParams.containsKey("error")) {
             LOG.warn("Error response found in authentication callback request");
-            return Optional.of(new ErrorObject(queryParams.get("error")));
+            return false;
         }
         if (!queryParams.containsKey("state") || queryParams.get("state").isEmpty()) {
-            LOG.warn("No state param in authentication callback request");
-            return Optional.of(
-                    new ErrorObject(
-                            OAuth2Error.INVALID_REQUEST_CODE,
-                            "No state param present in authentication callback request"));
+            LOG.warn("No state param found in authentication callback request query parameters");
+            return false;
         }
         if (!isStateValid(sessionId, queryParams.get("state"))) {
-            return Optional.of(
-                    new ErrorObject(
-                            OAuth2Error.INVALID_REQUEST_CODE,
-                            "Invalid state param present in authentication callback request"));
+            LOG.warn("Authentication callback request state is invalid");
+            return false;
         }
         if (!queryParams.containsKey("code") || queryParams.get("code").isEmpty()) {
-            LOG.warn("No code param in authentication callback request");
-            return Optional.of(
-                    new ErrorObject(
-                            OAuth2Error.INVALID_REQUEST_CODE,
-                            "No code param present in authentication callback request"));
+            LOG.warn("No code param found in authentication callback request query parameters");
+            return false;
         }
         LOG.info("Authentication callback request passed validation");
-        return Optional.empty();
+        return true;
     }
 
     private boolean isStateValid(String sessionId, String responseState) {

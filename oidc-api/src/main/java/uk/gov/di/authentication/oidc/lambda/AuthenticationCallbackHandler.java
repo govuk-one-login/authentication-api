@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.ErrorObject;
+import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseMode;
 import com.nimbusds.oauth2.sdk.http.HTTPRequest;
@@ -42,7 +43,6 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 
 import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.POST;
 import static java.util.Objects.isNull;
@@ -163,14 +163,14 @@ public class AuthenticationCallbackHandler
             String clientId = authenticationRequest.getClientID().getValue();
             attachLogFieldToLogs(CLIENT_ID, clientId);
 
-            Optional<ErrorObject> errorObject =
+            boolean requestValid =
                     authorisationService.validateRequest(
                             input.getQueryStringParameters(), userSession.getSessionId());
 
-            if (errorObject.isPresent()) {
+            if (!requestValid) {
                 return generateAuthenticationErrorResponse(
                         authenticationRequest,
-                        errorObject.get(),
+                        OAuth2Error.SERVER_ERROR,
                         clientSessionId,
                         userSession.getSessionId(),
                         persistentSessionId);

@@ -2,6 +2,7 @@ package uk.gov.di.authentication.api;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
+import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -161,7 +162,7 @@ class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHandlerInte
                 startsWith(REDIRECT_URI.toString()));
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
-                containsString("Invalid+state+param+present"));
+                containsString(OAuth2Error.SERVER_ERROR.getCode()));
         assertThat(
                 response.getHeaders().get(ResponseHeaders.LOCATION),
                 containsString(RP_STATE.getValue()));
