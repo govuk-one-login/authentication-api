@@ -367,3 +367,47 @@ resource "aws_dynamodb_table" "auth_code_store" {
 
   tags = local.default_tags
 }
+
+resource "aws_dynamodb_table" "bulk_email_users" {
+  name         = "${var.environment}-bulk-email-users"
+  count        = local.deploy_bulk_email_users_count
+  billing_mode = var.provision_dynamo ? "PROVISIONED" : "PAY_PER_REQUEST"
+
+  hash_key = "SubjectID"
+
+  read_capacity  = var.provision_dynamo ? var.dynamo_default_read_capacity : null
+  write_capacity = var.provision_dynamo ? var.dynamo_default_write_capacity : null
+
+  attribute {
+    name = "SubjectID"
+    type = "S"
+  }
+
+  attribute {
+    name = "BulkEmailStatus"
+    type = "S"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+
+  server_side_encryption {
+    enabled     = true
+    kms_key_arn = aws_kms_key.bulk_email_users_signing_key.arn
+  }
+
+  lifecycle {
+    prevent_destroy = false
+  }
+
+  global_secondary_index {
+    name            = "BulkEmailStatusIndex"
+    hash_key        = "BulkEmailStatus"
+    projection_type = "ALL"
+    read_capacity   = var.provision_dynamo ? var.dynamo_default_read_capacity : null
+    write_capacity  = var.provision_dynamo ? var.dynamo_default_write_capacity : null
+  }
+
+  tags = local.default_tags
+}
