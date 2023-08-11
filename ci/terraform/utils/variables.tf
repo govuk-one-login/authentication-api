@@ -66,3 +66,10 @@ variable "terms_and_conditions" {
   default     = "1.6"
   description = "The latest Terms and Conditions version number"
 }
+
+variable "notify_template_map" {
+  type = map(string)
+  default = {
+    TERMS_AND_CONDITIONS_BULK_EMAIL_TEMPLATE_ID = "067548f2-420d-4da9-923f-ec9a941706cf"
+  }
+}

@@ -12,6 +12,7 @@ import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
+import uk.gov.di.authentication.shared.exceptions.UserNotFoundBySubjectIdRuntimeException;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
@@ -23,6 +24,7 @@ import java.util.Set;
 import static java.util.Collections.emptyList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class DynamoServiceIntegrationTest {
 
@@ -300,6 +302,37 @@ class DynamoServiceIntegrationTest {
         assertThat(updatedUserProfile.getAccountVerified(), equalTo(1));
         assertThat(updatedUserProfile.getPhoneNumber(), equalTo(null));
         assertThat(updatedUserProfile.isPhoneNumberVerified(), equalTo(false));
+    }
+
+    @Test
+    void shouldRetrieveUserProfileBySubjectId() {
+        setupDynamoWithMultipleUsers();
+
+        assertThat(dynamoService.getUserProfileFromSubject("1111").getEmail(), equalTo("email1"));
+        assertThat(dynamoService.getUserProfileFromSubject("2222").getEmail(), equalTo("email2"));
+        assertThat(dynamoService.getUserProfileFromSubject("3333").getEmail(), equalTo("email3"));
+        assertThat(dynamoService.getUserProfileFromSubject("4444").getEmail(), equalTo("email4"));
+        assertThat(dynamoService.getUserProfileFromSubject("5555").getEmail(), equalTo("email5"));
+    }
+
+    @Test
+    void shouldThrowWhenUserNotFoundBySubjectId() {
+        setupDynamoWithMultipleUsers();
+
+        assertThrows(
+                UserNotFoundBySubjectIdRuntimeException.class,
+                () -> dynamoService.getUserProfileFromSubject("7777"));
+        assertThrows(
+                UserNotFoundBySubjectIdRuntimeException.class,
+                () -> dynamoService.getUserProfileFromSubject("8888"));
+    }
+
+    private void setupDynamoWithMultipleUsers() {
+        userStore.signUp("email1", "password-1", new Subject("1111"));
+        userStore.signUp("email2", "password-1", new Subject("2222"));
+        userStore.signUp("email3", "password-1", new Subject("3333"));
+        userStore.signUp("email4", "password-1", new Subject("4444"));
+        userStore.signUp("email5", "password-1", new Subject("5555"));
     }
 
     private void testUpdateEmail(UserProfile userProfile, UserCredentials userCredentials) {

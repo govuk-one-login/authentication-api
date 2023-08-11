@@ -81,6 +81,21 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Long.parseLong(System.getenv().getOrDefault("BLOCKED_EMAIL_DURATION", "900"));
     }
 
+    public int getBulkUserEmailBatchQueryLimit() {
+        return Integer.parseInt(
+                System.getenv().getOrDefault("BULK_USER_EMAIL_BATCH_QUERY_LIMIT", "25"));
+    }
+
+    public int getBulkUserEmailMaxBatchCount() {
+        return Integer.parseInt(
+                System.getenv().getOrDefault("BULK_USER_EMAIL_MAX_BATCH_COUNT", "8000"));
+    }
+
+    public long getBulkUserEmailBatchPauseDuration() {
+        return Long.parseLong(
+                System.getenv().getOrDefault("BULK_USER_EMAIL_BATCH_PAUSE_DURATION", "0"));
+    }
+
     public long getDefaultOtpCodeExpiry() {
         return Long.parseLong(System.getenv().getOrDefault("DEFAULT_OTP_CODE_EXPIRY", "900"));
     }

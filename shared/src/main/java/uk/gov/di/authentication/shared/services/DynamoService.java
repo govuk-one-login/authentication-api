@@ -23,6 +23,7 @@ import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.User;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.exceptions.UserNotFoundBySubjectIdRuntimeException;
 import uk.gov.di.authentication.shared.helpers.Argon2EncoderHelper;
 import uk.gov.di.authentication.shared.helpers.Argon2MatcherHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -532,11 +533,11 @@ public class DynamoService implements AuthenticationService {
                 QueryEnhancedRequest.builder().consistentRead(false).queryConditional(q).build();
         Optional<UserProfile> userProfile =
                 subjectIDIndex.query(queryEnhancedRequest).stream()
-                        .limit(1)
-                        .map(t -> t.items().get(0))
-                        .findFirst();
+                        .findFirst()
+                        .flatMap(page -> page.items().stream().findFirst());
         if (userProfile.isEmpty()) {
-            throw new RuntimeException("No userCredentials found with query search");
+            throw new UserNotFoundBySubjectIdRuntimeException(
+                    "No user profile found with query search");
         }
         return userProfile.get();
     }
