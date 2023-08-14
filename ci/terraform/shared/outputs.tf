@@ -96,6 +96,10 @@ output "orch_to_auth_signing_key_arn" {
   value = aws_kms_key.orchestration_to_auth_signing_key.arn
 }
 
+output "bulk_user_email_table_encryption_key_arn" {
+  value = aws_kms_key.bulk_email_users_encryption_key.arn
+}
+
 output "auth_id_token_signing_key_alias_name" {
   value = aws_kms_alias.auth_id_token_signing_key_alias.name
 }
