@@ -23,7 +23,6 @@ import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.User;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.exceptions.UserNotFoundBySubjectIdRuntimeException;
 import uk.gov.di.authentication.shared.helpers.Argon2EncoderHelper;
 import uk.gov.di.authentication.shared.helpers.Argon2MatcherHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -533,13 +532,23 @@ public class DynamoService implements AuthenticationService {
                 QueryEnhancedRequest.builder().consistentRead(false).queryConditional(q).build();
         Optional<UserProfile> userProfile =
                 subjectIDIndex.query(queryEnhancedRequest).stream()
-                        .findFirst()
-                        .flatMap(page -> page.items().stream().findFirst());
+                        .limit(1)
+                        .map(t -> t.items().get(0))
+                        .findFirst();
         if (userProfile.isEmpty()) {
-            throw new UserNotFoundBySubjectIdRuntimeException(
-                    "No user profile found with query search");
+            throw new RuntimeException("No userCredentials found with query search");
         }
         return userProfile.get();
+    }
+
+    public Optional<UserProfile> getOptionalUserProfileFromSubject(String subject) {
+        QueryConditional q =
+                QueryConditional.keyEqualTo(Key.builder().partitionValue(subject).build());
+        QueryEnhancedRequest queryEnhancedRequest =
+                QueryEnhancedRequest.builder().consistentRead(false).queryConditional(q).build();
+        return dynamoUserProfileTable.index("SubjectIDIndex").query(queryEnhancedRequest).stream()
+                .findFirst()
+                .flatMap(page -> page.items().stream().findFirst());
     }
 
     @Override

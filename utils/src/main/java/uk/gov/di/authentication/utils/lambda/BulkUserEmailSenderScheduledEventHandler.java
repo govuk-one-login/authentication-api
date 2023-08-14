@@ -6,8 +6,6 @@ import com.amazonaws.services.lambda.runtime.events.ScheduledEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.BulkEmailStatus;
-import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.exceptions.UserNotFoundBySubjectIdRuntimeException;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.BulkEmailUsersService;
@@ -94,18 +92,28 @@ public class BulkUserEmailSenderScheduledEventHandler
 
             userSubjectIdBatch.forEach(
                     subjectId -> {
-                        try {
-                            UserProfile userProfile =
-                                    dynamoService.getUserProfileFromSubject(subjectId);
-                            sendNotifyEmail(userProfile.getEmail());
-                            updateBulkUserStatus(subjectId, BulkEmailStatus.EMAIL_SENT);
-                        } catch (NotificationClientException e) {
-                            LOG.error("Unable to send bulk email to user: {}", e.getMessage());
-                            updateBulkUserStatus(subjectId, BulkEmailStatus.ERROR_SENDING_EMAIL);
-                        } catch (UserNotFoundBySubjectIdRuntimeException e) {
-                            LOG.warn("User not found by subject id");
-                            updateBulkUserStatus(subjectId, BulkEmailStatus.ACCOUNT_NOT_FOUND);
-                        }
+                        dynamoService
+                                .getOptionalUserProfileFromSubject(subjectId)
+                                .ifPresentOrElse(
+                                        userProfile -> {
+                                            try {
+                                                sendNotifyEmail(userProfile.getEmail());
+                                                updateBulkUserStatus(
+                                                        subjectId, BulkEmailStatus.EMAIL_SENT);
+                                            } catch (NotificationClientException e) {
+                                                LOG.error(
+                                                        "Unable to send bulk email to user: {}",
+                                                        e.getMessage());
+                                                updateBulkUserStatus(
+                                                        subjectId,
+                                                        BulkEmailStatus.ERROR_SENDING_EMAIL);
+                                            }
+                                        },
+                                        () -> {
+                                            LOG.warn("User not found by subject id");
+                                            updateBulkUserStatus(
+                                                    subjectId, BulkEmailStatus.ACCOUNT_NOT_FOUND);
+                                        });
                     });
 
             try {

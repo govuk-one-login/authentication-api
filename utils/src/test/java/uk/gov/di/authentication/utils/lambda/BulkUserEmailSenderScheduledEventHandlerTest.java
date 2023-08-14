@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.entity.BulkEmailStatus;
 import uk.gov.di.authentication.shared.entity.BulkEmailUser;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.exceptions.UserNotFoundBySubjectIdRuntimeException;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.services.BulkEmailUsersService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -75,8 +74,8 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
         when(configurationService.getBulkUserEmailBatchPauseDuration()).thenReturn(1L);
         when(bulkEmailUsersService.getNSubjectIdsByStatus(1, BulkEmailStatus.PENDING))
                 .thenReturn(List.of(SUBJECT_ID));
-        when(dynamoService.getUserProfileFromSubject(SUBJECT_ID))
-                .thenReturn(new UserProfile().withEmail(EMAIL));
+        when(dynamoService.getOptionalUserProfileFromSubject(SUBJECT_ID))
+                .thenReturn(Optional.of(new UserProfile().withEmail(EMAIL)));
         when(bulkEmailUsersService.updateUserStatus(SUBJECT_ID, BulkEmailStatus.EMAIL_SENT))
                 .thenReturn(
                         Optional.of(
@@ -104,8 +103,8 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
         when(bulkEmailUsersService.getNSubjectIdsByStatus(5, BulkEmailStatus.PENDING))
                 .thenReturn(Arrays.asList(TEST_SUBJECT_IDS));
         for (int i = 0; i < TEST_SUBJECT_IDS.length; i++) {
-            when(dynamoService.getUserProfileFromSubject(TEST_SUBJECT_IDS[i]))
-                    .thenReturn(new UserProfile().withEmail(TEST_EMAILS[i]));
+            when(dynamoService.getOptionalUserProfileFromSubject(TEST_SUBJECT_IDS[i]))
+                    .thenReturn(Optional.of(new UserProfile().withEmail(TEST_EMAILS[i])));
             when(bulkEmailUsersService.updateUserStatus(
                             TEST_SUBJECT_IDS[i], BulkEmailStatus.EMAIL_SENT))
                     .thenReturn(
@@ -136,8 +135,8 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
         when(configurationService.getBulkUserEmailMaxBatchCount()).thenReturn(1);
         when(bulkEmailUsersService.getNSubjectIdsByStatus(1, BulkEmailStatus.PENDING))
                 .thenReturn(List.of(SUBJECT_ID));
-        when(dynamoService.getUserProfileFromSubject(SUBJECT_ID))
-                .thenThrow(new UserNotFoundBySubjectIdRuntimeException("User not found"));
+        when(dynamoService.getOptionalUserProfileFromSubject(SUBJECT_ID))
+                .thenReturn(Optional.empty());
         when(bulkEmailUsersService.updateUserStatus(SUBJECT_ID, BulkEmailStatus.ACCOUNT_NOT_FOUND))
                 .thenReturn(
                         Optional.of(
@@ -164,8 +163,8 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
         when(configurationService.getBulkUserEmailMaxBatchCount()).thenReturn(1);
         when(bulkEmailUsersService.getNSubjectIdsByStatus(1, BulkEmailStatus.PENDING))
                 .thenReturn(List.of(SUBJECT_ID));
-        when(dynamoService.getUserProfileFromSubject(SUBJECT_ID))
-                .thenReturn(new UserProfile().withEmail(EMAIL));
+        when(dynamoService.getOptionalUserProfileFromSubject(SUBJECT_ID))
+                .thenReturn(Optional.of(new UserProfile().withEmail(EMAIL)));
         doThrow(NotificationClientException.class)
                 .when(notificationService)
                 .sendEmail(
