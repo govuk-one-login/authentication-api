@@ -4,6 +4,9 @@ import com.google.gson.JsonElement;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.httpstub.HttpStubExtension;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.awaitility.Awaitility.await;
@@ -73,5 +76,21 @@ public class NotifyStubExtension extends HttpStubExtension {
                 .untilAsserted(() -> assertThat(getCountOfRequests(), equalTo(1)));
 
         return objectMapper.readValue(getLastRequest().getEntity(), JsonElement.class);
+    }
+
+    public List<JsonElement> waitForNumberOfRequests(int timeoutInSeconds, int numberOfRequests) {
+        await().atMost(timeoutInSeconds, SECONDS)
+                .untilAsserted(() -> assertThat(getCountOfRequests(), equalTo(numberOfRequests)));
+
+        return getRecordedRequests().stream()
+                .map(
+                        r -> {
+                            try {
+                                return objectMapper.readValue(r.getEntity(), JsonElement.class);
+                            } catch (Json.JsonException e) {
+                                throw new RuntimeException(e);
+                            }
+                        })
+                .collect(Collectors.toList());
     }
 }

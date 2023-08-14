@@ -12,6 +12,7 @@ dependencies {
             configurations.dynamodb
 
     implementation project(":shared"),
+            configurations.govuk_notify,
             configurations.nimbus,
             configurations.xray
 

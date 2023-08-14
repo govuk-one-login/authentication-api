@@ -541,6 +541,16 @@ public class DynamoService implements AuthenticationService {
         return userProfile.get();
     }
 
+    public Optional<UserProfile> getOptionalUserProfileFromSubject(String subject) {
+        QueryConditional q =
+                QueryConditional.keyEqualTo(Key.builder().partitionValue(subject).build());
+        QueryEnhancedRequest queryEnhancedRequest =
+                QueryEnhancedRequest.builder().consistentRead(false).queryConditional(q).build();
+        return dynamoUserProfileTable.index("SubjectIDIndex").query(queryEnhancedRequest).stream()
+                .findFirst()
+                .flatMap(page -> page.items().stream().findFirst());
+    }
+
     @Override
     public UserProfile getUserProfileFromPublicSubject(String subject) {
         QueryConditional q =

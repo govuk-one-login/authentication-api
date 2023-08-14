@@ -44,7 +44,9 @@ public enum NotificationType implements TemplateAware {
             Map.of(
                     SupportedLanguage.CY,
                     "CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION_TEMPLATE_ID_CY"),
-            MFAMethodType.NONE);
+            MFAMethodType.NONE),
+    TERMS_AND_CONDITIONS_BULK_EMAIL(
+            "TERMS_AND_CONDITIONS_BULK_EMAIL_TEMPLATE_ID", MFAMethodType.NONE);
 
     private final String templateName;
     private final MFAMethodType mfaMethodType;

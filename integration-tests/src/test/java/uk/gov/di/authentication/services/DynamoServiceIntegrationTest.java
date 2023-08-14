@@ -18,6 +18,7 @@ import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import static java.util.Collections.emptyList;
@@ -300,6 +301,45 @@ class DynamoServiceIntegrationTest {
         assertThat(updatedUserProfile.getAccountVerified(), equalTo(1));
         assertThat(updatedUserProfile.getPhoneNumber(), equalTo(null));
         assertThat(updatedUserProfile.isPhoneNumberVerified(), equalTo(false));
+    }
+
+    @Test
+    void shouldRetrieveUserProfileBySubjectId() {
+        setupDynamoWithMultipleUsers();
+
+        assertThat(
+                dynamoService.getOptionalUserProfileFromSubject("1111").get().getEmail(),
+                equalTo("email1"));
+        assertThat(
+                dynamoService.getOptionalUserProfileFromSubject("2222").get().getEmail(),
+                equalTo("email2"));
+        assertThat(
+                dynamoService.getOptionalUserProfileFromSubject("3333").get().getEmail(),
+                equalTo("email3"));
+        assertThat(
+                dynamoService.getOptionalUserProfileFromSubject("4444").get().getEmail(),
+                equalTo("email4"));
+        assertThat(
+                dynamoService.getOptionalUserProfileFromSubject("5555").get().getEmail(),
+                equalTo("email5"));
+    }
+
+    @Test
+    void shouldThrowWhenUserNotFoundBySubjectId() {
+        setupDynamoWithMultipleUsers();
+
+        assertThat(
+                dynamoService.getOptionalUserProfileFromSubject("7777"), equalTo(Optional.empty()));
+        assertThat(
+                dynamoService.getOptionalUserProfileFromSubject("8888"), equalTo(Optional.empty()));
+    }
+
+    private void setupDynamoWithMultipleUsers() {
+        userStore.signUp("email1", "password-1", new Subject("1111"));
+        userStore.signUp("email2", "password-1", new Subject("2222"));
+        userStore.signUp("email3", "password-1", new Subject("3333"));
+        userStore.signUp("email4", "password-1", new Subject("4444"));
+        userStore.signUp("email5", "password-1", new Subject("5555"));
     }
 
     private void testUpdateEmail(UserProfile userProfile, UserCredentials userCredentials) {
