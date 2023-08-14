@@ -138,6 +138,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("SUPPORT_ACCESS_TOKEN_STORE", "false").equals("true");
     }
 
+    public boolean isBulkUserEmailEmailSendingEnabled() {
+        return System.getenv()
+                .getOrDefault("BULK_USER_EMAIL_EMAIL_SENDING_ENABLED", "false")
+                .equals("true");
+    }
+
     public String getContactUsLinkRoute() {
         return System.getenv().getOrDefault("CONTACT_US_LINK_ROUTE", "");
     }

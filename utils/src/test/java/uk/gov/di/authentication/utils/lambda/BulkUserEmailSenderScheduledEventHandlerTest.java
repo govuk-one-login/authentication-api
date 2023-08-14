@@ -72,6 +72,7 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
         when(configurationService.getBulkUserEmailBatchQueryLimit()).thenReturn(1);
         when(configurationService.getBulkUserEmailMaxBatchCount()).thenReturn(1);
         when(configurationService.getBulkUserEmailBatchPauseDuration()).thenReturn(1L);
+        when(configurationService.isBulkUserEmailEmailSendingEnabled()).thenReturn(true);
         when(bulkEmailUsersService.getNSubjectIdsByStatus(1, BulkEmailStatus.PENDING))
                 .thenReturn(List.of(SUBJECT_ID));
         when(dynamoService.getOptionalUserProfileFromSubject(SUBJECT_ID))
@@ -96,10 +97,41 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
     }
 
     @Test
+    void shouldNotSendEmailWhenSendEmailFlagNotEnabledAndUpdateStatusToEmailSent()
+            throws NotificationClientException {
+        when(configurationService.getBulkUserEmailBatchQueryLimit()).thenReturn(1);
+        when(configurationService.getBulkUserEmailMaxBatchCount()).thenReturn(1);
+        when(configurationService.getBulkUserEmailBatchPauseDuration()).thenReturn(1L);
+        when(configurationService.isBulkUserEmailEmailSendingEnabled()).thenReturn(false);
+        when(bulkEmailUsersService.getNSubjectIdsByStatus(1, BulkEmailStatus.PENDING))
+                .thenReturn(List.of(SUBJECT_ID));
+        when(dynamoService.getOptionalUserProfileFromSubject(SUBJECT_ID))
+                .thenReturn(Optional.of(new UserProfile().withEmail(EMAIL)));
+        when(bulkEmailUsersService.updateUserStatus(SUBJECT_ID, BulkEmailStatus.EMAIL_SENT))
+                .thenReturn(
+                        Optional.of(
+                                new BulkEmailUser()
+                                        .withBulkEmailStatus(BulkEmailStatus.EMAIL_SENT)
+                                        .withSubjectID(SUBJECT_ID)));
+
+        bulkUserEmailSenderScheduledEventHandler.handleRequest(scheduledEvent, mockContext);
+
+        verify(notificationService, times(0))
+                .sendEmail(
+                        EMAIL,
+                        Map.of(),
+                        TERMS_AND_CONDITIONS_BULK_EMAIL,
+                        LocaleHelper.SupportedLanguage.EN);
+        verify(bulkEmailUsersService, times(1))
+                .updateUserStatus(SUBJECT_ID, BulkEmailStatus.EMAIL_SENT);
+    }
+
+    @Test
     void shouldSendSingleBatchOfEmailsAndUpdateStatusToEmailSent()
             throws NotificationClientException {
         when(configurationService.getBulkUserEmailBatchQueryLimit()).thenReturn(5);
         when(configurationService.getBulkUserEmailMaxBatchCount()).thenReturn(1);
+        when(configurationService.isBulkUserEmailEmailSendingEnabled()).thenReturn(true);
         when(bulkEmailUsersService.getNSubjectIdsByStatus(5, BulkEmailStatus.PENDING))
                 .thenReturn(Arrays.asList(TEST_SUBJECT_IDS));
         for (int i = 0; i < TEST_SUBJECT_IDS.length; i++) {
@@ -133,6 +165,7 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
             throws NotificationClientException {
         when(configurationService.getBulkUserEmailBatchQueryLimit()).thenReturn(1);
         when(configurationService.getBulkUserEmailMaxBatchCount()).thenReturn(1);
+        when(configurationService.isBulkUserEmailEmailSendingEnabled()).thenReturn(true);
         when(bulkEmailUsersService.getNSubjectIdsByStatus(1, BulkEmailStatus.PENDING))
                 .thenReturn(List.of(SUBJECT_ID));
         when(dynamoService.getOptionalUserProfileFromSubject(SUBJECT_ID))
@@ -161,6 +194,7 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
             throws NotificationClientException {
         when(configurationService.getBulkUserEmailBatchQueryLimit()).thenReturn(1);
         when(configurationService.getBulkUserEmailMaxBatchCount()).thenReturn(1);
+        when(configurationService.isBulkUserEmailEmailSendingEnabled()).thenReturn(true);
         when(bulkEmailUsersService.getNSubjectIdsByStatus(1, BulkEmailStatus.PENDING))
                 .thenReturn(List.of(SUBJECT_ID));
         when(dynamoService.getOptionalUserProfileFromSubject(SUBJECT_ID))

@@ -86,6 +86,11 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
                     public int getBulkUserEmailMaxBatchCount() {
                         return 4;
                     }
+
+                    @Override
+                    public boolean isBulkUserEmailEmailSendingEnabled() {
+                        return true;
+                    }
                 };
         handler = new BulkUserEmailSenderScheduledEventHandler(configuration);
         bulkEmailUsersService = new BulkEmailUsersService(configuration);

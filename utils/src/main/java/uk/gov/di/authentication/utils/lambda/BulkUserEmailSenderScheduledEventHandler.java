@@ -133,11 +133,16 @@ public class BulkUserEmailSenderScheduledEventHandler
     }
 
     private void sendNotifyEmail(String email) throws NotificationClientException {
-        notificationService.sendEmail(
-                email,
-                Map.of(),
-                TERMS_AND_CONDITIONS_BULK_EMAIL,
-                LocaleHelper.SupportedLanguage.EN);
+        if (configurationService.isBulkUserEmailEmailSendingEnabled()) {
+            LOG.info("Bulk user email sending email.");
+            notificationService.sendEmail(
+                    email,
+                    Map.of(),
+                    TERMS_AND_CONDITIONS_BULK_EMAIL,
+                    LocaleHelper.SupportedLanguage.EN);
+        } else {
+            LOG.info("Bulk user email email sending not enabled.");
+        }
     }
 
     private void updateBulkUserStatus(String subjectId, BulkEmailStatus bulkEmailStatus) {
