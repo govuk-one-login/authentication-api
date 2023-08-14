@@ -88,7 +88,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public int getBulkUserEmailMaxBatchCount() {
         return Integer.parseInt(
-                System.getenv().getOrDefault("BULK_USER_EMAIL_MAX_BATCH_COUNT", "8000"));
+                System.getenv().getOrDefault("BULK_USER_EMAIL_MAX_BATCH_COUNT", "20"));
     }
 
     public long getBulkUserEmailBatchPauseDuration() {

@@ -7,12 +7,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.BulkEmailStatus;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
-import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.BulkEmailUsersService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.NotificationService;
-import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.service.notify.NotificationClient;
 import uk.gov.service.notify.NotificationClientException;
 
@@ -34,8 +32,6 @@ public class BulkUserEmailSenderScheduledEventHandler
     private final NotificationService notificationService;
 
     private final ConfigurationService configurationService;
-
-    protected final Json objectMapper = SerializationService.getInstance();
 
     public BulkUserEmailSenderScheduledEventHandler() {
         this(ConfigurationService.getInstance());
@@ -76,6 +72,13 @@ public class BulkUserEmailSenderScheduledEventHandler
         final int bulkUserEmailMaxBatchCount = configurationService.getBulkUserEmailMaxBatchCount();
         final long bulkUserEmailBatchPauseDuration =
                 configurationService.getBulkUserEmailBatchPauseDuration();
+
+        LOG.info(
+                "Bulk User Email Send configuration - bulkUserEmailBatchQueryLimit: {}, bulkUserEmailMaxBatchCount: {}, bulkUserEmailBatchPauseDuration: {}",
+                bulkUserEmailBatchQueryLimit,
+                bulkUserEmailMaxBatchCount,
+                bulkUserEmailBatchPauseDuration);
+
         List<String> userSubjectIdBatch;
 
         int batchCounter = 0;
@@ -119,16 +122,18 @@ public class BulkUserEmailSenderScheduledEventHandler
             try {
                 if (bulkUserEmailBatchPauseDuration > 0) {
                     LOG.info(
-                            "Bulk user email batch pausing for: {}ms",
+                            "Bulk user email batch pausing for: {} ms",
                             bulkUserEmailBatchPauseDuration);
                     Thread.sleep(bulkUserEmailBatchPauseDuration);
                     LOG.info("Bulk user email batch pause complete.");
                 }
             } catch (InterruptedException e) {
                 LOG.warn("Thread sleep for bulk user email batch pause interrupted.");
+                Thread.currentThread().interrupt();
             }
         } while (!userSubjectIdBatch.isEmpty() && batchCounter < bulkUserEmailMaxBatchCount);
 
+        LOG.info("Bulk user email: batch completed.");
         return null;
     }
 
