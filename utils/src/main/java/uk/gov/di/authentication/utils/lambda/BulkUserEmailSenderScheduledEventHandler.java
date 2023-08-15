@@ -8,6 +8,7 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.BulkEmailStatus;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.services.BulkEmailUsersService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.NotificationService;
@@ -33,6 +34,8 @@ public class BulkUserEmailSenderScheduledEventHandler
 
     private final ConfigurationService configurationService;
 
+    private final CloudwatchMetricsService cloudwatchMetricsService;
+
     public BulkUserEmailSenderScheduledEventHandler() {
         this(ConfigurationService.getInstance());
     }
@@ -41,11 +44,13 @@ public class BulkUserEmailSenderScheduledEventHandler
             BulkEmailUsersService bulkEmailUsersService,
             DynamoService dynamoService,
             ConfigurationService configurationService,
-            NotificationService notificationService) {
+            NotificationService notificationService,
+            CloudwatchMetricsService cloudwatchMetricsService) {
         this.bulkEmailUsersService = bulkEmailUsersService;
         this.dynamoService = dynamoService;
         this.configurationService = configurationService;
         this.notificationService = notificationService;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
     }
 
     public BulkUserEmailSenderScheduledEventHandler(ConfigurationService configurationService) {
@@ -61,6 +66,7 @@ public class BulkUserEmailSenderScheduledEventHandler
                                                 configurationService.getNotifyApiKey(), url))
                         .orElse(new NotificationClient(configurationService.getNotifyApiKey()));
         this.notificationService = new NotificationService(client, configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService();
     }
 
     @Override
@@ -78,6 +84,8 @@ public class BulkUserEmailSenderScheduledEventHandler
                 bulkUserEmailBatchQueryLimit,
                 bulkUserEmailMaxBatchCount,
                 bulkUserEmailBatchPauseDuration);
+
+        updateTableSizeMetric();
 
         List<String> userSubjectIdBatch;
 
@@ -156,5 +164,23 @@ public class BulkUserEmailSenderScheduledEventHandler
         } else {
             LOG.warn("Bulk user email status not updated, user not found.");
         }
+        updateBulkUserStatusMetric(bulkEmailStatus);
+    }
+
+    private void updateTableSizeMetric() {
+        var noOfBulkEmailUserItems = bulkEmailUsersService.describeTable().table().itemCount();
+        cloudwatchMetricsService.putEmbeddedValue(
+                "NumberOfBulkEmailUsers", noOfBulkEmailUserItems, Map.of());
+        LOG.info("BulkEmailUsers table item count: {}", noOfBulkEmailUserItems);
+    }
+
+    private void updateBulkUserStatusMetric(BulkEmailStatus bulkEmailStatus) {
+        cloudwatchMetricsService.incrementCounter(
+                "BulkEmailStatus",
+                Map.of(
+                        "BulkEmailStatus",
+                        bulkEmailStatus.getValue(),
+                        "Environment",
+                        configurationService.getEnvironment()));
     }
 }

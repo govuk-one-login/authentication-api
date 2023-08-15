@@ -5,6 +5,8 @@ import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.DescribeTableRequest;
+import software.amazon.awssdk.services.dynamodb.model.DescribeTableResponse;
 import software.amazon.awssdk.services.dynamodb.model.QueryRequest;
 import software.amazon.awssdk.services.dynamodb.model.QueryResponse;
 
@@ -51,5 +53,10 @@ public class BaseDynamoService<T> {
 
     public QueryResponse query(QueryRequest request) {
         return client.query(request);
+    }
+
+    public DescribeTableResponse describeTable() {
+        return client.describeTable(
+                DescribeTableRequest.builder().tableName(dynamoTable.tableName()).build());
     }
 }
