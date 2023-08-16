@@ -398,8 +398,8 @@ resource "aws_kms_key" "access_token_store_signing_key" {
   tags = local.default_tags
 }
 
-resource "aws_kms_key" "bulk_email_users_signing_key" {
-  description              = "KMS signing key for bulk email users table in DynamoDB"
+resource "aws_kms_key" "bulk_email_users_encryption_key" {
+  description              = "KMS encryption key for bulk email users table in DynamoDB"
   deletion_window_in_days  = 30
   key_usage                = "ENCRYPT_DECRYPT"
   customer_master_key_spec = "SYMMETRIC_DEFAULT"

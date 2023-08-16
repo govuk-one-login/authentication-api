@@ -394,7 +394,7 @@ resource "aws_dynamodb_table" "bulk_email_users" {
 
   server_side_encryption {
     enabled     = true
-    kms_key_arn = aws_kms_key.bulk_email_users_signing_key.arn
+    kms_key_arn = aws_kms_key.bulk_email_users_encryption_key.arn
   }
 
   lifecycle {
