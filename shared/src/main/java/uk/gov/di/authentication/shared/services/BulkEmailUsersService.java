@@ -41,6 +41,10 @@ public class BulkEmailUsersService extends BaseDynamoService<BulkEmailUser> {
                         });
     }
 
+    public void addUser(String subjectID, BulkEmailStatus bulkEmailStatus) {
+        put(new BulkEmailUser().withSubjectID(subjectID).withBulkEmailStatus(bulkEmailStatus));
+    }
+
     public List<String> getNSubjectIdsByStatus(Integer limit, BulkEmailStatus bulkEmailStatus) {
         Condition equalsBulkEmailStatus =
                 Condition.builder()

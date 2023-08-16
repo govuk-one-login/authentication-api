@@ -39,6 +39,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static java.util.Objects.nonNull;
 
@@ -729,6 +730,12 @@ public class DynamoService implements AuthenticationService {
 
             dynamoDbEnhancedClient.transactWriteItems(deleteItemsBatchRequest);
         }
+    }
+
+    public Stream<UserProfile> getBulkUserEmailAudienceStream() {
+        ScanEnhancedRequest scanRequest =
+                ScanEnhancedRequest.builder().addAttributeToProject("SubjectID").build();
+        return dynamoUserProfileTable.scan(scanRequest).items().stream();
     }
 
     private static String hashPassword(String password) {
