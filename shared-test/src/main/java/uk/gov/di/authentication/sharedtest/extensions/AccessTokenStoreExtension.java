@@ -55,8 +55,22 @@ public class AccessTokenStoreExtension extends DynamoExtension implements AfterE
         }
     }
 
-    public void addAccessTokenStore(String accessToken, String subjectID, List<String> scopes) {
-        dynamoService.addAccessTokenStore(accessToken, subjectID, scopes);
+    public void addAccessTokenStore(
+            String accessToken,
+            String subjectID,
+            List<String> claims,
+            boolean isNewAccount,
+            String sectorIdentifier) {
+        dynamoService.addAccessTokenStore(
+                accessToken, subjectID, claims, isNewAccount, sectorIdentifier);
+    }
+
+    public void addAccessTokenStore(String accessToken, String subjectID, List<String> claims) {
+        this.addAccessTokenStore(accessToken, subjectID, claims, false, "any");
+    }
+
+    public void setAccessTokenStoreUsed(String accessToken, boolean used) {
+        dynamoService.setAccessTokenStoreUsed(accessToken, used);
     }
 
     public Optional<AccessTokenStore> getAccessToken(String subjectID, String clientId) {
@@ -81,5 +95,9 @@ public class AccessTokenStoreExtension extends DynamoExtension implements AfterE
                         .build();
 
         dynamoDB.createTable(request);
+    }
+
+    public void setAccessTokenTtlToZero(String accessToken) {
+        dynamoService.setAccessTokenTtlTestOnly(accessToken, 0L);
     }
 }

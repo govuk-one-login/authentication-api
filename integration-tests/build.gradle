@@ -25,6 +25,7 @@ dependencies {
     implementation project(":shared-test"), noXray
     implementation project(":oidc-api"), noXray
     implementation project(":frontend-api"), noXray
+    implementation project(":auth-external-api"), noXray
     implementation project(":client-registry-api"), noXray
     implementation project(":ipv-api"), noXray
     implementation project(":doc-checking-app-api"), noXray
