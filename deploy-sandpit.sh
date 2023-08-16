@@ -91,6 +91,9 @@ while [[ $# -gt 0 ]]; do
     -p|--prompt)
       TERRAFORM_OPTS=""
       ;;
+    -r|--refresh)
+      TERRAFORM_OPTS="-refresh-only"
+      ;;
     -x|--auth-external)
       AUTH_EXTERNAL_API=1
       ;;
