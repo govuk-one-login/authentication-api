@@ -1,5 +1,6 @@
 
 module "bulk_user_email_send_lambda_role" {
+  count       = local.deploy_bulk_email_users_count
   source      = "../modules/lambda-role"
   environment = var.environment
   role_name   = "bulk-user-email-send-lambda-role"
@@ -9,14 +10,13 @@ module "bulk_user_email_send_lambda_role" {
     aws_iam_policy.bulk_user_email_send_dynamo_read_access[0].arn,
     aws_iam_policy.bulk_user_email_send_dynamo_write_access[0].arn,
     aws_iam_policy.bulk_user_email_send_dynamo_encryption_key_kms_policy[0].arn,
-    module.utils_txma_audit.access_policy_arn,
   ]
 }
 
 resource "aws_lambda_function" "bulk_user_email_send_lambda" {
   count                          = local.deploy_bulk_email_users_count
   function_name                  = "${var.environment}-bulk-user-email-send-lambda"
-  role                           = module.bulk_user_email_send_lambda_role.arn
+  role                           = module.bulk_user_email_send_lambda_role[0].arn
   handler                        = "uk.gov.di.authentication.utils.lambda.BulkUserEmailSenderScheduledEventHandler::handleRequest"
   timeout                        = lookup(var.performance_tuning, "bulk-user-email-send", local.default_performance_parameters).timeout
   memory_size                    = lookup(var.performance_tuning, "bulk-user-email-send", local.default_performance_parameters).memory
