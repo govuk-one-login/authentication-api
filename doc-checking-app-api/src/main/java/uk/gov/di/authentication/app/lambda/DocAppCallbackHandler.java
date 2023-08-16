@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.ErrorObject;
+import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.http.HTTPRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
@@ -288,19 +289,29 @@ public class DocAppCallbackHandler
                         302, "", Map.of(ResponseHeaders.LOCATION, redirectURI.toString()), null);
 
             } catch (UnsuccessfulCredentialResponseException e) {
-                incrementDocAppCallbackErrorCounter(false, "UnsuccessfulCredentialResponse");
-                auditService.submitAuditEvent(
-                        DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED,
-                        clientSessionId,
-                        session.getSessionId(),
-                        clientId,
-                        clientSession.getDocAppSubjectId().getValue(),
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN);
-                LOG.warn("Doc App sendCriDataRequest was not successful: {}", e.getMessage());
-                return redirectToFrontendErrorPage();
+                if (e.getHttpCode() == 404) {
+                    return generateAuthenticationErrorResponse(
+                            authenticationRequest,
+                            new ErrorObject(OAuth2Error.ACCESS_DENIED_CODE, "Not found"),
+                            false,
+                            clientSessionId,
+                            session.getSessionId(),
+                            clientSession.getDocAppSubjectId().getValue());
+                } else {
+                    incrementDocAppCallbackErrorCounter(false, "UnsuccessfulCredentialResponse");
+                    auditService.submitAuditEvent(
+                            DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED,
+                            clientSessionId,
+                            session.getSessionId(),
+                            clientId,
+                            clientSession.getDocAppSubjectId().getValue(),
+                            AuditService.UNKNOWN,
+                            AuditService.UNKNOWN,
+                            AuditService.UNKNOWN,
+                            AuditService.UNKNOWN);
+                    LOG.warn("Doc App sendCriDataRequest was not successful: {}", e.getMessage());
+                    return redirectToFrontendErrorPage();
+                }
             }
         } catch (DocAppCallbackException | NoSessionException e) {
             LOG.warn(e.getMessage());
