@@ -55,6 +55,7 @@ import java.util.Optional;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.mockito.ArgumentMatchers.any;
@@ -457,6 +458,61 @@ class DocAppCallbackHandlerTest {
         verifyNoInteractions(tokenService);
         verifyNoInteractions(auditService);
         verifyNoInteractions(dynamoDocAppService);
+    }
+
+    @Test
+    void shouldGenerateAuthenticationErrorResponseWhenCRIRequestReturns404()
+            throws UnsuccessfulCredentialResponseException {
+        usingValidSession();
+        usingValidClientSession();
+        var successfulTokenResponse =
+                new AccessTokenResponse(new Tokens(new BearerAccessToken(), null));
+        var tokenRequest = mock(TokenRequest.class);
+        Map<String, String> responseHeaders = new HashMap<>();
+        responseHeaders.put("code", AUTH_CODE.getValue());
+        responseHeaders.put("state", STATE.getValue());
+        when(responseService.validateResponse(responseHeaders, SESSION_ID))
+                .thenReturn(Optional.empty());
+        when(tokenService.constructTokenRequest(AUTH_CODE.getValue())).thenReturn(tokenRequest);
+        when(tokenService.sendTokenRequest(tokenRequest)).thenReturn(successfulTokenResponse);
+        when(tokenService.sendCriDataRequest(any(HTTPRequest.class), any(String.class)))
+                .thenThrow(
+                        new UnsuccessfulCredentialResponseException(
+                                "Received a 404 response from CRI data endpoint", 404));
+
+        var event = new APIGatewayProxyRequestEvent();
+        event.setQueryStringParameters(responseHeaders);
+        event.setHeaders(Map.of(COOKIE, buildCookieString()));
+        var response = makeHandlerRequest(event);
+
+        assertThat(response, hasStatus(302));
+
+        assertThat(
+                response.getHeaders().get("Location"),
+                containsString("test-uri?error=access_denied&error_description=Not+found&state="));
+        assertThat(
+                logging.events(),
+                hasItem(withMessageContaining("Error in Doc App AuthorisationResponse")));
+
+        verifyAuditServiceEvent(DocAppAuditableEvent.DOC_APP_AUTHORISATION_RESPONSE_RECEIVED);
+        verifyAuditServiceEvent(DocAppAuditableEvent.DOC_APP_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
+        verifyAuditServiceEvent(
+                DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED);
+
+        verifyNoMoreInteractions(auditService);
+        verifyNoInteractions(dynamoDocAppService);
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "DocAppCallback",
+                        Map.of(
+                                "Environment",
+                                ENVIRONMENT,
+                                "Successful",
+                                Boolean.toString(false),
+                                "NoSessionError",
+                                Boolean.toString(false),
+                                "Error",
+                                "access_denied"));
     }
 
     private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {

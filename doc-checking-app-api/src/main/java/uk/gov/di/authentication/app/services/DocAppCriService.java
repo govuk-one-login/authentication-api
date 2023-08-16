@@ -119,11 +119,13 @@ public class DocAppCriService {
                 count++;
                 response = request.send();
             } while (!response.indicatesSuccess() && count < maxTries);
+
             if (!response.indicatesSuccess()) {
                 throw new UnsuccessfulCredentialResponseException(
                         format(
                                 "Error %s when attempting to call CRI data endpoint: %s",
-                                response.getStatusCode(), response.getContent()));
+                                response.getStatusCode(), response.getContent()),
+                        response.getStatusCode());
             }
 
             if (!response.getContentAsJSONObject().get("sub").equals(docAppSubjectId)
