@@ -49,6 +49,7 @@ import java.util.UUID;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.startsWith;
@@ -56,6 +57,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.DOC_APP_AUTHORISATION_RESPONSE_RECEIVED;
 import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.DOC_APP_SUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED;
 import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.DOC_APP_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED;
+import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED;
 import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -255,6 +257,49 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                         DOC_APP_AUTHORISATION_RESPONSE_RECEIVED,
                         DOC_APP_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                         DOC_APP_UNSUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED));
+    }
+
+    @Test
+    void shouldSendAuthenticationErrorResponseToRPWhenCRIRequestReturns404()
+            throws Json.JsonException {
+        setupSession();
+        var configurationService =
+                new DocAppCallbackHandlerIntegrationTest.TestConfigurationService(
+                        criStub,
+                        auditTopic,
+                        notificationsQueue,
+                        auditSigningKey,
+                        tokenSigner,
+                        ipvPrivateKeyJwtSigner,
+                        spotQueue,
+                        docAppPrivateKeyJwtSigner,
+                        true);
+        handler = new DocAppCallbackHandler(configurationService);
+
+        criStub.register("/userinfo/v2", 404, "application/jwt", "error");
+
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(
+                                Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                        constructQueryStringParameters());
+
+        assertThat(response, hasStatus(302));
+        assertThat(
+                response.getHeaders().get(ResponseHeaders.LOCATION),
+                startsWith(
+                        TEST_CONFIGURATION_SERVICE.getDocAppAuthorisationCallbackURI().toString()));
+        assertThat(
+                response.getHeaders().get(ResponseHeaders.LOCATION),
+                containsString("error=access_denied&error_description=Not+found&state="));
+
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue,
+                List.of(
+                        DOC_APP_AUTHORISATION_RESPONSE_RECEIVED,
+                        DOC_APP_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
+                        DOC_APP_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED));
     }
 
     @Test
