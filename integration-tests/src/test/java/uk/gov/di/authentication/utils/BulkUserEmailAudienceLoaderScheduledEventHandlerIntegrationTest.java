@@ -14,7 +14,6 @@ import uk.gov.di.authentication.sharedtest.extensions.BulkEmailUsersExtension;
 import uk.gov.di.authentication.utils.lambda.BulkUserEmailAudienceLoaderScheduledEventHandler;
 
 import java.util.List;
-import java.util.Map;
 
 import static java.lang.String.format;
 import static java.lang.String.valueOf;

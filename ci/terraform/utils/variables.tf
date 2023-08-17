@@ -111,7 +111,17 @@ variable "bulk_user_email_send_schedule_enabled" {
 
 variable "bulk_user_email_send_schedule_expression" {
   type    = string
-  default = "cron(0 15 ? * MON-FRI *)"
+  default = "cron(0 15 ? * MON-FRI 2049)"
+}
+
+variable "bulk_user_email_audience_loader_schedule_enabled" {
+  type    = bool
+  default = false
+}
+
+variable "bulk_user_email_audience_loader_schedule_expression" {
+  type    = string
+  default = "cron(0 13 ? * MON-FRI 2049)"
 }
 
 variable "txma_account_id" {
