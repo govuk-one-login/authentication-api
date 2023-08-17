@@ -63,7 +63,7 @@ variable "cloudwatch_log_retention" {
 
 variable "terms_and_conditions" {
   type        = string
-  default     = "1.6"
+  default     = "1.7"
   description = "The latest Terms and Conditions version number"
 }
 
