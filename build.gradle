@@ -347,7 +347,7 @@ sonarqube {
         property "sonar.projectKey", "alphagov_di-authentication-api"
         property "sonar.organization", "alphagov"
         property "sonar.host.url", "https://sonarcloud.io"
-        property "sonar.exclusions", "shared-test/*"
+        property "sonar.coverage.exclusions", "**/shared-test/**"
     }
 }
 
