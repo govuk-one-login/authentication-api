@@ -4,11 +4,14 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.ScheduledEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.services.dynamodb.model.DescribeTableResponse;
+import software.amazon.awssdk.services.dynamodb.model.TableDescription;
 import uk.gov.di.authentication.shared.entity.BulkEmailStatus;
 import uk.gov.di.authentication.shared.entity.BulkEmailUser;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.shared.services.BulkEmailUsersService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.NotificationService;
@@ -40,6 +43,13 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
 
+    private final CloudwatchMetricsService cloudwatchMetricsService =
+            mock(CloudwatchMetricsService.class);
+
+    private final DescribeTableResponse describeTableResponse = mock(DescribeTableResponse.class);
+
+    private final TableDescription tableDescription = mock(TableDescription.class);
+
     private final ScheduledEvent scheduledEvent = mock(ScheduledEvent.class);
 
     private final String SUBJECT_ID = "subject-id";
@@ -63,7 +73,12 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
                         bulkEmailUsersService,
                         dynamoService,
                         configurationService,
-                        notificationService);
+                        notificationService,
+                        cloudwatchMetricsService);
+        when(bulkEmailUsersService.describeTable()).thenReturn(describeTableResponse);
+        when(describeTableResponse.table())
+                .thenReturn(TableDescription.builder().itemCount(1L).build());
+        when(configurationService.getEnvironment()).thenReturn("unit-test");
     }
 
     @Test
