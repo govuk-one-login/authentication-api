@@ -11,7 +11,6 @@ import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import uk.gov.di.authentication.ipv.entity.IPVAuthorisationResponse;
 import uk.gov.di.authentication.ipv.lambda.IPVAuthorisationHandler;
 import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.ServiceType;
@@ -77,7 +76,7 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
     }
 
     @Test
-    void shouldReturn200WithValidIPVAuthorisationRequest() throws Json.JsonException {
+    void shouldRedirectToIPVWithValidIPVAuthorisationRequest() throws Json.JsonException {
         userStore.signUp(TEST_EMAIL_ADDRESS, "password-1");
         clientStore.registerClient(
                 CLIENT_ID.getValue(),
@@ -102,12 +101,14 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                                 SESSION_ID, CLIENT_SESSION_ID, PERSISTENT_SESSION_ID),
                         Map.of());
 
-        assertThat(response, hasStatus(200));
-
-        var body = objectMapper.readValue(response.getBody(), IPVAuthorisationResponse.class);
+        assertThat(response, hasStatus(302));
 
         assertThat(
-                body.getRedirectUri(),
+                response.getHeaders().get("Location"),
+                startsWith(configurationService.getIPVAuthorisationURI().toString()));
+
+        assertThat(
+                response.getHeaders().get("Location"),
                 startsWith(configurationService.getIPVAuthorisationURI().toString()));
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(IPV_AUTHORISATION_REQUESTED));

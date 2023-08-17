@@ -1,0 +1,213 @@
+package uk.gov.di.authentication.ipv.lambda;
+
+import com.amazonaws.services.lambda.runtime.Context;
+import com.amazonaws.services.lambda.runtime.RequestHandler;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.oauth2.sdk.AuthorizationRequest;
+import com.nimbusds.oauth2.sdk.ParseException;
+import com.nimbusds.oauth2.sdk.ResponseType;
+import com.nimbusds.oauth2.sdk.id.ClientID;
+import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
+import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
+import uk.gov.di.authentication.ipv.entity.IPVAuthorisationRequest;
+import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
+import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
+import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthenticationService;
+import uk.gov.di.authentication.shared.services.ClientService;
+import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.KmsConnectionService;
+import uk.gov.di.authentication.shared.services.NoSessionOrchestrationService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
+import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.shared.state.UserContext;
+
+import java.net.URI;
+import java.util.Map;
+import java.util.Optional;
+
+import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
+import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.UNKNOWN;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
+import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
+
+public class IPVAuthorisationHandlerAfterSplit extends BaseFrontendHandler<IPVAuthorisationRequest>
+        implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+
+    private static final Logger LOG = LogManager.getLogger(IPVAuthorisationHandlerAfterSplit.class);
+
+    private final AuditService auditService;
+    private final IPVAuthorisationService authorisationService;
+    private final NoSessionOrchestrationService noSessionOrchestrationService;
+    private final CloudwatchMetricsService cloudwatchMetricsService;
+
+    public IPVAuthorisationHandlerAfterSplit(
+            ConfigurationService configurationService,
+            SessionService sessionService,
+            ClientSessionService clientSessionService,
+            ClientService clientService,
+            AuthenticationService authenticationService,
+            AuditService auditService,
+            IPVAuthorisationService authorisationService,
+            NoSessionOrchestrationService noSessionOrchestrationService,
+            CloudwatchMetricsService cloudwatchMetricsService) {
+        super(
+                IPVAuthorisationRequest.class,
+                configurationService,
+                sessionService,
+                clientSessionService,
+                clientService,
+                authenticationService);
+        this.auditService = auditService;
+        this.authorisationService = authorisationService;
+        this.noSessionOrchestrationService = noSessionOrchestrationService;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
+    }
+
+    public IPVAuthorisationHandlerAfterSplit() {
+        this(ConfigurationService.getInstance());
+    }
+
+    public IPVAuthorisationHandlerAfterSplit(ConfigurationService configurationService) {
+        super(IPVAuthorisationRequest.class, configurationService);
+        this.auditService = new AuditService(configurationService);
+        this.authorisationService =
+                new IPVAuthorisationService(
+                        configurationService,
+                        new RedisConnectionService(configurationService),
+                        new KmsConnectionService(configurationService));
+        this.noSessionOrchestrationService =
+                new NoSessionOrchestrationService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+    }
+
+    @Override
+    public APIGatewayProxyResponseEvent handleRequestWithUserContext(
+            APIGatewayProxyRequestEvent input,
+            Context context,
+            IPVAuthorisationRequest request,
+            UserContext userContext) {
+        try {
+            if (!configurationService.isIdentityEnabled()) {
+                LOG.error("Identity is not enabled");
+                throw new RuntimeException("Identity is not enabled");
+            }
+            var persistentId =
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
+            var rpClientID = userContext.getClient().map(ClientRegistry::getClientID);
+            attachLogFieldToLogs(CLIENT_ID, rpClientID.orElse(UNKNOWN));
+            LOG.info("IPVAuthorisationHandlerAfterSplit received request");
+            var authRequest =
+                    AuthenticationRequest.parse(
+                            userContext.getClientSession().getAuthRequestParams());
+            var pairwiseSubject =
+                    ClientSubjectHelper.getSubjectWithSectorIdentifier(
+                            userContext.getUserProfile().orElseThrow(),
+                            configurationService.getInternalSectorUri(),
+                            authenticationService);
+            var state = new State();
+            var claimsSetRequest =
+                    buildIpvClaimsRequest(authRequest)
+                            .map(ClaimsSetRequest::toJSONString)
+                            .orElse(null);
+
+            var clientSessionId =
+                    getHeaderValueFromHeaders(
+                            input.getHeaders(),
+                            CLIENT_SESSION_ID_HEADER,
+                            configurationService.getHeadersCaseInsensitive());
+
+            var encryptedJWT =
+                    authorisationService.constructRequestJWT(
+                            state,
+                            authRequest.getScope(),
+                            pairwiseSubject,
+                            claimsSetRequest,
+                            Optional.ofNullable(clientSessionId).orElse("unknown"),
+                            userContext.getUserProfile().map(UserProfile::getEmail).orElseThrow());
+            var authRequestBuilder =
+                    new AuthorizationRequest.Builder(
+                                    new ResponseType(ResponseType.Value.CODE),
+                                    new ClientID(
+                                            configurationService.getIPVAuthorisationClientId()))
+                            .endpointURI(configurationService.getIPVAuthorisationURI())
+                            .requestObject(encryptedJWT);
+
+            var ipvAuthorisationRequest = authRequestBuilder.build();
+            authorisationService.storeState(userContext.getSession().getSessionId(), state);
+            noSessionOrchestrationService.storeClientSessionIdAgainstState(clientSessionId, state);
+
+            LOG.info("Calculating RP pairwise identifier");
+            var rpPairwiseId =
+                    ClientSubjectHelper.getSubject(
+                                    userContext.getUserProfile().orElseThrow(),
+                                    userContext
+                                            .getClient()
+                                            .orElseThrow(
+                                                    () ->
+                                                            new ClientNotFoundException(
+                                                                    userContext.getSession())),
+                                    authenticationService,
+                                    configurationService.getInternalSectorUri())
+                            .getValue();
+
+            auditService.submitAuditEvent(
+                    IPVAuditableEvent.IPV_AUTHORISATION_REQUESTED,
+                    clientSessionId,
+                    userContext.getSession().getSessionId(),
+                    rpClientID.orElse(AuditService.UNKNOWN),
+                    userContext.getSession().getInternalCommonSubjectIdentifier(),
+                    request.getEmail(),
+                    IpAddressHelper.extractIpAddress(input),
+                    AuditService.UNKNOWN,
+                    persistentId,
+                    pair(
+                            "clientLandingPageUrl",
+                            userContext
+                                    .getClient()
+                                    .map(ClientRegistry::getLandingPageUrl)
+                                    .orElse(AuditService.UNKNOWN)),
+                    pair("rpPairwiseId", rpPairwiseId));
+
+            LOG.info(
+                    "IPVAuthorisationHandlerAfterSplit successfully processed request, redirect URI {}",
+                    ipvAuthorisationRequest.toURI().toString());
+            cloudwatchMetricsService.incrementCounter(
+                    "IPVHandoff", Map.of("Environment", configurationService.getEnvironment()));
+
+            URI redirectionUri = ipvAuthorisationRequest.toURI();
+            APIGatewayProxyResponseEvent redirectResponse = new APIGatewayProxyResponseEvent();
+            redirectResponse.setStatusCode(302);
+            redirectResponse.setHeaders(Map.of("Location", redirectionUri.toString()));
+            return redirectResponse;
+        } catch (ParseException e) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+        } catch (ClientNotFoundException e) {
+            return generateApiGatewayProxyErrorResponse(500, ErrorResponse.ERROR_1015);
+        }
+    }
+
+    private Optional<ClaimsSetRequest> buildIpvClaimsRequest(AuthenticationRequest authRequest) {
+        return Optional.ofNullable(authRequest)
+                .map(AuthenticationRequest::getOIDCClaims)
+                .map(OIDCClaimsRequest::getUserInfoClaimsRequest);
+    }
+}
