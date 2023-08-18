@@ -144,3 +144,9 @@ variable "performance_tuning" {
   description = "A map of performance tuning parameters per lambda"
   default     = {}
 }
+
+variable "lambda_log_alarm_error_rate_threshold" {
+  type        = number
+  description = "The rate of errors in a lambda before generating a Cloudwatch alarm. Calculated by dividing the number of errors in a lambda divided by the number of invocations in a 15 minute period"
+  default     = 1
+}
