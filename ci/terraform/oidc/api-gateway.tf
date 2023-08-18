@@ -318,7 +318,7 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_oidc_api" {
     name     = "${var.environment}-oidc-waf-rate-based-rule"
     statement {
       rate_based_statement {
-        limit              = 3600
+        limit              = var.environment == "staging" ? 600000 : 3600
         aggregate_key_type = "IP"
       }
     }
