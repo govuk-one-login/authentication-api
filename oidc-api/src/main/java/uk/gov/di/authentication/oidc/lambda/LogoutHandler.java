@@ -310,7 +310,7 @@ public class LogoutHandler
             Optional<String> clientId,
             Optional<String> sessionId) {
         LOG.info("Generating default Logout Response");
-        cloudwatchMetricsService.incrementLogout(clientId);
+        sessionId.ifPresent(t -> cloudwatchMetricsService.incrementLogout(clientId));
         return generateLogoutResponse(
                 configurationService.getDefaultLogoutURI(),
                 state,
