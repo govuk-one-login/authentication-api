@@ -39,7 +39,7 @@ public class AuthorisationCodeService {
         this.objectMapper = SerializationService.getInstance();
     }
 
-    public AuthorizationCode generateAuthorisationCode(
+    public AuthorizationCode generateAndSaveAuthorisationCode(
             String clientSessionId, String email, ClientSession clientSession) {
         LOG.info("Generating and saving AuthorisationCode");
         AuthorizationCode authorizationCode = new AuthorizationCode();

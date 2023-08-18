@@ -205,7 +205,7 @@ class AuthCodeHandlerTest {
         when(dynamoService.getUserProfileByEmailMaybe(EMAIL)).thenReturn(Optional.of(userProfile));
         when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
                 .thenReturn(true);
-        when(authorisationCodeService.generateAuthorisationCode(
+        when(authorisationCodeService.generateAndSaveAuthorisationCode(
                         CLIENT_SESSION_ID, EMAIL, clientSession))
                 .thenReturn(authorizationCode);
         when(orchestrationAuthorizationService.generateSuccessfulAuthResponse(
@@ -291,7 +291,7 @@ class AuthCodeHandlerTest {
         when(clientSession.getDocAppSubjectId()).thenReturn(new Subject(DOC_APP_SUBJECT_ID));
         when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
                 .thenReturn(true);
-        when(authorisationCodeService.generateAuthorisationCode(
+        when(authorisationCodeService.generateAndSaveAuthorisationCode(
                         CLIENT_SESSION_ID, null, clientSession))
                 .thenReturn(authorizationCode);
         when(orchestrationAuthorizationService.generateSuccessfulAuthResponse(
@@ -357,8 +357,7 @@ class AuthCodeHandlerTest {
             throws ClientNotFoundException, JOSEException {
         session.setEmailAddress(EMAIL);
         generateValidSessionAndAuthRequest(MEDIUM_LEVEL, false);
-        when(orchestrationAuthorizationService.isClientRedirectUriValid(
-                        eq(CLIENT_ID), eq(REDIRECT_URI)))
+        when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
                 .thenReturn(false);
         APIGatewayProxyResponseEvent response = generateApiRequest();
 

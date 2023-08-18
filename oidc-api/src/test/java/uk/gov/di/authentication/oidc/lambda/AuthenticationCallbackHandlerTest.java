@@ -115,7 +115,7 @@ class AuthenticationCallbackHandlerTest {
                 .thenReturn(URI.create(TEST_AUTH_BACKEND_BASE_URL));
         when(configurationService.getAuthenticationUserInfoEndpoint())
                 .thenReturn(TEST_AUTH_USERINFO_PATH);
-        when(authorisationCodeService.generateAuthorisationCode(
+        when(authorisationCodeService.generateAndSaveAuthorisationCode(
                         CLIENT_SESSION_ID, TEST_EMAIL_ADDRESS, clientSession))
                 .thenReturn(AUTH_CODE_RP_TO_ORCH);
         when(cookieHelper.parseSessionCookie(anyMap())).thenCallRealMethod();

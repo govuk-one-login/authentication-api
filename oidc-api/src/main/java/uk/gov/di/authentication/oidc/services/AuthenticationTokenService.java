@@ -25,6 +25,9 @@ import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
+import uk.gov.di.authentication.shared.exceptions.JwtParseException;
+import uk.gov.di.authentication.shared.exceptions.TokenRequestException;
+import uk.gov.di.authentication.shared.exceptions.TokenResponseException;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -94,10 +97,10 @@ public class AuthenticationTokenService {
             return tokenResponse;
         } catch (IOException e) {
             LOG.error("Error whilst sending TokenRequest", e);
-            throw new RuntimeException(e);
+            throw new TokenRequestException("Error whilst sending TokenRequest", e);
         } catch (ParseException e) {
             LOG.error("Error whilst parsing TokenResponse", e);
-            throw new RuntimeException(e);
+            throw new TokenResponseException("Error whilst parsing TokenResponse", e);
         }
     }
 
@@ -180,7 +183,8 @@ public class AuthenticationTokenService {
             return new PrivateKeyJWT(SignedJWT.parse(message + "." + signature));
         } catch (JOSEException | java.text.ParseException e) {
             LOG.error("Exception thrown when trying to parse SignedJWT or JWTClaimSet", e);
-            throw new RuntimeException(e);
+            throw new JwtParseException(
+                    "Exception thrown when trying to parse SignedJWT or JWTClaimSet", e);
         }
     }
 }

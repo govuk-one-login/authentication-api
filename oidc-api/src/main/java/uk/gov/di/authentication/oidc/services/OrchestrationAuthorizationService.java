@@ -41,6 +41,7 @@ import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
+import uk.gov.di.authentication.shared.exceptions.ClientRegistryValidationException;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
@@ -124,12 +125,12 @@ public class OrchestrationAuthorizationService {
         if (client.isEmpty()) {
             var errorMsg = "No Client found with given ClientID";
             LOG.warn(errorMsg);
-            throw new RuntimeException(errorMsg);
+            throw new ClientRegistryValidationException(errorMsg);
         }
 
         if (!client.get().getRedirectUrls().contains(authRequest.getRedirectionURI().toString())) {
             LOG.warn("Invalid Redirect URI in request {}", authRequest.getRedirectionURI());
-            throw new RuntimeException(
+            throw new ClientRegistryValidationException(
                     format(
                             "Invalid Redirect in request %s",
                             authRequest.getRedirectionURI().toString()));
@@ -326,18 +327,27 @@ public class OrchestrationAuthorizationService {
                 claimsRequest.getUserInfoClaimsRequest().getEntries().stream()
                         .map(ClaimsSetRequest.Entry::getClaimName)
                         .collect(Collectors.toList());
-        for (String claim : claimNames) {
-            if (ValidClaims.getAllValidClaims().stream().noneMatch(t -> t.equals(claim))) {
-                LOG.error(
-                        "Claims have been requested which are not yet supported. Claims in request: {}",
-                        claimsRequest.toJSONString());
-                return false;
-            }
-        }
-        if (!clientRegistry.getClaims().containsAll(claimNames)) {
+
+        boolean containsUnsupportedClaims =
+                claimNames.stream()
+                        .anyMatch(
+                                claim ->
+                                        ValidClaims.getAllValidClaims().stream()
+                                                .noneMatch(t -> t.equals(claim)));
+        if (containsUnsupportedClaims) {
             LOG.error(
-                    "Claims have been requested which this client is not supported to request. Claims in request: {}",
-                    claimsRequest.toJSONString());
+                    () ->
+                            "Claims have been requested which are not yet supported. Claims in request: "
+                                    + claimsRequest.toJSONString());
+            return false;
+        }
+
+        boolean hasUnsupportedClaims = !clientRegistry.getClaims().containsAll(claimNames);
+        if (hasUnsupportedClaims) {
+            LOG.error(
+                    () ->
+                            "Claims have been requested which this client is not supported to request. Claims in request: {}"
+                                    + claimsRequest.toJSONString());
             return false;
         }
         LOG.info("Claims are present AND valid in auth request");

@@ -199,7 +199,7 @@ public class AuthCodeHandler
                         requestedVectorOfTrust.getCredentialTrustLevel());
             }
             var authCode =
-                    authorisationCodeService.generateAuthorisationCode(
+                    authorisationCodeService.generateAndSaveAuthorisationCode(
                             clientSessionId, session.getEmailAddress(), clientSession);
 
             var authenticationResponse =

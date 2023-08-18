@@ -142,6 +142,9 @@ public class AuthenticationCallbackHandler
 
             attachSessionIdToLogs(userSession);
             var clientSessionId = sessionCookiesIds.getClientSessionId();
+            attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
+            attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
+
             var clientSession =
                     clientSessionService
                             .getClientSession(clientSessionId)
@@ -149,9 +152,6 @@ public class AuthenticationCallbackHandler
                                     () ->
                                             new AuthenticationCallbackException(
                                                     "ClientSession not found"));
-
-            attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
-            attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
 
             String persistentSessionId =
                     PersistentIdHelper.extractPersistentIdFromCookieHeader(input.getHeaders());
@@ -297,7 +297,7 @@ public class AuthenticationCallbackHandler
                 cloudwatchMetricsService.incrementCounter("AuthenticationCallback", dimensions);
 
                 var authCode =
-                        authorisationCodeService.generateAuthorisationCode(
+                        authorisationCodeService.generateAndSaveAuthorisationCode(
                                 clientSessionId, userSession.getEmailAddress(), clientSession);
 
                 var authenticationResponse =
