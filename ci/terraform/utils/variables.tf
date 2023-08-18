@@ -115,8 +115,9 @@ variable "bulk_user_email_send_schedule_enabled" {
 }
 
 variable "bulk_user_email_send_schedule_expression" {
-  type    = string
-  default = "cron(0 15 ? * MON-FRI 2049)"
+  type        = string
+  description = "Run at 15:00 every Friday in 2049.  Designed not to trigger, replace with desired expression."
+  default     = "cron(0 15 ? * FRI 2049)"
 }
 
 variable "bulk_user_email_audience_loader_schedule_enabled" {
@@ -125,8 +126,9 @@ variable "bulk_user_email_audience_loader_schedule_enabled" {
 }
 
 variable "bulk_user_email_audience_loader_schedule_expression" {
-  type    = string
-  default = "cron(0 13 ? * MON-FRI 2049)"
+  type        = string
+  description = "Run at 15:00 every Friday in 2049.  Designed not to trigger, replace with desired expression."
+  default     = "cron(0 13 ? * FRI 2049)"
 }
 
 variable "txma_account_id" {

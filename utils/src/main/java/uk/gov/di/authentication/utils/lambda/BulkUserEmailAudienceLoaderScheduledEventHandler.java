@@ -10,6 +10,8 @@ import uk.gov.di.authentication.shared.services.BulkEmailUsersService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 public class BulkUserEmailAudienceLoaderScheduledEventHandler
         implements RequestHandler<ScheduledEvent, Void> {
 
@@ -21,8 +23,6 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
     private final DynamoService dynamoService;
 
     private final ConfigurationService configurationService;
-
-    private long itemCounter = 0;
 
     public BulkUserEmailAudienceLoaderScheduledEventHandler() {
         this(ConfigurationService.getInstance());
@@ -51,17 +51,19 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
         final long bulkUserEmailMaxAudienceLoadUserCount =
                 configurationService.getBulkUserEmailMaxAudienceLoadUserCount();
 
-        itemCounter = 0;
+        AtomicLong itemCounter = new AtomicLong();
+        itemCounter.set(0);
         dynamoService
                 .getBulkUserEmailAudienceStream()
-                .takeWhile(userProfile -> (bulkUserEmailMaxAudienceLoadUserCount > itemCounter))
+                .takeWhile(
+                        userProfile -> (bulkUserEmailMaxAudienceLoadUserCount > itemCounter.get()))
                 .forEach(
                         userProfile -> {
-                            itemCounter++;
+                            itemCounter.getAndIncrement();
                             bulkEmailUsersService.addUser(
                                     userProfile.getSubjectID(), BulkEmailStatus.PENDING);
                             LOG.info("Bulk User Email added item number: {}", itemCounter);
-                            if (itemCounter >= bulkUserEmailMaxAudienceLoadUserCount) {
+                            if (itemCounter.get() >= bulkUserEmailMaxAudienceLoadUserCount) {
                                 LOG.info(
                                         "Bulk User Email max audience load user count reached: {}. Stopping load.",
                                         itemCounter);

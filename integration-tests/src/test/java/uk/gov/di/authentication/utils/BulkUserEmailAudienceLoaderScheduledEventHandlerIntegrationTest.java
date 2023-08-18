@@ -21,7 +21,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class BulkUserEmailAudienceLoaderScheduledEventHandlerIntegrationTest
+class BulkUserEmailAudienceLoaderScheduledEventHandlerIntegrationTest
         extends HandlerIntegrationTest<ScheduledEvent, Void> {
 
     @RegisterExtension
