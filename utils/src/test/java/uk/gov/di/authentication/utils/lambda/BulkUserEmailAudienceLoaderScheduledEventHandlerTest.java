@@ -44,6 +44,7 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
 
     @Test
     void shouldAddOneBulkEmailUser() {
+        when(configurationService.getBulkUserEmailMaxAudienceLoadUserCount()).thenReturn(10L);
         when(dynamoService.getBulkUserEmailAudienceStream())
                 .thenReturn(List.of(new UserProfile().withSubjectID(SUBJECT_ID)).stream());
 
@@ -53,7 +54,19 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
     }
 
     @Test
+    void shouldNotAddBulkEmailUserWhenMaxLoadAudienceUserCountIsZero() {
+        when(configurationService.getBulkUserEmailMaxAudienceLoadUserCount()).thenReturn(0L);
+        when(dynamoService.getBulkUserEmailAudienceStream())
+                .thenReturn(List.of(new UserProfile().withSubjectID(SUBJECT_ID)).stream());
+
+        bulkUserEmailAudienceLoaderScheduledEventHandler.handleRequest(scheduledEvent, mockContext);
+
+        verify(bulkEmailUsersService, times(0)).addUser(SUBJECT_ID, BulkEmailStatus.PENDING);
+    }
+
+    @Test
     void shouldAddManyBulkEmailUsers() {
+        when(configurationService.getBulkUserEmailMaxAudienceLoadUserCount()).thenReturn(10L);
         when(dynamoService.getBulkUserEmailAudienceStream())
                 .thenReturn(
                         List.of(
@@ -75,6 +88,33 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
         verify(bulkEmailUsersService, times(1))
                 .addUser(TEST_SUBJECT_IDS[3], BulkEmailStatus.PENDING);
         verify(bulkEmailUsersService, times(1))
+                .addUser(TEST_SUBJECT_IDS[4], BulkEmailStatus.PENDING);
+    }
+
+    @Test
+    void shouldAddOnlyMaxLoadAudienceUserCountBulkEmailUsers() {
+        when(configurationService.getBulkUserEmailMaxAudienceLoadUserCount()).thenReturn(3L);
+        when(dynamoService.getBulkUserEmailAudienceStream())
+                .thenReturn(
+                        List.of(
+                                new UserProfile().withSubjectID(TEST_SUBJECT_IDS[0]),
+                                new UserProfile().withSubjectID(TEST_SUBJECT_IDS[1]),
+                                new UserProfile().withSubjectID(TEST_SUBJECT_IDS[2]),
+                                new UserProfile().withSubjectID(TEST_SUBJECT_IDS[3]),
+                                new UserProfile().withSubjectID(TEST_SUBJECT_IDS[4]))
+                                .stream());
+
+        bulkUserEmailAudienceLoaderScheduledEventHandler.handleRequest(scheduledEvent, mockContext);
+
+        verify(bulkEmailUsersService, times(1))
+                .addUser(TEST_SUBJECT_IDS[0], BulkEmailStatus.PENDING);
+        verify(bulkEmailUsersService, times(1))
+                .addUser(TEST_SUBJECT_IDS[1], BulkEmailStatus.PENDING);
+        verify(bulkEmailUsersService, times(1))
+                .addUser(TEST_SUBJECT_IDS[2], BulkEmailStatus.PENDING);
+        verify(bulkEmailUsersService, times(0))
+                .addUser(TEST_SUBJECT_IDS[3], BulkEmailStatus.PENDING);
+        verify(bulkEmailUsersService, times(0))
                 .addUser(TEST_SUBJECT_IDS[4], BulkEmailStatus.PENDING);
     }
 }

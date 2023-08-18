@@ -48,15 +48,24 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
     public Void handleRequest(ScheduledEvent event, Context context) {
         LOG.info("Bulk User Email audience load triggered.");
 
+        final long bulkUserEmailMaxAudienceLoadUserCount =
+                configurationService.getBulkUserEmailMaxAudienceLoadUserCount();
+
         itemCounter = 0;
         dynamoService
                 .getBulkUserEmailAudienceStream()
+                .takeWhile(userProfile -> (bulkUserEmailMaxAudienceLoadUserCount > itemCounter))
                 .forEach(
                         userProfile -> {
                             itemCounter++;
                             bulkEmailUsersService.addUser(
                                     userProfile.getSubjectID(), BulkEmailStatus.PENDING);
                             LOG.info("Bulk User Email added item number: {}", itemCounter);
+                            if (itemCounter >= bulkUserEmailMaxAudienceLoadUserCount) {
+                                LOG.info(
+                                        "Bulk User Email max audience load user count reached: {}. Stopping load.",
+                                        itemCounter);
+                            }
                         });
 
         LOG.info("Bulk User Email audience load complete.  Total users added: {}", itemCounter);

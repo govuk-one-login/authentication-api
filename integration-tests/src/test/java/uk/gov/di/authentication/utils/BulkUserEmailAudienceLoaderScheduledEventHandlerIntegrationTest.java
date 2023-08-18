@@ -59,6 +59,11 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandlerIntegrationTest
                     }
 
                     @Override
+                    public long getBulkUserEmailMaxAudienceLoadUserCount() {
+                        return 1000L;
+                    }
+
+                    @Override
                     public boolean isBulkUserEmailEmailSendingEnabled() {
                         return true;
                     }
