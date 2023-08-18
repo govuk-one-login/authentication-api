@@ -361,7 +361,7 @@ class LogoutHandlerTest {
                 equalTo(DEFAULT_LOGOUT_URI + "?state=" + STATE));
         verify(sessionService, times(0)).deleteSessionFromRedis(SESSION_ID);
 
-        verify(cloudwatchMetricsService).incrementLogout(Optional.empty());
+        verifyNoInteractions(cloudwatchMetricsService);
         verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.LOG_OUT_SUCCESS,
