@@ -9,7 +9,7 @@ module "bulk_user_email_send_lambda_role" {
   policies_to_attach = [
     aws_iam_policy.bulk_user_email_send_dynamo_read_access[0].arn,
     aws_iam_policy.bulk_user_email_send_dynamo_write_access[0].arn,
-    aws_iam_policy.bulk_user_email_send_dynamo_encryption_key_kms_policy[0].arn,
+    aws_iam_policy.bulk_user_email_dynamo_encryption_key_kms_policy[0].arn,
   ]
 }
 

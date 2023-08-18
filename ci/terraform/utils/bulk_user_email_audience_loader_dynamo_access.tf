@@ -1,4 +1,4 @@
-data "aws_iam_policy_document" "bulk_user_email_send_dynamo_write_access" {
+data "aws_iam_policy_document" "bulk_user_email_audience_loader_dynamo_write_access" {
   count = local.deploy_bulk_email_users_count
   statement {
     sid    = "AllowAccessToDynamoTables"
@@ -17,16 +17,16 @@ data "aws_iam_policy_document" "bulk_user_email_send_dynamo_write_access" {
   }
 }
 
-resource "aws_iam_policy" "bulk_user_email_send_dynamo_write_access" {
+resource "aws_iam_policy" "bulk_user_email_audience_loader_dynamo_write_access" {
   count       = local.deploy_bulk_email_users_count
   name_prefix = "dynamo-access-policy"
   description = "IAM policy managing write access for the Bulk User Email Send lambda to the Dynamo Bulk Email Users table"
 
-  policy = data.aws_iam_policy_document.bulk_user_email_send_dynamo_write_access[0].json
+  policy = data.aws_iam_policy_document.bulk_user_email_audience_loader_dynamo_write_access[0].json
 }
 
 
-data "aws_iam_policy_document" "bulk_user_email_send_dynamo_read_access" {
+data "aws_iam_policy_document" "bulk_user_email_audience_loader_dynamo_read_access" {
   count = local.deploy_bulk_email_users_count
   statement {
     sid    = "AllowAccessToDynamoTables"
@@ -50,10 +50,10 @@ data "aws_iam_policy_document" "bulk_user_email_send_dynamo_read_access" {
   }
 }
 
-resource "aws_iam_policy" "bulk_user_email_send_dynamo_read_access" {
+resource "aws_iam_policy" "bulk_user_email_audience_loader_dynamo_read_access" {
   count       = local.deploy_bulk_email_users_count
   name_prefix = "dynamo-access-policy"
   description = "IAM policy managing read access for the Bulk User Email Send lambda to the Dynamo User Profile table"
 
-  policy = data.aws_iam_policy_document.bulk_user_email_send_dynamo_read_access[0].json
+  policy = data.aws_iam_policy_document.bulk_user_email_audience_loader_dynamo_read_access[0].json
 }
