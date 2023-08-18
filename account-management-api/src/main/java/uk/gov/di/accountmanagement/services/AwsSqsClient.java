@@ -1,7 +1,6 @@
 package uk.gov.di.accountmanagement.services;
 
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
-import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.sqs.SqsClient;
@@ -22,9 +21,7 @@ public class AwsSqsClient {
         if (sqsEndpoint.isPresent()) {
             amazonSqsBuilder
                     .endpointOverride(URI.create(sqsEndpoint.get()))
-                    .credentialsProvider(
-                            StaticCredentialsProvider.create(
-                                    AwsBasicCredentials.create("FAKEACCESSKEY", "FAKESECRETKEY")));
+                    .credentialsProvider(EnvironmentVariableCredentialsProvider.create());
         }
         this.client = amazonSqsBuilder.build();
         this.queueUrl = queueUrl;
