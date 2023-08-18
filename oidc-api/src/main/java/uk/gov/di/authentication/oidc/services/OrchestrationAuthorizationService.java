@@ -41,6 +41,7 @@ import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
+import uk.gov.di.authentication.shared.exceptions.ClientRegistryValidationException;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
@@ -58,7 +59,7 @@ import static java.lang.String.format;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 
-public class AuthorizationService {
+public class OrchestrationAuthorizationService {
 
     public static final String VTR_PARAM = "vtr";
     private static final JWSAlgorithm SIGNING_ALGORITHM = JWSAlgorithm.ES256;
@@ -66,9 +67,9 @@ public class AuthorizationService {
     private final DynamoClientService dynamoClientService;
     private final IPVCapacityService ipvCapacityService;
     private final KmsConnectionService kmsConnectionService;
-    private static final Logger LOG = LogManager.getLogger(AuthorizationService.class);
+    private static final Logger LOG = LogManager.getLogger(OrchestrationAuthorizationService.class);
 
-    public AuthorizationService(
+    public OrchestrationAuthorizationService(
             ConfigurationService configurationService,
             DynamoClientService dynamoClientService,
             IPVCapacityService ipvCapacityService,
@@ -79,7 +80,7 @@ public class AuthorizationService {
         this.kmsConnectionService = kmsConnectionService;
     }
 
-    public AuthorizationService(ConfigurationService configurationService) {
+    public OrchestrationAuthorizationService(ConfigurationService configurationService) {
         this(
                 configurationService,
                 new DynamoClientService(configurationService),
@@ -124,12 +125,12 @@ public class AuthorizationService {
         if (client.isEmpty()) {
             var errorMsg = "No Client found with given ClientID";
             LOG.warn(errorMsg);
-            throw new RuntimeException(errorMsg);
+            throw new ClientRegistryValidationException(errorMsg);
         }
 
         if (!client.get().getRedirectUrls().contains(authRequest.getRedirectionURI().toString())) {
             LOG.warn("Invalid Redirect URI in request {}", authRequest.getRedirectionURI());
-            throw new RuntimeException(
+            throw new ClientRegistryValidationException(
                     format(
                             "Invalid Redirect in request %s",
                             authRequest.getRedirectionURI().toString()));
@@ -204,6 +205,11 @@ public class AuthorizationService {
     }
 
     public EncryptedJWT getSignedAndEncryptedJWT(JWTClaimsSet jwtClaimsSet) {
+        var signedJwt = getSignedJWT(jwtClaimsSet);
+        return encryptJWT(signedJwt);
+    }
+
+    public SignedJWT getSignedJWT(JWTClaimsSet jwtClaimsSet) {
         LOG.info("Generating signed and encrypted JWT");
         var jwsHeader = new JWSHeader(SIGNING_ALGORITHM);
 
@@ -228,10 +234,7 @@ public class AuthorizationService {
                                             signResult.signature().asByteArray(),
                                             ECDSA.getSignatureByteArrayLength(SIGNING_ALGORITHM)))
                             .toString();
-            var signedJWT = SignedJWT.parse(message + "." + signature);
-            var encryptedJWT = encryptJWT(signedJWT);
-            LOG.info("Encrypted request JWT has been generated");
-            return encryptedJWT;
+            return SignedJWT.parse(message + "." + signature);
         } catch (ParseException | JOSEException e) {
             LOG.error("Error when generating SignedJWT", e);
             throw new InvalidJWEException("Error when generating SignedJWT", e);
@@ -324,18 +327,27 @@ public class AuthorizationService {
                 claimsRequest.getUserInfoClaimsRequest().getEntries().stream()
                         .map(ClaimsSetRequest.Entry::getClaimName)
                         .collect(Collectors.toList());
-        for (String claim : claimNames) {
-            if (ValidClaims.getAllValidClaims().stream().noneMatch(t -> t.equals(claim))) {
-                LOG.error(
-                        "Claims have been requested which are not yet supported. Claims in request: {}",
-                        claimsRequest.toJSONString());
-                return false;
-            }
-        }
-        if (!clientRegistry.getClaims().containsAll(claimNames)) {
+
+        boolean containsUnsupportedClaims =
+                claimNames.stream()
+                        .anyMatch(
+                                claim ->
+                                        ValidClaims.getAllValidClaims().stream()
+                                                .noneMatch(t -> t.equals(claim)));
+        if (containsUnsupportedClaims) {
             LOG.error(
-                    "Claims have been requested which this client is not supported to request. Claims in request: {}",
-                    claimsRequest.toJSONString());
+                    () ->
+                            "Claims have been requested which are not yet supported. Claims in request: "
+                                    + claimsRequest.toJSONString());
+            return false;
+        }
+
+        boolean hasUnsupportedClaims = !clientRegistry.getClaims().containsAll(claimNames);
+        if (hasUnsupportedClaims) {
+            LOG.error(
+                    () ->
+                            "Claims have been requested which this client is not supported to request. Claims in request: {}"
+                                    + claimsRequest.toJSONString());
             return false;
         }
         LOG.info("Claims are present AND valid in auth request");

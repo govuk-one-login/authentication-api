@@ -27,7 +27,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AuthCodeResponse;
-import uk.gov.di.authentication.oidc.services.AuthorizationService;
+import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
@@ -107,7 +107,8 @@ class AuthCodeHandlerTest {
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private static final Json objectMapper = SerializationService.getInstance();
 
-    private final AuthorizationService authorizationService = mock(AuthorizationService.class);
+    private final OrchestrationAuthorizationService orchestrationAuthorizationService =
+            mock(OrchestrationAuthorizationService.class);
     private final AuthorisationCodeService authorisationCodeService =
             mock(AuthorisationCodeService.class);
     private final SessionService sessionService = mock(SessionService.class);
@@ -149,7 +150,7 @@ class AuthCodeHandlerTest {
                 new AuthCodeHandler(
                         sessionService,
                         authorisationCodeService,
-                        authorizationService,
+                        orchestrationAuthorizationService,
                         clientSessionService,
                         auditService,
                         cloudwatchMetricsService,
@@ -202,12 +203,12 @@ class AuthCodeHandlerTest {
                         null,
                         authRequest.getResponseMode());
         when(dynamoService.getUserProfileByEmailMaybe(EMAIL)).thenReturn(Optional.of(userProfile));
-        when(authorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
+        when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
                 .thenReturn(true);
-        when(authorisationCodeService.generateAuthorisationCode(
+        when(authorisationCodeService.generateAndSaveAuthorisationCode(
                         CLIENT_SESSION_ID, EMAIL, clientSession))
                 .thenReturn(authorizationCode);
-        when(authorizationService.generateSuccessfulAuthResponse(
+        when(orchestrationAuthorizationService.generateSuccessfulAuthResponse(
                         any(AuthenticationRequest.class),
                         any(AuthorizationCode.class),
                         any(URI.class),
@@ -288,12 +289,12 @@ class AuthCodeHandlerTest {
                         authRequest.getResponseMode());
 
         when(clientSession.getDocAppSubjectId()).thenReturn(new Subject(DOC_APP_SUBJECT_ID));
-        when(authorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
+        when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
                 .thenReturn(true);
-        when(authorisationCodeService.generateAuthorisationCode(
+        when(authorisationCodeService.generateAndSaveAuthorisationCode(
                         CLIENT_SESSION_ID, null, clientSession))
                 .thenReturn(authorizationCode);
-        when(authorizationService.generateSuccessfulAuthResponse(
+        when(orchestrationAuthorizationService.generateSuccessfulAuthResponse(
                         any(AuthenticationRequest.class),
                         any(AuthorizationCode.class),
                         any(URI.class),
@@ -356,7 +357,7 @@ class AuthCodeHandlerTest {
             throws ClientNotFoundException, JOSEException {
         session.setEmailAddress(EMAIL);
         generateValidSessionAndAuthRequest(MEDIUM_LEVEL, false);
-        when(authorizationService.isClientRedirectUriValid(eq(CLIENT_ID), eq(REDIRECT_URI)))
+        when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
                 .thenReturn(false);
         APIGatewayProxyResponseEvent response = generateApiRequest();
 
@@ -373,7 +374,7 @@ class AuthCodeHandlerTest {
         AuthenticationErrorResponse authenticationErrorResponse =
                 new AuthenticationErrorResponse(
                         REDIRECT_URI, OAuth2Error.INVALID_CLIENT, null, null);
-        when(authorizationService.generateAuthenticationErrorResponse(
+        when(orchestrationAuthorizationService.generateAuthenticationErrorResponse(
                         any(AuthenticationRequest.class),
                         eq(OAuth2Error.INVALID_CLIENT),
                         any(URI.class),
@@ -381,7 +382,7 @@ class AuthCodeHandlerTest {
                 .thenReturn(authenticationErrorResponse);
         generateValidSessionAndAuthRequest(MEDIUM_LEVEL, false);
         doThrow(ClientNotFoundException.class)
-                .when(authorizationService)
+                .when(orchestrationAuthorizationService)
                 .isClientRedirectUriValid(eq(CLIENT_ID), eq(REDIRECT_URI));
 
         APIGatewayProxyResponseEvent response = generateApiRequest();
@@ -403,7 +404,7 @@ class AuthCodeHandlerTest {
         AuthenticationErrorResponse authenticationErrorResponse =
                 new AuthenticationErrorResponse(
                         REDIRECT_URI, OAuth2Error.INVALID_REQUEST, null, null);
-        when(authorizationService.generateAuthenticationErrorResponse(
+        when(orchestrationAuthorizationService.generateAuthenticationErrorResponse(
                         eq(REDIRECT_URI),
                         isNull(),
                         any(ResponseMode.class),
