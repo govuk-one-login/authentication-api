@@ -18,8 +18,8 @@ resource "aws_lambda_function" "backchannel_logout_request_lambda" {
   publish       = true
 
   s3_bucket         = aws_s3_bucket.source_bucket.bucket
-  s3_key            = aws_s3_bucket_object.oidc_api_release_zip.key
-  s3_object_version = aws_s3_bucket_object.oidc_api_release_zip.version_id
+  s3_key            = aws_s3_object.oidc_api_release_zip.key
+  s3_object_version = aws_s3_object.oidc_api_release_zip.version_id
 
   code_signing_config_arn = local.lambda_code_signing_configuration_arn
 

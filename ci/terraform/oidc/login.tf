@@ -48,8 +48,8 @@ module "login" {
   scaling_trigger             = lookup(var.performance_tuning, "login", local.default_performance_parameters).scaling_trigger
 
   source_bucket           = aws_s3_bucket.source_bucket.bucket
-  lambda_zip_file         = aws_s3_bucket_object.frontend_api_release_zip.key
-  lambda_zip_file_version = aws_s3_bucket_object.frontend_api_release_zip.version_id
+  lambda_zip_file         = aws_s3_object.frontend_api_release_zip.key
+  lambda_zip_file_version = aws_s3_object.frontend_api_release_zip.version_id
   code_signing_config_arn = local.lambda_code_signing_configuration_arn
 
   authentication_vpc_arn = local.authentication_vpc_arn

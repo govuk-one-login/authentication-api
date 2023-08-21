@@ -41,8 +41,8 @@ module "register" {
   scaling_trigger             = lookup(var.performance_tuning, "register", local.default_performance_parameters).scaling_trigger
 
   source_bucket           = aws_s3_bucket.source_bucket.bucket
-  lambda_zip_file         = aws_s3_bucket_object.client_api_release_zip.key
-  lambda_zip_file_version = aws_s3_bucket_object.client_api_release_zip.version_id
+  lambda_zip_file         = aws_s3_object.client_api_release_zip.key
+  lambda_zip_file_version = aws_s3_object.client_api_release_zip.version_id
   code_signing_config_arn = local.lambda_code_signing_configuration_arn
 
   security_group_ids                     = [local.authentication_security_group_id]

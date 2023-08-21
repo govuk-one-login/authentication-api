@@ -1,12 +1,12 @@
 resource "aws_s3_bucket" "source_bucket" {
   bucket_prefix = "${var.environment}-acct-mgmt-lambda-source-"
 
-  versioning {
+  aws_s3_bucket_versioning {
     enabled = true
   }
 }
 
-resource "aws_s3_bucket_object" "delivery_receipts_api_release_zip" {
+resource "aws_s3_object" "delivery_receipts_api_release_zip" {
   bucket = aws_s3_bucket.source_bucket.bucket
   key    = "delivery-receipts-api-release.zip"
 

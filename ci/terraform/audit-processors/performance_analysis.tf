@@ -56,8 +56,8 @@ resource "aws_lambda_function" "performance_analysis_logging_lambda" {
   }
 
   s3_bucket         = aws_s3_bucket.source_bucket.bucket
-  s3_key            = aws_s3_bucket_object.audit_processor_release_zip.key
-  s3_object_version = aws_s3_bucket_object.audit_processor_release_zip.version_id
+  s3_key            = aws_s3_object.audit_processor_release_zip.key
+  s3_object_version = aws_s3_object.audit_processor_release_zip.version_id
 
   code_signing_config_arn = local.lambda_code_signing_configuration_arn
 
