@@ -341,25 +341,40 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_oidc_api" {
         name        = "AWSManagedRulesCommonRuleSet"
         vendor_name = "AWS"
 
-        excluded_rule {
+        rule_action_override {
           name = "GenericRFI_QUERYARGUMENTS"
+          action_to_use {
+            count {}
+          }
         }
-        excluded_rule {
+        rule_action_override {
           name = "GenericRFI_BODY"
+          action_to_use {
+            count {}
+          }
         }
 
-        excluded_rule {
+        rule_action_override {
           name = "NoUserAgent_HEADER"
+          action_to_use {
+            count {}
+          }
         }
 
-        excluded_rule {
+        rule_action_override {
           name = "EC2MetaDataSSRF_QUERYARGUMENTS"
+          action_to_use {
+            count {}
+          }
         }
 
-        dynamic "excluded_rule" {
+        dynamic "rule_action_override" {
           for_each = var.environment != "production" || var.environment != "sandpit" ? ["1"] : []
           content {
             name = "EC2MetaDataSSRF_BODY"
+            action_to_use {
+              count {}
+            }
           }
         }
       }
@@ -371,7 +386,6 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_oidc_api" {
       sampled_requests_enabled   = true
     }
   }
-
   rule {
     override_action {
       none {}
