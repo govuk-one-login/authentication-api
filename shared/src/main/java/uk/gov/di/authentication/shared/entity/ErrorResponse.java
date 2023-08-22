@@ -59,7 +59,9 @@ public enum ErrorResponse {
             "System is blocked from sending any email verification codes for changing how to receive security codes"),
     ERROR_1048(
             1048,
-            "User entered invalid email verification code for changing how to receive security codes too many times");
+            "User entered invalid email verification code for changing how to receive security codes too many times"),
+    ERROR_1049(1049, "Email from session does not have a user profile"),
+    ERROR_1050(1050, "Authorization Auth Code not enabled");
 
     private int code;
 

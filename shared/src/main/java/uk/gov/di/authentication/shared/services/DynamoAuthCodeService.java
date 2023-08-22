@@ -9,38 +9,38 @@ import java.util.Optional;
 public class DynamoAuthCodeService extends BaseDynamoService<AuthCodeStore> {
 
     private final long timeToExist;
-    private final boolean isAuthCodeStoreEnabled;
+    private final boolean isAuthOrchSplitEnabled;
 
     public DynamoAuthCodeService(
             ConfigurationService configurationService, boolean isAuthCodeStoreEnabled) {
         super(AuthCodeStore.class, "auth-code-store", configurationService);
         this.timeToExist = configurationService.getAuthCodeExpiry();
-        this.isAuthCodeStoreEnabled = isAuthCodeStoreEnabled;
+        this.isAuthOrchSplitEnabled = isAuthCodeStoreEnabled;
     }
 
     public DynamoAuthCodeService(ConfigurationService configurationService) {
         super(AuthCodeStore.class, "auth-code-store", configurationService);
         this.timeToExist = configurationService.getAuthCodeExpiry();
-        this.isAuthCodeStoreEnabled = configurationService.isAuthCodeStoreEnabled();
+        this.isAuthOrchSplitEnabled = configurationService.isAuthCodeStoreEnabled();
     }
 
-    public Optional<AuthCodeStore> getAuthCodeStore(String subjectID) {
-        if (isAuthCodeStoreEnabled) {
-            return get(subjectID)
+    public Optional<AuthCodeStore> getAuthCodeStore(String authCode) {
+        if (isAuthOrchSplitEnabled) {
+            return get(authCode)
                     .filter(t -> t.getTimeToExist() > NowHelper.now().toInstant().getEpochSecond());
         }
         return Optional.empty();
     }
 
-    public void deleteAuthCode(String subjectID) {
-        if (isAuthCodeStoreEnabled) {
-            delete(subjectID);
+    public void deleteAuthCode(String authCode) {
+        if (isAuthOrchSplitEnabled) {
+            delete(authCode);
         }
     }
 
     public void saveAuthCode(
             String subjectID, String authCode, String requestedScopeClaims, boolean hasBeenUsed) {
-        if (isAuthCodeStoreEnabled) {
+        if (isAuthOrchSplitEnabled) {
             var authCodeStore =
                     new AuthCodeStore()
                             .withSubjectID(subjectID)
@@ -56,19 +56,19 @@ public class DynamoAuthCodeService extends BaseDynamoService<AuthCodeStore> {
         }
     }
 
-    public void updateHasBeenUsed(String subjectID, boolean hasBeenUsed) {
-        if (isAuthCodeStoreEnabled) {
-            var authCode =
-                    get(subjectID)
+    public void updateHasBeenUsed(String authCode, boolean hasBeenUsed) {
+        if (isAuthOrchSplitEnabled) {
+            var authCodeStore =
+                    get(authCode)
                             .orElse(new AuthCodeStore())
-                            .withSubjectID(subjectID)
+                            .withAuthCode(authCode)
                             .withHasBeenUsed(hasBeenUsed)
                             .withTimeToExist(
                                     NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS)
                                             .toInstant()
                                             .getEpochSecond());
 
-            update(authCode);
+            update(authCodeStore);
         }
     }
 }

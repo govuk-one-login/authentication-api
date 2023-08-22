@@ -33,9 +33,9 @@ class DynamoAuthCodeServiceIntegrationTest {
     void shouldUpdateHasBeenUsed() {
         setUpDynamo();
 
-        dynamoAuthCodeService.updateHasBeenUsed(SUBJECT_ID, true);
+        dynamoAuthCodeService.updateHasBeenUsed(AUTH_CODE, true);
         var updatedAuthCode =
-                dynamoAuthCodeService.getAuthCodeStore(SUBJECT_ID).orElseGet(AuthCodeStore::new);
+                dynamoAuthCodeService.getAuthCodeStore(AUTH_CODE).orElseGet(AuthCodeStore::new);
 
         assertThat(updatedAuthCode.isHasBeenUsed(), equalTo(true));
     }

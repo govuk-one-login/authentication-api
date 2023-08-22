@@ -75,6 +75,8 @@ resource "aws_api_gateway_deployment" "frontend_deployment" {
       module.processing-identity.method_trigger_value,
       module.doc-app-authorize.integration_trigger_value,
       module.doc-app-authorize.method_trigger_value,
+      module.authentication_auth_code.integration_trigger_value,
+      module.authentication_auth_code.method_trigger_value,
     ]))
   }
 
@@ -96,7 +98,8 @@ resource "aws_api_gateway_deployment" "frontend_deployment" {
     module.reset-password-request,
     module.processing-identity,
     module.ipv-authorize,
-    module.doc-app-authorize
+    module.doc-app-authorize,
+    module.authentication_auth_code,
   ]
 }
 
@@ -194,6 +197,7 @@ resource "aws_api_gateway_stage" "endpoint_frontend_stage" {
     module.ipv-authorize,
     module.processing-identity,
     module.doc-app-authorize,
+    module.authentication_auth_code,
     aws_api_gateway_deployment.deployment,
   ]
 }
