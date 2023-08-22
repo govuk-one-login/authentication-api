@@ -278,7 +278,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public boolean getHeadersCaseInsensitive() {
-        return System.getenv().getOrDefault("HEADERS_CASE_INSENSITIVE", "false").equals("true");
+        return false;
     }
 
     public boolean isClientSecretSupported() {
