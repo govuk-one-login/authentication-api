@@ -325,6 +325,53 @@ class DynamoServiceIntegrationTest {
     }
 
     @Test
+    void shouldGetUsersNotOnTermsAndConditionsVersion() {
+        setupDynamoWithMultipleUsers();
+
+        var users =
+                dynamoService.getBulkUserEmailAudienceStreamNotOnTermsAndConditionsVersion(
+                        null, List.of("1.0"));
+        assertThat(users.count(), equalTo(0L));
+    }
+
+    @Test
+    void shouldGetUsersNotOnTermsAndConditionsVariousVersions() {
+        setupDynamoWithMultipleUsersWithDifferentTermsAndConditions();
+
+        assertThat(
+                dynamoService
+                        .getBulkUserEmailAudienceStreamNotOnTermsAndConditionsVersion(
+                                null, List.of("1.0"))
+                        .count(),
+                equalTo(7L));
+        assertThat(
+                dynamoService
+                        .getBulkUserEmailAudienceStreamNotOnTermsAndConditionsVersion(
+                                null, List.of("1.1"))
+                        .count(),
+                equalTo(8L));
+        assertThat(
+                dynamoService
+                        .getBulkUserEmailAudienceStreamNotOnTermsAndConditionsVersion(
+                                null, List.of("1.2"))
+                        .count(),
+                equalTo(7L));
+        assertThat(
+                dynamoService
+                        .getBulkUserEmailAudienceStreamNotOnTermsAndConditionsVersion(
+                                null, List.of("1.3"))
+                        .count(),
+                equalTo(8L));
+
+        assertThat(
+                dynamoService
+                        .getBulkUserEmailAudienceStreamNotOnTermsAndConditionsVersion(
+                                null, List.of("1.3", "1.1"))
+                        .count(),
+                equalTo(6L));
+    }
+
+    @Test
     void shouldThrowWhenUserNotFoundBySubjectId() {
         setupDynamoWithMultipleUsers();
 
@@ -340,6 +387,21 @@ class DynamoServiceIntegrationTest {
         userStore.signUp("email3", "password-1", new Subject("3333"));
         userStore.signUp("email4", "password-1", new Subject("4444"));
         userStore.signUp("email5", "password-1", new Subject("5555"));
+    }
+
+    private void setupDynamoWithMultipleUsersWithDifferentTermsAndConditions() {
+        userStore.signUp("email0", "password-1", new Subject("0000"), "1.0");
+        userStore.signUp("email1", "password-1", new Subject("1111"), "1.0");
+        userStore.signUp("email2", "password-1", new Subject("2222"), "1.0");
+        userStore.signUp("email3", "password-1", new Subject("3333"), "1.1");
+        userStore.signUp("email4", "password-1", new Subject("4444"), "1.1");
+        userStore.signUp("email5", "password-1", new Subject("5555"), "1.2");
+        userStore.signUp("email6", "password-1", new Subject("6666"), "1.2");
+        userStore.signUp("email7", "password-1", new Subject("7777"), "1.2");
+        userStore.signUp("email8", "password-1", new Subject("8888"), "1.3");
+        userStore.signUp("email9", "password-1", new Subject("9999"), "1.3");
+        userStore.signUp("email10", "password-1", new Subject("A0000"), null);
+        userStore.signUp("email11", "password-1", new Subject("A1111"), null);
     }
 
     private void testUpdateEmail(UserProfile userProfile, UserCredentials userCredentials) {

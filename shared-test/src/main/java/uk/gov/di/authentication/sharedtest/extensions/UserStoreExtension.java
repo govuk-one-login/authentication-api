@@ -77,9 +77,29 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
         return signUp(email, password, subject, false);
     }
 
+    public String signUp(
+            String email, String password, Subject subject, String termsAndConditionsVersion) {
+        return signUp(
+                email, password, subject, false, Optional.ofNullable(termsAndConditionsVersion));
+    }
+
     public String signUp(String email, String password, Subject subject, boolean isTestUser) {
+        return signUp(email, password, subject, isTestUser, Optional.of("1.0"));
+    }
+
+    private String signUp(
+            String email,
+            String password,
+            Subject subject,
+            boolean isTestUser,
+            Optional<String> termsAndConditionsVersion) {
         TermsAndConditions termsAndConditions =
-                new TermsAndConditions("1.0", LocalDateTime.now(ZoneId.of("UTC")).toString());
+                termsAndConditionsVersion
+                        .map(
+                                v ->
+                                        new TermsAndConditions(
+                                                v, LocalDateTime.now(ZoneId.of("UTC")).toString()))
+                        .orElse(null);
         dynamoService.signUp(email, password, subject, termsAndConditions, isTestUser);
         return dynamoService.getUserProfileByEmail(email).getPublicSubjectID();
     }

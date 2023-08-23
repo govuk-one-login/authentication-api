@@ -42,6 +42,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.util.Objects.nonNull;
+import static software.amazon.awssdk.enhanced.dynamodb.internal.AttributeValues.stringValue;
 
 public class DynamoService implements AuthenticationService {
     private final DynamoDbTable<UserProfile> dynamoUserProfileTable;
@@ -738,6 +739,35 @@ public class DynamoService implements AuthenticationService {
                 ScanEnhancedRequest.builder()
                         .addAttributeToProject("SubjectID")
                         .exclusiveStartKey(exclusiveStartKey)
+                        .build();
+        return dynamoUserProfileTable.scan(scanRequest).items().stream();
+    }
+
+    public Stream<UserProfile> getBulkUserEmailAudienceStreamNotOnTermsAndConditionsVersion(
+            Map<String, AttributeValue> exclusiveStartKey, List<String> termsAndConditionsVersion) {
+
+        List<String> expression = new ArrayList<>();
+        Map<String, AttributeValue> expressionValues = new HashMap<>();
+
+        for (int i = 0; i < termsAndConditionsVersion.size(); i++) {
+            expression.add(String.format("termsAndConditions.version <> :tc_version%d", i));
+            expressionValues.put(
+                    String.format(":tc_version%d", i),
+                    stringValue(termsAndConditionsVersion.get(i)));
+        }
+        expression.add("attribute_exists(termsAndConditions.version)");
+
+        String expressionString = expression.stream().collect(Collectors.joining(" AND "));
+
+        ScanEnhancedRequest scanRequest =
+                ScanEnhancedRequest.builder()
+                        .addAttributeToProject("SubjectID")
+                        .exclusiveStartKey(exclusiveStartKey)
+                        .filterExpression(
+                                Expression.builder()
+                                        .expression(expressionString)
+                                        .expressionValues(expressionValues)
+                                        .build())
                         .build();
         return dynamoUserProfileTable.scan(scanRequest).items().stream();
     }
