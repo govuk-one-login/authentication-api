@@ -28,7 +28,7 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
 
     private final ConfigurationService configurationService;
 
-    private final LambdaInvokerService lambdaInvokerService;
+    private LambdaInvokerService lambdaInvokerService;
 
     public BulkUserEmailAudienceLoaderScheduledEventHandler() {
         this(ConfigurationService.getInstance());
@@ -53,6 +53,10 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
         this.lambdaInvokerService = new LambdaInvokerService(configurationService);
     }
 
+    public void setLambdaInvoker(LambdaInvokerService lambdaInvokerService) {
+        this.lambdaInvokerService = lambdaInvokerService;
+    }
+
     @Override
     public Void handleRequest(ScheduledEvent event, Context context) {
         LOG.info("Bulk User Email audience load triggered.");
@@ -65,11 +69,11 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
         if (event.getDetail() != null && event.getDetail().containsKey("lastEvaluatedKey")) {
             String lastEvaluatedKey = event.getDetail().get("lastEvaluatedKey").toString();
             exclusiveStartKey =
-                    Map.of("SubjectID", AttributeValue.builder().s(lastEvaluatedKey).build());
+                    Map.of("Email", AttributeValue.builder().s(lastEvaluatedKey).build());
         }
 
         AtomicLong itemCounter = new AtomicLong();
-        AtomicReference<String> lastSubjectId = new AtomicReference<>();
+        AtomicReference<String> lastEmail = new AtomicReference<>();
         itemCounter.set(0);
         dynamoService
                 .getBulkUserEmailAudienceStream(exclusiveStartKey)
@@ -86,7 +90,7 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
                                         "Bulk User Email max audience load user count reached: {}. Stopping load.",
                                         itemCounter);
                             }
-                            lastSubjectId.set(userProfile.getSubjectID());
+                            lastEmail.set(userProfile.getEmail());
                         });
 
         LOG.info(
@@ -96,7 +100,8 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
         if (itemCounter.get() == 0) {
             LOG.info("No items remaining to insert, finished import");
         } else {
-            event.setDetail(Map.of("lastEvaluatedKey", lastSubjectId.get()));
+            event.setDetail(Map.of("lastEvaluatedKey", lastEmail.get()));
+            LOG.info("Bulk User Email re-invoke.");
             lambdaInvokerService.invokeWithPayload(event);
         }
 

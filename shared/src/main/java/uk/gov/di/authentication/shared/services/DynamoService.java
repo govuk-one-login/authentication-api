@@ -738,6 +738,7 @@ public class DynamoService implements AuthenticationService {
         ScanEnhancedRequest scanRequest =
                 ScanEnhancedRequest.builder()
                         .addAttributeToProject("SubjectID")
+                        .addAttributeToProject("Email")
                         .exclusiveStartKey(exclusiveStartKey)
                         .build();
         return dynamoUserProfileTable.scan(scanRequest).items().stream();
@@ -762,6 +763,7 @@ public class DynamoService implements AuthenticationService {
         ScanEnhancedRequest scanRequest =
                 ScanEnhancedRequest.builder()
                         .addAttributeToProject("SubjectID")
+                        .addAttributeToProject("Email")
                         .exclusiveStartKey(exclusiveStartKey)
                         .filterExpression(
                                 Expression.builder()
