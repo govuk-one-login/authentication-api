@@ -11,10 +11,13 @@ import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegration
 import uk.gov.di.authentication.sharedtest.extensions.AuthCodeExtension;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static uk.gov.di.authentication.external.entity.AuthUserInfoClaims.EMAIL;
+import static uk.gov.di.authentication.external.entity.AuthUserInfoClaims.EMAIL_VERIFIED;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -39,7 +42,10 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
 
     private void setUpDynamo() {
         authCodeExtension.saveAuthCode(
-                TEST_SUBJECT_ID, TEST_AUTHORIZATION_CODE, TEST_REQUESTED_SCOPE_CLAIMS, false);
+                TEST_SUBJECT_ID,
+                TEST_AUTHORIZATION_CODE,
+                List.of(EMAIL_VERIFIED.getValue(), EMAIL.getValue()),
+                false);
         userStore.signUp(TEST_EMAIL_ADDRESS, TEST_PASSWORD);
     }
 
@@ -51,7 +57,7 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
                 new AuthCodeRequest(
                         TEST_REDIRECT_URI,
                         TEST_STATE,
-                        TEST_REQUESTED_SCOPE_CLAIMS,
+                        List.of(EMAIL_VERIFIED.getValue(), EMAIL.getValue()),
                         TEST_EMAIL_ADDRESS);
         var response = makeRequest(Optional.of(authRequest), getHeaders(), Map.of());
         assertThat(response, hasStatus(200));
@@ -62,7 +68,10 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
         setUpDynamo();
         var authRequest =
                 new AuthCodeRequest(
-                        null, TEST_STATE, TEST_REQUESTED_SCOPE_CLAIMS, TEST_EMAIL_ADDRESS);
+                        null,
+                        TEST_STATE,
+                        List.of(EMAIL_VERIFIED.getValue(), EMAIL.getValue()),
+                        TEST_EMAIL_ADDRESS);
         var response = makeRequest(Optional.of(authRequest), getHeaders(), Map.of());
         assertThat(response, hasStatus(400));
         assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1001)));
@@ -73,7 +82,10 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
         setUpDynamo();
         var authRequest =
                 new AuthCodeRequest(
-                        TEST_REDIRECT_URI, null, TEST_REQUESTED_SCOPE_CLAIMS, TEST_EMAIL_ADDRESS);
+                        TEST_REDIRECT_URI,
+                        null,
+                        List.of(EMAIL_VERIFIED.getValue(), EMAIL.getValue()),
+                        TEST_EMAIL_ADDRESS);
         var response = makeRequest(Optional.of(authRequest), getHeaders(), Map.of());
         assertThat(response, hasStatus(400));
         assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1001)));

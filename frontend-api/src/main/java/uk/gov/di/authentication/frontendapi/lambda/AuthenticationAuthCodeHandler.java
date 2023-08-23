@@ -75,7 +75,7 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
                 dynamoAuthCodeService.saveAuthCode(
                         userProfile.get().getSubjectID(),
                         authorisationCode.getValue(),
-                        authCodeRequest.getRequestedScopeClaims(),
+                        authCodeRequest.getClaims(),
                         false);
 
                 var state = State.parse(authCodeRequest.getState());

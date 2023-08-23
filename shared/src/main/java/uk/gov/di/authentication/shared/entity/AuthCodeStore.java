@@ -4,18 +4,20 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttri
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 
+import java.util.List;
+
 @DynamoDbBean
 public class AuthCodeStore {
 
     public static final String ATTRIBUTE_SUBJECT_ID = "SubjectID";
     public static final String ATTRIBUTE_AUTH_CODE = "AuthCode";
-    public static final String ATTRIBUTE_REQUESTED_SCOPES_CLAIMS = "RequestedScopes/Claims";
+    public static final String ATTRIBUTE_CLAIMS = "Claims";
     public static final String ATTRIBUTE_TIME_TO_EXIST = "TimeToExist";
     public static final String ATTRIBUTE_HAS_BEEN_USED = "HasBeenUsed";
 
     private String subjectID;
     private String authCode;
-    private String requestedScopeClaims;
+    private List<String> claims;
     private long timeToExist;
     private boolean hasBeenUsed;
 
@@ -50,17 +52,17 @@ public class AuthCodeStore {
         return this;
     }
 
-    @DynamoDbAttribute(ATTRIBUTE_REQUESTED_SCOPES_CLAIMS)
-    public String getRequestedScopeClaims() {
-        return requestedScopeClaims;
+    @DynamoDbAttribute(ATTRIBUTE_CLAIMS)
+    public List<String> getClaims() {
+        return claims;
     }
 
-    public void setRequestedScopeClaims(String requestedScopeClaims) {
-        this.requestedScopeClaims = requestedScopeClaims;
+    public void setClaims(List<String> claims) {
+        this.claims = claims;
     }
 
-    public AuthCodeStore withRequestedScopeClaims(String requestedScopeClaims) {
-        this.requestedScopeClaims = requestedScopeClaims;
+    public AuthCodeStore withClaims(List<String> claims) {
+        this.claims = claims;
         return this;
     }
 

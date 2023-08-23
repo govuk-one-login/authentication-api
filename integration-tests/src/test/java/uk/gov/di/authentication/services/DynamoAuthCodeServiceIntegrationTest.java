@@ -7,15 +7,18 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAuthCodeService;
 import uk.gov.di.authentication.sharedtest.extensions.AuthCodeExtension;
 
+import java.util.List;
+
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static uk.gov.di.authentication.external.entity.AuthUserInfoClaims.EMAIL;
+import static uk.gov.di.authentication.external.entity.AuthUserInfoClaims.EMAIL_VERIFIED;
 
 class DynamoAuthCodeServiceIntegrationTest {
 
     private static final String SUBJECT_ID = "test-subject-id";
     private static final String AUTH_CODE = "test-auth-code";
-    private static final String REQUESTED_SCOPE_CLAIMS = "test-requested-scope-claims";
     private static final boolean HAS_BEEN_USED = false;
 
     @RegisterExtension
@@ -26,7 +29,10 @@ class DynamoAuthCodeServiceIntegrationTest {
 
     private void setUpDynamo() {
         authCodeExtension.saveAuthCode(
-                SUBJECT_ID, AUTH_CODE, REQUESTED_SCOPE_CLAIMS, HAS_BEEN_USED);
+                SUBJECT_ID,
+                AUTH_CODE,
+                List.of(EMAIL_VERIFIED.getValue(), EMAIL.getValue()),
+                HAS_BEEN_USED);
     }
 
     @Test
