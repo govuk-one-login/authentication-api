@@ -1,7 +1,7 @@
-module "frontend_api_authentication_auth_code_role" {
+module "frontend_api_orch_auth_code_role" {
   source      = "../modules/lambda-role"
   environment = var.environment
-  role_name   = "frontend-api-authentication-auth-code-role"
+  role_name   = "frontend-api-orch-auth-code-role"
   vpc_arn     = local.authentication_vpc_arn
 
   policies_to_attach = [
@@ -13,11 +13,11 @@ module "frontend_api_authentication_auth_code_role" {
   ]
 }
 
-module "authentication_auth_code" {
+module "orch_auth_code" {
   source = "../modules/endpoint-module"
 
-  endpoint_name   = "authentication-auth-code"
-  path_part       = "authentication-auth-code"
+  endpoint_name   = "orch-auth-code"
+  path_part       = "orch-auth-code"
   endpoint_method = "POST"
   environment     = var.environment
 
@@ -35,10 +35,10 @@ module "authentication_auth_code" {
   root_resource_id = aws_api_gateway_rest_api.di_authentication_frontend_api.root_resource_id
   execution_arn    = aws_api_gateway_rest_api.di_authentication_frontend_api.execution_arn
 
-  memory_size                 = lookup(var.performance_tuning, "authentication-auth-code", local.default_performance_parameters).memory
-  provisioned_concurrency     = lookup(var.performance_tuning, "authentication-auth-code", local.default_performance_parameters).concurrency
-  max_provisioned_concurrency = lookup(var.performance_tuning, "authentication-auth-code", local.default_performance_parameters).max_concurrency
-  scaling_trigger             = lookup(var.performance_tuning, "authentication-auth-code", local.default_performance_parameters).scaling_trigger
+  memory_size                 = lookup(var.performance_tuning, "orch-auth-code", local.default_performance_parameters).memory
+  provisioned_concurrency     = lookup(var.performance_tuning, "orch-auth-code", local.default_performance_parameters).concurrency
+  max_provisioned_concurrency = lookup(var.performance_tuning, "orch-auth-code", local.default_performance_parameters).max_concurrency
+  scaling_trigger             = lookup(var.performance_tuning, "orch-auth-code", local.default_performance_parameters).scaling_trigger
 
   source_bucket           = aws_s3_bucket.source_bucket.bucket
   lambda_zip_file         = aws_s3_bucket_object.frontend_api_release_zip.key
@@ -51,7 +51,7 @@ module "authentication_auth_code" {
     local.authentication_oidc_redis_security_group_id,
   ]
   subnet_id                              = local.authentication_subnet_ids
-  lambda_role_arn                        = module.frontend_api_authentication_auth_code_role.arn
+  lambda_role_arn                        = module.frontend_api_orch_auth_code_role.arn
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
