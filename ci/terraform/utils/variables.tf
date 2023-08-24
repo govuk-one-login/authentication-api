@@ -150,3 +150,8 @@ variable "lambda_log_alarm_error_rate_threshold" {
   description = "The rate of errors in a lambda before generating a Cloudwatch alarm. Calculated by dividing the number of errors in a lambda divided by the number of invocations in a 15 minute period"
   default     = 1
 }
+
+variable "internal_sector_uri" {
+  type    = string
+  default = "undefined"
+}
