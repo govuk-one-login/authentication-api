@@ -733,17 +733,6 @@ public class DynamoService implements AuthenticationService {
         }
     }
 
-    public Stream<UserProfile> getBulkUserEmailAudienceStream(
-            Map<String, AttributeValue> exclusiveStartKey) {
-        ScanEnhancedRequest scanRequest =
-                ScanEnhancedRequest.builder()
-                        .addAttributeToProject("SubjectID")
-                        .addAttributeToProject("Email")
-                        .exclusiveStartKey(exclusiveStartKey)
-                        .build();
-        return dynamoUserProfileTable.scan(scanRequest).items().stream();
-    }
-
     public Stream<UserProfile> getBulkUserEmailAudienceStreamNotOnTermsAndConditionsVersion(
             Map<String, AttributeValue> exclusiveStartKey, List<String> termsAndConditionsVersion) {
 

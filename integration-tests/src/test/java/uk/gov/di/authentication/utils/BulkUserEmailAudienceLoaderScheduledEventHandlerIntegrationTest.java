@@ -10,6 +10,7 @@ import uk.gov.di.authentication.shared.entity.BulkEmailStatus;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.BulkEmailUsersService;
 import uk.gov.di.authentication.shared.services.LambdaInvokerService;
+import uk.gov.di.authentication.shared.services.SystemService;
 import uk.gov.di.authentication.sharedtest.basetest.HandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.BulkEmailUsersExtension;
 import uk.gov.di.authentication.utils.lambda.BulkUserEmailAudienceLoaderScheduledEventHandler;
@@ -48,7 +49,8 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerIntegrationTest
                         ipvPrivateKeyJwtSigner,
                         spotQueue,
                         docAppPrivateKeyJwtSigner,
-                        configurationParameters) {
+                        configurationParameters,
+                        new SystemService()) {
 
                     @Override
                     public String getTxmaAuditQueueUrl() {
@@ -136,11 +138,39 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerIntegrationTest
         }
     }
 
+    @Test
+    void shouldOnlyLoadUsersWithoutTheExcludedTermsAndConditionsVersions() {
+        // Excluded terms and conditions are set as the
+        // BULK_USER_EMAIL_EXCLUDED_TERMS_AND_CONDITIONS
+        // environment variable
+        setupDynamoUsersWithTermsAndConditionsVersions();
+        makeRequest(Optional.empty());
+
+        var usersLoaded = bulkEmailUsersService.getNSubjectIdsByStatus(15, BulkEmailStatus.PENDING);
+
+        assertThat(usersLoaded.size(), equalTo(7));
+    }
+
     private void setupDynamo(int numberOfUsers) {
         for (int i = 1; i <= numberOfUsers; i++) {
             userStore.signUp(
                     format("user.%o@account.gov.uk", i), "password123", new Subject(valueOf(i)));
         }
+    }
+
+    private void setupDynamoUsersWithTermsAndConditionsVersions() {
+        userStore.signUp("email0", "password-1", new Subject("0000"), "1.0");
+        userStore.signUp("email1", "password-1", new Subject("1111"), "1.0");
+        userStore.signUp("email2", "password-1", new Subject("2222"), "1.0");
+        userStore.signUp("email3", "password-1", new Subject("3333"), "1.1");
+        userStore.signUp("email4", "password-1", new Subject("4444"), "1.2");
+        userStore.signUp("email5", "password-1", new Subject("5555"), "1.2");
+        userStore.signUp("email6", "password-1", new Subject("6666"), "1.2");
+        userStore.signUp("email7", "password-1", new Subject("7777"), "1.5");
+        userStore.signUp("email8", "password-1", new Subject("8888"), "1.5");
+        userStore.signUp("email9", "password-1", new Subject("9999"), "1.6");
+        userStore.signUp("email10", "password-1", new Subject("A0000"), null);
+        userStore.signUp("email11", "password-1", new Subject("A1111"), null);
     }
 
     private void makeRequest(Optional<Map<String, Object>> exclusiveStartKey) {

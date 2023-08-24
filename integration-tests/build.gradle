@@ -63,6 +63,7 @@ test {
     environment "IDENTITY_ENABLED", "false"
     environment "TRACING_ENABLED", "false"
     environment "INTERNAl_SECTOR_URI", "https://test.account.gov.uk"
+    environment "BULK_USER_EMAIL_EXCLUDED_TERMS_AND_CONDITIONS", "1.5,1.6"
 
     doLast {
         tasks.getByName("jacocoTestReport").sourceDirectories.from(

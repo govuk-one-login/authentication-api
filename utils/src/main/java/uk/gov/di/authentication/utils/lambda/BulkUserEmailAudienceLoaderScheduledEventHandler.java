@@ -11,6 +11,8 @@ import uk.gov.di.authentication.shared.services.BulkEmailUsersService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.LambdaInvokerService;
+import uk.gov.di.authentication.shared.services.SystemService;
+import uk.gov.di.authentication.utils.exceptions.ExcludedTermsAndConditionsConfigMissingException;
 
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
@@ -32,6 +34,7 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
 
     public BulkUserEmailAudienceLoaderScheduledEventHandler() {
         this(ConfigurationService.getInstance());
+        this.configurationService.setSystemService(new SystemService());
     }
 
     public BulkUserEmailAudienceLoaderScheduledEventHandler(
@@ -61,10 +64,18 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
     public Void handleRequest(ScheduledEvent event, Context context) {
         LOG.info("Bulk User Email audience load triggered.");
 
+        var excludedTermsAndConditions =
+                configurationService.getBulkUserEmailExcludedTermsAndConditions();
+
         final long bulkUserEmailMaxAudienceLoadUserCount =
                 configurationService.getBulkUserEmailMaxAudienceLoadUserCount();
 
         Map<String, AttributeValue> exclusiveStartKey = null;
+
+        if (excludedTermsAndConditions == null || excludedTermsAndConditions.isEmpty()) {
+            throw new ExcludedTermsAndConditionsConfigMissingException(
+                    "Excluded terms and conditions configuration is missing");
+        }
 
         if (event.getDetail() != null && event.getDetail().containsKey("lastEvaluatedKey")) {
             String lastEvaluatedKey = event.getDetail().get("lastEvaluatedKey").toString();
@@ -76,7 +87,8 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
         AtomicReference<String> lastEmail = new AtomicReference<>();
         itemCounter.set(0);
         dynamoService
-                .getBulkUserEmailAudienceStream(exclusiveStartKey)
+                .getBulkUserEmailAudienceStreamNotOnTermsAndConditionsVersion(
+                        exclusiveStartKey, excludedTermsAndConditions)
                 .takeWhile(
                         userProfile -> (bulkUserEmailMaxAudienceLoadUserCount > itemCounter.get()))
                 .forEach(

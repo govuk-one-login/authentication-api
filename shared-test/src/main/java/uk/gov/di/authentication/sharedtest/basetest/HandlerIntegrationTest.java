@@ -7,6 +7,7 @@ import software.amazon.awssdk.services.kms.model.KeyUsageType;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.authentication.shared.services.SystemService;
 import uk.gov.di.authentication.sharedtest.extensions.AccountModifiersStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.AuditSnsTopicExtension;
 import uk.gov.di.authentication.sharedtest.extensions.ClientStoreExtension;
@@ -249,6 +250,27 @@ public abstract class HandlerIntegrationTest<Q, S> {
             this.ipvPrivateKeyJwtSigner = ipvPrivateKeyJwtSigner;
             this.spotQueue = spotQueue;
             this.docAppPrivateKeyJwtSigner = docAppPrivateKeyJwtSigner;
+        }
+
+        public IntegrationTestConfigurationService(
+                SnsTopicExtension auditEventTopic,
+                SqsQueueExtension notificationQueue,
+                KmsKeyExtension auditSigningKey,
+                TokenSigningExtension tokenSigningKey,
+                TokenSigningExtension ipvPrivateKeyJwtSigner,
+                SqsQueueExtension spotQueue,
+                TokenSigningExtension docAppPrivateKeyJwtSigner,
+                ParameterStoreExtension parameterStoreExtension,
+                SystemService systemService) {
+            super(parameterStoreExtension.getClient());
+            this.auditEventTopic = auditEventTopic;
+            this.notificationQueue = notificationQueue;
+            this.tokenSigningKey = tokenSigningKey;
+            this.auditSigningKey = auditSigningKey;
+            this.ipvPrivateKeyJwtSigner = ipvPrivateKeyJwtSigner;
+            this.spotQueue = spotQueue;
+            this.docAppPrivateKeyJwtSigner = docAppPrivateKeyJwtSigner;
+            super.systemService = systemService;
         }
 
         @Override

@@ -42,7 +42,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     private SsmClient ssmClient;
     private Map<String, String> ssmRedisParameters;
     private Optional<String> passwordPepper;
-    private SystemService systemService;
+    protected SystemService systemService;
 
     public ConfigurationService() {}
 
@@ -99,6 +99,16 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     public long getBulkUserEmailBatchPauseDuration() {
         return Long.parseLong(
                 System.getenv().getOrDefault("BULK_USER_EMAIL_BATCH_PAUSE_DURATION", "0"));
+    }
+
+    public List<String> getBulkUserEmailExcludedTermsAndConditions() {
+        String configurationValue =
+                systemService.getOrDefault("BULK_USER_EMAIL_EXCLUDED_TERMS_AND_CONDITIONS", "");
+        if (configurationValue == null || configurationValue.isEmpty()) {
+            return List.of();
+        } else {
+            return Arrays.stream(configurationValue.split(",")).collect(Collectors.toList());
+        }
     }
 
     public long getDefaultOtpCodeExpiry() {
