@@ -20,13 +20,16 @@ import uk.gov.di.authentication.sharedtest.extensions.NotifyStubExtension;
 import uk.gov.di.authentication.utils.lambda.BulkUserEmailSenderScheduledEventHandler;
 
 import java.security.SecureRandom;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.JsonMatcher.hasFieldWithValue;
+import static uk.gov.di.authentication.utils.domain.UtilsAuditableEvent.BULK_EMAIL_SENT;
 
 public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
         extends HandlerIntegrationTest<ScheduledEvent, Void> {
@@ -114,11 +117,11 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
 
         assertThat(request, hasFieldWithValue("email_address", equalTo("user.1@account.gov.uk")));
         assertThat(noOfStatusEmailSent, equalTo(1));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(BULK_EMAIL_SENT));
     }
 
     @Test
-    void shouldSendCorrectNoOfEmailsForListOfUsersWithVariousStatusAndUpdateStatus()
-            throws Json.JsonException {
+    void shouldSendCorrectNoOfEmailsForListOfUsersWithVariousStatusAndUpdateStatus() {
         setupDynamo();
         makeRequest();
 
@@ -133,13 +136,13 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
                         .size(),
                 equalTo(1));
         assertThat(emailsSent.size(), equalTo(8));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, Collections.nCopies(8, BULK_EMAIL_SENT));
         assertEmailNotSentTo(emailsSent, "user.email.sent.alreadt@account.gov.uk");
         assertEmailNotSentTo(emailsSent, "user.error.sending@account.gov.uk");
     }
 
     @Test
-    void shouldSendCorrectNoOfEmailsAndUpdateStatusWhenTwoUsersHaveNoCorrespondingAccount()
-            throws Json.JsonException {
+    void shouldSendCorrectNoOfEmailsAndUpdateStatusWhenTwoUsersHaveNoCorrespondingAccount() {
         setupDynamo();
         bulkEmailUsersExtension.addBulkEmailUser("11", BulkEmailStatus.PENDING);
         bulkEmailUsersExtension.addBulkEmailUser("12", BulkEmailStatus.PENDING);
@@ -159,6 +162,7 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
         assertThat(emailsSent.size(), equalTo(8));
         assertEmailNotSentTo(emailsSent, "user.email.sent.already@account.gov.uk");
         assertEmailNotSentTo(emailsSent, "user.error.sending@account.gov.uk");
+        assertTxmaAuditEventsReceived(txmaAuditQueue, Collections.nCopies(8, BULK_EMAIL_SENT));
     }
 
     void assertEmailNotSentTo(List<JsonElement> emailsSent, String email) {
