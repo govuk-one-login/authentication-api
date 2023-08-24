@@ -96,6 +96,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 System.getenv().getOrDefault("BULK_USER_EMAIL_MAX_AUDIENCE_LOAD_USER_COUNT", "0"));
     }
 
+    public long getBulkUserEmailAudienceLoadUserBatchSize() {
+        return Long.parseLong(
+                System.getenv()
+                        .getOrDefault("BULK_USER_EMAIL_MAX_AUDIENCE_LOAD_USER_BATCH_SIZE", "0"));
+    }
+
     public long getBulkUserEmailBatchPauseDuration() {
         return Long.parseLong(
                 System.getenv().getOrDefault("BULK_USER_EMAIL_BATCH_PAUSE_DURATION", "0"));

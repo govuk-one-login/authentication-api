@@ -24,6 +24,9 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
     private static final Logger LOG =
             LogManager.getLogger(BulkUserEmailAudienceLoaderScheduledEventHandler.class);
 
+    public static final String LAST_EVALUATED_KEY = "lastEvaluatedKey";
+    public static final String GLOBAL_USERS_ADDED_COUNT = "globalUsersAddedCount";
+
     private final BulkEmailUsersService bulkEmailUsersService;
 
     private final DynamoService dynamoService;
@@ -69,35 +72,44 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
 
         final long bulkUserEmailMaxAudienceLoadUserCount =
                 configurationService.getBulkUserEmailMaxAudienceLoadUserCount();
+        final long batchSize = configurationService.getBulkUserEmailAudienceLoadUserBatchSize();
 
         Map<String, AttributeValue> exclusiveStartKey = null;
+        Long existingCountOfAddedUsers = 0L;
 
         if (excludedTermsAndConditions == null || excludedTermsAndConditions.isEmpty()) {
             throw new ExcludedTermsAndConditionsConfigMissingException(
                     "Excluded terms and conditions configuration is missing");
         }
 
-        if (event.getDetail() != null && event.getDetail().containsKey("lastEvaluatedKey")) {
-            String lastEvaluatedKey = event.getDetail().get("lastEvaluatedKey").toString();
+        if (event.getDetail() != null && event.getDetail().containsKey(LAST_EVALUATED_KEY)) {
+            String lastEvaluatedKey = event.getDetail().get(LAST_EVALUATED_KEY).toString();
             exclusiveStartKey =
                     Map.of("Email", AttributeValue.builder().s(lastEvaluatedKey).build());
         }
 
+        if (event.getDetail() != null && event.getDetail().containsKey(GLOBAL_USERS_ADDED_COUNT)) {
+            existingCountOfAddedUsers =
+                    Long.parseLong(event.getDetail().get(GLOBAL_USERS_ADDED_COUNT).toString());
+        }
+
+        final Long remainingItemsLimit =
+                bulkUserEmailMaxAudienceLoadUserCount - existingCountOfAddedUsers;
+        final Long currentBatchSize = Math.min(batchSize, remainingItemsLimit);
         AtomicLong itemCounter = new AtomicLong();
         AtomicReference<String> lastEmail = new AtomicReference<>();
         itemCounter.set(0);
         dynamoService
                 .getBulkUserEmailAudienceStreamNotOnTermsAndConditionsVersion(
                         exclusiveStartKey, excludedTermsAndConditions)
-                .takeWhile(
-                        userProfile -> (bulkUserEmailMaxAudienceLoadUserCount > itemCounter.get()))
+                .takeWhile(userProfile -> (currentBatchSize > itemCounter.get()))
                 .forEach(
                         userProfile -> {
                             itemCounter.getAndIncrement();
                             bulkEmailUsersService.addUser(
                                     userProfile.getSubjectID(), BulkEmailStatus.PENDING);
                             LOG.info("Bulk User Email added item number: {}", itemCounter);
-                            if (itemCounter.get() >= bulkUserEmailMaxAudienceLoadUserCount) {
+                            if (itemCounter.get() >= remainingItemsLimit) {
                                 LOG.info(
                                         "Bulk User Email max audience load user count reached: {}. Stopping load.",
                                         itemCounter);
@@ -111,8 +123,17 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
 
         if (itemCounter.get() == 0) {
             LOG.info("No items remaining to insert, finished import");
+        } else if (itemCounter.get() >= remainingItemsLimit) {
+            LOG.info(
+                    "Bulk User Email max audience load user count reached. Total items added {}",
+                    itemCounter.get() + existingCountOfAddedUsers);
         } else {
-            event.setDetail(Map.of("lastEvaluatedKey", lastEmail.get()));
+            event.setDetail(
+                    Map.of(
+                            LAST_EVALUATED_KEY,
+                            lastEmail.get(),
+                            GLOBAL_USERS_ADDED_COUNT,
+                            existingCountOfAddedUsers + itemCounter.get()));
             LOG.info("Bulk User Email re-invoke.");
             lambdaInvokerService.invokeWithPayload(event);
         }

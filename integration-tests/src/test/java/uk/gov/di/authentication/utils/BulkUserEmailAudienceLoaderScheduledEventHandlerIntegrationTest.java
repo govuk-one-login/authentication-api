@@ -151,6 +151,19 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerIntegrationTest
         assertThat(usersLoaded.size(), equalTo(7));
     }
 
+    @Test
+    void shouldOnlyLoadUsersUpToTheMaxLimit() {
+        final Integer numberOfUsers = bulkUserEmailMaxAudienceLoadUserCount.intValue() + 10;
+        setupDynamo(numberOfUsers);
+        makeRequest(Optional.empty());
+
+        var usersLoaded =
+                bulkEmailUsersService.getNSubjectIdsByStatus(
+                        numberOfUsers + 1, BulkEmailStatus.PENDING);
+
+        assertThat(usersLoaded.size(), equalTo(bulkUserEmailMaxAudienceLoadUserCount.intValue()));
+    }
+
     private void setupDynamo(int numberOfUsers) {
         for (int i = 1; i <= numberOfUsers; i++) {
             userStore.signUp(

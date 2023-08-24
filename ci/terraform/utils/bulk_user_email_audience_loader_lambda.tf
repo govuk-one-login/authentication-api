@@ -41,11 +41,12 @@ resource "aws_lambda_function" "bulk_user_email_audience_loader_lambda" {
 
   environment {
     variables = merge(var.notify_template_map, {
-      ENVIRONMENT                                  = var.environment
-      BULK_USER_EMAIL_BATCH_QUERY_LIMIT            = var.bulk_user_email_batch_query_limit
-      BULK_USER_EMAIL_MAX_AUDIENCE_LOAD_USER_COUNT = var.bulk_user_email_max_audience_load_user_count
-      BULK_USER_EMAIL_EXCLUDED_TERMS_AND_CONDITIONS = var.bulk_user_email_excluded_terms_and_conditions
-      BULK_USER_EMAIL_AUDIENCE_LOADER_LAMBDA_NAME  = local.bulk_user_email_audience_loader_lambda_name
+      ENVIRONMENT                                       = var.environment
+      BULK_USER_EMAIL_BATCH_QUERY_LIMIT                 = var.bulk_user_email_batch_query_limit
+      BULK_USER_EMAIL_MAX_AUDIENCE_LOAD_USER_COUNT      = var.bulk_user_email_max_audience_load_user_count
+      BULK_USER_EMAIL_MAX_AUDIENCE_LOAD_USER_BATCH_SIZE = var.bulk_user_email_max_audience_load_user_batch_size
+      BULK_USER_EMAIL_AUDIENCE_LOADER_LAMBDA_NAME       = local.bulk_user_email_audience_loader_lambda_name
+      BULK_USER_EMAIL_EXCLUDED_TERMS_AND_CONDITIONS     = var.bulk_user_email_excluded_terms_and_conditions
     })
   }
 

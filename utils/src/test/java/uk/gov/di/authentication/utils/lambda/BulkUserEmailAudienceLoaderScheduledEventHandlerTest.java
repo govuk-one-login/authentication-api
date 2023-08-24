@@ -62,7 +62,8 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
 
     @Test
     void shouldAddOneBulkEmailUser() {
-        when(configurationService.getBulkUserEmailMaxAudienceLoadUserCount()).thenReturn(10L);
+        when(configurationService.getBulkUserEmailMaxAudienceLoadUserCount()).thenReturn(100L);
+        when(configurationService.getBulkUserEmailAudienceLoadUserBatchSize()).thenReturn(10L);
         when(configurationService.getBulkUserEmailExcludedTermsAndConditions())
                 .thenReturn(List.of("1.5", "1.6"));
         when(dynamoService.getBulkUserEmailAudienceStreamNotOnTermsAndConditionsVersion(
@@ -77,6 +78,7 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
     @Test
     void shouldNotAddBulkEmailUserWhenMaxLoadAudienceUserCountIsZero() {
         when(configurationService.getBulkUserEmailMaxAudienceLoadUserCount()).thenReturn(0L);
+        when(configurationService.getBulkUserEmailAudienceLoadUserBatchSize()).thenReturn(10L);
         when(configurationService.getBulkUserEmailExcludedTermsAndConditions())
                 .thenReturn(List.of("1.5", "1.6"));
         when(dynamoService.getBulkUserEmailAudienceStreamNotOnTermsAndConditionsVersion(
@@ -90,7 +92,8 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
 
     @Test
     void shouldAddManyBulkEmailUsers() {
-        when(configurationService.getBulkUserEmailMaxAudienceLoadUserCount()).thenReturn(10L);
+        when(configurationService.getBulkUserEmailMaxAudienceLoadUserCount()).thenReturn(100L);
+        when(configurationService.getBulkUserEmailAudienceLoadUserBatchSize()).thenReturn(10L);
         when(configurationService.getBulkUserEmailExcludedTermsAndConditions())
                 .thenReturn(List.of("1.5", "1.6"));
         when(dynamoService.getBulkUserEmailAudienceStreamNotOnTermsAndConditionsVersion(
@@ -108,7 +111,8 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
 
     @Test
     void shouldAddOnlyMaxLoadAudienceUserCountBulkEmailUsers() {
-        when(configurationService.getBulkUserEmailMaxAudienceLoadUserCount()).thenReturn(3L);
+        when(configurationService.getBulkUserEmailMaxAudienceLoadUserCount()).thenReturn(100L);
+        when(configurationService.getBulkUserEmailAudienceLoadUserBatchSize()).thenReturn(3L);
         when(configurationService.getBulkUserEmailExcludedTermsAndConditions())
                 .thenReturn(List.of("1.5", "1.6"));
         when(dynamoService.getBulkUserEmailAudienceStreamNotOnTermsAndConditionsVersion(
@@ -121,8 +125,9 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
     }
 
     @Test
-    void shouldReinvokeLambdaWithLastSubjectIdWhenNoInitialStartKey() {
-        when(configurationService.getBulkUserEmailMaxAudienceLoadUserCount()).thenReturn(10L);
+    void shouldReinvokeLambdaWithLastSubjectIdAndIncrementedCountWhenNoInitialStartKey() {
+        when(configurationService.getBulkUserEmailMaxAudienceLoadUserCount()).thenReturn(100L);
+        when(configurationService.getBulkUserEmailAudienceLoadUserBatchSize()).thenReturn(10L);
         when(configurationService.getBulkUserEmailExcludedTermsAndConditions())
                 .thenReturn(List.of("1.5", "1.6"));
 
@@ -149,13 +154,19 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
 
         var expectedLastEvaluatedEmail = emailFromSubjectId(TEST_SUBJECT_IDS[2]);
         verify(scheduledEvent, times(1))
-                .setDetail(Map.of("lastEvaluatedKey", expectedLastEvaluatedEmail));
+                .setDetail(
+                        Map.of(
+                                "lastEvaluatedKey",
+                                expectedLastEvaluatedEmail,
+                                "globalUsersAddedCount",
+                                Integer.toUnsignedLong(subjectIds.size())));
         verify(lambdaInvokerService, times(1)).invokeWithPayload(scheduledEvent);
     }
 
     @Test
-    void shouldReinvokeLambdaWithLastSubjectIdWithInitialStartKey() {
-        when(configurationService.getBulkUserEmailMaxAudienceLoadUserCount()).thenReturn(10L);
+    void shouldReinvokeLambdaWithLastSubjectIdWithInitialStartKeyAndCount() {
+        when(configurationService.getBulkUserEmailMaxAudienceLoadUserCount()).thenReturn(100L);
+        when(configurationService.getBulkUserEmailAudienceLoadUserBatchSize()).thenReturn(10L);
         when(configurationService.getBulkUserEmailExcludedTermsAndConditions())
                 .thenReturn(List.of("1.5", "1.6"));
 
@@ -170,7 +181,13 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
                         lastEvaluatedKey, List.of("1.5", "1.6")))
                 .thenReturn(testUserProfilesFromSubjectIds(subjectIds));
 
-        when(scheduledEvent.getDetail()).thenReturn(Map.of("lastEvaluatedKey", lastEvaluatedEmail));
+        when(scheduledEvent.getDetail())
+                .thenReturn(
+                        Map.of(
+                                "lastEvaluatedKey",
+                                lastEvaluatedEmail,
+                                "globalUsersAddedCount",
+                                2L));
 
         bulkUserEmailAudienceLoaderScheduledEventHandler.handleRequest(scheduledEvent, mockContext);
 
@@ -184,13 +201,19 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
                                         .addUser(id, BulkEmailStatus.PENDING));
 
         verify(scheduledEvent, times(1))
-                .setDetail(Map.of("lastEvaluatedKey", emailFromSubjectId(TEST_SUBJECT_IDS[4])));
+                .setDetail(
+                        Map.of(
+                                "lastEvaluatedKey",
+                                emailFromSubjectId(TEST_SUBJECT_IDS[4]),
+                                "globalUsersAddedCount",
+                                4L));
         verify(lambdaInvokerService, times(1)).invokeWithPayload(scheduledEvent);
     }
 
     @Test
     void shouldNotReinvokeLambdaWhenNoItemsReturned() {
-        when(configurationService.getBulkUserEmailMaxAudienceLoadUserCount()).thenReturn(10L);
+        when(configurationService.getBulkUserEmailMaxAudienceLoadUserCount()).thenReturn(100L);
+        when(configurationService.getBulkUserEmailAudienceLoadUserBatchSize()).thenReturn(10L);
         when(configurationService.getBulkUserEmailExcludedTermsAndConditions())
                 .thenReturn(List.of("1.5", "1.6"));
 
@@ -219,10 +242,8 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
 
     @Test
     void shouldThrowWhenNoExlcudedTermsAndConditionsConfig() {
-        when(configurationService.getBulkUserEmailMaxAudienceLoadUserCount()).thenReturn(10L);
-        when(dynamoService.getBulkUserEmailAudienceStreamNotOnTermsAndConditionsVersion(
-                        null, List.of("1.5", "1.6")))
-                .thenReturn(testUserProfilesFromSubjectIds(List.of(SUBJECT_ID)));
+        when(configurationService.getBulkUserEmailMaxAudienceLoadUserCount()).thenReturn(100L);
+        when(configurationService.getBulkUserEmailAudienceLoadUserBatchSize()).thenReturn(10L);
 
         assertThrows(
                 ExcludedTermsAndConditionsConfigMissingException.class,
