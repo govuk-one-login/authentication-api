@@ -6,6 +6,7 @@ import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.lambda.LambdaClient;
 import software.amazon.awssdk.services.lambda.model.InvokeRequest;
+import uk.gov.di.authentication.shared.exceptions.LambdaInvokerServiceException;
 import uk.gov.di.authentication.shared.serialization.Json;
 
 import java.nio.charset.StandardCharsets;
@@ -35,6 +36,13 @@ public class LambdaInvokerService implements LambdaInvoker {
 
     @Override
     public void invokeWithPayload(ScheduledEvent scheduledEvent) {
+        String lambdaName = configurationService.getBulkEmailLoaderLambdaName();
+
+        if (lambdaName == null || lambdaName.isEmpty()) {
+            throw new LambdaInvokerServiceException(
+                    "BULK_USER_EMAIL_AUDIENCE_LOADER_LAMBDA_NAME environment variable not set");
+        }
+
         try {
             SdkBytes payload =
                     SdkBytes.fromByteArray(
@@ -43,10 +51,7 @@ public class LambdaInvokerService implements LambdaInvoker {
                                     .getBytes(StandardCharsets.UTF_8));
 
             InvokeRequest invokeRequest =
-                    InvokeRequest.builder()
-                            .functionName("BULK_USER_EMAIL_AUDIENCE_LOADER")
-                            .payload(payload)
-                            .build();
+                    InvokeRequest.builder().functionName(lambdaName).payload(payload).build();
             lambdaClient.invoke(invokeRequest);
 
         } catch (Json.JsonException e) {

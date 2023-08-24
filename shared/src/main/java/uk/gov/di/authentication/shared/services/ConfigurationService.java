@@ -159,6 +159,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 .equals("true");
     }
 
+    public String getBulkEmailLoaderLambdaName() {
+        return System.getenv().getOrDefault("BULK_USER_EMAIL_AUDIENCE_LOADER_LAMBDA_NAME", "");
+    }
+
     public URI getAuthenticationAuthCallbackURI() {
         return URI.create(
                 System.getenv().getOrDefault("AUTHENTICATION_AUTHORIZATION_CALLBACK_URI", ""));
