@@ -10,6 +10,7 @@ module "bulk_user_email_send_lambda_role" {
     aws_iam_policy.bulk_user_email_send_dynamo_read_access[0].arn,
     aws_iam_policy.bulk_user_email_send_dynamo_write_access[0].arn,
     aws_iam_policy.bulk_user_email_dynamo_encryption_key_kms_policy[0].arn,
+    aws_iam_policy.txma_audit_queue_access_policy.arn
   ]
 }
 
@@ -42,6 +43,8 @@ resource "aws_lambda_function" "bulk_user_email_send_lambda" {
   environment {
     variables = merge(var.notify_template_map, {
       ENVIRONMENT                           = var.environment
+      INTERNAl_SECTOR_URI                   = var.internal_sector_uri
+      TXMA_AUDIT_QUEUE_URL                  = data.aws_sqs_queue.oidc_txma_audit_queue.url
       NOTIFY_API_KEY                        = var.notify_api_key
       NOTIFY_URL                            = var.notify_url
       BULK_USER_EMAIL_BATCH_QUERY_LIMIT     = var.bulk_user_email_batch_query_limit
