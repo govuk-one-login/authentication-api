@@ -1,4 +1,5 @@
 environment                              = "sandpit"
+internal_sector_uri                      = "https://identity.sandpit.account.gov.uk"
 shared_state_bucket                      = "digital-identity-dev-tfstate"
 allow_bulk_test_users                    = true
 bulk_user_email_send_schedule_enabled    = false
