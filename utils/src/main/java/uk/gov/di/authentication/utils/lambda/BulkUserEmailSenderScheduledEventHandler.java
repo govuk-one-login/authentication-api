@@ -6,12 +6,17 @@ import com.amazonaws.services.lambda.runtime.events.ScheduledEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.BulkEmailStatus;
+import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.BulkEmailUsersService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.NotificationService;
+import uk.gov.di.authentication.utils.domain.BulkEmailType;
+import uk.gov.di.authentication.utils.domain.UtilsAuditableEvent;
 import uk.gov.service.notify.NotificationClient;
 import uk.gov.service.notify.NotificationClientException;
 
@@ -19,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 
 import static uk.gov.di.authentication.shared.entity.NotificationType.TERMS_AND_CONDITIONS_BULK_EMAIL;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class BulkUserEmailSenderScheduledEventHandler
         implements RequestHandler<ScheduledEvent, Void> {
@@ -36,6 +42,8 @@ public class BulkUserEmailSenderScheduledEventHandler
 
     private final CloudwatchMetricsService cloudwatchMetricsService;
 
+    private final AuditService auditService;
+
     public BulkUserEmailSenderScheduledEventHandler() {
         this(ConfigurationService.getInstance());
     }
@@ -45,12 +53,14 @@ public class BulkUserEmailSenderScheduledEventHandler
             DynamoService dynamoService,
             ConfigurationService configurationService,
             NotificationService notificationService,
-            CloudwatchMetricsService cloudwatchMetricsService) {
+            CloudwatchMetricsService cloudwatchMetricsService,
+            AuditService auditService) {
         this.bulkEmailUsersService = bulkEmailUsersService;
         this.dynamoService = dynamoService;
         this.configurationService = configurationService;
         this.notificationService = notificationService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.auditService = auditService;
     }
 
     public BulkUserEmailSenderScheduledEventHandler(ConfigurationService configurationService) {
@@ -67,6 +77,7 @@ public class BulkUserEmailSenderScheduledEventHandler
                         .orElse(new NotificationClient(configurationService.getNotifyApiKey()));
         this.notificationService = new NotificationService(client, configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
+        this.auditService = new AuditService(configurationService);
     }
 
     @Override
@@ -109,6 +120,7 @@ public class BulkUserEmailSenderScheduledEventHandler
                                         userProfile -> {
                                             try {
                                                 sendNotifyEmail(userProfile.getEmail());
+                                                addAuditEventForEmailSent(userProfile);
                                                 updateBulkUserStatus(
                                                         subjectId, BulkEmailStatus.EMAIL_SENT);
                                             } catch (NotificationClientException e) {
@@ -182,5 +194,23 @@ public class BulkUserEmailSenderScheduledEventHandler
                         bulkEmailStatus.getValue(),
                         "Environment",
                         configurationService.getEnvironment()));
+    }
+
+    private void addAuditEventForEmailSent(UserProfile userProfile) {
+        var internalCommonSubjectIdentifier =
+                ClientSubjectHelper.getSubjectWithSectorIdentifier(
+                        userProfile, configurationService.getInternalSectorUri(), dynamoService);
+        auditService.submitAuditEvent(
+                UtilsAuditableEvent.BULK_EMAIL_SENT,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                internalCommonSubjectIdentifier.getValue(),
+                userProfile.getEmail(),
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                pair("internalSubjectId", userProfile.getSubjectID()),
+                pair("bulk-email-type", BulkEmailType.VC_EXPIRY_BULK_EMAIL.name()));
     }
 }
