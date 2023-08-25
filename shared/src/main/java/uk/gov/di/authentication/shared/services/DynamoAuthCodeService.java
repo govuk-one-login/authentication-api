@@ -4,6 +4,7 @@ import uk.gov.di.authentication.shared.entity.AuthCodeStore;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Optional;
 
 public class DynamoAuthCodeService extends BaseDynamoService<AuthCodeStore> {
@@ -39,13 +40,13 @@ public class DynamoAuthCodeService extends BaseDynamoService<AuthCodeStore> {
     }
 
     public void saveAuthCode(
-            String subjectID, String authCode, String requestedScopeClaims, boolean hasBeenUsed) {
+            String subjectID, String authCode, List<String> claims, boolean hasBeenUsed) {
         if (isAuthOrchSplitEnabled) {
             var authCodeStore =
                     new AuthCodeStore()
                             .withSubjectID(subjectID)
                             .withAuthCode(authCode)
-                            .withRequestedScopeClaims(requestedScopeClaims)
+                            .withClaims(claims)
                             .withHasBeenUsed(hasBeenUsed)
                             .withTimeToExist(
                                     NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS)

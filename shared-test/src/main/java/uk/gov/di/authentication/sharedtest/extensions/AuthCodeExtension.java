@@ -13,6 +13,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAuthCodeService;
 import uk.gov.di.authentication.sharedtest.basetest.DynamoTestConfiguration;
 
+import java.util.List;
 import java.util.Optional;
 
 public class AuthCodeExtension extends DynamoExtension implements AfterEachCallback {
@@ -59,9 +60,9 @@ public class AuthCodeExtension extends DynamoExtension implements AfterEachCallb
     }
 
     public void saveAuthCode(
-            String subjectID, String authCode, String requestedScopeClaims, boolean hasBeenUsed) {
+            String subjectID, String authCode, List<String> claims, boolean hasBeenUsed) {
 
-        dynamoAuthCodeService.saveAuthCode(subjectID, authCode, requestedScopeClaims, hasBeenUsed);
+        dynamoAuthCodeService.saveAuthCode(subjectID, authCode, claims, hasBeenUsed);
     }
 
     private void createAuthCodeStoreTable() {

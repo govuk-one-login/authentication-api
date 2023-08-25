@@ -4,6 +4,8 @@ import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import uk.gov.di.authentication.shared.validation.Required;
 
+import java.util.List;
+
 public class AuthCodeRequest {
 
     @SerializedName("redirect-uri")
@@ -16,21 +18,20 @@ public class AuthCodeRequest {
     @Required
     private String state;
 
-    @SerializedName("requestedScopeClaims")
+    @SerializedName("claims")
     @Expose
     @Required
-    private String requestedScopeClaims;
+    private List<String> claims;
 
     @SerializedName("email")
     @Expose
     @Required
     private String email;
 
-    public AuthCodeRequest(
-            String redirectUri, String state, String requestedScopeClaims, String email) {
+    public AuthCodeRequest(String redirectUri, String state, List<String> claims, String email) {
         this.redirectUri = redirectUri;
         this.state = state;
-        this.requestedScopeClaims = requestedScopeClaims;
+        this.claims = claims;
         this.email = email;
     }
 
@@ -50,12 +51,12 @@ public class AuthCodeRequest {
         this.state = state;
     }
 
-    public String getRequestedScopeClaims() {
-        return requestedScopeClaims;
+    public List<String> getClaims() {
+        return claims;
     }
 
-    public void setRequestedScopeClaims(String requestedScopeClaims) {
-        this.requestedScopeClaims = requestedScopeClaims;
+    public void setClaims(List<String> claims) {
+        this.claims = claims;
     }
 
     public String getEmail() {

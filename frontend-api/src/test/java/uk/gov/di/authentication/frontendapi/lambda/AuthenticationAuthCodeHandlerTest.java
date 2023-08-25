@@ -20,11 +20,13 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -39,7 +41,6 @@ class AuthenticationAuthCodeHandlerTest {
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
     private static final String TEST_REDIRECT_URI = "https://redirect_uri.com";
     private static final String TEST_STATE = "xyz";
-    private static final String TEST_REQUESTED_SCOPE_CLAIMS = "requested-scope-claims";
     private static final String TEST_AUTHORIZATION_CODE = "SplxlOBeZQQYbYS6WxSbIA";
     private static final String TEST_SUBJECT_ID = "subject-id";
 
@@ -150,11 +151,7 @@ class AuthenticationAuthCodeHandlerTest {
         var result = handler.handleRequest(event, context);
 
         verify(dynamoAuthCodeService, times(1))
-                .saveAuthCode(
-                        eq(userProfile.getSubjectID()),
-                        anyString(),
-                        eq(TEST_REQUESTED_SCOPE_CLAIMS),
-                        eq(false));
+                .saveAuthCode(eq(userProfile.getSubjectID()), anyString(), anyList(), eq(false));
         assertThat(result, hasStatus(200));
         var authorizationResponse = new AuthCodeResponse(TEST_AUTHORIZATION_CODE, TEST_STATE);
         assertThat(result, hasBody(objectMapper.writeValueAsString(authorizationResponse)));
@@ -165,11 +162,11 @@ class AuthenticationAuthCodeHandlerTest {
         event.setHeaders(getHeaders());
         event.setBody(
                 format(
-                        "{ \"email\": \"%s\", \"redirect-uri\": \"%s\", \"state\": \"%s\", \"requestedScopeClaims\": \"%s\" }",
+                        "{ \"email\": \"%s\", \"redirect-uri\": \"%s\", \"state\": \"%s\", \"claims\": [\"%s\"] }",
                         TEST_EMAIL_ADDRESS,
                         TEST_REDIRECT_URI,
                         TEST_STATE,
-                        TEST_REQUESTED_SCOPE_CLAIMS));
+                        List.of("email-verified", "email")));
         return event;
     }
 
