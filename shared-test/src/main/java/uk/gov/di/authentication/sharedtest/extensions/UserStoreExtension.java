@@ -77,14 +77,24 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
         return signUp(email, password, subject, false);
     }
 
+    public String addUnverifiedUser(
+            String email, String password, Subject subject, String termsAndConditionsVersion) {
+        return signUp(
+                email, password, subject, false, Optional.ofNullable(termsAndConditionsVersion), 0);
+    }
+
+    public String addUnverifiedUser(String email, String password) {
+        return signUp(email, password, new Subject(), false, Optional.of("1.0"), 0);
+    }
+
     public String signUp(
             String email, String password, Subject subject, String termsAndConditionsVersion) {
         return signUp(
-                email, password, subject, false, Optional.ofNullable(termsAndConditionsVersion));
+                email, password, subject, false, Optional.ofNullable(termsAndConditionsVersion), 1);
     }
 
     public String signUp(String email, String password, Subject subject, boolean isTestUser) {
-        return signUp(email, password, subject, isTestUser, Optional.of("1.0"));
+        return signUp(email, password, subject, isTestUser, Optional.of("1.0"), 1);
     }
 
     private String signUp(
@@ -92,7 +102,8 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
             String password,
             Subject subject,
             boolean isTestUser,
-            Optional<String> termsAndConditionsVersion) {
+            Optional<String> termsAndConditionsVersion,
+            int accountVerified) {
         TermsAndConditions termsAndConditions =
                 termsAndConditionsVersion
                         .map(
@@ -100,7 +111,8 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
                                         new TermsAndConditions(
                                                 v, LocalDateTime.now(ZoneId.of("UTC")).toString()))
                         .orElse(null);
-        dynamoService.signUp(email, password, subject, termsAndConditions, isTestUser);
+        dynamoService.signUp(
+                email, password, subject, termsAndConditions, isTestUser, accountVerified);
         return dynamoService.getUserProfileByEmail(email).getPublicSubjectID();
     }
 

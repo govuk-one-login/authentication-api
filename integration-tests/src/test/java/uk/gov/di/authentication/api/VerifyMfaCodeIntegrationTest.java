@@ -902,7 +902,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     private void setUpTest(String sessionId, Scope scope) throws Json.JsonException {
-        userStore.signUp(EMAIL_ADDRESS, USER_PASSWORD);
+        userStore.addUnverifiedUser(EMAIL_ADDRESS, USER_PASSWORD);
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(

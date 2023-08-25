@@ -335,7 +335,7 @@ class DynamoServiceIntegrationTest {
     }
 
     @Test
-    void shouldGetUsersNotOnTermsAndConditionsVariousVersions() {
+    void shouldGetVerifiedUsersNotOnTermsAndConditionsVariousVersions() {
         setupDynamoWithMultipleUsersWithDifferentTermsAndConditions();
 
         assertThat(
@@ -402,6 +402,9 @@ class DynamoServiceIntegrationTest {
         userStore.signUp("email9", "password-1", new Subject("9999"), "1.3");
         userStore.signUp("email10", "password-1", new Subject("A0000"), null);
         userStore.signUp("email11", "password-1", new Subject("A1111"), null);
+        userStore.addUnverifiedUser("email12", "password-1", new Subject("A2222"), "1.3");
+        userStore.addUnverifiedUser("email13", "password-1", new Subject("A3333"), "1.3");
+        userStore.addUnverifiedUser("email14", "password-1", new Subject("A4444"), "1.3");
     }
 
     private void testUpdateEmail(UserProfile userProfile, UserCredentials userCredentials) {

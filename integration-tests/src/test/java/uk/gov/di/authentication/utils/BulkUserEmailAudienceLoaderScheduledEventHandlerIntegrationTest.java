@@ -139,7 +139,7 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerIntegrationTest
     }
 
     @Test
-    void shouldOnlyLoadUsersWithoutTheExcludedTermsAndConditionsVersions() {
+    void shouldGetVerifiedUsersWithoutTheExcludedTermsAndConditionsVersions() {
         // Excluded terms and conditions are set as the
         // BULK_USER_EMAIL_EXCLUDED_TERMS_AND_CONDITIONS
         // environment variable
@@ -184,6 +184,9 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerIntegrationTest
         userStore.signUp("email9", "password-1", new Subject("9999"), "1.6");
         userStore.signUp("email10", "password-1", new Subject("A0000"), null);
         userStore.signUp("email11", "password-1", new Subject("A1111"), null);
+        userStore.addUnverifiedUser("email12", "password-1", new Subject("A2222"), "1.3");
+        userStore.addUnverifiedUser("email13", "password-1", new Subject("A3333"), "1.3");
+        userStore.addUnverifiedUser("email14", "password-1", new Subject("A4444"), "1.3");
     }
 
     private void makeRequest(Optional<Map<String, Object>> exclusiveStartKey) {

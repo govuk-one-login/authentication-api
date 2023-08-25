@@ -42,6 +42,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.util.Objects.nonNull;
+import static software.amazon.awssdk.enhanced.dynamodb.internal.AttributeValues.numberValue;
 import static software.amazon.awssdk.enhanced.dynamodb.internal.AttributeValues.stringValue;
 
 public class DynamoService implements AuthenticationService {
@@ -79,7 +80,7 @@ public class DynamoService implements AuthenticationService {
     @Override
     public User signUp(
             String email, String password, Subject subject, TermsAndConditions termsAndConditions) {
-        return signUp(email, password, subject, termsAndConditions, false);
+        return signUp(email, password, subject, termsAndConditions, false, 1);
     }
 
     public User signUp(
@@ -87,7 +88,8 @@ public class DynamoService implements AuthenticationService {
             String password,
             Subject subject,
             TermsAndConditions termsAndConditions,
-            boolean isTestUser) {
+            boolean isTestUser,
+            int accountVerified) {
         var dateTime = LocalDateTime.now().toString();
         var hashedPassword = hashPassword(password);
         var userCredentials =
@@ -103,6 +105,7 @@ public class DynamoService implements AuthenticationService {
                         .withEmail(email.toLowerCase(Locale.ROOT))
                         .withSubjectID(subject.toString())
                         .withEmailVerified(true)
+                        .withAccountVerified(accountVerified)
                         .withCreated(dateTime)
                         .withUpdated(dateTime)
                         .withPublicSubjectID((new Subject()).toString())
@@ -746,6 +749,8 @@ public class DynamoService implements AuthenticationService {
                     stringValue(termsAndConditionsVersion.get(i)));
         }
         expression.add("attribute_exists(termsAndConditions.version)");
+        expression.add("accountVerified = :accountVerified");
+        expressionValues.put(":accountVerified", numberValue(1));
 
         String expressionString = expression.stream().collect(Collectors.joining(" AND "));
 
