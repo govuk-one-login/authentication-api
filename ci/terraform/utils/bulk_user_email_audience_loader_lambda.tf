@@ -10,7 +10,32 @@ module "bulk_user_email_audience_loader_lambda_role" {
     aws_iam_policy.bulk_user_email_audience_loader_dynamo_read_access[0].arn,
     aws_iam_policy.bulk_user_email_audience_loader_dynamo_write_access[0].arn,
     aws_iam_policy.bulk_user_email_dynamo_encryption_key_kms_policy[0].arn,
+    aws_iam_policy.bulk_user_email_audience_loader_lambda_invocation_policy[0].arn
   ]
+}
+
+data "aws_iam_policy_document" "bulk_user_email_audience_loader_lambda_invocation_policy_document" {
+  count = local.deploy_bulk_email_users_count
+  statement {
+    sid    = "AllowLambdaInvocation"
+    effect = "Allow"
+
+    actions = [
+      "lambda:InvokeFunction",
+    ]
+
+    resources = [
+      aws_lambda_function.bulk_user_email_audience_loader_lambda[0].arn,
+    ]
+  }
+}
+
+resource "aws_iam_policy" "bulk_user_email_audience_loader_lambda_invocation_policy" {
+  count       = local.deploy_bulk_email_users_count
+  name_prefix = "lambda-invocation-policy"
+  description = "IAM policy managing lambda invocation access for the Bulk Email Users audience loader."
+
+  policy = data.aws_iam_policy_document.bulk_user_email_audience_loader_lambda_invocation_policy_document[0].json
 }
 
 resource "aws_lambda_function" "bulk_user_email_audience_loader_lambda" {
@@ -20,7 +45,7 @@ resource "aws_lambda_function" "bulk_user_email_audience_loader_lambda" {
   handler                        = "uk.gov.di.authentication.utils.lambda.BulkUserEmailAudienceLoaderScheduledEventHandler::handleRequest"
   timeout                        = lookup(var.performance_tuning, "bulk-user-email-audience-loader", local.default_performance_parameters).timeout
   memory_size                    = lookup(var.performance_tuning, "bulk-user-email-audience-loader", local.default_performance_parameters).memory
-  reserved_concurrent_executions = 1
+  reserved_concurrent_executions = 3
   runtime                        = "java11"
   tracing_config {
     mode = "Active"

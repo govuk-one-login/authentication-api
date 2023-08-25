@@ -1,6 +1,9 @@
 package uk.gov.di.authentication.shared.services;
 
 import com.amazonaws.services.lambda.runtime.events.ScheduledEvent;
+import net.minidev.json.JSONObject;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.regions.Region;
@@ -9,9 +12,9 @@ import software.amazon.awssdk.services.lambda.model.InvokeRequest;
 import uk.gov.di.authentication.shared.exceptions.LambdaInvokerServiceException;
 import uk.gov.di.authentication.shared.serialization.Json;
 
-import java.nio.charset.StandardCharsets;
-
 public class LambdaInvokerService implements LambdaInvoker {
+
+    private static final Logger LOG = LogManager.getLogger(LambdaInvokerService.class);
 
     protected final Json objectMapper = SerializationService.getInstance();
 
@@ -43,19 +46,16 @@ public class LambdaInvokerService implements LambdaInvoker {
                     "BULK_USER_EMAIL_AUDIENCE_LOADER_LAMBDA_NAME environment variable not set");
         }
 
-        try {
-            SdkBytes payload =
-                    SdkBytes.fromByteArray(
-                            objectMapper
-                                    .writeValueAsString(scheduledEvent)
-                                    .getBytes(StandardCharsets.UTF_8));
+        JSONObject detail = new JSONObject();
+        detail.appendField("lastEvaluatedKey", scheduledEvent.getDetail().get("lastEvaluatedKey"));
+        detail.appendField(
+                "globalUsersAddedCount", scheduledEvent.getDetail().get("globalUsersAddedCount"));
 
-            InvokeRequest invokeRequest =
-                    InvokeRequest.builder().functionName(lambdaName).payload(payload).build();
-            lambdaClient.invoke(invokeRequest);
+        String jsonPayload = new JSONObject().appendField("detail", detail).toJSONString();
+        SdkBytes payload = SdkBytes.fromUtf8String(jsonPayload);
 
-        } catch (Json.JsonException e) {
-            throw new RuntimeException(e);
-        }
+        InvokeRequest invokeRequest =
+                InvokeRequest.builder().functionName(lambdaName).payload(payload).build();
+        lambdaClient.invoke(invokeRequest);
     }
 }

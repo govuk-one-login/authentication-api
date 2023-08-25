@@ -1,13 +1,14 @@
 package uk.gov.di.authentication.shared.services;
 
 import com.amazonaws.services.lambda.runtime.events.ScheduledEvent;
+import net.minidev.json.JSONObject;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.lambda.LambdaClient;
 import software.amazon.awssdk.services.lambda.model.InvokeRequest;
 import uk.gov.di.authentication.shared.serialization.Json;
 
-import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
@@ -22,18 +23,27 @@ class LambdaInvokerServiceTest {
 
     ScheduledEvent scheduledEvent = mock(ScheduledEvent.class);
 
-    protected final Json objectMapper = SerializationService.getInstance();
-
     @Test
-    void shouldInvokeTheLambdaWithTheGivenScheduledEvent() throws Json.JsonException {
+    void shouldInvokeTheLambdaWithTheGivenScheduledEvent() {
         var functionName = "BULK_USER_EMAIL_AUDIENCE_LOADER";
         when(configurationService.getBulkEmailLoaderLambdaName()).thenReturn(functionName);
+        var lastEvaluatedKey = "email@example.com";
+        var globalUsersAddedCount = "5";
+        Map<String, Object> details =
+                Map.of(
+                        "globalUsersAddedCount",
+                        globalUsersAddedCount,
+                        "lastEvaluatedKey",
+                        lastEvaluatedKey);
+        when(scheduledEvent.getDetail()).thenReturn(details);
 
-        var payload =
-                SdkBytes.fromByteArray(
-                        objectMapper
-                                .writeValueAsString(scheduledEvent)
-                                .getBytes(StandardCharsets.UTF_8));
+        JSONObject detail =
+                new JSONObject()
+                        .appendField("lastEvaluatedKey", lastEvaluatedKey)
+                        .appendField("globalUsersAddedCount", globalUsersAddedCount);
+        String payloadString = new JSONObject().appendField("detail", detail).toJSONString();
+
+        var payload = SdkBytes.fromUtf8String(payloadString);
         InvokeRequest invokeRequest =
                 InvokeRequest.builder().functionName(functionName).payload(payload).build();
         LambdaInvokerService lambdaInvokerService =
