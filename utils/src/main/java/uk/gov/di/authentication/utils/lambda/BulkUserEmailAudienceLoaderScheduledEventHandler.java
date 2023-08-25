@@ -14,6 +14,7 @@ import uk.gov.di.authentication.shared.services.LambdaInvokerService;
 import uk.gov.di.authentication.shared.services.SystemService;
 import uk.gov.di.authentication.utils.exceptions.ExcludedTermsAndConditionsConfigMissingException;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -67,9 +68,6 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
     public Void handleRequest(ScheduledEvent event, Context context) {
         LOG.info("Bulk User Email audience load triggered.");
 
-        var excludedTermsAndConditions =
-                configurationService.getBulkUserEmailExcludedTermsAndConditions();
-
         final long bulkUserEmailMaxAudienceLoadUserCount =
                 configurationService.getBulkUserEmailMaxAudienceLoadUserCount();
         final long batchSize = configurationService.getBulkUserEmailAudienceLoadUserBatchSize();
@@ -77,6 +75,8 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
         Map<String, AttributeValue> exclusiveStartKey = null;
         Long existingCountOfAddedUsers = 0L;
 
+        List<String> excludedTermsAndConditions =
+                configurationService.getBulkUserEmailExcludedTermsAndConditions();
         if (excludedTermsAndConditions == null || excludedTermsAndConditions.isEmpty()) {
             throw new ExcludedTermsAndConditionsConfigMissingException(
                     "Excluded terms and conditions configuration is missing");
@@ -96,9 +96,11 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
         final Long remainingItemsLimit =
                 bulkUserEmailMaxAudienceLoadUserCount - existingCountOfAddedUsers;
         final Long currentBatchSize = Math.min(batchSize, remainingItemsLimit);
+
         AtomicLong itemCounter = new AtomicLong();
         AtomicReference<String> lastEmail = new AtomicReference<>();
         itemCounter.set(0);
+
         dynamoService
                 .getBulkUserEmailAudienceStreamNotOnTermsAndConditionsVersion(
                         exclusiveStartKey, excludedTermsAndConditions)
