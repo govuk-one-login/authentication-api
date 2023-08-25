@@ -136,7 +136,8 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
-                        pair("internalSubjectId", SUBJECT_ID));
+                        pair("internalSubjectId", SUBJECT_ID),
+                        pair("bulk-email-type", "VC_EXPIRY_BULK_EMAIL"));
     }
 
     @Test
@@ -180,7 +181,8 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
-                        pair("internalSubjectId", SUBJECT_ID));
+                        pair("internalSubjectId", SUBJECT_ID),
+                        pair("bulk-email-type", "VC_EXPIRY_BULK_EMAIL"));
     }
 
     @Test
@@ -233,7 +235,8 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
                             AuditService.UNKNOWN,
                             AuditService.UNKNOWN,
                             AuditService.UNKNOWN,
-                            pair("internalSubjectId", TEST_SUBJECT_IDS[j]));
+                            pair("internalSubjectId", TEST_SUBJECT_IDS[j]),
+                            pair("bulk-email-type", "VC_EXPIRY_BULK_EMAIL"));
         }
     }
 

@@ -15,6 +15,7 @@ import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.NotificationService;
+import uk.gov.di.authentication.utils.domain.BulkEmailType;
 import uk.gov.di.authentication.utils.domain.UtilsAuditableEvent;
 import uk.gov.service.notify.NotificationClient;
 import uk.gov.service.notify.NotificationClientException;
@@ -209,6 +210,7 @@ public class BulkUserEmailSenderScheduledEventHandler
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
-                pair("internalSubjectId", userProfile.getSubjectID()));
+                pair("internalSubjectId", userProfile.getSubjectID()),
+                pair("bulk-email-type", BulkEmailType.VC_EXPIRY_BULK_EMAIL.name()));
     }
 }
