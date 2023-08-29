@@ -5,12 +5,19 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.ScheduledEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import uk.gov.di.authentication.shared.entity.BulkEmailStatus;
 import uk.gov.di.authentication.shared.services.BulkEmailUsersService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
+import uk.gov.di.authentication.shared.services.LambdaInvokerService;
+import uk.gov.di.authentication.shared.services.SystemService;
+import uk.gov.di.authentication.utils.exceptions.ExcludedTermsAndConditionsConfigMissingException;
 
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class BulkUserEmailAudienceLoaderScheduledEventHandler
         implements RequestHandler<ScheduledEvent, Void> {
@@ -18,23 +25,31 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
     private static final Logger LOG =
             LogManager.getLogger(BulkUserEmailAudienceLoaderScheduledEventHandler.class);
 
+    public static final String LAST_EVALUATED_KEY = "lastEvaluatedKey";
+    public static final String GLOBAL_USERS_ADDED_COUNT = "globalUsersAddedCount";
+
     private final BulkEmailUsersService bulkEmailUsersService;
 
     private final DynamoService dynamoService;
 
     private final ConfigurationService configurationService;
 
+    private LambdaInvokerService lambdaInvokerService;
+
     public BulkUserEmailAudienceLoaderScheduledEventHandler() {
         this(ConfigurationService.getInstance());
+        this.configurationService.setSystemService(new SystemService());
     }
 
     public BulkUserEmailAudienceLoaderScheduledEventHandler(
             BulkEmailUsersService bulkEmailUsersService,
             DynamoService dynamoService,
-            ConfigurationService configurationService) {
+            ConfigurationService configurationService,
+            LambdaInvokerService lambdaInvokerService) {
         this.bulkEmailUsersService = bulkEmailUsersService;
         this.dynamoService = dynamoService;
         this.configurationService = configurationService;
+        this.lambdaInvokerService = lambdaInvokerService;
     }
 
     public BulkUserEmailAudienceLoaderScheduledEventHandler(
@@ -42,6 +57,11 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
         this.configurationService = configurationService;
         this.bulkEmailUsersService = new BulkEmailUsersService(configurationService);
         this.dynamoService = new DynamoService(configurationService);
+        this.lambdaInvokerService = new LambdaInvokerService(configurationService);
+    }
+
+    public void setLambdaInvoker(LambdaInvokerService lambdaInvokerService) {
+        this.lambdaInvokerService = lambdaInvokerService;
     }
 
     @Override
@@ -50,27 +70,76 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
 
         final long bulkUserEmailMaxAudienceLoadUserCount =
                 configurationService.getBulkUserEmailMaxAudienceLoadUserCount();
+        final long batchSize = configurationService.getBulkUserEmailAudienceLoadUserBatchSize();
+
+        Map<String, AttributeValue> exclusiveStartKey = null;
+        Long existingCountOfAddedUsers = 0L;
+
+        List<String> excludedTermsAndConditions =
+                configurationService.getBulkUserEmailExcludedTermsAndConditions();
+        if (excludedTermsAndConditions == null || excludedTermsAndConditions.isEmpty()) {
+            throw new ExcludedTermsAndConditionsConfigMissingException(
+                    "Excluded terms and conditions configuration is missing");
+        }
+
+        if (event.getDetail() != null && event.getDetail().containsKey(LAST_EVALUATED_KEY)) {
+            String lastEvaluatedKey = event.getDetail().get(LAST_EVALUATED_KEY).toString();
+            exclusiveStartKey =
+                    Map.of("Email", AttributeValue.builder().s(lastEvaluatedKey).build());
+        }
+
+        if (event.getDetail() != null && event.getDetail().containsKey(GLOBAL_USERS_ADDED_COUNT)) {
+            existingCountOfAddedUsers =
+                    Long.parseLong(event.getDetail().get(GLOBAL_USERS_ADDED_COUNT).toString());
+        }
+
+        final Long remainingItemsLimit =
+                bulkUserEmailMaxAudienceLoadUserCount - existingCountOfAddedUsers;
+        final Long currentBatchSize = Math.min(batchSize, remainingItemsLimit);
 
         AtomicLong itemCounter = new AtomicLong();
+        AtomicReference<String> lastEmail = new AtomicReference<>();
         itemCounter.set(0);
+
         dynamoService
-                .getBulkUserEmailAudienceStream()
-                .takeWhile(
-                        userProfile -> (bulkUserEmailMaxAudienceLoadUserCount > itemCounter.get()))
+                .getBulkUserEmailAudienceStreamNotOnTermsAndConditionsVersion(
+                        exclusiveStartKey, excludedTermsAndConditions)
+                .takeWhile(userProfile -> (currentBatchSize > itemCounter.get()))
                 .forEach(
                         userProfile -> {
                             itemCounter.getAndIncrement();
                             bulkEmailUsersService.addUser(
                                     userProfile.getSubjectID(), BulkEmailStatus.PENDING);
                             LOG.info("Bulk User Email added item number: {}", itemCounter);
-                            if (itemCounter.get() >= bulkUserEmailMaxAudienceLoadUserCount) {
+                            if (itemCounter.get() >= remainingItemsLimit) {
                                 LOG.info(
                                         "Bulk User Email max audience load user count reached: {}. Stopping load.",
                                         itemCounter);
                             }
+                            lastEmail.set(userProfile.getEmail());
                         });
 
-        LOG.info("Bulk User Email audience load complete.  Total users added: {}", itemCounter);
+        LOG.info(
+                "Bulk User Email audience batch load complete.  Total users added this batch: {}",
+                itemCounter);
+
+        if (itemCounter.get() == 0) {
+            LOG.info("No items remaining to insert, finished import");
+        } else if (itemCounter.get() >= remainingItemsLimit) {
+            LOG.info(
+                    "Bulk User Email max audience load user count reached. Total items added {}",
+                    itemCounter.get() + existingCountOfAddedUsers);
+        } else {
+            event.setDetail(
+                    Map.of(
+                            LAST_EVALUATED_KEY,
+                            lastEmail.get(),
+                            GLOBAL_USERS_ADDED_COUNT,
+                            existingCountOfAddedUsers + itemCounter.get()));
+            LOG.info("Bulk User Email re-invoke.");
+            lambdaInvokerService.invokeWithPayload(event);
+        }
+
         return null;
     }
 }

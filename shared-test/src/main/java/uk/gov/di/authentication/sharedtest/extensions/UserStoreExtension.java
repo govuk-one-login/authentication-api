@@ -77,10 +77,42 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
         return signUp(email, password, subject, false);
     }
 
+    public String addUnverifiedUser(
+            String email, String password, Subject subject, String termsAndConditionsVersion) {
+        return signUp(
+                email, password, subject, false, Optional.ofNullable(termsAndConditionsVersion), 0);
+    }
+
+    public String addUnverifiedUser(String email, String password) {
+        return signUp(email, password, new Subject(), false, Optional.of("1.0"), 0);
+    }
+
+    public String signUp(
+            String email, String password, Subject subject, String termsAndConditionsVersion) {
+        return signUp(
+                email, password, subject, false, Optional.ofNullable(termsAndConditionsVersion), 1);
+    }
+
     public String signUp(String email, String password, Subject subject, boolean isTestUser) {
+        return signUp(email, password, subject, isTestUser, Optional.of("1.0"), 1);
+    }
+
+    private String signUp(
+            String email,
+            String password,
+            Subject subject,
+            boolean isTestUser,
+            Optional<String> termsAndConditionsVersion,
+            int accountVerified) {
         TermsAndConditions termsAndConditions =
-                new TermsAndConditions("1.0", LocalDateTime.now(ZoneId.of("UTC")).toString());
-        dynamoService.signUp(email, password, subject, termsAndConditions, isTestUser);
+                termsAndConditionsVersion
+                        .map(
+                                v ->
+                                        new TermsAndConditions(
+                                                v, LocalDateTime.now(ZoneId.of("UTC")).toString()))
+                        .orElse(null);
+        dynamoService.signUp(
+                email, password, subject, termsAndConditions, isTestUser, accountVerified);
         return dynamoService.getUserProfileByEmail(email).getPublicSubjectID();
     }
 

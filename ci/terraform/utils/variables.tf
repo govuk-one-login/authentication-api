@@ -101,7 +101,12 @@ variable "bulk_user_email_batch_pause_duration" {
 
 variable "bulk_user_email_max_audience_load_user_count" {
   type    = number
-  default = null
+  default = 0
+}
+
+variable "bulk_user_email_max_audience_load_user_batch_size" {
+  type    = number
+  default = 0
 }
 
 variable "bulk_user_email_email_sending_enabled" {
@@ -112,6 +117,11 @@ variable "bulk_user_email_email_sending_enabled" {
 variable "bulk_user_email_send_schedule_enabled" {
   type    = bool
   default = false
+}
+
+variable "bulk_user_email_excluded_terms_and_conditions" {
+  type    = string
+  default = null
 }
 
 variable "bulk_user_email_send_schedule_expression" {

@@ -9,11 +9,15 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.shared.entity.BulkEmailStatus;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.BulkEmailUsersService;
+import uk.gov.di.authentication.shared.services.LambdaInvokerService;
+import uk.gov.di.authentication.shared.services.SystemService;
 import uk.gov.di.authentication.sharedtest.basetest.HandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.BulkEmailUsersExtension;
 import uk.gov.di.authentication.utils.lambda.BulkUserEmailAudienceLoaderScheduledEventHandler;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 import static java.lang.String.format;
 import static java.lang.String.valueOf;
@@ -30,6 +34,10 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerIntegrationTest
 
     private BulkEmailUsersService bulkEmailUsersService;
 
+    private Long bulkUserEmailAudienceLoadUserBatchSize = 5L;
+
+    private Long bulkUserEmailMaxAudienceLoadUserCount = 24L;
+
     @BeforeEach
     void setup() {
         var configuration =
@@ -41,7 +49,8 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerIntegrationTest
                         ipvPrivateKeyJwtSigner,
                         spotQueue,
                         docAppPrivateKeyJwtSigner,
-                        configurationParameters) {
+                        configurationParameters,
+                        new SystemService()) {
 
                     @Override
                     public String getTxmaAuditQueueUrl() {
@@ -54,13 +63,13 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerIntegrationTest
                     }
 
                     @Override
-                    public int getBulkUserEmailMaxBatchCount() {
-                        return 4;
+                    public long getBulkUserEmailAudienceLoadUserBatchSize() {
+                        return bulkUserEmailAudienceLoadUserBatchSize;
                     }
 
                     @Override
                     public long getBulkUserEmailMaxAudienceLoadUserCount() {
-                        return 1000L;
+                        return bulkUserEmailMaxAudienceLoadUserCount;
                     }
 
                     @Override
@@ -68,7 +77,19 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerIntegrationTest
                         return true;
                     }
                 };
+
         handler = new BulkUserEmailAudienceLoaderScheduledEventHandler(configuration);
+        var lambdaInvokerService =
+                new LambdaInvokerService(configuration, null) {
+                    @Override
+                    public void invokeWithPayload(ScheduledEvent scheduledEvent) {
+                        handler.handleRequest(scheduledEvent, context);
+                    }
+                };
+
+        ((BulkUserEmailAudienceLoaderScheduledEventHandler) handler)
+                .setLambdaInvoker(lambdaInvokerService);
+
         bulkEmailUsersService = new BulkEmailUsersService(configuration);
     }
 
@@ -77,7 +98,7 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerIntegrationTest
 
         userStore.signUp("user.1@account.gov.uk", "password123", new Subject("1"));
 
-        makeRequest();
+        makeRequest(Optional.empty());
 
         var usersLoaded = bulkEmailUsersService.getNSubjectIdsByStatus(10, BulkEmailStatus.PENDING);
 
@@ -86,19 +107,61 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerIntegrationTest
     }
 
     @Test
-    void shouldLoadMultipleUsersFromUserProfile() {
-        final int numberOfUsers = 15;
+    void shouldLoadMultipleUsersFromUserProfileWhenBatchSizeLowerThanUsers() {
+        final int numberOfUsers = bulkUserEmailAudienceLoadUserBatchSize.intValue() + 10;
         setupDynamo(numberOfUsers);
-        makeRequest();
+        makeRequest(Optional.empty());
 
         var usersLoaded =
                 bulkEmailUsersService.getNSubjectIdsByStatus(
-                        numberOfUsers, BulkEmailStatus.PENDING);
+                        numberOfUsers + 1, BulkEmailStatus.PENDING);
 
         assertThat(usersLoaded.size(), equalTo(numberOfUsers));
         for (int i = 1; i <= usersLoaded.size(); i++) {
             assertTrue(usersLoaded.contains(valueOf(i)));
         }
+    }
+
+    @Test
+    void shouldLoadMultipleUsersFromUserProfileWhenBatchSizeHigherThanUsers() {
+        final int numberOfUsers = 7;
+        setupDynamo(numberOfUsers);
+        makeRequest(Optional.empty());
+
+        var usersLoaded =
+                bulkEmailUsersService.getNSubjectIdsByStatus(
+                        numberOfUsers + 1, BulkEmailStatus.PENDING);
+
+        assertThat(usersLoaded.size(), equalTo(numberOfUsers));
+        for (int i = 1; i <= usersLoaded.size(); i++) {
+            assertTrue(usersLoaded.contains(valueOf(i)));
+        }
+    }
+
+    @Test
+    void shouldGetVerifiedUsersWithoutTheExcludedTermsAndConditionsVersions() {
+        // Excluded terms and conditions are set as the
+        // BULK_USER_EMAIL_EXCLUDED_TERMS_AND_CONDITIONS
+        // environment variable
+        setupDynamoUsersWithTermsAndConditionsVersions();
+        makeRequest(Optional.empty());
+
+        var usersLoaded = bulkEmailUsersService.getNSubjectIdsByStatus(15, BulkEmailStatus.PENDING);
+
+        assertThat(usersLoaded.size(), equalTo(7));
+    }
+
+    @Test
+    void shouldOnlyLoadUsersUpToTheMaxLimit() {
+        final Integer numberOfUsers = bulkUserEmailMaxAudienceLoadUserCount.intValue() + 10;
+        setupDynamo(numberOfUsers);
+        makeRequest(Optional.empty());
+
+        var usersLoaded =
+                bulkEmailUsersService.getNSubjectIdsByStatus(
+                        numberOfUsers + 1, BulkEmailStatus.PENDING);
+
+        assertThat(usersLoaded.size(), equalTo(bulkUserEmailMaxAudienceLoadUserCount.intValue()));
     }
 
     private void setupDynamo(int numberOfUsers) {
@@ -108,12 +171,32 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerIntegrationTest
         }
     }
 
-    private void makeRequest() {
+    private void setupDynamoUsersWithTermsAndConditionsVersions() {
+        userStore.signUp("email0", "password-1", new Subject("0000"), "1.0");
+        userStore.signUp("email1", "password-1", new Subject("1111"), "1.0");
+        userStore.signUp("email2", "password-1", new Subject("2222"), "1.0");
+        userStore.signUp("email3", "password-1", new Subject("3333"), "1.1");
+        userStore.signUp("email4", "password-1", new Subject("4444"), "1.2");
+        userStore.signUp("email5", "password-1", new Subject("5555"), "1.2");
+        userStore.signUp("email6", "password-1", new Subject("6666"), "1.2");
+        userStore.signUp("email7", "password-1", new Subject("7777"), "1.5");
+        userStore.signUp("email8", "password-1", new Subject("8888"), "1.5");
+        userStore.signUp("email9", "password-1", new Subject("9999"), "1.6");
+        userStore.signUp("email10", "password-1", new Subject("A0000"), null);
+        userStore.signUp("email11", "password-1", new Subject("A1111"), null);
+        userStore.addUnverifiedUser("email12", "password-1", new Subject("A2222"), "1.3");
+        userStore.addUnverifiedUser("email13", "password-1", new Subject("A3333"), "1.3");
+        userStore.addUnverifiedUser("email14", "password-1", new Subject("A4444"), "1.3");
+    }
+
+    private void makeRequest(Optional<Map<String, Object>> exclusiveStartKey) {
+        var detail = exclusiveStartKey.orElse(Map.of());
         ScheduledEvent scheduledEvent =
                 new ScheduledEvent()
                         .withAccount("12345678")
                         .withRegion("eu-west-2")
                         .withDetailType("Scheduled Event")
+                        .withDetail(detail)
                         .withSource("aws.events")
                         .withId("abcd-1234-defg-5678")
                         .withTime(DateTime.now())

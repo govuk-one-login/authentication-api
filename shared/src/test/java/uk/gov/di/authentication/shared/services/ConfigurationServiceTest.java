@@ -6,6 +6,8 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -87,5 +89,31 @@ class ConfigurationServiceTest {
         assertEquals(
                 Optional.of(DeliveryReceiptsNotificationType.TERMS_AND_CONDITIONS_BULK_EMAIL),
                 configurationService.getNotificationTypeFromTemplateId("1234-bulk"));
+    }
+
+    @Test
+    void shouldReadTermsAndConditionsVersionCSVList() {
+        when(systemService.getOrDefault("BULK_USER_EMAIL_EXCLUDED_TERMS_AND_CONDITIONS", ""))
+                .thenReturn("1.1,1.3,1.5");
+
+        ConfigurationService configurationService = new ConfigurationService();
+        configurationService.setSystemService(systemService);
+
+        assertEquals(
+                List.of("1.1", "1.3", "1.5"),
+                configurationService.getBulkUserEmailExcludedTermsAndConditions());
+    }
+
+    @Test
+    void shouldReadEmptyTermsAndConditionsVersionCSVList() {
+        when(systemService.getOrDefault("BULK_USER_EMAIL_EXCLUDED_TERMS_AND_CONDITIONS", ""))
+                .thenReturn("");
+
+        ConfigurationService configurationService = new ConfigurationService();
+        configurationService.setSystemService(systemService);
+
+        assertEquals(
+                Collections.EMPTY_LIST,
+                configurationService.getBulkUserEmailExcludedTermsAndConditions());
     }
 }

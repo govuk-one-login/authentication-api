@@ -42,7 +42,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     private SsmClient ssmClient;
     private Map<String, String> ssmRedisParameters;
     private Optional<String> passwordPepper;
-    private SystemService systemService;
+    protected SystemService systemService;
 
     public ConfigurationService() {}
 
@@ -96,9 +96,25 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 System.getenv().getOrDefault("BULK_USER_EMAIL_MAX_AUDIENCE_LOAD_USER_COUNT", "0"));
     }
 
+    public long getBulkUserEmailAudienceLoadUserBatchSize() {
+        return Long.parseLong(
+                System.getenv()
+                        .getOrDefault("BULK_USER_EMAIL_MAX_AUDIENCE_LOAD_USER_BATCH_SIZE", "0"));
+    }
+
     public long getBulkUserEmailBatchPauseDuration() {
         return Long.parseLong(
                 System.getenv().getOrDefault("BULK_USER_EMAIL_BATCH_PAUSE_DURATION", "0"));
+    }
+
+    public List<String> getBulkUserEmailExcludedTermsAndConditions() {
+        String configurationValue =
+                systemService.getOrDefault("BULK_USER_EMAIL_EXCLUDED_TERMS_AND_CONDITIONS", "");
+        if (configurationValue == null || configurationValue.isEmpty()) {
+            return List.of();
+        } else {
+            return Arrays.stream(configurationValue.split(",")).collect(Collectors.toList());
+        }
     }
 
     public long getDefaultOtpCodeExpiry() {
@@ -147,6 +163,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv()
                 .getOrDefault("BULK_USER_EMAIL_EMAIL_SENDING_ENABLED", "false")
                 .equals("true");
+    }
+
+    public String getBulkEmailLoaderLambdaName() {
+        return System.getenv().getOrDefault("BULK_USER_EMAIL_AUDIENCE_LOADER_LAMBDA_NAME", "");
     }
 
     public URI getAuthenticationAuthCallbackURI() {
