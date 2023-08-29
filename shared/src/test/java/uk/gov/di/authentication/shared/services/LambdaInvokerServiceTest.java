@@ -5,6 +5,7 @@ import net.minidev.json.JSONObject;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.lambda.LambdaClient;
+import software.amazon.awssdk.services.lambda.model.InvocationType;
 import software.amazon.awssdk.services.lambda.model.InvokeRequest;
 import uk.gov.di.authentication.shared.serialization.Json;
 
@@ -45,7 +46,11 @@ class LambdaInvokerServiceTest {
 
         var payload = SdkBytes.fromUtf8String(payloadString);
         InvokeRequest invokeRequest =
-                InvokeRequest.builder().functionName(functionName).payload(payload).build();
+                InvokeRequest.builder()
+                        .functionName(functionName)
+                        .invocationType(InvocationType.EVENT)
+                        .payload(payload)
+                        .build();
         LambdaInvokerService lambdaInvokerService =
                 new LambdaInvokerService(configurationService, lambdaClient);
 
