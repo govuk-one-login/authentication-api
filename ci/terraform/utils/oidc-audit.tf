@@ -26,7 +26,7 @@ data "aws_iam_policy_document" "txma_audit_queue_access_policy_document" {
       "kms:Decrypt"
     ]
     resources = [
-      data.aws_kms_alias.oidc_txma_audit_queue_encryption_key_alias.arn
+      data.aws_kms_alias.oidc_txma_audit_queue_encryption_key_alias.target_key_arn
     ]
   }
 }
