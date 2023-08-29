@@ -97,6 +97,12 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
                 bulkUserEmailMaxAudienceLoadUserCount - existingCountOfAddedUsers;
         final Long currentBatchSize = Math.min(batchSize, remainingItemsLimit);
 
+        LOG.info(
+                "Bulk User Email audience load parameters before batch: total users added so far {}, remaining items limit {}, batch size {}",
+                remainingItemsLimit,
+                existingCountOfAddedUsers,
+                currentBatchSize);
+
         AtomicLong itemCounter = new AtomicLong();
         AtomicReference<String> lastEmail = new AtomicReference<>();
         itemCounter.set(0);
@@ -123,20 +129,23 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
                 "Bulk User Email audience batch load complete.  Total users added this batch: {}",
                 itemCounter);
 
+        final long totalUsersAddedSoFar = itemCounter.get() + existingCountOfAddedUsers;
         if (itemCounter.get() == 0) {
             LOG.info("No items remaining to insert, finished import");
         } else if (itemCounter.get() >= remainingItemsLimit) {
             LOG.info(
-                    "Bulk User Email max audience load user count reached. Total items added {}",
-                    itemCounter.get() + existingCountOfAddedUsers);
+                    "Bulk User Email max audience load max user count reached. Total users added {}",
+                    totalUsersAddedSoFar);
         } else {
             event.setDetail(
                     Map.of(
                             LAST_EVALUATED_KEY,
                             lastEmail.get(),
                             GLOBAL_USERS_ADDED_COUNT,
-                            existingCountOfAddedUsers + itemCounter.get()));
-            LOG.info("Bulk User Email re-invoke.");
+                            totalUsersAddedSoFar));
+            LOG.info(
+                    "Bulk User Email re-invoke.  Total users added so far {}",
+                    totalUsersAddedSoFar);
             lambdaInvokerService.invokeWithPayload(event);
         }
 

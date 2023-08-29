@@ -8,6 +8,7 @@ import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.lambda.LambdaClient;
+import software.amazon.awssdk.services.lambda.model.InvocationType;
 import software.amazon.awssdk.services.lambda.model.InvokeRequest;
 import uk.gov.di.authentication.shared.exceptions.LambdaInvokerServiceException;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -55,7 +56,11 @@ public class LambdaInvokerService implements LambdaInvoker {
         SdkBytes payload = SdkBytes.fromUtf8String(jsonPayload);
 
         InvokeRequest invokeRequest =
-                InvokeRequest.builder().functionName(lambdaName).payload(payload).build();
+                InvokeRequest.builder()
+                        .functionName(lambdaName)
+                        .invocationType(InvocationType.EVENT)
+                        .payload(payload)
+                        .build();
         lambdaClient.invoke(invokeRequest);
     }
 }
