@@ -21,6 +21,7 @@ import uk.gov.di.authentication.shared.services.NotificationService;
 import uk.gov.di.authentication.utils.domain.UtilsAuditableEvent;
 import uk.gov.service.notify.NotificationClientException;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +30,7 @@ import java.util.Optional;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -63,6 +65,7 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
     private static final String EMAIL = "user@account.gov.uk";
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final byte[] SALT = SaltHelper.generateNewSalt();
+    private static final ByteBuffer SALT_BYTE_BUFFER = ByteBuffer.wrap(SALT);
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     SUBJECT_ID, "test.account.gov.uk", SALT);
@@ -96,8 +99,9 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
     }
 
     @Test
-    void shouldSendSingleBatchOfSingleEmailAndUpdateStatusToEmailSent()
-            throws NotificationClientException {
+    void
+            shouldSendSingleBatchOfSingleEmailAndNotSubmitAuditEventForUserWithoutSaltThenUpdateStatusToEmailSent()
+                    throws NotificationClientException {
         when(configurationService.getBulkUserEmailBatchQueryLimit()).thenReturn(1);
         when(configurationService.getBulkUserEmailMaxBatchCount()).thenReturn(1);
         when(configurationService.getBulkUserEmailBatchPauseDuration()).thenReturn(1L);
@@ -131,7 +135,7 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
-                        expectedCommonSubject,
+                        AuditService.UNKNOWN,
                         EMAIL,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
@@ -141,7 +145,7 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
     }
 
     @Test
-    void shouldNotSendEmailWhenSendEmailFlagNotEnabledAndUpdateStatusToEmailSent()
+    void shouldNotSendEmailOrAuditEventWhenSendEmailFlagNotEnabledAndUpdateStatusToEmailSent()
             throws NotificationClientException {
         when(configurationService.getBulkUserEmailBatchQueryLimit()).thenReturn(1);
         when(configurationService.getBulkUserEmailMaxBatchCount()).thenReturn(1);
@@ -152,7 +156,11 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
         when(dynamoService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
         when(dynamoService.getOptionalUserProfileFromSubject(SUBJECT_ID))
                 .thenReturn(
-                        Optional.of(new UserProfile().withEmail(EMAIL).withSubjectID(SUBJECT_ID)));
+                        Optional.of(
+                                new UserProfile()
+                                        .withEmail(EMAIL)
+                                        .withSubjectID(SUBJECT_ID)
+                                        .withSalt(SALT_BYTE_BUFFER)));
         when(bulkEmailUsersService.updateUserStatus(SUBJECT_ID, BulkEmailStatus.EMAIL_SENT))
                 .thenReturn(
                         Optional.of(
@@ -170,7 +178,7 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
                         LocaleHelper.SupportedLanguage.EN);
         verify(bulkEmailUsersService, times(1))
                 .updateUserStatus(SUBJECT_ID, BulkEmailStatus.EMAIL_SENT);
-        verify(auditService)
+        verify(auditService, never())
                 .submitAuditEvent(
                         UtilsAuditableEvent.BULK_EMAIL_SENT,
                         AuditService.UNKNOWN,
@@ -186,7 +194,7 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
     }
 
     @Test
-    void shouldSendSingleBatchOfEmailsAndUpdateStatusToEmailSent()
+    void shouldSendSingleBatchOfEmailsAndSendAuditEventsThenUpdateStatusToEmailSent()
             throws NotificationClientException {
         when(configurationService.getBulkUserEmailBatchQueryLimit()).thenReturn(5);
         when(configurationService.getBulkUserEmailMaxBatchCount()).thenReturn(1);
@@ -200,7 +208,8 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
                             Optional.of(
                                     new UserProfile()
                                             .withEmail(TEST_EMAILS[i])
-                                            .withSubjectID(TEST_SUBJECT_IDS[i])));
+                                            .withSubjectID(TEST_SUBJECT_IDS[i])
+                                            .withSalt(SALT_BYTE_BUFFER)));
             when(bulkEmailUsersService.updateUserStatus(
                             TEST_SUBJECT_IDS[i], BulkEmailStatus.EMAIL_SENT))
                     .thenReturn(
