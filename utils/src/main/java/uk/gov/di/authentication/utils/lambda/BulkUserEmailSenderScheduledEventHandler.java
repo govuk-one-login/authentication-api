@@ -119,8 +119,9 @@ public class BulkUserEmailSenderScheduledEventHandler
                                 .ifPresentOrElse(
                                         userProfile -> {
                                             try {
-                                                sendNotifyEmail(userProfile.getEmail());
-                                                addAuditEventForEmailSent(userProfile);
+                                                if (sendNotifyEmail(userProfile.getEmail())) {
+                                                    addAuditEventForEmailSent(userProfile);
+                                                }
                                                 updateBulkUserStatus(
                                                         subjectId, BulkEmailStatus.EMAIL_SENT);
                                             } catch (NotificationClientException e) {
@@ -157,7 +158,7 @@ public class BulkUserEmailSenderScheduledEventHandler
         return null;
     }
 
-    private void sendNotifyEmail(String email) throws NotificationClientException {
+    private boolean sendNotifyEmail(String email) throws NotificationClientException {
         if (configurationService.isBulkUserEmailEmailSendingEnabled()) {
             LOG.info("Bulk user email sending email.");
             notificationService.sendEmail(
@@ -165,8 +166,10 @@ public class BulkUserEmailSenderScheduledEventHandler
                     Map.of(),
                     TERMS_AND_CONDITIONS_BULK_EMAIL,
                     LocaleHelper.SupportedLanguage.EN);
+            return true;
         } else {
             LOG.info("Bulk user email email sending not enabled.");
+            return false;
         }
     }
 
@@ -198,14 +201,19 @@ public class BulkUserEmailSenderScheduledEventHandler
 
     private void addAuditEventForEmailSent(UserProfile userProfile) {
         var internalCommonSubjectIdentifier =
-                ClientSubjectHelper.getSubjectWithSectorIdentifier(
-                        userProfile, configurationService.getInternalSectorUri(), dynamoService);
+                userProfile.getSalt() != null
+                        ? ClientSubjectHelper.getSubjectWithSectorIdentifier(
+                                        userProfile,
+                                        configurationService.getInternalSectorUri(),
+                                        dynamoService)
+                                .getValue()
+                        : AuditService.UNKNOWN;
         auditService.submitAuditEvent(
                 UtilsAuditableEvent.BULK_EMAIL_SENT,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
-                internalCommonSubjectIdentifier.getValue(),
+                internalCommonSubjectIdentifier,
                 userProfile.getEmail(),
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
