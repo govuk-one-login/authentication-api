@@ -36,7 +36,7 @@ resource "aws_lambda_function" "bulk_user_email_send_lambda" {
   code_signing_config_arn = local.lambda_code_signing_configuration_arn
 
   vpc_config {
-    security_group_ids = [local.authentication_security_group_id]
+    security_group_ids = [local.authentication_egress_security_group_id]
     subnet_ids         = local.authentication_subnet_ids
   }
 
