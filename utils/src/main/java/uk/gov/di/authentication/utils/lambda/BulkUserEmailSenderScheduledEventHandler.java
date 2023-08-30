@@ -193,7 +193,7 @@ public class BulkUserEmailSenderScheduledEventHandler
         cloudwatchMetricsService.incrementCounter(
                 "BulkEmailStatus",
                 Map.of(
-                        "BulkEmailStatus",
+                        "Status",
                         bulkEmailStatus.getValue(),
                         "Environment",
                         configurationService.getEnvironment()));
