@@ -7,3 +7,5 @@ internal_sector_uri = "https://identity.staging.account.gov.uk"
 allow_bulk_test_users = true
 
 shared_state_bucket = "di-auth-staging-tfstate"
+
+bulk_user_email_excluded_terms_and_conditions = "1.5,1.6,1.7"
