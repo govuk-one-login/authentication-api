@@ -4,6 +4,12 @@ variable "oidc_api_lambda_zip_file" {
   type        = string
 }
 
+variable "auth_ext_lambda_zip_file" {
+  default     = "../../../auth-external-api/build/distributions/auth-external-api.zip"
+  description = "Location of the Auth External API Lambda ZIP file"
+  type        = string
+}
+
 variable "frontend_api_lambda_zip_file" {
   default     = "../../../frontend-api/build/distributions/frontend-api.zip"
   description = "Location of the Frontend API Lambda ZIP file"
