@@ -14,7 +14,7 @@ resource "aws_lambda_function" "backchannel_logout_request_lambda" {
   handler       = "uk.gov.di.authentication.oidc.lambda.BackChannelLogoutRequestHandler::handleRequest"
   timeout       = 30
   memory_size   = 512
-  runtime       = "java11"
+  runtime       = "java17"
   publish       = true
 
   s3_bucket         = aws_s3_bucket.source_bucket.bucket

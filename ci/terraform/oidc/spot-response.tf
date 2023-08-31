@@ -76,7 +76,7 @@ resource "aws_lambda_function" "spot_response_lambda" {
   handler       = "uk.gov.di.authentication.ipv.lambda.SPOTResponseHandler::handleRequest"
   timeout       = 30
   memory_size   = 512
-  runtime       = "java11"
+  runtime       = "java17"
   publish       = true
 
   s3_bucket         = aws_s3_bucket.source_bucket.bucket

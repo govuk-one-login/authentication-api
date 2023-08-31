@@ -72,7 +72,7 @@ resource "aws_lambda_function" "audit_processor_lambda" {
   }
   kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
 
-  runtime = "java11"
+  runtime = "java17"
 
   tags = local.default_tags
 }
