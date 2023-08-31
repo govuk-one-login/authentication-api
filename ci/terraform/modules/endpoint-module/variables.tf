@@ -52,7 +52,7 @@ variable "handler_environment_variables" {
 
 variable "handler_runtime" {
   type    = string
-  default = "java11"
+  default = "java17"
 }
 
 variable "rest_api_id" {
