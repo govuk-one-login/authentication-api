@@ -89,12 +89,15 @@ public class BulkUserEmailSenderScheduledEventHandler
         final int bulkUserEmailMaxBatchCount = configurationService.getBulkUserEmailMaxBatchCount();
         final long bulkUserEmailBatchPauseDuration =
                 configurationService.getBulkUserEmailBatchPauseDuration();
+        final List<String> bulkUserEmailExcludedTermsAndConditions =
+                configurationService.getBulkUserEmailExcludedTermsAndConditions();
 
         LOG.info(
-                "Bulk User Email Send configuration - bulkUserEmailBatchQueryLimit: {}, bulkUserEmailMaxBatchCount: {}, bulkUserEmailBatchPauseDuration: {}",
+                "Bulk User Email Send configuration - bulkUserEmailBatchQueryLimit: {}, bulkUserEmailMaxBatchCount: {}, bulkUserEmailBatchPauseDuration: {}, excludedTermsAndConditions: {}",
                 bulkUserEmailBatchQueryLimit,
                 bulkUserEmailMaxBatchCount,
-                bulkUserEmailBatchPauseDuration);
+                bulkUserEmailBatchPauseDuration,
+                bulkUserEmailExcludedTermsAndConditions);
 
         updateTableSizeMetric();
 
@@ -117,22 +120,11 @@ public class BulkUserEmailSenderScheduledEventHandler
                         dynamoService
                                 .getOptionalUserProfileFromSubject(subjectId)
                                 .ifPresentOrElse(
-                                        userProfile -> {
-                                            try {
-                                                if (sendNotifyEmail(userProfile.getEmail())) {
-                                                    addAuditEventForEmailSent(userProfile);
-                                                }
-                                                updateBulkUserStatus(
-                                                        subjectId, BulkEmailStatus.EMAIL_SENT);
-                                            } catch (NotificationClientException e) {
-                                                LOG.error(
-                                                        "Unable to send bulk email to user: {}",
-                                                        e.getMessage());
-                                                updateBulkUserStatus(
+                                        userProfile ->
+                                                sendEmailIfRequiredAndUpdateStatus(
+                                                        userProfile,
                                                         subjectId,
-                                                        BulkEmailStatus.ERROR_SENDING_EMAIL);
-                                            }
-                                        },
+                                                        bulkUserEmailExcludedTermsAndConditions),
                                         () -> {
                                             LOG.warn("User not found by subject id");
                                             updateBulkUserStatus(
@@ -170,6 +162,29 @@ public class BulkUserEmailSenderScheduledEventHandler
         } else {
             LOG.info("Bulk user email email sending not enabled.");
             return false;
+        }
+    }
+
+    private void sendEmailIfRequiredAndUpdateStatus(
+            UserProfile userProfile,
+            String subjectId,
+            List<String> bulkUserEmailExcludedTermsAndConditions) {
+        boolean hasAcceptedRecentTermsAndConditions =
+                (userProfile.getTermsAndConditions() != null
+                        && bulkUserEmailExcludedTermsAndConditions.contains(
+                                userProfile.getTermsAndConditions().getVersion()));
+        if (hasAcceptedRecentTermsAndConditions) {
+            updateBulkUserStatus(subjectId, BulkEmailStatus.TERMS_ACCEPTED_RECENTLY);
+        } else {
+            try {
+                if (sendNotifyEmail(userProfile.getEmail())) {
+                    addAuditEventForEmailSent(userProfile);
+                }
+                updateBulkUserStatus(subjectId, BulkEmailStatus.EMAIL_SENT);
+            } catch (NotificationClientException e) {
+                LOG.error("Unable to send bulk email to user: {}", e.getMessage());
+                updateBulkUserStatus(subjectId, BulkEmailStatus.ERROR_SENDING_EMAIL);
+            }
         }
     }
 

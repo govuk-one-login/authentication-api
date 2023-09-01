@@ -8,9 +8,11 @@ import software.amazon.awssdk.services.dynamodb.model.DescribeTableResponse;
 import software.amazon.awssdk.services.dynamodb.model.TableDescription;
 import uk.gov.di.authentication.shared.entity.BulkEmailStatus;
 import uk.gov.di.authentication.shared.entity.BulkEmailUser;
+import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.BulkEmailUsersService;
@@ -106,12 +108,21 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
         when(configurationService.getBulkUserEmailMaxBatchCount()).thenReturn(1);
         when(configurationService.getBulkUserEmailBatchPauseDuration()).thenReturn(1L);
         when(configurationService.isBulkUserEmailEmailSendingEnabled()).thenReturn(true);
+        when(configurationService.getBulkUserEmailExcludedTermsAndConditions())
+                .thenReturn(List.of("1.1"));
         when(bulkEmailUsersService.getNSubjectIdsByStatus(1, BulkEmailStatus.PENDING))
                 .thenReturn(List.of(SUBJECT_ID));
         when(dynamoService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
         when(dynamoService.getOptionalUserProfileFromSubject(SUBJECT_ID))
                 .thenReturn(
-                        Optional.of(new UserProfile().withEmail(EMAIL).withSubjectID(SUBJECT_ID)));
+                        Optional.of(
+                                new UserProfile()
+                                        .withEmail(EMAIL)
+                                        .withSubjectID(SUBJECT_ID)
+                                        .withTermsAndConditions(
+                                                new TermsAndConditions(
+                                                        "1.0",
+                                                        NowHelper.now().toInstant().toString()))));
         when(bulkEmailUsersService.updateUserStatus(SUBJECT_ID, BulkEmailStatus.EMAIL_SENT))
                 .thenReturn(
                         Optional.of(
@@ -151,6 +162,8 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
         when(configurationService.getBulkUserEmailMaxBatchCount()).thenReturn(1);
         when(configurationService.getBulkUserEmailBatchPauseDuration()).thenReturn(1L);
         when(configurationService.isBulkUserEmailEmailSendingEnabled()).thenReturn(false);
+        when(configurationService.getBulkUserEmailExcludedTermsAndConditions())
+                .thenReturn(List.of());
         when(bulkEmailUsersService.getNSubjectIdsByStatus(1, BulkEmailStatus.PENDING))
                 .thenReturn(List.of(SUBJECT_ID));
         when(dynamoService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
@@ -194,12 +207,71 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
     }
 
     @Test
+    void shouldNotSendEmailOrAuditEventWhenUserHasAcceptedTermsAndConditionsOnExcludedList()
+            throws NotificationClientException {
+        var excludedTermsAndConditions = "1.5";
+        when(configurationService.getBulkUserEmailBatchQueryLimit()).thenReturn(1);
+        when(configurationService.getBulkUserEmailMaxBatchCount()).thenReturn(1);
+        when(configurationService.getBulkUserEmailBatchPauseDuration()).thenReturn(1L);
+        when(configurationService.getBulkUserEmailExcludedTermsAndConditions())
+                .thenReturn(List.of(excludedTermsAndConditions));
+        when(configurationService.isBulkUserEmailEmailSendingEnabled()).thenReturn(true);
+        when(bulkEmailUsersService.getNSubjectIdsByStatus(1, BulkEmailStatus.PENDING))
+                .thenReturn(List.of(SUBJECT_ID));
+        when(dynamoService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
+        when(dynamoService.getOptionalUserProfileFromSubject(SUBJECT_ID))
+                .thenReturn(
+                        Optional.of(
+                                new UserProfile()
+                                        .withEmail(EMAIL)
+                                        .withSubjectID(SUBJECT_ID)
+                                        .withSalt(SALT_BYTE_BUFFER)
+                                        .withTermsAndConditions(
+                                                new TermsAndConditions(
+                                                        excludedTermsAndConditions,
+                                                        NowHelper.now().toInstant().toString()))));
+
+        when(bulkEmailUsersService.updateUserStatus(SUBJECT_ID, BulkEmailStatus.EMAIL_SENT))
+                .thenReturn(
+                        Optional.of(
+                                new BulkEmailUser()
+                                        .withBulkEmailStatus(BulkEmailStatus.EMAIL_SENT)
+                                        .withSubjectID(SUBJECT_ID)));
+
+        bulkUserEmailSenderScheduledEventHandler.handleRequest(scheduledEvent, mockContext);
+
+        verify(notificationService, times(0))
+                .sendEmail(
+                        EMAIL,
+                        Map.of(),
+                        TERMS_AND_CONDITIONS_BULK_EMAIL,
+                        LocaleHelper.SupportedLanguage.EN);
+        verify(bulkEmailUsersService, times(1))
+                .updateUserStatus(SUBJECT_ID, BulkEmailStatus.TERMS_ACCEPTED_RECENTLY);
+        verify(auditService, never())
+                .submitAuditEvent(
+                        UtilsAuditableEvent.BULK_EMAIL_SENT,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        expectedCommonSubject,
+                        EMAIL,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        pair("internalSubjectId", SUBJECT_ID),
+                        pair("bulk-email-type", "VC_EXPIRY_BULK_EMAIL"));
+    }
+
+    @Test
     void shouldSendSingleBatchOfEmailsAndSendAuditEventsThenUpdateStatusToEmailSent()
             throws NotificationClientException {
         when(configurationService.getBulkUserEmailBatchQueryLimit()).thenReturn(5);
         when(configurationService.getBulkUserEmailMaxBatchCount()).thenReturn(1);
         when(configurationService.isBulkUserEmailEmailSendingEnabled()).thenReturn(true);
         when(dynamoService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
+        when(configurationService.getBulkUserEmailExcludedTermsAndConditions())
+                .thenReturn(List.of());
         when(bulkEmailUsersService.getNSubjectIdsByStatus(5, BulkEmailStatus.PENDING))
                 .thenReturn(Arrays.asList(TEST_SUBJECT_IDS));
         for (int i = 0; i < TEST_SUBJECT_IDS.length; i++) {
@@ -287,6 +359,8 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
         when(configurationService.isBulkUserEmailEmailSendingEnabled()).thenReturn(true);
         when(bulkEmailUsersService.getNSubjectIdsByStatus(1, BulkEmailStatus.PENDING))
                 .thenReturn(List.of(SUBJECT_ID));
+        when(configurationService.getBulkUserEmailExcludedTermsAndConditions())
+                .thenReturn(List.of());
         when(dynamoService.getOptionalUserProfileFromSubject(SUBJECT_ID))
                 .thenReturn(Optional.of(new UserProfile().withEmail(EMAIL)));
         doThrow(NotificationClientException.class)
