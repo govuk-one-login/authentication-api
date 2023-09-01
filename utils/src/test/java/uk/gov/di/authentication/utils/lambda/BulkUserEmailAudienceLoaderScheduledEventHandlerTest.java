@@ -64,9 +64,9 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
     void shouldAddOneBulkEmailUser() {
         when(configurationService.getBulkUserEmailMaxAudienceLoadUserCount()).thenReturn(100L);
         when(configurationService.getBulkUserEmailAudienceLoadUserBatchSize()).thenReturn(10L);
-        when(configurationService.getBulkUserEmailExcludedTermsAndConditions())
+        when(configurationService.getBulkUserEmailIncludedTermsAndConditions())
                 .thenReturn(List.of("1.5", "1.6"));
-        when(dynamoService.getBulkUserEmailAudienceStreamNotOnTermsAndConditionsVersion(
+        when(dynamoService.getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
                         null, List.of("1.5", "1.6")))
                 .thenReturn(testUserProfilesFromSubjectIds(List.of(SUBJECT_ID)));
 
@@ -79,9 +79,9 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
     void shouldNotAddBulkEmailUserWhenMaxLoadAudienceUserCountIsZero() {
         when(configurationService.getBulkUserEmailMaxAudienceLoadUserCount()).thenReturn(0L);
         when(configurationService.getBulkUserEmailAudienceLoadUserBatchSize()).thenReturn(10L);
-        when(configurationService.getBulkUserEmailExcludedTermsAndConditions())
+        when(configurationService.getBulkUserEmailIncludedTermsAndConditions())
                 .thenReturn(List.of("1.5", "1.6"));
-        when(dynamoService.getBulkUserEmailAudienceStreamNotOnTermsAndConditionsVersion(
+        when(dynamoService.getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
                         null, List.of("1.5", "1.6")))
                 .thenReturn(testUserProfilesFromSubjectIds(List.of(SUBJECT_ID)));
 
@@ -94,9 +94,9 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
     void shouldAddManyBulkEmailUsers() {
         when(configurationService.getBulkUserEmailMaxAudienceLoadUserCount()).thenReturn(100L);
         when(configurationService.getBulkUserEmailAudienceLoadUserBatchSize()).thenReturn(10L);
-        when(configurationService.getBulkUserEmailExcludedTermsAndConditions())
+        when(configurationService.getBulkUserEmailIncludedTermsAndConditions())
                 .thenReturn(List.of("1.5", "1.6"));
-        when(dynamoService.getBulkUserEmailAudienceStreamNotOnTermsAndConditionsVersion(
+        when(dynamoService.getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
                         null, List.of("1.5", "1.6")))
                 .thenReturn(testUserProfilesFromSubjectIds(List.of(TEST_SUBJECT_IDS)));
 
@@ -113,9 +113,9 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
     void shouldAddOnlyMaxLoadAudienceUserCountBulkEmailUsers() {
         when(configurationService.getBulkUserEmailMaxAudienceLoadUserCount()).thenReturn(100L);
         when(configurationService.getBulkUserEmailAudienceLoadUserBatchSize()).thenReturn(3L);
-        when(configurationService.getBulkUserEmailExcludedTermsAndConditions())
+        when(configurationService.getBulkUserEmailIncludedTermsAndConditions())
                 .thenReturn(List.of("1.5", "1.6"));
-        when(dynamoService.getBulkUserEmailAudienceStreamNotOnTermsAndConditionsVersion(
+        when(dynamoService.getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
                         null, List.of("1.5", "1.6")))
                 .thenReturn(testUserProfilesFromSubjectIds(List.of(TEST_SUBJECT_IDS)));
 
@@ -128,12 +128,12 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
     void shouldReinvokeLambdaWithLastSubjectIdAndIncrementedCountWhenNoInitialStartKey() {
         when(configurationService.getBulkUserEmailMaxAudienceLoadUserCount()).thenReturn(100L);
         when(configurationService.getBulkUserEmailAudienceLoadUserBatchSize()).thenReturn(10L);
-        when(configurationService.getBulkUserEmailExcludedTermsAndConditions())
+        when(configurationService.getBulkUserEmailIncludedTermsAndConditions())
                 .thenReturn(List.of("1.5", "1.6"));
 
         var subjectIds = List.of(TEST_SUBJECT_IDS[0], TEST_SUBJECT_IDS[1], TEST_SUBJECT_IDS[2]);
         var userProfiles = testUserProfilesFromSubjectIds(subjectIds);
-        when(dynamoService.getBulkUserEmailAudienceStreamNotOnTermsAndConditionsVersion(
+        when(dynamoService.getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
                         null, List.of("1.5", "1.6")))
                 .thenReturn(userProfiles);
 
@@ -167,7 +167,7 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
     void shouldReinvokeLambdaWithLastSubjectIdWithInitialStartKeyAndCount() {
         when(configurationService.getBulkUserEmailMaxAudienceLoadUserCount()).thenReturn(100L);
         when(configurationService.getBulkUserEmailAudienceLoadUserBatchSize()).thenReturn(10L);
-        when(configurationService.getBulkUserEmailExcludedTermsAndConditions())
+        when(configurationService.getBulkUserEmailIncludedTermsAndConditions())
                 .thenReturn(List.of("1.5", "1.6"));
 
         var lastEvaluatedEmail = emailFromSubjectId(TEST_SUBJECT_IDS[2]);
@@ -177,7 +177,7 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
 
         var subjectIds = List.of(TEST_SUBJECT_IDS[3], TEST_SUBJECT_IDS[4]);
 
-        when(dynamoService.getBulkUserEmailAudienceStreamNotOnTermsAndConditionsVersion(
+        when(dynamoService.getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
                         lastEvaluatedKey, List.of("1.5", "1.6")))
                 .thenReturn(testUserProfilesFromSubjectIds(subjectIds));
 
@@ -214,14 +214,14 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
     void shouldNotReinvokeLambdaWhenNoItemsReturned() {
         when(configurationService.getBulkUserEmailMaxAudienceLoadUserCount()).thenReturn(100L);
         when(configurationService.getBulkUserEmailAudienceLoadUserBatchSize()).thenReturn(10L);
-        when(configurationService.getBulkUserEmailExcludedTermsAndConditions())
+        when(configurationService.getBulkUserEmailIncludedTermsAndConditions())
                 .thenReturn(List.of("1.5", "1.6"));
 
         var lastEvaluatedSubjectId = TEST_SUBJECT_IDS[2];
         var lastEvaluatedKey =
                 Map.of("SubjectID", AttributeValue.builder().s(lastEvaluatedSubjectId).build());
 
-        when(dynamoService.getBulkUserEmailAudienceStreamNotOnTermsAndConditionsVersion(
+        when(dynamoService.getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
                         null, List.of("1.5", "1.6")))
                 .thenReturn(Stream.empty());
 

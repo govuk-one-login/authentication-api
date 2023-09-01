@@ -41,6 +41,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static java.lang.String.format;
 import static java.util.Objects.nonNull;
 import static software.amazon.awssdk.enhanced.dynamodb.internal.AttributeValues.numberValue;
 import static software.amazon.awssdk.enhanced.dynamodb.internal.AttributeValues.stringValue;
@@ -736,18 +737,25 @@ public class DynamoService implements AuthenticationService {
         }
     }
 
-    public Stream<UserProfile> getBulkUserEmailAudienceStreamNotOnTermsAndConditionsVersion(
+    public Stream<UserProfile> getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
             Map<String, AttributeValue> exclusiveStartKey, List<String> termsAndConditionsVersion) {
 
+        List<String> termsAndConditionsExpression = new ArrayList<>();
         List<String> expression = new ArrayList<>();
         Map<String, AttributeValue> expressionValues = new HashMap<>();
 
         for (int i = 0; i < termsAndConditionsVersion.size(); i++) {
-            expression.add(String.format("termsAndConditions.version <> :tc_version%d", i));
+            termsAndConditionsExpression.add(
+                    format("termsAndConditions.version = :tc_version%d", i));
             expressionValues.put(
-                    String.format(":tc_version%d", i),
-                    stringValue(termsAndConditionsVersion.get(i)));
+                    format(":tc_version%d", i), stringValue(termsAndConditionsVersion.get(i)));
         }
+        String termsAndConditionsExpressionString =
+                format(
+                        " ( %s ) ",
+                        termsAndConditionsExpression.stream().collect(Collectors.joining(" OR ")));
+
+        expression.add(termsAndConditionsExpressionString);
         expression.add("attribute_exists(termsAndConditions.version)");
         expression.add("accountVerified = :accountVerified");
         expressionValues.put(":accountVerified", numberValue(1));

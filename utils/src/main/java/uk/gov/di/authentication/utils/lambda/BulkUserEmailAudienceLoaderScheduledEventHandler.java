@@ -75,9 +75,9 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
         Map<String, AttributeValue> exclusiveStartKey = null;
         Long existingCountOfAddedUsers = 0L;
 
-        List<String> excludedTermsAndConditions =
-                configurationService.getBulkUserEmailExcludedTermsAndConditions();
-        if (excludedTermsAndConditions == null || excludedTermsAndConditions.isEmpty()) {
+        List<String> includedTermsAndConditions =
+                configurationService.getBulkUserEmailIncludedTermsAndConditions();
+        if (includedTermsAndConditions == null || includedTermsAndConditions.isEmpty()) {
             throw new ExcludedTermsAndConditionsConfigMissingException(
                     "Excluded terms and conditions configuration is missing");
         }
@@ -108,8 +108,8 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
         itemCounter.set(0);
 
         dynamoService
-                .getBulkUserEmailAudienceStreamNotOnTermsAndConditionsVersion(
-                        exclusiveStartKey, excludedTermsAndConditions)
+                .getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
+                        exclusiveStartKey, includedTermsAndConditions)
                 .takeWhile(userProfile -> (currentBatchSize > itemCounter.get()))
                 .forEach(
                         userProfile -> {
