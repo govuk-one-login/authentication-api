@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.oidc.services;
 
 import com.nimbusds.oauth2.sdk.id.Subject;
+import com.nimbusds.oauth2.sdk.token.BearerTokenError;
 import com.nimbusds.oauth2.sdk.util.JSONObjectUtils;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
@@ -12,6 +13,7 @@ import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
 import uk.gov.di.authentication.oidc.exceptions.UserInfoException;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
+import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -67,7 +69,7 @@ public class UserInfoService {
         }
     }
 
-    public UserInfo populateUserInfo(AccessTokenInfo accessTokenInfo) {
+    public UserInfo populateUserInfo(AccessTokenInfo accessTokenInfo) throws AccessTokenException {
         LOG.info("Populating UserInfo");
         UserInfo userInfo = new UserInfo(new Subject(accessTokenInfo.getSubject()));
         if (accessTokenInfo.getScopes().contains(CustomScopeValue.DOC_CHECKING_APP.getValue())) {
@@ -75,19 +77,22 @@ public class UserInfoService {
         }
 
         if (configurationService.isAuthOrchSplitEnabled()) {
-            UserInfo tmpUserInfo = null;
+            UserInfo tmpUserInfo;
             try {
-                var userInfoString =
-                        userInfoStorageService
-                                .getAuthenticationUserInfoData(
-                                        accessTokenInfo
-                                                .getAccessTokenStore()
-                                                .getInternalSubjectId())
-                                .get()
-                                .getUserInfo();
-                tmpUserInfo = new UserInfo(JSONObjectUtils.parse(userInfoString));
+                var authUserInfo =
+                        userInfoStorageService.getAuthenticationUserInfoData(
+                                accessTokenInfo.getAccessTokenStore().getInternalSubjectId());
+
+                if (authUserInfo.isPresent()) {
+                    tmpUserInfo =
+                            new UserInfo(JSONObjectUtils.parse(authUserInfo.get().getUserInfo()));
+                } else {
+                    throw new AccessTokenException(
+                            "Unable to find subject", BearerTokenError.INVALID_TOKEN);
+                }
             } catch (Exception e) {
-                var error = e.getMessage();
+                throw new AccessTokenException(
+                        "Unable to get user info for Subject", BearerTokenError.INVALID_TOKEN);
             }
 
             if (accessTokenInfo.getScopes().contains(OIDCScopeValue.EMAIL.getValue())) {
@@ -98,17 +103,14 @@ public class UserInfoService {
                 userInfo.setPhoneNumber(tmpUserInfo.getPhoneNumber());
                 userInfo.setPhoneNumberVerified(tmpUserInfo.getPhoneNumberVerified());
             }
-            //            if
-            // (accessTokenInfo.getScopes().contains(CustomScopeValue.GOVUK_ACCOUNT.getValue())) {
-            //                userInfo.setClaim("legacy_subject_id",
-            // userProfile.getLegacySubjectID());
-            //            }
-            //            if
-            // (accessTokenInfo.getScopes().contains(CustomScopeValue.ACCOUNT_MANAGEMENT.getValue())) {
-            //                userInfo.setClaim("public_subject_id",
-            // userProfile.getPublicSubjectID());
-            //            }
-
+            if (accessTokenInfo.getScopes().contains(CustomScopeValue.GOVUK_ACCOUNT.getValue())) {
+                userInfo.setClaim("legacy_subject_id", tmpUserInfo.getClaim("legacy_subject_id"));
+            }
+            if (accessTokenInfo
+                    .getScopes()
+                    .contains(CustomScopeValue.ACCOUNT_MANAGEMENT.getValue())) {
+                userInfo.setClaim("public_subject_id", tmpUserInfo.getClaim("public_subject_id"));
+            }
         } else {
             var userProfile =
                     authenticationService.getUserProfileFromSubject(
