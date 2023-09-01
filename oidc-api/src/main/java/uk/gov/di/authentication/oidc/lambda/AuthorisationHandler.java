@@ -74,7 +74,7 @@ public class AuthorisationHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOG = LogManager.getLogger(AuthorisationHandler.class);
-    public static final String GOOGLE_ANALYTICS_QUERY_PARAMETER_KEY = "email";
+    public static final String GOOGLE_ANALYTICS_QUERY_PARAMETER_KEY = "result";
 
     private final SessionService sessionService;
     private final ConfigurationService configurationService;

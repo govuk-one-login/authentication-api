@@ -375,17 +375,13 @@ class AuthorisationHandlerTest {
 
         Map<String, String> requestParams =
                 buildRequestParams(
-                        Map.of(
-                                "an-irrelevant-key",
-                                "an-irrelevant-value",
-                                "email",
-                                "confirmation"));
+                        Map.of("an-irrelevant-key", "an-irrelevant-value", "result", "sign-in"));
         APIGatewayProxyResponseEvent response = makeHandlerRequest(withRequestEvent(requestParams));
         URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
 
         assertThat(response, hasStatus(302));
         assertEquals(LOGIN_URL.getAuthority(), uri.getAuthority());
-        assertThat(uri.getQuery(), containsString("email=confirmation"));
+        assertThat(uri.getQuery(), containsString("result=sign-in"));
         assertThat(uri.getQuery(), not(containsString("an-irrelevant-key=an-irrelevant-value")));
     }
 
