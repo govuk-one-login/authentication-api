@@ -94,6 +94,11 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
                     public boolean isBulkUserEmailEmailSendingEnabled() {
                         return true;
                     }
+
+                    @Override
+                    public List<String> getBulkUserEmailExcludedTermsAndConditions() {
+                        return List.of("1.5", "1.6");
+                    }
                 };
         handler = new BulkUserEmailSenderScheduledEventHandler(configuration);
         bulkEmailUsersService = new BulkEmailUsersService(configuration);
@@ -144,8 +149,8 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
     @Test
     void shouldSendCorrectNoOfEmailsAndUpdateStatusWhenTwoUsersHaveNoCorrespondingAccount() {
         setupDynamo();
-        bulkEmailUsersExtension.addBulkEmailUser("11", BulkEmailStatus.PENDING);
-        bulkEmailUsersExtension.addBulkEmailUser("12", BulkEmailStatus.PENDING);
+        bulkEmailUsersExtension.addBulkEmailUser("13", BulkEmailStatus.PENDING);
+        bulkEmailUsersExtension.addBulkEmailUser("14", BulkEmailStatus.PENDING);
 
         makeRequest();
 
@@ -181,17 +186,23 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
         bulkEmailUsersExtension.addBulkEmailUser("8", BulkEmailStatus.PENDING);
         bulkEmailUsersExtension.addBulkEmailUser("9", BulkEmailStatus.PENDING);
         bulkEmailUsersExtension.addBulkEmailUser("10", BulkEmailStatus.PENDING);
+        bulkEmailUsersExtension.addBulkEmailUser("11", BulkEmailStatus.PENDING);
+        bulkEmailUsersExtension.addBulkEmailUser("12", BulkEmailStatus.PENDING);
 
-        userStore.signUp("user.1@account.gov.uk", "password123", new Subject("1"));
-        userStore.signUp("user.2@account.gov.uk", "password123", new Subject("2"));
-        userStore.signUp("user.email.sent.already@account.gov.uk", "password123", new Subject("3"));
-        userStore.signUp("user.4@account.gov.uk", "password123", new Subject("4"));
-        userStore.signUp("user.5@account.gov.uk", "password123", new Subject("5"));
-        userStore.signUp("user.error.sending@account.gov.uk", "password123", new Subject("6"));
-        userStore.signUp("user.7@account.gov.uk", "password123", new Subject("7"));
-        userStore.signUp("user.8@account.gov.uk", "password123", new Subject("8"));
-        userStore.signUp("user.9@account.gov.uk", "password123", new Subject("9"));
-        userStore.signUp("user.10@account.gov.uk", "password123", new Subject("10"));
+        userStore.signUp("user.1@account.gov.uk", "password123", new Subject("1"), null);
+        userStore.signUp("user.2@account.gov.uk", "password123", new Subject("2"), "1.0");
+        userStore.signUp(
+                "user.email.sent.already@account.gov.uk", "password123", new Subject("3"), "1.0");
+        userStore.signUp("user.4@account.gov.uk", "password123", new Subject("4"), "1.1");
+        userStore.signUp("user.5@account.gov.uk", "password123", new Subject("5"), "1.1");
+        userStore.signUp(
+                "user.error.sending@account.gov.uk", "password123", new Subject("6"), "1.2");
+        userStore.signUp("user.7@account.gov.uk", "password123", new Subject("7"), "1.2");
+        userStore.signUp("user.8@account.gov.uk", "password123", new Subject("8"), "1.3");
+        userStore.signUp("user.9@account.gov.uk", "password123", new Subject("9"), "1.3");
+        userStore.signUp("user.10@account.gov.uk", "password123", new Subject("10"), "1.4");
+        userStore.signUp("user.11@account.gov.uk", "password123", new Subject("11"), "1.5");
+        userStore.signUp("user.12@account.gov.uk", "password123", new Subject("12"), "1.6");
     }
 
     private void makeRequest() {
