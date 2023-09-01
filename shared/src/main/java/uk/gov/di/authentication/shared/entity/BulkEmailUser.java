@@ -9,6 +9,7 @@ public class BulkEmailUser {
 
     private String subjectID;
     private BulkEmailStatus bulkEmailStatus;
+    private String updatedAt;
 
     public BulkEmailUser() {}
 
@@ -38,6 +39,20 @@ public class BulkEmailUser {
 
     public BulkEmailUser withBulkEmailStatus(BulkEmailStatus bulkEmailStatus) {
         this.bulkEmailStatus = bulkEmailStatus;
+        return this;
+    }
+
+    @DynamoDbAttribute("UpdatedAt")
+    public String getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(String timestamp) {
+        this.updatedAt = timestamp;
+    }
+
+    public BulkEmailUser withUpdatedAt(String timestamp) {
+        this.updatedAt = timestamp;
         return this;
     }
 }

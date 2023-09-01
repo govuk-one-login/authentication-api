@@ -7,6 +7,7 @@ import software.amazon.awssdk.services.dynamodb.model.QueryRequest;
 import uk.gov.di.authentication.shared.entity.BulkEmailStatus;
 import uk.gov.di.authentication.shared.entity.BulkEmailUser;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -35,7 +36,8 @@ public class BulkEmailUsersService extends BaseDynamoService<BulkEmailUser> {
         return getBulkEmailUsers(subjectID)
                 .map(
                         user -> {
-                            user.withBulkEmailStatus(bulkEmailStatus);
+                            LocalDateTime now = LocalDateTime.now(configurationService.getClock());
+                            user.withBulkEmailStatus(bulkEmailStatus).withUpdatedAt(now.toString());
                             update(user);
                             return user;
                         });

@@ -17,6 +17,7 @@ import uk.gov.di.authentication.shared.exceptions.SSMParameterNotFoundException;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
 
 import java.net.URI;
+import java.time.Clock;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -119,6 +120,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public long getDefaultOtpCodeExpiry() {
         return Long.parseLong(System.getenv().getOrDefault("DEFAULT_OTP_CODE_EXPIRY", "900"));
+    }
+
+    public Clock getClock() {
+        return Clock.systemDefaultZone();
     }
 
     public long getEmailAccountCreationOtpCodeExpiry() {

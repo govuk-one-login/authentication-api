@@ -104,12 +104,7 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
     void
             shouldSendSingleBatchOfSingleEmailAndNotSubmitAuditEventForUserWithoutSaltThenUpdateStatusToEmailSent()
                     throws NotificationClientException {
-        when(configurationService.getBulkUserEmailBatchQueryLimit()).thenReturn(1);
-        when(configurationService.getBulkUserEmailMaxBatchCount()).thenReturn(1);
-        when(configurationService.getBulkUserEmailBatchPauseDuration()).thenReturn(1L);
-        when(configurationService.isBulkUserEmailEmailSendingEnabled()).thenReturn(true);
-        when(configurationService.getBulkUserEmailExcludedTermsAndConditions())
-                .thenReturn(List.of("1.1"));
+        setupBulkUsersConfiguration(1, 1, 1L, true, List.of("1.1"));
         when(bulkEmailUsersService.getNSubjectIdsByStatus(1, BulkEmailStatus.PENDING))
                 .thenReturn(List.of(SUBJECT_ID));
         when(dynamoService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
@@ -158,12 +153,8 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
     @Test
     void shouldNotSendEmailOrAuditEventWhenSendEmailFlagNotEnabledAndUpdateStatusToEmailSent()
             throws NotificationClientException {
-        when(configurationService.getBulkUserEmailBatchQueryLimit()).thenReturn(1);
-        when(configurationService.getBulkUserEmailMaxBatchCount()).thenReturn(1);
-        when(configurationService.getBulkUserEmailBatchPauseDuration()).thenReturn(1L);
-        when(configurationService.isBulkUserEmailEmailSendingEnabled()).thenReturn(false);
-        when(configurationService.getBulkUserEmailExcludedTermsAndConditions())
-                .thenReturn(List.of());
+        var sendingEnabled = false;
+        setupBulkUsersConfiguration(1, 1, 1L, sendingEnabled, List.of());
         when(bulkEmailUsersService.getNSubjectIdsByStatus(1, BulkEmailStatus.PENDING))
                 .thenReturn(List.of(SUBJECT_ID));
         when(dynamoService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
@@ -210,12 +201,7 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
     void shouldNotSendEmailOrAuditEventWhenUserHasAcceptedTermsAndConditionsOnExcludedList()
             throws NotificationClientException {
         var excludedTermsAndConditions = "1.5";
-        when(configurationService.getBulkUserEmailBatchQueryLimit()).thenReturn(1);
-        when(configurationService.getBulkUserEmailMaxBatchCount()).thenReturn(1);
-        when(configurationService.getBulkUserEmailBatchPauseDuration()).thenReturn(1L);
-        when(configurationService.getBulkUserEmailExcludedTermsAndConditions())
-                .thenReturn(List.of(excludedTermsAndConditions));
-        when(configurationService.isBulkUserEmailEmailSendingEnabled()).thenReturn(true);
+        setupBulkUsersConfiguration(1, 1, 1L, true, List.of(excludedTermsAndConditions));
         when(bulkEmailUsersService.getNSubjectIdsByStatus(1, BulkEmailStatus.PENDING))
                 .thenReturn(List.of(SUBJECT_ID));
         when(dynamoService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
@@ -266,13 +252,10 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
     @Test
     void shouldSendSingleBatchOfEmailsAndSendAuditEventsThenUpdateStatusToEmailSent()
             throws NotificationClientException {
-        when(configurationService.getBulkUserEmailBatchQueryLimit()).thenReturn(5);
-        when(configurationService.getBulkUserEmailMaxBatchCount()).thenReturn(1);
-        when(configurationService.isBulkUserEmailEmailSendingEnabled()).thenReturn(true);
+        var batchLimit = 5;
+        setupBulkUsersConfiguration(batchLimit, 1, 1L, true, List.of());
         when(dynamoService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
-        when(configurationService.getBulkUserEmailExcludedTermsAndConditions())
-                .thenReturn(List.of());
-        when(bulkEmailUsersService.getNSubjectIdsByStatus(5, BulkEmailStatus.PENDING))
+        when(bulkEmailUsersService.getNSubjectIdsByStatus(batchLimit, BulkEmailStatus.PENDING))
                 .thenReturn(Arrays.asList(TEST_SUBJECT_IDS));
         for (int i = 0; i < TEST_SUBJECT_IDS.length; i++) {
             when(dynamoService.getOptionalUserProfileFromSubject(TEST_SUBJECT_IDS[i]))
@@ -324,9 +307,7 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
     @Test
     void shouldNotSendSingleEmailAndUpdateStatusToAccountNotFoundWhenNoUserProfileForSubjectId()
             throws NotificationClientException {
-        when(configurationService.getBulkUserEmailBatchQueryLimit()).thenReturn(1);
-        when(configurationService.getBulkUserEmailMaxBatchCount()).thenReturn(1);
-        when(configurationService.isBulkUserEmailEmailSendingEnabled()).thenReturn(true);
+        setupBulkUsersConfiguration(1, 1, 1L, true, List.of());
         when(bulkEmailUsersService.getNSubjectIdsByStatus(1, BulkEmailStatus.PENDING))
                 .thenReturn(List.of(SUBJECT_ID));
         when(dynamoService.getOptionalUserProfileFromSubject(SUBJECT_ID))
@@ -354,13 +335,9 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
     @Test
     void shouldNotSendSingleEmailAndUpdateStatusToErrorWhenNotifySendEmailFails()
             throws NotificationClientException {
-        when(configurationService.getBulkUserEmailBatchQueryLimit()).thenReturn(1);
-        when(configurationService.getBulkUserEmailMaxBatchCount()).thenReturn(1);
-        when(configurationService.isBulkUserEmailEmailSendingEnabled()).thenReturn(true);
+        setupBulkUsersConfiguration(1, 1, 1L, true, List.of());
         when(bulkEmailUsersService.getNSubjectIdsByStatus(1, BulkEmailStatus.PENDING))
                 .thenReturn(List.of(SUBJECT_ID));
-        when(configurationService.getBulkUserEmailExcludedTermsAndConditions())
-                .thenReturn(List.of());
         when(dynamoService.getOptionalUserProfileFromSubject(SUBJECT_ID))
                 .thenReturn(Optional.of(new UserProfile().withEmail(EMAIL)));
         doThrow(NotificationClientException.class)
@@ -389,5 +366,23 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
         verify(bulkEmailUsersService, times(1))
                 .updateUserStatus(SUBJECT_ID, BulkEmailStatus.ERROR_SENDING_EMAIL);
         verifyNoInteractions(auditService);
+    }
+
+    private void setupBulkUsersConfiguration(
+            int bulkUserEmailBatchQueryLimit,
+            int bulkUserEmailMaxBatchCount,
+            long batchPauseDuration,
+            boolean isBulkUserSendingEnabled,
+            List<String> excludedTermsAndConditions) {
+        when(configurationService.getBulkUserEmailBatchQueryLimit())
+                .thenReturn(bulkUserEmailBatchQueryLimit);
+        when(configurationService.getBulkUserEmailMaxBatchCount())
+                .thenReturn(bulkUserEmailMaxBatchCount);
+        when(configurationService.isBulkUserEmailEmailSendingEnabled())
+                .thenReturn(isBulkUserSendingEnabled);
+        when(configurationService.getBulkUserEmailExcludedTermsAndConditions())
+                .thenReturn(excludedTermsAndConditions);
+        when(configurationService.getBulkUserEmailBatchPauseDuration())
+                .thenReturn(batchPauseDuration);
     }
 }
