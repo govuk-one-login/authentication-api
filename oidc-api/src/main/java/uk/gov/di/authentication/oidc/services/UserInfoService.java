@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.oidc.services;
 
 import com.nimbusds.oauth2.sdk.id.Subject;
+import com.nimbusds.oauth2.sdk.util.JSONObjectUtils;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import net.minidev.json.JSONArray;
@@ -23,7 +24,7 @@ import java.util.Map;
 import java.util.Objects;
 
 public class UserInfoService {
-
+    private final AuthenticationUserInfoStorageService userInfoStorageService;
     private final AuthenticationService authenticationService;
     private final DynamoIdentityService identityService;
     private final DynamoDocAppService dynamoDocAppService;
@@ -38,12 +39,14 @@ public class UserInfoService {
             DynamoIdentityService identityService,
             DynamoDocAppService dynamoDocAppService,
             CloudwatchMetricsService cloudwatchMetricsService,
-            ConfigurationService configurationService) {
+            ConfigurationService configurationService,
+            AuthenticationUserInfoStorageService userInfoStorageService) {
         this.authenticationService = authenticationService;
         this.identityService = identityService;
         this.dynamoDocAppService = dynamoDocAppService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.configurationService = configurationService;
+        this.userInfoStorageService = userInfoStorageService;
     }
 
     public String calculateSubjectForAudit(AccessTokenInfo accessTokenInfo) {
@@ -66,28 +69,69 @@ public class UserInfoService {
 
     public UserInfo populateUserInfo(AccessTokenInfo accessTokenInfo) {
         LOG.info("Populating UserInfo");
-        var userInfo = new UserInfo(new Subject(accessTokenInfo.getSubject()));
+        UserInfo userInfo = new UserInfo(new Subject(accessTokenInfo.getSubject()));
         if (accessTokenInfo.getScopes().contains(CustomScopeValue.DOC_CHECKING_APP.getValue())) {
             return populateDocAppUserInfo(accessTokenInfo, userInfo);
         }
-        var userProfile =
-                authenticationService.getUserProfileFromSubject(
-                        accessTokenInfo.getAccessTokenStore().getInternalSubjectId());
 
-        if (accessTokenInfo.getScopes().contains(OIDCScopeValue.EMAIL.getValue())) {
-            userInfo.setEmailAddress(userProfile.getEmail());
-            userInfo.setEmailVerified(userProfile.isEmailVerified());
+        if (configurationService.isAuthOrchSplitEnabled()) {
+            UserInfo tmpUserInfo = null;
+            try {
+                var userInfoString =
+                        userInfoStorageService
+                                .getAuthenticationUserInfoData(
+                                        accessTokenInfo
+                                                .getAccessTokenStore()
+                                                .getInternalSubjectId())
+                                .get()
+                                .getUserInfo();
+                tmpUserInfo = new UserInfo(JSONObjectUtils.parse(userInfoString));
+            } catch (Exception e) {
+                var error = e.getMessage();
+            }
+
+            if (accessTokenInfo.getScopes().contains(OIDCScopeValue.EMAIL.getValue())) {
+                userInfo.setEmailAddress(tmpUserInfo.getEmailAddress());
+                userInfo.setEmailVerified(tmpUserInfo.getEmailVerified());
+            }
+            if (accessTokenInfo.getScopes().contains(OIDCScopeValue.PHONE.getValue())) {
+                userInfo.setPhoneNumber(tmpUserInfo.getPhoneNumber());
+                userInfo.setPhoneNumberVerified(tmpUserInfo.getPhoneNumberVerified());
+            }
+            //            if
+            // (accessTokenInfo.getScopes().contains(CustomScopeValue.GOVUK_ACCOUNT.getValue())) {
+            //                userInfo.setClaim("legacy_subject_id",
+            // userProfile.getLegacySubjectID());
+            //            }
+            //            if
+            // (accessTokenInfo.getScopes().contains(CustomScopeValue.ACCOUNT_MANAGEMENT.getValue())) {
+            //                userInfo.setClaim("public_subject_id",
+            // userProfile.getPublicSubjectID());
+            //            }
+
+        } else {
+            var userProfile =
+                    authenticationService.getUserProfileFromSubject(
+                            accessTokenInfo.getAccessTokenStore().getInternalSubjectId());
+
+            if (accessTokenInfo.getScopes().contains(OIDCScopeValue.EMAIL.getValue())) {
+                userInfo.setEmailAddress(userProfile.getEmail());
+                userInfo.setEmailVerified(userProfile.isEmailVerified());
+            }
+            if (accessTokenInfo.getScopes().contains(OIDCScopeValue.PHONE.getValue())) {
+                userInfo.setPhoneNumber(userProfile.getPhoneNumber());
+                userInfo.setPhoneNumberVerified(userProfile.isPhoneNumberVerified());
+            }
+            if (accessTokenInfo.getScopes().contains(CustomScopeValue.GOVUK_ACCOUNT.getValue())) {
+                userInfo.setClaim("legacy_subject_id", userProfile.getLegacySubjectID());
+            }
+            if (accessTokenInfo
+                    .getScopes()
+                    .contains(CustomScopeValue.ACCOUNT_MANAGEMENT.getValue())) {
+                userInfo.setClaim("public_subject_id", userProfile.getPublicSubjectID());
+            }
         }
-        if (accessTokenInfo.getScopes().contains(OIDCScopeValue.PHONE.getValue())) {
-            userInfo.setPhoneNumber(userProfile.getPhoneNumber());
-            userInfo.setPhoneNumberVerified(userProfile.isPhoneNumberVerified());
-        }
-        if (accessTokenInfo.getScopes().contains(CustomScopeValue.GOVUK_ACCOUNT.getValue())) {
-            userInfo.setClaim("legacy_subject_id", userProfile.getLegacySubjectID());
-        }
-        if (accessTokenInfo.getScopes().contains(CustomScopeValue.ACCOUNT_MANAGEMENT.getValue())) {
-            userInfo.setClaim("public_subject_id", userProfile.getPublicSubjectID());
-        }
+
         if (configurationService.isIdentityEnabled()
                 && Objects.nonNull(accessTokenInfo.getIdentityClaims())) {
             return populateIdentityInfo(accessTokenInfo, userInfo);

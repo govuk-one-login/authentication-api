@@ -13,6 +13,7 @@ import uk.gov.di.authentication.app.services.DynamoDocAppService;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
 import uk.gov.di.authentication.oidc.services.AccessTokenService;
+import uk.gov.di.authentication.oidc.services.AuthenticationUserInfoStorageService;
 import uk.gov.di.authentication.oidc.services.UserInfoService;
 import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -37,6 +38,7 @@ public class UserInfoHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOG = LogManager.getLogger(UserInfoHandler.class);
+    private final AuthenticationUserInfoStorageService userInfoStorageService;
     private final ConfigurationService configurationService;
     private final UserInfoService userInfoService;
     private final AccessTokenService accessTokenService;
@@ -46,11 +48,13 @@ public class UserInfoHandler
             ConfigurationService configurationService,
             UserInfoService userInfoService,
             AccessTokenService accessTokenService,
-            AuditService auditService) {
+            AuditService auditService,
+            AuthenticationUserInfoStorageService userInfoStorageService) {
         this.configurationService = configurationService;
         this.userInfoService = userInfoService;
         this.accessTokenService = accessTokenService;
         this.auditService = auditService;
+        this.userInfoStorageService = userInfoStorageService;
     }
 
     public UserInfoHandler() {
@@ -65,7 +69,8 @@ public class UserInfoHandler
                         new DynamoIdentityService(configurationService),
                         new DynamoDocAppService(configurationService),
                         new CloudwatchMetricsService(),
-                        configurationService);
+                        configurationService,
+                        new AuthenticationUserInfoStorageService(configurationService));
         this.accessTokenService =
                 new AccessTokenService(
                         new RedisConnectionService(configurationService),
@@ -76,6 +81,8 @@ public class UserInfoHandler
                                         new KmsConnectionService(configurationService)),
                                 configurationService));
         this.auditService = new AuditService(configurationService);
+        this.userInfoStorageService =
+                new AuthenticationUserInfoStorageService(configurationService);
     }
 
     @Override

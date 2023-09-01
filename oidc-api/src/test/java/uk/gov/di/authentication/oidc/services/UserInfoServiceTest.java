@@ -57,7 +57,8 @@ import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.PASSPO
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 class UserInfoServiceTest {
-
+    private final AuthenticationUserInfoStorageService userInfoStorageService =
+            mock(AuthenticationUserInfoStorageService.class);
     private UserInfoService userInfoService;
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final DynamoIdentityService identityService = mock(DynamoIdentityService.class);
@@ -111,7 +112,8 @@ class UserInfoServiceTest {
                         identityService,
                         dynamoDocAppService,
                         cloudwatchMetricsService,
-                        configurationService);
+                        configurationService,
+                        userInfoStorageService);
         clientRegistry = generateClientRegistry();
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         when(configurationService.getEnvironment()).thenReturn("test");
