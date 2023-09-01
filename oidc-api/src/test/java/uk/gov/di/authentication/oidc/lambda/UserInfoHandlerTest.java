@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
 import uk.gov.di.authentication.oidc.services.AccessTokenService;
+import uk.gov.di.authentication.oidc.services.AuthenticationUserInfoStorageService;
 import uk.gov.di.authentication.oidc.services.UserInfoService;
 import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -39,6 +40,8 @@ public class UserInfoHandlerTest {
     private static final String PHONE_NUMBER = "01234567890";
     private static final Subject SUBJECT = new Subject();
     private static final Subject AUDIT_SUBJECT_ID = new Subject();
+    private final AuthenticationUserInfoStorageService userInfoStorageService =
+            mock(AuthenticationUserInfoStorageService.class);
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final UserInfoService userInfoService = mock(UserInfoService.class);
@@ -54,7 +57,11 @@ public class UserInfoHandlerTest {
     void setUp() {
         handler =
                 new UserInfoHandler(
-                        configurationService, userInfoService, accessTokenService, auditService);
+                        configurationService,
+                        userInfoService,
+                        accessTokenService,
+                        auditService,
+                        userInfoStorageService);
         when(context.getAwsRequestId()).thenReturn("aws-request-id");
         when(accessTokenInfo.getClientID()).thenReturn("client-id");
         when(accessTokenInfo.getSubject()).thenReturn(SUBJECT.getValue());
