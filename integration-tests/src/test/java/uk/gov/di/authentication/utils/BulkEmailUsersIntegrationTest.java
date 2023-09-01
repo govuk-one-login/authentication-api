@@ -3,11 +3,15 @@ package uk.gov.di.authentication.utils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.shared.entity.BulkEmailStatus;
-import uk.gov.di.authentication.shared.entity.BulkEmailUser;
 import uk.gov.di.authentication.shared.services.BulkEmailUsersService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.extensions.BulkEmailUsersExtension;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -26,8 +30,17 @@ public class BulkEmailUsersIntegrationTest {
     protected static final BulkEmailUsersExtension bulkEmailUsersExtension =
             new BulkEmailUsersExtension();
 
-    BulkEmailUsersService bulkEmailUsersService =
-            new BulkEmailUsersService(ConfigurationService.getInstance());
+    private Instant fixedNow = LocalDateTime.of(2023, 1, 1, 0, 0, 0).toInstant(ZoneOffset.UTC);
+
+    private ConfigurationService configurationService =
+            new ConfigurationService() {
+                @Override
+                public Clock getClock() {
+                    return Clock.fixed(fixedNow, ZoneId.of("UTC"));
+                }
+            };
+
+    BulkEmailUsersService bulkEmailUsersService = new BulkEmailUsersService(configurationService);
 
     @Test
     void updateUserStatusUpdatesaUserWithTheProvidedStatus() {
@@ -41,13 +54,12 @@ public class BulkEmailUsersIntegrationTest {
         assertEquals(SUBJECT_ID_1, updatedUser.getSubjectID());
         assertEquals(BulkEmailStatus.EMAIL_SENT, updatedUser.getBulkEmailStatus());
 
-        var bulkEmailStatusOfUserAfterUpdate =
-                bulkEmailUsersService
-                        .getBulkEmailUsers(SUBJECT_ID_1)
-                        .map(BulkEmailUser::getBulkEmailStatus)
-                        .get();
+        var bulkEmailUserAfterUpdate = bulkEmailUsersService.getBulkEmailUsers(SUBJECT_ID_1).get();
 
-        assertEquals(BulkEmailStatus.EMAIL_SENT, bulkEmailStatusOfUserAfterUpdate);
+        assertEquals(BulkEmailStatus.EMAIL_SENT, bulkEmailUserAfterUpdate.getBulkEmailStatus());
+        assertEquals(
+                LocalDateTime.ofInstant(fixedNow, ZoneId.of("UTC")).toString(),
+                bulkEmailUserAfterUpdate.getUpdatedAt());
     }
 
     @Test
