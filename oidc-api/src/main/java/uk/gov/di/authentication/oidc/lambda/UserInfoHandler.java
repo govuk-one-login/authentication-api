@@ -38,7 +38,6 @@ public class UserInfoHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOG = LogManager.getLogger(UserInfoHandler.class);
-    private final AuthenticationUserInfoStorageService userInfoStorageService;
     private final ConfigurationService configurationService;
     private final UserInfoService userInfoService;
     private final AccessTokenService accessTokenService;
@@ -48,13 +47,11 @@ public class UserInfoHandler
             ConfigurationService configurationService,
             UserInfoService userInfoService,
             AccessTokenService accessTokenService,
-            AuditService auditService,
-            AuthenticationUserInfoStorageService userInfoStorageService) {
+            AuditService auditService) {
         this.configurationService = configurationService;
         this.userInfoService = userInfoService;
         this.accessTokenService = accessTokenService;
         this.auditService = auditService;
-        this.userInfoStorageService = userInfoStorageService;
     }
 
     public UserInfoHandler() {
@@ -81,8 +78,6 @@ public class UserInfoHandler
                                         new KmsConnectionService(configurationService)),
                                 configurationService));
         this.auditService = new AuditService(configurationService);
-        this.userInfoStorageService =
-                new AuthenticationUserInfoStorageService(configurationService);
     }
 
     @Override

@@ -8,6 +8,7 @@ version "unspecified"
 
 dependencies {
 
+    implementation project(path: ':auth-external-api')
     compileOnly             configurations.kms,
             configurations.lambda,
             configurations.sqs,
