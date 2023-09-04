@@ -12,7 +12,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.LambdaInvokerService;
 import uk.gov.di.authentication.shared.services.SystemService;
-import uk.gov.di.authentication.utils.exceptions.ExcludedTermsAndConditionsConfigMissingException;
+import uk.gov.di.authentication.utils.exceptions.IncludedTermsAndConditionsConfigMissingException;
 
 import java.util.List;
 import java.util.Map;
@@ -78,8 +78,7 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
         List<String> includedTermsAndConditions =
                 configurationService.getBulkUserEmailIncludedTermsAndConditions();
         if (includedTermsAndConditions == null || includedTermsAndConditions.isEmpty()) {
-            throw new ExcludedTermsAndConditionsConfigMissingException(
-                    "Excluded terms and conditions configuration is missing");
+            throw new IncludedTermsAndConditionsConfigMissingException();
         }
 
         if (event.getDetail() != null && event.getDetail().containsKey(LAST_EVALUATED_KEY)) {
