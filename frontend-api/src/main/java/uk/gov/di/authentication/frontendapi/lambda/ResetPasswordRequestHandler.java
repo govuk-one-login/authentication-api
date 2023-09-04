@@ -31,6 +31,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import java.util.Objects;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PASSWORD_RESET_REQUESTED;
@@ -102,7 +103,8 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
 
         LOG.info("Processing request");
         try {
-            if (!userContext.getSession().validateSession(request.getEmail())) {
+            if (Objects.isNull(userContext.getSession().getEmailAddress())
+                    || !userContext.getSession().validateSession(request.getEmail())) {
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
             }
             var isTestClient =
