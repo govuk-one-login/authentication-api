@@ -104,7 +104,7 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
     void
             shouldSendSingleBatchOfSingleEmailAndNotSubmitAuditEventForUserWithoutSaltThenUpdateStatusToEmailSent()
                     throws NotificationClientException {
-        setupBulkUsersConfiguration(1, 1, 1L, true, List.of("1.1"));
+        setupBulkUsersConfiguration(1, 1, 1L, true, List.of("1.0", "1.1"));
         when(bulkEmailUsersService.getNSubjectIdsByStatus(1, BulkEmailStatus.PENDING))
                 .thenReturn(List.of(SUBJECT_ID));
         when(dynamoService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
@@ -198,10 +198,10 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
     }
 
     @Test
-    void shouldNotSendEmailOrAuditEventWhenUserHasAcceptedTermsAndConditionsOnExcludedList()
+    void shouldNotSendEmailOrAuditEventWhenUserHasAcceptedTermsAndConditionsNotOnIncludedList()
             throws NotificationClientException {
-        var excludedTermsAndConditions = "1.5";
-        setupBulkUsersConfiguration(1, 1, 1L, true, List.of(excludedTermsAndConditions));
+        var includedTermsAndConditions = "1.3,1.4,1.5";
+        setupBulkUsersConfiguration(1, 1, 1L, true, List.of(includedTermsAndConditions));
         when(bulkEmailUsersService.getNSubjectIdsByStatus(1, BulkEmailStatus.PENDING))
                 .thenReturn(List.of(SUBJECT_ID));
         when(dynamoService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
@@ -214,7 +214,7 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
                                         .withSalt(SALT_BYTE_BUFFER)
                                         .withTermsAndConditions(
                                                 new TermsAndConditions(
-                                                        excludedTermsAndConditions,
+                                                        "1.6",
                                                         NowHelper.now().toInstant().toString()))));
 
         when(bulkEmailUsersService.updateUserStatus(SUBJECT_ID, BulkEmailStatus.EMAIL_SENT))
@@ -380,7 +380,7 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
                 .thenReturn(bulkUserEmailMaxBatchCount);
         when(configurationService.isBulkUserEmailEmailSendingEnabled())
                 .thenReturn(isBulkUserSendingEnabled);
-        when(configurationService.getBulkUserEmailExcludedTermsAndConditions())
+        when(configurationService.getBulkUserEmailIncludedTermsAndConditions())
                 .thenReturn(excludedTermsAndConditions);
         when(configurationService.getBulkUserEmailBatchPauseDuration())
                 .thenReturn(batchPauseDuration);

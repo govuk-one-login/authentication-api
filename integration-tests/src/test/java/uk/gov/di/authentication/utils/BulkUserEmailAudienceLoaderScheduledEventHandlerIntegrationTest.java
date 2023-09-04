@@ -141,7 +141,7 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerIntegrationTest
     @Test
     void shouldGetVerifiedUsersWithoutTheExcludedTermsAndConditionsVersions() {
         // Excluded terms and conditions are set as the
-        // BULK_USER_EMAIL_EXCLUDED_TERMS_AND_CONDITIONS
+        // BULK_USER_EMAIL_INCLUDED_TERMS_AND_CONDITIONS
         // environment variable
         setupDynamoUsersWithTermsAndConditionsVersions();
         makeRequest(Optional.empty());

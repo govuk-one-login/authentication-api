@@ -93,7 +93,7 @@ class ConfigurationServiceTest {
 
     @Test
     void shouldReadTermsAndConditionsVersionCSVList() {
-        when(systemService.getOrDefault("BULK_USER_EMAIL_EXCLUDED_TERMS_AND_CONDITIONS", ""))
+        when(systemService.getOrDefault("BULK_USER_EMAIL_INCLUDED_TERMS_AND_CONDITIONS", ""))
                 .thenReturn("1.1,1.3,1.5");
 
         ConfigurationService configurationService = new ConfigurationService();
@@ -101,12 +101,12 @@ class ConfigurationServiceTest {
 
         assertEquals(
                 List.of("1.1", "1.3", "1.5"),
-                configurationService.getBulkUserEmailExcludedTermsAndConditions());
+                configurationService.getBulkUserEmailIncludedTermsAndConditions());
     }
 
     @Test
     void shouldReadEmptyTermsAndConditionsVersionCSVList() {
-        when(systemService.getOrDefault("BULK_USER_EMAIL_EXCLUDED_TERMS_AND_CONDITIONS", ""))
+        when(systemService.getOrDefault("BULK_USER_EMAIL_INCLUDED_TERMS_AND_CONDITIONS", ""))
                 .thenReturn("");
 
         ConfigurationService configurationService = new ConfigurationService();
@@ -114,6 +114,6 @@ class ConfigurationServiceTest {
 
         assertEquals(
                 Collections.EMPTY_LIST,
-                configurationService.getBulkUserEmailExcludedTermsAndConditions());
+                configurationService.getBulkUserEmailIncludedTermsAndConditions());
     }
 }

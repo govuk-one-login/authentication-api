@@ -325,50 +325,50 @@ class DynamoServiceIntegrationTest {
     }
 
     @Test
-    void shouldGetUsersNotOnTermsAndConditionsVersion() {
+    void shouldGetUsersOnTermsAndConditionsVersion() {
         setupDynamoWithMultipleUsers();
 
         var users =
-                dynamoService.getBulkUserEmailAudienceStreamNotOnTermsAndConditionsVersion(
+                dynamoService.getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
                         null, List.of("1.0"));
-        assertThat(users.count(), equalTo(0L));
+        assertThat(users.count(), equalTo(5L));
     }
 
     @Test
-    void shouldGetVerifiedUsersNotOnTermsAndConditionsVariousVersions() {
+    void shouldGetVerifiedUsersOnTermsAndConditionsVariousVersions() {
         setupDynamoWithMultipleUsersWithDifferentTermsAndConditions();
 
         assertThat(
                 dynamoService
-                        .getBulkUserEmailAudienceStreamNotOnTermsAndConditionsVersion(
+                        .getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
                                 null, List.of("1.0"))
                         .count(),
-                equalTo(7L));
+                equalTo(3L));
         assertThat(
                 dynamoService
-                        .getBulkUserEmailAudienceStreamNotOnTermsAndConditionsVersion(
+                        .getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
                                 null, List.of("1.1"))
                         .count(),
-                equalTo(8L));
+                equalTo(2L));
         assertThat(
                 dynamoService
-                        .getBulkUserEmailAudienceStreamNotOnTermsAndConditionsVersion(
+                        .getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
                                 null, List.of("1.2"))
                         .count(),
-                equalTo(7L));
+                equalTo(3L));
         assertThat(
                 dynamoService
-                        .getBulkUserEmailAudienceStreamNotOnTermsAndConditionsVersion(
+                        .getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
                                 null, List.of("1.3"))
                         .count(),
-                equalTo(8L));
+                equalTo(2L));
 
         assertThat(
                 dynamoService
-                        .getBulkUserEmailAudienceStreamNotOnTermsAndConditionsVersion(
+                        .getBulkUserEmailAudienceStreamOnTermsAndConditionsVersion(
                                 null, List.of("1.3", "1.1"))
                         .count(),
-                equalTo(6L));
+                equalTo(4L));
     }
 
     @Test

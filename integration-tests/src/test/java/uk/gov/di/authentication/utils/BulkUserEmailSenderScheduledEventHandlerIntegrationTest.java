@@ -96,8 +96,8 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
                     }
 
                     @Override
-                    public List<String> getBulkUserEmailExcludedTermsAndConditions() {
-                        return List.of("1.5", "1.6");
+                    public List<String> getBulkUserEmailIncludedTermsAndConditions() {
+                        return List.of("1.0", "1.1", "1.2", "1.3", "1.4");
                     }
                 };
         handler = new BulkUserEmailSenderScheduledEventHandler(configuration);

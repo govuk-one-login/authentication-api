@@ -89,15 +89,15 @@ public class BulkUserEmailSenderScheduledEventHandler
         final int bulkUserEmailMaxBatchCount = configurationService.getBulkUserEmailMaxBatchCount();
         final long bulkUserEmailBatchPauseDuration =
                 configurationService.getBulkUserEmailBatchPauseDuration();
-        final List<String> bulkUserEmailExcludedTermsAndConditions =
-                configurationService.getBulkUserEmailExcludedTermsAndConditions();
+        final List<String> bulkUserEmailIncludedTermsAndConditions =
+                configurationService.getBulkUserEmailIncludedTermsAndConditions();
 
         LOG.info(
-                "Bulk User Email Send configuration - bulkUserEmailBatchQueryLimit: {}, bulkUserEmailMaxBatchCount: {}, bulkUserEmailBatchPauseDuration: {}, excludedTermsAndConditions: {}",
+                "Bulk User Email Send configuration - bulkUserEmailBatchQueryLimit: {}, bulkUserEmailMaxBatchCount: {}, bulkUserEmailBatchPauseDuration: {}, includedTermsAndConditions: {}",
                 bulkUserEmailBatchQueryLimit,
                 bulkUserEmailMaxBatchCount,
                 bulkUserEmailBatchPauseDuration,
-                bulkUserEmailExcludedTermsAndConditions);
+                bulkUserEmailIncludedTermsAndConditions);
 
         updateTableSizeMetric();
 
@@ -124,7 +124,7 @@ public class BulkUserEmailSenderScheduledEventHandler
                                                 sendEmailIfRequiredAndUpdateStatus(
                                                         userProfile,
                                                         subjectId,
-                                                        bulkUserEmailExcludedTermsAndConditions),
+                                                        bulkUserEmailIncludedTermsAndConditions),
                                         () -> {
                                             LOG.warn("User not found by subject id");
                                             updateBulkUserStatus(
@@ -168,10 +168,10 @@ public class BulkUserEmailSenderScheduledEventHandler
     private void sendEmailIfRequiredAndUpdateStatus(
             UserProfile userProfile,
             String subjectId,
-            List<String> bulkUserEmailExcludedTermsAndConditions) {
+            List<String> bulkUserEmailIncludedTermsAndConditions) {
         boolean hasAcceptedRecentTermsAndConditions =
                 (userProfile.getTermsAndConditions() != null
-                        && bulkUserEmailExcludedTermsAndConditions.contains(
+                        && !bulkUserEmailIncludedTermsAndConditions.contains(
                                 userProfile.getTermsAndConditions().getVersion()));
         if (hasAcceptedRecentTermsAndConditions) {
             updateBulkUserStatus(subjectId, BulkEmailStatus.TERMS_ACCEPTED_RECENTLY);

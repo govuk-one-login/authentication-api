@@ -108,9 +108,9 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 System.getenv().getOrDefault("BULK_USER_EMAIL_BATCH_PAUSE_DURATION", "0"));
     }
 
-    public List<String> getBulkUserEmailExcludedTermsAndConditions() {
+    public List<String> getBulkUserEmailIncludedTermsAndConditions() {
         String configurationValue =
-                systemService.getOrDefault("BULK_USER_EMAIL_EXCLUDED_TERMS_AND_CONDITIONS", "");
+                systemService.getOrDefault("BULK_USER_EMAIL_INCLUDED_TERMS_AND_CONDITIONS", "");
         if (configurationValue == null || configurationValue.isEmpty()) {
             return List.of();
         } else {

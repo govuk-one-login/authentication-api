@@ -119,7 +119,7 @@ variable "bulk_user_email_send_schedule_enabled" {
   default = false
 }
 
-variable "bulk_user_email_excluded_terms_and_conditions" {
+variable "bulk_user_email_included_terms_and_conditions" {
   type    = string
   default = null
 }
