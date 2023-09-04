@@ -23,7 +23,8 @@ dependencies {
             configurations.cloudwatch,
             project(":shared"),
             project(":client-registry-api"),
-            project(":doc-checking-app-api")
+            project(":doc-checking-app-api"),
+            project(":auth-external-api")
 
     testImplementation configurations.tests,
             configurations.lambda_tests,

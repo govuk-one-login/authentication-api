@@ -9,6 +9,7 @@ import net.minidev.json.JSONArray;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.app.services.DynamoDocAppService;
+import uk.gov.di.authentication.external.entity.AuthUserInfoClaims;
 import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
 import uk.gov.di.authentication.oidc.exceptions.UserInfoException;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
@@ -33,7 +34,6 @@ public class UserInfoService {
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final ConfigurationService configurationService;
     protected final Json objectMapper = SerializationService.getInstance();
-
     private static final Logger LOG = LogManager.getLogger(UserInfoService.class);
 
     public UserInfoService(
@@ -77,61 +77,9 @@ public class UserInfoService {
         }
 
         if (configurationService.isAuthOrchSplitEnabled()) {
-            UserInfo tmpUserInfo;
-            try {
-                var authUserInfo =
-                        userInfoStorageService.getAuthenticationUserInfoData(
-                                accessTokenInfo.getAccessTokenStore().getInternalSubjectId());
-
-                if (authUserInfo.isPresent()) {
-                    tmpUserInfo =
-                            new UserInfo(JSONObjectUtils.parse(authUserInfo.get().getUserInfo()));
-                } else {
-                    throw new AccessTokenException(
-                            "Unable to find subject", BearerTokenError.INVALID_TOKEN);
-                }
-            } catch (Exception e) {
-                throw new AccessTokenException(
-                        "Unable to get user info for Subject", BearerTokenError.INVALID_TOKEN);
-            }
-
-            if (accessTokenInfo.getScopes().contains(OIDCScopeValue.EMAIL.getValue())) {
-                userInfo.setEmailAddress(tmpUserInfo.getEmailAddress());
-                userInfo.setEmailVerified(tmpUserInfo.getEmailVerified());
-            }
-            if (accessTokenInfo.getScopes().contains(OIDCScopeValue.PHONE.getValue())) {
-                userInfo.setPhoneNumber(tmpUserInfo.getPhoneNumber());
-                userInfo.setPhoneNumberVerified(tmpUserInfo.getPhoneNumberVerified());
-            }
-            if (accessTokenInfo.getScopes().contains(CustomScopeValue.GOVUK_ACCOUNT.getValue())) {
-                userInfo.setClaim("legacy_subject_id", tmpUserInfo.getClaim("legacy_subject_id"));
-            }
-            if (accessTokenInfo
-                    .getScopes()
-                    .contains(CustomScopeValue.ACCOUNT_MANAGEMENT.getValue())) {
-                userInfo.setClaim("public_subject_id", tmpUserInfo.getClaim("public_subject_id"));
-            }
+            populateInfoOrchSplitEnabled(userInfo, accessTokenInfo);
         } else {
-            var userProfile =
-                    authenticationService.getUserProfileFromSubject(
-                            accessTokenInfo.getAccessTokenStore().getInternalSubjectId());
-
-            if (accessTokenInfo.getScopes().contains(OIDCScopeValue.EMAIL.getValue())) {
-                userInfo.setEmailAddress(userProfile.getEmail());
-                userInfo.setEmailVerified(userProfile.isEmailVerified());
-            }
-            if (accessTokenInfo.getScopes().contains(OIDCScopeValue.PHONE.getValue())) {
-                userInfo.setPhoneNumber(userProfile.getPhoneNumber());
-                userInfo.setPhoneNumberVerified(userProfile.isPhoneNumberVerified());
-            }
-            if (accessTokenInfo.getScopes().contains(CustomScopeValue.GOVUK_ACCOUNT.getValue())) {
-                userInfo.setClaim("legacy_subject_id", userProfile.getLegacySubjectID());
-            }
-            if (accessTokenInfo
-                    .getScopes()
-                    .contains(CustomScopeValue.ACCOUNT_MANAGEMENT.getValue())) {
-                userInfo.setClaim("public_subject_id", userProfile.getPublicSubjectID());
-            }
+            populateInfo(userInfo, accessTokenInfo);
         }
 
         if (configurationService.isIdentityEnabled()
@@ -140,6 +88,66 @@ public class UserInfoService {
         } else {
             LOG.info("No identity claims present");
             return userInfo;
+        }
+    }
+
+    private void populateInfoOrchSplitEnabled(UserInfo userInfo, AccessTokenInfo accessTokenInfo)
+            throws AccessTokenException {
+        UserInfo tmpUserInfo;
+        try {
+            var authUserInfo =
+                    userInfoStorageService.getAuthenticationUserInfoData(
+                            accessTokenInfo.getAccessTokenStore().getInternalSubjectId());
+
+            if (authUserInfo.isPresent()) {
+                tmpUserInfo = new UserInfo(JSONObjectUtils.parse(authUserInfo.get().getUserInfo()));
+            } else {
+                throw new AccessTokenException(
+                        "Unable to find subject", BearerTokenError.INVALID_TOKEN);
+            }
+        } catch (Exception e) {
+            throw new AccessTokenException(
+                    "Unable to get user info for Subject", BearerTokenError.INVALID_TOKEN);
+        }
+
+        if (accessTokenInfo.getScopes().contains(OIDCScopeValue.EMAIL.getValue())) {
+            userInfo.setEmailAddress(tmpUserInfo.getEmailAddress());
+            userInfo.setEmailVerified(tmpUserInfo.getEmailVerified());
+        }
+        if (accessTokenInfo.getScopes().contains(OIDCScopeValue.PHONE.getValue())) {
+            userInfo.setPhoneNumber(tmpUserInfo.getPhoneNumber());
+            userInfo.setPhoneNumberVerified(tmpUserInfo.getPhoneNumberVerified());
+        }
+        if (accessTokenInfo.getScopes().contains(CustomScopeValue.GOVUK_ACCOUNT.getValue())) {
+            userInfo.setClaim(
+                    AuthUserInfoClaims.LEGACY_SUBJECT_ID.getValue(),
+                    tmpUserInfo.getClaim(AuthUserInfoClaims.LEGACY_SUBJECT_ID.getValue()));
+        }
+        if (accessTokenInfo.getScopes().contains(CustomScopeValue.ACCOUNT_MANAGEMENT.getValue())) {
+            userInfo.setClaim(
+                    AuthUserInfoClaims.PUBLIC_SUBJECT_ID.getValue(),
+                    tmpUserInfo.getClaim(AuthUserInfoClaims.PUBLIC_SUBJECT_ID.getValue()));
+        }
+    }
+
+    private void populateInfo(UserInfo userInfo, AccessTokenInfo accessTokenInfo) {
+        var userProfile =
+                authenticationService.getUserProfileFromSubject(
+                        accessTokenInfo.getAccessTokenStore().getInternalSubjectId());
+
+        if (accessTokenInfo.getScopes().contains(OIDCScopeValue.EMAIL.getValue())) {
+            userInfo.setEmailAddress(userProfile.getEmail());
+            userInfo.setEmailVerified(userProfile.isEmailVerified());
+        }
+        if (accessTokenInfo.getScopes().contains(OIDCScopeValue.PHONE.getValue())) {
+            userInfo.setPhoneNumber(userProfile.getPhoneNumber());
+            userInfo.setPhoneNumberVerified(userProfile.isPhoneNumberVerified());
+        }
+        if (accessTokenInfo.getScopes().contains(CustomScopeValue.GOVUK_ACCOUNT.getValue())) {
+            userInfo.setClaim("legacy_subject_id", userProfile.getLegacySubjectID());
+        }
+        if (accessTokenInfo.getScopes().contains(CustomScopeValue.ACCOUNT_MANAGEMENT.getValue())) {
+            userInfo.setClaim("public_subject_id", userProfile.getPublicSubjectID());
         }
     }
 
