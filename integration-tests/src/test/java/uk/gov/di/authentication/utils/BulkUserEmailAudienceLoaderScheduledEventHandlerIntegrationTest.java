@@ -15,6 +15,11 @@ import uk.gov.di.authentication.sharedtest.basetest.HandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.BulkEmailUsersExtension;
 import uk.gov.di.authentication.utils.lambda.BulkUserEmailAudienceLoaderScheduledEventHandler;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -37,6 +42,8 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerIntegrationTest
     private Long bulkUserEmailAudienceLoadUserBatchSize = 5L;
 
     private Long bulkUserEmailMaxAudienceLoadUserCount = 24L;
+
+    private Instant fixedNow = LocalDateTime.of(2023, 6, 1, 11, 59, 59).toInstant(ZoneOffset.UTC);
 
     @BeforeEach
     void setup() {
@@ -76,6 +83,11 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerIntegrationTest
                     public boolean isBulkUserEmailEmailSendingEnabled() {
                         return true;
                     }
+
+                    @Override
+                    public Clock getClock() {
+                        return Clock.fixed(fixedNow, ZoneId.of("UTC"));
+                    }
                 };
 
         handler = new BulkUserEmailAudienceLoaderScheduledEventHandler(configuration);
@@ -104,6 +116,19 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerIntegrationTest
 
         assertThat(usersLoaded.get(0), equalTo("1"));
         assertThat(usersLoaded.size(), equalTo(1));
+    }
+
+    @Test
+    void shouldSetCreatedAtAndStatusWhenLoadingSingleUser() {
+        userStore.signUp("user.1@account.gov.uk", "password123", new Subject("1"));
+
+        makeRequest(Optional.empty());
+
+        var userLoaded = bulkEmailUsersService.getBulkEmailUsers("1").get();
+        assertThat(
+                userLoaded.getCreatedAt(),
+                equalTo(LocalDateTime.ofInstant(fixedNow, ZoneId.of("UTC")).toString()));
+        assertThat(userLoaded.getBulkEmailStatus(), equalTo(BulkEmailStatus.PENDING));
     }
 
     @Test
