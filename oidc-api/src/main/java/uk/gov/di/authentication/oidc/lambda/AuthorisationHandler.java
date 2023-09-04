@@ -74,6 +74,7 @@ public class AuthorisationHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOG = LogManager.getLogger(AuthorisationHandler.class);
+    public static final String GOOGLE_ANALYTICS_QUERY_PARAMETER_KEY = "result";
 
     private final SessionService sessionService;
     private final ConfigurationService configurationService;
@@ -310,6 +311,15 @@ public class AuthorisationHandler
                     && authenticationRequest.getPrompt().contains(Prompt.Type.LOGIN)) {
                 redirectUriBuilder.addParameter("prompt", String.valueOf(Prompt.Type.LOGIN));
             }
+
+            List<String> optionalGaTrackingParameter =
+                    authenticationRequest.getCustomParameter(GOOGLE_ANALYTICS_QUERY_PARAMETER_KEY);
+            if (Objects.nonNull(optionalGaTrackingParameter)
+                    && !optionalGaTrackingParameter.isEmpty()) {
+                redirectUriBuilder.addParameter(
+                        GOOGLE_ANALYTICS_QUERY_PARAMETER_KEY, optionalGaTrackingParameter.get(0));
+            }
+
             redirectURI = redirectUriBuilder.build().toString();
         } catch (URISyntaxException e) {
             throw new RuntimeException("Error constructing redirect URI", e);

@@ -361,6 +361,30 @@ class AuthorisationHandlerTest {
                         pair("client-name", RP_CLIENT_NAME));
     }
 
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void shouldRetainGoogleAnalyticsParamThroughRedirectToLoginWhenClientIsFaceToFaceRp(
+            boolean isAuthOrchSplitEnabled) {
+        when(configService.isAuthOrchSplitEnabled()).thenReturn(isAuthOrchSplitEnabled);
+
+        withExistingSession(session);
+        when(userContext.getClientSession()).thenReturn(clientSession);
+        when(userContext.getSession()).thenReturn(session);
+        when(clientSession.getAuthRequestParams())
+                .thenReturn(generateAuthRequest(Optional.empty()).toParameters());
+
+        Map<String, String> requestParams =
+                buildRequestParams(
+                        Map.of("an-irrelevant-key", "an-irrelevant-value", "result", "sign-in"));
+        APIGatewayProxyResponseEvent response = makeHandlerRequest(withRequestEvent(requestParams));
+        URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
+
+        assertThat(response, hasStatus(302));
+        assertEquals(LOGIN_URL.getAuthority(), uri.getAuthority());
+        assertThat(uri.getQuery(), containsString("result=sign-in"));
+        assertThat(uri.getQuery(), not(containsString("an-irrelevant-key=an-irrelevant-value")));
+    }
+
     @Test
     void shouldRedirectToLoginWhenUserNeedsToBeUplifted() {
         session.setCurrentCredentialStrength(CredentialTrustLevel.LOW_LEVEL);
