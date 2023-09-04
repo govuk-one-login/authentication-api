@@ -11,7 +11,7 @@ import uk.gov.di.authentication.shared.services.BulkEmailUsersService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.LambdaInvokerService;
-import uk.gov.di.authentication.utils.exceptions.ExcludedTermsAndConditionsConfigMissingException;
+import uk.gov.di.authentication.utils.exceptions.IncludedTermsAndConditionsConfigMissingException;
 
 import java.util.Arrays;
 import java.util.List;
@@ -246,7 +246,7 @@ class BulkUserEmailAudienceLoaderScheduledEventHandlerTest {
         when(configurationService.getBulkUserEmailAudienceLoadUserBatchSize()).thenReturn(10L);
 
         assertThrows(
-                ExcludedTermsAndConditionsConfigMissingException.class,
+                IncludedTermsAndConditionsConfigMissingException.class,
                 () ->
                         bulkUserEmailAudienceLoaderScheduledEventHandler.handleRequest(
                                 scheduledEvent, mockContext),
