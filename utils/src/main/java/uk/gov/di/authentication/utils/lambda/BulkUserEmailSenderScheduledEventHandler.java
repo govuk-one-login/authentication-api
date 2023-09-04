@@ -15,6 +15,7 @@ import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.NotificationService;
+import uk.gov.di.authentication.shared.services.SystemService;
 import uk.gov.di.authentication.utils.domain.BulkEmailType;
 import uk.gov.di.authentication.utils.domain.UtilsAuditableEvent;
 import uk.gov.service.notify.NotificationClient;
@@ -46,6 +47,7 @@ public class BulkUserEmailSenderScheduledEventHandler
 
     public BulkUserEmailSenderScheduledEventHandler() {
         this(ConfigurationService.getInstance());
+        this.configurationService.setSystemService(new SystemService());
     }
 
     public BulkUserEmailSenderScheduledEventHandler(
