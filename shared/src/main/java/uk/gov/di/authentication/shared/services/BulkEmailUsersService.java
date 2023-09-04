@@ -44,7 +44,12 @@ public class BulkEmailUsersService extends BaseDynamoService<BulkEmailUser> {
     }
 
     public void addUser(String subjectID, BulkEmailStatus bulkEmailStatus) {
-        put(new BulkEmailUser().withSubjectID(subjectID).withBulkEmailStatus(bulkEmailStatus));
+        LocalDateTime now = LocalDateTime.now(configurationService.getClock());
+        put(
+                new BulkEmailUser()
+                        .withSubjectID(subjectID)
+                        .withBulkEmailStatus(bulkEmailStatus)
+                        .withCreatedAt(now.toString()));
     }
 
     public List<String> getNSubjectIdsByStatus(Integer limit, BulkEmailStatus bulkEmailStatus) {

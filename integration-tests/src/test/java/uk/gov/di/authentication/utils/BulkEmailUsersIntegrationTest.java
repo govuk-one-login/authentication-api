@@ -43,6 +43,19 @@ public class BulkEmailUsersIntegrationTest {
     BulkEmailUsersService bulkEmailUsersService = new BulkEmailUsersService(configurationService);
 
     @Test
+    void shouldAddBulkEmailUserWithPendingStatusAndCreatedTimestamp() {
+        bulkEmailUsersService.addUser(SUBJECT_ID_1, BulkEmailStatus.PENDING);
+
+        var createdUser = bulkEmailUsersService.getBulkEmailUsers(SUBJECT_ID_1).get();
+
+        assertEquals(SUBJECT_ID_1, createdUser.getSubjectID());
+        assertEquals(BulkEmailStatus.PENDING, createdUser.getBulkEmailStatus());
+        assertEquals(
+                LocalDateTime.ofInstant(fixedNow, ZoneId.of("UTC")).toString(),
+                createdUser.getCreatedAt());
+    }
+
+    @Test
     void updateUserStatusUpdatesaUserWithTheProvidedStatus() {
         bulkEmailUsersExtension.addBulkEmailUser(SUBJECT_ID_1, BulkEmailStatus.PENDING);
 
