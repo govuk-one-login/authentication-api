@@ -78,8 +78,7 @@ public class BulkUserEmailAudienceLoaderScheduledEventHandler
         List<String> includedTermsAndConditions =
                 configurationService.getBulkUserEmailIncludedTermsAndConditions();
         if (includedTermsAndConditions == null || includedTermsAndConditions.isEmpty()) {
-            throw new IncludedTermsAndConditionsConfigMissingException(
-                    "Included terms and conditions configuration is missing");
+            throw new IncludedTermsAndConditionsConfigMissingException();
         }
 
         if (event.getDetail() != null && event.getDetail().containsKey(LAST_EVALUATED_KEY)) {

@@ -18,6 +18,7 @@ import uk.gov.di.authentication.shared.services.NotificationService;
 import uk.gov.di.authentication.shared.services.SystemService;
 import uk.gov.di.authentication.utils.domain.BulkEmailType;
 import uk.gov.di.authentication.utils.domain.UtilsAuditableEvent;
+import uk.gov.di.authentication.utils.exceptions.IncludedTermsAndConditionsConfigMissingException;
 import uk.gov.service.notify.NotificationClient;
 import uk.gov.service.notify.NotificationClientException;
 
@@ -93,6 +94,10 @@ public class BulkUserEmailSenderScheduledEventHandler
                 configurationService.getBulkUserEmailBatchPauseDuration();
         final List<String> bulkUserEmailIncludedTermsAndConditions =
                 configurationService.getBulkUserEmailIncludedTermsAndConditions();
+
+        if (bulkUserEmailIncludedTermsAndConditions.isEmpty()) {
+            throw new IncludedTermsAndConditionsConfigMissingException();
+        }
 
         LOG.info(
                 "Bulk User Email Send configuration - bulkUserEmailBatchQueryLimit: {}, bulkUserEmailMaxBatchCount: {}, bulkUserEmailBatchPauseDuration: {}, includedTermsAndConditions: {}",
