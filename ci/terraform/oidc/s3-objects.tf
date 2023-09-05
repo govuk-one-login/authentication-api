@@ -10,6 +10,7 @@ resource "aws_s3_bucket_versioning" "source_bucket_versioning" {
 }
 
 resource "aws_s3_object" "auth_ext_api_release_zip" {
+  count  = var.environment == "production" ? 0 : 1
   bucket = aws_s3_bucket.source_bucket.bucket
   key    = "auth-ext-api-release.zip"
 
