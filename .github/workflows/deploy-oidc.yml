@@ -69,6 +69,14 @@ jobs:
             --include "signed-ipv-api-${{ github.sha }}-*"
           mv artifacts/signed-ipv-api-*.zip artifacts/ipv-api.zip
 
+      - name: Download and copy Auth External API signed artifact
+        working-directory: ci/terraform/oidc
+        run: |
+          aws s3 cp s3://${{ env.DESTINATION_BUCKET }} ./artifacts \
+            --recursive --exclude "*" \
+            --include "signed-auth-external-api-${{ github.sha }}-*"
+          mv artifacts/signed-auth-external-api-*.zip artifacts/auth-external-api.zip
+
       - name: Upload OIDC Terraform files
         working-directory: ci/terraform
         run: |
