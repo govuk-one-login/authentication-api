@@ -14,7 +14,3 @@ data "terraform_remote_state" "shared" {
     force_path_style            = false
   }
 }
-
-locals {
-  auth_id_token_signing_key_arn = data.terraform_remote_state.shared.outputs.auth_id_token_signing_key_arn
-}
