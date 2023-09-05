@@ -19,6 +19,8 @@ import uk.gov.di.authentication.shared.services.AccessTokenService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 
+import java.util.Optional;
+
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.AUTHORIZATION_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -116,7 +118,18 @@ public class UserInfoHandler
                     new UserInfoErrorResponse(e.getError()).toHTTPResponse().getHeaderMap());
         }
 
-        LOG.info("Successfully processed UserInfo request. Sending back UserInfo response");
+        LOG.info(
+                "Successfully processed UserInfo request. Setting token status to used and sending back UserInfo response");
+
+        Optional<AccessTokenStore> updatedTokenStore =
+                accessTokenService.setAccessTokenStoreUsed(accessToken.getValue(), true);
+
+        if (updatedTokenStore.isEmpty() || !updatedTokenStore.get().isUsed()) {
+            LOG.error(
+                    "Access token store was unexpectedly empty or was not set as used for the following token: {}",
+                    accessToken.getValue());
+        }
+
         return generateApiGatewayProxyResponse(200, userInfo.toJSONString());
     }
 

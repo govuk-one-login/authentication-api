@@ -73,8 +73,8 @@ public class AccessTokenStoreExtension extends DynamoExtension implements AfterE
         dynamoService.setAccessTokenStoreUsed(accessToken, used);
     }
 
-    public Optional<AccessTokenStore> getAccessToken(String subjectID, String clientId) {
-        return dynamoService.getAccessTokenStore(subjectID);
+    public Optional<AccessTokenStore> getAccessToken(String accessToken) {
+        return dynamoService.getAccessTokenStore(accessToken);
     }
 
     private void createAccessTokenStoreTable() {
