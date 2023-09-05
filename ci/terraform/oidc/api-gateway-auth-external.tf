@@ -67,6 +67,7 @@ resource "aws_api_gateway_usage_plan" "di_auth_ext_api_usage_plan" {
     aws_api_gateway_stage.di_auth_ext_stage,
     aws_api_gateway_rest_api.di_auth_ext_api,
   ]
+  # checkov:skip=CKV_AWS_120:We do not want API caching on this Lambda
 }
 
 resource "aws_api_gateway_stage" "di_auth_ext_stage" {
@@ -87,6 +88,8 @@ resource "aws_api_gateway_stage" "di_auth_ext_stage" {
   }
 
   tags = local.default_tags
+  # checkov:skip=CKV_AWS_51:Client cert authentication is something we might want to consider in the future
+  # checkov:skip=CKV_AWS_120:We do not want API caching on this Lambda
 }
 
 resource "aws_api_gateway_method_settings" "di_auth_ext_api_logging_settings" {
@@ -105,6 +108,8 @@ resource "aws_api_gateway_method_settings" "di_auth_ext_api_logging_settings" {
   depends_on = [
     aws_api_gateway_stage.di_auth_ext_stage
   ]
+  # checkov:skip=CKV_AWS_225:We do not want API caching on this Lambda
+  # checkov:skip=CKV_AWS_308:We do not want API caching on this Lambda
 }
 
 resource "aws_api_gateway_deployment" "auth_ext_api_deployment" {
