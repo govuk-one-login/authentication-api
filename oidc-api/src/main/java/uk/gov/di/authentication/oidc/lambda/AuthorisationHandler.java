@@ -10,12 +10,14 @@ import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseMode;
 import com.nimbusds.oauth2.sdk.ResponseType;
+import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.OIDCError;
+import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.Prompt;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import org.apache.http.client.utils.URIBuilder;
@@ -32,7 +34,6 @@ import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
@@ -384,11 +385,6 @@ public class AuthorisationHandler
                             .claim("state", new State().getValue())
                             .claim("client_id", configurationService.getOrchestrationClientId())
                             .claim(
-                                    "scope",
-                                    ValidScopes.extractAuthScopesFromRequestedScopes(
-                                                    authenticationRequest.getScope())
-                                            .toString())
-                            .claim(
                                     "redirect_uri",
                                     configurationService.getOrchestrationRedirectUri());
 
@@ -458,30 +454,44 @@ public class AuthorisationHandler
                         clientRegistry.isIdentityVerificationSupported(),
                         configurationService.isIdentityEnabled());
 
+        var amScopePresent =
+                requestedScopesContain(CustomScopeValue.ACCOUNT_MANAGEMENT, authenticationRequest);
+        var govukAccountScopePresent =
+                requestedScopesContain(CustomScopeValue.GOVUK_ACCOUNT, authenticationRequest);
+        var phoneScopePresent = requestedScopesContain(OIDCScopeValue.PHONE, authenticationRequest);
+        var emailScopePresent = requestedScopesContain(OIDCScopeValue.EMAIL, authenticationRequest);
+
         var claimsSetRequest = new ClaimsSetRequest();
         if (identityRequired) {
             LOG.info("Identity is required. Adding the local_account_id and salt claims");
             claimsSetRequest = claimsSetRequest.add("local_account_id").add("salt");
         }
-        if (authenticationRequest
-                .getScope()
-                .toStringList()
-                .contains(CustomScopeValue.ACCOUNT_MANAGEMENT.getValue())) {
+        if (amScopePresent) {
             LOG.info("am scope is present. Adding the public_subject_id claim");
             claimsSetRequest = claimsSetRequest.add("public_subject_id");
         }
-        if (authenticationRequest
-                .getScope()
-                .toStringList()
-                .contains(CustomScopeValue.GOVUK_ACCOUNT.getValue())) {
+        if (govukAccountScopePresent) {
             LOG.info("govuk-account scope is present. Adding the legacy_subject_id claim");
             claimsSetRequest = claimsSetRequest.add("legacy_subject_id");
         }
-
+        if (phoneScopePresent) {
+            LOG.info(
+                    "phone scope is present. Adding the phone_number and phone_number_verified claim");
+            claimsSetRequest = claimsSetRequest.add("phone_number").add("phone_number_verified");
+        }
+        if (emailScopePresent) {
+            LOG.info("email scope is present. Adding the legacy_subject_id claim");
+            claimsSetRequest = claimsSetRequest.add("email").add("email_verified");
+        }
         if (claimsSetRequest.getEntries().isEmpty()) {
             LOG.info("No additional claims to add to request");
             return Optional.empty();
         }
         return Optional.of(new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest));
+    }
+
+    private Boolean requestedScopesContain(
+            Scope.Value scope, AuthenticationRequest authenticationRequest) {
+        return authenticationRequest.getScope().toStringList().contains(scope.getValue());
     }
 }

@@ -33,7 +33,6 @@ import java.util.Objects;
 import java.util.Optional;
 
 import static com.nimbusds.openid.connect.sdk.OIDCScopeValue.EMAIL;
-import static com.nimbusds.openid.connect.sdk.OIDCScopeValue.OFFLINE_ACCESS;
 import static com.nimbusds.openid.connect.sdk.OIDCScopeValue.OPENID;
 import static com.nimbusds.openid.connect.sdk.OIDCScopeValue.PHONE;
 import static java.util.Collections.singletonList;
@@ -75,51 +74,6 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
     }
 
     @Test
-    void shouldSendSecureJarToAuthenticationWithRelevantScopes()
-            throws ParseException, JOSEException, java.text.ParseException {
-        var rpRequestedScopes = new Scope(OPENID, PHONE, EMAIL);
-        registerClient(rpRequestedScopes.toStringList(), false);
-
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(Optional.empty()),
-                        constructQueryStringParameters(rpRequestedScopes.toString(), null));
-
-        var authorizationRequest =
-                validateQueryRequestToAuthenticationAndReturnAuthRequest(response);
-        assertTrue(Objects.nonNull(authorizationRequest.getRequestObject()));
-        var encryptedRequestObject = authorizationRequest.getRequestObject();
-        var signedJWTResponse = decryptJWT((EncryptedJWT) encryptedRequestObject);
-        validateStandardClaimsInJar(signedJWTResponse);
-        assertThat(signedJWTResponse.getJWTClaimsSet().getClaim("claim"), equalTo(null));
-        assertTxmaAuditEventsReceived(
-                txmaAuditQueue, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
-    }
-
-    @Test
-    void shouldSendSecureJarToAuthenticationWithRelevantScopesAndOmitOfflineAccess()
-            throws ParseException, JOSEException, java.text.ParseException {
-        var rpRequestedScopes = new Scope(OPENID, PHONE, EMAIL, OFFLINE_ACCESS);
-        registerClient(rpRequestedScopes.toStringList(), false);
-
-        var response =
-                makeRequest(
-                        Optional.empty(),
-                        constructHeaders(Optional.empty()),
-                        constructQueryStringParameters(rpRequestedScopes.toString(), null));
-
-        var authorizationRequest =
-                validateQueryRequestToAuthenticationAndReturnAuthRequest(response);
-        var encryptedRequestObject = authorizationRequest.getRequestObject();
-        var signedJWTResponse = decryptJWT((EncryptedJWT) encryptedRequestObject);
-        validateStandardClaimsInJar(signedJWTResponse);
-        assertThat(signedJWTResponse.getJWTClaimsSet().getClaim("claim"), equalTo(null));
-        assertTxmaAuditEventsReceived(
-                txmaAuditQueue, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
-    }
-
-    @Test
     void
             shouldSendSecureJarToAuthenticationWithRelevantScopesAndAddIdentityClaimsWhenIdentityIsRequired()
                     throws ParseException, JOSEException, java.text.ParseException {
@@ -132,24 +86,11 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
                         constructHeaders(Optional.empty()),
                         constructQueryStringParameters(rpRequestedScopes.toString(), "P2.Cl.Cm"));
 
-        var authorizationRequest =
-                validateQueryRequestToAuthenticationAndReturnAuthRequest(response);
-        var encryptedRequestObject = authorizationRequest.getRequestObject();
-        var signedJWTResponse = decryptJWT((EncryptedJWT) encryptedRequestObject);
-        validateStandardClaimsInJar(signedJWTResponse);
-        assertThat(
-                Objects.nonNull(signedJWTResponse.getJWTClaimsSet().getClaim("claim")),
-                equalTo(true));
+        var claimsRequest = getValidatedClaimsRequest(response);
 
-        var claimsRequest =
-                OIDCClaimsRequest.parse(
-                        (String) signedJWTResponse.getJWTClaimsSet().getClaim("claim"));
-
-        var identityExpectedSaltClaim = claimsRequest.getUserInfoClaimsRequest().get("salt");
-        var identityExpectedLocalAccountIdClaim =
-                claimsRequest.getUserInfoClaimsRequest().get("local_account_id");
-        assertThat(Objects.nonNull(identityExpectedSaltClaim), equalTo(true));
-        assertThat(Objects.nonNull(identityExpectedLocalAccountIdClaim), equalTo(true));
+        assertTrue(Objects.nonNull(claimsRequest.getUserInfoClaimsRequest().get("salt")));
+        assertTrue(
+                Objects.nonNull(claimsRequest.getUserInfoClaimsRequest().get("local_account_id")));
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
     }
@@ -158,7 +99,7 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
     void
             shouldSendSecureJarToAuthenticationWithRelevantScopesAndAddAccountManagementClaimWhenAmScopeIsPresent()
                     throws ParseException, JOSEException, java.text.ParseException {
-        var rpRequestedScopes = new Scope(OPENID, PHONE, EMAIL, ACCOUNT_MANAGEMENT);
+        var rpRequestedScopes = new Scope(OPENID, EMAIL, ACCOUNT_MANAGEMENT);
         registerClient(rpRequestedScopes.toStringList(), false);
 
         var response =
@@ -167,22 +108,54 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
                         constructHeaders(Optional.empty()),
                         constructQueryStringParameters(rpRequestedScopes.toString(), null));
 
-        var authorizationRequest =
-                validateQueryRequestToAuthenticationAndReturnAuthRequest(response);
-        var encryptedRequestObject = authorizationRequest.getRequestObject();
-        var signedJWTResponse = decryptJWT((EncryptedJWT) encryptedRequestObject);
-        validateStandardClaimsInJar(signedJWTResponse);
+        var claimsRequest = getValidatedClaimsRequest(response);
 
-        assertThat(
-                Objects.nonNull(signedJWTResponse.getJWTClaimsSet().getClaim("claim")),
-                equalTo(true));
-        var claimsRequest =
-                OIDCClaimsRequest.parse(
-                        (String) signedJWTResponse.getJWTClaimsSet().getClaim("claim"));
+        assertTrue(
+                Objects.nonNull(claimsRequest.getUserInfoClaimsRequest().get("public_subject_id")));
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+    }
 
-        var accountManagementExpectedClaim =
-                claimsRequest.getUserInfoClaimsRequest().get("public_subject_id");
-        assertThat(Objects.nonNull(accountManagementExpectedClaim), equalTo(true));
+    @Test
+    void
+            shouldSendSecureJarToAuthenticationWithRelevantScopesAndAddPhoneClaimsWhenPhoneScopeIsPresent()
+                    throws ParseException, JOSEException, java.text.ParseException {
+        var rpRequestedScopes = new Scope(OPENID, PHONE, ACCOUNT_MANAGEMENT);
+        registerClient(rpRequestedScopes.toStringList(), false);
+
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(Optional.empty()),
+                        constructQueryStringParameters(rpRequestedScopes.toString(), null));
+
+        var claimsRequest = getValidatedClaimsRequest(response);
+
+        assertTrue(Objects.nonNull(claimsRequest.getUserInfoClaimsRequest().get("phone_number")));
+        assertTrue(
+                Objects.nonNull(
+                        claimsRequest.getUserInfoClaimsRequest().get("phone_number_verified")));
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+    }
+
+    @Test
+    void
+            shouldSendSecureJarToAuthenticationWithRelevantScopesAndAddEmailClaimsWhenEmailScopeIsPresent()
+                    throws ParseException, JOSEException, java.text.ParseException {
+        var rpRequestedScopes = new Scope(OPENID, EMAIL, ACCOUNT_MANAGEMENT);
+        registerClient(rpRequestedScopes.toStringList(), false);
+
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(Optional.empty()),
+                        constructQueryStringParameters(rpRequestedScopes.toString(), null));
+
+        var claimsRequest = getValidatedClaimsRequest(response);
+
+        assertTrue(Objects.nonNull(claimsRequest.getUserInfoClaimsRequest().get("email")));
+        assertTrue(Objects.nonNull(claimsRequest.getUserInfoClaimsRequest().get("email_verified")));
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
     }
@@ -200,18 +173,7 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
                         constructHeaders(Optional.empty()),
                         constructQueryStringParameters(rpRequestedScopes.toString(), null));
 
-        var authorizationRequest =
-                validateQueryRequestToAuthenticationAndReturnAuthRequest(response);
-        var encryptedRequestObject = authorizationRequest.getRequestObject();
-        var signedJWTResponse = decryptJWT((EncryptedJWT) encryptedRequestObject);
-
-        validateStandardClaimsInJar(signedJWTResponse);
-        assertThat(
-                Objects.nonNull(signedJWTResponse.getJWTClaimsSet().getClaim("claim")),
-                equalTo(true));
-        var claimsRequest =
-                OIDCClaimsRequest.parse(
-                        (String) signedJWTResponse.getJWTClaimsSet().getClaim("claim"));
+        var claimsRequest = getValidatedClaimsRequest(response);
 
         var govUkAccountExpectedClaim =
                 claimsRequest.getUserInfoClaimsRequest().get("legacy_subject_id");
@@ -254,6 +216,21 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
         return authorizationRequest;
     }
 
+    private OIDCClaimsRequest getValidatedClaimsRequest(APIGatewayProxyResponseEvent response)
+            throws ParseException, JOSEException, java.text.ParseException {
+        var authorizationRequest =
+                validateQueryRequestToAuthenticationAndReturnAuthRequest(response);
+        var encryptedRequestObject = authorizationRequest.getRequestObject();
+        var signedJWTResponse = decryptJWT((EncryptedJWT) encryptedRequestObject);
+        validateStandardClaimsInJar(signedJWTResponse);
+        assertThat(
+                Objects.nonNull(signedJWTResponse.getJWTClaimsSet().getClaim("claim")),
+                equalTo(true));
+
+        return OIDCClaimsRequest.parse(
+                (String) signedJWTResponse.getJWTClaimsSet().getClaim("claim"));
+    }
+
     private void validateStandardClaimsInJar(SignedJWT signedJWT) throws java.text.ParseException {
         assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("jti")));
         assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("state")));
@@ -269,7 +246,6 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
         assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("confidence")));
         assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("state")));
         assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("client_id")));
-        assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("scope")));
         assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("redirect_uri")));
         assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("exp")));
         assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("iat")));
@@ -300,10 +276,6 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
                 signedJWT.getJWTClaimsSet().getClaim("rp_sector_host"),
                 equalTo("rp-sector-uri.com"));
         assertThat(signedJWT.getHeader().getAlgorithm(), equalTo(JWSAlgorithm.ES256));
-        var scope = Scope.parse((String) signedJWT.getJWTClaimsSet().getClaim("scope"));
-        var expectedSentScopes = new Scope(OPENID, EMAIL, PHONE);
-        assertThat(scope.size(), equalTo(expectedSentScopes.size()));
-        assertThat(expectedSentScopes.containsAll(scope), equalTo(true));
     }
 
     private String getLocationResponseHeader(APIGatewayProxyResponseEvent response) {

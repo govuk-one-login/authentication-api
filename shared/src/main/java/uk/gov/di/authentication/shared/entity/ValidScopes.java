@@ -43,18 +43,6 @@ public class ValidScopes {
         return Collections.emptySet();
     }
 
-    public static Scope extractAuthScopesFromRequestedScopes(Scope requestedScopes) {
-        var scopeList =
-                ValidScopes.getPublicValidScopes().stream()
-                        .filter(
-                                t ->
-                                        !t.equals(OIDCScopeValue.OFFLINE_ACCESS.getValue())
-                                                && requestedScopes.toStringList().contains(t))
-                        .collect(Collectors.toList());
-
-        return Scope.parse(scopeList);
-    }
-
     public static Set<String> getClaimsForListOfScopes(List<String> scopes) {
         Set<String> claims = new HashSet<>();
         for (String scope : scopes) {
