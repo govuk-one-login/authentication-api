@@ -1,16 +1,16 @@
-resource "aws_s3_bucket" "source_bucket" {
+resource "aws_s3_bucket" "auth_ext_source_bucket" {
   bucket_prefix = "${var.environment}-auth-ext-lambda-source-"
 }
 
-resource "aws_s3_bucket_versioning" "source_bucket_versioning" {
-  bucket = aws_s3_bucket.source_bucket.id
+resource "aws_s3_bucket_versioning" "auth_ext_source_bucket_versioning" {
+  bucket = aws_s3_bucket.auth_ext_source_bucket.id
   versioning_configuration {
     status = "Enabled"
   }
 }
 
 resource "aws_s3_object" "auth_ext_api_release_zip" {
-  bucket = aws_s3_bucket.source_bucket.bucket
+  bucket = aws_s3_bucket.auth_ext_source_bucket.bucket
   key    = "auth-ext-api-release.zip"
 
   server_side_encryption = "AES256"
