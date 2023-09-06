@@ -9,15 +9,6 @@ resource "aws_s3_bucket_versioning" "source_bucket_versioning" {
   }
 }
 
-resource "aws_s3_object" "auth_ext_api_release_zip" {
-  bucket = aws_s3_bucket.source_bucket.bucket
-  key    = "auth-ext-api-release.zip"
-
-  server_side_encryption = "AES256"
-  source                 = var.auth_ext_lambda_zip_file
-  source_hash            = filemd5(var.auth_ext_lambda_zip_file)
-}
-
 resource "aws_s3_object" "oidc_api_release_zip" {
   bucket = aws_s3_bucket.source_bucket.bucket
   key    = "oidc-api-release.zip"
