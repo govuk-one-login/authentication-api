@@ -1,7 +1,6 @@
 name: Pre-merge checks
 on:
   pull_request:
-    paths-ignore: ['ci/terraform/**']
     types:
       - opened
       - reopened
