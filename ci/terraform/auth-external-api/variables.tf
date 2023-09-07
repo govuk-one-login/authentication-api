@@ -23,11 +23,6 @@ variable "aws_region" {
   default = "eu-west-2"
 }
 
-variable "common_state_bucket" {
-  type    = string
-  default = "digital-identity-dev-tfstate"
-}
-
 variable "enable_api_gateway_execution_request_tracing" {
   default     = false
   description = "Whether to enable capturing of requests/responses from API gateway runs (ONLY ENABLE IN NON-PROD ENVIRONMENTS)"
