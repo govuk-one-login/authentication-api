@@ -75,17 +75,17 @@ resource "aws_api_gateway_stage" "di_auth_ext_stage" {
   rest_api_id           = aws_api_gateway_rest_api.di_auth_ext_api.id
   stage_name            = var.environment
   cache_cluster_enabled = false
+  xray_tracing_enabled  = true
 
-  xray_tracing_enabled = true
-
-  dynamic "access_log_settings" {
-    for_each = aws_cloudwatch_log_group.auth_ext_stage_access_logs
-    iterator = log_group
-    content {
-      destination_arn = log_group.value.arn
-      format          = local.access_logging_template
-    }
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.auth_ext_stage_access_logs.arn
+    format          = local.access_logging_template
   }
+
+  depends_on = [
+    module.auth_userinfo_role,
+    aws_api_gateway_deployment.auth_ext_api_deployment,
+  ]
 
   tags = local.default_tags
   # checkov:skip=CKV_AWS_51:Client cert authentication is something we might want to consider in the future
@@ -115,9 +115,18 @@ resource "aws_api_gateway_method_settings" "di_auth_ext_api_logging_settings" {
 resource "aws_api_gateway_deployment" "auth_ext_api_deployment" {
   rest_api_id = aws_api_gateway_rest_api.di_auth_ext_api.id
 
+  triggers = {
+    redeployment = sha1(jsonencode([
+      module.auth_userinfo.integration_trigger_value,
+      module.auth_userinfo.method_trigger_value,
+    ]))
+  }
   lifecycle {
     create_before_destroy = true
   }
+  depends_on = [
+    module.auth_userinfo,
+  ]
 }
 
 resource "aws_cloudwatch_log_group" "auth_ext_stage_access_logs" {
@@ -129,7 +138,7 @@ resource "aws_cloudwatch_log_group" "auth_ext_stage_access_logs" {
 resource "aws_cloudwatch_log_subscription_filter" "auth_ext_api_access_log_subscription" {
   count           = length(var.logging_endpoint_arns)
   name            = "${var.environment}-auth-ext-api-access-logs-subscription-${count.index}"
-  log_group_name  = aws_cloudwatch_log_group.auth_ext_stage_access_logs[0].name
+  log_group_name  = aws_cloudwatch_log_group.auth_ext_stage_access_logs.name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
 
