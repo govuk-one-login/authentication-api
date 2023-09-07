@@ -59,7 +59,7 @@ locals {
   }
 
   request_tracing_allowed       = contains(["build", "sandpit"], var.environment)
-  deploy_bulk_email_users_count = contains(["build", "sandpit", "staging", "integration"], var.environment) ? 1 : 0
+  deploy_bulk_email_users_count = 1
 }
 
 data "aws_caller_identity" "current" {}
