@@ -466,20 +466,20 @@ public class AuthorisationHandler
             LOG.info("Identity is required. Adding the local_account_id and salt claims");
             claimsSetRequest = claimsSetRequest.add("local_account_id").add("salt");
         }
-        if (amScopePresent) {
+        if (Boolean.TRUE.equals(amScopePresent)) {
             LOG.info("am scope is present. Adding the public_subject_id claim");
             claimsSetRequest = claimsSetRequest.add("public_subject_id");
         }
-        if (govukAccountScopePresent) {
+        if (Boolean.TRUE.equals(govukAccountScopePresent)) {
             LOG.info("govuk-account scope is present. Adding the legacy_subject_id claim");
             claimsSetRequest = claimsSetRequest.add("legacy_subject_id");
         }
-        if (phoneScopePresent) {
+        if (Boolean.TRUE.equals(phoneScopePresent)) {
             LOG.info(
                     "phone scope is present. Adding the phone_number and phone_number_verified claim");
             claimsSetRequest = claimsSetRequest.add("phone_number").add("phone_number_verified");
         }
-        if (emailScopePresent) {
+        if (Boolean.TRUE.equals(emailScopePresent)) {
             LOG.info("email scope is present. Adding the legacy_subject_id claim");
             claimsSetRequest = claimsSetRequest.add("email").add("email_verified");
         }
