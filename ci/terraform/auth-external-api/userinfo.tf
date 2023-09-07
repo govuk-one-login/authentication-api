@@ -17,7 +17,7 @@ module "auth_userinfo_role" {
 module "auth_userinfo" {
   source = "../modules/endpoint-module"
 
-  endpoint_name   = "userinfo"
+  endpoint_name   = "auth-userinfo"
   path_part       = "userinfo"
   endpoint_method = "GET"
   environment     = var.environment
