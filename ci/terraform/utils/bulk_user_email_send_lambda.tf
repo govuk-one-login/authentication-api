@@ -22,7 +22,7 @@ resource "aws_lambda_function" "bulk_user_email_send_lambda" {
   timeout                        = lookup(var.performance_tuning, "bulk-user-email-send", local.default_performance_parameters).timeout
   memory_size                    = lookup(var.performance_tuning, "bulk-user-email-send", local.default_performance_parameters).memory
   reserved_concurrent_executions = 1
-  runtime                        = "java11"
+  runtime                        = "java17"
   tracing_config {
     mode = "Active"
   }
