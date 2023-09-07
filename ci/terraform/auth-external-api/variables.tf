@@ -49,3 +49,48 @@ variable "logging_endpoint_arns" {
   default     = []
   description = "Amazon Resource Name (ARN) for the CSLS endpoints to ship logs to"
 }
+
+variable "internal_sector_uri" {
+  type    = string
+  default = "undefined"
+}
+
+
+variable "performance_tuning" {
+  type = map(object({
+    memory : number,
+    concurrency : number,
+    max_concurrency : number,
+    scaling_trigger : number,
+  }))
+  description = "A map of performance tuning parameters per lambda"
+  default     = {}
+}
+
+variable "lambda_max_concurrency" {
+  default = 0
+}
+
+variable "scaling_trigger" {
+  default = 0.7
+}
+
+variable "lambda_min_concurrency" {
+  default     = 1
+  type        = number
+  description = "The number of lambda instance to keep 'warm'"
+}
+
+variable "endpoint_memory_size" {
+  default = 1024
+  type    = number
+}
+
+locals {
+  default_performance_parameters = {
+    memory          = var.endpoint_memory_size
+    concurrency     = var.lambda_min_concurrency
+    max_concurrency = var.lambda_max_concurrency
+    scaling_trigger = var.scaling_trigger
+  }
+}
