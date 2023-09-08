@@ -23,7 +23,7 @@ resource "aws_lambda_function" "authorizer" {
   function_name = "${var.environment}-api_gateway_authorizer"
   role          = module.account_management_api_authorizer_role.arn
   handler       = "uk.gov.di.accountmanagement.lambda.AuthoriseAccessTokenHandler::handleRequest"
-  runtime       = "java11"
+  runtime       = "java17"
 
   s3_bucket         = aws_s3_bucket.source_bucket.bucket
   s3_key            = aws_s3_object.account_management_api_release_zip.key
