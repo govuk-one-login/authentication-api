@@ -154,7 +154,7 @@ resource "aws_lambda_function" "email_sqs_lambda" {
   handler       = "uk.gov.di.authentication.frontendapi.lambda.NotificationHandler::handleRequest"
   timeout       = 30
   memory_size   = 512
-  runtime       = "java11"
+  runtime       = "java17"
   publish       = true
 
   s3_bucket         = aws_s3_bucket.source_bucket.bucket

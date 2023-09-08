@@ -17,7 +17,7 @@ resource "aws_lambda_function" "bulk_test_user_delete_lambda" {
   handler       = "uk.gov.di.authentication.utils.lambda.BulkTestUserDeleteHandler::handleRequest"
   timeout       = 900
   memory_size   = 4096
-  runtime       = "java11"
+  runtime       = "java17"
   publish       = true
 
   s3_bucket         = aws_s3_object.utils_release_zip.bucket

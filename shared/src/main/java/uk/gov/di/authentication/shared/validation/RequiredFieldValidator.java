@@ -33,7 +33,7 @@ public class RequiredFieldValidator implements Validator {
             if (!isStatic(field.getModifiers())) {
                 var accessible = field.canAccess(object);
                 try {
-                    if (!accessible) field.setAccessible(true);
+                    if (!accessible) field.trySetAccessible();
                     if (field.isAnnotationPresent(Required.class) && isNull(field.get(object))) {
                         violations.add(field.getName());
                     }
