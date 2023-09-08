@@ -1,6 +1,5 @@
 package uk.gov.di.authentication.shared.entity;
 
-import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.Test;
 
@@ -13,7 +12,6 @@ import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ValidScopesTest {
 
@@ -163,29 +161,5 @@ class ValidScopesTest {
         assertFalse(
                 ValidScopes.getScopesForListOfClaims(claims)
                         .contains(OIDCScopeValue.EMAIL.getValue()));
-    }
-
-    @Test
-    void shouldReturnOnlyScopesPermittedForAuthentication() {
-        var requestedScope =
-                new Scope(
-                        OIDCScopeValue.OPENID,
-                        OIDCScopeValue.EMAIL,
-                        OIDCScopeValue.PHONE,
-                        OIDCScopeValue.OFFLINE_ACCESS,
-                        CustomScopeValue.ACCOUNT_MANAGEMENT,
-                        CustomScopeValue.ACCOUNT_MANAGEMENT,
-                        CustomScopeValue.GOVUK_ACCOUNT,
-                        CustomScopeValue.DOC_CHECKING_APP);
-
-        var scopesForAuthentication =
-                ValidScopes.extractAuthScopesFromRequestedScopes(requestedScope);
-        var scopeList = scopesForAuthentication.toStringList();
-
-        var expectedScopes =
-                new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.PHONE)
-                        .toStringList();
-        assertThat(scopeList.size(), equalTo(3));
-        assertTrue(scopeList.containsAll(expectedScopes));
     }
 }
