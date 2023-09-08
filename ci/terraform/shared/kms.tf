@@ -421,3 +421,32 @@ resource "aws_kms_key" "bulk_email_users_encryption_key" {
   })
   tags = local.default_tags
 }
+
+resource "aws_kms_key" "authentication_callback_userinfo_encryption_key" {
+  description              = "KMS encryption key for authentication callback user info table in DynamoDB"
+  deletion_window_in_days  = 30
+  key_usage                = "ENCRYPT_DECRYPT"
+  customer_master_key_spec = "SYMMETRIC_DEFAULT"
+  enable_key_rotation      = true
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Id      = "key-policy-dynamodb",
+    Statement = [
+      {
+        Sid       = "Allow IAM to manage this key",
+        Effect    = "Allow",
+        Principal = { AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root" }
+        Action = [
+          "kms:*"
+        ],
+        Resource = "*"
+      }
+    ]
+  })
+  tags = local.default_tags
+}
+
+resource "aws_kms_alias" "authentication_callback_userinfo_encryption_key_alias" {
+  name          = "alias/${var.environment}-authentication-callback-userinfo-encryption-key-alias"
+  target_key_id = aws_kms_key.authentication_callback_userinfo_encryption_key.key_id
+}
