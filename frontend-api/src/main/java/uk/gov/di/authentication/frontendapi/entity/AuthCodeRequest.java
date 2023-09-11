@@ -23,16 +23,10 @@ public class AuthCodeRequest {
     @Required
     private List<String> claims;
 
-    @SerializedName("email")
-    @Expose
-    @Required
-    private String email;
-
-    public AuthCodeRequest(String redirectUri, String state, List<String> claims, String email) {
+    public AuthCodeRequest(String redirectUri, String state, List<String> claims) {
         this.redirectUri = redirectUri;
         this.state = state;
         this.claims = claims;
-        this.email = email;
     }
 
     public String getRedirectUri() {
@@ -57,13 +51,5 @@ public class AuthCodeRequest {
 
     public void setClaims(List<String> claims) {
         this.claims = claims;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
     }
 }
