@@ -24,7 +24,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class UserInfoHandlerTest {
@@ -53,12 +57,14 @@ class UserInfoHandlerTest {
     }
 
     @Test
-    void shouldReturn200WithUserInfoForValidRequest() throws ParseException, AccessTokenException {
+    void shouldReturn200WithUserInfoForValidRequestAndSetTokenStoreUsed()
+            throws ParseException, AccessTokenException {
         APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
-        String validToken = "Bearer valid-token";
-        request.setHeaders(Map.of("Authorization", validToken));
+        String validTokenHeader = "Bearer valid-token";
+        AccessToken validToken = AccessToken.parse(validTokenHeader, AccessTokenType.BEARER);
+        request.setHeaders(Map.of("Authorization", validTokenHeader));
         when(accessTokenService.getAccessTokenFromAuthorizationHeader(any()))
-                .thenReturn(AccessToken.parse(validToken, AccessTokenType.BEARER));
+                .thenReturn(validToken);
         when(userInfoService.populateUserInfo(accessTokenStore)).thenReturn(TEST_SUBJECT_USER_INFO);
 
         APIGatewayProxyResponseEvent response = userInfoHandler.userInfoRequestHandler(request);
@@ -66,6 +72,8 @@ class UserInfoHandlerTest {
         assertEquals(200, response.getStatusCode());
         assertEquals(
                 String.format("{\"sub\":\"%s\"}", TEST_SUBJECT.getValue()), response.getBody());
+
+        verify(accessTokenService, times(1)).setAccessTokenStoreUsed(validToken.getValue(), true);
     }
 
     @Test
@@ -78,6 +86,8 @@ class UserInfoHandlerTest {
         assertNotNull(multiValueHeaders);
         var authChallengeHeader = multiValueHeaders.get("WWW-Authenticate");
         assertEquals("Bearer", authChallengeHeader.get(0));
+
+        verify(accessTokenService, never()).setAccessTokenStoreUsed(any(), anyBoolean());
     }
 
     @Test
@@ -97,6 +107,8 @@ class UserInfoHandlerTest {
         var authChallengeHeader = multiValueHeaders.get("WWW-Authenticate");
         assertTrue(authChallengeHeader.get(0).contains("invalid_token"));
         assertTrue(authChallengeHeader.get(0).contains("\"Invalid access token\""));
+
+        verify(accessTokenService, never()).setAccessTokenStoreUsed(any(), anyBoolean());
     }
 
     @Test
@@ -117,6 +129,8 @@ class UserInfoHandlerTest {
         var authChallengeHeader = multiValueHeaders.get("WWW-Authenticate");
         assertTrue(authChallengeHeader.get(0).contains("invalid_token"));
         assertTrue(authChallengeHeader.get(0).contains("\"Invalid access token\""));
+
+        verify(accessTokenService, never()).setAccessTokenStoreUsed(any(), anyBoolean());
     }
 
     @Test
@@ -141,6 +155,8 @@ class UserInfoHandlerTest {
         var authChallengeHeader = multiValueHeaders.get("WWW-Authenticate");
         assertTrue(authChallengeHeader.get(0).contains("invalid_token"));
         assertTrue(authChallengeHeader.get(0).contains("\"Invalid access token\""));
+
+        verify(accessTokenService, never()).setAccessTokenStoreUsed(any(), anyBoolean());
     }
 
     @Test
@@ -162,5 +178,7 @@ class UserInfoHandlerTest {
         var authChallengeHeader = multiValueHeaders.get("WWW-Authenticate");
         assertTrue(authChallengeHeader.get(0).contains("invalid_token"));
         assertTrue(authChallengeHeader.get(0).contains("\"Invalid access token\""));
+
+        verify(accessTokenService, never()).setAccessTokenStoreUsed(any(), anyBoolean());
     }
 }

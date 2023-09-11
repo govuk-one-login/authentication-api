@@ -19,16 +19,17 @@ import uk.gov.di.authentication.sharedtest.extensions.AccessTokenStoreExtension;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 import static com.nimbusds.oauth2.sdk.token.BearerTokenError.INVALID_TOKEN;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
-    private static final String ACCESS_TOKEN = "1223abc456xyz";
     private static final String RP_SECTOR_ID_URI = "https://rp-test-uri.com";
     private static final String INTERNAL_SECTOR_ID_URI = "https://test.account.gov.uk";
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
@@ -66,11 +67,14 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
     void
             shouldCallUserInfoWithAccessTokenAndReturn200WithASingleRequestedClaimAndTwoUnconditionalClaimsButNotClaimsWhichAreNotInAccessToken()
                     throws ParseException {
-        var accessToken = new BearerAccessToken(ACCESS_TOKEN);
+        String accessTokenAsString = UUID.randomUUID().toString();
+        var accessToken = new BearerAccessToken(accessTokenAsString);
         boolean isNewAccount = true;
         var createdUser =
                 addTokenToDynamoAndCreateAssociatedUser(
-                        ACCESS_TOKEN, List.of(OIDCScopeValue.EMAIL.getValue()), isNewAccount);
+                        accessTokenAsString,
+                        List.of(OIDCScopeValue.EMAIL.getValue()),
+                        isNewAccount);
 
         var response =
                 makeRequest(
@@ -104,11 +108,14 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
         assertNull(userInfoResponse.getPhoneNumber());
         assertNull(userInfoResponse.getPhoneNumberVerified());
         assertNull(userInfoResponse.getClaim("salt"));
+
+        assertTrue(accessTokenStoreExtension.getAccessToken(accessTokenAsString).get().isUsed());
     }
 
     @Test
     void shouldReturn401ForAccessTokenThatDoesNotExistInDatabase() {
-        var accessToken = new BearerAccessToken("any-invalid");
+        var accessToken =
+                new BearerAccessToken("any-as-we-will-not-be-seeding-this-into-the-test-db");
 
         var response =
                 makeRequest(
@@ -128,12 +135,13 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
 
     @Test
     void shouldReturn401ForAccessTokenThatIsAlreadyUsed() {
-        var accessToken = new BearerAccessToken(ACCESS_TOKEN);
+        String accessTokenAsString = UUID.randomUUID().toString();
+        var accessToken = new BearerAccessToken(accessTokenAsString);
         boolean isNewAccount = true;
         addTokenToDynamoAndCreateAssociatedUser(
-                ACCESS_TOKEN, List.of(OIDCScopeValue.EMAIL.getValue()), isNewAccount);
+                accessTokenAsString, List.of(OIDCScopeValue.EMAIL.getValue()), isNewAccount);
 
-        accessTokenStoreExtension.setAccessTokenStoreUsed(ACCESS_TOKEN, true);
+        accessTokenStoreExtension.setAccessTokenStoreUsed(accessTokenAsString, true);
 
         var response =
                 makeRequest(
@@ -149,15 +157,18 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
                                 .toHTTPResponse()
                                 .getHeaderMap()
                                 .get("WWW-Authenticate")));
+
+        assertTrue(accessTokenStoreExtension.getAccessToken(accessTokenAsString).get().isUsed());
     }
 
     @Test
     void shouldReturn401ForAccessTokenThatIsPastItsTtl() {
-        var accessToken = new BearerAccessToken(ACCESS_TOKEN);
+        String accessTokenAsString = UUID.randomUUID().toString();
+        var accessToken = new BearerAccessToken(accessTokenAsString);
         boolean isNewAccount = true;
         addTokenToDynamoAndCreateAssociatedUser(
-                ACCESS_TOKEN, List.of(OIDCScopeValue.EMAIL.getValue()), isNewAccount);
-        accessTokenStoreExtension.setAccessTokenTtlToZero(ACCESS_TOKEN);
+                accessTokenAsString, List.of(OIDCScopeValue.EMAIL.getValue()), isNewAccount);
+        accessTokenStoreExtension.setAccessTokenTtlToZero(accessTokenAsString);
 
         var response =
                 makeRequest(
