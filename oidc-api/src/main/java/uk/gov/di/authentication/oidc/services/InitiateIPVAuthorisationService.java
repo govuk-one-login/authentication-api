@@ -9,6 +9,7 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
+import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
@@ -17,8 +18,6 @@ import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -61,12 +60,11 @@ public class InitiateIPVAuthorisationService {
     public APIGatewayProxyResponseEvent sendRequestToIPV(
             APIGatewayProxyRequestEvent input,
             AuthenticationRequest authRequest,
-            UserProfile userProfile,
+            UserInfo userInfo,
             Session session,
             ClientRegistry client,
             String rpClientID,
             String clientSessionId,
-            String requestEmail,
             String persistentSessionCookieId) {
         try {
             if (!configurationService.isIdentityEnabled()) {
@@ -76,11 +74,8 @@ public class InitiateIPVAuthorisationService {
 
             attachLogFieldToLogs(CLIENT_ID, rpClientID);
             LOG.info("IPVAuthorisationHandler received request");
-            var pairwiseSubject =
-                    ClientSubjectHelper.getSubjectWithSectorIdentifier(
-                            userProfile,
-                            configurationService.getInternalSectorUri(),
-                            authenticationService);
+            var pairwiseSubject = userInfo.getSubject();
+
             var state = new State();
             var claimsSetRequest =
                     buildIpvClaimsRequest(authRequest)
@@ -94,7 +89,7 @@ public class InitiateIPVAuthorisationService {
                             pairwiseSubject,
                             claimsSetRequest,
                             Optional.ofNullable(clientSessionId).orElse("unknown"),
-                            userProfile.getEmail());
+                            userInfo.getEmailAddress());
             var authRequestBuilder =
                     new AuthorizationRequest.Builder(
                                     new ResponseType(ResponseType.Value.CODE),
@@ -106,14 +101,7 @@ public class InitiateIPVAuthorisationService {
             var ipvAuthorisationRequest = authRequestBuilder.build();
             authorisationService.storeState(session.getSessionId(), state);
 
-            LOG.info("Calculating RP pairwise identifier");
-            var rpPairwiseId =
-                    ClientSubjectHelper.getSubject(
-                                    userProfile,
-                                    client,
-                                    authenticationService,
-                                    configurationService.getInternalSectorUri())
-                            .getValue();
+            var rpPairwiseId = userInfo.getClaim("rp_pairwise_id");
 
             auditService.submitAuditEvent(
                     IPVAuditableEvent.IPV_AUTHORISATION_REQUESTED,
@@ -121,7 +109,7 @@ public class InitiateIPVAuthorisationService {
                     session.getSessionId(),
                     rpClientID,
                     session.getInternalCommonSubjectIdentifier(),
-                    requestEmail,
+                    userInfo.getEmailAddress(),
                     IpAddressHelper.extractIpAddress(input),
                     AuditService.UNKNOWN,
                     persistentSessionCookieId,

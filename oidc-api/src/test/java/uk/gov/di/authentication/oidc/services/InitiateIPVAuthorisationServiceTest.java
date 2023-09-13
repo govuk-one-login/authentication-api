@@ -21,6 +21,7 @@ import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.claims.ClaimRequirement;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
+import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
@@ -28,20 +29,15 @@ import uk.gov.di.authentication.ipv.entity.IPVAuthorisationResponse;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.*;
 
 import java.net.URI;
 import java.net.URLDecoder;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
-import java.time.temporal.ChronoUnit;
-import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -59,7 +55,6 @@ public class InitiateIPVAuthorisationServiceTest {
     private static final String CLIENT_SESSION_ID = "client-session-v1";
     private static final String PERSISTENT_SESSION_ID = "a-persistent-session-id";
     private static final String CLIENT_ID = "test-client-id";
-    private static final String REQUEST_EMAIl = "test@test.com";
     private static final String INTERNAL_SECTOR_URI = "https://ipv.account.gov.uk";
     private static final String SESSION_ID = "a-session-id";
     private static final String IPV_CLIENT_ID = "ipv-client-id";
@@ -68,14 +63,8 @@ public class InitiateIPVAuthorisationServiceTest {
     private static final URI IPV_AUTHORISATION_URI = URI.create("http://localhost/ipv/authorize");
     private static final String ENVIRONMENT = "test-environment";
     private static final String EMAIL_ADDRESS = "test@test.com";
-    private static final String PHONE_NUMBER = "01234567890";
-    private static final String PUBLIC_SUBJECT_ID = new Subject("public-subject-id-2").getValue();
     private static final String SUBJECT_ID = new Subject("subject-id-3").getValue();
-    private static final String LEGACY_SUBJECT_ID = new Subject("legacy-subject-id-1").getValue();
-    private static final ByteBuffer SALT =
-            ByteBuffer.wrap("a-test-salt".getBytes(StandardCharsets.UTF_8));
-    private static final Date CREATED_DATE_TIME = NowHelper.nowMinus(30, ChronoUnit.SECONDS);
-    private static final Date UPDATED_DATE_TIME = NowHelper.now();
+    private static final String RP_PAIRWISE_ID = "urn:fdc:gov.uk:2022:dkjfshsdkjh";
     private static final String IP_ADDRESS = "123.123.123.123";
 
     private final ConfigurationService configService = mock(ConfigurationService.class);
@@ -98,12 +87,14 @@ public class InitiateIPVAuthorisationServiceTest {
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     SUBJECT_ID, "test.account.gov.uk", SaltHelper.generateNewSalt());
     private final AuthenticationRequest authenticationRequest = mock(AuthenticationRequest.class);
-    private final UserProfile userProfile = generateUserProfile();
+    private final UserInfo userInfo = generateUserInfo();
     private final Session session =
             new Session(SESSION_ID)
                     .setEmailAddress(EMAIL_ADDRESS)
                     .setInternalCommonSubjectIdentifier(expectedCommonSubject);
     private final ClientRegistry client = generateClientRegistry();
+
+    public InitiateIPVAuthorisationServiceTest() throws com.nimbusds.oauth2.sdk.ParseException {}
 
     @BeforeEach
     void setup() {
@@ -118,7 +109,6 @@ public class InitiateIPVAuthorisationServiceTest {
         event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
 
-        when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT.array());
         when(configService.getIPVAuthorisationClientId()).thenReturn(IPV_CLIENT_ID);
         when(configService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         when(configService.isIdentityEnabled()).thenReturn(true);
@@ -137,12 +127,11 @@ public class InitiateIPVAuthorisationServiceTest {
                                 initiateAuthorisationService.sendRequestToIPV(
                                         event,
                                         authenticationRequest,
-                                        userProfile,
+                                        userInfo,
                                         session,
                                         client,
                                         CLIENT_ID,
                                         CLIENT_SESSION_ID,
-                                        REQUEST_EMAIl,
                                         PERSISTENT_SESSION_ID),
                         "Expected to throw exception");
 
@@ -167,12 +156,11 @@ public class InitiateIPVAuthorisationServiceTest {
                 initiateAuthorisationService.sendRequestToIPV(
                         event,
                         createAuthenticationRequest(),
-                        userProfile,
+                        userInfo,
                         session,
                         client,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        REQUEST_EMAIl,
                         PERSISTENT_SESSION_ID);
         var body =
                 SerializationService.getInstance()
@@ -184,9 +172,7 @@ public class InitiateIPVAuthorisationServiceTest {
                 splitQuery(body.getRedirectUri()).get("request"),
                 equalTo(encryptedJWT.serialize()));
         verify(authorisationService).storeState(eq(session.getSessionId()), any(State.class));
-        var expectedRpPairwiseId =
-                ClientSubjectHelper.calculatePairwiseIdentifier(
-                        SUBJECT_ID, "sector-identifier", SALT.array());
+
         verify(auditService)
                 .submitAuditEvent(
                         IPVAuditableEvent.IPV_AUTHORISATION_REQUESTED,
@@ -199,7 +185,7 @@ public class InitiateIPVAuthorisationServiceTest {
                         AuditService.UNKNOWN,
                         PERSISTENT_SESSION_ID,
                         pair("clientLandingPageUrl", LANDING_PAGE_URL),
-                        pair("rpPairwiseId", expectedRpPairwiseId));
+                        pair("rpPairwiseId", RP_PAIRWISE_ID));
         verify(cloudwatchMetricsService)
                 .incrementCounter("IPVHandoff", Map.of("Environment", ENVIRONMENT));
     }
@@ -234,18 +220,23 @@ public class InitiateIPVAuthorisationServiceTest {
         return EncryptedJWT.parse(jweObject.serialize());
     }
 
-    private UserProfile generateUserProfile() {
-        return new UserProfile()
-                .withEmail(EMAIL_ADDRESS)
-                .withEmailVerified(true)
-                .withPhoneNumber(PHONE_NUMBER)
-                .withPhoneNumberVerified(true)
-                .withPublicSubjectID(PUBLIC_SUBJECT_ID)
-                .withSubjectID(SUBJECT_ID)
-                .withLegacySubjectID(LEGACY_SUBJECT_ID)
-                .withSalt(SALT)
-                .withCreated(CREATED_DATE_TIME.toString())
-                .withUpdated(UPDATED_DATE_TIME.toString());
+    private UserInfo generateUserInfo() throws com.nimbusds.oauth2.sdk.ParseException {
+        String jsonString =
+                String.format(
+                        "{\n"
+                                + "                \"sub\": \"urn:fdc:gov.uk:2022:jdgfhgfsdret\",\n"
+                                + "                \"legacy_subject_id\": \"odkjfshsdkjhdkjfshsdkjhdkjfshsdkjh\",\n"
+                                + "                \"public_subject_id\": \"pdkjfshsdkjhdkjfshsdkjhdkjfshsdkjh\",\n"
+                                + "                \"local_account_id\": \"dkjfshsdkjhdkjfshsdkjhdkjfshsdkjh\",\n"
+                                + "                \"rp_pairwise_id\": \"%s\",\n"
+                                + "                \"email\": \"%s\",\n"
+                                + "                \"email_verified\": true,\n"
+                                + "                \"phone_number\": \"007492837401\",\n"
+                                + "                \"phone_number_verified\": true,\n"
+                                + "                \"new_account\": \"true\",\n"
+                                + "                \"salt\": \"\" }",
+                        RP_PAIRWISE_ID, EMAIL_ADDRESS);
+        return UserInfo.parse(jsonString);
     }
 
     private ClientRegistry generateClientRegistry() {
