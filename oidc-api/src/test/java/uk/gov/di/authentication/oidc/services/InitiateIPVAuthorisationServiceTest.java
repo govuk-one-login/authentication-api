@@ -32,7 +32,11 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
-import uk.gov.di.authentication.shared.services.*;
+import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthenticationService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.net.URI;
 import java.net.URLDecoder;
