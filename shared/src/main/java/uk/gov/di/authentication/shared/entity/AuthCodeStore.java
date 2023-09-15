@@ -9,17 +9,21 @@ import java.util.List;
 @DynamoDbBean
 public class AuthCodeStore {
 
-    public static final String ATTRIBUTE_SUBJECT_ID = "SubjectID";
-    public static final String ATTRIBUTE_AUTH_CODE = "AuthCode";
-    public static final String ATTRIBUTE_CLAIMS = "Claims";
-    public static final String ATTRIBUTE_TIME_TO_EXIST = "TimeToExist";
-    public static final String ATTRIBUTE_HAS_BEEN_USED = "HasBeenUsed";
+    private static final String ATTRIBUTE_SUBJECT_ID = "SubjectID";
+    private static final String ATTRIBUTE_AUTH_CODE = "AuthCode";
+    private static final String ATTRIBUTE_CLAIMS = "Claims";
+    private static final String ATTRIBUTE_TIME_TO_EXIST = "TimeToExist";
+    private static final String ATTRIBUTE_HAS_BEEN_USED = "HasBeenUsed";
+    private static final String ATTRIBUTE_SECTOR_IDENTIFIER = "SectorIdentifier";
+    private static final String ATTRIBUTE_IS_NEW_ACCOUNT = "IsNewAccount";
 
     private String subjectID;
     private String authCode;
     private List<String> claims;
     private long timeToExist;
     private boolean hasBeenUsed;
+    private String sectorIdentifier;
+    private boolean isNewAccount;
 
     public AuthCodeStore() {}
 
@@ -91,6 +95,34 @@ public class AuthCodeStore {
 
     public AuthCodeStore withHasBeenUsed(boolean hasBeenUsed) {
         this.hasBeenUsed = hasBeenUsed;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_SECTOR_IDENTIFIER)
+    public String getSectorIdentifier() {
+        return sectorIdentifier;
+    }
+
+    public void setTimeToExist(String sectorIdentifier) {
+        this.sectorIdentifier = sectorIdentifier;
+    }
+
+    public AuthCodeStore withSectorIdentifier(String sectorIdentifier) {
+        this.sectorIdentifier = sectorIdentifier;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_IS_NEW_ACCOUNT)
+    public boolean getIsNewAccount() {
+        return isNewAccount;
+    }
+
+    public void setIsNewAccount(boolean isNewAccount) {
+        this.isNewAccount = isNewAccount;
+    }
+
+    public AuthCodeStore withIsNewAccount(boolean isNewAccount) {
+        this.isNewAccount = isNewAccount;
         return this;
     }
 }

@@ -8,6 +8,7 @@ import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseMode;
+import com.nimbusds.oauth2.sdk.TokenResponse;
 import com.nimbusds.oauth2.sdk.http.HTTPRequest;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
@@ -190,7 +191,7 @@ public class AuthenticationCallbackHandler
             var tokenRequest =
                     tokenService.constructTokenRequest(
                             input.getQueryStringParameters().get("code"));
-            var tokenResponse = tokenService.sendTokenRequest(tokenRequest);
+            TokenResponse tokenResponse = tokenService.sendTokenRequest(tokenRequest);
             if (tokenResponse.indicatesSuccess()) {
                 LOG.info("TokenResponse was successful");
                 auditService.submitAuditEvent(

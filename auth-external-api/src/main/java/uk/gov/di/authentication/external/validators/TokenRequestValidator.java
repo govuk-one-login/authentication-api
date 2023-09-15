@@ -1,21 +1,41 @@
 package uk.gov.di.authentication.external.validators;
 
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.jwk.KeyType;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
+import com.nimbusds.oauth2.sdk.ParseException;
+import com.nimbusds.oauth2.sdk.auth.ClientAuthenticationMethod;
+import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
+import com.nimbusds.oauth2.sdk.auth.verifier.ClientAuthenticationVerifier;
+import com.nimbusds.oauth2.sdk.auth.verifier.InvalidClientException;
+import com.nimbusds.oauth2.sdk.id.Audience;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.shared.exceptions.TokenAuthInvalidException;
+import uk.gov.di.authentication.shared.validation.PrivateKeyJwtAuthPublicKeySelector;
 
+import java.net.URI;
+import java.util.Collections;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 public class TokenRequestValidator {
+    private static final Logger LOG = LogManager.getLogger(TokenRequestValidator.class);
     private final String redirectUri;
     private final String clientId;
 
-    TokenRequestValidator(String redirectUri, String clientId) {
+    public TokenRequestValidator(String redirectUri, String clientId) {
         this.redirectUri = redirectUri;
         this.clientId = clientId;
     }
 
-    public Optional<ErrorObject> validate(Map<Object, Object> requestParameters) {
+    public Optional<ErrorObject> validatePlaintextParams(Map<String, String> requestParameters) {
+        if (Objects.isNull(requestParameters)) {
+            return invalidRequestCode("Request requires query parameters");
+        }
+
         if (!requestParameters.containsKey("grant_type")) {
             return invalidRequestCode("Request is missing grant_type parameter");
         }
@@ -49,5 +69,37 @@ public class TokenRequestValidator {
 
     private static Optional<ErrorObject> invalidRequestCode(String description) {
         return Optional.of(new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, description));
+    }
+
+    public void validatePrivateKeyJwtClientAuth(
+            String requestBody, URI expectedAudience, String publicKey)
+            throws TokenAuthInvalidException {
+        try {
+            PrivateKeyJWT privateKeyJWT = PrivateKeyJWT.parse(requestBody);
+
+            ClientAuthenticationVerifier<?> signatureVerifier =
+                    new ClientAuthenticationVerifier<>(
+                            new PrivateKeyJwtAuthPublicKeySelector(publicKey, KeyType.EC),
+                            Collections.singleton(new Audience(expectedAudience)));
+            signatureVerifier.verify(privateKeyJWT, null, null);
+        } catch (ParseException e) {
+            LOG.warn("Unable to parse private_key_jwt", e);
+            throw new TokenAuthInvalidException(
+                    new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Invalid private_key_jwt"),
+                    ClientAuthenticationMethod.PRIVATE_KEY_JWT,
+                    "tbc");
+        } catch (InvalidClientException e) {
+            LOG.warn("Invalid client in private_key_jwt", e);
+            throw new TokenAuthInvalidException(
+                    OAuth2Error.INVALID_CLIENT, ClientAuthenticationMethod.PRIVATE_KEY_JWT, "tbc");
+        } catch (JOSEException e) {
+            LOG.warn("Could not verify signature of private_key_jwt", e);
+            throw new TokenAuthInvalidException(
+                    new ErrorObject(
+                            OAuth2Error.INVALID_CLIENT_CODE,
+                            "Invalid signature in private_key_jwt"),
+                    ClientAuthenticationMethod.PRIVATE_KEY_JWT,
+                    "tbc");
+        }
     }
 }

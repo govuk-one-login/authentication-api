@@ -1,7 +1,6 @@
 package uk.gov.di.authentication.shared.validation;
 
 import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.jwk.KeyType;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
@@ -11,27 +10,17 @@ import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.auth.ClientAuthenticationMethod;
 import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
-import com.nimbusds.oauth2.sdk.auth.Secret;
 import com.nimbusds.oauth2.sdk.auth.verifier.ClientAuthenticationVerifier;
-import com.nimbusds.oauth2.sdk.auth.verifier.ClientCredentialsSelector;
 import com.nimbusds.oauth2.sdk.auth.verifier.InvalidClientException;
 import com.nimbusds.oauth2.sdk.id.Audience;
-import com.nimbusds.oauth2.sdk.id.ClientID;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 
-import java.security.KeyFactory;
-import java.security.NoSuchAlgorithmException;
-import java.security.PublicKey;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.X509EncodedKeySpec;
-import java.util.Base64;
 import java.util.Collections;
 import java.util.Date;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -91,7 +80,8 @@ public class PrivateKeyJwtClientAuthValidator extends TokenClientAuthValidator {
             }
             ClientAuthenticationVerifier<?> authenticationVerifier =
                     new ClientAuthenticationVerifier<>(
-                            generateClientCredentialsSelector(clientRegistry.getPublicKey()),
+                            new PrivateKeyJwtAuthPublicKeySelector(
+                                    clientRegistry.getPublicKey(), KeyType.RSA),
                             Collections.singleton(new Audience(tokenUrl)));
             authenticationVerifier.verify(privateKeyJWT, null, null);
             return clientRegistry;
@@ -134,36 +124,5 @@ public class PrivateKeyJwtClientAuthValidator extends TokenClientAuthValidator {
             return true;
         }
         return false;
-    }
-
-    private ClientCredentialsSelector<?> generateClientCredentialsSelector(String publicKey) {
-        return new ClientCredentialsSelector<>() {
-            @Override
-            public List<Secret> selectClientSecrets(
-                    ClientID claimedClientID,
-                    ClientAuthenticationMethod authMethod,
-                    com.nimbusds.oauth2.sdk.auth.verifier.Context context) {
-                return Collections.emptyList();
-            }
-
-            @Override
-            public List<PublicKey> selectPublicKeys(
-                    ClientID claimedClientID,
-                    ClientAuthenticationMethod authMethod,
-                    JWSHeader jwsHeader,
-                    boolean forceRefresh,
-                    com.nimbusds.oauth2.sdk.auth.verifier.Context context) {
-
-                byte[] decodedKey = Base64.getMimeDecoder().decode(publicKey);
-                try {
-                    X509EncodedKeySpec x509publicKey = new X509EncodedKeySpec(decodedKey);
-                    KeyFactory kf = KeyFactory.getInstance(KeyType.RSA.getValue());
-                    return Collections.singletonList(kf.generatePublic(x509publicKey));
-                } catch (InvalidKeySpecException | NoSuchAlgorithmException e) {
-                    LOG.error("Exception when selecting public key", e);
-                    throw new RuntimeException(e);
-                }
-            }
-        };
     }
 }
