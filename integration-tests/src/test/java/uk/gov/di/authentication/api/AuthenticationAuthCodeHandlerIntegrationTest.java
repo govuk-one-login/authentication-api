@@ -27,6 +27,7 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
     private static final String TEST_REDIRECT_URI = "https://redirect_uri.com";
     private static final String TEST_STATE = "xyz";
     private static final String TEST_AUTHORIZATION_CODE = "SplxlOBeZQQYbYS6WxSbIA";
+    private static final String TEST_SECTOR_IDENTIFIER = "sectorIdentifier";
     private static final String TEST_SUBJECT_ID = "subject-id";
 
     @RegisterExtension
@@ -44,6 +45,8 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
                 TEST_SUBJECT_ID,
                 TEST_AUTHORIZATION_CODE,
                 List.of(EMAIL_VERIFIED.getValue(), EMAIL.getValue()),
+                false,
+                TEST_SECTOR_IDENTIFIER,
                 false);
         userStore.signUp(TEST_EMAIL_ADDRESS, TEST_PASSWORD);
     }
@@ -56,7 +59,9 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
                 new AuthCodeRequest(
                         TEST_REDIRECT_URI,
                         TEST_STATE,
-                        List.of(EMAIL_VERIFIED.getValue(), EMAIL.getValue()));
+                        List.of(EMAIL_VERIFIED.getValue(), EMAIL.getValue()),
+                        TEST_SECTOR_IDENTIFIER,
+                        false);
         var response = makeRequest(Optional.of(authRequest), getHeaders(), Map.of());
         assertThat(response, hasStatus(200));
     }
@@ -66,7 +71,11 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
         setUpDynamo();
         var authRequest =
                 new AuthCodeRequest(
-                        null, TEST_STATE, List.of(EMAIL_VERIFIED.getValue(), EMAIL.getValue()));
+                        null,
+                        TEST_STATE,
+                        List.of(EMAIL_VERIFIED.getValue(), EMAIL.getValue()),
+                        TEST_SECTOR_IDENTIFIER,
+                        false);
         var response = makeRequest(Optional.of(authRequest), getHeaders(), Map.of());
         assertThat(response, hasStatus(400));
         assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1001)));
@@ -79,7 +88,9 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
                 new AuthCodeRequest(
                         TEST_REDIRECT_URI,
                         null,
-                        List.of(EMAIL_VERIFIED.getValue(), EMAIL.getValue()));
+                        List.of(EMAIL_VERIFIED.getValue(), EMAIL.getValue()),
+                        TEST_SECTOR_IDENTIFIER,
+                        false);
         var response = makeRequest(Optional.of(authRequest), getHeaders(), Map.of());
         assertThat(response, hasStatus(400));
         assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1001)));
@@ -88,7 +99,9 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
     @Test
     void shouldReturn400StatusForInvalidRequestedScopeClaims() throws Json.JsonException {
         setUpDynamo();
-        var authRequest = new AuthCodeRequest(TEST_REDIRECT_URI, TEST_STATE, null);
+        var authRequest =
+                new AuthCodeRequest(
+                        TEST_REDIRECT_URI, TEST_STATE, null, TEST_SECTOR_IDENTIFIER, false);
         var response = makeRequest(Optional.of(authRequest), getHeaders(), Map.of());
         assertThat(response, hasStatus(400));
         assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1001)));

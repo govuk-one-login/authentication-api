@@ -48,6 +48,7 @@ class AuthenticationTokenHandlerIntegrationTest extends ApiGatewayHandlerIntegra
     private static final URI AUTH_BACKEND_URI = URI.create("http://auth-backend");
     private static final Subject TEST_SUBJECT = new Subject();
     private static final List<String> TEST_CLAIMS = List.of("test-claim-1");
+    private static final String TEST_SECTOR_IDENTIFIER = "sectorIdentifier";
 
     @RegisterExtension
     protected static final AuthCodeExtension authCodeStoreExtension = new AuthCodeExtension(180);
@@ -71,7 +72,12 @@ class AuthenticationTokenHandlerIntegrationTest extends ApiGatewayHandlerIntegra
         handler = new TokenHandler(configurationService);
 
         authCodeStoreExtension.saveAuthCode(
-                TEST_SUBJECT.getValue(), VALID_AUTH_CODE, TEST_CLAIMS, false);
+                TEST_SUBJECT.getValue(),
+                VALID_AUTH_CODE,
+                TEST_CLAIMS,
+                false,
+                TEST_SECTOR_IDENTIFIER,
+                false);
 
         txmaAuditQueue.clear();
     }

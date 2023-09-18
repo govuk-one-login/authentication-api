@@ -23,10 +23,27 @@ public class AuthCodeRequest {
     @Required
     private List<String> claims;
 
-    public AuthCodeRequest(String redirectUri, String state, List<String> claims) {
+    @SerializedName("rp-sector-uri")
+    @Expose
+    @Required
+    private String sectorIdentifier;
+
+    @SerializedName("is-new-account")
+    @Expose
+    @Required
+    private boolean isNewAccount;
+
+    public AuthCodeRequest(
+            String redirectUri,
+            String state,
+            List<String> claims,
+            String sectorIdentifier,
+            boolean isNewAccount) {
         this.redirectUri = redirectUri;
         this.state = state;
         this.claims = claims;
+        this.sectorIdentifier = sectorIdentifier;
+        this.isNewAccount = isNewAccount;
     }
 
     public String getRedirectUri() {
@@ -51,5 +68,21 @@ public class AuthCodeRequest {
 
     public void setClaims(List<String> claims) {
         this.claims = claims;
+    }
+
+    public String getSectorIdentifier() {
+        return sectorIdentifier;
+    }
+
+    public void setSectorIdentifier(String sectorIdentifier) {
+        this.sectorIdentifier = sectorIdentifier;
+    }
+
+    public boolean isNewAccount() {
+        return isNewAccount;
+    }
+
+    public void setNewAccount(boolean newAccount) {
+        isNewAccount = newAccount;
     }
 }
