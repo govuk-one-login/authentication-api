@@ -277,6 +277,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("ORCH_TO_AUTH_TOKEN_SIGNING_KEY_ALIAS");
     }
 
+    public String getOrchestrationToAuthenticationSigningPublicKey() {
+        return System.getenv("ORCH_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY");
+    }
+
     public String getOrchestrationToAuthenticationEncryptionPublicKey() {
         var paramName = format("{0}-auth-public-encryption-key", getEnvironment());
         try {

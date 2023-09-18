@@ -2,6 +2,10 @@ package uk.gov.di.authentication.sharedtest.basetest;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.jwk.Curve;
+import com.nimbusds.jose.jwk.ECKey;
+import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import software.amazon.awssdk.services.kms.model.KeyUsageType;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -23,6 +27,8 @@ import uk.gov.di.authentication.sharedtest.extensions.TokenSigningExtension;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
 
 import java.net.HttpCookie;
+import java.security.spec.X509EncodedKeySpec;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -53,6 +59,20 @@ public abstract class HandlerIntegrationTest<Q, S> {
                                     Optional.ofNullable(
                                                     System.getenv().get("FRONTEND_API_GATEWAY_ID"))
                                             .orElse("")));
+    public static final ECKey EC_KEY_PAIR;
+    public static final String EC_PUBLIC_KEY;
+
+    static {
+        try {
+            EC_KEY_PAIR = new ECKeyGenerator(Curve.P_256).generate();
+            X509EncodedKeySpec x509EncodedKeySpec =
+                    new X509EncodedKeySpec(EC_KEY_PAIR.toPublicKey().getEncoded());
+            byte[] x509EncodedPublicKey = x509EncodedKeySpec.getEncoded();
+            EC_PUBLIC_KEY = Base64.getEncoder().encodeToString(x509EncodedPublicKey);
+        } catch (JOSEException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     @RegisterExtension
     protected static final SqsQueueExtension notificationsQueue =
@@ -110,7 +130,8 @@ public abstract class HandlerIntegrationTest<Q, S> {
                             "local-account-management-redis-port", String.valueOf(REDIS_PORT),
                             "local-account-management-redis-tls",
                                     String.valueOf(DOES_REDIS_USE_TLS),
-                            "local-password-pepper", "pepper"));
+                            "local-password-pepper", "pepper",
+                            "local-auth-public-signing-key", EC_PUBLIC_KEY));
 
     protected static final ConfigurationService TEST_CONFIGURATION_SERVICE =
             new IntegrationTestConfigurationService(
