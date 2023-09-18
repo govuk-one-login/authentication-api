@@ -12,6 +12,8 @@ public class BulkEmailUser {
     private String updatedAt;
     private String createdAt;
 
+    private String deliveryReceiptStatus;
+
     public BulkEmailUser() {}
 
     @DynamoDbPartitionKey
@@ -68,6 +70,20 @@ public class BulkEmailUser {
 
     public BulkEmailUser withCreatedAt(String timestamp) {
         this.createdAt = timestamp;
+        return this;
+    }
+
+    @DynamoDbAttribute("DeliveryReceiptStatus")
+    public String getDeliveryReceiptStatus() {
+        return deliveryReceiptStatus;
+    }
+
+    public void setDeliveryReceiptStatus(String status) {
+        this.deliveryReceiptStatus = status;
+    }
+
+    public BulkEmailUser withDeliveryReceiptStatus(String status) {
+        this.deliveryReceiptStatus = status;
         return this;
     }
 }
