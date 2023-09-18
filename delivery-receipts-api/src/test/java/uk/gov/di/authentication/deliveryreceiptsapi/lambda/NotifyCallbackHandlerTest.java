@@ -4,16 +4,21 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.deliveryreceiptsapi.entity.NotifyDeliveryReceipt;
 import uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.BulkEmailUsersService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.util.Collections;
 import java.util.Date;
@@ -24,10 +29,14 @@ import java.util.stream.Stream;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType.EMAIL_UPDATED;
+import static uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType.TERMS_AND_CONDITIONS_BULK_EMAIL;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class NotifyCallbackHandlerTest {
@@ -37,15 +46,27 @@ class NotifyCallbackHandlerTest {
     private NotifyCallbackHandler handler;
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final DynamoService dynamoService = mock(DynamoService.class);
+
+    private final BulkEmailUsersService bulkEmailUsersService = mock(BulkEmailUsersService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
     private final Json objectMapper = SerializationService.getInstance();
+
+    @RegisterExtension
+    public final CaptureLoggingExtension logging =
+            new CaptureLoggingExtension(NotifyCallbackHandler.class);
 
     @BeforeEach
     void setup() {
         when(configurationService.getNotifyCallbackBearerToken()).thenReturn(BEARER_TOKEN);
         when(configurationService.getEnvironment()).thenReturn(ENVIRONMENT);
-        handler = new NotifyCallbackHandler(cloudwatchMetricsService, configurationService);
+        handler =
+                new NotifyCallbackHandler(
+                        cloudwatchMetricsService,
+                        configurationService,
+                        dynamoService,
+                        bulkEmailUsersService);
     }
 
     private static Stream<Arguments> phoneNumbers() {
@@ -127,6 +148,45 @@ class NotifyCallbackHandlerTest {
                                 ENVIRONMENT,
                                 "NotifyStatus",
                                 "delivered"));
+    }
+
+    @Test
+    void shouldUpdateBulkEmailDeliveryReceiptsStatusForTermsAndConditionsEmailType()
+            throws Json.JsonException {
+        String email = "jim@test.com";
+        var templateID = IdGenerator.generate();
+        when(configurationService.getNotificationTypeFromTemplateId(templateID))
+                .thenReturn(Optional.of(TERMS_AND_CONDITIONS_BULK_EMAIL));
+        var deliveryReceipt = createDeliveryReceipt(email, "delivered", "email", templateID);
+        var event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Authorization", "Bearer " + BEARER_TOKEN));
+        event.setBody(objectMapper.writeValueAsString(deliveryReceipt));
+        String subjectId = "subject-id-1";
+        UserProfile userProfile = new UserProfile().withEmail(email).withSubjectID(subjectId);
+        when(dynamoService.getUserProfileByEmailMaybe(email)).thenReturn(Optional.of(userProfile));
+        handler.handleRequest(event, context);
+
+        verify(dynamoService).getUserProfileByEmailMaybe(email);
+
+        verify(bulkEmailUsersService).updateDeliveryReceiptStatus(subjectId, "delivered");
+    }
+
+    @Test
+    void shouldNotUpdateBulkEmailDeliveryReceiptsStatusForTermsAndConditionsEmailType()
+            throws Json.JsonException {
+        String email = "jim@test.com";
+        var templateID = IdGenerator.generate();
+        when(configurationService.getNotificationTypeFromTemplateId(templateID))
+                .thenReturn(Optional.of(EMAIL_UPDATED));
+        var deliveryReceipt = createDeliveryReceipt(email, "delivered", "email", templateID);
+        var event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Authorization", "Bearer " + BEARER_TOKEN));
+        event.setBody(objectMapper.writeValueAsString(deliveryReceipt));
+        handler.handleRequest(event, context);
+
+        verify(dynamoService, never()).getUserProfileByEmailMaybe(anyString());
+        verify(bulkEmailUsersService, never())
+                .updateDeliveryReceiptStatus(anyString(), anyString());
     }
 
     @Test
