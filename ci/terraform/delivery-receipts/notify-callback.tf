@@ -6,6 +6,8 @@ module "delivery_receipts_api_notify_callback_role" {
 
   policies_to_attach = [
     aws_iam_policy.parameter_policy.arn,
+    aws_iam_policy.delivery_receipts_dynamo_update_access.arn,
+    aws_iam_policy.delivery_receipts_dynamo_read_access.arn
   ]
 }
 
