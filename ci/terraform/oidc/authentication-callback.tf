@@ -9,6 +9,7 @@ module "oidc_api_authentication_callback_role" {
     aws_iam_policy.dynamo_authentication_callback_userinfo_read_policy.arn,
     aws_iam_policy.dynamo_authentication_callback_userinfo_write_access_policy.arn,
     aws_iam_policy.redis_parameter_policy.arn,
+    aws_iam_policy.authentication_backend_uri_parameter_policy.arn,
     module.oidc_txma_audit.access_policy_arn
   ]
 }

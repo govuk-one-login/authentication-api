@@ -171,3 +171,37 @@ data "aws_ssm_parameter" "smoke_test_client_id" {
   count = var.environment == "production" || var.environment == "sandpit" ? 1 : 0
   name  = "${var.environment}-smoke-test-client-id"
 }
+
+module "auth_external_api" {
+  source      = "../auth-external-api"
+  environment = var.environment
+}
+
+resource "aws_ssm_parameter" "authentication_backend_uri" {
+  name  = "${var.environment}-authentication-backend-uri"
+  type  = "String"
+  value = "https://${module.auth_external_api.di_auth_ext_api_id}-${module.auth_external_api.vpce_id}.execute-api.${var.aws_region}.amazonaws.com/${var.environment}/"
+}
+
+
+data "aws_iam_policy_document" "authentication_backend_uri_parameter_policy_document" {
+  statement {
+    sid    = "AllowGetParameters"
+    effect = "Allow"
+
+    actions = [
+      "ssm:GetParameter",
+      "ssm:GetParameters",
+    ]
+
+    resources = [
+      aws_ssm_parameter.authentication_backend_uri.arn
+    ]
+  }
+}
+
+resource "aws_iam_policy" "authentication_backend_uri_parameter_policy" {
+  policy      = data.aws_iam_policy_document.authentication_backend_uri_parameter_policy_document.json
+  path        = "/${var.environment}/lambda-parameters/"
+  name_prefix = "authentication-backend-uri-parameter-store-policy"
+}

@@ -222,11 +222,10 @@ public class AuthenticationCallbackHandler
             }
 
             try {
-                String userInfoPath = configurationService.getAuthenticationUserInfoEndpoint();
                 URI userInfoURI =
                         buildURI(
                                 configurationService.getAuthenticationBackendURI().toString(),
-                                userInfoPath);
+                                "userinfo");
 
                 HTTPRequest authorizationRequest = new HTTPRequest(POST, userInfoURI);
                 authorizationRequest.setAuthorization(

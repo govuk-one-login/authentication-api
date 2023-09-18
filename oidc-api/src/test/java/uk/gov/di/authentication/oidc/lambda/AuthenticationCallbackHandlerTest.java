@@ -79,7 +79,6 @@ class AuthenticationCallbackHandlerTest {
     private final ClientService clientService = mock(ClientService.class);
     private static final String TEST_FRONTEND_BASE_URL = "test.orchestration.frontend.url";
     private static final String TEST_AUTH_BACKEND_BASE_URL = "https://test.auth.backend.url";
-    private static final String TEST_AUTH_USERINFO_PATH = "/test-userinfo";
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
     private static final String PERSISTENT_SESSION_ID = "a-persistent-session-id";
     private static final String SESSION_ID = "a-session-id";
@@ -113,8 +112,6 @@ class AuthenticationCallbackHandlerTest {
         when(configurationService.getLoginURI()).thenReturn(URI.create(TEST_FRONTEND_BASE_URL));
         when(configurationService.getAuthenticationBackendURI())
                 .thenReturn(URI.create(TEST_AUTH_BACKEND_BASE_URL));
-        when(configurationService.getAuthenticationUserInfoEndpoint())
-                .thenReturn(TEST_AUTH_USERINFO_PATH);
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
                         CLIENT_SESSION_ID, TEST_EMAIL_ADDRESS, clientSession))
                 .thenReturn(AUTH_CODE_RP_TO_ORCH);

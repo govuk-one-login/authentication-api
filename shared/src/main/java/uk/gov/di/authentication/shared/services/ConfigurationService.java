@@ -180,11 +180,14 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public URI getAuthenticationBackendURI() {
-        return URI.create(System.getenv().getOrDefault("AUTHENTICATION_BACKEND_URI", ""));
-    }
-
-    public String getAuthenticationUserInfoEndpoint() {
-        return System.getenv("AUTHENTICATION_USER_INFO_ENDPOINT");
+        var paramName = format("{0}-authentication-backend-uri\"", getEnvironment());
+        try {
+            var request = GetParameterRequest.builder().name(paramName).build();
+            return URI.create(getSsmClient().getParameter(request).parameter().value());
+        } catch (ParameterNotFoundException e) {
+            LOG.error("No parameter exists with name: {}", paramName);
+            throw new RuntimeException(e);
+        }
     }
 
     public String getContactUsLinkRoute() {
