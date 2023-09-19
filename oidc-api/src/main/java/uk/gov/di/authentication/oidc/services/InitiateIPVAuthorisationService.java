@@ -21,7 +21,6 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuditService;
-import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
@@ -39,19 +38,16 @@ public class InitiateIPVAuthorisationService {
     private static final Logger LOG = LogManager.getLogger(InitiateIPVAuthorisationService.class);
 
     private final ConfigurationService configurationService;
-    private final AuthenticationService authenticationService;
     private final AuditService auditService;
     private final IPVAuthorisationService authorisationService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
 
     public InitiateIPVAuthorisationService(
             ConfigurationService configurationService,
-            AuthenticationService authenticationService,
             AuditService auditService,
             IPVAuthorisationService authorisationService,
             CloudwatchMetricsService cloudwatchMetricsService) {
         this.configurationService = configurationService;
-        this.authenticationService = authenticationService;
         this.auditService = auditService;
         this.authorisationService = authorisationService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
