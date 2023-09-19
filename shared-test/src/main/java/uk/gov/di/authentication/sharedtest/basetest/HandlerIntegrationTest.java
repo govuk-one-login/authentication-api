@@ -40,6 +40,7 @@ public abstract class HandlerIntegrationTest<Q, S> {
     private static final int REDIS_PORT = 6379;
     private static final String REDIS_PASSWORD = null;
     private static final boolean DOES_REDIS_USE_TLS = false;
+    private static final String BEARER_TOKEN = "notify-test-@bearer-token";
     protected static final String LOCAL_ENDPOINT_FORMAT =
             "http://localhost:45678/restapis/%s/local/_user_request_";
     protected static final String LOCAL_API_GATEWAY_ID =
@@ -119,19 +120,26 @@ public abstract class HandlerIntegrationTest<Q, S> {
     @RegisterExtension
     protected static final ParameterStoreExtension configurationParameters =
             new ParameterStoreExtension(
-                    Map.of(
-                            "local-session-redis-master-host", REDIS_HOST,
-                            "local-session-redis-password", String.valueOf(REDIS_PASSWORD),
-                            "local-session-redis-port", String.valueOf(REDIS_PORT),
-                            "local-session-redis-tls", String.valueOf(DOES_REDIS_USE_TLS),
-                            "local-account-management-redis-master-host", REDIS_HOST,
-                            "local-account-management-redis-password",
-                                    String.valueOf(REDIS_PASSWORD),
-                            "local-account-management-redis-port", String.valueOf(REDIS_PORT),
-                            "local-account-management-redis-tls",
-                                    String.valueOf(DOES_REDIS_USE_TLS),
-                            "local-password-pepper", "pepper",
-                            "local-auth-public-signing-key", EC_PUBLIC_KEY));
+                    Map.ofEntries(
+                            Map.entry("local-session-redis-master-host", REDIS_HOST),
+                            Map.entry(
+                                    "local-session-redis-password", String.valueOf(REDIS_PASSWORD)),
+                            Map.entry("local-session-redis-port", String.valueOf(REDIS_PORT)),
+                            Map.entry(
+                                    "local-session-redis-tls", String.valueOf(DOES_REDIS_USE_TLS)),
+                            Map.entry("local-account-management-redis-master-host", REDIS_HOST),
+                            Map.entry(
+                                    "local-account-management-redis-password",
+                                    String.valueOf(REDIS_PASSWORD)),
+                            Map.entry(
+                                    "local-account-management-redis-port",
+                                    String.valueOf(REDIS_PORT)),
+                            Map.entry(
+                                    "local-account-management-redis-tls",
+                                    String.valueOf(DOES_REDIS_USE_TLS)),
+                            Map.entry("local-password-pepper", "pepper"),
+                            Map.entry("local-auth-public-signing-key", EC_PUBLIC_KEY),
+                            Map.entry("local-notify-callback-bearer-token", BEARER_TOKEN)));
 
     protected static final ConfigurationService TEST_CONFIGURATION_SERVICE =
             new IntegrationTestConfigurationService(
