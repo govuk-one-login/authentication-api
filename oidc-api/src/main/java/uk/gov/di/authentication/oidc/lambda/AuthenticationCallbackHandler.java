@@ -17,11 +17,14 @@ import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent;
 import uk.gov.di.authentication.oidc.exceptions.AuthenticationCallbackException;
 import uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService;
 import uk.gov.di.authentication.oidc.services.AuthenticationTokenService;
 import uk.gov.di.authentication.oidc.services.AuthenticationUserInfoStorageService;
+import uk.gov.di.authentication.oidc.services.InitiateIPVAuthorisationService;
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
@@ -48,6 +51,7 @@ import java.util.Objects;
 import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.POST;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
+import static uk.gov.di.authentication.shared.conditions.IdentityHelper.identityRequired;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
@@ -71,6 +75,7 @@ public class AuthenticationCallbackHandler
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final AuthorisationCodeService authorisationCodeService;
     private final ClientService clientService;
+    private final InitiateIPVAuthorisationService initiateIPVAuthorisationService;
     private final CookieHelper cookieHelper;
     private static final String ERROR_PAGE_REDIRECT_PATH = "error";
 
@@ -79,11 +84,11 @@ public class AuthenticationCallbackHandler
     }
 
     public AuthenticationCallbackHandler(ConfigurationService configurationService) {
+
         var kmsConnectionService = new KmsConnectionService(configurationService);
+        var redisConnectionService = new RedisConnectionService(configurationService);
         this.configurationService = configurationService;
-        this.authorisationService =
-                new AuthenticationAuthorizationService(
-                        new RedisConnectionService(configurationService));
+        this.authorisationService = new AuthenticationAuthorizationService(redisConnectionService);
         this.tokenService =
                 new AuthenticationTokenService(configurationService, kmsConnectionService);
         this.sessionService = new SessionService(configurationService);
@@ -95,6 +100,13 @@ public class AuthenticationCallbackHandler
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.authorisationCodeService = new AuthorisationCodeService(configurationService);
         this.clientService = new DynamoClientService(configurationService);
+        this.initiateIPVAuthorisationService =
+                new InitiateIPVAuthorisationService(
+                        configurationService,
+                        auditService,
+                        new IPVAuthorisationService(
+                                configurationService, redisConnectionService, kmsConnectionService),
+                        cloudwatchMetricsService);
     }
 
     public AuthenticationCallbackHandler(
@@ -108,7 +120,8 @@ public class AuthenticationCallbackHandler
             CookieHelper cookieHelper,
             CloudwatchMetricsService cloudwatchMetricsService,
             AuthorisationCodeService authorisationCodeService,
-            ClientService clientService) {
+            ClientService clientService,
+            InitiateIPVAuthorisationService initiateIPVAuthorisationService) {
         this.configurationService = configurationService;
         this.authorisationService = responseService;
         this.tokenService = tokenService;
@@ -120,6 +133,7 @@ public class AuthenticationCallbackHandler
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.authorisationCodeService = authorisationCodeService;
         this.clientService = clientService;
+        this.initiateIPVAuthorisationService = initiateIPVAuthorisationService;
     }
 
     public APIGatewayProxyResponseEvent handleRequest(
@@ -251,6 +265,25 @@ public class AuthenticationCallbackHandler
                 LOG.info("Adding Authentication userinfo to dynamo");
                 userInfoStorageService.addAuthenticationUserInfoData(
                         userInfo.getSubject().getValue(), userInfo);
+
+                ClientRegistry client = clientService.getClient(clientId).orElseThrow();
+
+                boolean identityRequired =
+                        identityRequired(
+                                clientSession.getAuthRequestParams(),
+                                client.isIdentityVerificationSupported(),
+                                configurationService.isIdentityEnabled());
+                if (identityRequired) {
+                    return initiateIPVAuthorisationService.sendRequestToIPV(
+                            input,
+                            authenticationRequest,
+                            userInfo,
+                            userSession,
+                            client,
+                            clientId,
+                            clientSessionId,
+                            persistentSessionId);
+                }
 
                 URI clientRedirectURI = authenticationRequest.getRedirectionURI();
                 State state = authenticationRequest.getState();
