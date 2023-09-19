@@ -26,6 +26,10 @@ data "aws_dynamodb_table" "account_modifiers_table" {
   name = "${var.environment}-account-modifiers"
 }
 
+data "aws_dynamodb_table" "auth_code_store" {
+  name = "${var.environment}-auth-code-store"
+}
+
 data "aws_dynamodb_table" "access_token_store" {
   name = "${var.environment}-access-token-store"
 }
@@ -208,6 +212,7 @@ data "aws_iam_policy_document" "dynamo_common_passwords_read_access_policy_docum
   }
 }
 
+
 data "aws_iam_policy_document" "dynamo_account_modifiers_read_access_policy_document" {
   statement {
     sid    = "AllowAccessToDynamoTables"
@@ -334,6 +339,22 @@ data "aws_iam_policy_document" "dynamo_authentication_callback_userinfo_read_pol
     resources = [
       data.aws_dynamodb_table.authentication_callback_userinfo_table.arn,
       "${data.aws_dynamodb_table.authentication_callback_userinfo_table.arn}/index/*",
+    ]
+  }
+}
+
+data "aws_iam_policy_document" "dynamo_auth_code_store_write_access_policy_document" {
+  statement {
+    sid    = "AllowAccessToDynamoTables"
+    effect = "Allow"
+
+    actions = [
+      "dynamodb:BatchWriteItem",
+      "dynamodb:UpdateItem",
+      "dynamodb:PutItem",
+    ]
+    resources = [
+      data.aws_dynamodb_table.auth_code_store.arn,
     ]
   }
 }
@@ -481,4 +502,12 @@ resource "aws_iam_policy" "dynamo_authentication_callback_userinfo_write_access_
   description = "IAM policy for managing write permissions to the Dynamo Callback User Info table"
 
   policy = data.aws_iam_policy_document.dynamo_authentication_callback_userinfo_write_policy_document.json
+}
+
+resource "aws_iam_policy" "dynamo_auth_code_store_write_access_policy" {
+  name_prefix = "dynamo-auth-code-write-policy"
+  path        = "/${var.environment}/oidc-shared/"
+  description = "IAM policy for managing write permissions to the Dynamo Auth Code table (code used orch<->auth NOT RP<->orch)"
+
+  policy = data.aws_iam_policy_document.dynamo_auth_code_store_write_access_policy_document.json
 }

@@ -24,6 +24,7 @@ extended_feature_flags_enabled  = true
 support_auth_orch_split         = false
 custom_doc_app_claim_enabled    = true
 ipv_no_session_response_enabled = true
+orch_client_id                  = "orchestrationAuth"
 
 auth_frontend_public_encryption_key = <<-EOT
 -----BEGIN PUBLIC KEY-----
