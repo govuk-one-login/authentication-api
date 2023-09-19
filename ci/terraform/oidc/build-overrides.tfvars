@@ -16,6 +16,7 @@ custom_doc_app_claim_enabled        = true
 ipv_no_session_response_enabled     = true
 doc_app_cri_data_v2_endpoint        = "credentials/issue"
 doc_app_use_cri_data_v2_endpoint    = true
+orch_client_id                      = "orchestrationAuth"
 auth_frontend_public_encryption_key = <<-EOT
 -----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApLJWOHz7uHLinSJr8XM0

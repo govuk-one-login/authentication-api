@@ -9,3 +9,11 @@ lambda_max_concurrency = 10
 lambda_min_concurrency = 3
 endpoint_memory_size   = 1024
 scaling_trigger        = 0.6
+
+orch_client_id                  = "orchestrationAuth"
+orch_to_auth_public_signing_key = <<-EOT
+-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE5iJXSuxgbfM6ADQVtNNDi7ED5ly5
++3VZPbjHv+v0AjQ5Ps+avkXWKwOeScG9sS0cDf0utEXi3fN3cEraa9WuKQ==
+-----END PUBLIC KEY-----
+EOT

@@ -49,6 +49,8 @@ swIDAQAB
 -----END PUBLIC KEY-----
 EOT
 
+orch_client_id = "orchestrationAuth"
+
 auth_frontend_public_encryption_key = <<-EOT
 -----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAppKCOhyLiKs5QTB1L+XK
