@@ -9,6 +9,8 @@ module "oidc_api_authentication_callback_role" {
     aws_iam_policy.dynamo_authentication_callback_userinfo_read_policy.arn,
     aws_iam_policy.dynamo_authentication_callback_userinfo_write_access_policy.arn,
     aws_iam_policy.redis_parameter_policy.arn,
+    aws_iam_policy.ipv_token_auth_kms_policy.arn,
+    aws_iam_policy.ipv_public_encryption_key_parameter_policy.arn,
     module.oidc_txma_audit.access_policy_arn
   ]
 }
@@ -22,13 +24,16 @@ module "authentication_callback" {
   environment     = var.environment
 
   handler_environment_variables = {
-    REDIS_KEY               = local.redis_key
-    SUPPORT_AUTH_ORCH_SPLIT = var.support_auth_orch_split
-    DYNAMO_ENDPOINT         = var.use_localstack ? var.lambda_dynamo_endpoint : null
-    LOCALSTACK_ENDPOINT     = var.use_localstack ? var.localstack_endpoint : null
-    ENVIRONMENT             = var.environment
-    TXMA_AUDIT_QUEUE_URL    = module.oidc_txma_audit.queue_url
-    INTERNAl_SECTOR_URI     = var.internal_sector_uri
+    ENVIRONMENT                 = var.environment
+    REDIS_KEY                   = local.redis_key
+    SUPPORT_AUTH_ORCH_SPLIT     = var.support_auth_orch_split
+    DYNAMO_ENDPOINT             = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    LOCALSTACK_ENDPOINT         = var.use_localstack ? var.localstack_endpoint : null
+    TXMA_AUDIT_QUEUE_URL        = module.oidc_txma_audit.queue_url
+    INTERNAl_SECTOR_URI         = var.internal_sector_uri
+    IDENTITY_ENABLED            = var.ipv_api_enabled
+    IPV_AUTHORISATION_CLIENT_ID = var.ipv_authorisation_client_id
+    IPV_AUTHORISATION_URI       = var.ipv_authorisation_uri
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.AuthenticationCallbackHandler::handleRequest"
 
