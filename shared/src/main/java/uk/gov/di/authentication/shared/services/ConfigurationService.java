@@ -295,7 +295,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public String getOrchestrationRedirectUri() {
-        return System.getenv().getOrDefault("ORCH_REDIRECT_URI", "UNKNOWN");
+        return System.getenv().getOrDefault("ORCH_REDIRECT_URI", "orchestration-redirect");
     }
 
     public String getOrchestrationClientId() {
