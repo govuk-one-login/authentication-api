@@ -44,6 +44,7 @@ import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
@@ -68,6 +69,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
@@ -79,12 +81,13 @@ class AuthorizationServiceTest {
     private static final State STATE = new State();
     private static final Nonce NONCE = new Nonce();
     private static final String KEY_ID = "14342354354353";
-    private static final String CLIENT_NAME = "test-client-name";
     private OrchestrationAuthorizationService orchestrationAuthorizationService;
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final IPVCapacityService ipvCapacityService = mock(IPVCapacityService.class);
     private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
+    private final RedisConnectionService redisConnectionService =
+            mock(RedisConnectionService.class);
     private PrivateKey privateKey;
 
     @RegisterExtension
@@ -98,7 +101,8 @@ class AuthorizationServiceTest {
                         configurationService,
                         dynamoClientService,
                         ipvCapacityService,
-                        kmsConnectionService);
+                        kmsConnectionService,
+                        redisConnectionService);
         var keyPair = generateRsaKeyPair();
         privateKey = keyPair.getPrivate();
         String publicCertificateAsPem =
@@ -672,6 +676,18 @@ class AuthorizationServiceTest {
         var signedJWTResponse = decryptJWT(encryptedJWT);
 
         assertThat(signedJWTResponse.getJWTClaimsSet().getClaim("claim1"), equalTo(claim1Value));
+    }
+
+    @Test
+    void shouldSaveStateInRedis() {
+        when(configurationService.getSessionExpiry()).thenReturn(3600L);
+        var sessionId = "new-session-id";
+        var state = new State();
+
+        orchestrationAuthorizationService.storeState(sessionId, state);
+
+        verify(redisConnectionService)
+                .saveWithExpiry("auth-state:" + sessionId, state.getValue(), 3600);
     }
 
     private ClientRegistry generateClientRegistry(String redirectURI, String clientID) {

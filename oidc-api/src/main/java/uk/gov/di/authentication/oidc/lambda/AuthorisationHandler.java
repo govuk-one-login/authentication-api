@@ -360,6 +360,8 @@ public class AuthorisationHandler
             var rpSectorIdentifierHost =
                     ClientSubjectHelper.getSectorIdentifierForClient(
                             client, configurationService.getInternalSectorUri());
+            var state = new State();
+            orchestrationAuthorizationService.storeState(session.getSessionId(), state);
             var claimsBuilder =
                     new JWTClaimsSet.Builder()
                             .issuer(configurationService.getOrchestrationClientId())
@@ -382,7 +384,7 @@ public class AuthorisationHandler
                                             .getEffectiveVectorOfTrust(authenticationRequest)
                                             .getCredentialTrustLevel()
                                             .getValue())
-                            .claim("state", new State().getValue())
+                            .claim("state", state.getValue())
                             .claim("client_id", configurationService.getOrchestrationClientId())
                             .claim(
                                     "redirect_uri",

@@ -46,6 +46,7 @@ import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
 
 import java.net.URI;
 import java.security.interfaces.RSAPublicKey;
@@ -62,22 +63,26 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFie
 public class OrchestrationAuthorizationService {
 
     public static final String VTR_PARAM = "vtr";
+    public static final String AUTHENTICATION_STATE_STORAGE_PREFIX = "auth-state:";
     private static final JWSAlgorithm SIGNING_ALGORITHM = JWSAlgorithm.ES256;
     private final ConfigurationService configurationService;
     private final DynamoClientService dynamoClientService;
     private final IPVCapacityService ipvCapacityService;
     private final KmsConnectionService kmsConnectionService;
+    private final RedisConnectionService redisConnectionService;
     private static final Logger LOG = LogManager.getLogger(OrchestrationAuthorizationService.class);
 
     public OrchestrationAuthorizationService(
             ConfigurationService configurationService,
             DynamoClientService dynamoClientService,
             IPVCapacityService ipvCapacityService,
-            KmsConnectionService kmsConnectionService) {
+            KmsConnectionService kmsConnectionService,
+            RedisConnectionService redisConnectionService) {
         this.configurationService = configurationService;
         this.dynamoClientService = dynamoClientService;
         this.ipvCapacityService = ipvCapacityService;
         this.kmsConnectionService = kmsConnectionService;
+        this.redisConnectionService = redisConnectionService;
     }
 
     public OrchestrationAuthorizationService(ConfigurationService configurationService) {
@@ -85,7 +90,8 @@ public class OrchestrationAuthorizationService {
                 configurationService,
                 new DynamoClientService(configurationService),
                 new IPVCapacityService(configurationService),
-                new KmsConnectionService(configurationService));
+                new KmsConnectionService(configurationService),
+                new RedisConnectionService(configurationService));
     }
 
     public boolean isClientRedirectUriValid(ClientID clientID, URI redirectURI)
@@ -362,5 +368,13 @@ public class OrchestrationAuthorizationService {
         var isTestJourney = dynamoClientService.isTestJourney(clientID.toString(), emailAddress);
         LOG.info("Is journey a test journey: {}", isTestJourney);
         return isTestJourney;
+    }
+
+    public void storeState(String sessionId, State state) {
+        LOG.info("Storing state");
+        redisConnectionService.saveWithExpiry(
+                AUTHENTICATION_STATE_STORAGE_PREFIX + sessionId,
+                state.getValue(),
+                configurationService.getSessionExpiry());
     }
 }
