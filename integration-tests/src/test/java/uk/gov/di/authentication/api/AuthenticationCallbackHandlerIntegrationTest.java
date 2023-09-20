@@ -16,7 +16,6 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
-import uk.gov.di.authentication.ipv.entity.IPVAuthorisationResponse;
 import uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AuthenticationUserInfo;
 import uk.gov.di.authentication.oidc.lambda.AuthenticationCallbackHandler;
@@ -256,12 +255,13 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                                     Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
                             constructQueryStringParameters());
 
-            assertThat(response, hasStatus(200));
+            assertThat(response, hasStatus(302));
 
-            var body = objectMapper.readValue(response.getBody(), IPVAuthorisationResponse.class);
+            URI redirectLocationHeader =
+                    URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
 
             assertThat(
-                    body.getRedirectUri(),
+                    redirectLocationHeader.toString(),
                     startsWith(configurationService.getIPVAuthorisationURI().toString()));
 
             assertTxmaAuditEventsReceived(
