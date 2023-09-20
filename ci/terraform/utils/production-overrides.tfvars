@@ -23,4 +23,4 @@ bulk_user_email_batch_query_limit     = 2500
 bulk_user_email_max_batch_count       = 1
 bulk_user_email_batch_pause_duration  = 0
 
-bulk_user_email_send_schedule_expression = "cron(0/10 14-17 20 8 ? 2023)"
+bulk_user_email_send_schedule_expression = "cron(0/10 14-17 20 SEP ? 2023)"
