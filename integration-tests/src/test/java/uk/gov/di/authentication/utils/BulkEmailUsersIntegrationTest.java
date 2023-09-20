@@ -76,6 +76,21 @@ public class BulkEmailUsersIntegrationTest {
     }
 
     @Test
+    void updateDeliveryStatusUpdatesAUserWithTheProvidedDeliveryStatus() {
+        bulkEmailUsersExtension.addBulkEmailUser(SUBJECT_ID_1, BulkEmailStatus.PENDING);
+
+        String deliveryStatus = "delivered";
+
+        var updatedUser =
+                bulkEmailUsersService
+                        .updateDeliveryReceiptStatus(SUBJECT_ID_1, deliveryStatus)
+                        .get();
+
+        assertEquals(SUBJECT_ID_1, updatedUser.getSubjectID());
+        assertEquals(deliveryStatus, updatedUser.getDeliveryReceiptStatus());
+    }
+
+    @Test
     void updateUserStatusReturnsNoneIfTheSuppliedSubjectIdDoesNotExist() {
         var subjectId = "a-non-existent-subject-id";
         var result = bulkEmailUsersService.updateUserStatus(subjectId, BulkEmailStatus.EMAIL_SENT);

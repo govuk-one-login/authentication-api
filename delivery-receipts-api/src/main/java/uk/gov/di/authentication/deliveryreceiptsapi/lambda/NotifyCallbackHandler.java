@@ -12,14 +12,17 @@ import uk.gov.di.authentication.deliveryreceiptsapi.entity.NotifyDeliveryReceipt
 import uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
+import uk.gov.di.authentication.shared.services.BulkEmailUsersService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SystemService;
 
 import java.util.Map;
 import java.util.Objects;
 
+import static uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType.TERMS_AND_CONDITIONS_BULK_EMAIL;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
@@ -28,6 +31,9 @@ public class NotifyCallbackHandler
 
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private final ConfigurationService configurationService;
+    private final DynamoService dynamoService;
+
+    private final BulkEmailUsersService bulkEmailUsersService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final Json objectMapper = SerializationService.getInstance();
 
@@ -35,14 +41,20 @@ public class NotifyCallbackHandler
 
     public NotifyCallbackHandler(
             CloudwatchMetricsService cloudwatchMetricsService,
-            ConfigurationService configurationService) {
+            ConfigurationService configurationService,
+            DynamoService dynamoService,
+            BulkEmailUsersService bulkEmailUsersService) {
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.configurationService = configurationService;
+        this.dynamoService = dynamoService;
+        this.bulkEmailUsersService = bulkEmailUsersService;
     }
 
     public NotifyCallbackHandler(ConfigurationService configurationService) {
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
         this.configurationService = configurationService;
+        this.dynamoService = new DynamoService(configurationService);
+        this.bulkEmailUsersService = new BulkEmailUsersService(configurationService);
     }
 
     public NotifyCallbackHandler() {
@@ -101,6 +113,18 @@ public class NotifyCallbackHandler
                                 configurationService.getEnvironment(),
                                 "NotifyStatus",
                                 deliveryReceipt.getStatus()));
+                if (templateName.equals(TERMS_AND_CONDITIONS_BULK_EMAIL.getTemplateAlias())) {
+                    LOG.info("Updating bulk email table for delivery receipt");
+                    var maybeProfile =
+                            dynamoService.getUserProfileByEmailMaybe(deliveryReceipt.getTo());
+                    if (maybeProfile.isPresent()) {
+                        bulkEmailUsersService.updateDeliveryReceiptStatus(
+                                maybeProfile.get().getSubjectID(), deliveryReceipt.getStatus());
+                    } else {
+                        LOG.info(
+                                "No profile found for email in delivery receipt: not updating bulk email users table");
+                    }
+                }
                 LOG.info("Email callback request processed");
             }
         } catch (JsonException e) {
