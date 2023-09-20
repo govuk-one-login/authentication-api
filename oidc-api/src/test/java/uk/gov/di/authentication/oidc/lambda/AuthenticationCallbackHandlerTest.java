@@ -23,7 +23,6 @@ import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.authentication.ipv.entity.IPVAuthorisationResponse;
 import uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent;
 import uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService;
 import uk.gov.di.authentication.oidc.services.AuthenticationTokenService;
@@ -34,11 +33,11 @@ import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
+import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
-import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -102,6 +101,7 @@ class AuthenticationCallbackHandlerTest {
     private static final ClientID CLIENT_ID = new ClientID();
     private static final Subject PAIRWISE_SUBJECT_ID = new Subject();
     private static final URI REDIRECT_URI = URI.create("https://test.rp.redirect.uri");
+    private static final URI IPV_REDIRECT_URI = URI.create("https://test.ipv.redirect.uri");
     private static final State RP_STATE = new State();
     private static final ClientSession clientSession =
             new ClientSession(
@@ -180,6 +180,8 @@ class AuthenticationCallbackHandlerTest {
                 redirectLocation,
                 equalTo(REDIRECT_URI + "?code=" + AUTH_CODE_RP_TO_ORCH + "&state=" + RP_STATE));
 
+        verify(cloudwatchMetricsService).incrementCounter(eq("AuthenticationCallback"), any());
+
         verifyAuditEvents(
                 List.of(
                         OrchestrationAuditableEvent.AUTH_CALLBACK_RESPONSE_RECEIVED,
@@ -189,8 +191,7 @@ class AuthenticationCallbackHandlerTest {
     }
 
     @Test
-    void shouldRedirectToIPVWhenIdentityRequired()
-            throws Json.JsonException, UnsuccessfulCredentialResponseException {
+    void shouldRedirectToIPVWhenIdentityRequired() throws UnsuccessfulCredentialResponseException {
         mockStatic(IdentityHelper.class);
 
         usingValidSession();
@@ -212,13 +213,11 @@ class AuthenticationCallbackHandlerTest {
         var response = handler.handleRequest(event, null);
 
         assertThat(response, hasStatus(302));
+
+        verify(cloudwatchMetricsService).incrementCounter(eq("AuthenticationCallback"), any());
+
         verify(initiateIPVAuthorisationService)
                 .sendRequestToIPV(any(), any(), any(), any(), any(), any(), any(), any());
-    }
-
-    private APIGatewayProxyResponseEvent createIPVApiResponse() throws Json.JsonException {
-        return generateApiGatewayProxyResponse(
-                302, new IPVAuthorisationResponse("redirect-ipv-url"));
     }
 
     @Test
@@ -311,6 +310,11 @@ class AuthenticationCallbackHandlerTest {
                         OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_USERINFO_RESPONSE_RECEIVED),
                 auditService);
         verifyNoInteractions(userInfoStorageService, cloudwatchMetricsService);
+    }
+
+    private APIGatewayProxyResponseEvent createIPVApiResponse() {
+        return generateApiGatewayProxyResponse(
+                302, "", Map.of(ResponseHeaders.LOCATION, IPV_REDIRECT_URI.toString()), null);
     }
 
     private static void setValidHeadersAndQueryParameters(APIGatewayProxyRequestEvent event) {

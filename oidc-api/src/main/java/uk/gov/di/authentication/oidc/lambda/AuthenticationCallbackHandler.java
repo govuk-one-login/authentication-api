@@ -273,33 +273,6 @@ public class AuthenticationCallbackHandler
                                 clientSession.getAuthRequestParams(),
                                 client.isIdentityVerificationSupported(),
                                 configurationService.isIdentityEnabled());
-                if (identityRequired) {
-                    return initiateIPVAuthorisationService.sendRequestToIPV(
-                            input,
-                            authenticationRequest,
-                            userInfo,
-                            userSession,
-                            client,
-                            clientId,
-                            clientSessionId,
-                            persistentSessionId);
-                }
-
-                URI clientRedirectURI = authenticationRequest.getRedirectionURI();
-                State state = authenticationRequest.getState();
-                ResponseMode responseMode = authenticationRequest.getResponseMode();
-
-                LOG.info("Redirecting to: {} with state: {}", clientRedirectURI, state);
-
-                VectorOfTrust requestedVectorOfTrust = clientSession.getEffectiveVectorOfTrust();
-                if (isNull(userSession.getCurrentCredentialStrength())
-                        || requestedVectorOfTrust
-                                        .getCredentialTrustLevel()
-                                        .compareTo(userSession.getCurrentCredentialStrength())
-                                > 0) {
-                    userSession.setCurrentCredentialStrength(
-                            requestedVectorOfTrust.getCredentialTrustLevel());
-                }
 
                 boolean isTestJourney = false;
                 if (nonNull(userInfo.getEmailAddress())) {
@@ -329,6 +302,34 @@ public class AuthenticationCallbackHandler
                 }
 
                 cloudwatchMetricsService.incrementCounter("AuthenticationCallback", dimensions);
+
+                if (identityRequired) {
+                    return initiateIPVAuthorisationService.sendRequestToIPV(
+                            input,
+                            authenticationRequest,
+                            userInfo,
+                            userSession,
+                            client,
+                            clientId,
+                            clientSessionId,
+                            persistentSessionId);
+                }
+
+                URI clientRedirectURI = authenticationRequest.getRedirectionURI();
+                State state = authenticationRequest.getState();
+                ResponseMode responseMode = authenticationRequest.getResponseMode();
+
+                LOG.info("Redirecting to: {} with state: {}", clientRedirectURI, state);
+
+                VectorOfTrust requestedVectorOfTrust = clientSession.getEffectiveVectorOfTrust();
+                if (isNull(userSession.getCurrentCredentialStrength())
+                        || requestedVectorOfTrust
+                                        .getCredentialTrustLevel()
+                                        .compareTo(userSession.getCurrentCredentialStrength())
+                                > 0) {
+                    userSession.setCurrentCredentialStrength(
+                            requestedVectorOfTrust.getCredentialTrustLevel());
+                }
 
                 var authCode =
                         authorisationCodeService.generateAndSaveAuthorisationCode(
