@@ -32,17 +32,14 @@ import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
-import uk.gov.di.authentication.ipv.entity.IPVAuthorisationResponse;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
-import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.net.URI;
 import java.net.URLDecoder;
@@ -154,8 +151,7 @@ public class InitiateIPVAuthorisationServiceTest {
     }
 
     @Test
-    void shouldReturn200AndRedirectURIWithClaims()
-            throws JOSEException, ParseException, Json.JsonException {
+    void shouldReturn302AndRedirectURIWithClaims() throws JOSEException, ParseException {
         var encryptedJWT = createEncryptedJWT();
         when(authorisationService.constructRequestJWT(
                         any(State.class),
@@ -176,15 +172,12 @@ public class InitiateIPVAuthorisationServiceTest {
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
                         PERSISTENT_SESSION_ID);
-        var body =
-                SerializationService.getInstance()
-                        .readValue(response.getBody(), IPVAuthorisationResponse.class);
 
-        assertThat(response, hasStatus(200));
-        assertThat(body.getRedirectUri(), startsWith(IPV_AUTHORISATION_URI.toString()));
-        assertThat(
-                splitQuery(body.getRedirectUri()).get("request"),
-                equalTo(encryptedJWT.serialize()));
+        assertThat(response, hasStatus(302));
+        String redirectLocation = response.getHeaders().get("Location");
+        assertThat(redirectLocation, startsWith(IPV_AUTHORISATION_URI.toString()));
+
+        assertThat(splitQuery(redirectLocation).get("request"), equalTo(encryptedJWT.serialize()));
         verify(authorisationService).storeState(eq(session.getSessionId()), any(State.class));
 
         verify(auditService)
