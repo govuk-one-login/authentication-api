@@ -241,6 +241,8 @@ class AuthorisationHandlerTest {
 
         assertThat(response, hasStatus(302));
         var locationHeader = response.getHeaders().get(ResponseHeaders.LOCATION);
+        verify(orchestrationAuthorizationService)
+                .storeState(eq(session.getSessionId()), any(State.class));
         assertThat(locationHeader, containsString(TEST_ENCRYPTED_JWT.serialize()));
         assertThat(
                 splitQuery(locationHeader).get("request"), equalTo(TEST_ENCRYPTED_JWT.serialize()));
