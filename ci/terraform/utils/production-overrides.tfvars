@@ -17,8 +17,10 @@ bulk_user_email_included_terms_and_conditions     = "1.0,1.1,1.2,1.3,1.4,1.5,1.6
 bulk_user_email_max_audience_load_user_batch_size = 0
 bulk_user_email_max_audience_load_user_count      = 0
 
-bulk_user_email_send_schedule_enabled = false
-bulk_user_email_email_sending_enabled = false
-bulk_user_email_batch_query_limit     = 1000
+bulk_user_email_send_schedule_enabled = true
+bulk_user_email_email_sending_enabled = true
+bulk_user_email_batch_query_limit     = 2500
 bulk_user_email_max_batch_count       = 1
 bulk_user_email_batch_pause_duration  = 0
+
+bulk_user_email_send_schedule_expression = "cron(0/10 14-17 20 8 ? 2023)"
