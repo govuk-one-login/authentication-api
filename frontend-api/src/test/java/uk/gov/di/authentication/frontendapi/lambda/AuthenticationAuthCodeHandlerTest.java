@@ -43,6 +43,7 @@ class AuthenticationAuthCodeHandlerTest {
     private static final String TEST_STATE = "xyz";
     private static final String TEST_AUTHORIZATION_CODE = "SplxlOBeZQQYbYS6WxSbIA";
     private static final String TEST_SUBJECT_ID = "subject-id";
+    private static final String TEST_SECTOR_IDENTIFIER = "sectorIdentifier";
 
     private AuthenticationAuthCodeHandler handler;
     private static final Json objectMapper = SerializationService.getInstance();
@@ -151,7 +152,13 @@ class AuthenticationAuthCodeHandlerTest {
         var result = handler.handleRequest(event, context);
 
         verify(dynamoAuthCodeService, times(1))
-                .saveAuthCode(eq(userProfile.getSubjectID()), anyString(), anyList(), eq(false));
+                .saveAuthCode(
+                        eq(userProfile.getSubjectID()),
+                        anyString(),
+                        anyList(),
+                        eq(false),
+                        anyString(),
+                        eq(false));
         assertThat(result, hasStatus(200));
         var authorizationResponse = new AuthCodeResponse(TEST_AUTHORIZATION_CODE, TEST_STATE);
         assertThat(result, hasBody(objectMapper.writeValueAsString(authorizationResponse)));
@@ -162,11 +169,13 @@ class AuthenticationAuthCodeHandlerTest {
         event.setHeaders(getHeaders());
         event.setBody(
                 format(
-                        "{ \"email\": \"%s\", \"redirect-uri\": \"%s\", \"state\": \"%s\", \"claims\": [\"%s\"] }",
+                        "{ \"email\": \"%s\", \"redirect-uri\": \"%s\", \"state\": \"%s\", \"claims\": [\"%s\"], \"rp-sector-uri\": \"%s\",  \"is-new-account\": \"%s\" }",
                         TEST_EMAIL_ADDRESS,
                         TEST_REDIRECT_URI,
                         TEST_STATE,
-                        List.of("email-verified", "email")));
+                        List.of("email-verified", "email"),
+                        TEST_SECTOR_IDENTIFIER,
+                        false));
         return event;
     }
 

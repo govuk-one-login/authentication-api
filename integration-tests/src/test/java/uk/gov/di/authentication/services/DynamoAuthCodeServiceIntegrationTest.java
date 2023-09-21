@@ -20,6 +20,8 @@ class DynamoAuthCodeServiceIntegrationTest {
     private static final String SUBJECT_ID = "test-subject-id";
     private static final String AUTH_CODE = "test-auth-code";
     private static final boolean HAS_BEEN_USED = false;
+    private static final boolean IS_NEW_ACCOUNT = false;
+    private static final String TEST_SECTOR_IDENTIFIER = "sectorIdentifier";
 
     @RegisterExtension
     protected static final AuthCodeExtension authCodeExtension = new AuthCodeExtension(180);
@@ -32,7 +34,9 @@ class DynamoAuthCodeServiceIntegrationTest {
                 SUBJECT_ID,
                 AUTH_CODE,
                 List.of(EMAIL_VERIFIED.getValue(), EMAIL.getValue()),
-                HAS_BEEN_USED);
+                HAS_BEEN_USED,
+                TEST_SECTOR_IDENTIFIER,
+                IS_NEW_ACCOUNT);
     }
 
     @Test

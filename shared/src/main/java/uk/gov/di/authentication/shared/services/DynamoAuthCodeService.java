@@ -40,7 +40,12 @@ public class DynamoAuthCodeService extends BaseDynamoService<AuthCodeStore> {
     }
 
     public void saveAuthCode(
-            String subjectID, String authCode, List<String> claims, boolean hasBeenUsed) {
+            String subjectID,
+            String authCode,
+            List<String> claims,
+            boolean hasBeenUsed,
+            String sectorIdentifier,
+            boolean isNewAccount) {
         if (isAuthOrchSplitEnabled) {
             var authCodeStore =
                     new AuthCodeStore()
@@ -48,6 +53,8 @@ public class DynamoAuthCodeService extends BaseDynamoService<AuthCodeStore> {
                             .withAuthCode(authCode)
                             .withClaims(claims)
                             .withHasBeenUsed(hasBeenUsed)
+                            .withSectorIdentifier(sectorIdentifier)
+                            .withIsNewAccount(isNewAccount)
                             .withTimeToExist(
                                     NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS)
                                             .toInstant()
