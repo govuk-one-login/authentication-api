@@ -9,6 +9,7 @@ import com.nimbusds.oauth2.sdk.id.State;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.AuthCodeRequest;
+import uk.gov.di.authentication.frontendapi.entity.AuthCodeResponse;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
@@ -86,7 +87,8 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
                         new AuthorizationSuccessResponse(
                                 redirectUri, authorisationCode, null, state, null);
 
-                return generateApiGatewayProxyResponse(200, authorizationResponse);
+                return generateApiGatewayProxyResponse(
+                        200, new AuthCodeResponse(authorizationResponse.toURI().toString()));
             } catch (JsonException ex) {
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
             }
