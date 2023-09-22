@@ -3,9 +3,9 @@ package uk.gov.di.authentication.frontendapi.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.authentication.frontendapi.entity.AuthCodeResponse;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -19,6 +19,8 @@ import uk.gov.di.authentication.shared.services.DynamoAuthCodeService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +28,8 @@ import java.util.Optional;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -41,7 +45,7 @@ class AuthenticationAuthCodeHandlerTest {
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
     private static final String TEST_REDIRECT_URI = "https://redirect_uri.com";
     private static final String TEST_STATE = "xyz";
-    private static final String TEST_AUTHORIZATION_CODE = "SplxlOBeZQQYbYS6WxSbIA";
+    private static final String LOCATION = "location";
     private static final String TEST_SUBJECT_ID = "subject-id";
     private static final String TEST_SECTOR_IDENTIFIER = "sectorIdentifier";
 
@@ -88,18 +92,6 @@ class AuthenticationAuthCodeHandlerTest {
     }
 
     @Test
-    void shouldReturn400ErrorWhenEmailIsInvalid() throws Json.JsonException {
-        when(configurationService.isAuthOrchSplitEnabled()).thenReturn(true);
-        var event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(getHeaders());
-        event.setBody(format("{ \"email\": \"%s\"}", ""));
-
-        var result = handler.handleRequest(event, context);
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1001)));
-    }
-
-    @Test
     void shouldReturn400ErrorWhenRedirectUriIsInvalid() throws Json.JsonException {
         when(configurationService.isAuthOrchSplitEnabled()).thenReturn(true);
         var event = new APIGatewayProxyRequestEvent();
@@ -128,6 +120,40 @@ class AuthenticationAuthCodeHandlerTest {
     }
 
     @Test
+    void shouldReturn400ErrorClaimsListIsEmpty() throws Json.JsonException {
+        when(configurationService.isAuthOrchSplitEnabled()).thenReturn(true);
+        var event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(getHeaders());
+        event.setBody(
+                format(
+                        "{ \"email\": \"%s\", \"redirect-uri\": \"%s\", \"state\": \"%s\", \"claims\": [\"%s\"] }",
+                        TEST_EMAIL_ADDRESS, TEST_REDIRECT_URI, TEST_STATE, Optional.empty()));
+
+        var result = handler.handleRequest(event, context);
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1001)));
+    }
+
+    @Test
+    void shouldReturn400ErrorWhenRPSectorUriIsInvalid() throws Json.JsonException {
+        when(configurationService.isAuthOrchSplitEnabled()).thenReturn(true);
+        var event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(getHeaders());
+        event.setBody(
+                format(
+                        "{ \"email\": \"%s\", \"redirect-uri\": \"%s\", \"state\": \"%s\", \"claims\": [\"%s\"], \"rp-sector-uri\": \"%s\", }",
+                        TEST_EMAIL_ADDRESS,
+                        TEST_REDIRECT_URI,
+                        TEST_STATE,
+                        List.of("email-verified", "email"),
+                        ""));
+
+        var result = handler.handleRequest(event, context);
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1001)));
+    }
+
+    @Test
     void shouldReturn400ErrorWhenUnableToFetchEmailFromUserProfile() throws Json.JsonException {
         when(configurationService.isAuthOrchSplitEnabled()).thenReturn(true);
         when(authenticationService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
@@ -140,7 +166,7 @@ class AuthenticationAuthCodeHandlerTest {
     }
 
     @Test
-    void shouldReturn200AndSaveNewAuthCodeRequest() throws Json.JsonException {
+    void shouldReturn200AndSaveNewAuthCodeRequest() throws URISyntaxException {
         when(configurationService.isAuthOrchSplitEnabled()).thenReturn(true);
         when(configurationService.getAuthCodeExpiry()).thenReturn(Long.valueOf(12));
         var userProfile = new UserProfile();
@@ -160,8 +186,14 @@ class AuthenticationAuthCodeHandlerTest {
                         anyString(),
                         eq(false));
         assertThat(result, hasStatus(200));
-        var authorizationResponse = new AuthCodeResponse(TEST_AUTHORIZATION_CODE, TEST_STATE);
-        assertThat(result, hasBody(objectMapper.writeValueAsString(authorizationResponse)));
+        var jsonBody = new JSONObject(result.getBody());
+        assertTrue(jsonBody.has(LOCATION));
+        var location = jsonBody.get(LOCATION);
+        var uri = new URI(location.toString());
+        assertTrue(uri.getQuery().contains("code"));
+        assertTrue(uri.getQuery().contains("state"));
+        assertTrue(uri.getQuery().contains(TEST_STATE));
+        assertFalse(uri.getQuery().contains("random_query_parameter"));
     }
 
     private APIGatewayProxyRequestEvent validAuthCodeRequest() {
@@ -169,8 +201,7 @@ class AuthenticationAuthCodeHandlerTest {
         event.setHeaders(getHeaders());
         event.setBody(
                 format(
-                        "{ \"email\": \"%s\", \"redirect-uri\": \"%s\", \"state\": \"%s\", \"claims\": [\"%s\"], \"rp-sector-uri\": \"%s\",  \"is-new-account\": \"%s\" }",
-                        TEST_EMAIL_ADDRESS,
+                        "{ \"redirect-uri\": \"%s\", \"state\": \"%s\", \"claims\": [\"%s\"], \"rp-sector-uri\": \"%s\",  \"is-new-account\": \"%s\" }",
                         TEST_REDIRECT_URI,
                         TEST_STATE,
                         List.of("email-verified", "email"),
