@@ -212,7 +212,7 @@ class AuthenticationTokenHandlerIntegrationTest extends ApiGatewayHandlerIntegra
         }
 
         @Override
-        public boolean isAuthCodeStoreEnabled() {
+        public boolean isAuthOrchSplitEnabled() {
             return true;
         }
 

@@ -55,7 +55,7 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
                         configurationParameters) {
 
                     @Override
-                    public boolean isAccessTokenStoreEnabled() {
+                    public boolean isAuthOrchSplitEnabled() {
                         return true;
                     }
                 };
