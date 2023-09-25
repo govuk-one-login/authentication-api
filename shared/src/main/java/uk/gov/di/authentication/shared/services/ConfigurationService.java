@@ -43,6 +43,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     private SsmClient ssmClient;
     private Map<String, String> ssmRedisParameters;
     private Optional<String> passwordPepper;
+
+    private String notifyCallbackBearerToken;
     protected SystemService systemService;
 
     public ConfigurationService() {}
@@ -402,13 +404,18 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public String getNotifyCallbackBearerToken() {
-        var request =
-                GetParameterRequest.builder()
-                        .withDecryption(true)
-                        .name(format("{0}-notify-callback-bearer-token", getEnvironment()))
-                        .build();
+        if (notifyCallbackBearerToken == null) {
 
-        return getSsmClient().getParameter(request).parameter().value();
+            var request =
+                    GetParameterRequest.builder()
+                            .withDecryption(true)
+                            .name(format("{0}-notify-callback-bearer-token", getEnvironment()))
+                            .build();
+
+            notifyCallbackBearerToken = getSsmClient().getParameter(request).parameter().value();
+        }
+
+        return notifyCallbackBearerToken;
     }
 
     public List<String> getNotifyTestDestinations() {
