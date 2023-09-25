@@ -10,6 +10,7 @@ module "frontend_api_orch_auth_code_role" {
     aws_iam_policy.dynamo_user_write_access_policy.arn,
     aws_iam_policy.dynamo_client_registry_read_access_policy.arn,
     aws_iam_policy.dynamo_auth_code_store_write_access_policy.arn,
+    aws_iam_policy.redis_parameter_policy.arn,
     module.oidc_txma_audit.access_policy_arn
   ]
 }
@@ -29,6 +30,7 @@ module "orch_auth_code" {
     ENVIRONMENT             = var.environment
     TXMA_AUDIT_QUEUE_URL    = module.oidc_txma_audit.queue_url
     INTERNAl_SECTOR_URI     = var.internal_sector_uri
+    REDIS_KEY               = local.redis_key
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.AuthenticationAuthCodeHandler::handleRequest"
 
