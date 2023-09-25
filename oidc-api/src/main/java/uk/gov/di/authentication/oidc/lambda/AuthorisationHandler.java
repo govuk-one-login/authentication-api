@@ -365,7 +365,7 @@ public class AuthorisationHandler
             var claimsBuilder =
                     new JWTClaimsSet.Builder()
                             .issuer(configurationService.getOrchestrationClientId())
-                            .audience(configurationService.getAuthAudience())
+                            .audience(configurationService.getLoginURI().toString())
                             .expirationTime(expiryDate)
                             .issueTime(NowHelper.now())
                             .notBeforeTime(NowHelper.now())
