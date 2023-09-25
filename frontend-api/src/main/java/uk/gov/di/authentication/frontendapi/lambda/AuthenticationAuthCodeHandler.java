@@ -56,6 +56,10 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
         this.dynamoAuthCodeService = new DynamoAuthCodeService(configurationService);
     }
 
+    public AuthenticationAuthCodeHandler() {
+        this(ConfigurationService.getInstance());
+    }
+
     @Override
     public APIGatewayProxyResponseEvent handleRequestWithUserContext(
             APIGatewayProxyRequestEvent input,
