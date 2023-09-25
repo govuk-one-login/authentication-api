@@ -26,7 +26,6 @@ module "authorize" {
   environment     = var.environment
 
   handler_environment_variables = {
-    AUTH_AUDIENCE                        = var.auth_audience
     DOMAIN_NAME                          = local.service_domain
     DOC_APP_API_ENABLED                  = var.doc_app_api_enabled
     DYNAMO_ENDPOINT                      = var.use_localstack ? var.lambda_dynamo_endpoint : null

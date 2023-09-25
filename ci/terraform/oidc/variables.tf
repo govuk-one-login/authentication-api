@@ -464,11 +464,6 @@ variable "orch_client_id" {
   default = ""
 }
 
-variable "auth_audience" {
-  type    = string
-  default = ""
-}
-
 locals {
   default_performance_parameters = {
     memory          = var.endpoint_memory_size
