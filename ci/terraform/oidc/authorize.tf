@@ -43,6 +43,7 @@ module "authorize" {
     SUPPORT_LANGUAGE_CY                  = tostring(var.language_cy_enabled)
     INTERNAl_SECTOR_URI                  = var.internal_sector_uri
     ORCH_TO_AUTH_TOKEN_SIGNING_KEY_ALIAS = local.orch_to_auth_signing_key_alias_name
+    SUPPORT_AUTH_ORCH_SPLIT              = var.support_auth_orch_split
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.AuthorisationHandler::handleRequest"
   rest_api_id           = aws_api_gateway_rest_api.di_authentication_api.id

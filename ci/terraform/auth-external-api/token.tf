@@ -32,6 +32,7 @@ module "auth_token" {
     ORCH_CLIENT_ID                            = var.orch_client_id
     AUTHENTICATION_BACKEND_URI                = var.authentication_backend_uri
     ORCH_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY     = var.orch_to_auth_public_signing_key
+    SUPPORT_AUTH_ORCH_SPLIT                   = var.support_auth_orch_split
   }
   handler_function_name = "uk.gov.di.authentication.external.lambda.TokenHandler::handleRequest"
   handler_runtime       = "java17"
