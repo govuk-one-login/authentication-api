@@ -148,10 +148,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Integer.parseInt(System.getenv().getOrDefault("CODE_AUTH_APP_ALLOWED_WINDOWS", "9"));
     }
 
-    public String getAuthAudience() {
-        return System.getenv().getOrDefault("AUTH_AUDIENCE", "UNKNOWN");
-    }
-
     public boolean isAuthOrchSplitEnabled() {
         return System.getenv().getOrDefault("SUPPORT_AUTH_ORCH_SPLIT", "false").equals("true");
     }
