@@ -3,6 +3,7 @@ set -eu
 
 source ./scripts/functions.sh
 
+# shellcheck disable=SC2034
 auth_api_startup_start_seconds=$SECONDS
 
 startup

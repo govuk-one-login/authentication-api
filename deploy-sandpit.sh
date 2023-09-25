@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 
 set -eu
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
 function runTerraform() {
   echo "Running ${1} Terraform..."
-  pushd "${DIR}/ci/terraform/${1}" > /dev/null
+  pushd "${DIR}/ci/terraform/${1}" >/dev/null
   rm -rf .terraform/
   terraform init -backend-config=sandpit.hcl
-  terraform apply -var-file sandpit.tfvars ${2}
-  popd > /dev/null
+  terraform apply -var-file sandpit.tfvars "${2}"
+  popd >/dev/null
 }
 
 function usage() {
@@ -58,70 +58,72 @@ if [[ $# == 0 ]]; then
 fi
 while [[ $# -gt 0 ]]; do
   case $1 in
-    -a|--account-management)
-      AM=1
-      ;;
-    --audit)
-      AUDIT=1
-      ;;
-    -b|--build)
-      BUILD=1
-      ;;
-    -c|--clean)
-      CLEAN="clean"
-      ;;
-    -d|--delivery-receipts)
-      RECEIPTS=1
-      ;;
-    -o|--oidc)
-      OIDC=1
-      ;;
-    -s|--shared)
-      SHARED=1
-      ;;
-    -u|--utils)
-      UTILS=1
-      ;;
-    -t|--test-services)
-      TEST_SERVICES=1
-      ;;
-    --destroy)
-      TERRAFORM_OPTS="-destroy"
-      ;;
-    -p|--prompt)
-      TERRAFORM_OPTS=""
-      ;;
-    -r|--refresh)
-      TERRAFORM_OPTS="-refresh-only"
-      ;;
-    -x|--auth-external)
-      AUTH_EXTERNAL_API=1
-      ;;
-    *)
-      usage
-      exit 1
-      ;;
+  -a | --account-management)
+    AM=1
+    ;;
+  --audit)
+    AUDIT=1
+    ;;
+  -b | --build)
+    BUILD=1
+    ;;
+  -c | --clean)
+    CLEAN="clean"
+    ;;
+  -d | --delivery-receipts)
+    RECEIPTS=1
+    ;;
+  -o | --oidc)
+    OIDC=1
+    ;;
+  -s | --shared)
+    SHARED=1
+    ;;
+  -u | --utils)
+    UTILS=1
+    ;;
+  -t | --test-services)
+    TEST_SERVICES=1
+    ;;
+  --destroy)
+    TERRAFORM_OPTS="-destroy"
+    ;;
+  -p | --prompt)
+    TERRAFORM_OPTS=""
+    ;;
+  -r | --refresh)
+    TERRAFORM_OPTS="-refresh-only"
+    ;;
+  -x | --auth-external)
+    AUTH_EXTERNAL_API=1
+    ;;
+  *)
+    usage
+    exit 1
+    ;;
   esac
   shift
 done
 
-if [[ $BUILD == "1" ]]; then
-  echo "Building deployment artefacts ... "
-  pushd "${DIR}" > /dev/null
-  ./gradlew ${CLEAN} build buildZip -x test -x spotlessCheck -x composeDown
-  popd > /dev/null
-  echo "done!"
+if [[ -z "${AWS_ACCESS_KEY_ID:-}" || -z "${AWS_SECRET_ACCESS_KEY:-}" ]]; then
+  echo "!! AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY must be set in the environment." >&2
+  echo "!! Perhaps you meant: gds aws digital-identity-dev -- ./${0}" >&2
+  exit 1
 fi
 
-echo -n "Getting AWS credentials ... "
-eval $(gds aws digital-identity-dev -e)
-echo "done!"
+if [[ $BUILD == "1" ]]; then
+  echo "Building deployment artefacts ... "
+  pushd "${DIR}" >/dev/null
+  ./gradlew ${CLEAN} build buildZip -x test -x spotlessCheck -x composeDown
+  popd >/dev/null
+  echo "done!"
+fi
 
 echo -n "Getting Terraform variables from SSM ... "
 VARS="$(aws ssm get-parameters-by-path --region eu-west-2 --with-decryption --path "/sandpit-deploy/terraform-variables" | jq -r '.Parameters[] | @base64')"
 for VAR in $VARS; do
-  VAR_NAME="TF_VAR_$(echo ${VAR} | base64 -d | jq -r '.Name / "/" | .[3]')"
-  export $VAR_NAME="$(echo ${VAR} | base64 -d | jq -r '.Value')"
+  VAR_NAME="TF_VAR_$(echo "${VAR}" | base64 -d | jq -r '.Name / "/" | .[3]')"
+  echo export "${VAR_NAME}"="$(echo "${VAR}" | base64 -d | jq -r '.Value')"
 done
 echo "done!"
 
