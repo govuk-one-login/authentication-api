@@ -23,11 +23,12 @@ module "auth_userinfo" {
   environment     = var.environment
 
   handler_environment_variables = {
-    ENVIRONMENT          = var.environment
-    TXMA_AUDIT_QUEUE_URL = module.auth_ext_txma_audit.queue_url
-    LOCALSTACK_ENDPOINT  = null
-    DYNAMO_ENDPOINT      = null
-    INTERNAl_SECTOR_URI  = var.internal_sector_uri
+    ENVIRONMENT             = var.environment
+    TXMA_AUDIT_QUEUE_URL    = module.auth_ext_txma_audit.queue_url
+    LOCALSTACK_ENDPOINT     = null
+    DYNAMO_ENDPOINT         = null
+    INTERNAl_SECTOR_URI     = var.internal_sector_uri
+    SUPPORT_AUTH_ORCH_SPLIT = var.support_auth_orch_split
   }
   handler_function_name = "uk.gov.di.authentication.external.lambda.UserInfoHandler::handleRequest"
   handler_runtime       = "java17"

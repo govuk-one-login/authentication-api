@@ -110,6 +110,12 @@ variable "orch_to_auth_public_signing_key" {
   description = "A hardcoded value for the public key corresponding to the KMS created in the OIDC module. It is used to validate the signature of a client_assertion JWT (orch<->auth token endpoint)"
 }
 
+variable "support_auth_orch_split" {
+  default     = false
+  type        = bool
+  description = "Feature flag which toggles auth-orch split on and off"
+}
+
 locals {
   default_performance_parameters = {
     memory          = var.endpoint_memory_size
