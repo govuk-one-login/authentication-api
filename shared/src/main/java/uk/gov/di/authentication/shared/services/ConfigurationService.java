@@ -156,14 +156,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("SUPPORT_AUTH_ORCH_SPLIT", "false").equals("true");
     }
 
-    public boolean isAuthCodeStoreEnabled() {
-        return System.getenv().getOrDefault("SUPPORT_AUTH_CODE_STORE", "false").equals("true");
-    }
-
-    public boolean isAccessTokenStoreEnabled() {
-        return System.getenv().getOrDefault("SUPPORT_ACCESS_TOKEN_STORE", "false").equals("true");
-    }
-
     public boolean isBulkUserEmailEmailSendingEnabled() {
         return System.getenv()
                 .getOrDefault("BULK_USER_EMAIL_EMAIL_SENDING_ENABLED", "false")
