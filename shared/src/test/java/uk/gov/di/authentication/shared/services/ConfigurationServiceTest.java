@@ -4,6 +4,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import software.amazon.awssdk.services.ssm.SsmClient;
+import software.amazon.awssdk.services.ssm.model.GetParameterRequest;
+import software.amazon.awssdk.services.ssm.model.GetParameterResponse;
 import uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType;
 
 import java.util.Collections;
@@ -13,6 +16,8 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class ConfigurationServiceTest {
@@ -115,5 +120,38 @@ class ConfigurationServiceTest {
         assertEquals(
                 Collections.EMPTY_LIST,
                 configurationService.getBulkUserEmailIncludedTermsAndConditions());
+    }
+
+    @Test
+    void shoulCacheTheNotifyBearerTokenAfterTheFirstCall() {
+        var mock = mock(SsmClient.class);
+        ConfigurationService configurationService = new ConfigurationService(mock);
+
+        String ssmParamName = "test-notify-callback-bearer-token";
+        String ssmParamValue = "bearer-token";
+
+        var request = parameterRequest(ssmParamName);
+        var response = parameterResponse(ssmParamName, ssmParamValue);
+
+        when(mock.getParameter(parameterRequest(ssmParamName))).thenReturn(response);
+
+        assertEquals(configurationService.getNotifyCallbackBearerToken(), ssmParamValue);
+        assertEquals(configurationService.getNotifyCallbackBearerToken(), ssmParamValue);
+        verify(mock, times(1)).getParameter(request);
+    }
+
+    private GetParameterRequest parameterRequest(String name) {
+        return GetParameterRequest.builder().withDecryption(true).name(name).build();
+    }
+
+    private GetParameterResponse parameterResponse(String name, String value) {
+        return GetParameterResponse.builder()
+                .parameter(
+                        software.amazon.awssdk.services.ssm.model.Parameter.builder()
+                                .name(name)
+                                .type("String")
+                                .value(value)
+                                .build())
+                .build();
     }
 }
