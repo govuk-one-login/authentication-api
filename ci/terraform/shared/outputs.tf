@@ -165,3 +165,7 @@ output "pepper_ssm_parameter_policy" {
 output "lambda_code_signing_configuration_arn" {
   value = aws_lambda_code_signing_config.code_signing_config.arn
 }
+
+output "auth_code_store_signing_configuration_arn" {
+  value = aws_kms_key.auth_code_store_signing_key.arn
+}
