@@ -24,6 +24,10 @@ if [ -z "${secrets}" ]; then
 fi
 
 while IFS=$'\t' read -r arn name; do
+  if [[ ! ${name} =~ ^[a-zA-Z0-9_]+$ ]]; then
+    printf '!! Invalid secret name: %s. Secret name must match /^[a-zA-Z0-9_]+/. Exiting' "${name}" >&2
+    exit 1
+  fi
   value=$(aws secretsmanager get-secret-value --secret-id "${arn}" | jq -r '.SecretString')
   export "TF_VAR_${name}"="${value}"
 done <<<"${secrets}"
