@@ -359,6 +359,26 @@ data "aws_iam_policy_document" "dynamo_auth_code_store_write_access_policy_docum
   }
 }
 
+data "aws_iam_policy_document" "dynamo_auth_code_store_read_access_policy_document" {
+  statement {
+    sid    = "AllowAccessToDynamoTables"
+    effect = "Allow"
+
+    actions = [
+      "dynamodb:BatchGetItem",
+      "dynamodb:DescribeStream",
+      "dynamodb:DescribeTable",
+      "dynamodb:Get*",
+      "dynamodb:Query",
+      "dynamodb:Scan",
+    ]
+    resources = [
+      data.aws_dynamodb_table.auth_code_store.arn,
+      "${data.aws_dynamodb_table.auth_code_store.arn}/index/*",
+    ]
+  }
+}
+
 
 resource "aws_iam_policy" "dynamo_client_registry_write_access_policy" {
   name_prefix = "dynamo-client-registry-write-policy"
@@ -510,4 +530,12 @@ resource "aws_iam_policy" "dynamo_auth_code_store_write_access_policy" {
   description = "IAM policy for managing write permissions to the Dynamo Auth Code table (code used orch<->auth NOT RP<->orch)"
 
   policy = data.aws_iam_policy_document.dynamo_auth_code_store_write_access_policy_document.json
+}
+
+resource "aws_iam_policy" "dynamo_auth_code_store_read_access_policy" {
+  name_prefix = "dynamo-auth-code-read-policy"
+  path        = "/${var.environment}/oidc-shared/"
+  description = "IAM policy for managing read permissions to the Dynamo Auth Code table (code used orch<->auth NOT RP<->orch)"
+
+  policy = data.aws_iam_policy_document.dynamo_auth_code_store_read_access_policy_document.json
 }
