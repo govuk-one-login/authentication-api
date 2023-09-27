@@ -14,5 +14,6 @@ build
 .java-version
 **/terraform.log
 ci/terraform/**/*.plan
+ci/terraform/**/*.tfstate*
 logs/
 .vscode/
