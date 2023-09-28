@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
-set -eu
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
 function runTerraform() {
@@ -86,7 +86,8 @@ while [[ $# -gt 0 ]]; do
     TEST_SERVICES=1
     ;;
   --destroy)
-    TERRAFORM_OPTS="-destroy"
+    echo "PLEASE DON'T DESTROY, JUST REAPPLY"
+    exit 1
     ;;
   -p | --prompt)
     TERRAFORM_OPTS=""
@@ -107,7 +108,7 @@ done
 
 if [[ -z "${AWS_ACCESS_KEY_ID:-}" || -z "${AWS_SECRET_ACCESS_KEY:-}" ]]; then
   echo "!! AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY must be set in the environment." >&2
-  echo "!! Perhaps you meant: gds aws digital-identity-dev -- ./${0}" >&2
+  echo "!! Perhaps you meant: gds aws digital-identity-dev -- ${0}" >&2
   exit 1
 fi
 
@@ -119,12 +120,8 @@ if [[ $BUILD == "1" ]]; then
   echo "done!"
 fi
 
-echo -n "Getting Terraform variables from SSM ... "
-VARS="$(aws ssm get-parameters-by-path --region eu-west-2 --with-decryption --path "/sandpit-deploy/terraform-variables" | jq -r '.Parameters[] | @base64')"
-for VAR in $VARS; do
-  VAR_NAME="TF_VAR_$(echo "${VAR}" | base64 -d | jq -r '.Name / "/" | .[3]')"
-  echo export "${VAR_NAME}"="$(echo "${VAR}" | base64 -d | jq -r '.Value')"
-done
+echo -n "Getting Terraform variables from Secrets Manager ... "
+source "${DIR}/scripts/read_secrets__main.sh" "sandpit"
 echo "done!"
 
 if [[ $SHARED == "1" ]]; then

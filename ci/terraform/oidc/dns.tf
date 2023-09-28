@@ -100,6 +100,10 @@ output "oidc_api_name_servers" {
 
 resource "aws_route53_zone" "frontend_api_zone" {
   name = local.frontend_api_fqdn
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_acm_certificate" "frontend_api" {

@@ -41,7 +41,6 @@ blocked_email_duration                    = 30
 otp_code_ttl_duration                     = 120
 email_acct_creation_otp_code_ttl_duration = 60
 
-txma_account_id                = "12345678"
 extended_feature_flags_enabled = true
 
 orch_client_id = "orchestrationAuth"
