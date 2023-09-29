@@ -10,6 +10,7 @@ import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.http.HTTPRequest;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
@@ -23,9 +24,11 @@ import uk.gov.di.authentication.shared.exceptions.NoSessionException;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.authentication.shared.helpers.ConstructUriHelper;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
+import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -41,6 +44,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.POST;
+import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.AUTH_CODE_ISSUED;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -64,6 +68,7 @@ public class DocAppCallbackHandler
     private final DynamoDocAppService dynamoDocAppService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final NoSessionOrchestrationService noSessionOrchestrationService;
+    private final AuthorisationCodeService authorisationCodeService;
     private final CookieHelper cookieHelper;
     protected final Json objectMapper = SerializationService.getInstance();
     private static final String REDIRECT_PATH = "doc-app-callback";
@@ -82,6 +87,7 @@ public class DocAppCallbackHandler
             ClientSessionService clientSessionService,
             AuditService auditService,
             DynamoDocAppService dynamoDocAppService,
+            AuthorisationCodeService authorisationCodeService,
             CookieHelper cookieHelper,
             CloudwatchMetricsService cloudwatchMetricsService,
             NoSessionOrchestrationService noSessionOrchestrationService) {
@@ -92,6 +98,7 @@ public class DocAppCallbackHandler
         this.clientSessionService = clientSessionService;
         this.auditService = auditService;
         this.dynamoDocAppService = dynamoDocAppService;
+        this.authorisationCodeService = authorisationCodeService;
         this.cookieHelper = cookieHelper;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.noSessionOrchestrationService = noSessionOrchestrationService;
@@ -111,6 +118,7 @@ public class DocAppCallbackHandler
         this.clientSessionService = new ClientSessionService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.dynamoDocAppService = new DynamoDocAppService(configurationService);
+        this.authorisationCodeService = new AuthorisationCodeService(configurationService);
         this.cookieHelper = new CookieHelper();
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.noSessionOrchestrationService =
@@ -285,6 +293,45 @@ public class DocAppCallbackHandler
                                         "Environment", configurationService.getEnvironment(),
                                         "Successful", Boolean.toString(true)));
                 cloudwatchMetricsService.incrementCounter("DocAppCallback", dimensions);
+
+                if (configurationService.isDocAppDecoupleEnabled()) {
+                    var authCode =
+                            authorisationCodeService.generateAndSaveAuthorisationCode(
+                                    clientSessionId, session.getEmailAddress(), clientSession);
+
+                    var clientRedirectURI = authenticationRequest.getRedirectionURI();
+                    var state = authenticationRequest.getState();
+                    var responseMode = authenticationRequest.getResponseMode();
+                    var authenticationResponse =
+                            new AuthenticationSuccessResponse(
+                                    clientRedirectURI,
+                                    authCode,
+                                    null,
+                                    null,
+                                    state,
+                                    null,
+                                    responseMode);
+
+                    auditService.submitAuditEvent(
+                            AUTH_CODE_ISSUED,
+                            clientSessionId,
+                            session.getSessionId(),
+                            clientId,
+                            clientSession.getDocAppSubjectId().getValue(),
+                            session.getEmailAddress(),
+                            IpAddressHelper.extractIpAddress(input),
+                            AuditService.UNKNOWN,
+                            AuditService.UNKNOWN);
+
+                    return generateApiGatewayProxyResponse(
+                            302,
+                            "",
+                            Map.of(
+                                    ResponseHeaders.LOCATION,
+                                    authenticationResponse.toURI().toString()),
+                            null);
+                }
+
                 return generateApiGatewayProxyResponse(
                         302, "", Map.of(ResponseHeaders.LOCATION, redirectURI.toString()), null);
 
