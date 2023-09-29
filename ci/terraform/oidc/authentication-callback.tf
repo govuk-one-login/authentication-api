@@ -11,6 +11,7 @@ module "oidc_api_authentication_callback_role" {
     aws_iam_policy.redis_parameter_policy.arn,
     aws_iam_policy.ipv_token_auth_kms_policy.arn,
     aws_iam_policy.ipv_public_encryption_key_parameter_policy.arn,
+    aws_iam_policy.orch_to_auth_kms_policy.arn,
     module.oidc_txma_audit.access_policy_arn
   ]
 }
@@ -24,16 +25,18 @@ module "authentication_callback" {
   environment     = var.environment
 
   handler_environment_variables = {
-    ENVIRONMENT                 = var.environment
-    REDIS_KEY                   = local.redis_key
-    SUPPORT_AUTH_ORCH_SPLIT     = var.support_auth_orch_split
-    DYNAMO_ENDPOINT             = var.use_localstack ? var.lambda_dynamo_endpoint : null
-    LOCALSTACK_ENDPOINT         = var.use_localstack ? var.localstack_endpoint : null
-    TXMA_AUDIT_QUEUE_URL        = module.oidc_txma_audit.queue_url
-    INTERNAl_SECTOR_URI         = var.internal_sector_uri
-    IDENTITY_ENABLED            = var.ipv_api_enabled
-    IPV_AUTHORISATION_CLIENT_ID = var.ipv_authorisation_client_id
-    IPV_AUTHORISATION_URI       = var.ipv_authorisation_uri
+    ENVIRONMENT                          = var.environment
+    REDIS_KEY                            = local.redis_key
+    SUPPORT_AUTH_ORCH_SPLIT              = var.support_auth_orch_split
+    DYNAMO_ENDPOINT                      = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    LOCALSTACK_ENDPOINT                  = var.use_localstack ? var.localstack_endpoint : null
+    TXMA_AUDIT_QUEUE_URL                 = module.oidc_txma_audit.queue_url
+    INTERNAl_SECTOR_URI                  = var.internal_sector_uri
+    IDENTITY_ENABLED                     = var.ipv_api_enabled
+    IPV_AUTHORISATION_CLIENT_ID          = var.ipv_authorisation_client_id
+    IPV_AUTHORISATION_URI                = var.ipv_authorisation_uri
+    ORCH_TO_AUTH_TOKEN_SIGNING_KEY_ALIAS = local.orch_to_auth_signing_key_alias_name
+    AUTHENTICATION_BACKEND_URI           = "https://${local.di_auth_ext_api_id}-${local.vpce_id}.execute-api.${var.aws_region}.amazonaws.com/${var.environment}/"
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.AuthenticationCallbackHandler::handleRequest"
 

@@ -1,4 +1,3 @@
-
 data "terraform_remote_state" "shared" {
   backend = "s3"
   config = {
@@ -14,6 +13,23 @@ data "terraform_remote_state" "shared" {
     force_path_style            = var.use_localstack
   }
 }
+
+data "terraform_remote_state" "auth-ext-api" {
+  backend = "s3"
+  config = {
+    bucket                      = var.shared_state_bucket
+    key                         = "${var.environment}-auth-ext-api-terraform.tfstate"
+    role_arn                    = var.deployer_role_arn
+    region                      = var.aws_region
+    endpoint                    = var.use_localstack ? "http://localhost:45678" : null
+    iam_endpoint                = var.use_localstack ? "http://localhost:45678" : null
+    sts_endpoint                = var.use_localstack ? "http://localhost:45678" : null
+    skip_credentials_validation = var.use_localstack
+    skip_metadata_api_check     = var.use_localstack
+    force_path_style            = var.use_localstack
+  }
+}
+
 
 locals {
   redis_key                                   = "session"
@@ -41,4 +57,6 @@ locals {
   pepper_ssm_parameter_policy                 = data.terraform_remote_state.shared.outputs.pepper_ssm_parameter_policy
   lambda_code_signing_configuration_arn       = data.terraform_remote_state.shared.outputs.lambda_code_signing_configuration_arn
   auth_code_store_signing_configuration_arn   = data.terraform_remote_state.shared.outputs.auth_code_store_signing_configuration_arn
+  di_auth_ext_api_id                          = data.terraform_remote_state.auth-ext-api.outputs.di_auth_ext_api_id
+  vpce_id                                     = data.terraform_remote_state.auth-ext-api.outputs.vpce_id
 }
