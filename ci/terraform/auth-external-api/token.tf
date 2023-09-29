@@ -12,6 +12,8 @@ module "auth_token_role" {
     aws_iam_policy.dynamo_auth_code_store_write_access_policy.arn,
     aws_iam_policy.dynamo_access_token_store_read_access_policy.arn,
     aws_iam_policy.dynamo_access_token_store_write_access_policy.arn,
+    aws_iam_policy.auth_code_dynamo_encryption_key_kms_policy.arn,
+    aws_iam_policy.access_token_store_signing_key_kms_policy.arn
   ]
 }
 
@@ -30,7 +32,7 @@ module "auth_token" {
     DYNAMO_ENDPOINT                           = null
     AUTHENTICATION_AUTHORIZATION_CALLBACK_URI = var.authentication_auth_callback_uri
     ORCH_CLIENT_ID                            = var.orch_client_id
-    AUTHENTICATION_BACKEND_URI                = var.authentication_backend_uri
+    AUTHENTICATION_BACKEND_URI                = "https://${aws_api_gateway_rest_api.di_auth_ext_api.id}-${data.aws_vpc_endpoint.auth_api_vpc_endpoint.id}.execute-api.${var.aws_region}.amazonaws.com/${var.environment}/"
     ORCH_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY     = var.orch_to_auth_public_signing_key
     SUPPORT_AUTH_ORCH_SPLIT                   = var.support_auth_orch_split
   }

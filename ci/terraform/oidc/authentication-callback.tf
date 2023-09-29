@@ -37,6 +37,8 @@ module "authentication_callback" {
     IPV_AUTHORISATION_URI                = var.ipv_authorisation_uri
     ORCH_TO_AUTH_TOKEN_SIGNING_KEY_ALIAS = local.orch_to_auth_signing_key_alias_name
     AUTHENTICATION_BACKEND_URI           = "https://${local.di_auth_ext_api_id}-${local.vpce_id}.execute-api.${var.aws_region}.amazonaws.com/${var.environment}/"
+    ORCH_CLIENT_ID                       = var.orch_client_id
+    LOGIN_URI                            = "https://${local.frontend_fqdn}/"
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.AuthenticationCallbackHandler::handleRequest"
 

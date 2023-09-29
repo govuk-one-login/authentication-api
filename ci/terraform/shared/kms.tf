@@ -375,7 +375,7 @@ resource "aws_kms_alias" "auth_id_token_signing_key_alias" {
   target_key_id = aws_kms_key.auth_id_token_signing_key.key_id
 }
 resource "aws_kms_key" "access_token_store_signing_key" {
-  description              = "KMS signing key for Authorization code store in DynamoDB"
+  description              = "KMS signing key for Access Token store in DynamoDB"
   deletion_window_in_days  = 30
   key_usage                = "ENCRYPT_DECRYPT"
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
