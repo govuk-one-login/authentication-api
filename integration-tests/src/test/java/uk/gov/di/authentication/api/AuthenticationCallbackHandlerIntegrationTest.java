@@ -402,11 +402,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         }
 
         @Override
-        public String getAuthenticationUserInfoEndpoint() {
-            return "/userinfo";
-        }
-
-        @Override
         public String getTxmaAuditQueueUrl() {
             return txmaAuditQueue.getQueueUrl();
         }

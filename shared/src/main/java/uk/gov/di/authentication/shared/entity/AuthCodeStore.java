@@ -103,7 +103,7 @@ public class AuthCodeStore {
         return sectorIdentifier;
     }
 
-    public void setTimeToExist(String sectorIdentifier) {
+    public void setSectorIdentifier(String sectorIdentifier) {
         this.sectorIdentifier = sectorIdentifier;
     }
 
