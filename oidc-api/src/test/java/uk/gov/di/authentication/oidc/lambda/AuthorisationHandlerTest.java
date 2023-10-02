@@ -28,6 +28,7 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
@@ -48,14 +49,17 @@ import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
 import uk.gov.di.authentication.oidc.services.RequestObjectService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
+import uk.gov.di.authentication.shared.helpers.DocAppSubjectIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DocAppAuthorisationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
@@ -85,6 +89,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR;
@@ -99,6 +104,8 @@ class AuthorisationHandlerTest {
     private final Context context = mock(Context.class);
     private final ConfigurationService configService = mock(ConfigurationService.class);
     private final SessionService sessionService = mock(SessionService.class);
+    private final DocAppAuthorisationService docAppAuthorisationService =
+            mock(DocAppAuthorisationService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ClientSession clientSession = mock(ClientSession.class);
     private final OrchestrationAuthorizationService orchestrationAuthorizationService =
@@ -119,6 +126,7 @@ class AuthorisationHandlerTest {
     private static final String AWS_REQUEST_ID = "aws-request-id";
     private static final ClientID CLIENT_ID = new ClientID("test-id");
     private static final String REDIRECT_URI = "https://localhost:8080";
+    private static final String DOC_APP_REDIRECT_URI = "/doc-app-authorisation";
     private static final String SCOPE = "email openid profile";
     private static final String RESPONSE_TYPE = "code";
     private static final String TEST_ORCHESTRATOR_CLIENT_ID = "test-orch-client-id";
@@ -173,7 +181,8 @@ class AuthorisationHandlerTest {
                         orchestrationAuthorizationService,
                         auditService,
                         requestObjectService,
-                        clientService);
+                        clientService,
+                        docAppAuthorisationService);
         session = new Session("a-session-id");
         when(sessionService.createSession()).thenReturn(session);
         when(clientSessionService.generateClientSessionId()).thenReturn(CLIENT_SESSION_ID);
@@ -744,6 +753,117 @@ class AuthorisationHandlerTest {
                         "",
                         PERSISTENT_SESSION_ID,
                         pair("description", expectedError.getDescription()));
+    }
+
+    @Test
+    void shouldRedirectToTheDocAppRedirectUriWithEncryptedJwtWhenTheRequestIsADocAppRequest()
+            throws JOSEException, ParseException {
+        // TODO it's really unclear to me whether this jwt / query params represents what we'd
+        // expect
+
+        when(configService.isDocAppDecoupleEnabled()).thenReturn(true);
+
+        var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience("oidc-audience")
+                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .claim("state", STATE)
+                        .claim("nonce", NONCE.getValue())
+                        .issuer(CLIENT_ID.getValue())
+                        .build();
+
+        Map<String, String> requestParams =
+                buildRequestParams(
+                        Map.of(
+                                "client_id",
+                                CLIENT_ID.getValue(),
+                                "scope",
+                                "openid doc-checking-app",
+                                "response_type",
+                                "code",
+                                "request",
+                                generateSignedJWT(jwtClaimsSet, keyPair).serialize()));
+
+        var clientRegistry = generateClientRegistry().withClientType(ClientType.APP.getValue());
+
+        when(clientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.of(clientRegistry));
+
+        mockStatic(DocAppSubjectIdHelper.class);
+
+        var uri = URI.create("someUri");
+        when(configService.getDocAppDomain()).thenReturn(uri);
+        when(DocAppSubjectIdHelper.calculateDocAppSubjectId(any(), anyBoolean(), any()))
+                .thenReturn(new Subject("calculatedSubjectId"));
+        when(configService.getDocAppAuthorisationClientId()).thenReturn(CLIENT_ID.getValue());
+        when(configService.getDocAppAuthorisationURI())
+                .thenReturn(URI.create(DOC_APP_REDIRECT_URI));
+        EncryptedJWT encryptedJwt = createEncryptedJWT();
+        when(docAppAuthorisationService.constructRequestJWT(any(), any(), any(), any()))
+                .thenReturn(encryptedJwt);
+
+        var response = makeHandlerRequest(withRequestEvent(requestParams));
+
+        verify(clientSessionService).saveClientSession(anyString(), any());
+
+        assertThat(response, hasStatus(302));
+        assertThat(
+                response.getHeaders().get("Location"),
+                equalTo(
+                        DOC_APP_REDIRECT_URI
+                                + "?response_type=code&request="
+                                + encryptedJwt.serialize()
+                                + "&client_id="
+                                + CLIENT_ID.getValue()));
+    }
+
+    @Test
+    void shouldNotLogWhenTheDocAppDecoupleFeatureFlagIsOffAndTheRequestIsADocAppRequest()
+            throws JOSEException {
+        when(configService.isDocAppDecoupleEnabled()).thenReturn(false);
+
+        var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience("oidc-audience")
+                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .claim("state", STATE)
+                        .claim("scope", SCOPE)
+                        .claim("nonce", NONCE.getValue())
+                        .issuer(CLIENT_ID.getValue())
+                        .build();
+
+        Map<String, String> requestParams =
+                buildRequestParams(
+                        Map.of(
+                                "client_id",
+                                CLIENT_ID.getValue(),
+                                "scope",
+                                "openid doc-checking-app",
+                                "response_type",
+                                "code",
+                                "request",
+                                generateSignedJWT(jwtClaimsSet, keyPair).serialize(),
+                                "state",
+                                "state"));
+
+        var clientRegistry = generateClientRegistry().withClientType(ClientType.APP.getValue());
+
+        when(clientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.of(clientRegistry));
+
+        makeHandlerRequest(withRequestEvent(requestParams));
+
+        assertFalse(
+                logging.events().stream()
+                        .map(event -> event.getMessage().getFormattedMessage())
+                        .toList()
+                        .contains("Doc app request received"));
     }
 
     private APIGatewayProxyResponseEvent makeHandlerRequest(APIGatewayProxyRequestEvent event) {

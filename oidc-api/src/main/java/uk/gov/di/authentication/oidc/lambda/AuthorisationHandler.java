@@ -13,6 +13,7 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
@@ -29,6 +30,7 @@ import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.oidc.helpers.RequestObjectToAuthRequestHelper;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
 import uk.gov.di.authentication.oidc.services.RequestObjectService;
+import uk.gov.di.authentication.shared.conditions.DocAppUserHelper;
 import uk.gov.di.authentication.shared.conditions.IdentityHelper;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
@@ -36,6 +38,7 @@ import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
+import uk.gov.di.authentication.shared.helpers.DocAppSubjectIdHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
@@ -43,7 +46,11 @@ import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DocAppAuthorisationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
+import uk.gov.di.authentication.shared.services.JwksService;
+import uk.gov.di.authentication.shared.services.KmsConnectionService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
 import java.net.URI;
@@ -85,6 +92,8 @@ public class AuthorisationHandler
     private final AuditService auditService;
     private final ClientService clientService;
 
+    private final DocAppAuthorisationService docAppAuthorisationService;
+
     public AuthorisationHandler(
             ConfigurationService configurationService,
             SessionService sessionService,
@@ -92,7 +101,8 @@ public class AuthorisationHandler
             OrchestrationAuthorizationService orchestrationAuthorizationService,
             AuditService auditService,
             RequestObjectService requestObjectService,
-            ClientService clientService) {
+            ClientService clientService,
+            DocAppAuthorisationService docAppAuthorisationService) {
         this.configurationService = configurationService;
         this.sessionService = sessionService;
         this.clientSessionService = clientSessionService;
@@ -100,6 +110,7 @@ public class AuthorisationHandler
         this.auditService = auditService;
         this.requestObjectService = requestObjectService;
         this.clientService = clientService;
+        this.docAppAuthorisationService = docAppAuthorisationService;
     }
 
     public AuthorisationHandler(ConfigurationService configurationService) {
@@ -111,6 +122,13 @@ public class AuthorisationHandler
         this.auditService = new AuditService(configurationService);
         this.requestObjectService = new RequestObjectService(configurationService);
         this.clientService = new DynamoClientService(configurationService);
+        var kmsConnectionService = new KmsConnectionService(configurationService);
+        this.docAppAuthorisationService =
+                new DocAppAuthorisationService(
+                        configurationService,
+                        new RedisConnectionService(configurationService),
+                        kmsConnectionService,
+                        new JwksService(configurationService, kmsConnectionService));
     }
 
     public AuthorisationHandler() {
@@ -202,14 +220,66 @@ public class AuthorisationHandler
                     authRequest.getClientID().getValue(),
                     clientSessionId);
         } else {
-            authRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
-            return getOrCreateSessionAndRedirect(
-                    sessionService.getSessionFromSessionCookie(input.getHeaders()),
-                    authRequest,
-                    ipAddress,
-                    persistentSessionId,
-                    clientSessionId);
+            if (configurationService.isDocAppDecoupleEnabled()
+                    && DocAppUserHelper.isDocCheckingAppUser(
+                            authRequest.toParameters(),
+                            clientService.getClient(authRequest.getClientID().getValue()))) {
+                return redirectToDocApp(authRequest, clientSessionId);
+            } else {
+                authRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
+                return getOrCreateSessionAndRedirect(
+                        sessionService.getSessionFromSessionCookie(input.getHeaders()),
+                        authRequest,
+                        ipAddress,
+                        persistentSessionId,
+                        clientSessionId);
+            }
         }
+    }
+
+    private APIGatewayProxyResponseEvent redirectToDocApp(
+            AuthenticationRequest authRequest, String clientSessionId) {
+
+        var client = clientService.getClient(authRequest.getClientID().getValue()).get(); // TODO
+        var clientName = client.getClientName();
+
+        Subject subjectId =
+                DocAppSubjectIdHelper.calculateDocAppSubjectId(
+                        authRequest.toParameters(),
+                        configurationService.isCustomDocAppClaimEnabled(),
+                        configurationService.getDocAppDomain());
+        LOG.info("Doc app request received");
+
+        var clientSession =
+                clientSessionService.generateClientSession(
+                        authRequest.toParameters(),
+                        LocalDateTime.now(),
+                        orchestrationAuthorizationService.getEffectiveVectorOfTrust(authRequest),
+                        clientName);
+
+        clientSessionService.saveClientSession(
+                clientSessionId, clientSession.setDocAppSubjectId(subjectId));
+        LOG.info("Subject saved to ClientSession for DocCheckingAppUser");
+
+        var state = new State();
+        var encryptedJWT =
+                docAppAuthorisationService.constructRequestJWT(
+                        state, clientSession.getDocAppSubjectId(), client, clientSessionId);
+        var authRequestBuilder =
+                new AuthorizationRequest.Builder(
+                                new ResponseType(ResponseType.Value.CODE),
+                                new ClientID(configurationService.getDocAppAuthorisationClientId()))
+                        .endpointURI(configurationService.getDocAppAuthorisationURI())
+                        .requestObject(encryptedJWT);
+
+        var authorisationRequest = authRequestBuilder.build();
+
+        // TODO do we need cookies?
+        return generateApiGatewayProxyResponse(
+                302,
+                "",
+                Map.of(ResponseHeaders.LOCATION, authorisationRequest.toURI().toString()),
+                Map.of());
     }
 
     private APIGatewayProxyResponseEvent getOrCreateSessionAndRedirect(
