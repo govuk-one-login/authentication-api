@@ -283,7 +283,7 @@ public class AuthenticationCallbackHandler
                         new HashMap<>(
                                 Map.of(
                                         "IsNewAccount",
-                                        (String) userInfo.getClaim("new_account"),
+                                        userInfo.getClaim("new_account").toString(),
                                         "Environment",
                                         configurationService.getEnvironment(),
                                         "Client",

@@ -173,3 +173,7 @@ output "lambda_code_signing_configuration_arn" {
 output "auth_code_store_signing_configuration_arn" {
   value = aws_kms_key.auth_code_store_signing_key.arn
 }
+
+output "authentication_callback_userinfo_encryption_key_arn" {
+  value = aws_kms_key.authentication_callback_userinfo_encryption_key.arn
+}
