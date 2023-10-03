@@ -19,6 +19,7 @@ import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.oauth2.sdk.token.Tokens;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.apache.http.client.utils.URIBuilder;
@@ -38,6 +39,7 @@ import uk.gov.di.authentication.shared.exceptions.NoSessionException;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -84,6 +86,8 @@ class DocAppCallbackHandlerTest {
     private final DynamoDocAppService dynamoDocAppService = mock(DynamoDocAppService.class);
     private final NoSessionOrchestrationService noSessionOrchestrationService =
             mock(NoSessionOrchestrationService.class);
+    private static final AuthorisationCodeService authorisationCodeService =
+            mock(AuthorisationCodeService.class);
     private final CookieHelper cookieHelper = mock(CookieHelper.class);
 
     private static final URI LOGIN_URL = URI.create("https://example.com");
@@ -114,6 +118,9 @@ class DocAppCallbackHandlerTest {
 
     @BeforeEach
     void setUp() {
+        when(authorisationCodeService.generateAndSaveAuthorisationCode(
+                        CLIENT_SESSION_ID, TEST_EMAIL_ADDRESS, clientSession))
+                .thenReturn(AUTH_CODE);
         handler =
                 new DocAppCallbackHandler(
                         configService,
@@ -123,6 +130,7 @@ class DocAppCallbackHandlerTest {
                         clientSessionService,
                         auditService,
                         dynamoDocAppService,
+                        authorisationCodeService,
                         cookieHelper,
                         cloudwatchMetricsService,
                         noSessionOrchestrationService);
@@ -165,6 +173,53 @@ class DocAppCallbackHandlerTest {
         verifyAuditServiceEvent(DocAppAuditableEvent.DOC_APP_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
         verifyAuditServiceEvent(
                 DocAppAuditableEvent.DOC_APP_SUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED);
+
+        verifyNoMoreInteractions(auditService);
+        verify(dynamoDocAppService)
+                .addDocAppCredential(
+                        PAIRWISE_SUBJECT_ID.getValue(), List.of("a-verifiable-credential"));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "DocAppCallback",
+                        Map.of("Environment", ENVIRONMENT, "Successful", Boolean.toString(true)));
+    }
+
+    @Test
+    void shouldRedirectToRPWhenDecouplingIsEnabledForSuccessfulResponse()
+            throws UnsuccessfulCredentialResponseException {
+        usingValidSession();
+        usingValidClientSession();
+        var successfulTokenResponse =
+                new AccessTokenResponse(new Tokens(new BearerAccessToken(), null));
+        var tokenRequest = mock(TokenRequest.class);
+        Map<String, String> responseHeaders = new HashMap<>();
+        responseHeaders.put("code", AUTH_CODE.getValue());
+        responseHeaders.put("state", STATE.getValue());
+        when(configService.isDocAppDecoupleEnabled()).thenReturn(true);
+        when(responseService.validateResponse(responseHeaders, SESSION_ID))
+                .thenReturn(Optional.empty());
+        when(tokenService.constructTokenRequest(AUTH_CODE.getValue())).thenReturn(tokenRequest);
+        when(tokenService.sendTokenRequest(tokenRequest)).thenReturn(successfulTokenResponse);
+        when(tokenService.sendCriDataRequest(any(HTTPRequest.class), any(String.class)))
+                .thenReturn(List.of("a-verifiable-credential"));
+
+        var event = new APIGatewayProxyRequestEvent();
+        event.setQueryStringParameters(responseHeaders);
+        event.setHeaders(Map.of(COOKIE, buildCookieString()));
+        var response = makeHandlerRequest(event);
+
+        assertThat(response, hasStatus(302));
+        var authenticationResponse =
+                new AuthenticationSuccessResponse(
+                        REDIRECT_URI, AUTH_CODE, null, null, RP_STATE, null, null);
+        var expectedRedirectURI = authenticationResponse.toURI();
+        assertThat(response.getHeaders().get("Location"), equalTo(expectedRedirectURI.toString()));
+
+        verifyAuditServiceEvent(DocAppAuditableEvent.DOC_APP_AUTHORISATION_RESPONSE_RECEIVED);
+        verifyAuditServiceEvent(DocAppAuditableEvent.DOC_APP_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
+        verifyAuditServiceEvent(
+                DocAppAuditableEvent.DOC_APP_SUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED);
+        verifyAuditServiceEvent(DocAppAuditableEvent.AUTH_CODE_ISSUED, TEST_EMAIL_ADDRESS);
 
         verifyNoMoreInteractions(auditService);
         verify(dynamoDocAppService)
@@ -557,6 +612,20 @@ class DocAppCallbackHandlerTest {
                         CLIENT_ID.getValue(),
                         PAIRWISE_SUBJECT_ID.getValue(),
                         AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN);
+    }
+
+    private void verifyAuditServiceEvent(DocAppAuditableEvent docAppAuditableEvent, String email) {
+        verify(auditService)
+                .submitAuditEvent(
+                        docAppAuditableEvent,
+                        CLIENT_SESSION_ID,
+                        SESSION_ID,
+                        CLIENT_ID.getValue(),
+                        PAIRWISE_SUBJECT_ID.getValue(),
+                        email,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN);
