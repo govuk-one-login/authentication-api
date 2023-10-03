@@ -145,7 +145,9 @@ class DocAppCriServiceTest {
 
     @Test
     void shouldCallUserInfoEndpointAndReturn200()
-            throws IOException, JOSEException, NoSuchAlgorithmException,
+            throws IOException,
+                    JOSEException,
+                    NoSuchAlgorithmException,
                     UnsuccessfulCredentialResponseException {
         var keyPair = KeyPairGenerator.getInstance("EC").generateKeyPair();
         var signedJwtOne = generateSignedJWT(new JWTClaimsSet.Builder().build(), keyPair);
@@ -176,7 +178,9 @@ class DocAppCriServiceTest {
 
     @Test
     void shouldRetryCallToUserInfoAndReturn200IfFirstCallFails()
-            throws NoSuchAlgorithmException, JOSEException, IOException,
+            throws NoSuchAlgorithmException,
+                    JOSEException,
+                    IOException,
                     UnsuccessfulCredentialResponseException {
         var keyPair = KeyPairGenerator.getInstance("EC").generateKeyPair();
         var signedJwtOne = generateSignedJWT(new JWTClaimsSet.Builder().build(), keyPair);
