@@ -48,7 +48,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.POST;
+import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.GET;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static uk.gov.di.authentication.shared.conditions.IdentityHelper.identityRequired;
@@ -236,13 +236,12 @@ public class AuthenticationCallbackHandler
             }
 
             try {
-                String userInfoPath = configurationService.getAuthenticationUserInfoEndpoint();
                 URI userInfoURI =
                         buildURI(
                                 configurationService.getAuthenticationBackendURI().toString(),
-                                userInfoPath);
+                                "userinfo");
 
-                HTTPRequest authorizationRequest = new HTTPRequest(POST, userInfoURI);
+                HTTPRequest authorizationRequest = new HTTPRequest(GET, userInfoURI);
                 authorizationRequest.setAuthorization(
                         tokenResponse
                                 .toSuccessResponse()
@@ -284,7 +283,7 @@ public class AuthenticationCallbackHandler
                         new HashMap<>(
                                 Map.of(
                                         "IsNewAccount",
-                                        (String) userInfo.getClaim("new_account"),
+                                        userInfo.getClaim("new_account").toString(),
                                         "Environment",
                                         configurationService.getEnvironment(),
                                         "Client",

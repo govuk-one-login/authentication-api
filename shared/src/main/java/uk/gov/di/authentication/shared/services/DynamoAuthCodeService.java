@@ -20,9 +20,7 @@ public class DynamoAuthCodeService extends BaseDynamoService<AuthCodeStore> {
     }
 
     public DynamoAuthCodeService(ConfigurationService configurationService) {
-        super(AuthCodeStore.class, "auth-code-store", configurationService);
-        this.timeToExist = configurationService.getAuthCodeExpiry();
-        this.isAuthOrchSplitEnabled = configurationService.isAuthOrchSplitEnabled();
+        this(configurationService, configurationService.isAuthOrchSplitEnabled());
     }
 
     public Optional<AuthCodeStore> getAuthCodeStore(String authCode) {

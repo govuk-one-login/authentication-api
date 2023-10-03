@@ -44,3 +44,5 @@ email_acct_creation_otp_code_ttl_duration = 60
 extended_feature_flags_enabled = true
 
 orch_client_id = "orchestrationAuth"
+
+support_auth_orch_split = true

@@ -26,9 +26,7 @@ public class AccessTokenService extends BaseDynamoService<AccessTokenStore> {
     }
 
     public AccessTokenService(ConfigurationService configurationService) {
-        super(AccessTokenStore.class, "access-token-store", configurationService);
-        this.timeToExist = configurationService.getAccessTokenExpiry();
-        this.isAccessTokenStoreEnabled = configurationService.isAuthOrchSplitEnabled();
+        this(configurationService, configurationService.isAuthOrchSplitEnabled());
     }
 
     public void addAccessTokenStore(

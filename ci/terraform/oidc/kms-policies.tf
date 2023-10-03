@@ -113,3 +113,49 @@ resource "aws_iam_policy" "doc_app_auth_kms_policy" {
 
   policy = data.aws_iam_policy_document.doc_app_auth_kms_policy_document.json
 }
+
+data "aws_iam_policy_document" "auth_code_dynamo_encryption_key_policy_document" {
+  statement {
+    sid    = "AllowAccessToAuthCodeTableKmsEncryptionKey"
+    effect = "Allow"
+
+    actions = [
+      "kms:Encrypt*",
+      "kms:Decrypt*",
+      "kms:GetPublicKey"
+    ]
+    resources = [
+      local.auth_code_store_signing_configuration_arn
+    ]
+  }
+}
+
+resource "aws_iam_policy" "auth_code_dynamo_encryption_key_kms_policy" {
+  name        = "${var.environment}-auth-code-table-encryption-key-kms-policy"
+  path        = "/"
+  description = "IAM policy for managing KMS encryption of the auth code table"
+
+  policy = data.aws_iam_policy_document.auth_code_dynamo_encryption_key_policy_document.json
+}
+
+data "aws_iam_policy_document" "authentication_callback_userinfo_encryption_key_policy_document" {
+  statement {
+    sid    = "AllowAccessToAuthCallbackUserInfoTableKmsEncryptionKey"
+    effect = "Allow"
+
+    actions = [
+      "kms:Decrypt*"
+    ]
+    resources = [
+      local.authentication_callback_userinfo_encryption_key_arn
+    ]
+  }
+}
+
+resource "aws_iam_policy" "authentication_callback_userinfo_encryption_key_kms_policy" {
+  name        = "${var.environment}-authentication-callback-userinfo-encryption-key-kms-policy"
+  path        = "/"
+  description = "IAM policy for managing KMS encryption of the auth code table"
+
+  policy = data.aws_iam_policy_document.authentication_callback_userinfo_encryption_key_policy_document.json
+}
