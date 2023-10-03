@@ -181,7 +181,9 @@ public class TokenServiceTest {
 
     @Test
     void shouldOnlyIncludeIdentityClaimsInAccessTokenWhenRequested()
-            throws ParseException, JOSEException, Json.JsonException,
+            throws ParseException,
+                    JOSEException,
+                    Json.JsonException,
                     com.nimbusds.oauth2.sdk.ParseException {
         var claimsSetRequest = new ClaimsSetRequest().add("nickname").add("birthdate");
         var oidcClaimsRequest = new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
