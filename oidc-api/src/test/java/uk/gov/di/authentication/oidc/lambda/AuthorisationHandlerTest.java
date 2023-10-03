@@ -43,10 +43,12 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.InOrder;
+import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
 import uk.gov.di.authentication.oidc.services.RequestObjectService;
+import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ClientType;
@@ -58,6 +60,7 @@ import uk.gov.di.authentication.shared.helpers.DocAppSubjectIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DocAppAuthorisationService;
 import uk.gov.di.authentication.shared.services.SessionService;
@@ -71,6 +74,7 @@ import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -112,6 +116,8 @@ class AuthorisationHandlerTest {
             mock(OrchestrationAuthorizationService.class);
     private final UserContext userContext = mock(UserContext.class);
     private final AuditService auditService = mock(AuditService.class);
+    private final CloudwatchMetricsService cloudwatchMetricsService =
+            mock(CloudwatchMetricsService.class);
     private final RequestObjectService requestObjectService = mock(RequestObjectService.class);
     private final ClientService clientService = mock(ClientService.class);
     private final InOrder inOrder = inOrder(auditService);
@@ -125,6 +131,7 @@ class AuthorisationHandlerTest {
     private static final String PERSISTENT_SESSION_ID = "a-persistent-session-id";
     private static final String AWS_REQUEST_ID = "aws-request-id";
     private static final ClientID CLIENT_ID = new ClientID("test-id");
+    private static final String SESSION_ID = "a-session-id";
     private static final String REDIRECT_URI = "https://localhost:8080";
     private static final String DOC_APP_REDIRECT_URI = "/doc-app-authorisation";
     private static final String SCOPE = "email openid profile";
@@ -158,6 +165,7 @@ class AuthorisationHandlerTest {
 
     @BeforeEach
     public void setUp() {
+        when(configService.getEnvironment()).thenReturn("test-env");
         when(configService.getDomainName()).thenReturn("auth.ida.digital.cabinet-office.gov.uk");
         when(configService.getLoginURI()).thenReturn(LOGIN_URL);
         when(configService.getOrchestrationClientId()).thenReturn(TEST_ORCHESTRATOR_CLIENT_ID);
@@ -182,12 +190,14 @@ class AuthorisationHandlerTest {
                         auditService,
                         requestObjectService,
                         clientService,
-                        docAppAuthorisationService);
+                        docAppAuthorisationService,
+                        cloudwatchMetricsService);
         session = new Session("a-session-id");
         when(sessionService.createSession()).thenReturn(session);
         when(clientSessionService.generateClientSessionId()).thenReturn(CLIENT_SESSION_ID);
         when(clientSessionService.generateClientSession(any(), any(), any(), any()))
                 .thenReturn(clientSession);
+        when(clientSession.getDocAppSubjectId()).thenReturn(new Subject("test-subject-id"));
         when(clientService.getClient(anyString()))
                 .thenReturn(Optional.of(generateClientRegistry()));
     }
@@ -818,6 +828,14 @@ class AuthorisationHandlerTest {
                                 + encryptedJwt.serialize()
                                 + "&client_id="
                                 + CLIENT_ID.getValue()));
+
+        verify(cloudwatchMetricsService).incrementCounter(eq("DocAppHandoff"), any());
+
+        verifyAuditEvents(
+                List.of(
+                        OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED,
+                        DocAppAuditableEvent.DOC_APP_AUTHORISATION_REQUESTED),
+                auditService);
     }
 
     @Test
@@ -985,5 +1003,22 @@ class AuthorisationHandlerTest {
                     URLDecoder.decode(pair.substring(idx + 1), StandardCharsets.UTF_8));
         }
         return query_pairs;
+    }
+
+    private static void verifyAuditEvents(
+            List<AuditableEvent> auditEvents, AuditService auditService) {
+        for (AuditableEvent event : auditEvents) {
+            verify(auditService)
+                    .submitAuditEvent(
+                            eq(event),
+                            eq(CLIENT_SESSION_ID),
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            any());
+        }
     }
 }

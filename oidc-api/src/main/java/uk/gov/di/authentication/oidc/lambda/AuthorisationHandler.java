@@ -25,6 +25,7 @@ import org.apache.http.client.utils.URIBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
+import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.oidc.helpers.RequestObjectToAuthRequestHelper;
@@ -42,9 +43,11 @@ import uk.gov.di.authentication.shared.helpers.DocAppSubjectIdHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DocAppAuthorisationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
@@ -91,7 +94,7 @@ public class AuthorisationHandler
     private final RequestObjectService requestObjectService;
     private final AuditService auditService;
     private final ClientService clientService;
-
+    private final CloudwatchMetricsService cloudwatchMetricsService;
     private final DocAppAuthorisationService docAppAuthorisationService;
 
     public AuthorisationHandler(
@@ -102,7 +105,8 @@ public class AuthorisationHandler
             AuditService auditService,
             RequestObjectService requestObjectService,
             ClientService clientService,
-            DocAppAuthorisationService docAppAuthorisationService) {
+            DocAppAuthorisationService docAppAuthorisationService,
+            CloudwatchMetricsService cloudwatchMetricsService) {
         this.configurationService = configurationService;
         this.sessionService = sessionService;
         this.clientSessionService = clientSessionService;
@@ -111,6 +115,7 @@ public class AuthorisationHandler
         this.requestObjectService = requestObjectService;
         this.clientService = clientService;
         this.docAppAuthorisationService = docAppAuthorisationService;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
     }
 
     public AuthorisationHandler(ConfigurationService configurationService) {
@@ -129,6 +134,7 @@ public class AuthorisationHandler
                         new RedisConnectionService(configurationService),
                         kmsConnectionService,
                         new JwksService(configurationService, kmsConnectionService));
+        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
     }
 
     public AuthorisationHandler() {
@@ -224,7 +230,11 @@ public class AuthorisationHandler
                     && DocAppUserHelper.isDocCheckingAppUser(
                             authRequest.toParameters(),
                             clientService.getClient(authRequest.getClientID().getValue()))) {
-                return redirectToDocApp(authRequest, clientSessionId);
+                return redirectToDocApp(
+                        authRequest,
+                        clientSessionId,
+                        ipAddress,
+                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
             } else {
                 authRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
                 return getOrCreateSessionAndRedirect(
@@ -238,10 +248,14 @@ public class AuthorisationHandler
     }
 
     private APIGatewayProxyResponseEvent redirectToDocApp(
-            AuthenticationRequest authRequest, String clientSessionId) {
+            AuthenticationRequest authRequest,
+            String clientSessionId,
+            String ipAddress,
+            String persistentId) {
 
-        var client = clientService.getClient(authRequest.getClientID().getValue()).get(); // TODO
-        var clientName = client.getClientName();
+        var clientRegistry =
+                clientService.getClient(authRequest.getClientID().getValue()).get(); // TODO
+        var clientName = clientRegistry.getClientName();
 
         Subject subjectId =
                 DocAppSubjectIdHelper.calculateDocAppSubjectId(
@@ -264,7 +278,7 @@ public class AuthorisationHandler
         var state = new State();
         var encryptedJWT =
                 docAppAuthorisationService.constructRequestJWT(
-                        state, clientSession.getDocAppSubjectId(), client, clientSessionId);
+                        state, clientSession.getDocAppSubjectId(), clientRegistry, clientSessionId);
         var authRequestBuilder =
                 new AuthorizationRequest.Builder(
                                 new ResponseType(ResponseType.Value.CODE),
@@ -274,11 +288,30 @@ public class AuthorisationHandler
 
         var authorisationRequest = authRequestBuilder.build();
 
+        auditService.submitAuditEvent(
+                DocAppAuditableEvent.DOC_APP_AUTHORISATION_REQUESTED,
+                clientSessionId,
+                "", // TODO
+                clientRegistry.getClientID(),
+                clientSession.getDocAppSubjectId().toString(),
+                AuditService.UNKNOWN,
+                ipAddress,
+                AuditService.UNKNOWN,
+                persistentId);
+
+        URI authorisationRequestUri = authorisationRequest.toURI();
+        LOG.info(
+                "DocAppAuthorizeHandler successfully processed request, redirect URI {}",
+                authorisationRequestUri);
+
+        cloudwatchMetricsService.incrementCounter(
+                "DocAppHandoff", Map.of("Environment", configurationService.getEnvironment()));
+
         // TODO do we need cookies?
         return generateApiGatewayProxyResponse(
                 302,
                 "",
-                Map.of(ResponseHeaders.LOCATION, authorisationRequest.toURI().toString()),
+                Map.of(ResponseHeaders.LOCATION, authorisationRequestUri.toString()),
                 Map.of());
     }
 
