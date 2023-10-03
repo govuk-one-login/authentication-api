@@ -95,6 +95,7 @@ import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR;
 import static uk.gov.di.authentication.oidc.helper.RequestObjectTestHelper.generateSignedJWT;
@@ -492,6 +493,20 @@ class AuthorisationHandlerTest {
     }
 
     @Test
+    void shouldReturn400WhenClientIsNotPresent() throws JOSEException {
+        when(clientService.getClient(anyString())).thenReturn(Optional.empty());
+
+        var response = makeDocAppHandlerRequest();
+
+        assertThat(response, hasStatus(400));
+        assertThat(
+                response.getBody(),
+                equalTo(OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString()));
+        verifyNoInteractions(configService);
+        verifyNoInteractions(requestObjectService);
+    }
+
+    @Test
     void shouldReturn400WhenAuthorisationRequestCannotBeParsed() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(
@@ -773,31 +788,6 @@ class AuthorisationHandlerTest {
 
         when(configService.isDocAppDecoupleEnabled()).thenReturn(true);
 
-        var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
-
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience("oidc-audience")
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .claim("state", STATE)
-                        .claim("nonce", NONCE.getValue())
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
-
-        Map<String, String> requestParams =
-                buildRequestParams(
-                        Map.of(
-                                "client_id",
-                                CLIENT_ID.getValue(),
-                                "scope",
-                                "openid doc-checking-app",
-                                "response_type",
-                                "code",
-                                "request",
-                                generateSignedJWT(jwtClaimsSet, keyPair).serialize()));
-
         var clientRegistry = generateClientRegistry().withClientType(ClientType.APP.getValue());
 
         when(clientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.of(clientRegistry));
@@ -815,7 +805,7 @@ class AuthorisationHandlerTest {
         when(docAppAuthorisationService.constructRequestJWT(any(), any(), any(), any()))
                 .thenReturn(encryptedJwt);
 
-        var response = makeHandlerRequest(withRequestEvent(requestParams));
+        var response = makeDocAppHandlerRequest();
 
         verify(clientSessionService).saveClientSession(anyString(), any());
 
@@ -843,39 +833,7 @@ class AuthorisationHandlerTest {
             throws JOSEException {
         when(configService.isDocAppDecoupleEnabled()).thenReturn(false);
 
-        var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
-
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience("oidc-audience")
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .claim("state", STATE)
-                        .claim("scope", SCOPE)
-                        .claim("nonce", NONCE.getValue())
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
-
-        Map<String, String> requestParams =
-                buildRequestParams(
-                        Map.of(
-                                "client_id",
-                                CLIENT_ID.getValue(),
-                                "scope",
-                                "openid doc-checking-app",
-                                "response_type",
-                                "code",
-                                "request",
-                                generateSignedJWT(jwtClaimsSet, keyPair).serialize(),
-                                "state",
-                                "state"));
-
-        var clientRegistry = generateClientRegistry().withClientType(ClientType.APP.getValue());
-
-        when(clientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.of(clientRegistry));
-
-        makeHandlerRequest(withRequestEvent(requestParams));
+        makeDocAppHandlerRequest();
 
         assertFalse(
                 logging.events().stream()
@@ -905,6 +863,36 @@ class AuthorisationHandlerTest {
         assertThat(logEvent, hasContextData("awsRequestId", AWS_REQUEST_ID));
 
         return response;
+    }
+
+    private APIGatewayProxyResponseEvent makeDocAppHandlerRequest() throws JOSEException {
+        var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience("oidc-audience")
+                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .claim("state", STATE)
+                        .claim("nonce", NONCE.getValue())
+                        .claim("scope", "openid doc-checking-app")
+                        .issuer(CLIENT_ID.getValue())
+                        .build();
+
+        Map<String, String> requestParams =
+                buildRequestParams(
+                        Map.of(
+                                "client_id",
+                                CLIENT_ID.getValue(),
+                                "response_type",
+                                "code",
+                                "scope",
+                                "openid",
+                                "request",
+                                generateSignedJWT(jwtClaimsSet, keyPair).serialize()));
+
+        return makeHandlerRequest(withRequestEvent(requestParams));
     }
 
     private APIGatewayProxyRequestEvent withRequestEvent(Map<String, String> requestParams) {

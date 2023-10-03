@@ -7,6 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ErrorObject;
+import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseMode;
 import com.nimbusds.oauth2.sdk.ResponseType;
@@ -37,6 +38,7 @@ import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.helpers.DocAppSubjectIdHelper;
@@ -152,6 +154,7 @@ public class AuthorisationHandler
 
     public APIGatewayProxyResponseEvent authoriseRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
+        var client = new ClientRegistry();
         var persistentSessionId =
                 orchestrationAuthorizationService.getExistingOrCreateNewPersistentSessionId(
                         input.getHeaders());
@@ -183,6 +186,11 @@ public class AuthorisationHandler
                                     Collectors.toMap(
                                             Map.Entry::getKey, entry -> List.of(entry.getValue())));
             authRequest = AuthenticationRequest.parse(queryStringParameters);
+            String clientId = authRequest.getClientID().getValue();
+            client =
+                    clientService
+                            .getClient(clientId)
+                            .orElseThrow(() -> new ClientNotFoundException(clientId));
         } catch (ParseException e) {
             if (e.getRedirectionURI() == null) {
                 LOG.warn(
@@ -204,7 +212,12 @@ public class AuthorisationHandler
             LOG.warn("No query string parameters are present in the Authentication request", e);
             throw new RuntimeException(
                     "No query string parameters are present in the Authentication request", e);
+        } catch (ClientNotFoundException e) {
+            LOG.warn("Invalid client or client not found in Client Registry");
+            return generateApiGatewayProxyResponse(
+                    400, OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString());
         }
+
         Optional<AuthRequestError> authRequestError;
         if (authRequest.getRequestObject() != null && configurationService.isDocAppApiEnabled()) {
             LOG.info("RequestObject auth request received");
@@ -225,37 +238,37 @@ public class AuthorisationHandler
                     persistentSessionId,
                     authRequest.getClientID().getValue(),
                     clientSessionId);
-        } else {
-            if (configurationService.isDocAppDecoupleEnabled()
-                    && DocAppUserHelper.isDocCheckingAppUser(
-                            authRequest.toParameters(),
-                            clientService.getClient(authRequest.getClientID().getValue()))) {
-                return redirectToDocApp(
-                        authRequest,
-                        clientSessionId,
-                        ipAddress,
-                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
-            } else {
-                authRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
-                return getOrCreateSessionAndRedirect(
-                        sessionService.getSessionFromSessionCookie(input.getHeaders()),
-                        authRequest,
-                        ipAddress,
-                        persistentSessionId,
-                        clientSessionId);
-            }
         }
+
+        if (configurationService.isDocAppDecoupleEnabled()
+                && DocAppUserHelper.isDocCheckingAppUser(
+                        authRequest.toParameters(), Optional.of(client))) {
+            return redirectToDocApp(
+                    authRequest,
+                    client,
+                    clientSessionId,
+                    ipAddress,
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+        }
+
+        authRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
+        return getOrCreateSessionAndRedirect(
+                sessionService.getSessionFromSessionCookie(input.getHeaders()),
+                authRequest,
+                ipAddress,
+                persistentSessionId,
+                client,
+                clientSessionId);
     }
 
     private APIGatewayProxyResponseEvent redirectToDocApp(
             AuthenticationRequest authRequest,
+            ClientRegistry client,
             String clientSessionId,
             String ipAddress,
             String persistentId) {
 
-        var clientRegistry =
-                clientService.getClient(authRequest.getClientID().getValue()).get(); // TODO
-        var clientName = clientRegistry.getClientName();
+        var clientName = client.getClientName();
 
         Subject subjectId =
                 DocAppSubjectIdHelper.calculateDocAppSubjectId(
@@ -278,7 +291,7 @@ public class AuthorisationHandler
         var state = new State();
         var encryptedJWT =
                 docAppAuthorisationService.constructRequestJWT(
-                        state, clientSession.getDocAppSubjectId(), clientRegistry, clientSessionId);
+                        state, clientSession.getDocAppSubjectId(), client, clientSessionId);
         var authRequestBuilder =
                 new AuthorizationRequest.Builder(
                                 new ResponseType(ResponseType.Value.CODE),
@@ -292,7 +305,7 @@ public class AuthorisationHandler
                 DocAppAuditableEvent.DOC_APP_AUTHORISATION_REQUESTED,
                 clientSessionId,
                 "", // TODO
-                clientRegistry.getClientID(),
+                client.getClientID(),
                 clientSession.getDocAppSubjectId().toString(),
                 AuditService.UNKNOWN,
                 ipAddress,
@@ -308,6 +321,7 @@ public class AuthorisationHandler
                 "DocAppHandoff", Map.of("Environment", configurationService.getEnvironment()));
 
         // TODO do we need cookies?
+
         return generateApiGatewayProxyResponse(
                 302,
                 "",
@@ -320,6 +334,7 @@ public class AuthorisationHandler
             AuthenticationRequest authenticationRequest,
             String ipAddress,
             String persistentSessionId,
+            ClientRegistry client,
             String clientSessionId) {
         if (Objects.nonNull(authenticationRequest.getPrompt())
                 && (authenticationRequest.getPrompt().contains(Prompt.Type.CONSENT)
@@ -349,18 +364,7 @@ public class AuthorisationHandler
             LOG.info("Updated session id from {} - new", oldSessionId);
         }
 
-        ClientRegistry fullClientDetailsFromRegistry =
-                clientService
-                        .getClient(authenticationRequest.getClientID().getValue())
-                        .orElseThrow(
-                                () ->
-                                        new RuntimeException(
-                                                "Client not found: "
-                                                        + authenticationRequest
-                                                                .getClientID()
-                                                                .getValue()));
-
-        var clientName = fullClientDetailsFromRegistry.getClientName();
+        var clientName = client.getClientName();
 
         auditService.submitAuditEvent(
                 OidcAuditableEvent.AUTHORISATION_INITIATED,
@@ -389,11 +393,7 @@ public class AuthorisationHandler
         sessionService.save(session);
         LOG.info("Session saved successfully");
         return redirect(
-                session,
-                clientSessionId,
-                authenticationRequest,
-                persistentSessionId,
-                fullClientDetailsFromRegistry);
+                session, clientSessionId, authenticationRequest, persistentSessionId, client);
     }
 
     private APIGatewayProxyResponseEvent redirect(
@@ -428,6 +428,8 @@ public class AuthorisationHandler
         } catch (URISyntaxException e) {
             throw new RuntimeException("Error constructing redirect URI", e);
         }
+
+        // TODO pull cookies out into shared method
         List<String> cookies = new ArrayList<>();
         cookies.add(
                 CookieHelper.buildCookieString(
