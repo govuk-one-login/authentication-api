@@ -29,4 +29,4 @@ AZUx4RCDu+VWAZpPi1NaF5XWvkFNFwH+MyLkATh90UEJDe+ayKW6AXFcRQ==
 EOT
 
 orch_client_id          = "orchestrationAuth"
-support_auth_orch_split = true
+support_auth_orch_split = false
