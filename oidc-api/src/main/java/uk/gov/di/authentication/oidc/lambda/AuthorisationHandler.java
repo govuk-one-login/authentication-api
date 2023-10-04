@@ -55,6 +55,7 @@ import uk.gov.di.authentication.shared.services.DocAppAuthorisationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.JwksService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
+import uk.gov.di.authentication.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SessionService;
 
@@ -99,6 +100,8 @@ public class AuthorisationHandler
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final DocAppAuthorisationService docAppAuthorisationService;
 
+    private final NoSessionOrchestrationService noSessionOrchestrationService;
+
     public AuthorisationHandler(
             ConfigurationService configurationService,
             SessionService sessionService,
@@ -108,7 +111,8 @@ public class AuthorisationHandler
             RequestObjectService requestObjectService,
             ClientService clientService,
             DocAppAuthorisationService docAppAuthorisationService,
-            CloudwatchMetricsService cloudwatchMetricsService) {
+            CloudwatchMetricsService cloudwatchMetricsService,
+            NoSessionOrchestrationService noSessionOrchestrationService) {
         this.configurationService = configurationService;
         this.sessionService = sessionService;
         this.clientSessionService = clientSessionService;
@@ -118,6 +122,7 @@ public class AuthorisationHandler
         this.clientService = clientService;
         this.docAppAuthorisationService = docAppAuthorisationService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.noSessionOrchestrationService = noSessionOrchestrationService;
     }
 
     public AuthorisationHandler(ConfigurationService configurationService) {
@@ -137,6 +142,8 @@ public class AuthorisationHandler
                         kmsConnectionService,
                         new JwksService(configurationService, kmsConnectionService));
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.noSessionOrchestrationService =
+                new NoSessionOrchestrationService(configurationService);
     }
 
     public AuthorisationHandler() {
@@ -317,6 +324,9 @@ public class AuthorisationHandler
                         .requestObject(encryptedJWT);
 
         var authorisationRequest = authRequestBuilder.build();
+
+        docAppAuthorisationService.storeState(session.getSessionId(), state);
+        noSessionOrchestrationService.storeClientSessionIdAgainstState(clientSessionId, state);
 
         auditService.submitAuditEvent(
                 DocAppAuditableEvent.DOC_APP_AUTHORISATION_REQUESTED,

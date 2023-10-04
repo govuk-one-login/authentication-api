@@ -66,6 +66,7 @@ import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DocAppAuthorisationService;
+import uk.gov.di.authentication.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
@@ -123,6 +124,9 @@ class AuthorisationHandlerTest {
     private final AuditService auditService = mock(AuditService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
+
+    private final NoSessionOrchestrationService noSessionOrchestrationService =
+            mock(NoSessionOrchestrationService.class);
     private final RequestObjectService requestObjectService = mock(RequestObjectService.class);
     private final ClientService clientService = mock(ClientService.class);
     private final InOrder inOrder = inOrder(auditService);
@@ -196,7 +200,8 @@ class AuthorisationHandlerTest {
                         requestObjectService,
                         clientService,
                         docAppAuthorisationService,
-                        cloudwatchMetricsService);
+                        cloudwatchMetricsService,
+                        noSessionOrchestrationService);
         session = new Session("a-session-id");
         when(sessionService.createSession()).thenReturn(session);
         when(clientSessionService.generateClientSessionId()).thenReturn(CLIENT_SESSION_ID);
@@ -760,6 +765,14 @@ class AuthorisationHandlerTest {
                     .thenReturn(Optional.of(sessionSpy));
             makeDocAppHandlerRequest();
             verify(sessionSpy).addClientSession(CLIENT_SESSION_ID);
+        }
+
+        @Test
+        void shouldSaveStateAndStoreItToClientSession() throws JOSEException {
+            makeDocAppHandlerRequest();
+            verify(docAppAuthorisationService).storeState(eq(SESSION_ID), any());
+            verify(noSessionOrchestrationService)
+                    .storeClientSessionIdAgainstState(eq(CLIENT_SESSION_ID), any());
         }
 
         @Test
