@@ -250,7 +250,7 @@ public class AuthorisationHandler
         if (configurationService.isDocAppDecoupleEnabled()
                 && DocAppUserHelper.isDocCheckingAppUser(
                         authRequest.toParameters(), Optional.of(client))) {
-            return redirectToDocApp(
+            return handleDocAppJourney(
                     session,
                     authRequest,
                     client,
@@ -260,11 +260,11 @@ public class AuthorisationHandler
         }
 
         authRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
-        return getOrCreateSessionAndRedirect(
+        return handleAuthJourney(
                 session, authRequest, ipAddress, persistentSessionId, client, clientSessionId);
     }
 
-    private APIGatewayProxyResponseEvent redirectToDocApp(
+    private APIGatewayProxyResponseEvent handleDocAppJourney(
             Optional<Session> existingSession,
             AuthenticationRequest authRequest,
             ClientRegistry client,
@@ -356,7 +356,7 @@ public class AuthorisationHandler
                 Map.of());
     }
 
-    private APIGatewayProxyResponseEvent getOrCreateSessionAndRedirect(
+    private APIGatewayProxyResponseEvent handleAuthJourney(
             Optional<Session> existingSession,
             AuthenticationRequest authenticationRequest,
             String ipAddress,
@@ -419,11 +419,11 @@ public class AuthorisationHandler
         updateAttachedLogFieldToLogs(CLIENT_ID, authenticationRequest.getClientID().getValue());
         sessionService.save(session);
         LOG.info("Session saved successfully");
-        return redirect(
+        return generateAuthRedirect(
                 session, clientSessionId, authenticationRequest, persistentSessionId, client);
     }
 
-    private APIGatewayProxyResponseEvent redirect(
+    private APIGatewayProxyResponseEvent generateAuthRedirect(
             Session session,
             String clientSessionID,
             AuthenticationRequest authenticationRequest,
