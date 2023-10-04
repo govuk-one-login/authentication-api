@@ -32,6 +32,8 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -371,6 +373,46 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
         verify(bulkEmailUsersService, times(1))
                 .updateUserStatus(SUBJECT_ID, BulkEmailStatus.ERROR_SENDING_EMAIL);
         verifyNoInteractions(auditService);
+    }
+
+    @Test
+    void shouldSendEmailToUsersWithAStatusOfNotifyErrorWhenTheSendModeIsSetToNotifyErrorRetries()
+            throws NotificationClientException {
+        setupBulkUsersConfiguration(1, 1, 1L, true, List.of("1.0", "1.1"));
+        when(configurationService.getBulkEmailUserSendMode()).thenReturn("NOTIFY_ERROR_RETRIES");
+
+        when(bulkEmailUsersService.getNSubjectIdsByStatus(1, BulkEmailStatus.ERROR_SENDING_EMAIL))
+                .thenReturn(List.of(SUBJECT_ID));
+        when(dynamoService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
+        when(dynamoService.getOptionalUserProfileFromSubject(SUBJECT_ID))
+                .thenReturn(
+                        Optional.of(
+                                new UserProfile()
+                                        .withEmail(EMAIL)
+                                        .withSubjectID(SUBJECT_ID)
+                                        .withTermsAndConditions(
+                                                new TermsAndConditions(
+                                                        "1.0",
+                                                        NowHelper.now().toInstant().toString()))));
+        when(bulkEmailUsersService.updateUserStatus(SUBJECT_ID, BulkEmailStatus.EMAIL_SENT))
+                .thenReturn(
+                        Optional.of(
+                                new BulkEmailUser()
+                                        .withBulkEmailStatus(BulkEmailStatus.EMAIL_SENT)
+                                        .withSubjectID(SUBJECT_ID)));
+
+        bulkUserEmailSenderScheduledEventHandler.handleRequest(scheduledEvent, mockContext);
+
+        verify(bulkEmailUsersService, never())
+                .getNSubjectIdsByStatus(anyInt(), eq(BulkEmailStatus.PENDING));
+        verify(notificationService, times(1))
+                .sendEmail(
+                        EMAIL,
+                        Map.of(),
+                        TERMS_AND_CONDITIONS_BULK_EMAIL,
+                        LocaleHelper.SupportedLanguage.EN);
+        verify(bulkEmailUsersService, times(1))
+                .updateUserStatus(SUBJECT_ID, BulkEmailStatus.EMAIL_SENT);
     }
 
     @Test

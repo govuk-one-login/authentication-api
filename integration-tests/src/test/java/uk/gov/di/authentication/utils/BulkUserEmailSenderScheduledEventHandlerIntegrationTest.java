@@ -47,59 +47,7 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
     @BeforeEach
     void setup() {
         notifyStub.init();
-        var configuration =
-                new IntegrationTestConfigurationService(
-                        auditTopic,
-                        notificationsQueue,
-                        auditSigningKey,
-                        tokenSigner,
-                        ipvPrivateKeyJwtSigner,
-                        spotQueue,
-                        docAppPrivateKeyJwtSigner,
-                        configurationParameters) {
-
-                    @Override
-                    public String getTxmaAuditQueueUrl() {
-                        return txmaAuditQueue.getQueueUrl();
-                    }
-
-                    @Override
-                    public Optional<String> getNotifyApiUrl() {
-                        return Optional.of(
-                                new URIBuilder()
-                                        .setHost("localhost")
-                                        .setPort(notifyStub.getHttpPort())
-                                        .setScheme("http")
-                                        .toString());
-                    }
-
-                    @Override
-                    public String getNotifyApiKey() {
-                        byte[] bytes = new byte[36];
-                        new SecureRandom().nextBytes(bytes);
-                        return Hex.encodeHexString(bytes);
-                    }
-
-                    @Override
-                    public int getBulkUserEmailBatchQueryLimit() {
-                        return 3;
-                    }
-
-                    @Override
-                    public int getBulkUserEmailMaxBatchCount() {
-                        return 4;
-                    }
-
-                    @Override
-                    public boolean isBulkUserEmailEmailSendingEnabled() {
-                        return true;
-                    }
-
-                    @Override
-                    public List<String> getBulkUserEmailIncludedTermsAndConditions() {
-                        return List.of("1.0", "1.1", "1.2", "1.3", "1.4");
-                    }
-                };
+        var configuration = configWithSendMode("PENDING");
         handler = new BulkUserEmailSenderScheduledEventHandler(configuration);
         bulkEmailUsersService = new BulkEmailUsersService(configuration);
     }
@@ -139,7 +87,7 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
                 bulkEmailUsersService
                         .getNSubjectIdsByStatus(10, BulkEmailStatus.ERROR_SENDING_EMAIL)
                         .size(),
-                equalTo(1));
+                equalTo(2));
         assertThat(emailsSent.size(), equalTo(8));
         assertTxmaAuditEventsReceived(txmaAuditQueue, Collections.nCopies(8, BULK_EMAIL_SENT));
         assertEmailNotSentTo(emailsSent, "user.email.sent.alreadt@account.gov.uk");
@@ -147,10 +95,38 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
     }
 
     @Test
+    void
+            shouldSendCorrectNoOfEmailsForListOfUsersWithVariousStatusAndUpdateStatusWhenSendModeIsNotifyErrors() {
+        setupDynamo();
+
+        var configuration = configWithSendMode("NOTIFY_ERROR_RETRIES");
+        handler = new BulkUserEmailSenderScheduledEventHandler(configuration);
+        bulkEmailUsersService = new BulkEmailUsersService(configuration);
+
+        handler.handleRequest(scheduledEvent, context);
+
+        var numberOfUsersWithErrorSendingEmailStatus = 2;
+        var numberOfUsersWithEmailAlreadySent = 1;
+
+        var emailsSent =
+                notifyStub.waitForNumberOfRequests(60, numberOfUsersWithErrorSendingEmailStatus);
+
+        assertThat(
+                bulkEmailUsersService.getNSubjectIdsByStatus(10, BulkEmailStatus.EMAIL_SENT).size(),
+                equalTo(
+                        numberOfUsersWithErrorSendingEmailStatus
+                                + numberOfUsersWithEmailAlreadySent));
+        assertThat(emailsSent.size(), equalTo(numberOfUsersWithErrorSendingEmailStatus));
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue,
+                Collections.nCopies(numberOfUsersWithErrorSendingEmailStatus, BULK_EMAIL_SENT));
+    }
+
+    @Test
     void shouldSendCorrectNoOfEmailsAndUpdateStatusWhenTwoUsersHaveNoCorrespondingAccount() {
         setupDynamo();
-        bulkEmailUsersExtension.addBulkEmailUser("13", BulkEmailStatus.PENDING);
-        bulkEmailUsersExtension.addBulkEmailUser("14", BulkEmailStatus.PENDING);
+        bulkEmailUsersExtension.addBulkEmailUser("999998", BulkEmailStatus.PENDING);
+        bulkEmailUsersExtension.addBulkEmailUser("999999", BulkEmailStatus.PENDING);
 
         makeRequest();
 
@@ -188,6 +164,7 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
         bulkEmailUsersExtension.addBulkEmailUser("10", BulkEmailStatus.PENDING);
         bulkEmailUsersExtension.addBulkEmailUser("11", BulkEmailStatus.PENDING);
         bulkEmailUsersExtension.addBulkEmailUser("12", BulkEmailStatus.PENDING);
+        bulkEmailUsersExtension.addBulkEmailUser("13", BulkEmailStatus.ERROR_SENDING_EMAIL);
 
         userStore.signUp("user.1@account.gov.uk", "password123", new Subject("1"), null);
         userStore.signUp("user.2@account.gov.uk", "password123", new Subject("2"), "1.0");
@@ -203,21 +180,82 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
         userStore.signUp("user.10@account.gov.uk", "password123", new Subject("10"), "1.4");
         userStore.signUp("user.11@account.gov.uk", "password123", new Subject("11"), "1.5");
         userStore.signUp("user.12@account.gov.uk", "password123", new Subject("12"), "1.6");
+        userStore.signUp("user.13@account.gov.uk", "password123", new Subject("13"), "1.2");
     }
 
-    private void makeRequest() {
-        ScheduledEvent scheduledEvent =
-                new ScheduledEvent()
-                        .withAccount("12345678")
-                        .withRegion("eu-west-2")
-                        .withDetailType("Scheduled Event")
-                        .withSource("aws.events")
-                        .withId("abcd-1234-defg-5678")
-                        .withTime(DateTime.now())
-                        .withResources(
-                                List.of(
-                                        "arn:aws:events:eu-west-2:12345678:rule/email-scheduled-campaign-rule"));
+    private ScheduledEvent scheduledEvent =
+            new ScheduledEvent()
+                    .withAccount("12345678")
+                    .withRegion("eu-west-2")
+                    .withDetailType("Scheduled Event")
+                    .withSource("aws.events")
+                    .withId("abcd-1234-defg-5678")
+                    .withTime(DateTime.now())
+                    .withResources(
+                            List.of(
+                                    "arn:aws:events:eu-west-2:12345678:rule/email-scheduled-campaign-rule"));
 
+    private void makeRequest() {
         handler.handleRequest(scheduledEvent, context);
+    }
+
+    private IntegrationTestConfigurationService configWithSendMode(String sendMode) {
+        return new IntegrationTestConfigurationService(
+                auditTopic,
+                notificationsQueue,
+                auditSigningKey,
+                tokenSigner,
+                ipvPrivateKeyJwtSigner,
+                spotQueue,
+                docAppPrivateKeyJwtSigner,
+                configurationParameters) {
+
+            @Override
+            public String getTxmaAuditQueueUrl() {
+                return txmaAuditQueue.getQueueUrl();
+            }
+
+            @Override
+            public Optional<String> getNotifyApiUrl() {
+                return Optional.of(
+                        new URIBuilder()
+                                .setHost("localhost")
+                                .setPort(notifyStub.getHttpPort())
+                                .setScheme("http")
+                                .toString());
+            }
+
+            @Override
+            public String getNotifyApiKey() {
+                byte[] bytes = new byte[36];
+                new SecureRandom().nextBytes(bytes);
+                return Hex.encodeHexString(bytes);
+            }
+
+            @Override
+            public int getBulkUserEmailBatchQueryLimit() {
+                return 3;
+            }
+
+            @Override
+            public int getBulkUserEmailMaxBatchCount() {
+                return 4;
+            }
+
+            @Override
+            public boolean isBulkUserEmailEmailSendingEnabled() {
+                return true;
+            }
+
+            @Override
+            public List<String> getBulkUserEmailIncludedTermsAndConditions() {
+                return List.of("1.0", "1.1", "1.2", "1.3", "1.4");
+            }
+
+            @Override
+            public String getBulkEmailUserSendMode() {
+                return sendMode;
+            }
+        };
     }
 }

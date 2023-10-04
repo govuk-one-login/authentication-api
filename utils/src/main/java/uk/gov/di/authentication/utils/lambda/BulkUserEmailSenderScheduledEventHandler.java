@@ -94,6 +94,7 @@ public class BulkUserEmailSenderScheduledEventHandler
                 configurationService.getBulkUserEmailBatchPauseDuration();
         final List<String> bulkUserEmailIncludedTermsAndConditions =
                 configurationService.getBulkUserEmailIncludedTermsAndConditions();
+        final String bulkEmailUserSendMode = configurationService.getBulkEmailUserSendMode();
 
         if (bulkUserEmailIncludedTermsAndConditions.isEmpty()) {
             throw new IncludedTermsAndConditionsConfigMissingException();
@@ -114,8 +115,7 @@ public class BulkUserEmailSenderScheduledEventHandler
         do {
             batchCounter++;
             userSubjectIdBatch =
-                    bulkEmailUsersService.getNSubjectIdsByStatus(
-                            bulkUserEmailBatchQueryLimit, BulkEmailStatus.PENDING);
+                    getUserIdSubjectBatch(bulkEmailUserSendMode, bulkUserEmailBatchQueryLimit);
 
             LOG.info(
                     "Retrieved user subject ids for batch no: {} no of users: {}",
@@ -155,6 +155,17 @@ public class BulkUserEmailSenderScheduledEventHandler
 
         LOG.info("Bulk user email: batch completed.");
         return null;
+    }
+
+    private List<String> getUserIdSubjectBatch(String sendMode, Integer limit) {
+        BulkEmailStatus statusRequired;
+        if (sendMode.equals(BulkEmailStatus.PENDING.getValue())) {
+            statusRequired = BulkEmailStatus.PENDING;
+        } else {
+            statusRequired = BulkEmailStatus.ERROR_SENDING_EMAIL;
+        }
+
+        return bulkEmailUsersService.getNSubjectIdsByStatus(limit, statusRequired);
     }
 
     private boolean sendNotifyEmail(String email) throws NotificationClientException {
