@@ -15,6 +15,7 @@ data "terraform_remote_state" "shared" {
 }
 
 data "terraform_remote_state" "auth-ext-api" {
+  count   = var.support_auth_orch_split ? 1 : 0
   backend = "s3"
   config = {
     bucket                      = var.shared_state_bucket
@@ -57,7 +58,7 @@ locals {
   pepper_ssm_parameter_policy                         = data.terraform_remote_state.shared.outputs.pepper_ssm_parameter_policy
   lambda_code_signing_configuration_arn               = data.terraform_remote_state.shared.outputs.lambda_code_signing_configuration_arn
   auth_code_store_signing_configuration_arn           = data.terraform_remote_state.shared.outputs.auth_code_store_signing_configuration_arn
-  di_auth_ext_api_id                                  = data.terraform_remote_state.auth-ext-api.outputs.di_auth_ext_api_id
-  vpce_id                                             = data.terraform_remote_state.auth-ext-api.outputs.vpce_id
+  di_auth_ext_api_id                                  = var.support_auth_orch_split ? data.terraform_remote_state.auth-ext-api[0].outputs.di_auth_ext_api_id : ""
+  vpce_id                                             = var.support_auth_orch_split ? data.terraform_remote_state.auth-ext-api[0].outputs.vpce_id : ""
   authentication_callback_userinfo_encryption_key_arn = data.terraform_remote_state.shared.outputs.authentication_callback_userinfo_encryption_key_arn
 }
