@@ -239,11 +239,12 @@ public class AuthorisationHandler
                     authRequest.getClientID().getValue(),
                     clientSessionId);
         }
-
+        Optional<Session> session = sessionService.getSessionFromSessionCookie(input.getHeaders());
         if (configurationService.isDocAppDecoupleEnabled()
                 && DocAppUserHelper.isDocCheckingAppUser(
                         authRequest.toParameters(), Optional.of(client))) {
             return redirectToDocApp(
+                    session,
                     authRequest,
                     client,
                     clientSessionId,
@@ -253,20 +254,29 @@ public class AuthorisationHandler
 
         authRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
         return getOrCreateSessionAndRedirect(
-                sessionService.getSessionFromSessionCookie(input.getHeaders()),
-                authRequest,
-                ipAddress,
-                persistentSessionId,
-                client,
-                clientSessionId);
+                session, authRequest, ipAddress, persistentSessionId, client, clientSessionId);
     }
 
     private APIGatewayProxyResponseEvent redirectToDocApp(
+            Optional<Session> existingSession,
             AuthenticationRequest authRequest,
             ClientRegistry client,
             String clientSessionId,
             String ipAddress,
             String persistentId) {
+
+        var session = existingSession.orElseGet(sessionService::createSession);
+        attachSessionIdToLogs(session);
+
+        if (existingSession.isEmpty()) {
+            updateAttachedSessionIdToLogs(session.getSessionId());
+            LOG.info("Created session");
+        } else {
+            var oldSessionId = session.getSessionId();
+            sessionService.updateSessionId(session);
+            updateAttachedSessionIdToLogs(session.getSessionId());
+            LOG.info("Updated session id from {} - new", oldSessionId);
+        }
 
         var clientName = client.getClientName();
 
@@ -288,6 +298,13 @@ public class AuthorisationHandler
                 clientSessionId, clientSession.setDocAppSubjectId(subjectId));
         LOG.info("Subject saved to ClientSession for DocCheckingAppUser");
 
+        session.addClientSession(clientSessionId);
+        updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
+        updateAttachedLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
+        updateAttachedLogFieldToLogs(CLIENT_ID, authRequest.getClientID().getValue());
+        sessionService.save(session);
+        LOG.info("Session saved successfully");
+
         var state = new State();
         var encryptedJWT =
                 docAppAuthorisationService.constructRequestJWT(
@@ -304,7 +321,7 @@ public class AuthorisationHandler
         auditService.submitAuditEvent(
                 DocAppAuditableEvent.DOC_APP_AUTHORISATION_REQUESTED,
                 clientSessionId,
-                "", // TODO
+                session.getSessionId(),
                 client.getClientID(),
                 clientSession.getDocAppSubjectId().toString(),
                 AuditService.UNKNOWN,
