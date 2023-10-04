@@ -13,7 +13,7 @@ repos:
         exclude: ^(ci|.github)/.*|docker-compose.*|.pre-commit-config.yaml$
         files: ^.*\.(json|yml|yaml)$
 
-  - repo: https://github.com/alphagov/di-pre-commit-hooks.git
+  - repo: https://github.com/govuk-one-login/pre-commit-hooks.git
     rev: 0.0.1
     hooks:
       - id: gradle-spotless-apply
