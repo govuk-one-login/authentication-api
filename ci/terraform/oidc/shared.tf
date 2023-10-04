@@ -18,7 +18,7 @@ data "terraform_remote_state" "auth-ext-api" {
   backend = "s3"
   config = {
     bucket                      = var.shared_state_bucket
-    key                         = "${var.environment}-auth-ext-api-terraform.tfstate"
+    key                         = "${var.environment}-auth-external-api-terraform.tfstate"
     role_arn                    = var.deployer_role_arn
     region                      = var.aws_region
     endpoint                    = var.use_localstack ? "http://localhost:45678" : null
