@@ -22,6 +22,7 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.NotificationService;
 import uk.gov.di.authentication.utils.domain.UtilsAuditableEvent;
 import uk.gov.di.authentication.utils.exceptions.IncludedTermsAndConditionsConfigMissingException;
+import uk.gov.di.authentication.utils.exceptions.UnrecognisedSendModeException;
 import uk.gov.service.notify.NotificationClientException;
 
 import java.nio.ByteBuffer;
@@ -105,6 +106,7 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
                 .thenReturn(TableDescription.builder().itemCount(1L).build());
         when(configurationService.getEnvironment()).thenReturn("unit-test");
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
+        when(configurationService.getBulkEmailUserSendMode()).thenReturn("PENDING");
     }
 
     @Test
@@ -413,6 +415,19 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
                         LocaleHelper.SupportedLanguage.EN);
         verify(bulkEmailUsersService, times(1))
                 .updateUserStatus(SUBJECT_ID, BulkEmailStatus.EMAIL_SENT);
+    }
+
+    @Test
+    void shouldThrowAnErrorWhenTheSendModeIsNotRecognised() {
+        setupBulkUsersConfiguration(1, 1, 1L, true, List.of("1.0", "1.1"));
+        when(configurationService.getBulkEmailUserSendMode()).thenReturn("INVALID_SEND_MODE");
+
+        assertThrows(
+                UnrecognisedSendModeException.class,
+                () ->
+                        bulkUserEmailSenderScheduledEventHandler.handleRequest(
+                                scheduledEvent, mockContext));
+        verify(bulkEmailUsersService, never()).getNSubjectIdsByStatus(anyInt(), any());
     }
 
     @Test

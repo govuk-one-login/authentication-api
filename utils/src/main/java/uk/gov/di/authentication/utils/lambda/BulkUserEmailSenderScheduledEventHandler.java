@@ -19,12 +19,14 @@ import uk.gov.di.authentication.shared.services.SystemService;
 import uk.gov.di.authentication.utils.domain.BulkEmailType;
 import uk.gov.di.authentication.utils.domain.UtilsAuditableEvent;
 import uk.gov.di.authentication.utils.exceptions.IncludedTermsAndConditionsConfigMissingException;
+import uk.gov.di.authentication.utils.exceptions.UnrecognisedSendModeException;
 import uk.gov.service.notify.NotificationClient;
 import uk.gov.service.notify.NotificationClientException;
 
 import java.util.List;
 import java.util.Map;
 
+import static java.lang.String.format;
 import static uk.gov.di.authentication.shared.entity.NotificationType.TERMS_AND_CONDITIONS_BULK_EMAIL;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
@@ -158,12 +160,16 @@ public class BulkUserEmailSenderScheduledEventHandler
     }
 
     private List<String> getUserIdSubjectBatch(String sendMode, Integer limit) {
-        BulkEmailStatus statusRequired;
-        if (sendMode.equals(BulkEmailStatus.PENDING.getValue())) {
-            statusRequired = BulkEmailStatus.PENDING;
-        } else {
-            statusRequired = BulkEmailStatus.ERROR_SENDING_EMAIL;
-        }
+        BulkEmailStatus statusRequired =
+                switch (sendMode) {
+                    case "PENDING":
+                        yield BulkEmailStatus.PENDING;
+                    case "NOTIFY_ERROR_RETRIES":
+                        yield BulkEmailStatus.ERROR_SENDING_EMAIL;
+                    default:
+                        var errorMessage = format("Didn't recognise send mode %s", sendMode);
+                        throw new UnrecognisedSendModeException(errorMessage);
+                };
 
         return bulkEmailUsersService.getNSubjectIdsByStatus(limit, statusRequired);
     }
