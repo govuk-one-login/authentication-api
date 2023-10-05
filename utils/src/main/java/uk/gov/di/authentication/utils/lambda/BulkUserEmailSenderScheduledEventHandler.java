@@ -19,12 +19,14 @@ import uk.gov.di.authentication.shared.services.SystemService;
 import uk.gov.di.authentication.utils.domain.BulkEmailType;
 import uk.gov.di.authentication.utils.domain.UtilsAuditableEvent;
 import uk.gov.di.authentication.utils.exceptions.IncludedTermsAndConditionsConfigMissingException;
+import uk.gov.di.authentication.utils.exceptions.UnrecognisedSendModeException;
 import uk.gov.service.notify.NotificationClient;
 import uk.gov.service.notify.NotificationClientException;
 
 import java.util.List;
 import java.util.Map;
 
+import static java.lang.String.format;
 import static uk.gov.di.authentication.shared.entity.NotificationType.TERMS_AND_CONDITIONS_BULK_EMAIL;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
@@ -94,6 +96,7 @@ public class BulkUserEmailSenderScheduledEventHandler
                 configurationService.getBulkUserEmailBatchPauseDuration();
         final List<String> bulkUserEmailIncludedTermsAndConditions =
                 configurationService.getBulkUserEmailIncludedTermsAndConditions();
+        final String bulkEmailUserSendMode = configurationService.getBulkEmailUserSendMode();
 
         if (bulkUserEmailIncludedTermsAndConditions.isEmpty()) {
             throw new IncludedTermsAndConditionsConfigMissingException();
@@ -114,8 +117,7 @@ public class BulkUserEmailSenderScheduledEventHandler
         do {
             batchCounter++;
             userSubjectIdBatch =
-                    bulkEmailUsersService.getNSubjectIdsByStatus(
-                            bulkUserEmailBatchQueryLimit, BulkEmailStatus.PENDING);
+                    getUserIdSubjectBatch(bulkEmailUserSendMode, bulkUserEmailBatchQueryLimit);
 
             LOG.info(
                     "Retrieved user subject ids for batch no: {} no of users: {}",
@@ -155,6 +157,21 @@ public class BulkUserEmailSenderScheduledEventHandler
 
         LOG.info("Bulk user email: batch completed.");
         return null;
+    }
+
+    private List<String> getUserIdSubjectBatch(String sendMode, Integer limit) {
+        BulkEmailStatus statusRequired =
+                switch (sendMode) {
+                    case "PENDING":
+                        yield BulkEmailStatus.PENDING;
+                    case "NOTIFY_ERROR_RETRIES":
+                        yield BulkEmailStatus.ERROR_SENDING_EMAIL;
+                    default:
+                        var errorMessage = format("Didn't recognise send mode %s", sendMode);
+                        throw new UnrecognisedSendModeException(errorMessage);
+                };
+
+        return bulkEmailUsersService.getNSubjectIdsByStatus(limit, statusRequired);
     }
 
     private boolean sendNotifyEmail(String email) throws NotificationClientException {

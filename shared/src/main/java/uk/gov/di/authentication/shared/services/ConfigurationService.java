@@ -120,6 +120,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         }
     }
 
+    public String getBulkEmailUserSendMode() {
+        return systemService.getOrDefault("BULK_USER_EMAIL_SEND_MODE", "PENDING");
+    }
+
     public long getDefaultOtpCodeExpiry() {
         return Long.parseLong(System.getenv().getOrDefault("DEFAULT_OTP_CODE_EXPIRY", "900"));
     }

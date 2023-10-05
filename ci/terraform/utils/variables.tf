@@ -124,6 +124,11 @@ variable "bulk_user_email_included_terms_and_conditions" {
   default = null
 }
 
+variable "bulk_user_email_send_mode" {
+  type    = string
+  default = "PENDING"
+}
+
 variable "bulk_user_email_send_schedule_expression" {
   type        = string
   description = "Run at 15:00 every Friday in 2049.  Designed not to trigger, replace with desired expression."
