@@ -36,6 +36,8 @@ public class BulkUserEmailSenderScheduledEventHandler
     private static final Logger LOG =
             LogManager.getLogger(BulkUserEmailSenderScheduledEventHandler.class);
 
+    public static final String DELIVERY_RECEIPT_STATUS_TEMPORARY_FAILURE = "temporary-failure";
+
     private final BulkEmailUsersService bulkEmailUsersService;
 
     private final DynamoService dynamoService;
@@ -160,18 +162,19 @@ public class BulkUserEmailSenderScheduledEventHandler
     }
 
     private List<String> getUserIdSubjectBatch(String sendMode, Integer limit) {
-        BulkEmailStatus statusRequired =
-                switch (sendMode) {
-                    case "PENDING":
-                        yield BulkEmailStatus.PENDING;
-                    case "NOTIFY_ERROR_RETRIES":
-                        yield BulkEmailStatus.ERROR_SENDING_EMAIL;
-                    default:
-                        var errorMessage = format("Didn't recognise send mode %s", sendMode);
-                        throw new UnrecognisedSendModeException(errorMessage);
-                };
-
-        return bulkEmailUsersService.getNSubjectIdsByStatus(limit, statusRequired);
+        switch (sendMode) {
+            case "PENDING":
+                return bulkEmailUsersService.getNSubjectIdsByStatus(limit, BulkEmailStatus.PENDING);
+            case "NOTIFY_ERROR_RETRIES":
+                return bulkEmailUsersService.getNSubjectIdsByStatus(
+                        limit, BulkEmailStatus.ERROR_SENDING_EMAIL);
+            case "DELIVERY_RECEIPT_TEMPORARY_FAILURE_RETRIES":
+                return bulkEmailUsersService.getNSubjectIdsByDeliveryReceiptStatus(
+                        limit, DELIVERY_RECEIPT_STATUS_TEMPORARY_FAILURE);
+            default:
+                var errorMessage = format("Didn't recognise send mode %s", sendMode);
+                throw new UnrecognisedSendModeException(errorMessage);
+        }
     }
 
     private boolean sendNotifyEmail(String email) throws NotificationClientException {
