@@ -104,4 +104,22 @@ public class BulkEmailUsersExtension extends DynamoExtension implements AfterEac
 
         dynamoDB.putItem(request);
     }
+
+    public void addBulkEmailUserWithDeliveryReceiptStatus(
+            String subjectID, String deliveryReceiptStatus, BulkEmailStatus bulkEmailStatus) {
+        PutItemRequest request =
+                PutItemRequest.builder()
+                        .tableName(BULK_EMAIL_USERS_TABLE)
+                        .item(
+                                Map.of(
+                                        SUBJECT_ID_FIELD,
+                                        AttributeValue.fromS(subjectID),
+                                        BULK_EMAIL_STATUS_FIELD,
+                                        AttributeValue.fromS(bulkEmailStatus.getValue()),
+                                        DELIVERY_RECEIPT_STATUS_FIELD,
+                                        AttributeValue.fromS(deliveryReceiptStatus)))
+                        .build();
+
+        dynamoDB.putItem(request);
+    }
 }
