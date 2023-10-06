@@ -21,6 +21,8 @@ public class BulkEmailUsersExtension extends DynamoExtension implements AfterEac
     public static final String SUBJECT_ID_FIELD = "SubjectID";
     public static final String BULK_EMAIL_STATUS_FIELD = "BulkEmailStatus";
     public static final String BULK_EMAIL_STATUS_INDEX = "BulkEmailStatusIndex";
+    public static final String DELIVERY_RECEIPT_STATUS_FIELD = "DeliveryReceiptStatus";
+    public static final String DELIVERY_RECEIPT_STATUS_INDEX = "DeliveryReceiptStatusIndex";
 
     public static final String BULK_EMAIL_USERS_TABLE = "local-bulk-email-users";
 
@@ -58,6 +60,10 @@ public class BulkEmailUsersExtension extends DynamoExtension implements AfterEac
                                 AttributeDefinition.builder()
                                         .attributeName(BULK_EMAIL_STATUS_FIELD)
                                         .attributeType(ScalarAttributeType.S)
+                                        .build(),
+                                AttributeDefinition.builder()
+                                        .attributeName(DELIVERY_RECEIPT_STATUS_FIELD)
+                                        .attributeType(ScalarAttributeType.S)
                                         .build())
                         .globalSecondaryIndexes(
                                 GlobalSecondaryIndex.builder()
@@ -65,6 +71,16 @@ public class BulkEmailUsersExtension extends DynamoExtension implements AfterEac
                                         .keySchema(
                                                 KeySchemaElement.builder()
                                                         .attributeName(BULK_EMAIL_STATUS_FIELD)
+                                                        .keyType(KeyType.HASH)
+                                                        .build())
+                                        .projection(t -> t.projectionType(ProjectionType.ALL))
+                                        .build(),
+                                GlobalSecondaryIndex.builder()
+                                        .indexName(DELIVERY_RECEIPT_STATUS_INDEX)
+                                        .keySchema(
+                                                KeySchemaElement.builder()
+                                                        .attributeName(
+                                                                DELIVERY_RECEIPT_STATUS_FIELD)
                                                         .keyType(KeyType.HASH)
                                                         .build())
                                         .projection(t -> t.projectionType(ProjectionType.ALL))
