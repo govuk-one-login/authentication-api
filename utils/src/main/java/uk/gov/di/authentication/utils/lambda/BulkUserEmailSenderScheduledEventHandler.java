@@ -99,6 +99,7 @@ public class BulkUserEmailSenderScheduledEventHandler
         final List<String> bulkUserEmailIncludedTermsAndConditions =
                 configurationService.getBulkUserEmailIncludedTermsAndConditions();
         final String bulkEmailUserSendMode = configurationService.getBulkEmailUserSendMode();
+        BulkEmailStatus successStatus = "DELIVERY_RECEIPT_TEMPORARY_FAILURE_RETRIES".equals(bulkEmailUserSendMode) ? BulkEmailStatus.RETRY_EMAIL_SENT : BulkEmailStatus.EMAIL_SENT;
 
         if (bulkUserEmailIncludedTermsAndConditions.isEmpty()) {
             throw new IncludedTermsAndConditionsConfigMissingException();
@@ -135,7 +136,8 @@ public class BulkUserEmailSenderScheduledEventHandler
                                                 sendEmailIfRequiredAndUpdateStatus(
                                                         userProfile,
                                                         subjectId,
-                                                        bulkUserEmailIncludedTermsAndConditions),
+                                                        bulkUserEmailIncludedTermsAndConditions,
+                                                        successStatus),
                                         () -> {
                                             LOG.warn("User not found by subject id");
                                             updateBulkUserStatus(
@@ -195,7 +197,9 @@ public class BulkUserEmailSenderScheduledEventHandler
     private void sendEmailIfRequiredAndUpdateStatus(
             UserProfile userProfile,
             String subjectId,
-            List<String> bulkUserEmailIncludedTermsAndConditions) {
+            List<String> bulkUserEmailIncludedTermsAndConditions,
+            BulkEmailStatus successStatus
+            ) {
         boolean hasAcceptedRecentTermsAndConditions =
                 (userProfile.getTermsAndConditions() != null
                         && !bulkUserEmailIncludedTermsAndConditions.contains(
@@ -207,7 +211,7 @@ public class BulkUserEmailSenderScheduledEventHandler
                 if (sendNotifyEmail(userProfile.getEmail())) {
                     addAuditEventForEmailSent(userProfile);
                 }
-                updateBulkUserStatus(subjectId, BulkEmailStatus.EMAIL_SENT);
+                updateBulkUserStatus(subjectId, successStatus);
             } catch (NotificationClientException e) {
                 LOG.error("Unable to send bulk email to user: {}", e.getMessage());
                 updateBulkUserStatus(subjectId, BulkEmailStatus.ERROR_SENDING_EMAIL);

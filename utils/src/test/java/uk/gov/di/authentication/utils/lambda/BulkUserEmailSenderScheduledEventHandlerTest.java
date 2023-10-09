@@ -457,7 +457,7 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
                         TERMS_AND_CONDITIONS_BULK_EMAIL,
                         LocaleHelper.SupportedLanguage.EN);
         verify(bulkEmailUsersService, times(1))
-                .updateUserStatus(SUBJECT_ID, BulkEmailStatus.EMAIL_SENT);
+                .updateUserStatus(SUBJECT_ID, BulkEmailStatus.RETRY_EMAIL_SENT);
     }
 
     @Test

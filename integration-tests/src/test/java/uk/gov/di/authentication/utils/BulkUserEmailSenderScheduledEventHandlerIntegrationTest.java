@@ -21,12 +21,17 @@ import uk.gov.di.authentication.utils.lambda.BulkUserEmailSenderScheduledEventHa
 
 import java.security.SecureRandom;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.IntStream;
 
+import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.JsonMatcher.hasFieldWithValue;
 import static uk.gov.di.authentication.utils.domain.UtilsAuditableEvent.BULK_EMAIL_SENT;
@@ -120,6 +125,65 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
                 Collections.nCopies(numberOfUsersWithErrorSendingEmailStatus, BULK_EMAIL_SENT));
+    }
+
+    @Test
+    void shouldSendCorrectNoOfEmailsWhenSendModeIsDeliveryReceiptRetries() {
+        var noOfUsersWithTempFailures = 5;
+        IntStream.range(0, noOfUsersWithTempFailures)
+                .mapToObj(String::valueOf)
+                .forEach(
+                        i -> {
+                            bulkEmailUsersExtension.addBulkEmailUserWithDeliveryReceiptStatus(
+                                    i, "temporary-failure", BulkEmailStatus.EMAIL_SENT);
+                            userStore.signUp(
+                                    format("user.%s@account.gov.uk", i),
+                                    "password123",
+                                    new Subject(i),
+                                    "1.2");
+                        });
+
+        IntStream.range(noOfUsersWithTempFailures, noOfUsersWithTempFailures + 5)
+                .mapToObj(String::valueOf)
+                .forEach(
+                        i -> {
+                            bulkEmailUsersExtension.addBulkEmailUserWithDeliveryReceiptStatus(
+                                    i, "permanent-failure", BulkEmailStatus.EMAIL_SENT);
+                            userStore.signUp(
+                                    format("user.%s@account.gov.uk", i),
+                                    "password123",
+                                    new Subject(i),
+                                    "1.2");
+                        });
+
+        IntStream.range(10, 15)
+                .mapToObj(String::valueOf)
+                .forEach(
+                        i -> {
+                            bulkEmailUsersExtension.addBulkEmailUser(i, BulkEmailStatus.EMAIL_SENT);
+                            userStore.signUp(
+                                    format("user.%s@account.gov.uk", i),
+                                    "password123",
+                                    new Subject(i),
+                                    "1.2");
+                        });
+
+        var configuration = configWithSendMode("DELIVERY_RECEIPT_TEMPORARY_FAILURE_RETRIES");
+        handler = new BulkUserEmailSenderScheduledEventHandler(configuration);
+        bulkEmailUsersService = new BulkEmailUsersService(configuration);
+
+        handler.handleRequest(scheduledEvent, context);
+
+        var emailsSent = notifyStub.waitForNumberOfRequests(20, noOfUsersWithTempFailures);
+
+        var retryEmailSentUsers =
+                bulkEmailUsersService.getNSubjectIdsByStatus(100, BulkEmailStatus.RETRY_EMAIL_SENT);
+
+        assertEquals(noOfUsersWithTempFailures, retryEmailSentUsers.size());
+        assertEquals(noOfUsersWithTempFailures, emailsSent.size());
+        assertEquals(Set.of("0", "1", "2", "3", "4"), new HashSet<>(retryEmailSentUsers));
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue, Collections.nCopies(5, BULK_EMAIL_SENT)); // TODO
     }
 
     @Test
