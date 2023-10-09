@@ -776,6 +776,20 @@ class AuthorisationHandlerTest {
         }
 
         @Test
+        void shouldSetTheRelevantCookiesInTheHeader() throws JOSEException {
+            var response = makeDocAppHandlerRequest();
+
+            assertTrue(
+                    response.getMultiValueHeaders()
+                            .get(ResponseHeaders.SET_COOKIE)
+                            .contains(EXPECTED_SESSION_COOKIE_STRING));
+            assertTrue(
+                    response.getMultiValueHeaders()
+                            .get(ResponseHeaders.SET_COOKIE)
+                            .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
+        }
+
+        @Test
         void shouldRedirectToTheDocAppRedirectUriWithEncryptedJwtWhenTheRequestIsADocAppRequest()
                 throws JOSEException {
 

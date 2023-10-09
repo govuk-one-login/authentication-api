@@ -35,6 +35,7 @@ import uk.gov.di.authentication.oidc.services.RequestObjectService;
 import uk.gov.di.authentication.shared.conditions.DocAppUserHelper;
 import uk.gov.di.authentication.shared.conditions.IdentityHelper;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -45,7 +46,6 @@ import uk.gov.di.authentication.shared.helpers.DocAppSubjectIdHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
-import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -246,31 +246,44 @@ public class AuthorisationHandler
                     authRequest.getClientID().getValue(),
                     clientSessionId);
         }
+        authRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
         Optional<Session> session = sessionService.getSessionFromSessionCookie(input.getHeaders());
+        ClientSession clientSession =
+                clientSessionService.generateClientSession(
+                        authRequest.toParameters(),
+                        LocalDateTime.now(),
+                        orchestrationAuthorizationService.getEffectiveVectorOfTrust(authRequest),
+                        client.getClientName());
         if (configurationService.isDocAppDecoupleEnabled()
                 && DocAppUserHelper.isDocCheckingAppUser(
                         authRequest.toParameters(), Optional.of(client))) {
             return handleDocAppJourney(
                     session,
+                    clientSession,
                     authRequest,
                     client,
                     clientSessionId,
                     ipAddress,
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+                    persistentSessionId);
         }
-
-        authRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
         return handleAuthJourney(
-                session, authRequest, ipAddress, persistentSessionId, client, clientSessionId);
+                session,
+                clientSession,
+                authRequest,
+                ipAddress,
+                persistentSessionId,
+                client,
+                clientSessionId);
     }
 
     private APIGatewayProxyResponseEvent handleDocAppJourney(
             Optional<Session> existingSession,
-            AuthenticationRequest authRequest,
+            ClientSession clientSession,
+            AuthenticationRequest authenticationRequest,
             ClientRegistry client,
             String clientSessionId,
             String ipAddress,
-            String persistentId) {
+            String persistentSessionId) {
 
         var session = existingSession.orElseGet(sessionService::createSession);
         attachSessionIdToLogs(session);
@@ -285,21 +298,12 @@ public class AuthorisationHandler
             LOG.info("Updated session id from {} - new", oldSessionId);
         }
 
-        var clientName = client.getClientName();
-
         Subject subjectId =
                 DocAppSubjectIdHelper.calculateDocAppSubjectId(
-                        authRequest.toParameters(),
+                        authenticationRequest.toParameters(),
                         configurationService.isCustomDocAppClaimEnabled(),
                         configurationService.getDocAppDomain());
         LOG.info("Doc app request received");
-
-        var clientSession =
-                clientSessionService.generateClientSession(
-                        authRequest.toParameters(),
-                        LocalDateTime.now(),
-                        orchestrationAuthorizationService.getEffectiveVectorOfTrust(authRequest),
-                        clientName);
 
         clientSessionService.saveClientSession(
                 clientSessionId, clientSession.setDocAppSubjectId(subjectId));
@@ -308,7 +312,7 @@ public class AuthorisationHandler
         session.addClientSession(clientSessionId);
         updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
         updateAttachedLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
-        updateAttachedLogFieldToLogs(CLIENT_ID, authRequest.getClientID().getValue());
+        updateAttachedLogFieldToLogs(CLIENT_ID, authenticationRequest.getClientID().getValue());
         sessionService.save(session);
         LOG.info("Session saved successfully");
 
@@ -337,7 +341,7 @@ public class AuthorisationHandler
                 AuditService.UNKNOWN,
                 ipAddress,
                 AuditService.UNKNOWN,
-                persistentId);
+                persistentSessionId);
 
         URI authorisationRequestUri = authorisationRequest.toURI();
         LOG.info(
@@ -347,17 +351,19 @@ public class AuthorisationHandler
         cloudwatchMetricsService.incrementCounter(
                 "DocAppHandoff", Map.of("Environment", configurationService.getEnvironment()));
 
-        // TODO do we need cookies?
+        List<String> cookies =
+                handleCookies(session, authenticationRequest, persistentSessionId, clientSessionId);
 
         return generateApiGatewayProxyResponse(
                 302,
                 "",
                 Map.of(ResponseHeaders.LOCATION, authorisationRequestUri.toString()),
-                Map.of());
+                Map.of(ResponseHeaders.SET_COOKIE, cookies));
     }
 
     private APIGatewayProxyResponseEvent handleAuthJourney(
             Optional<Session> existingSession,
+            ClientSession clientSession,
             AuthenticationRequest authenticationRequest,
             String ipAddress,
             String persistentSessionId,
@@ -391,8 +397,6 @@ public class AuthorisationHandler
             LOG.info("Updated session id from {} - new", oldSessionId);
         }
 
-        var clientName = client.getClientName();
-
         auditService.submitAuditEvent(
                 OidcAuditableEvent.AUTHORISATION_INITIATED,
                 clientSessionId,
@@ -403,14 +407,8 @@ public class AuthorisationHandler
                 ipAddress,
                 AuditService.UNKNOWN,
                 persistentSessionId,
-                pair("client-name", clientName));
-        var clientSession =
-                clientSessionService.generateClientSession(
-                        authenticationRequest.toParameters(),
-                        LocalDateTime.now(),
-                        orchestrationAuthorizationService.getEffectiveVectorOfTrust(
-                                authenticationRequest),
-                        clientName);
+                pair("client-name", client.getClientName()));
+
         clientSessionService.storeClientSession(clientSessionId, clientSession);
 
         session.addClientSession(clientSessionId);
@@ -425,7 +423,7 @@ public class AuthorisationHandler
 
     private APIGatewayProxyResponseEvent generateAuthRedirect(
             Session session,
-            String clientSessionID,
+            String clientSessionId,
             AuthenticationRequest authenticationRequest,
             String persistentSessionId,
             ClientRegistry client) {
@@ -456,35 +454,8 @@ public class AuthorisationHandler
             throw new RuntimeException("Error constructing redirect URI", e);
         }
 
-        // TODO pull cookies out into shared method
-        List<String> cookies = new ArrayList<>();
-        cookies.add(
-                CookieHelper.buildCookieString(
-                        CookieHelper.SESSION_COOKIE_NAME,
-                        session.getSessionId() + "." + clientSessionID,
-                        configurationService.getSessionCookieMaxAge(),
-                        configurationService.getSessionCookieAttributes(),
-                        configurationService.getDomainName()));
-        cookies.add(
-                CookieHelper.buildCookieString(
-                        CookieHelper.PERSISTENT_COOKIE_NAME,
-                        persistentSessionId,
-                        configurationService.getPersistentCookieMaxAge(),
-                        configurationService.getSessionCookieAttributes(),
-                        configurationService.getDomainName()));
-
-        getPrimaryLanguageFromUILocales(authenticationRequest, configurationService)
-                .ifPresent(
-                        primaryLanguage -> {
-                            LOG.info("Setting primary language: {}", primaryLanguage.getLanguage());
-                            cookies.add(
-                                    CookieHelper.buildCookieString(
-                                            CookieHelper.LANGUAGE_COOKIE_NAME,
-                                            primaryLanguage.getLanguage(),
-                                            configurationService.getLanguageCookieMaxAge(),
-                                            configurationService.getSessionCookieAttributes(),
-                                            configurationService.getDomainName()));
-                        });
+        List<String> cookies =
+                handleCookies(session, authenticationRequest, persistentSessionId, clientSessionId);
 
         if (configurationService.isAuthOrchSplitEnabled()) {
             var jwtID = IdGenerator.generate();
@@ -509,7 +480,7 @@ public class AuthorisationHandler
                             .claim("consent_required", client.isConsentRequired())
                             .claim("is_one_login_service", client.isOneLoginService())
                             .claim("service_type", client.getServiceType())
-                            .claim("govuk_signin_journey_id", clientSessionID)
+                            .claim("govuk_signin_journey_id", clientSessionId)
                             .claim(
                                     "confidence",
                                     orchestrationAuthorizationService
@@ -627,5 +598,42 @@ public class AuthorisationHandler
     private Boolean requestedScopesContain(
             Scope.Value scope, AuthenticationRequest authenticationRequest) {
         return authenticationRequest.getScope().toStringList().contains(scope.getValue());
+    }
+
+    private List<String> handleCookies(
+            Session session,
+            AuthenticationRequest authRequest,
+            String persistentSessionId,
+            String clientSessionId) {
+        List<String> cookies = new ArrayList<>();
+        cookies.add(
+                CookieHelper.buildCookieString(
+                        CookieHelper.SESSION_COOKIE_NAME,
+                        session.getSessionId() + "." + clientSessionId,
+                        configurationService.getSessionCookieMaxAge(),
+                        configurationService.getSessionCookieAttributes(),
+                        configurationService.getDomainName()));
+        cookies.add(
+                CookieHelper.buildCookieString(
+                        CookieHelper.PERSISTENT_COOKIE_NAME,
+                        persistentSessionId,
+                        configurationService.getPersistentCookieMaxAge(),
+                        configurationService.getSessionCookieAttributes(),
+                        configurationService.getDomainName()));
+
+        getPrimaryLanguageFromUILocales(authRequest, configurationService)
+                .ifPresent(
+                        primaryLanguage -> {
+                            LOG.info("Setting primary language: {}", primaryLanguage.getLanguage());
+                            cookies.add(
+                                    CookieHelper.buildCookieString(
+                                            CookieHelper.LANGUAGE_COOKIE_NAME,
+                                            primaryLanguage.getLanguage(),
+                                            configurationService.getLanguageCookieMaxAge(),
+                                            configurationService.getSessionCookieAttributes(),
+                                            configurationService.getDomainName()));
+                        });
+
+        return cookies;
     }
 }
