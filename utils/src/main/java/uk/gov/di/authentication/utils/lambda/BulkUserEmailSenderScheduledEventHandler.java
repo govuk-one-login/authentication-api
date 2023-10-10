@@ -102,6 +102,11 @@ public class BulkUserEmailSenderScheduledEventHandler
                 readBulkEmailUserSendModeConfiguration(
                         configurationService.getBulkEmailUserSendMode());
         final BulkEmailStatus successStatus = bulkEmailUserSendMode.mapToSuccessStatus();
+        final UtilsAuditableEvent auditableEvent =
+                BulkEmailUserSendMode.DELIVERY_RECEIPT_TEMPORARY_FAILURE_RETRIES.equals(
+                                bulkEmailUserSendMode)
+                        ? UtilsAuditableEvent.BULK_RETRY_EMAIL_SENT
+                        : UtilsAuditableEvent.BULK_EMAIL_SENT;
 
         if (bulkUserEmailIncludedTermsAndConditions.isEmpty()) {
             throw new IncludedTermsAndConditionsConfigMissingException();
@@ -140,7 +145,8 @@ public class BulkUserEmailSenderScheduledEventHandler
                                                         userProfile,
                                                         subjectId,
                                                         bulkUserEmailIncludedTermsAndConditions,
-                                                        successStatus),
+                                                        successStatus,
+                                                        auditableEvent),
                                         () -> {
                                             LOG.warn("User not found by subject id");
                                             updateBulkUserStatus(
@@ -200,7 +206,8 @@ public class BulkUserEmailSenderScheduledEventHandler
             UserProfile userProfile,
             String subjectId,
             List<String> bulkUserEmailIncludedTermsAndConditions,
-            BulkEmailStatus successStatus) {
+            BulkEmailStatus successStatus,
+            UtilsAuditableEvent utilsAuditableEvent) {
         boolean hasAcceptedRecentTermsAndConditions =
                 (userProfile.getTermsAndConditions() != null
                         && !bulkUserEmailIncludedTermsAndConditions.contains(
@@ -210,7 +217,7 @@ public class BulkUserEmailSenderScheduledEventHandler
         } else {
             try {
                 if (sendNotifyEmail(userProfile.getEmail())) {
-                    addAuditEventForEmailSent(userProfile);
+                    addAuditEventForEmailSent(userProfile, utilsAuditableEvent);
                 }
                 updateBulkUserStatus(subjectId, successStatus);
             } catch (NotificationClientException e) {
@@ -246,7 +253,8 @@ public class BulkUserEmailSenderScheduledEventHandler
                         configurationService.getEnvironment()));
     }
 
-    private void addAuditEventForEmailSent(UserProfile userProfile) {
+    private void addAuditEventForEmailSent(
+            UserProfile userProfile, UtilsAuditableEvent utilsAuditableEvent) {
         var internalCommonSubjectIdentifier =
                 userProfile.getSalt() != null
                         ? ClientSubjectHelper.getSubjectWithSectorIdentifier(
@@ -256,7 +264,7 @@ public class BulkUserEmailSenderScheduledEventHandler
                                 .getValue()
                         : AuditService.UNKNOWN;
         auditService.submitAuditEvent(
-                UtilsAuditableEvent.BULK_EMAIL_SENT,
+                utilsAuditableEvent,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,

@@ -35,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.JsonMatcher.hasFieldWithValue;
 import static uk.gov.di.authentication.utils.domain.UtilsAuditableEvent.BULK_EMAIL_SENT;
+import static uk.gov.di.authentication.utils.domain.UtilsAuditableEvent.BULK_RETRY_EMAIL_SENT;
 
 public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
         extends HandlerIntegrationTest<ScheduledEvent, Void> {
@@ -187,7 +188,7 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
                                     .getDeliveryReceiptStatus());
                 });
         assertTxmaAuditEventsReceived(
-                txmaAuditQueue, Collections.nCopies(5, BULK_EMAIL_SENT)); // TODO
+                txmaAuditQueue, Collections.nCopies(5, BULK_RETRY_EMAIL_SENT));
     }
 
     @Test
