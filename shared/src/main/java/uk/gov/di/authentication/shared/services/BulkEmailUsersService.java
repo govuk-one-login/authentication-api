@@ -40,6 +40,9 @@ public class BulkEmailUsersService extends BaseDynamoService<BulkEmailUser> {
                         user -> {
                             LocalDateTime now = LocalDateTime.now(configurationService.getClock());
                             user.withBulkEmailStatus(bulkEmailStatus).withUpdatedAt(now.toString());
+                            if (BulkEmailStatus.RETRY_EMAIL_SENT.equals(bulkEmailStatus)) {
+                                user.setDeliveryReceiptStatus(null);
+                            }
                             update(user);
                             return user;
                         });

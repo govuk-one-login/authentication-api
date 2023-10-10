@@ -52,9 +52,7 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
     @BeforeEach
     void setup() {
         notifyStub.init();
-        var configuration = configWithSendMode("PENDING");
-        handler = new BulkUserEmailSenderScheduledEventHandler(configuration);
-        bulkEmailUsersService = new BulkEmailUsersService(configuration);
+        setupConfig("PENDING");
     }
 
     @AfterEach
@@ -103,10 +101,7 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
     void
             shouldSendCorrectNoOfEmailsForListOfUsersWithVariousStatusAndUpdateStatusWhenSendModeIsNotifyErrors() {
         setupDynamo();
-
-        var configuration = configWithSendMode("NOTIFY_ERROR_RETRIES");
-        handler = new BulkUserEmailSenderScheduledEventHandler(configuration);
-        bulkEmailUsersService = new BulkEmailUsersService(configuration);
+        setupConfig("NOTIFY_ERROR_RETRIES");
 
         handler.handleRequest(scheduledEvent, context);
 
@@ -129,6 +124,7 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
 
     @Test
     void shouldSendCorrectNoOfEmailsWhenSendModeIsDeliveryReceiptRetries() {
+        setupConfig("DELIVERY_RECEIPT_TEMPORARY_FAILURE_RETRIES");
         var noOfUsersWithTempFailures = 5;
         IntStream.range(0, noOfUsersWithTempFailures)
                 .mapToObj(String::valueOf)
@@ -168,10 +164,6 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
                                     "1.2");
                         });
 
-        var configuration = configWithSendMode("DELIVERY_RECEIPT_TEMPORARY_FAILURE_RETRIES");
-        handler = new BulkUserEmailSenderScheduledEventHandler(configuration);
-        bulkEmailUsersService = new BulkEmailUsersService(configuration);
-
         handler.handleRequest(scheduledEvent, context);
 
         var emailsSent = notifyStub.waitForNumberOfRequests(20, noOfUsersWithTempFailures);
@@ -179,9 +171,20 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
         var retryEmailSentUsers =
                 bulkEmailUsersService.getNSubjectIdsByStatus(100, BulkEmailStatus.RETRY_EMAIL_SENT);
 
+        var RETRY_EMAIL_SENT_USERIDS_SET = Set.of("0", "1", "2", "3", "4");
+
         assertEquals(noOfUsersWithTempFailures, retryEmailSentUsers.size());
         assertEquals(noOfUsersWithTempFailures, emailsSent.size());
-        assertEquals(Set.of("0", "1", "2", "3", "4"), new HashSet<>(retryEmailSentUsers));
+        assertEquals(RETRY_EMAIL_SENT_USERIDS_SET, new HashSet<>(retryEmailSentUsers));
+        RETRY_EMAIL_SENT_USERIDS_SET.forEach(
+                sub -> {
+                    assertEquals(
+                            null,
+                            bulkEmailUsersService
+                                    .getBulkEmailUsers(sub)
+                                    .get()
+                                    .getDeliveryReceiptStatus());
+                });
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue, Collections.nCopies(5, BULK_EMAIL_SENT)); // TODO
     }
@@ -263,7 +266,13 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
         handler.handleRequest(scheduledEvent, context);
     }
 
-    private IntegrationTestConfigurationService configWithSendMode(String sendMode) {
+    private void setupConfig(String sendMode) {
+        var configuration = configWithSendMode(sendMode);
+        handler = new BulkUserEmailSenderScheduledEventHandler(configuration);
+        bulkEmailUsersService = new BulkEmailUsersService(configuration);
+    }
+
+    private static IntegrationTestConfigurationService configWithSendMode(String sendMode) {
         return new IntegrationTestConfigurationService(
                 auditTopic,
                 notificationsQueue,
