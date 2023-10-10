@@ -53,6 +53,7 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
     void setup() {
         notifyStub.init();
         setupConfig("PENDING");
+        txmaAuditQueue.clear();
     }
 
     @AfterEach
