@@ -6,6 +6,7 @@ import com.amazonaws.services.lambda.runtime.events.ScheduledEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.BulkEmailStatus;
+import uk.gov.di.authentication.shared.entity.BulkEmailUserSendMode;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
@@ -26,7 +27,6 @@ import uk.gov.service.notify.NotificationClientException;
 import java.util.List;
 import java.util.Map;
 
-import static java.lang.String.format;
 import static uk.gov.di.authentication.shared.entity.NotificationType.TERMS_AND_CONDITIONS_BULK_EMAIL;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
@@ -98,19 +98,22 @@ public class BulkUserEmailSenderScheduledEventHandler
                 configurationService.getBulkUserEmailBatchPauseDuration();
         final List<String> bulkUserEmailIncludedTermsAndConditions =
                 configurationService.getBulkUserEmailIncludedTermsAndConditions();
-        final String bulkEmailUserSendMode = configurationService.getBulkEmailUserSendMode();
-        BulkEmailStatus successStatus = "DELIVERY_RECEIPT_TEMPORARY_FAILURE_RETRIES".equals(bulkEmailUserSendMode) ? BulkEmailStatus.RETRY_EMAIL_SENT : BulkEmailStatus.EMAIL_SENT;
+        final BulkEmailUserSendMode bulkEmailUserSendMode =
+                readBulkEmailUserSendModeConfiguration(
+                        configurationService.getBulkEmailUserSendMode());
+        final BulkEmailStatus successStatus = bulkEmailUserSendMode.mapToSuccessStatus();
 
         if (bulkUserEmailIncludedTermsAndConditions.isEmpty()) {
             throw new IncludedTermsAndConditionsConfigMissingException();
         }
 
         LOG.info(
-                "Bulk User Email Send configuration - bulkUserEmailBatchQueryLimit: {}, bulkUserEmailMaxBatchCount: {}, bulkUserEmailBatchPauseDuration: {}, includedTermsAndConditions: {}",
+                "Bulk User Email Send configuration - bulkUserEmailBatchQueryLimit: {}, bulkUserEmailMaxBatchCount: {}, bulkUserEmailBatchPauseDuration: {}, includedTermsAndConditions: {}, bulkEmailUserSendMode: {}",
                 bulkUserEmailBatchQueryLimit,
                 bulkUserEmailMaxBatchCount,
                 bulkUserEmailBatchPauseDuration,
-                bulkUserEmailIncludedTermsAndConditions);
+                bulkUserEmailIncludedTermsAndConditions,
+                bulkEmailUserSendMode);
 
         updateTableSizeMetric();
 
@@ -163,19 +166,18 @@ public class BulkUserEmailSenderScheduledEventHandler
         return null;
     }
 
-    private List<String> getUserIdSubjectBatch(String sendMode, Integer limit) {
+    private List<String> getUserIdSubjectBatch(BulkEmailUserSendMode sendMode, Integer limit) {
         switch (sendMode) {
-            case "PENDING":
+            case PENDING:
                 return bulkEmailUsersService.getNSubjectIdsByStatus(limit, BulkEmailStatus.PENDING);
-            case "NOTIFY_ERROR_RETRIES":
+            case NOTIFY_ERROR_RETRIES:
                 return bulkEmailUsersService.getNSubjectIdsByStatus(
                         limit, BulkEmailStatus.ERROR_SENDING_EMAIL);
-            case "DELIVERY_RECEIPT_TEMPORARY_FAILURE_RETRIES":
+            case DELIVERY_RECEIPT_TEMPORARY_FAILURE_RETRIES:
                 return bulkEmailUsersService.getNSubjectIdsByDeliveryReceiptStatus(
                         limit, DELIVERY_RECEIPT_STATUS_TEMPORARY_FAILURE);
             default:
-                var errorMessage = format("Didn't recognise send mode %s", sendMode);
-                throw new UnrecognisedSendModeException(errorMessage);
+                throw new UnrecognisedSendModeException(sendMode.getValue());
         }
     }
 
@@ -198,8 +200,7 @@ public class BulkUserEmailSenderScheduledEventHandler
             UserProfile userProfile,
             String subjectId,
             List<String> bulkUserEmailIncludedTermsAndConditions,
-            BulkEmailStatus successStatus
-            ) {
+            BulkEmailStatus successStatus) {
         boolean hasAcceptedRecentTermsAndConditions =
                 (userProfile.getTermsAndConditions() != null
                         && !bulkUserEmailIncludedTermsAndConditions.contains(
@@ -266,5 +267,13 @@ public class BulkUserEmailSenderScheduledEventHandler
                 AuditService.UNKNOWN,
                 pair("internalSubjectId", userProfile.getSubjectID()),
                 pair("bulk-email-type", BulkEmailType.VC_EXPIRY_BULK_EMAIL.name()));
+    }
+
+    BulkEmailUserSendMode readBulkEmailUserSendModeConfiguration(String bulkEmailUserSendMode) {
+        try {
+            return BulkEmailUserSendMode.valueOf(bulkEmailUserSendMode);
+        } catch (IllegalArgumentException e) {
+            throw new UnrecognisedSendModeException(bulkEmailUserSendMode);
+        }
     }
 }
