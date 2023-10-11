@@ -14,5 +14,5 @@ resource "aws_lambda_code_signing_config" "code_signing_config" {
 }
 
 locals {
-  dynatrace_layer_signing_profile_arn = "arn:aws:signer:eu-west-2:985486846182:/signing-profiles/SigningProfile_2LIsnoqFX0BU/IE6arNMuby"
+  dynatrace_layer_signing_profile_arn = "arn:aws:signer:eu-west-2:216552277552:/signing-profiles/DynatraceSigner/5uwzCCGTPq"
 }
