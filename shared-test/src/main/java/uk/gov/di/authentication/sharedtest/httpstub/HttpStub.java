@@ -1,16 +1,15 @@
 package uk.gov.di.authentication.sharedtest.httpstub;
 
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
+import org.eclipse.jetty.server.Response;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
-import org.eclipse.jetty.server.handler.AbstractHandler;
+import org.eclipse.jetty.util.Callback;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 
 import java.io.File;
-import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.security.KeyStore;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -101,7 +100,7 @@ class HttpStub {
 
             server.addConnector(serverConnector);
         }
-        server.setHandler(new Handler());
+        server.setHandler(new TestHandler());
     }
 
     public void start() {
@@ -159,25 +158,23 @@ class HttpStub {
         return recordedRequests;
     }
 
-    private class Handler extends AbstractHandler {
+    private class TestHandler extends Handler.Abstract {
+
         @Override
-        public void handle(
-                String target,
-                Request baseRequest,
-                HttpServletRequest request,
-                HttpServletResponse response)
-                throws IOException, ServletException {
-            recordedRequests.add(new RecordedRequest(baseRequest));
-
+        public boolean handle(Request request, Response response, Callback callback)
+                throws Exception {
+            recordedRequests.add(new RecordedRequest(request));
             RegisteredResponse registeredResponse =
-                    registeredResponses.get(baseRequest.getRequestURI());
-
+                    registeredResponses.get(request.getHttpURI().getPath());
             if (registeredResponse != null) {
                 response.setStatus(registeredResponse.getStatus());
-                response.setContentType(registeredResponse.getContentType());
-                response.getWriter().append(registeredResponse.getBody());
-                baseRequest.setHandled(true);
+                if (registeredResponse.getContentType() != null) {
+                    response.getHeaders().add("Content-Type", registeredResponse.getContentType());
+                }
+                response.write(
+                        true, ByteBuffer.wrap(registeredResponse.getBody().getBytes()), callback);
             }
+            return true;
         }
     }
 }
