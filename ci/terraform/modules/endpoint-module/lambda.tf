@@ -3,10 +3,8 @@ resource "aws_lambda_function" "endpoint_lambda" {
   role          = var.lambda_role_arn
   handler       = var.handler_function_name
   timeout       = 30
-  # Dynatrace documentation suggests an additional 1.5GiB RAM for Java OneAgent,
-  # if this is a bad idea, will revert.
-  memory_size = var.memory_size + 1536
-  publish     = true
+  memory_size   = var.memory_size
+  publish       = true
 
   tracing_config {
     mode = "Active"
@@ -122,6 +120,6 @@ resource "aws_appautoscaling_policy" "provisioned-concurrency-policy" {
 }
 
 locals {
-  deploy_dynatrace = false
+  deploy_dynatrace = var.environment != "production"
   lambda_layers    = flatten(local.deploy_dynatrace ? [local.dynatrace_layer_arn] : [])
 }
