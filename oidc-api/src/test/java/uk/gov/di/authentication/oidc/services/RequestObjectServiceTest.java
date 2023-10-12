@@ -142,6 +142,25 @@ class RequestObjectServiceTest {
     }
 
     @Test
+    void shouldThrowWhenRedirectUriIsAbsent() throws JOSEException {
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(AUDIENCE)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", SCOPE)
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.toString())
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .issuer(CLIENT_ID.getValue())
+                        .build();
+        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+        assertThrows(
+                RuntimeException.class,
+                () -> service.validateRequestObject(authRequest),
+                "Expected to throw exception");
+    }
+
+    @Test
     void shouldThrowWhenInvalidClient() throws JOSEException {
         when(dynamoClientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.empty());
         var jwtClaimsSet =

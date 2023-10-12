@@ -87,11 +87,13 @@ public class RequestObjectService {
                 throw new RuntimeException();
             }
             var jwtClaimsSet = signedJWT.getJWTClaimsSet();
-            if (client.getRedirectUrls().stream()
-                    .filter(Objects::nonNull)
-                    .noneMatch(s -> s.equals(jwtClaimsSet.getClaim("redirect_uri")))) {
+
+            if (jwtClaimsSet.getStringClaim("redirect_uri") == null
+                    || !client.getRedirectUrls()
+                            .contains(jwtClaimsSet.getStringClaim("redirect_uri"))) {
                 throw new RuntimeException("Invalid Redirect URI in request JWT");
             }
+
             var redirectURI = URI.create((String) jwtClaimsSet.getClaim("redirect_uri"));
             if (Boolean.FALSE.equals(client.getClientType().equals(ClientType.APP.getValue()))) {
                 LOG.error("ClientType of client is not 'app'");
