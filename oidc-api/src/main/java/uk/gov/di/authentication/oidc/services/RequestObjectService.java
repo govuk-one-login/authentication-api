@@ -198,12 +198,18 @@ public class RequestObjectService {
         if (requestObject && !scopes.contains(CustomScopeValue.DOC_CHECKING_APP.getValue())) {
             return true;
         }
+
         for (String scope : scopes) {
-            if (ValidScopes.getAllValidScopes().stream().noneMatch(t -> t.equals(scope))) {
+            if (!ValidScopes.getAllValidScopes().contains(scope)) {
+                return true;
+            }
+
+            if (!clientRegistry.getScopes().contains(scope)) {
                 return true;
             }
         }
-        return !clientRegistry.getScopes().containsAll(scopes);
+
+        return false;
     }
 
     private static boolean isSignatureValid(SignedJWT signedJWT, String publicKey) {
