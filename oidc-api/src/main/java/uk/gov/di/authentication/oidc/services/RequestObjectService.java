@@ -73,19 +73,20 @@ public class RequestObjectService {
         attachLogFieldToLogs(CLIENT_ID, clientId);
 
         var client = dynamoClientService.getClient(clientId).orElse(null);
-        try {
 
-            if (Objects.isNull(client)) {
-                var errorMsg = "No Client found with given ClientID";
-                LOG.warn(errorMsg);
-                throw new RuntimeException(errorMsg);
-            }
-            var signedJWT = (SignedJWT) authRequest.getRequestObject();
-            var signatureValid = isSignatureValid(signedJWT, client.getPublicKey());
-            if (!signatureValid) {
-                LOG.error("Invalid Signature on request JWT");
-                throw new RuntimeException();
-            }
+        if (Objects.isNull(client)) {
+            var errorMsg = "No Client found with given ClientID";
+            LOG.warn(errorMsg);
+            throw new RuntimeException(errorMsg);
+        }
+        var signedJWT = (SignedJWT) authRequest.getRequestObject();
+        var signatureValid = isSignatureValid(signedJWT, client.getPublicKey());
+        if (!signatureValid) {
+            LOG.error("Invalid Signature on request JWT");
+            throw new RuntimeException();
+        }
+
+        try {
             var jwtClaimsSet = signedJWT.getJWTClaimsSet();
 
             if (jwtClaimsSet.getStringClaim("redirect_uri") == null
