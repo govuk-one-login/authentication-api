@@ -388,6 +388,11 @@ resource "aws_dynamodb_table" "bulk_email_users" {
     type = "S"
   }
 
+  attribute {
+    name = "DeliveryReceiptStatus"
+    type = "S"
+  }
+
   point_in_time_recovery {
     enabled = true
   }
@@ -404,6 +409,14 @@ resource "aws_dynamodb_table" "bulk_email_users" {
   global_secondary_index {
     name            = "BulkEmailStatusIndex"
     hash_key        = "BulkEmailStatus"
+    projection_type = "ALL"
+    read_capacity   = var.provision_dynamo ? var.dynamo_default_read_capacity : null
+    write_capacity  = var.provision_dynamo ? var.dynamo_default_write_capacity : null
+  }
+
+  global_secondary_index {
+    name            = "DeliveryReceiptStatusIndex"
+    hash_key        = "DeliveryReceiptStatus"
     projection_type = "ALL"
     read_capacity   = var.provision_dynamo ? var.dynamo_default_read_capacity : null
     write_capacity  = var.provision_dynamo ? var.dynamo_default_write_capacity : null

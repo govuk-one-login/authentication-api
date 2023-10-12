@@ -12,11 +12,14 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static uk.gov.di.authentication.utils.lambda.BulkUserEmailSenderScheduledEventHandler.DELIVERY_RECEIPT_STATUS_TEMPORARY_FAILURE;
 
 public class BulkEmailUsersIntegrationTest {
 
@@ -121,6 +124,66 @@ public class BulkEmailUsersIntegrationTest {
         var limit = 3;
 
         var users = bulkEmailUsersService.getNSubjectIdsByStatus(limit, BulkEmailStatus.PENDING);
+
+        assertEquals(limit, users.size());
+    }
+
+    @Test
+    void shouldReturnUsersWithStatusOfEmailSentAndRelevantDeliveryReceiptStatus() {
+        String temporaryFailureString = "temporary-failure";
+        String permanentFailureString = "permanent-failure";
+        bulkEmailUsersExtension.addBulkEmailUserWithDeliveryReceiptStatus(
+                SUBJECT_ID_1,
+                DELIVERY_RECEIPT_STATUS_TEMPORARY_FAILURE,
+                BulkEmailStatus.EMAIL_SENT);
+        bulkEmailUsersExtension.addBulkEmailUserWithDeliveryReceiptStatus(
+                SUBJECT_ID_2,
+                DELIVERY_RECEIPT_STATUS_TEMPORARY_FAILURE,
+                BulkEmailStatus.EMAIL_SENT);
+        bulkEmailUsersExtension.addBulkEmailUserWithDeliveryReceiptStatus(
+                SUBJECT_ID_3,
+                DELIVERY_RECEIPT_STATUS_TEMPORARY_FAILURE,
+                BulkEmailStatus.EMAIL_SENT);
+        bulkEmailUsersExtension.addBulkEmailUserWithDeliveryReceiptStatus(
+                SUBJECT_ID_4, permanentFailureString, BulkEmailStatus.EMAIL_SENT);
+        bulkEmailUsersExtension.addBulkEmailUserWithDeliveryReceiptStatus(
+                SUBJECT_ID_5, DELIVERY_RECEIPT_STATUS_TEMPORARY_FAILURE, BulkEmailStatus.PENDING);
+
+        var users =
+                bulkEmailUsersService.getNSubjectIdsByDeliveryReceiptStatus(
+                        5, DELIVERY_RECEIPT_STATUS_TEMPORARY_FAILURE);
+
+        assertEquals(3, users.size());
+        assertEquals(Set.of(SUBJECT_ID_1, SUBJECT_ID_2, SUBJECT_ID_3), new HashSet<>(users));
+    }
+
+    @Test
+    void shouldReturnTheCorrectNumberOfUsersByDeliveryReceiptStatus() {
+        bulkEmailUsersExtension.addBulkEmailUserWithDeliveryReceiptStatus(
+                SUBJECT_ID_1,
+                DELIVERY_RECEIPT_STATUS_TEMPORARY_FAILURE,
+                BulkEmailStatus.EMAIL_SENT);
+        bulkEmailUsersExtension.addBulkEmailUserWithDeliveryReceiptStatus(
+                SUBJECT_ID_2,
+                DELIVERY_RECEIPT_STATUS_TEMPORARY_FAILURE,
+                BulkEmailStatus.EMAIL_SENT);
+        bulkEmailUsersExtension.addBulkEmailUserWithDeliveryReceiptStatus(
+                SUBJECT_ID_3,
+                DELIVERY_RECEIPT_STATUS_TEMPORARY_FAILURE,
+                BulkEmailStatus.EMAIL_SENT);
+        bulkEmailUsersExtension.addBulkEmailUserWithDeliveryReceiptStatus(
+                SUBJECT_ID_4,
+                DELIVERY_RECEIPT_STATUS_TEMPORARY_FAILURE,
+                BulkEmailStatus.EMAIL_SENT);
+        bulkEmailUsersExtension.addBulkEmailUserWithDeliveryReceiptStatus(
+                SUBJECT_ID_5,
+                DELIVERY_RECEIPT_STATUS_TEMPORARY_FAILURE,
+                BulkEmailStatus.EMAIL_SENT);
+
+        var limit = 3;
+        var users =
+                bulkEmailUsersService.getNSubjectIdsByDeliveryReceiptStatus(
+                        limit, DELIVERY_RECEIPT_STATUS_TEMPORARY_FAILURE);
 
         assertEquals(limit, users.size());
     }
