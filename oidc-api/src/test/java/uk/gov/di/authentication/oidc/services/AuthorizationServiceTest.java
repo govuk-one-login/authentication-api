@@ -221,7 +221,7 @@ class AuthorizationServiceTest {
         assertTrue(errorObject.isPresent());
 
         assertThat(
-                errorObject.get().getErrorObject(),
+                errorObject.get().errorObject(),
                 equalTo(
                         new ErrorObject(
                                 OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid")));
@@ -319,7 +319,7 @@ class AuthorizationServiceTest {
 
         assertTrue(errorObject.isPresent());
         assertThat(
-                errorObject.get().getErrorObject(),
+                errorObject.get().errorObject(),
                 equalTo(
                         new ErrorObject(
                                 OAuth2Error.INVALID_REQUEST_CODE,
@@ -358,7 +358,7 @@ class AuthorizationServiceTest {
                         generateAuthRequest(REDIRECT_URI.toString(), responseType, scope), true);
 
         assertTrue(errorObject.isPresent());
-        assertThat(errorObject.get().getErrorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
+        assertThat(errorObject.get().errorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
     }
 
     @Test
@@ -397,8 +397,7 @@ class AuthorizationServiceTest {
                         generateAuthRequest(REDIRECT_URI.toString(), responseType, scope), true);
 
         assertTrue(errorObject.isPresent());
-        assertThat(
-                errorObject.get().getErrorObject(), equalTo(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE));
+        assertThat(errorObject.get().errorObject(), equalTo(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE));
     }
 
     @Test
@@ -417,7 +416,7 @@ class AuthorizationServiceTest {
                         generateAuthRequest(REDIRECT_URI.toString(), responseType, scope), true);
 
         assertTrue(errorObject.isPresent());
-        assertThat(errorObject.get().getErrorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
+        assertThat(errorObject.get().errorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
     }
 
     @Test
@@ -439,7 +438,7 @@ class AuthorizationServiceTest {
 
         assertTrue(errorObject.isPresent());
         assertThat(
-                errorObject.get().getErrorObject(),
+                errorObject.get().errorObject(),
                 equalTo(
                         new ErrorObject(
                                 OAuth2Error.INVALID_REQUEST_CODE,
@@ -465,7 +464,7 @@ class AuthorizationServiceTest {
 
         assertTrue(errorObject.isPresent());
         assertThat(
-                errorObject.get().getErrorObject(),
+                errorObject.get().errorObject(),
                 equalTo(
                         new ErrorObject(
                                 OAuth2Error.INVALID_REQUEST_CODE,
@@ -492,7 +491,7 @@ class AuthorizationServiceTest {
 
         assertTrue(errorObject.isPresent());
         assertThat(
-                errorObject.get().getErrorObject(),
+                errorObject.get().errorObject(),
                 equalTo(
                         new ErrorObject(
                                 OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid")));
@@ -517,8 +516,7 @@ class AuthorizationServiceTest {
         var errorObject = orchestrationAuthorizationService.validateAuthRequest(authRequest, true);
 
         assertTrue(errorObject.isPresent());
-        assertThat(
-                errorObject.get().getErrorObject(), equalTo(OAuth2Error.TEMPORARILY_UNAVAILABLE));
+        assertThat(errorObject.get().errorObject(), equalTo(OAuth2Error.TEMPORARILY_UNAVAILABLE));
     }
 
     @Test
@@ -606,7 +604,7 @@ class AuthorizationServiceTest {
 
         assertTrue(authRequestError.isPresent());
         assertThat(
-                authRequestError.get().getErrorObject(),
+                authRequestError.get().errorObject(),
                 equalTo(OAuth2Error.REQUEST_URI_NOT_SUPPORTED));
     }
 
@@ -631,8 +629,7 @@ class AuthorizationServiceTest {
 
         assertTrue(authRequestError.isPresent());
         assertThat(
-                authRequestError.get().getErrorObject(),
-                equalTo(OAuth2Error.REQUEST_NOT_SUPPORTED));
+                authRequestError.get().errorObject(), equalTo(OAuth2Error.REQUEST_NOT_SUPPORTED));
     }
 
     @ParameterizedTest

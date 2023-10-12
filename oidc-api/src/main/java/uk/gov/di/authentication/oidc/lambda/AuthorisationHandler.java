@@ -193,10 +193,10 @@ public class AuthorisationHandler
 
         if (authRequestError.isPresent()) {
             return generateErrorResponse(
-                    authRequestError.get().getRedirectURI(),
+                    authRequestError.get().redirectURI(),
                     authRequest.getState(),
                     authRequest.getResponseMode(),
-                    authRequestError.get().getErrorObject(),
+                    authRequestError.get().errorObject(),
                     ipAddress,
                     persistentSessionId,
                     authRequest.getClientID().getValue(),
