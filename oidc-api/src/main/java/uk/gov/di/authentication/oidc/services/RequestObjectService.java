@@ -99,35 +99,27 @@ public class RequestObjectService {
 
             if (!ClientType.APP.getValue().equals(client.getClientType())) {
                 LOG.error("ClientType of client is not 'app'");
-                return Optional.of(
-                        new AuthRequestError(OAuth2Error.UNAUTHORIZED_CLIENT, redirectURI));
+                return errorResponse(redirectURI, OAuth2Error.UNAUTHORIZED_CLIENT);
             }
 
-            if (authRequest.getResponseType() != CODE) {
-                LOG.error(
-                        "Unsupported responseType included in request. Expected responseType of code");
-                return Optional.of(
-                        new AuthRequestError(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE, redirectURI));
-            }
             if (requestContainsInvalidScopes(
                     authRequest.getScope().toStringList(), client, false)) {
                 LOG.error(
                         "Invalid scopes in authRequest. Scopes in request: {}",
                         authRequest.getScope().toStringList());
-                return Optional.of(new AuthRequestError(OAuth2Error.INVALID_SCOPE, redirectURI));
+                return errorResponse(redirectURI, OAuth2Error.INVALID_SCOPE);
             }
             if (Objects.isNull(jwtClaimsSet.getClaim("client_id"))
                     || !jwtClaimsSet
                             .getClaim("client_id")
                             .toString()
                             .equals(authRequest.getClientID().getValue())) {
-                return Optional.of(
-                        new AuthRequestError(OAuth2Error.UNAUTHORIZED_CLIENT, redirectURI));
+                return errorResponse(redirectURI, OAuth2Error.UNAUTHORIZED_CLIENT);
             }
             if (Objects.nonNull(jwtClaimsSet.getClaim("request"))
                     || Objects.nonNull(jwtClaimsSet.getClaim("request_uri"))) {
                 LOG.error("request or request_uri claim should not be included in request JWT");
-                return Optional.of(new AuthRequestError(OAuth2Error.INVALID_REQUEST, redirectURI));
+                return errorResponse(redirectURI, OAuth2Error.INVALID_REQUEST);
             }
             if (Objects.isNull(jwtClaimsSet.getAudience())
                     || !jwtClaimsSet
@@ -140,20 +132,18 @@ public class RequestObjectService {
                                                     "/authorize")
                                             .toString())) {
                 LOG.error("Invalid or missing audience");
-                return Optional.of(new AuthRequestError(OAuth2Error.ACCESS_DENIED, redirectURI));
+                return errorResponse(redirectURI, OAuth2Error.ACCESS_DENIED);
             }
             if (Objects.isNull(jwtClaimsSet.getIssuer())
                     || !jwtClaimsSet.getIssuer().equals(client.getClientID())) {
                 LOG.error("Invalid or missing issuer");
-                return Optional.of(
-                        new AuthRequestError(OAuth2Error.UNAUTHORIZED_CLIENT, redirectURI));
+                return errorResponse(redirectURI, OAuth2Error.UNAUTHORIZED_CLIENT);
             }
 
             if (!CODE.toString().equals(jwtClaimsSet.getClaim("response_type"))) {
                 LOG.error(
                         "Unsupported responseType included in request JWT. Expected responseType of code");
-                return Optional.of(
-                        new AuthRequestError(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE, redirectURI));
+                return errorResponse(redirectURI, OAuth2Error.UNSUPPORTED_RESPONSE_TYPE);
             }
             if (Objects.isNull(jwtClaimsSet.getClaim("scope"))
                     || requestContainsInvalidScopes(
@@ -161,25 +151,23 @@ public class RequestObjectService {
                             client,
                             true)) {
                 LOG.error("Invalid scopes in request JWT");
-                return Optional.of(new AuthRequestError(OAuth2Error.INVALID_SCOPE, redirectURI));
+                return errorResponse(redirectURI, OAuth2Error.INVALID_SCOPE);
             }
             if (Objects.isNull(jwtClaimsSet.getClaim("state"))) {
                 LOG.error("State is missing from authRequest");
-                return Optional.of(
-                        new AuthRequestError(
-                                new ErrorObject(
-                                        OAuth2Error.INVALID_REQUEST_CODE,
-                                        "Request is missing state parameter"),
-                                redirectURI));
+                return errorResponse(
+                        redirectURI,
+                        new ErrorObject(
+                                OAuth2Error.INVALID_REQUEST_CODE,
+                                "Request is missing state parameter"));
             }
             if (Objects.isNull(jwtClaimsSet.getClaim("nonce"))) {
                 LOG.error("Nonce is missing from authRequest");
-                return Optional.of(
-                        new AuthRequestError(
-                                new ErrorObject(
-                                        OAuth2Error.INVALID_REQUEST_CODE,
-                                        "Request is missing nonce parameter"),
-                                redirectURI));
+                return errorResponse(
+                        redirectURI,
+                        new ErrorObject(
+                                OAuth2Error.INVALID_REQUEST_CODE,
+                                "Request is missing nonce parameter"));
             }
             var vtrError = validateVtr(jwtClaimsSet, redirectURI);
             if (vtrError.isPresent()) {
@@ -191,12 +179,11 @@ public class RequestObjectService {
                     LangTagUtils.parseLangTagList(uiLocales.split(" "));
                 } catch (ClassCastException | LangTagException e) {
                     LOG.warn("ui_locales parameter is invalid: {}", e.getMessage());
-                    return Optional.of(
-                            new AuthRequestError(
-                                    new ErrorObject(
-                                            OAuth2Error.INVALID_REQUEST_CODE,
-                                            "ui_locales parameter is invalid"),
-                                    redirectURI));
+                    return errorResponse(
+                            redirectURI,
+                            new ErrorObject(
+                                    OAuth2Error.INVALID_REQUEST_CODE,
+                                    "ui_locales parameter is invalid"));
                 }
             }
             LOG.info("RequestObject has passed initial validation");
@@ -243,20 +230,21 @@ public class RequestObjectService {
             var vectorOfTrust = VectorOfTrust.parseFromAuthRequestAttribute(authRequestVtr);
             if (vectorOfTrust.containsLevelOfConfidence()
                     && !ipvCapacityService.isIPVCapacityAvailable()) {
-                return Optional.of(
-                        new AuthRequestError(OAuth2Error.TEMPORARILY_UNAVAILABLE, redirectURI));
+                return errorResponse(redirectURI, OAuth2Error.TEMPORARILY_UNAVAILABLE);
             }
         } catch (IllegalArgumentException e) {
             LOG.error(
                     "vtr in AuthRequest is not valid. vtr in request: {}. IllegalArgumentException: {}",
                     authRequestVtr,
                     e);
-            return Optional.of(
-                    new AuthRequestError(
-                            new ErrorObject(
-                                    OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid"),
-                            redirectURI));
+            return errorResponse(
+                    redirectURI,
+                    new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid"));
         }
         return Optional.empty();
+    }
+
+    private static Optional<AuthRequestError> errorResponse(URI uri, ErrorObject error) {
+        return Optional.of(new AuthRequestError(error, uri));
     }
 }
