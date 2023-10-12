@@ -15,6 +15,8 @@ locals {
     DT_CLUSTER_ID                = local.dynatrace_secret["DT_CLUSTER_ID"]
     DT_TENANT                    = local.dynatrace_secret["DT_TENANT"]
     DT_LOG_COLLECTION_AUTH_TOKEN = local.dynatrace_secret["DT_LOG_COLLECTION_AUTH_TOKEN"]
+    DT_LOGGING_DESTINATION       = "stdout"
+    DT_LOGGING_JAVA_FLAGS        = "log-Transformer=true,log-OpenTelemetryUtils=true,log-AsyncClassRetransformer=true,log-ClassValue=true"
 
     DT_OPEN_TELEMETRY_ENABLE_INTEGRATION = "true"
   }
