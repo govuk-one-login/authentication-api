@@ -238,6 +238,39 @@ class RequestObjectServiceTest {
     }
 
     @Test
+    void shouldReturnErrorForInvalidResponseTypeInQueryParams() throws JOSEException {
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(AUDIENCE)
+                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", SCOPE)
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.toString())
+                        .issuer(CLIENT_ID.getValue())
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .build();
+
+        var authRequest =
+                new AuthenticationRequest.Builder(
+                                ResponseType.IDTOKEN,
+                                new Scope(OIDCScopeValue.OPENID),
+                                CLIENT_ID,
+                                URI.create(REDIRECT_URI))
+                        .state(STATE)
+                        .nonce(new Nonce())
+                        .requestObject(generateSignedJWT(jwtClaimsSet, keyPair))
+                        .build();
+        var requestObjectError = service.validateRequestObject(authRequest);
+
+        assertTrue(requestObjectError.isPresent());
+        assertThat(
+                requestObjectError.get().errorObject(),
+                equalTo(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE));
+        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+    }
+
+    @Test
     void shouldReturnErrorWhenClientIDIsInvalid() throws JOSEException {
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()

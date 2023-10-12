@@ -102,6 +102,12 @@ public class RequestObjectService {
                 return errorResponse(redirectURI, OAuth2Error.UNAUTHORIZED_CLIENT);
             }
 
+            if (!CODE.toString().equals(authRequest.getResponseType().toString())) {
+                LOG.error(
+                        "Unsupported responseType included in request. Expected responseType of code");
+                return errorResponse(redirectURI, OAuth2Error.UNSUPPORTED_RESPONSE_TYPE);
+            }
+
             if (requestContainsInvalidScopes(authRequest.getScope(), client, false)) {
                 LOG.error(
                         "Invalid scopes in authRequest. Scopes in request: {}",
