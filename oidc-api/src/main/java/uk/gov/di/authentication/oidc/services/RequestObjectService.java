@@ -102,8 +102,7 @@ public class RequestObjectService {
                 return errorResponse(redirectURI, OAuth2Error.UNAUTHORIZED_CLIENT);
             }
 
-            if (requestContainsInvalidScopes(
-                    authRequest.getScope().toStringList(), client, false)) {
+            if (requestContainsInvalidScopes(authRequest.getScope(), client, false)) {
                 LOG.error(
                         "Invalid scopes in authRequest. Scopes in request: {}",
                         authRequest.getScope().toStringList());
@@ -147,9 +146,7 @@ public class RequestObjectService {
             }
             if (Objects.isNull(jwtClaimsSet.getClaim("scope"))
                     || requestContainsInvalidScopes(
-                            Scope.parse(jwtClaimsSet.getClaim("scope").toString()).toStringList(),
-                            client,
-                            true)) {
+                            Scope.parse(jwtClaimsSet.getClaim("scope").toString()), client, true)) {
                 LOG.error("Invalid scopes in request JWT");
                 return errorResponse(redirectURI, OAuth2Error.INVALID_SCOPE);
             }
@@ -194,12 +191,12 @@ public class RequestObjectService {
     }
 
     private boolean requestContainsInvalidScopes(
-            List<String> scopes, ClientRegistry clientRegistry, boolean requestObject) {
+            Scope scopes, ClientRegistry clientRegistry, boolean requestObject) {
         if (requestObject && !scopes.contains(CustomScopeValue.DOC_CHECKING_APP.getValue())) {
             return true;
         }
 
-        for (String scope : scopes) {
+        for (String scope : scopes.toStringList()) {
             if (!ValidScopes.getAllValidScopes().contains(scope)) {
                 return true;
             }
