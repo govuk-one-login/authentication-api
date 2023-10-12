@@ -1,0 +1,33 @@
+sequenceDiagram
+    participant am_api as Account Management API
+    participant rp as Account Management RP
+    participant orch_api as Orchestration OIDC API
+    participant auth as Authentication
+    rp ->> orch_api : OIDC Authentication request to /authorize via browser (AuthorisationHandler.java)
+    orch_api  ->> orch_api : Validates Authentication request, creates session cookie
+    orch_api ->> orch_api : Generates a signed and encrypted OAuth 2.0 Authorization request
+    orch_api ->> auth : OAuth 2.0 Authorization request to /authorize via browser
+    auth ->> auth : Authenticates the user
+    auth ->> orch_api : Authorisation response via browser to /orchestration-redirect (AuthenticationCallbackHandler.java)
+    orch_api ->> auth : Token request containing Authorization code to /token
+    auth ->> orch_api : Token response containing access token
+    orch_api ->> auth : Userinfo request containing access token to /userinfo (UserInfoHandler.java)
+    auth ->> orch_api : Userinfo response
+    orch_api ->> orch_api : Generates and store Authorization Code with 5 min TTL
+    orch_api ->> rp : 302 redirect containing Authentication Response to the RPs redirect URL
+    rp ->> orch_api : Token request to /token (TokenHandler.java)
+    orch_api ->> orch_api : Validates token request, then generates and stores access token with 3 min TTL
+    orch_api ->> orch_api : Generates and stores refresh token with 1 hour TTL
+    orch_api ->> rp : Token response containing access, refresh and id tokens
+    rp ->> orch_api : UserInfo request to /userinfo (UserInfoHandler.java)
+    orch_api ->> orch_api : Validates Access Token
+    orch_api ->> rp : UserInfo response containing user information 
+    rp ->> rp : Checks validity of access token
+    alt if access token has expired
+    rp ->> orch_api : Makes request to /token endpoint with refresh token to request new access token
+    else access token is valid
+    rp ->> am_api : Makes AuthenticateRequest to /authenticate (AuthenticateHandler.java)
+    am_api ->> am_api : Lambda Authorizer (AuthoriseAccessTokenHandler.java) validates Access Token JWT
+    am_api ->> am_api : AuthenticateHandler.java validates Email and Password combination
+    am_api ->> rp : 204 response
+    end
