@@ -6,7 +6,7 @@ logging_endpoint_arns = [
 internal_sector_uri    = "https://identity.staging.account.gov.uk"
 lambda_max_concurrency = 10
 lambda_min_concurrency = 3
-endpoint_memory_size   = 1024
+endpoint_memory_size   = 1536
 scaling_trigger        = 0.6
 
 orch_client_id                  = "orchestrationAuth"
