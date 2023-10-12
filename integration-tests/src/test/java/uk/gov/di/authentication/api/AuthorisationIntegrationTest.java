@@ -5,14 +5,16 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.crypto.RSASSASigner;
+import com.nimbusds.jose.jwk.JWKSet;
+import com.nimbusds.jose.jwk.KeyUse;
+import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
-import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.State;
-import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.apache.http.client.utils.URIBuilder;
@@ -20,8 +22,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.oidc.lambda.AuthorisationHandler;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.ClientType;
@@ -31,8 +31,14 @@ import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.extensions.AuthExternalApiStubExtension;
 import uk.gov.di.authentication.sharedtest.extensions.DocAppJwksExtension;
+import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
+import uk.gov.di.authentication.sharedtest.extensions.SnsTopicExtension;
+import uk.gov.di.authentication.sharedtest.extensions.SqsQueueExtension;
+import uk.gov.di.authentication.sharedtest.extensions.TokenSigningExtension;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 
 import java.net.HttpCookie;
@@ -41,6 +47,7 @@ import java.net.URISyntaxException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
+import java.security.interfaces.RSAPublicKey;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Base64;
@@ -60,10 +67,13 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.startsWith;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISATION_INITIATED;
+import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR;
+import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.authentication.shared.helpers.CookieHelper.getHttpCookieFromMultiValueResponseHeaders;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -77,6 +87,9 @@ public class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTe
     private static final KeyPair KEY_PAIR = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
     public static final String DUMMY_CLIENT_SESSION_ID = "456";
 
+    private static final Subject SUBJECT_ID = new Subject();
+    public static boolean DOC_APP_DECOUPLE_ENABLED = false;
+
     @RegisterExtension
     public static final DocAppJwksExtension jwksExtension = new DocAppJwksExtension();
 
@@ -87,13 +100,36 @@ public class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTe
     private static final URI AUTHORIZE_URI = URI.create("http://doc-app/authorize");
     private static final String DOC_APP_CLIENT_ID = "doc-app-client-id";
 
+    @RegisterExtension
+    public final AuthExternalApiStubExtension authExternalApiStub =
+            new AuthExternalApiStubExtension();
+
+    protected final ConfigurationService configurationService =
+            new AuthorisationIntegrationTest.TestConfigurationService(
+                    authExternalApiStub,
+                    auditTopic,
+                    notificationsQueue,
+                    auditSigningKey,
+                    tokenSigner,
+                    ipvPrivateKeyJwtSigner,
+                    spotQueue,
+                    docAppPrivateKeyJwtSigner);
+
     @Nested
     class AuthJourney {
         @BeforeEach
         void setup() {
             registerClient(CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB);
-            handler = new AuthorisationHandler(configWithDocAppDecouple(false));
-            //            txmaAuditQueue.clear();
+            authExternalApiStub.init(SUBJECT_ID);
+            handler = new AuthorisationHandler(configurationService);
+            txmaAuditQueue.clear();
+
+            var jwkKey =
+                    new RSAKey.Builder((RSAPublicKey) keyPair.getPublic())
+                            .keyUse(KeyUse.ENCRYPTION)
+                            .keyID(ENCRYPTION_KEY_ID)
+                            .build();
+            jwksExtension.init(new JWKSet(jwkKey));
         }
 
         @Test
@@ -113,9 +149,9 @@ public class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTe
                             .isPresent(),
                     equalTo(true));
 
-            //            assertTxmaAuditEventsReceived(
-            //                    txmaAuditQueue,
-            //                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
         }
 
         @Test
@@ -137,9 +173,9 @@ public class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTe
                     equalTo(true));
             assertThat(URI.create(redirectUri).getQuery(), equalTo(null));
 
-            //            assertTxmaAuditEventsReceived(
-            //                    txmaAuditQueue,
-            //                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
         }
 
         @Test
@@ -173,9 +209,9 @@ public class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTe
             assertThat(persistentCookie.isPresent(), equalTo(true));
             assertThat(persistentCookie.get().getValue(), equalTo("persistent-id-value"));
 
-            //            assertTxmaAuditEventsReceived(
-            //                    txmaAuditQueue,
-            //                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
         }
 
         @Test
@@ -215,9 +251,9 @@ public class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTe
             assertThat(languageCookie.isPresent(), equalTo(true));
             assertThat(languageCookie.get().getValue(), equalTo("en"));
 
-            //            assertTxmaAuditEventsReceived(
-            //                    txmaAuditQueue,
-            //                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
         }
 
         @Test
@@ -245,9 +281,9 @@ public class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTe
                             .isPresent(),
                     equalTo(true));
 
-            //            assertTxmaAuditEventsReceived(
-            //                    txmaAuditQueue,
-            //                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
         }
 
         @Test
@@ -263,10 +299,9 @@ public class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTe
             assertThat(redirectUri, containsString(OAuth2Error.INVALID_SCOPE.getCode()));
             assertThat(redirectUri, startsWith(RP_REDIRECT_URI));
 
-            //            assertTxmaAuditEventsReceived(
-            //                    txmaAuditQueue,
-            //                    List.of(AUTHORISATION_REQUEST_RECEIVED,
-            // AUTHORISATION_REQUEST_ERROR));
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_REQUEST_ERROR));
         }
 
         @Test
@@ -293,9 +328,9 @@ public class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTe
                             .isPresent(),
                     equalTo(true));
 
-            //            assertTxmaAuditEventsReceived(
-            //                    txmaAuditQueue,
-            //                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
         }
 
         @Test
@@ -324,9 +359,9 @@ public class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTe
                             .isPresent(),
                     equalTo(true));
 
-            //            assertTxmaAuditEventsReceived(
-            //                    txmaAuditQueue,
-            //                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
         }
 
         @Test
@@ -360,9 +395,9 @@ public class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTe
             assertThat(cookie.isPresent(), equalTo(true));
             assertThat(cookie.get().getValue(), not(startsWith(sessionId)));
 
-            //            assertTxmaAuditEventsReceived(
-            //                    txmaAuditQueue,
-            //                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
         }
 
         @Test
@@ -393,9 +428,9 @@ public class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTe
             assertThat(cookie.isPresent(), equalTo(true));
             assertThat(cookie.get().getValue(), not(startsWith(sessionId)));
 
-            //            assertTxmaAuditEventsReceived(
-            //                    txmaAuditQueue,
-            //                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
         }
 
         @Test
@@ -427,9 +462,9 @@ public class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTe
             assertThat(cookie.isPresent(), equalTo(true));
             assertThat(cookie.get().getValue(), not(startsWith(sessionId)));
 
-            //            assertTxmaAuditEventsReceived(
-            //                    txmaAuditQueue,
-            //                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
         }
 
         @Test
@@ -447,9 +482,9 @@ public class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTe
                     redirectUri, startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
             assertThat(URI.create(redirectUri).getQuery(), equalTo(null));
 
-            //            assertTxmaAuditEventsReceived(
-            //                    txmaAuditQueue,
-            //                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
         }
 
         @Test
@@ -484,9 +519,9 @@ public class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTe
                     getLocationResponseHeader(response),
                     startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
 
-            //            assertTxmaAuditEventsReceived(
-            //                    txmaAuditQueue,
-            //                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
         }
 
         @Test
@@ -522,9 +557,9 @@ public class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTe
                     redirectUri, startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
             assertThat(URI.create(redirectUri).getQuery(), equalTo("prompt=login"));
 
-            //            assertTxmaAuditEventsReceived(
-            //                    txmaAuditQueue,
-            //                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
         }
 
         @Test
@@ -560,9 +595,9 @@ public class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTe
             assertThat(
                     redirectUri, startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
 
-            //            assertTxmaAuditEventsReceived(
-            //                    txmaAuditQueue,
-            //                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
         }
 
         @Test
@@ -598,70 +633,73 @@ public class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTe
             assertThat(
                     redirectUri, startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
 
-            //            assertTxmaAuditEventsReceived(
-            //                    txmaAuditQueue,
-            //                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
         }
 
-        @ParameterizedTest
-        @ValueSource(strings = {"", "en", "cy", "en cy", "es fr ja", "cy-AR"})
-        void shouldCallAuthorizeAsDocAppClient(String uiLocales)
-                throws JOSEException, ParseException {
-            registerClient(
-                    CLIENT_ID,
-                    "test-client",
-                    List.of(OPENID.getValue(), CustomScopeValue.DOC_CHECKING_APP.getValue()),
-                    ClientType.APP);
-            var signedJWT = createSignedJWT(uiLocales);
-            var queryStringParameters =
-                    new HashMap<>(
-                            Map.of(
-                                    "response_type",
-                                    "code",
-                                    "client_id",
-                                    CLIENT_ID,
-                                    "scope",
-                                    "openid",
-                                    "request",
-                                    signedJWT.serialize()));
-            var response =
-                    makeRequest(
-                            Optional.empty(),
-                            constructHeaders(Optional.empty()),
-                            queryStringParameters);
-            assertThat(response, hasStatus(302));
-            assertThat(
-                    getLocationResponseHeader(response),
-                    startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
-            assertThat(
-                    getHttpCookieFromMultiValueResponseHeaders(
-                                    response.getMultiValueHeaders(), "gs")
-                            .isPresent(),
-                    equalTo(true));
-            var sessionCookie =
-                    getHttpCookieFromMultiValueResponseHeaders(
-                                    response.getMultiValueHeaders(), "gs")
-                            .orElseThrow();
-            var languageCookie =
-                    getHttpCookieFromMultiValueResponseHeaders(
-                            response.getMultiValueHeaders(), "lng");
-            if (uiLocales.contains("en")) {
-                assertThat(languageCookie.isPresent(), equalTo(true));
-                assertThat(languageCookie.get().getValue(), equalTo("en"));
-            } else if (uiLocales.contains("cy")) {
-                assertThat(languageCookie.isPresent(), equalTo(true));
-                assertThat(languageCookie.get().getValue(), equalTo("cy"));
-            } else {
-                assertThat(languageCookie.isPresent(), equalTo(false));
-            }
-            var clientSessionID = sessionCookie.getValue().split("\\.")[1];
-            var clientSession = redis.getClientSession(clientSessionID);
-            var authRequest = AuthenticationRequest.parse(clientSession.getAuthRequestParams());
-            assertTrue(authRequest.getScope().contains(CustomScopeValue.DOC_CHECKING_APP));
-            //            assertTxmaAuditEventsReceived(
-            //                    txmaAuditQueue,
-            //                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
-        }
+        //        @ParameterizedTest
+        //        @ValueSource(strings = {"", "en", "cy", "en cy", "es fr ja", "cy-AR"})
+        //        void shouldCallAuthorizeAsDocAppClient(String uiLocales)
+        //                throws JOSEException, ParseException {
+        //            registerClient(
+        //                    CLIENT_ID,
+        //                    "test-client",
+        //                    List.of(OPENID.getValue(),
+        // CustomScopeValue.DOC_CHECKING_APP.getValue()),
+        //                    ClientType.APP);
+        //            var signedJWT = createSignedJWT(uiLocales);
+        //            var queryStringParameters =
+        //                    new HashMap<>(
+        //                            Map.of(
+        //                                    "response_type",
+        //                                    "code",
+        //                                    "client_id",
+        //                                    CLIENT_ID,
+        //                                    "scope",
+        //                                    "openid",
+        //                                    "request",
+        //                                    signedJWT.serialize()));
+        //            var response =
+        //                    makeRequest(
+        //                            Optional.empty(),
+        //                            constructHeaders(Optional.empty()),
+        //                            queryStringParameters);
+        //            assertThat(response, hasStatus(302));
+        //            assertThat(
+        //                    getLocationResponseHeader(response),
+        //                    startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+        //            assertThat(
+        //                    getHttpCookieFromMultiValueResponseHeaders(
+        //                                    response.getMultiValueHeaders(), "gs")
+        //                            .isPresent(),
+        //                    equalTo(true));
+        //            var sessionCookie =
+        //                    getHttpCookieFromMultiValueResponseHeaders(
+        //                                    response.getMultiValueHeaders(), "gs")
+        //                            .orElseThrow();
+        //            var languageCookie =
+        //                    getHttpCookieFromMultiValueResponseHeaders(
+        //                            response.getMultiValueHeaders(), "lng");
+        //            if (uiLocales.contains("en")) {
+        //                assertThat(languageCookie.isPresent(), equalTo(true));
+        //                assertThat(languageCookie.get().getValue(), equalTo("en"));
+        //            } else if (uiLocales.contains("cy")) {
+        //                assertThat(languageCookie.isPresent(), equalTo(true));
+        //                assertThat(languageCookie.get().getValue(), equalTo("cy"));
+        //            } else {
+        //                assertThat(languageCookie.isPresent(), equalTo(false));
+        //            }
+        //            var clientSessionID = sessionCookie.getValue().split("\\.")[1];
+        //            var clientSession = redis.getClientSession(clientSessionID);
+        //            var authRequest =
+        // AuthenticationRequest.parse(clientSession.getAuthRequestParams());
+        //
+        // assertTrue(authRequest.getScope().contains(CustomScopeValue.DOC_CHECKING_APP));
+        //            assertTxmaAuditEventsReceived(
+        //                    txmaAuditQueue,
+        //                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+        //        }
 
         private String givenAnExistingSession(CredentialTrustLevel credentialTrustLevel)
                 throws Exception {
@@ -671,83 +709,75 @@ public class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTe
         }
     }
 
-    //    @Nested
-    //    class DocAppJourneyWithDocAppDecoupleOn {
-    //
-    //        //        @BeforeEach
-    //        //        void setup() {
-    //        //            registerClient(
-    //        //                    CLIENT_ID,
-    //        //                    "test-client",
-    //        //                    List.of("openid", "doc-checking-app"),
-    //        //                    ClientType.APP);
-    //        //            handler = new AuthorisationHandler(configWithDocAppDecouple(true));
-    //        //            txmaAuditQueue.clear();
-    //        //
-    //        //            var jwkKey =
-    //        //                    new RSAKey.Builder((RSAPublicKey) keyPair.getPublic())
-    //        //                            .keyUse(KeyUse.ENCRYPTION)
-    //        //                            .keyID(ENCRYPTION_KEY_ID)
-    //        //                            .build();
-    //        //            jwksExtension.init(new JWKSet(jwkKey));
-    //        //        }
-    //
-    //        @BeforeEach
-    //        void setup() {
-    //            registerClient(CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB);
-    //            handler = new AuthorisationHandler(configWithDocAppDecouple(false));
-    //            txmaAuditQueue.clear();
-    //        }
-    //
-    //        @Test
-    //        void shouldRedirectToLoginUriWhenNoCookieIsPresent() {
-    //            var response =
-    //                    makeRequest(
-    //                            Optional.empty(),
-    //                            constructHeaders(Optional.empty()),
-    //                            constructQueryStringParameters(CLIENT_ID, null, "openid",
-    // "Cl.Cm"));
-    //            assertThat(response, hasStatus(302));
-    //            assertThat(
-    //                    getLocationResponseHeader(response),
-    //                    startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
-    //            assertThat(
-    //                    getHttpCookieFromMultiValueResponseHeaders(
-    //                                    response.getMultiValueHeaders(), "gs")
-    //                            .isPresent(),
-    //                    equalTo(true));
-    //
-    //            assertTxmaAuditEventsReceived(
-    //                    txmaAuditQueue,
-    //                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
-    //        }
-    //
-    //        @Test
-    //        void shouldRedirectToLoginUriWhenNoCookieIsPresentButIdentityVectorsArePresent() {
-    //            var response =
-    //                    makeRequest(
-    //                            Optional.empty(),
-    //                            constructHeaders(Optional.empty()),
-    //                            constructQueryStringParameters(CLIENT_ID, null, "openid",
-    // "P2.Cl.Cm"));
-    //            assertThat(response, hasStatus(302));
-    //
-    //            String redirectUri = getLocationResponseHeader(response);
-    //            assertThat(
-    //                    redirectUri,
-    // startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
-    //            assertThat(
-    //                    getHttpCookieFromMultiValueResponseHeaders(
-    //                                    response.getMultiValueHeaders(), "gs")
-    //                            .isPresent(),
-    //                    equalTo(true));
-    //            assertThat(URI.create(redirectUri).getQuery(), equalTo(null));
-    //
-    //            assertTxmaAuditEventsReceived(
-    //                    txmaAuditQueue,
-    //                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
-    //        }
-    //    }
+    @Nested
+    class DocAppJourneyWithDocAppDecoupleOn {
+
+        @BeforeEach
+        void setup() {
+            DOC_APP_DECOUPLE_ENABLED = true;
+
+            registerClient(
+                    CLIENT_ID,
+                    "test-client",
+                    List.of("openid", "doc-checking-app"),
+                    ClientType.APP);
+            handler = new AuthorisationHandler(configurationService);
+            txmaAuditQueue.clear();
+
+            var jwkKey =
+                    new RSAKey.Builder((RSAPublicKey) keyPair.getPublic())
+                            .keyUse(KeyUse.ENCRYPTION)
+                            .keyID(ENCRYPTION_KEY_ID)
+                            .build();
+            jwksExtension.init(new JWKSet(jwkKey));
+        }
+
+        @Test
+        void shouldRedirectToLoginUriWhenNoCookieIsPresent() {
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(Optional.empty()),
+                            constructQueryStringParameters(CLIENT_ID, null, "openid", "Cl.Cm"));
+            assertThat(response, hasStatus(302));
+            assertThat(
+                    getLocationResponseHeader(response),
+                    startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+            assertThat(
+                    getHttpCookieFromMultiValueResponseHeaders(
+                                    response.getMultiValueHeaders(), "gs")
+                            .isPresent(),
+                    equalTo(true));
+
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+        }
+
+        @Test
+        void shouldRedirectToLoginUriWhenNoCookieIsPresentButIdentityVectorsArePresent() {
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(Optional.empty()),
+                            constructQueryStringParameters(CLIENT_ID, null, "openid", "P2.Cl.Cm"));
+            assertThat(response, hasStatus(302));
+
+            String redirectUri = getLocationResponseHeader(response);
+            assertThat(
+                    redirectUri, startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+            assertThat(
+                    getHttpCookieFromMultiValueResponseHeaders(
+                                    response.getMultiValueHeaders(), "gs")
+                            .isPresent(),
+                    equalTo(true));
+            assertThat(URI.create(redirectUri).getQuery(), equalTo(null));
+
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+        }
+    }
 
     private Map<String, String> constructQueryStringParameters(
             String clientId, String prompt, String scopes, String vtr) {
@@ -838,67 +868,80 @@ public class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTe
         return signedJWT;
     }
 
-    private IntegrationTestConfigurationService configWithDocAppDecouple(
-            boolean isDocAppDecoupleEnabled) {
-        return new IntegrationTestConfigurationService(
-                auditTopic,
-                notificationsQueue,
-                auditSigningKey,
-                tokenSigner,
-                ipvPrivateKeyJwtSigner,
-                spotQueue,
-                docAppPrivateKeyJwtSigner,
-                configurationParameters) {
-            @Override
-            public String getTxmaAuditQueueUrl() {
-                return txmaAuditQueue.getQueueUrl();
-            }
+    protected static class TestConfigurationService extends IntegrationTestConfigurationService {
 
-            @Override
-            public boolean isLanguageEnabled(LocaleHelper.SupportedLanguage supportedLanguage) {
-                return supportedLanguage.equals(LocaleHelper.SupportedLanguage.EN)
-                        || supportedLanguage.equals(LocaleHelper.SupportedLanguage.CY);
-            }
+        private final AuthExternalApiStubExtension authExternalApiStub;
 
-            @Override
-            public boolean isDocAppDecoupleEnabled() {
-                return isDocAppDecoupleEnabled;
-            }
+        public TestConfigurationService(
+                AuthExternalApiStubExtension authExternalApiStub,
+                SnsTopicExtension auditEventTopic,
+                SqsQueueExtension notificationQueue,
+                KmsKeyExtension auditSigningKey,
+                TokenSigningExtension tokenSigningKey,
+                TokenSigningExtension ipvPrivateKeyJwtSigner,
+                SqsQueueExtension spotQueue,
+                TokenSigningExtension docAppPrivateKeyJwtSigner) {
+            super(
+                    auditEventTopic,
+                    notificationQueue,
+                    auditSigningKey,
+                    tokenSigningKey,
+                    ipvPrivateKeyJwtSigner,
+                    spotQueue,
+                    docAppPrivateKeyJwtSigner,
+                    configurationParameters);
+            this.authExternalApiStub = authExternalApiStub;
+        }
 
-            @Override
-            public URI getDocAppJwksUri() {
-                try {
-                    return new URIBuilder()
-                            .setHost("localhost")
-                            .setPort(jwksExtension.getHttpPort())
-                            .setPath("/.well-known/jwks.json")
-                            .setScheme("http")
-                            .build();
-                } catch (URISyntaxException e) {
-                    throw new RuntimeException(e);
-                }
-            }
+        @Override
+        public String getTxmaAuditQueueUrl() {
+            return txmaAuditQueue.getQueueUrl();
+        }
 
-            @Override
-            public String getDocAppEncryptionKeyID() {
-                return ENCRYPTION_KEY_ID;
-            }
+        @Override
+        public boolean isLanguageEnabled(LocaleHelper.SupportedLanguage supportedLanguage) {
+            return supportedLanguage.equals(LocaleHelper.SupportedLanguage.EN)
+                    || supportedLanguage.equals(LocaleHelper.SupportedLanguage.CY);
+        }
 
-            @Override
-            public String getDocAppAuthorisationClientId() {
-                return DOC_APP_CLIENT_ID;
-            }
+        @Override
+        public boolean isDocAppDecoupleEnabled() {
+            return DOC_APP_DECOUPLE_ENABLED;
+        }
 
-            @Override
-            public URI getDocAppAuthorisationURI() {
-                return AUTHORIZE_URI;
+        @Override
+        public URI getDocAppJwksUri() {
+            try {
+                return new URIBuilder()
+                        .setHost("localhost")
+                        .setPort(jwksExtension.getHttpPort())
+                        .setPath("/.well-known/jwks.json")
+                        .setScheme("http")
+                        .build();
+            } catch (URISyntaxException e) {
+                throw new RuntimeException(e);
             }
+        }
 
-            @Override
-            public URI getDocAppAuthorisationCallbackURI() {
-                return CALLBACK_URI;
-            }
-        };
+        @Override
+        public String getDocAppEncryptionKeyID() {
+            return ENCRYPTION_KEY_ID;
+        }
+
+        @Override
+        public String getDocAppAuthorisationClientId() {
+            return DOC_APP_CLIENT_ID;
+        }
+
+        @Override
+        public URI getDocAppAuthorisationURI() {
+            return AUTHORIZE_URI;
+        }
+
+        @Override
+        public URI getDocAppAuthorisationCallbackURI() {
+            return CALLBACK_URI;
+        }
     }
 
     private static KeyPair generateRsaKeyPair() {
