@@ -9,7 +9,6 @@ import com.nimbusds.langtag.LangTagException;
 import com.nimbusds.langtag.LangTagUtils;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
-import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.apache.logging.log4j.LogManager;
@@ -37,6 +36,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import static com.nimbusds.oauth2.sdk.ResponseType.CODE;
 import static java.util.Collections.emptyList;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
@@ -95,12 +95,14 @@ public class RequestObjectService {
             }
 
             var redirectURI = URI.create((String) jwtClaimsSet.getClaim("redirect_uri"));
-            if (Boolean.FALSE.equals(client.getClientType().equals(ClientType.APP.getValue()))) {
+
+            if (!ClientType.APP.getValue().equals(client.getClientType())) {
                 LOG.error("ClientType of client is not 'app'");
                 return Optional.of(
                         new AuthRequestError(OAuth2Error.UNAUTHORIZED_CLIENT, redirectURI));
             }
-            if (!authRequest.getResponseType().toString().equals(ResponseType.CODE.toString())) {
+
+            if (authRequest.getResponseType() != CODE) {
                 LOG.error(
                         "Unsupported responseType included in request. Expected responseType of code");
                 return Optional.of(
@@ -145,7 +147,8 @@ public class RequestObjectService {
                 return Optional.of(
                         new AuthRequestError(OAuth2Error.UNAUTHORIZED_CLIENT, redirectURI));
             }
-            if (!ResponseType.CODE.toString().equals(jwtClaimsSet.getClaim("response_type"))) {
+
+            if (!CODE.toString().equals(jwtClaimsSet.getClaim("response_type"))) {
                 LOG.error(
                         "Unsupported responseType included in request JWT. Expected responseType of code");
                 return Optional.of(
