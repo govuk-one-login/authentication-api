@@ -703,42 +703,49 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         }
 
         @Test
-        void shouldGenerateCorrectResponseGivenAValidRequest() throws JOSEException {
-            assert (true);
-            //            SignedJWT signedJWT = createSignedJWT("");
-            //
-            //            Map<String, String> requestParams =
-            //                    Map.of(
-            //                            "client_id",
-            //                            CLIENT_ID,
-            //                            "response_type",
-            //                            "code",
-            //                            "request",
-            //                            signedJWT.serialize(),
-            //                            "scope",
-            //                            "openid");
-            //
-            //            var response =
-            //                    makeRequest(
-            //                            Optional.empty(),
-            //                            constructHeaders(
-            //                                    Optional.of(
-            //                                            new HttpCookie(
-            //                                                    "di-persistent-session-id",
-            //                                                    "persistent-id-value"))),
-            //                            requestParams);
-            //
-            //            var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
-            //            var expectedQueryStringRegex =
-            //                    "response_type=code&request=.*&client_id=doc-app-client-id";
-            //            assertThat(response, hasStatus(302));
-            //            assertThat(locationHeaderUri.getQuery(),
-            // matchesPattern(expectedQueryStringRegex));
-            //
-            //            assertTxmaAuditEventsReceived(
-            //                    txmaAuditQueue,
-            //                    List.of(AUTHORISATION_REQUEST_RECEIVED,
-            // DOC_APP_AUTHORISATION_REQUESTED));
+        void shouldRedirectToLoginUriWhenNoCookieIsPresent() {
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(Optional.empty()),
+                            constructQueryStringParameters(CLIENT_ID, null, "openid", "Cl.Cm"));
+            assertThat(response, hasStatus(302));
+            assertThat(
+                    getLocationResponseHeader(response),
+                    startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+            assertThat(
+                    getHttpCookieFromMultiValueResponseHeaders(
+                                    response.getMultiValueHeaders(), "gs")
+                            .isPresent(),
+                    equalTo(true));
+
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+        }
+
+        @Test
+        void shouldRedirectToLoginUriWhenNoCookieIsPresentButIdentityVectorsArePresent() {
+            var response =
+                    makeRequest(
+                            Optional.empty(),
+                            constructHeaders(Optional.empty()),
+                            constructQueryStringParameters(CLIENT_ID, null, "openid", "P2.Cl.Cm"));
+            assertThat(response, hasStatus(302));
+
+            String redirectUri = getLocationResponseHeader(response);
+            assertThat(
+                    redirectUri, startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+            assertThat(
+                    getHttpCookieFromMultiValueResponseHeaders(
+                                    response.getMultiValueHeaders(), "gs")
+                            .isPresent(),
+                    equalTo(true));
+            assertThat(URI.create(redirectUri).getQuery(), equalTo(null));
+
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
         }
     }
 
