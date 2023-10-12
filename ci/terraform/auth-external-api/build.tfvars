@@ -6,7 +6,7 @@ logging_endpoint_arns = [
 internal_sector_uri    = "https://identity.build.account.gov.uk"
 lambda_max_concurrency = 0
 lambda_min_concurrency = 1
-endpoint_memory_size   = 1024
+endpoint_memory_size   = 1536
 scaling_trigger        = 0.6
 
 orch_client_id                  = "orchestrationAuth"

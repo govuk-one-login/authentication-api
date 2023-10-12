@@ -79,7 +79,7 @@ variable "cloudwatch_log_retention" {
 }
 
 variable "endpoint_memory_size" {
-  default = 1024
+  default = 1536
   type    = number
 }
 

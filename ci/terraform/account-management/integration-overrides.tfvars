@@ -2,7 +2,7 @@ internal_sector_uri = "https://identity.integration.account.gov.uk"
 
 lambda_max_concurrency = 0
 lambda_min_concurrency = 1
-endpoint_memory_size   = 1024
+endpoint_memory_size   = 1536
 scaling_trigger        = 0.6
 
 logging_endpoint_arns = [
