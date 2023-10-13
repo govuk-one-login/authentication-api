@@ -7,7 +7,6 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ErrorObject;
-import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseMode;
 import com.nimbusds.oauth2.sdk.ResponseType;
@@ -160,7 +159,7 @@ public class AuthorisationHandler
     }
 
     public APIGatewayProxyResponseEvent authoriseRequestHandler(
-            APIGatewayProxyRequestEvent input, Context context) {
+            APIGatewayProxyRequestEvent input, Context context) throws ClientNotFoundException {
         var client = new ClientRegistry();
         var persistentSessionId =
                 orchestrationAuthorizationService.getExistingOrCreateNewPersistentSessionId(
@@ -219,10 +218,6 @@ public class AuthorisationHandler
             LOG.warn("No query string parameters are present in the Authentication request", e);
             throw new RuntimeException(
                     "No query string parameters are present in the Authentication request", e);
-        } catch (ClientNotFoundException e) {
-            LOG.warn("Invalid client or client not found in Client Registry");
-            return generateApiGatewayProxyResponse(
-                    400, OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString());
         }
 
         Optional<AuthRequestError> authRequestError;

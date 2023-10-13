@@ -83,6 +83,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
@@ -516,15 +517,13 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldReturn400WhenClientIsNotPresent() throws JOSEException {
-            when(clientService.getClient(anyString())).thenReturn(Optional.empty());
+        void shouldThrowErrorWhenClientIsNotPresent() {
+            when(clientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.empty());
 
-            var response = makeDocAppHandlerRequest();
-
-            assertThat(response, hasStatus(400));
-            assertThat(
-                    response.getBody(),
-                    equalTo(OAuth2Error.INVALID_CLIENT.toJSONObject().toJSONString()));
+            assertThrows(
+                    RuntimeException.class,
+                    () -> makeDocAppHandlerRequest(),
+                    format("No Client found for ClientID: %s", CLIENT_ID.getValue()));
             verifyNoInteractions(configService);
             verifyNoInteractions(requestObjectService);
         }
