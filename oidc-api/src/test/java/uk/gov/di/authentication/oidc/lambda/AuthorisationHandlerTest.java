@@ -735,6 +735,63 @@ class AuthorisationHandlerTest {
         }
 
         @Test
+        void shouldValidateRequestObjectWhenRequestObjectIsPresent() throws JOSEException {
+            var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+            var event = new APIGatewayProxyRequestEvent();
+            var jwtClaimsSet =
+                    new JWTClaimsSet.Builder()
+                            .audience("https://localhost/authorize")
+                            .claim("redirect_uri", REDIRECT_URI)
+                            .claim("response_type", ResponseType.CODE.toString())
+                            .claim("scope", SCOPE)
+                            .claim("state", STATE.getValue())
+                            .claim("nonce", NONCE.getValue())
+                            .claim("client_id", CLIENT_ID.getValue())
+                            .issuer(CLIENT_ID.getValue())
+                            .build();
+            event.setQueryStringParameters(
+                    Map.of(
+                            "client_id",
+                            CLIENT_ID.getValue(),
+                            "scope",
+                            "openid",
+                            "response_type",
+                            "code",
+                            "request",
+                            generateSignedJWT(jwtClaimsSet, keyPair).serialize()));
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
+            makeHandlerRequest(event);
+            verify(requestObjectService).validateRequestObject(any());
+        }
+
+        @Test
+        void shouldValidateRequestQueryParamsWhenRequestObjectIsNotPresent() {
+            var event = new APIGatewayProxyRequestEvent();
+            event.setQueryStringParameters(
+                    Map.of(
+                            "client_id", "test-id",
+                            "redirect_uri", "http://localhost:8080",
+                            "scope", "email,openid,profile",
+                            "response_type", "code"));
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
+            makeHandlerRequest(event);
+
+            InOrder inOrder = inOrder(orchestrationAuthorizationService);
+            inOrder.verify(orchestrationAuthorizationService)
+                    .getExistingOrCreateNewPersistentSessionId(any());
+            inOrder.verify(orchestrationAuthorizationService)
+                    .validateAuthRequest(any(), anyBoolean());
+
+            verifyNoInteractions(requestObjectService);
+        }
+
+        @Test
         void shouldRedirectToLoginWhenRequestObjectIsValid() throws JOSEException {
             var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
             when(configService.isDocAppApiEnabled()).thenReturn(true);
