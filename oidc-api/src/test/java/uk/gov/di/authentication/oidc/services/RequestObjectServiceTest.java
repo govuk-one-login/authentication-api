@@ -142,6 +142,25 @@ class RequestObjectServiceTest {
     }
 
     @Test
+    void shouldThrowWhenRedirectUriIsAbsent() throws JOSEException {
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(AUDIENCE)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", SCOPE)
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.toString())
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .issuer(CLIENT_ID.getValue())
+                        .build();
+        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+        assertThrows(
+                RuntimeException.class,
+                () -> service.validateRequestObject(authRequest),
+                "Expected to throw exception");
+    }
+
+    @Test
     void shouldThrowWhenInvalidClient() throws JOSEException {
         when(dynamoClientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.empty());
         var jwtClaimsSet =
@@ -191,9 +210,8 @@ class RequestObjectServiceTest {
 
         assertTrue(requestObjectError.isPresent());
         assertThat(
-                requestObjectError.get().getErrorObject(),
-                equalTo(OAuth2Error.UNAUTHORIZED_CLIENT));
-        assertThat(requestObjectError.get().getRedirectURI().toString(), equalTo(REDIRECT_URI));
+                requestObjectError.get().errorObject(), equalTo(OAuth2Error.UNAUTHORIZED_CLIENT));
+        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
     }
 
     @Test
@@ -214,9 +232,42 @@ class RequestObjectServiceTest {
 
         assertTrue(requestObjectError.isPresent());
         assertThat(
-                requestObjectError.get().getErrorObject(),
+                requestObjectError.get().errorObject(),
                 equalTo(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE));
-        assertThat(requestObjectError.get().getRedirectURI().toString(), equalTo(REDIRECT_URI));
+        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+    }
+
+    @Test
+    void shouldReturnErrorForInvalidResponseTypeInQueryParams() throws JOSEException {
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(AUDIENCE)
+                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", SCOPE)
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.toString())
+                        .issuer(CLIENT_ID.getValue())
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .build();
+
+        var authRequest =
+                new AuthenticationRequest.Builder(
+                                ResponseType.IDTOKEN,
+                                new Scope(OIDCScopeValue.OPENID),
+                                CLIENT_ID,
+                                URI.create(REDIRECT_URI))
+                        .state(STATE)
+                        .nonce(new Nonce())
+                        .requestObject(generateSignedJWT(jwtClaimsSet, keyPair))
+                        .build();
+        var requestObjectError = service.validateRequestObject(authRequest);
+
+        assertTrue(requestObjectError.isPresent());
+        assertThat(
+                requestObjectError.get().errorObject(),
+                equalTo(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE));
+        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
     }
 
     @Test
@@ -237,9 +288,8 @@ class RequestObjectServiceTest {
 
         assertTrue(requestObjectError.isPresent());
         assertThat(
-                requestObjectError.get().getErrorObject(),
-                equalTo(OAuth2Error.UNAUTHORIZED_CLIENT));
-        assertThat(requestObjectError.get().getRedirectURI().toString(), equalTo(REDIRECT_URI));
+                requestObjectError.get().errorObject(), equalTo(OAuth2Error.UNAUTHORIZED_CLIENT));
+        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
     }
 
     @Test
@@ -259,8 +309,8 @@ class RequestObjectServiceTest {
         var requestObjectError = service.validateRequestObject(authRequest);
 
         assertTrue(requestObjectError.isPresent());
-        assertThat(requestObjectError.get().getErrorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
-        assertThat(requestObjectError.get().getRedirectURI().toString(), equalTo(REDIRECT_URI));
+        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
+        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
     }
 
     @Test
@@ -280,8 +330,8 @@ class RequestObjectServiceTest {
         var requestObjectError = service.validateRequestObject(authRequest);
 
         assertTrue(requestObjectError.isPresent());
-        assertThat(requestObjectError.get().getErrorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
-        assertThat(requestObjectError.get().getRedirectURI().toString(), equalTo(REDIRECT_URI));
+        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
+        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
     }
 
     @Test
@@ -308,8 +358,8 @@ class RequestObjectServiceTest {
         var requestObjectError = service.validateRequestObject(generateAuthRequest(signedJWT));
 
         assertTrue(requestObjectError.isPresent());
-        assertThat(requestObjectError.get().getErrorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
-        assertThat(requestObjectError.get().getRedirectURI().toString(), equalTo(REDIRECT_URI));
+        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
+        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
     }
 
     @Test
@@ -333,8 +383,8 @@ class RequestObjectServiceTest {
                                 signedJWT, new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL)));
 
         assertTrue(requestObjectError.isPresent());
-        assertThat(requestObjectError.get().getErrorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
-        assertThat(requestObjectError.get().getRedirectURI().toString(), equalTo(REDIRECT_URI));
+        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
+        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
     }
 
     @Test
@@ -354,8 +404,8 @@ class RequestObjectServiceTest {
         var requestObjectError = service.validateRequestObject(authRequest);
 
         assertTrue(requestObjectError.isPresent());
-        assertThat(requestObjectError.get().getErrorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
-        assertThat(requestObjectError.get().getRedirectURI().toString(), equalTo(REDIRECT_URI));
+        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
+        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
     }
 
     @Test
@@ -376,8 +426,8 @@ class RequestObjectServiceTest {
         var requestObjectError = service.validateRequestObject(authRequest);
 
         assertTrue(requestObjectError.isPresent());
-        assertThat(requestObjectError.get().getErrorObject(), equalTo(OAuth2Error.ACCESS_DENIED));
-        assertThat(requestObjectError.get().getRedirectURI().toString(), equalTo(REDIRECT_URI));
+        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.ACCESS_DENIED));
+        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
     }
 
     @Test
@@ -398,9 +448,8 @@ class RequestObjectServiceTest {
 
         assertTrue(requestObjectError.isPresent());
         assertThat(
-                requestObjectError.get().getErrorObject(),
-                equalTo(OAuth2Error.UNAUTHORIZED_CLIENT));
-        assertThat(requestObjectError.get().getRedirectURI().toString(), equalTo(REDIRECT_URI));
+                requestObjectError.get().errorObject(), equalTo(OAuth2Error.UNAUTHORIZED_CLIENT));
+        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
     }
 
     @Test
@@ -422,8 +471,8 @@ class RequestObjectServiceTest {
         var requestObjectError = service.validateRequestObject(authRequest);
 
         assertTrue(requestObjectError.isPresent());
-        assertThat(requestObjectError.get().getErrorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
-        assertThat(requestObjectError.get().getRedirectURI().toString(), equalTo(REDIRECT_URI));
+        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
+        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
     }
 
     @Test
@@ -444,8 +493,8 @@ class RequestObjectServiceTest {
         var requestObjectError = service.validateRequestObject(authRequest);
 
         assertTrue(requestObjectError.isPresent());
-        assertThat(requestObjectError.get().getErrorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
-        assertThat(requestObjectError.get().getRedirectURI().toString(), equalTo(REDIRECT_URI));
+        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
+        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
     }
 
     @Test
@@ -487,11 +536,11 @@ class RequestObjectServiceTest {
         var requestObjectError = service.validateRequestObject(generateAuthRequest(signedJWT));
 
         assertTrue(requestObjectError.isPresent());
-        assertThat(requestObjectError.get().getErrorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
+        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
         assertThat(
-                requestObjectError.get().getErrorObject().getDescription(),
+                requestObjectError.get().errorObject().getDescription(),
                 equalTo("Request is missing state parameter"));
-        assertThat(requestObjectError.get().getRedirectURI().toString(), equalTo(REDIRECT_URI));
+        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
     }
 
     @Test
@@ -511,11 +560,11 @@ class RequestObjectServiceTest {
         var requestObjectError = service.validateRequestObject(generateAuthRequest(signedJWT));
 
         assertTrue(requestObjectError.isPresent());
-        assertThat(requestObjectError.get().getErrorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
+        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
         assertThat(
-                requestObjectError.get().getErrorObject().getDescription(),
+                requestObjectError.get().errorObject().getDescription(),
                 equalTo("Request is missing nonce parameter"));
-        assertThat(requestObjectError.get().getRedirectURI().toString(), equalTo(REDIRECT_URI));
+        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
     }
 
     @Test
@@ -536,8 +585,8 @@ class RequestObjectServiceTest {
         var requestObjectError = service.validateRequestObject(authRequest);
 
         assertTrue(requestObjectError.isPresent());
-        assertThat(requestObjectError.get().getErrorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
-        assertThat(requestObjectError.get().getRedirectURI().toString(), equalTo(REDIRECT_URI));
+        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
+        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
     }
 
     private ClientRegistry generateClientRegistry(String clientType, Scope scope) {

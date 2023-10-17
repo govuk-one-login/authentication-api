@@ -9,7 +9,6 @@ import com.nimbusds.langtag.LangTagException;
 import com.nimbusds.langtag.LangTagUtils;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
-import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.apache.logging.log4j.LogManager;
@@ -37,6 +36,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import static com.nimbusds.oauth2.sdk.ResponseType.CODE;
 import static java.util.Collections.emptyList;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
@@ -73,56 +73,58 @@ public class RequestObjectService {
         attachLogFieldToLogs(CLIENT_ID, clientId);
 
         var client = dynamoClientService.getClient(clientId).orElse(null);
-        try {
 
-            if (Objects.isNull(client)) {
-                var errorMsg = "No Client found with given ClientID";
-                LOG.warn(errorMsg);
-                throw new RuntimeException(errorMsg);
-            }
-            var signedJWT = (SignedJWT) authRequest.getRequestObject();
-            var signatureValid = isSignatureValid(signedJWT, client.getPublicKey());
-            if (!signatureValid) {
-                LOG.error("Invalid Signature on request JWT");
-                throw new RuntimeException();
-            }
+        if (Objects.isNull(client)) {
+            var errorMsg = "No Client found with given ClientID";
+            LOG.warn(errorMsg);
+            throw new RuntimeException(errorMsg);
+        }
+        var signedJWT = (SignedJWT) authRequest.getRequestObject();
+        var signatureValid = isSignatureValid(signedJWT, client.getPublicKey());
+        if (!signatureValid) {
+            LOG.error("Invalid Signature on request JWT");
+            throw new RuntimeException();
+        }
+
+        try {
             var jwtClaimsSet = signedJWT.getJWTClaimsSet();
-            if (client.getRedirectUrls().stream()
-                    .filter(Objects::nonNull)
-                    .noneMatch(s -> s.equals(jwtClaimsSet.getClaim("redirect_uri")))) {
+
+            if (jwtClaimsSet.getStringClaim("redirect_uri") == null
+                    || !client.getRedirectUrls()
+                            .contains(jwtClaimsSet.getStringClaim("redirect_uri"))) {
                 throw new RuntimeException("Invalid Redirect URI in request JWT");
             }
+
             var redirectURI = URI.create((String) jwtClaimsSet.getClaim("redirect_uri"));
-            if (Boolean.FALSE.equals(client.getClientType().equals(ClientType.APP.getValue()))) {
+
+            if (!ClientType.APP.getValue().equals(client.getClientType())) {
                 LOG.error("ClientType of client is not 'app'");
-                return Optional.of(
-                        new AuthRequestError(OAuth2Error.UNAUTHORIZED_CLIENT, redirectURI));
+                return errorResponse(redirectURI, OAuth2Error.UNAUTHORIZED_CLIENT);
             }
-            if (!authRequest.getResponseType().toString().equals(ResponseType.CODE.toString())) {
+
+            if (!CODE.toString().equals(authRequest.getResponseType().toString())) {
                 LOG.error(
                         "Unsupported responseType included in request. Expected responseType of code");
-                return Optional.of(
-                        new AuthRequestError(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE, redirectURI));
+                return errorResponse(redirectURI, OAuth2Error.UNSUPPORTED_RESPONSE_TYPE);
             }
-            if (requestContainsInvalidScopes(
-                    authRequest.getScope().toStringList(), client, false)) {
+
+            if (requestContainsInvalidScopes(authRequest.getScope(), client, false)) {
                 LOG.error(
                         "Invalid scopes in authRequest. Scopes in request: {}",
                         authRequest.getScope().toStringList());
-                return Optional.of(new AuthRequestError(OAuth2Error.INVALID_SCOPE, redirectURI));
+                return errorResponse(redirectURI, OAuth2Error.INVALID_SCOPE);
             }
             if (Objects.isNull(jwtClaimsSet.getClaim("client_id"))
                     || !jwtClaimsSet
                             .getClaim("client_id")
                             .toString()
                             .equals(authRequest.getClientID().getValue())) {
-                return Optional.of(
-                        new AuthRequestError(OAuth2Error.UNAUTHORIZED_CLIENT, redirectURI));
+                return errorResponse(redirectURI, OAuth2Error.UNAUTHORIZED_CLIENT);
             }
             if (Objects.nonNull(jwtClaimsSet.getClaim("request"))
                     || Objects.nonNull(jwtClaimsSet.getClaim("request_uri"))) {
                 LOG.error("request or request_uri claim should not be included in request JWT");
-                return Optional.of(new AuthRequestError(OAuth2Error.INVALID_REQUEST, redirectURI));
+                return errorResponse(redirectURI, OAuth2Error.INVALID_REQUEST);
             }
             if (Objects.isNull(jwtClaimsSet.getAudience())
                     || !jwtClaimsSet
@@ -135,45 +137,40 @@ public class RequestObjectService {
                                                     "/authorize")
                                             .toString())) {
                 LOG.error("Invalid or missing audience");
-                return Optional.of(new AuthRequestError(OAuth2Error.ACCESS_DENIED, redirectURI));
+                return errorResponse(redirectURI, OAuth2Error.ACCESS_DENIED);
             }
             if (Objects.isNull(jwtClaimsSet.getIssuer())
                     || !jwtClaimsSet.getIssuer().equals(client.getClientID())) {
                 LOG.error("Invalid or missing issuer");
-                return Optional.of(
-                        new AuthRequestError(OAuth2Error.UNAUTHORIZED_CLIENT, redirectURI));
+                return errorResponse(redirectURI, OAuth2Error.UNAUTHORIZED_CLIENT);
             }
-            if (!ResponseType.CODE.toString().equals(jwtClaimsSet.getClaim("response_type"))) {
+
+            if (!CODE.toString().equals(jwtClaimsSet.getClaim("response_type"))) {
                 LOG.error(
                         "Unsupported responseType included in request JWT. Expected responseType of code");
-                return Optional.of(
-                        new AuthRequestError(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE, redirectURI));
+                return errorResponse(redirectURI, OAuth2Error.UNSUPPORTED_RESPONSE_TYPE);
             }
             if (Objects.isNull(jwtClaimsSet.getClaim("scope"))
                     || requestContainsInvalidScopes(
-                            Scope.parse(jwtClaimsSet.getClaim("scope").toString()).toStringList(),
-                            client,
-                            true)) {
+                            Scope.parse(jwtClaimsSet.getClaim("scope").toString()), client, true)) {
                 LOG.error("Invalid scopes in request JWT");
-                return Optional.of(new AuthRequestError(OAuth2Error.INVALID_SCOPE, redirectURI));
+                return errorResponse(redirectURI, OAuth2Error.INVALID_SCOPE);
             }
             if (Objects.isNull(jwtClaimsSet.getClaim("state"))) {
                 LOG.error("State is missing from authRequest");
-                return Optional.of(
-                        new AuthRequestError(
-                                new ErrorObject(
-                                        OAuth2Error.INVALID_REQUEST_CODE,
-                                        "Request is missing state parameter"),
-                                redirectURI));
+                return errorResponse(
+                        redirectURI,
+                        new ErrorObject(
+                                OAuth2Error.INVALID_REQUEST_CODE,
+                                "Request is missing state parameter"));
             }
             if (Objects.isNull(jwtClaimsSet.getClaim("nonce"))) {
                 LOG.error("Nonce is missing from authRequest");
-                return Optional.of(
-                        new AuthRequestError(
-                                new ErrorObject(
-                                        OAuth2Error.INVALID_REQUEST_CODE,
-                                        "Request is missing nonce parameter"),
-                                redirectURI));
+                return errorResponse(
+                        redirectURI,
+                        new ErrorObject(
+                                OAuth2Error.INVALID_REQUEST_CODE,
+                                "Request is missing nonce parameter"));
             }
             var vtrError = validateVtr(jwtClaimsSet, redirectURI);
             if (vtrError.isPresent()) {
@@ -185,12 +182,11 @@ public class RequestObjectService {
                     LangTagUtils.parseLangTagList(uiLocales.split(" "));
                 } catch (ClassCastException | LangTagException e) {
                     LOG.warn("ui_locales parameter is invalid: {}", e.getMessage());
-                    return Optional.of(
-                            new AuthRequestError(
-                                    new ErrorObject(
-                                            OAuth2Error.INVALID_REQUEST_CODE,
-                                            "ui_locales parameter is invalid"),
-                                    redirectURI));
+                    return errorResponse(
+                            redirectURI,
+                            new ErrorObject(
+                                    OAuth2Error.INVALID_REQUEST_CODE,
+                                    "ui_locales parameter is invalid"));
                 }
             }
             LOG.info("RequestObject has passed initial validation");
@@ -201,16 +197,22 @@ public class RequestObjectService {
     }
 
     private boolean requestContainsInvalidScopes(
-            List<String> scopes, ClientRegistry clientRegistry, boolean requestObject) {
+            Scope scopes, ClientRegistry clientRegistry, boolean requestObject) {
         if (requestObject && !scopes.contains(CustomScopeValue.DOC_CHECKING_APP.getValue())) {
             return true;
         }
-        for (String scope : scopes) {
-            if (ValidScopes.getAllValidScopes().stream().noneMatch(t -> t.equals(scope))) {
+
+        for (String scope : scopes.toStringList()) {
+            if (!ValidScopes.getAllValidScopes().contains(scope)) {
+                return true;
+            }
+
+            if (!clientRegistry.getScopes().contains(scope)) {
                 return true;
             }
         }
-        return !clientRegistry.getScopes().containsAll(scopes);
+
+        return false;
     }
 
     private static boolean isSignatureValid(SignedJWT signedJWT, String publicKey) {
@@ -237,20 +239,21 @@ public class RequestObjectService {
             var vectorOfTrust = VectorOfTrust.parseFromAuthRequestAttribute(authRequestVtr);
             if (vectorOfTrust.containsLevelOfConfidence()
                     && !ipvCapacityService.isIPVCapacityAvailable()) {
-                return Optional.of(
-                        new AuthRequestError(OAuth2Error.TEMPORARILY_UNAVAILABLE, redirectURI));
+                return errorResponse(redirectURI, OAuth2Error.TEMPORARILY_UNAVAILABLE);
             }
         } catch (IllegalArgumentException e) {
             LOG.error(
                     "vtr in AuthRequest is not valid. vtr in request: {}. IllegalArgumentException: {}",
                     authRequestVtr,
                     e);
-            return Optional.of(
-                    new AuthRequestError(
-                            new ErrorObject(
-                                    OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid"),
-                            redirectURI));
+            return errorResponse(
+                    redirectURI,
+                    new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid"));
         }
         return Optional.empty();
+    }
+
+    private static Optional<AuthRequestError> errorResponse(URI uri, ErrorObject error) {
+        return Optional.of(new AuthRequestError(error, uri));
     }
 }
