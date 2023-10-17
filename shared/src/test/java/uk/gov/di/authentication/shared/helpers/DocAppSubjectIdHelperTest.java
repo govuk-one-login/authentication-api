@@ -15,13 +15,12 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
-import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 
 import java.net.URI;
-import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -44,10 +43,11 @@ class DocAppSubjectIdHelperTest {
     void shouldUseSubjectFromRequestObjectWhenPresentAndCustomDocAppClaimEnabled()
             throws JOSEException {
         var expectedSubject = new Subject();
-        var clientSession = generateClientSession(expectedSubject);
+        var authRequestParams = generateAuthRequestParams(expectedSubject);
 
         var docAppSubjectId =
-                DocAppSubjectIdHelper.calculateDocAppSubjectId(clientSession, true, DOC_APP_DOMAIN);
+                DocAppSubjectIdHelper.calculateDocAppSubjectId(
+                        authRequestParams, true, DOC_APP_DOMAIN);
 
         assertThat(docAppSubjectId, equalTo(expectedSubject));
     }
@@ -57,11 +57,11 @@ class DocAppSubjectIdHelperTest {
             shouldUsePairwiseSubjectWhenSubjectInRequestObjectIsPresentButCustomDocAppClaimIsNotEnabled()
                     throws JOSEException {
         var expectedSubject = new Subject();
-        var clientSession = generateClientSession(expectedSubject);
+        var authRequestParams = generateAuthRequestParams(expectedSubject);
 
         var docAppSubjectId =
                 DocAppSubjectIdHelper.calculateDocAppSubjectId(
-                        clientSession, false, DOC_APP_DOMAIN);
+                        authRequestParams, false, DOC_APP_DOMAIN);
 
         assertThat(docAppSubjectId, not(equalTo(expectedSubject)));
         assertTrue(docAppSubjectId.getValue().startsWith("urn:fdc:gov.uk:2022:"));
@@ -70,11 +70,11 @@ class DocAppSubjectIdHelperTest {
     @Test
     void shouldUsePairwiseSubjectWhenSubjectNotPresentInRequestObjectAndCustomAppClaimIsNotEnabled()
             throws JOSEException {
-        var clientSession = generateClientSession(null);
+        var authRequestParams = generateAuthRequestParams(null);
 
         var docAppSubjectId =
                 DocAppSubjectIdHelper.calculateDocAppSubjectId(
-                        clientSession, false, DOC_APP_DOMAIN);
+                        authRequestParams, false, DOC_APP_DOMAIN);
 
         assertTrue(docAppSubjectId.getValue().startsWith("urn:fdc:gov.uk:2022:"));
     }
@@ -82,7 +82,7 @@ class DocAppSubjectIdHelperTest {
     @Test
     void shouldUsePairwiseSubjectWhenCustomAppClaimIsEnabledButSubjectNotPresentInRequestObject()
             throws JOSEException {
-        var clientSession = generateClientSession(null);
+        var clientSession = generateAuthRequestParams(null);
 
         var docAppSubjectId =
                 DocAppSubjectIdHelper.calculateDocAppSubjectId(clientSession, true, DOC_APP_DOMAIN);
@@ -90,7 +90,8 @@ class DocAppSubjectIdHelperTest {
         assertTrue(docAppSubjectId.getValue().startsWith("urn:fdc:gov.uk:2022:"));
     }
 
-    private ClientSession generateClientSession(Subject subject) throws JOSEException {
+    private Map<String, List<String>> generateAuthRequestParams(Subject subject)
+            throws JOSEException {
         var jwtClaimsSetBuilder =
                 new JWTClaimsSet.Builder()
                         .audience(AUDIENCE)
@@ -115,10 +116,6 @@ class DocAppSubjectIdHelperTest {
                         .nonce(new Nonce())
                         .requestObject(signedJWT)
                         .build();
-        return new ClientSession(
-                authRequest.toParameters(),
-                LocalDateTime.now(),
-                VectorOfTrust.getDefaults(),
-                "client-name");
+        return authRequest.toParameters();
     }
 }

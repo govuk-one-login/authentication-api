@@ -6,6 +6,7 @@ module "oidc_authorize_role" {
 
   policies_to_attach = [
     aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
+    aws_iam_policy.doc_app_auth_kms_policy.arn,
     aws_iam_policy.dynamo_user_read_access_policy.arn,
     aws_iam_policy.dynamo_client_registry_read_access_policy.arn,
     aws_iam_policy.lambda_sns_policy.arn,
@@ -27,8 +28,6 @@ module "authorize" {
 
   handler_environment_variables = {
     DOMAIN_NAME                          = local.service_domain
-    DOC_APP_API_ENABLED                  = var.doc_app_api_enabled
-    DYNAMO_ENDPOINT                      = var.use_localstack ? var.lambda_dynamo_endpoint : null
     TXMA_AUDIT_QUEUE_URL                 = module.oidc_txma_audit.queue_url
     ENVIRONMENT                          = var.environment
     HEADERS_CASE_INSENSITIVE             = var.use_localstack ? "true" : "false"
@@ -43,6 +42,17 @@ module "authorize" {
     INTERNAl_SECTOR_URI                  = var.internal_sector_uri
     ORCH_TO_AUTH_TOKEN_SIGNING_KEY_ALIAS = local.orch_to_auth_signing_key_alias_name
     SUPPORT_AUTH_ORCH_SPLIT              = var.support_auth_orch_split
+    DOC_APP_AUTHORISATION_URI            = var.doc_app_authorisation_uri
+    DOC_APP_AUTHORISATION_CALLBACK_URI   = var.doc_app_authorisation_callback_uri
+    DOC_APP_AUTHORISATION_CLIENT_ID      = var.doc_app_authorisation_client_id
+    DOC_APP_JWKS_URL                     = var.doc_app_jwks_endpoint
+    DOC_APP_ENCRYPTION_KEY_ID            = var.doc_app_encryption_key_id
+    DOC_APP_TOKEN_SIGNING_KEY_ALIAS      = local.doc_app_auth_key_alias_name
+    DOC_APP_API_ENABLED                  = var.doc_app_api_enabled
+    DOC_APP_DOMAIN                       = var.doc_app_domain
+    DOC_APP_DECOUPLE_ENABLED             = var.doc_app_decouple_enabled
+    DYNAMO_ENDPOINT                      = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    CUSTOM_DOC_APP_CLAIM_ENABLED         = var.custom_doc_app_claim_enabled
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.AuthorisationHandler::handleRequest"
   rest_api_id           = aws_api_gateway_rest_api.di_authentication_api.id

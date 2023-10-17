@@ -5,9 +5,10 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.authentication.shared.entity.ClientSession;
 
 import java.net.URI;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 public class DocAppSubjectIdHelper {
@@ -17,12 +18,14 @@ public class DocAppSubjectIdHelper {
     private DocAppSubjectIdHelper() {}
 
     public static Subject calculateDocAppSubjectId(
-            ClientSession clientSession, boolean isCustomDocAppClaimEnabled, URI docAppDomain) {
+            Map<String, List<String>> authRequestParams,
+            boolean isCustomDocAppClaimEnabled,
+            URI docAppDomain) {
         try {
             LOG.info(
                     "Calculating DocAppSubjectId. CustomDocAppClaim is enabled: {}",
                     isCustomDocAppClaimEnabled);
-            var authRequest = AuthenticationRequest.parse(clientSession.getAuthRequestParams());
+            var authRequest = AuthenticationRequest.parse(authRequestParams);
             var secureRequestSubject =
                     authRequest.getRequestObject().getJWTClaimsSet().getSubject();
             if (isCustomDocAppClaimEnabled && Objects.nonNull(secureRequestSubject)) {

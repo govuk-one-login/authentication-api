@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.app.services;
+package uk.gov.di.authentication.shared.services;
 
 import com.nimbusds.jose.EncryptionMethod;
 import com.nimbusds.jose.JOSEException;
@@ -27,15 +27,11 @@ import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.shared.exceptions.DocAppAuthorisationServiceException;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.JwksService;
-import uk.gov.di.authentication.shared.services.KmsConnectionService;
-import uk.gov.di.authentication.shared.services.RedisConnectionService;
-import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.net.MalformedURLException;
 import java.security.interfaces.RSAPublicKey;
@@ -54,6 +50,8 @@ public class DocAppAuthorisationService {
     private final KmsConnectionService kmsConnectionService;
     private final JwksService jwksService;
     public static final String STATE_STORAGE_PREFIX = "state:";
+
+    public static final String STATE_PARAM = "state";
     private static final JWSAlgorithm SIGNING_ALGORITHM = JWSAlgorithm.ES256;
 
     private final Json objectMapper = SerializationService.getInstance();
@@ -81,14 +79,14 @@ public class DocAppAuthorisationService {
             LOG.warn("Error response found in Doc Checking App Authorisation response");
             return Optional.of(new ErrorObject(headers.get("error")));
         }
-        if (!headers.containsKey("state") || headers.get("state").isEmpty()) {
+        if (!headers.containsKey(STATE_PARAM) || headers.get(STATE_PARAM).isEmpty()) {
             LOG.warn("No state param in Doc Checking App Authorisation response");
             return Optional.of(
                     new ErrorObject(
                             OAuth2Error.INVALID_REQUEST_CODE,
                             "No state param present in Authorisation response"));
         }
-        if (!isStateValid(sessionId, headers.get("state"))) {
+        if (!isStateValid(sessionId, headers.get(STATE_PARAM))) {
             return Optional.of(
                     new ErrorObject(
                             OAuth2Error.INVALID_REQUEST_CODE,
@@ -114,7 +112,7 @@ public class DocAppAuthorisationService {
                     configurationService.getSessionExpiry());
         } catch (JsonException e) {
             LOG.error("Unable to save state to Redis");
-            throw new RuntimeException(e);
+            throw new DocAppAuthorisationServiceException(e);
         }
     }
 
@@ -170,7 +168,7 @@ public class DocAppAuthorisationService {
                         .issueTime(NowHelper.now())
                         .notBeforeTime(NowHelper.now())
                         .jwtID(jwtID)
-                        .claim("state", state.getValue())
+                        .claim(STATE_PARAM, state.getValue())
                         .claim(
                                 "redirect_uri",
                                 configurationService.getDocAppAuthorisationCallbackURI().toString())
@@ -205,7 +203,7 @@ public class DocAppAuthorisationService {
             return encryptedJWT;
         } catch (ParseException | JOSEException e) {
             LOG.error("Error when generating SignedJWT", e);
-            throw new RuntimeException(e);
+            throw new DocAppAuthorisationServiceException(e);
         }
     }
 
@@ -225,10 +223,10 @@ public class DocAppAuthorisationService {
             return EncryptedJWT.parse(jweObject.serialize());
         } catch (JOSEException e) {
             LOG.error("Error when encrypting SignedJWT", e);
-            throw new RuntimeException(e);
+            throw new DocAppAuthorisationServiceException(e);
         } catch (ParseException e) {
             LOG.error("Error when parsing JWE object to EncryptedJWT", e);
-            throw new RuntimeException(e);
+            throw new DocAppAuthorisationServiceException(e);
         }
     }
 
@@ -242,10 +240,10 @@ public class DocAppAuthorisationService {
             return new RSAKey.Builder((RSAKey) encryptionJWK).build().toRSAPublicKey();
         } catch (JOSEException e) {
             LOG.error("Error parsing the public key to RSAPublicKey", e);
-            throw new RuntimeException();
+            throw new DocAppAuthorisationServiceException(e);
         } catch (MalformedURLException e) {
             LOG.error("Invalid JWKs URL", e);
-            throw new RuntimeException(e);
+            throw new DocAppAuthorisationServiceException(e);
         }
     }
 }

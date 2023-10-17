@@ -4,6 +4,7 @@ import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
@@ -12,6 +13,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 public class DocAppUserHelper {
 
@@ -21,6 +23,11 @@ public class DocAppUserHelper {
 
     public static boolean isDocCheckingAppUser(UserContext context) {
         var authRequestParams = context.getClientSession().getAuthRequestParams();
+        return isDocCheckingAppUser(authRequestParams, context.getClient());
+    }
+
+    public static boolean isDocCheckingAppUser(
+            Map<String, List<String>> authRequestParams, Optional<ClientRegistry> clientRegistry) {
         if (!authRequestParams.containsKey("request")) {
             LOG.info("No request object in auth request");
             return false;
@@ -29,8 +36,8 @@ public class DocAppUserHelper {
             LOG.info("No doc app scope in auth request");
             return false;
         } else {
-            return context.getClient()
-                    .filter(t -> t.getClientType().equals(ClientType.APP.getValue()))
+            return clientRegistry
+                    .filter(client -> client.getClientType().equals(ClientType.APP.getValue()))
                     .isPresent();
         }
     }
