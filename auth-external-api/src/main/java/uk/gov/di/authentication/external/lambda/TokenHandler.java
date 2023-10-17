@@ -9,6 +9,7 @@ import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.external.domain.AuthExternalApiAuditableEvent;
 import uk.gov.di.authentication.external.exceptions.AuthCodeStoreRetreivalException;
 import uk.gov.di.authentication.external.services.TokenService;
 import uk.gov.di.authentication.external.validators.TokenRequestValidator;
@@ -17,6 +18,7 @@ import uk.gov.di.authentication.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.RequestBodyHelper;
 import uk.gov.di.authentication.shared.services.AccessTokenService;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAuthCodeService;
 
@@ -37,18 +39,21 @@ public class TokenHandler
     private final AccessTokenService accessTokenStoreService;
     private final TokenService tokenUtilityService;
     private final TokenRequestValidator tokenRequestValidator;
+    private final AuditService auditService;
 
     public TokenHandler(
             ConfigurationService configurationService,
             DynamoAuthCodeService authorisationCodeService,
             AccessTokenService accessTokenService,
             TokenService tokenUtilityService,
-            TokenRequestValidator tokenRequestValidator) {
+            TokenRequestValidator tokenRequestValidator,
+            AuditService auditService) {
         this.configurationService = configurationService;
         this.authorisationCodeService = authorisationCodeService;
         this.accessTokenStoreService = accessTokenService;
         this.tokenUtilityService = tokenUtilityService;
         this.tokenRequestValidator = tokenRequestValidator;
+        this.auditService = auditService;
     }
 
     public TokenHandler() {
@@ -66,6 +71,7 @@ public class TokenHandler
         String orchestratorClientId = configurationService.getOrchestrationClientId();
         this.tokenRequestValidator =
                 new TokenRequestValidator(orchestratorCallbackRedirectUri, orchestratorClientId);
+        this.auditService = new AuditService(configurationService);
     }
 
     @Override
@@ -143,6 +149,17 @@ public class TokenHandler
                     authCodeStore.getSectorIdentifier());
 
             authorisationCodeService.updateHasBeenUsed(authCodeStore.getAuthCode(), true);
+
+            auditService.submitAuditEvent(
+                    AuthExternalApiAuditableEvent.TOKEN_SENT_TO_ORCHESTRATION,
+                    AuditService.UNKNOWN,
+                    AuditService.UNKNOWN,
+                    Optional.ofNullable(requestBody.get("client_id")).orElse(AuditService.UNKNOWN),
+                    Optional.ofNullable(authCodeStore.getSubjectID()).orElse(AuditService.UNKNOWN),
+                    AuditService.UNKNOWN,
+                    AuditService.UNKNOWN,
+                    AuditService.UNKNOWN,
+                    AuditService.UNKNOWN);
 
             Map<String, String> headers = new HashMap<>();
             headers.put("Content-Type", "application/json");

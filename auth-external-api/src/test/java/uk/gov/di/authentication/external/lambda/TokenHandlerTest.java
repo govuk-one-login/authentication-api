@@ -11,11 +11,13 @@ import com.nimbusds.oauth2.sdk.token.Tokens;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.external.domain.AuthExternalApiAuditableEvent;
 import uk.gov.di.authentication.external.services.TokenService;
 import uk.gov.di.authentication.external.validators.TokenRequestValidator;
 import uk.gov.di.authentication.shared.entity.AuthCodeStore;
 import uk.gov.di.authentication.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.authentication.shared.services.AccessTokenService;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAuthCodeService;
 
@@ -37,6 +39,7 @@ class TokenHandlerTest {
     private AccessTokenService accessTokenService;
     private TokenRequestValidator tokenRequestValidator;
     private static final TokenService tokenUtilityService = mock(TokenService.class);
+    private static final AuditService auditService = mock(AuditService.class);
     private static final BearerAccessToken SUCCESS_TOKEN_RESPONSE_ACCESS_TOKEN =
             new BearerAccessToken();
     private static final AccessTokenResponse SUCCESS_TOKEN_RESPONSE =
@@ -44,6 +47,7 @@ class TokenHandlerTest {
     private static final DynamoAuthCodeService authCodeService = mock(DynamoAuthCodeService.class);
     private static final long UNIX_TIME_16_08_2099 = 4090554490L;
     private static final String VALID_AUTH_CODE = "valid-auth-code";
+    private static final String CLIENT_ID = "test-client-id";
     private static final AuthCodeStore VALID_AUTH_CODE_STORE =
             new AuthCodeStore()
                     .withAuthCode(VALID_AUTH_CODE)
@@ -105,7 +109,8 @@ class TokenHandlerTest {
                         authCodeService,
                         accessTokenService,
                         tokenUtilityService,
-                        tokenRequestValidator);
+                        tokenRequestValidator,
+                        auditService);
     }
 
     @Test
@@ -189,7 +194,7 @@ class TokenHandlerTest {
     @Test
     void shouldReturn200WithAccessTokenWhenAuthCodeStoreIsValidAndMarkAuthCodeStoreAsUsed() {
         APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
-        String formData = "code=" + VALID_AUTH_CODE;
+        String formData = "code=" + VALID_AUTH_CODE + "&client_id=" + CLIENT_ID;
         request.setBody(formData);
 
         APIGatewayProxyResponseEvent response = tokenHandler.tokenRequestHandler(request);
@@ -205,5 +210,17 @@ class TokenHandlerTest {
                         VALID_AUTH_CODE_STORE.getIsNewAccount(),
                         VALID_AUTH_CODE_STORE.getSectorIdentifier());
         verify(authCodeService).updateHasBeenUsed(VALID_AUTH_CODE, true);
+
+        verify(auditService)
+                .submitAuditEvent(
+                        AuthExternalApiAuditableEvent.TOKEN_SENT_TO_ORCHESTRATION,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        CLIENT_ID,
+                        VALID_AUTH_CODE_STORE.getSubjectID(),
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN);
     }
 }
