@@ -52,7 +52,7 @@ class WellknownHandlerTest {
         assertThat(metadata.getRegistrationEndpointURI(), equalTo(expectedRegistrationURI));
         assertThat(metadata.supportsBackChannelLogout(), equalTo(true));
         assertThat(metadata.getCustomParameters().get("trustmarks"), equalTo(expectedTrustMarkURI));
-
+        assertThat(metadata.supportsRequestURIParam(), equalTo(false));
         ValidClaims.allOneLoginClaims()
                 .forEach(claim -> assertTrue(metadata.getClaims().contains(claim)));
 
