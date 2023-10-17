@@ -62,6 +62,7 @@ import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.a
 import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.ADDRESS_CLAIM;
 import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.CORE_IDENTITY_CLAIM;
 import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.DRIVING_PERMIT;
+import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.NINO;
 import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.PASSPORT_CLAIM;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -184,30 +185,36 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         ValidClaims.PASSPORT.getValue(),
                         PASSPORT_CLAIM,
                         ValidClaims.DRIVING_PERMIT.getValue(),
-                        DRIVING_PERMIT),
+                        DRIVING_PERMIT,
+                        ValidClaims.NINO.getValue(),
+                        NINO),
                 180,
                 true);
 
         var response = makeIdentityUserinfoRequest();
-
         assertThat(response, hasStatus(200));
         var userInfoResponse = UserInfo.parse(response.getBody());
+
         assertThat(userInfoResponse.getEmailVerified(), equalTo(true));
         assertThat(userInfoResponse.getEmailAddress(), equalTo(TEST_EMAIL_ADDRESS));
         assertThat(userInfoResponse.getPhoneNumber(), equalTo(FORMATTED_PHONE_NUMBER));
         assertThat(userInfoResponse.getPhoneNumberVerified(), equalTo(true));
         assertThat(userInfoResponse.getSubject(), equalTo(PUBLIC_SUBJECT));
+
         var addressClaim = (JSONArray) userInfoResponse.getClaim(ValidClaims.ADDRESS.getValue());
-        assertThat(((JSONObject) addressClaim.get(0)).size(), equalTo(7));
         var passportClaim = (JSONArray) userInfoResponse.getClaim(ValidClaims.PASSPORT.getValue());
-        assertThat(((JSONObject) passportClaim.get(0)).size(), equalTo(2));
         var drivingPermitClaim =
                 (JSONArray) userInfoResponse.getClaim(ValidClaims.DRIVING_PERMIT.getValue());
+        var ninoClaim = (JSONArray) userInfoResponse.getClaim(ValidClaims.NINO.getValue());
+        assertThat(((JSONObject) addressClaim.get(0)).size(), equalTo(7));
+        assertThat(((JSONObject) passportClaim.get(0)).size(), equalTo(2));
         assertThat(((JSONObject) drivingPermitClaim.get(0)).size(), equalTo(6));
+        assertThat(((JSONObject) ninoClaim.get(0)).size(), equalTo(1));
+
         assertThat(
                 userInfoResponse.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()),
                 equalTo(signedCredential.serialize()));
-        assertThat(userInfoResponse.toJWTClaimsSet().getClaims().size(), equalTo(9));
+        assertThat(userInfoResponse.toJWTClaimsSet().getClaims().size(), equalTo(10));
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, singletonList(USER_INFO_RETURNED));
     }
@@ -327,7 +334,8 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .add(ValidClaims.CORE_IDENTITY_JWT.getValue())
                         .add(ValidClaims.ADDRESS.getValue())
                         .add(ValidClaims.PASSPORT.getValue())
-                        .add(ValidClaims.DRIVING_PERMIT.getValue());
+                        .add(ValidClaims.DRIVING_PERMIT.getValue())
+                        .add(ValidClaims.NINO.getValue());
         var oidcValidClaimsRequest =
                 new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
         var claimsSet =

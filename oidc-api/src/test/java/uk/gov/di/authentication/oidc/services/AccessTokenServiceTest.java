@@ -49,7 +49,6 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 class AccessTokenServiceTest {
-
     private AccessTokenService validationService;
     private final RedisConnectionService redisConnectionService =
             mock(RedisConnectionService.class);
@@ -68,12 +67,12 @@ class AccessTokenServiceTest {
     private static final String KEY_ID = "14342354354353";
     private static final String ACCESS_TOKEN_PREFIX = "ACCESS_TOKEN:";
     private static final Json objectMapper = SerializationService.getInstance();
-
     private final ClaimsSetRequest claimsSetRequest =
             new ClaimsSetRequest()
                     .add(ValidClaims.ADDRESS.getValue())
                     .add(ValidClaims.PASSPORT.getValue())
                     .add(ValidClaims.DRIVING_PERMIT.getValue())
+                    .add(ValidClaims.NINO.getValue())
                     .add(ValidClaims.CORE_IDENTITY_JWT.getValue());
     private final OIDCClaimsRequest oidcValidClaimsRequest =
             new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
@@ -83,18 +82,18 @@ class AccessTokenServiceTest {
     public final CaptureLoggingExtension logging =
             new CaptureLoggingExtension(AccessTokenService.class);
 
-    @AfterEach
-    void tearDown() {
-        assertThat(
-                logging.events(),
-                not(hasItem(withMessageContaining(CLIENT_ID, SUBJECT.toString()))));
-    }
-
     @BeforeEach
     void setUp() {
         validationService =
                 new AccessTokenService(
                         redisConnectionService, clientService, tokenValidationService);
+    }
+
+    @AfterEach
+    void tearDown() {
+        assertThat(
+                logging.events(),
+                not(hasItem(withMessageContaining(CLIENT_ID, SUBJECT.toString()))));
     }
 
     private static Stream<Boolean> identityEnabled() {
@@ -183,6 +182,7 @@ class AccessTokenServiceTest {
     @MethodSource("identityEnabled")
     void shouldThrowExceptionWhenTokenHasExpired(boolean identityEndpoint) {
         accessToken = createSignedAccessToken(null, true);
+
         var accessTokenException =
                 assertThrows(
                         AccessTokenException.class,

@@ -57,6 +57,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.ADDRESS_CLAIM;
 import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.DRIVING_PERMIT;
+import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.NINO;
 import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.PASSPORT_CLAIM;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
@@ -88,7 +89,9 @@ class UserInfoServiceTest {
             new ClaimsSetRequest()
                     .add(ValidClaims.CORE_IDENTITY_JWT.getValue())
                     .add(ValidClaims.ADDRESS.getValue())
-                    .add(ValidClaims.PASSPORT.getValue());
+                    .add(ValidClaims.PASSPORT.getValue())
+                    .add(ValidClaims.DRIVING_PERMIT.getValue())
+                    .add(ValidClaims.NINO.getValue());
     private final OIDCClaimsRequest oidcValidClaimsRequest =
             new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
     private final String coreIdentityJWT = SignedCredentialHelper.generateCredential().serialize();
@@ -144,6 +147,7 @@ class UserInfoServiceTest {
         assertNull(userInfo.getClaim(ValidClaims.ADDRESS.getValue()));
         assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
         assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
+        assertNull(userInfo.getClaim(ValidClaims.NINO.getValue()));
     }
 
     @Test
@@ -161,7 +165,7 @@ class UserInfoServiceTest {
                 new AuthenticationUserInfo().withUserInfo(generateUserInfo().toJSONString());
 
         when(userInfoStorageService.getAuthenticationUserInfoData(
-                accessTokenInfo.getAccessTokenStore().getInternalSubjectId()))
+                        accessTokenInfo.getAccessTokenStore().getInternalSubjectId()))
                 .thenReturn(Optional.of(testUserInfo));
 
         var userInfo = userInfoService.populateUserInfo(accessTokenInfo);
@@ -174,6 +178,7 @@ class UserInfoServiceTest {
         assertNull(userInfo.getClaim(ValidClaims.ADDRESS.getValue()));
         assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
         assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
+        assertNull(userInfo.getClaim(ValidClaims.NINO.getValue()));
     }
 
     @Nested
@@ -189,7 +194,8 @@ class UserInfoServiceTest {
             var accessTokenStore =
                     new AccessTokenStore(accessToken.getValue(), INTERNAL_SUBJECT.getValue());
             var accessTokenInfo =
-                    new AccessTokenInfo(accessTokenStore, SUBJECT.getValue(), SCOPES, null, CLIENT_ID);
+                    new AccessTokenInfo(
+                            accessTokenStore, SUBJECT.getValue(), SCOPES, null, CLIENT_ID);
 
             var userInfo = userInfoService.populateUserInfo(accessTokenInfo);
 
@@ -200,12 +206,14 @@ class UserInfoServiceTest {
             assertNull(userInfo.getClaim(ValidClaims.ADDRESS.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
+            assertNull(userInfo.getClaim(ValidClaims.NINO.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
         }
 
         @Test
-        void shouldJustPopulateUserInfoWhenIdentityEnabledButNoIdentityClaimsPresentOrchSplitEnabled()
-                throws JOSEException, AccessTokenException {
+        void
+                shouldJustPopulateUserInfoWhenIdentityEnabledButNoIdentityClaimsPresentOrchSplitEnabled()
+                        throws JOSEException, AccessTokenException {
             when(configurationService.isIdentityEnabled()).thenReturn(true);
             when(configurationService.isAuthOrchSplitEnabled()).thenReturn(true);
 
@@ -213,12 +221,13 @@ class UserInfoServiceTest {
             var accessTokenStore =
                     new AccessTokenStore(accessToken.getValue(), INTERNAL_SUBJECT.getValue());
             var accessTokenInfo =
-                    new AccessTokenInfo(accessTokenStore, SUBJECT.getValue(), SCOPES, null, CLIENT_ID);
+                    new AccessTokenInfo(
+                            accessTokenStore, SUBJECT.getValue(), SCOPES, null, CLIENT_ID);
             var testUserInfo =
                     new AuthenticationUserInfo().withUserInfo(generateUserInfo().toJSONString());
 
             when(userInfoStorageService.getAuthenticationUserInfoData(
-                    accessTokenInfo.getAccessTokenStore().getInternalSubjectId()))
+                            accessTokenInfo.getAccessTokenStore().getInternalSubjectId()))
                     .thenReturn(Optional.of(testUserInfo));
 
             var userInfo = userInfoService.populateUserInfo(accessTokenInfo);
@@ -230,6 +239,7 @@ class UserInfoServiceTest {
             assertNull(userInfo.getClaim(ValidClaims.ADDRESS.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
+            assertNull(userInfo.getClaim(ValidClaims.NINO.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
         }
 
@@ -248,7 +258,9 @@ class UserInfoServiceTest {
                                             ValidClaims.PASSPORT.getValue(),
                                             PASSPORT_CLAIM,
                                             ValidClaims.DRIVING_PERMIT.getValue(),
-                                            DRIVING_PERMIT));
+                                            DRIVING_PERMIT,
+                                            ValidClaims.NINO.getValue(),
+                                            NINO));
             accessToken = createSignedAccessToken(oidcValidClaimsRequest);
             when(authenticationService.getUserProfileFromSubject(INTERNAL_SUBJECT.getValue()))
                     .thenReturn(generateUserprofile());
@@ -280,10 +292,17 @@ class UserInfoServiceTest {
             assertThat(((LinkedTreeMap) addressClaim.get(0)).size(), equalTo(7));
             var passportClaim = (JSONArray) userInfo.getClaim(ValidClaims.PASSPORT.getValue());
             assertThat(((LinkedTreeMap) passportClaim.get(0)).size(), equalTo(2));
+            var drivingPermitClaim =
+                    (JSONArray) userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue());
+            assertThat(((LinkedTreeMap) drivingPermitClaim.get(0)).size(), equalTo(6));
+            var ninoClaim = (JSONArray) userInfo.getClaim(ValidClaims.NINO.getValue());
+            assertThat(((LinkedTreeMap) ninoClaim.get(0)).size(), equalTo(1));
 
             assertClaimMetricPublished("https://vocab.account.gov.uk/v1/coreIdentityJWT");
             assertClaimMetricPublished("https://vocab.account.gov.uk/v1/address");
             assertClaimMetricPublished("https://vocab.account.gov.uk/v1/passport");
+            assertClaimMetricPublished("https://vocab.account.gov.uk/v1/drivingPermit");
+            assertClaimMetricPublished("https://vocab.account.gov.uk/v1/nino");
         }
 
         @Test
@@ -302,7 +321,9 @@ class UserInfoServiceTest {
                                             ValidClaims.PASSPORT.getValue(),
                                             PASSPORT_CLAIM,
                                             ValidClaims.DRIVING_PERMIT.getValue(),
-                                            PASSPORT_CLAIM));
+                                            DRIVING_PERMIT,
+                                            ValidClaims.NINO.getValue(),
+                                            NINO));
             accessToken = createSignedAccessToken(oidcValidClaimsRequest);
 
             when(identityService.getIdentityCredentials(SUBJECT.getValue()))
@@ -323,7 +344,7 @@ class UserInfoServiceTest {
                     new AuthenticationUserInfo().withUserInfo(generateUserInfo().toJSONString());
 
             when(userInfoStorageService.getAuthenticationUserInfoData(
-                    accessTokenInfo.getAccessTokenStore().getInternalSubjectId()))
+                            accessTokenInfo.getAccessTokenStore().getInternalSubjectId()))
                     .thenReturn(Optional.of(testUserInfo));
 
             var userInfo = userInfoService.populateUserInfo(accessTokenInfo);
@@ -339,10 +360,17 @@ class UserInfoServiceTest {
             assertThat(((LinkedTreeMap) addressClaim.get(0)).size(), equalTo(7));
             var passportClaim = (JSONArray) userInfo.getClaim(ValidClaims.PASSPORT.getValue());
             assertThat(((LinkedTreeMap) passportClaim.get(0)).size(), equalTo(2));
+            var drivingPermitClaim =
+                    (JSONArray) userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue());
+            assertThat(((LinkedTreeMap) drivingPermitClaim.get(0)).size(), equalTo(6));
+            var ninoClaim = (JSONArray) userInfo.getClaim(ValidClaims.NINO.getValue());
+            assertThat(((LinkedTreeMap) ninoClaim.get(0)).size(), equalTo(1));
 
             assertClaimMetricPublished("https://vocab.account.gov.uk/v1/coreIdentityJWT");
             assertClaimMetricPublished("https://vocab.account.gov.uk/v1/address");
             assertClaimMetricPublished("https://vocab.account.gov.uk/v1/passport");
+            assertClaimMetricPublished("https://vocab.account.gov.uk/v1/drivingPermit");
+            assertClaimMetricPublished("https://vocab.account.gov.uk/v1/nino");
         }
 
         @Test
@@ -357,7 +385,8 @@ class UserInfoServiceTest {
             var accessTokenStore =
                     new AccessTokenStore(accessToken.getValue(), INTERNAL_SUBJECT.getValue());
             var accessTokenInfo =
-                    new AccessTokenInfo(accessTokenStore, SUBJECT.getValue(), scopes, null, CLIENT_ID);
+                    new AccessTokenInfo(
+                            accessTokenStore, SUBJECT.getValue(), scopes, null, CLIENT_ID);
 
             var userInfo = userInfoService.populateUserInfo(accessTokenInfo);
 
@@ -368,12 +397,14 @@ class UserInfoServiceTest {
             assertNull(userInfo.getClaim(ValidClaims.ADDRESS.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
+            assertNull(userInfo.getClaim(ValidClaims.NINO.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
         }
 
         @Test
-        void shouldJustPopulateEmailClaimWhenOnlyEmailScopeIsPresentAndIdentityNotEnabledOrchSplitEnabled()
-                throws JOSEException, AccessTokenException {
+        void
+                shouldJustPopulateEmailClaimWhenOnlyEmailScopeIsPresentAndIdentityNotEnabledOrchSplitEnabled()
+                        throws JOSEException, AccessTokenException {
             when(configurationService.isIdentityEnabled()).thenReturn(false);
             when(configurationService.isAuthOrchSplitEnabled()).thenReturn(true);
             accessToken = createSignedAccessToken(null);
@@ -382,12 +413,13 @@ class UserInfoServiceTest {
             var accessTokenStore =
                     new AccessTokenStore(accessToken.getValue(), INTERNAL_SUBJECT.getValue());
             var accessTokenInfo =
-                    new AccessTokenInfo(accessTokenStore, SUBJECT.getValue(), scopes, null, CLIENT_ID);
+                    new AccessTokenInfo(
+                            accessTokenStore, SUBJECT.getValue(), scopes, null, CLIENT_ID);
             var testUserInfo =
                     new AuthenticationUserInfo().withUserInfo(generateUserInfo().toJSONString());
 
             when(userInfoStorageService.getAuthenticationUserInfoData(
-                    accessTokenInfo.getAccessTokenStore().getInternalSubjectId()))
+                            accessTokenInfo.getAccessTokenStore().getInternalSubjectId()))
                     .thenReturn(Optional.of(testUserInfo));
 
             var userInfo = userInfoService.populateUserInfo(accessTokenInfo);
@@ -399,6 +431,7 @@ class UserInfoServiceTest {
             assertNull(userInfo.getClaim(ValidClaims.ADDRESS.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
+            assertNull(userInfo.getClaim(ValidClaims.NINO.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
         }
 
@@ -436,14 +469,18 @@ class UserInfoServiceTest {
             assertThat(
                     userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()),
                     equalTo(coreIdentityJWT));
+            assertNull(userInfo.getClaim(ValidClaims.ADDRESS.getValue()));
+            assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
+            assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
+            assertNull(userInfo.getClaim(ValidClaims.NINO.getValue()));
 
             assertClaimMetricPublished("https://vocab.account.gov.uk/v1/coreIdentityJWT");
         }
 
         @Test
         void
-        shouldPopulateIdentityClaimsWhenClaimsArePresentButNoAdditionalClaimsArePresentOrchSplitEnabled()
-                throws JOSEException, AccessTokenException {
+                shouldPopulateIdentityClaimsWhenClaimsArePresentButNoAdditionalClaimsArePresentOrchSplitEnabled()
+                        throws JOSEException, AccessTokenException {
             when(configurationService.isIdentityEnabled()).thenReturn(true);
             when(configurationService.isAuthOrchSplitEnabled()).thenReturn(true);
             var identityCredentials =
@@ -470,7 +507,7 @@ class UserInfoServiceTest {
                     new AuthenticationUserInfo().withUserInfo(generateUserInfo().toJSONString());
 
             when(userInfoStorageService.getAuthenticationUserInfoData(
-                    accessTokenInfo.getAccessTokenStore().getInternalSubjectId()))
+                            accessTokenInfo.getAccessTokenStore().getInternalSubjectId()))
                     .thenReturn(Optional.of(testUserInfo));
 
             var userInfo = userInfoService.populateUserInfo(accessTokenInfo);
@@ -482,6 +519,10 @@ class UserInfoServiceTest {
             assertThat(
                     userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()),
                     equalTo(coreIdentityJWT));
+            assertNull(userInfo.getClaim(ValidClaims.ADDRESS.getValue()));
+            assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
+            assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
+            assertNull(userInfo.getClaim(ValidClaims.NINO.getValue()));
 
             assertClaimMetricPublished("https://vocab.account.gov.uk/v1/coreIdentityJWT");
         }
@@ -512,7 +553,8 @@ class UserInfoServiceTest {
 
             var userInfo = userInfoService.populateUserInfo(accessTokenInfo);
 
-            assertThat(userInfo.getClaim("doc-app-credential"), equalTo(List.of(docAppCredentialJWT)));
+            assertThat(
+                    userInfo.getClaim("doc-app-credential"), equalTo(List.of(docAppCredentialJWT)));
             assertClaimMetricPublished("doc-app-credential");
         }
 
@@ -540,7 +582,8 @@ class UserInfoServiceTest {
 
             var userInfo = userInfoService.populateUserInfo(accessTokenInfo);
 
-            assertThat(userInfo.getClaim("doc-app-credential"), equalTo(List.of(docAppCredentialJWT)));
+            assertThat(
+                    userInfo.getClaim("doc-app-credential"), equalTo(List.of(docAppCredentialJWT)));
             assertClaimMetricPublished("doc-app-credential");
         }
 
@@ -555,7 +598,11 @@ class UserInfoServiceTest {
                     new AccessTokenStore(accessToken.getValue(), DOC_APP_SUBJECT.getValue());
             var accessTokenInfo =
                     new AccessTokenInfo(
-                            accessTokenStore, DOC_APP_SUBJECT.getValue(), docAppScope, null, CLIENT_ID);
+                            accessTokenStore,
+                            DOC_APP_SUBJECT.getValue(),
+                            docAppScope,
+                            null,
+                            CLIENT_ID);
 
             var subjectForAudit = userInfoService.calculateSubjectForAudit(accessTokenInfo);
 
@@ -575,7 +622,11 @@ class UserInfoServiceTest {
                     new AccessTokenStore(accessToken.getValue(), DOC_APP_SUBJECT.getValue());
             var accessTokenInfo =
                     new AccessTokenInfo(
-                            accessTokenStore, DOC_APP_SUBJECT.getValue(), docAppScope, null, CLIENT_ID);
+                            accessTokenStore,
+                            DOC_APP_SUBJECT.getValue(),
+                            docAppScope,
+                            null,
+                            CLIENT_ID);
 
             var subjectForAudit = userInfoService.calculateSubjectForAudit(accessTokenInfo);
 
@@ -597,7 +648,8 @@ class UserInfoServiceTest {
             var accessTokenStore =
                     new AccessTokenStore(accessToken.getValue(), INTERNAL_SUBJECT.getValue());
             var accessTokenInfo =
-                    new AccessTokenInfo(accessTokenStore, SUBJECT.getValue(), SCOPES, null, CLIENT_ID);
+                    new AccessTokenInfo(
+                            accessTokenStore, SUBJECT.getValue(), SCOPES, null, CLIENT_ID);
 
             var subjectForAudit = userInfoService.calculateSubjectForAudit(accessTokenInfo);
 
@@ -605,8 +657,9 @@ class UserInfoServiceTest {
         }
 
         @Test
-        void shouldReturnInternalCommonSubjectIdentifierWhenDocAppScopeIsNotPresentOrchSplitEnabled()
-                throws JOSEException {
+        void
+                shouldReturnInternalCommonSubjectIdentifierWhenDocAppScopeIsNotPresentOrchSplitEnabled()
+                        throws JOSEException {
             when(configurationService.isAuthOrchSplitEnabled()).thenReturn(true);
             var salt = SaltHelper.generateNewSalt();
             var expectedCommonSubject =
@@ -620,7 +673,8 @@ class UserInfoServiceTest {
             var accessTokenStore =
                     new AccessTokenStore(accessToken.getValue(), INTERNAL_SUBJECT.getValue());
             var accessTokenInfo =
-                    new AccessTokenInfo(accessTokenStore, SUBJECT.getValue(), SCOPES, null, CLIENT_ID);
+                    new AccessTokenInfo(
+                            accessTokenStore, SUBJECT.getValue(), SCOPES, null, CLIENT_ID);
 
             var subjectForAudit = userInfoService.calculateSubjectForAudit(accessTokenInfo);
 
@@ -633,8 +687,8 @@ class UserInfoServiceTest {
         return createSignedAccessToken(identityClaims, SCOPES);
     }
 
-    private AccessToken createSignedAccessToken(OIDCClaimsRequest identityClaims, List<String> scopes)
-            throws JOSEException {
+    private AccessToken createSignedAccessToken(
+            OIDCClaimsRequest identityClaims, List<String> scopes) throws JOSEException {
         var expiryDate = NowHelper.nowPlus(3, ChronoUnit.MINUTES);
         var ecSigningKey =
                 new ECKeyGenerator(Curve.P_256)
