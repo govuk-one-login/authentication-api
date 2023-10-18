@@ -57,8 +57,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.ADDRESS_CLAIM;
 import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.DRIVING_PERMIT;
-import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.NINO;
 import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.PASSPORT_CLAIM;
+import static uk.gov.di.authentication.sharedtest.helper.IdentityTestData.SOCIAL_SECURITY_RECORD;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 class UserInfoServiceTest {
@@ -91,7 +91,7 @@ class UserInfoServiceTest {
                     .add(ValidClaims.ADDRESS.getValue())
                     .add(ValidClaims.PASSPORT.getValue())
                     .add(ValidClaims.DRIVING_PERMIT.getValue())
-                    .add(ValidClaims.NINO.getValue());
+                    .add(ValidClaims.SOCIAL_SECURITY_RECORD.getValue());
     private final OIDCClaimsRequest oidcValidClaimsRequest =
             new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
     private final String coreIdentityJWT = SignedCredentialHelper.generateCredential().serialize();
@@ -147,7 +147,7 @@ class UserInfoServiceTest {
         assertNull(userInfo.getClaim(ValidClaims.ADDRESS.getValue()));
         assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
         assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
-        assertNull(userInfo.getClaim(ValidClaims.NINO.getValue()));
+        assertNull(userInfo.getClaim(ValidClaims.SOCIAL_SECURITY_RECORD.getValue()));
     }
 
     @Test
@@ -178,7 +178,7 @@ class UserInfoServiceTest {
         assertNull(userInfo.getClaim(ValidClaims.ADDRESS.getValue()));
         assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
         assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
-        assertNull(userInfo.getClaim(ValidClaims.NINO.getValue()));
+        assertNull(userInfo.getClaim(ValidClaims.SOCIAL_SECURITY_RECORD.getValue()));
     }
 
     @Nested
@@ -206,7 +206,7 @@ class UserInfoServiceTest {
             assertNull(userInfo.getClaim(ValidClaims.ADDRESS.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
-            assertNull(userInfo.getClaim(ValidClaims.NINO.getValue()));
+            assertNull(userInfo.getClaim(ValidClaims.SOCIAL_SECURITY_RECORD.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
         }
 
@@ -239,7 +239,7 @@ class UserInfoServiceTest {
             assertNull(userInfo.getClaim(ValidClaims.ADDRESS.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
-            assertNull(userInfo.getClaim(ValidClaims.NINO.getValue()));
+            assertNull(userInfo.getClaim(ValidClaims.SOCIAL_SECURITY_RECORD.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
         }
 
@@ -259,8 +259,8 @@ class UserInfoServiceTest {
                                             PASSPORT_CLAIM,
                                             ValidClaims.DRIVING_PERMIT.getValue(),
                                             DRIVING_PERMIT,
-                                            ValidClaims.NINO.getValue(),
-                                            NINO));
+                                            ValidClaims.SOCIAL_SECURITY_RECORD.getValue(),
+                                            SOCIAL_SECURITY_RECORD));
             accessToken = createSignedAccessToken(oidcValidClaimsRequest);
             when(authenticationService.getUserProfileFromSubject(INTERNAL_SUBJECT.getValue()))
                     .thenReturn(generateUserprofile());
@@ -289,20 +289,21 @@ class UserInfoServiceTest {
                     userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()),
                     equalTo(coreIdentityJWT));
             var addressClaim = (JSONArray) userInfo.getClaim(ValidClaims.ADDRESS.getValue());
-            assertThat(((LinkedTreeMap) addressClaim.get(0)).size(), equalTo(7));
             var passportClaim = (JSONArray) userInfo.getClaim(ValidClaims.PASSPORT.getValue());
-            assertThat(((LinkedTreeMap) passportClaim.get(0)).size(), equalTo(2));
             var drivingPermitClaim =
                     (JSONArray) userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue());
+            var socialSecurityRecordClaim =
+                    (JSONArray) userInfo.getClaim(ValidClaims.SOCIAL_SECURITY_RECORD.getValue());
+            assertThat(((LinkedTreeMap) addressClaim.get(0)).size(), equalTo(7));
+            assertThat(((LinkedTreeMap) passportClaim.get(0)).size(), equalTo(2));
             assertThat(((LinkedTreeMap) drivingPermitClaim.get(0)).size(), equalTo(6));
-            var ninoClaim = (JSONArray) userInfo.getClaim(ValidClaims.NINO.getValue());
-            assertThat(((LinkedTreeMap) ninoClaim.get(0)).size(), equalTo(1));
+            assertThat(((LinkedTreeMap) socialSecurityRecordClaim.get(0)).size(), equalTo(1));
 
             assertClaimMetricPublished("https://vocab.account.gov.uk/v1/coreIdentityJWT");
             assertClaimMetricPublished("https://vocab.account.gov.uk/v1/address");
             assertClaimMetricPublished("https://vocab.account.gov.uk/v1/passport");
             assertClaimMetricPublished("https://vocab.account.gov.uk/v1/drivingPermit");
-            assertClaimMetricPublished("https://vocab.account.gov.uk/v1/nino");
+            assertClaimMetricPublished("https://vocab.account.gov.uk/v1/socialSecurityRecord");
         }
 
         @Test
@@ -322,8 +323,8 @@ class UserInfoServiceTest {
                                             PASSPORT_CLAIM,
                                             ValidClaims.DRIVING_PERMIT.getValue(),
                                             DRIVING_PERMIT,
-                                            ValidClaims.NINO.getValue(),
-                                            NINO));
+                                            ValidClaims.SOCIAL_SECURITY_RECORD.getValue(),
+                                            SOCIAL_SECURITY_RECORD));
             accessToken = createSignedAccessToken(oidcValidClaimsRequest);
 
             when(identityService.getIdentityCredentials(SUBJECT.getValue()))
@@ -357,20 +358,21 @@ class UserInfoServiceTest {
                     userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()),
                     equalTo(coreIdentityJWT));
             var addressClaim = (JSONArray) userInfo.getClaim(ValidClaims.ADDRESS.getValue());
-            assertThat(((LinkedTreeMap) addressClaim.get(0)).size(), equalTo(7));
             var passportClaim = (JSONArray) userInfo.getClaim(ValidClaims.PASSPORT.getValue());
-            assertThat(((LinkedTreeMap) passportClaim.get(0)).size(), equalTo(2));
             var drivingPermitClaim =
                     (JSONArray) userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue());
+            var socialSecurityRecordClaim =
+                    (JSONArray) userInfo.getClaim(ValidClaims.SOCIAL_SECURITY_RECORD.getValue());
+            assertThat(((LinkedTreeMap) addressClaim.get(0)).size(), equalTo(7));
+            assertThat(((LinkedTreeMap) passportClaim.get(0)).size(), equalTo(2));
             assertThat(((LinkedTreeMap) drivingPermitClaim.get(0)).size(), equalTo(6));
-            var ninoClaim = (JSONArray) userInfo.getClaim(ValidClaims.NINO.getValue());
-            assertThat(((LinkedTreeMap) ninoClaim.get(0)).size(), equalTo(1));
+            assertThat(((LinkedTreeMap) socialSecurityRecordClaim.get(0)).size(), equalTo(1));
 
             assertClaimMetricPublished("https://vocab.account.gov.uk/v1/coreIdentityJWT");
             assertClaimMetricPublished("https://vocab.account.gov.uk/v1/address");
             assertClaimMetricPublished("https://vocab.account.gov.uk/v1/passport");
             assertClaimMetricPublished("https://vocab.account.gov.uk/v1/drivingPermit");
-            assertClaimMetricPublished("https://vocab.account.gov.uk/v1/nino");
+            assertClaimMetricPublished("https://vocab.account.gov.uk/v1/socialSecurityRecord");
         }
 
         @Test
@@ -397,7 +399,7 @@ class UserInfoServiceTest {
             assertNull(userInfo.getClaim(ValidClaims.ADDRESS.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
-            assertNull(userInfo.getClaim(ValidClaims.NINO.getValue()));
+            assertNull(userInfo.getClaim(ValidClaims.SOCIAL_SECURITY_RECORD.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
         }
 
@@ -431,7 +433,7 @@ class UserInfoServiceTest {
             assertNull(userInfo.getClaim(ValidClaims.ADDRESS.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
-            assertNull(userInfo.getClaim(ValidClaims.NINO.getValue()));
+            assertNull(userInfo.getClaim(ValidClaims.SOCIAL_SECURITY_RECORD.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
         }
 
@@ -472,7 +474,7 @@ class UserInfoServiceTest {
             assertNull(userInfo.getClaim(ValidClaims.ADDRESS.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
-            assertNull(userInfo.getClaim(ValidClaims.NINO.getValue()));
+            assertNull(userInfo.getClaim(ValidClaims.SOCIAL_SECURITY_RECORD.getValue()));
 
             assertClaimMetricPublished("https://vocab.account.gov.uk/v1/coreIdentityJWT");
         }
@@ -522,7 +524,7 @@ class UserInfoServiceTest {
             assertNull(userInfo.getClaim(ValidClaims.ADDRESS.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
-            assertNull(userInfo.getClaim(ValidClaims.NINO.getValue()));
+            assertNull(userInfo.getClaim(ValidClaims.SOCIAL_SECURITY_RECORD.getValue()));
 
             assertClaimMetricPublished("https://vocab.account.gov.uk/v1/coreIdentityJWT");
         }

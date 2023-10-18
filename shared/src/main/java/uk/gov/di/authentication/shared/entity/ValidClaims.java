@@ -12,7 +12,7 @@ public enum ValidClaims {
     ADDRESS("https://vocab.account.gov.uk/v1/address"),
     PASSPORT("https://vocab.account.gov.uk/v1/passport"),
     DRIVING_PERMIT("https://vocab.account.gov.uk/v1/drivingPermit"),
-    NINO("https://vocab.account.gov.uk/v1/nino"),
+    SOCIAL_SECURITY_RECORD("https://vocab.account.gov.uk/v1/socialSecurityRecord"),
     CORE_IDENTITY_JWT("https://vocab.account.gov.uk/v1/coreIdentityJWT");
 
     private final String value;

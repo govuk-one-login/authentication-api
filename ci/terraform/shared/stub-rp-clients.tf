@@ -64,7 +64,7 @@ resource "aws_dynamodb_table_item" "stub_rp_client" {
           S = "https://vocab.account.gov.uk/v1/drivingPermit"
         },
         {
-          S = "https://vocab.account.gov.uk/v1/nino"
+          S = "https://vocab.account.gov.uk/v1/socialSecurityRecord"
         },
       ]
     }

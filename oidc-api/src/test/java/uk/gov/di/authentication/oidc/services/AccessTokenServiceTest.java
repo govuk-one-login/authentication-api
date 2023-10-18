@@ -72,7 +72,7 @@ class AccessTokenServiceTest {
                     .add(ValidClaims.ADDRESS.getValue())
                     .add(ValidClaims.PASSPORT.getValue())
                     .add(ValidClaims.DRIVING_PERMIT.getValue())
-                    .add(ValidClaims.NINO.getValue())
+                    .add(ValidClaims.SOCIAL_SECURITY_RECORD.getValue())
                     .add(ValidClaims.CORE_IDENTITY_JWT.getValue());
     private final OIDCClaimsRequest oidcValidClaimsRequest =
             new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
