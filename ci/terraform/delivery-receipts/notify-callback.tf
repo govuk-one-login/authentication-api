@@ -53,3 +53,7 @@ module "notify_callback" {
     aws_api_gateway_rest_api.di_authentication_delivery_receipts_api,
   ]
 }
+moved {
+  from = module.notify_callback.aws_api_gateway_method.endpoint_method
+  to   = module.notify_callback.aws_api_gateway_method.endpoint_method["POST"]
+}

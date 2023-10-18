@@ -55,3 +55,8 @@ module "openid_configuration_discovery" {
     module.openid_configuration_role
   ]
 }
+
+moved {
+  from = module.openid_configuration_discovery.aws_api_gateway_method.endpoint_method
+  to   = module.openid_configuration_discovery.aws_api_gateway_method.endpoint_method["GET"]
+}

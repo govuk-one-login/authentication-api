@@ -71,3 +71,8 @@ module "auth_token" {
     aws_api_gateway_rest_api.di_auth_ext_api,
   ]
 }
+
+moved {
+  from = module.auth_token.aws_api_gateway_method.endpoint_method
+  to   = module.auth_token.aws_api_gateway_method.endpoint_method["POST"]
+}

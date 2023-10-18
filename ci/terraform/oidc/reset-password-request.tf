@@ -74,3 +74,8 @@ module "reset-password-request" {
     aws_sqs_queue.email_queue,
   ]
 }
+
+moved {
+  from = module.reset-password-request.aws_api_gateway_method.endpoint_method
+  to   = module.reset-password-request.aws_api_gateway_method.endpoint_method["POST"]
+}

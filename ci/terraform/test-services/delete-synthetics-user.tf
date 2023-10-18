@@ -57,3 +57,8 @@ module "delete-synthetics-user" {
     aws_api_gateway_rest_api.di_authentication_test_services_api,
   ]
 }
+
+moved {
+  from = module.delete-synthetics-user.aws_api_gateway_method.endpoint_method
+  to   = module.delete-synthetics-user.aws_api_gateway_method.endpoint_method["DELETE"]
+}

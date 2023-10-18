@@ -77,3 +77,8 @@ module "verify_code" {
     aws_sqs_queue.email_queue,
   ]
 }
+
+moved {
+  from = module.verify_code.aws_api_gateway_method.endpoint_method
+  to   = module.verify_code.aws_api_gateway_method.endpoint_method["POST"]
+}

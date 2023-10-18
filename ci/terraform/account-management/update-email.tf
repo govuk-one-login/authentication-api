@@ -62,3 +62,8 @@ module "update_email" {
   lambda_env_vars_encryption_kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
 
 }
+
+moved {
+  from = module.update_email.aws_api_gateway_method.endpoint_method
+  to   = module.update_email.aws_api_gateway_method.endpoint_method["POST"]
+}

@@ -69,3 +69,8 @@ module "update" {
     aws_api_gateway_resource.register_resource,
   ]
 }
+
+moved {
+  from = module.update[0].aws_api_gateway_method.endpoint_method
+  to   = module.update[0].aws_api_gateway_method.endpoint_method["PUT"]
+}

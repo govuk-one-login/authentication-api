@@ -72,3 +72,7 @@ module "orch_auth_code" {
     aws_api_gateway_resource.wellknown_resource,
   ]
 }
+moved {
+  from = module.orch_auth_code.aws_api_gateway_method.endpoint_method
+  to   = module.orch_auth_code.aws_api_gateway_method.endpoint_method["POST"]
+}

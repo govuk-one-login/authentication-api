@@ -73,3 +73,8 @@ module "send_notification" {
     aws_sqs_queue.email_queue,
   ]
 }
+
+moved {
+  from = module.send_notification.aws_api_gateway_method.endpoint_method
+  to   = module.send_notification.aws_api_gateway_method.endpoint_method["POST"]
+}

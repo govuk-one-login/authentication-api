@@ -71,3 +71,8 @@ module "update_profile" {
     aws_api_gateway_resource.wellknown_resource,
   ]
 }
+
+moved {
+  from = module.update_profile.aws_api_gateway_method.endpoint_method
+  to   = module.update_profile.aws_api_gateway_method.endpoint_method["POST"]
+}

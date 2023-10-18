@@ -74,3 +74,8 @@ module "mfa" {
     aws_sqs_queue.email_queue,
   ]
 }
+
+moved {
+  from = module.mfa.aws_api_gateway_method.endpoint_method
+  to   = module.mfa.aws_api_gateway_method.endpoint_method["POST"]
+}
