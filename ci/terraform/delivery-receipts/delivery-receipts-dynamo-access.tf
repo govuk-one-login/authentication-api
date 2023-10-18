@@ -1,7 +1,6 @@
 
 data "aws_dynamodb_table" "bulk_email_users_table" {
-  count = local.deploy_bulk_email_users_count
-  name  = "${var.environment}-bulk-email-users"
+  name = "${var.environment}-bulk-email-users"
 }
 
 data "aws_dynamodb_table" "user_profile_table" {
