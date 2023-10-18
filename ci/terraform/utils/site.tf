@@ -52,7 +52,7 @@ locals {
   }
 
   request_tracing_allowed                     = contains(["build", "sandpit"], var.environment)
-  deploy_bulk_email_users_count               = 1
+  deploy_bulk_email_users_count               = contains(["build", "sandpit"], var.environment) ? 0 : 1
   bulk_user_email_audience_loader_lambda_name = "${var.environment}-bulk-user-email-audience-loader-lambda"
 }
 
