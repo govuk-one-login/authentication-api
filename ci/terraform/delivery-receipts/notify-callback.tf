@@ -4,12 +4,10 @@ module "delivery_receipts_api_notify_callback_role" {
   role_name   = "delivery-receipts-api-notify-callback-role"
   vpc_arn     = local.vpc_arn
 
-  policies_to_attach = [
+  policies_to_attach = concat([
     aws_iam_policy.parameter_policy.arn,
-    aws_iam_policy.bulk_user_email_receipts_user_profile_dynamo_read_access.arn,
-    aws_iam_policy.bulk_user_email_receipts_dynamo_write_access.arn,
     aws_iam_policy.bulk_user_email_dynamo_encryption_key_kms_policy.arn,
-  ]
+  ], local.deploy_bulk_email_users_count == 1 ? [aws_iam_policy.bulk_user_email_receipts_dynamo_write_access[0].arn, aws_iam_policy.bulk_user_email_receipts_user_profile_dynamo_read_access.arn] : [])
 }
 
 module "notify_callback" {
