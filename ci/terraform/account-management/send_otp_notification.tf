@@ -18,7 +18,7 @@ module "send_otp_notification" {
 
   endpoint_name   = "send-otp-notification"
   path_part       = "send-otp-notification"
-  endpoint_method = "POST"
+  endpoint_method = ["POST"]
   environment     = var.environment
 
   handler_environment_variables = {

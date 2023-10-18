@@ -44,7 +44,7 @@ module "token" {
 
   endpoint_name   = "token"
   path_part       = "token"
-  endpoint_method = "POST"
+  endpoint_method = ["POST"]
   environment     = var.environment
 
   handler_environment_variables = {

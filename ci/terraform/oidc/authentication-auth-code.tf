@@ -22,7 +22,7 @@ module "orch_auth_code" {
 
   endpoint_name   = "orch-auth-code"
   path_part       = "orch-auth-code"
-  endpoint_method = "POST"
+  endpoint_method = ["POST"]
   environment     = var.environment
 
   handler_environment_variables = {

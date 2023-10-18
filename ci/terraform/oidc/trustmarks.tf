@@ -11,7 +11,7 @@ module "trustmarks" {
 
   endpoint_name   = "trustmark"
   path_part       = "trustmark"
-  endpoint_method = "GET"
+  endpoint_method = ["GET"]
   environment     = var.environment
 
   handler_environment_variables = {

@@ -16,7 +16,7 @@ module "delete-synthetics-user" {
 
   endpoint_name   = "synthetics-user"
   path_part       = "synthetics-user"
-  endpoint_method = "DELETE"
+  endpoint_method = ["DELETE"]
   environment     = var.environment
 
   handler_environment_variables = {

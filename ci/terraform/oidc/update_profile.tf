@@ -20,7 +20,7 @@ module "update_profile" {
 
   endpoint_name   = "update-profile"
   path_part       = "update-profile"
-  endpoint_method = "POST"
+  endpoint_method = ["POST"]
   environment     = var.environment
 
   handler_environment_variables = {

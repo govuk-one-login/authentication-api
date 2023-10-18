@@ -22,7 +22,7 @@ module "verify_mfa_code" {
 
   endpoint_name   = "verify-mfa-code"
   path_part       = "verify-mfa-code"
-  endpoint_method = "POST"
+  endpoint_method = ["POST"]
   environment     = var.environment
 
   handler_environment_variables = {

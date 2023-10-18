@@ -21,7 +21,7 @@ module "signup" {
 
   endpoint_name   = "signup"
   path_part       = "signup"
-  endpoint_method = "POST"
+  endpoint_method = ["POST"]
   environment     = var.environment
 
   handler_environment_variables = {

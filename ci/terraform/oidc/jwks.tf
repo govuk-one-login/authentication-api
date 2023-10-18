@@ -15,7 +15,7 @@ module "jwks" {
 
   endpoint_name   = "jwks.json"
   path_part       = "jwks.json"
-  endpoint_method = "GET"
+  endpoint_method = ["GET"]
   environment     = var.environment
 
   handler_environment_variables = {

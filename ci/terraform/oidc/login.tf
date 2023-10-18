@@ -23,7 +23,7 @@ module "login" {
 
   endpoint_name   = "login"
   path_part       = "login"
-  endpoint_method = "POST"
+  endpoint_method = ["POST"]
   environment     = var.environment
 
   handler_environment_variables = {

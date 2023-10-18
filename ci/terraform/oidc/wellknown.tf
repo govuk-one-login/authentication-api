@@ -11,7 +11,7 @@ module "openid_configuration_discovery" {
 
   endpoint_name   = "openid-configuration"
   path_part       = "openid-configuration"
-  endpoint_method = "GET"
+  endpoint_method = ["GET"]
   environment     = var.environment
 
   handler_environment_variables = {

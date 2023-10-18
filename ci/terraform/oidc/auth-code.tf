@@ -19,7 +19,7 @@ module "auth-code" {
 
   endpoint_name   = "auth-code"
   path_part       = "auth-code"
-  endpoint_method = "GET"
+  endpoint_method = ["GET"]
 
   handler_environment_variables = {
     TXMA_AUDIT_QUEUE_URL     = module.oidc_txma_audit.queue_url

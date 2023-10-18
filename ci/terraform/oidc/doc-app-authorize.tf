@@ -19,7 +19,7 @@ module "doc-app-authorize" {
 
   endpoint_name   = "doc-app-authorize"
   path_part       = "doc-app-authorize"
-  endpoint_method = "POST"
+  endpoint_method = ["POST"]
   environment     = var.environment
 
   handler_environment_variables = {

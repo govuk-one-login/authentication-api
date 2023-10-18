@@ -19,7 +19,7 @@ module "update_email" {
 
   endpoint_name   = "update-email"
   path_part       = "update-email"
-  endpoint_method = "POST"
+  endpoint_method = ["POST"]
   handler_environment_variables = {
     ENVIRONMENT          = var.environment
     DYNAMO_ENDPOINT      = var.use_localstack ? var.lambda_dynamo_endpoint : null

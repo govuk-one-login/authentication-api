@@ -20,7 +20,7 @@ module "logout" {
 
   endpoint_name   = "logout"
   path_part       = "logout"
-  endpoint_method = "GET"
+  endpoint_method = ["GET"]
   environment     = var.environment
 
   handler_environment_variables = {

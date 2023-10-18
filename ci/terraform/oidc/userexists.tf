@@ -20,7 +20,7 @@ module "userexists" {
 
   endpoint_name   = "user-exists"
   path_part       = "user-exists"
-  endpoint_method = "POST"
+  endpoint_method = ["POST"]
   environment     = var.environment
 
   handler_environment_variables = {

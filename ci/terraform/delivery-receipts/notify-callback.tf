@@ -15,7 +15,7 @@ module "notify_callback" {
 
   endpoint_name   = "notify-callback"
   path_part       = "notify-callback"
-  endpoint_method = "POST"
+  endpoint_method = ["POST"]
   environment     = var.environment
 
   handler_environment_variables = merge(var.notify_template_map, {

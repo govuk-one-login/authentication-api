@@ -19,7 +19,7 @@ module "send_notification" {
 
   endpoint_name   = "send-notification"
   path_part       = "send-notification"
-  endpoint_method = "POST"
+  endpoint_method = ["POST"]
   environment     = var.environment
 
   handler_environment_variables = {

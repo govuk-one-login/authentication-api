@@ -20,7 +20,7 @@ module "auth_userinfo" {
 
   endpoint_name   = "auth-userinfo"
   path_part       = "userinfo"
-  endpoint_method = "GET"
+  endpoint_method = ["GET"]
   environment     = var.environment
 
   handler_environment_variables = {

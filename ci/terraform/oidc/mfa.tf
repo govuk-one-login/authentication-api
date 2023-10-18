@@ -19,7 +19,7 @@ module "mfa" {
 
   endpoint_name   = "mfa"
   path_part       = "mfa"
-  endpoint_method = "POST"
+  endpoint_method = ["POST"]
   environment     = var.environment
 
   handler_environment_variables = {

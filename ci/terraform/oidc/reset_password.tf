@@ -23,7 +23,7 @@ module "reset_password" {
 
   endpoint_name   = "reset-password"
   path_part       = "reset-password"
-  endpoint_method = "POST"
+  endpoint_method = ["POST"]
   environment     = var.environment
 
   handler_environment_variables = {

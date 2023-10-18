@@ -18,7 +18,7 @@ module "update_password" {
 
   endpoint_name   = "update-password"
   path_part       = "update-password"
-  endpoint_method = "POST"
+  endpoint_method = ["POST"]
   handler_environment_variables = {
     ENVIRONMENT          = var.environment
     DYNAMO_ENDPOINT      = var.use_localstack ? var.lambda_dynamo_endpoint : null

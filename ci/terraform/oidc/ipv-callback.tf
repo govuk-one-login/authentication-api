@@ -24,7 +24,7 @@ module "ipv-callback" {
 
   endpoint_name   = "ipv-callback"
   path_part       = "ipv-callback"
-  endpoint_method = "GET"
+  endpoint_method = ["GET"]
   environment     = var.environment
 
   handler_environment_variables = {

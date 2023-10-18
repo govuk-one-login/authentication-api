@@ -23,7 +23,7 @@ module "authorize" {
 
   endpoint_name   = "authorize"
   path_part       = "authorize"
-  endpoint_method = "GET"
+  endpoint_method = ["GET", "POST"]
   environment     = var.environment
 
   handler_environment_variables = {

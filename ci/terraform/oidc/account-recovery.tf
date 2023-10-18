@@ -22,7 +22,7 @@ module "account_recovery" {
 
   endpoint_name   = "account-recovery"
   path_part       = "account-recovery"
-  endpoint_method = "POST"
+  endpoint_method = ["POST"]
   environment     = var.environment
 
   handler_environment_variables = {

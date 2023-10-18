@@ -18,7 +18,7 @@ module "update_phone_number" {
 
   endpoint_name   = "update-phone-number"
   path_part       = "update-phone-number"
-  endpoint_method = "POST"
+  endpoint_method = ["POST"]
   handler_environment_variables = {
     ENVIRONMENT          = var.environment
     DYNAMO_ENDPOINT      = var.use_localstack ? var.lambda_dynamo_endpoint : null

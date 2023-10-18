@@ -22,7 +22,7 @@ module "verify_code" {
 
   endpoint_name   = "verify-code"
   path_part       = "verify-code"
-  endpoint_method = "POST"
+  endpoint_method = ["POST"]
   environment     = var.environment
 
   handler_environment_variables = {

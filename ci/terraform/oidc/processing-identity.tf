@@ -21,7 +21,7 @@ module "processing-identity" {
 
   endpoint_name   = "processing-identity"
   path_part       = "processing-identity"
-  endpoint_method = "POST"
+  endpoint_method = ["POST"]
   environment     = var.environment
 
   handler_environment_variables = {

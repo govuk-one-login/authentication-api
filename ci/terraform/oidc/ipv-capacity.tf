@@ -17,7 +17,7 @@ module "ipv-capacity" {
 
   endpoint_name   = "ipv-capacity"
   path_part       = "ipv-capacity"
-  endpoint_method = "GET"
+  endpoint_method = ["GET"]
   environment     = var.environment
 
   handler_environment_variables = {

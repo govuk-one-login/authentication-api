@@ -21,7 +21,7 @@ module "doc-app-callback" {
 
   endpoint_name   = "doc-app-callback"
   path_part       = "doc-app-callback"
-  endpoint_method = "GET"
+  endpoint_method = ["GET"]
   environment     = var.environment
 
   handler_environment_variables = {

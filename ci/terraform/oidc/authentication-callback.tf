@@ -22,7 +22,7 @@ module "authentication_callback" {
 
   endpoint_name   = "orchestration-redirect"
   path_part       = "orchestration-redirect"
-  endpoint_method = "GET"
+  endpoint_method = ["GET"]
   environment     = var.environment
 
   handler_environment_variables = {

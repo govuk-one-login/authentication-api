@@ -19,7 +19,7 @@ module "update" {
 
   path_part                      = "{clientId}"
   endpoint_name                  = "update-client-info"
-  endpoint_method                = "PUT"
+  endpoint_method                = ["PUT"]
   method_request_parameters      = { "method.request.path.clientId" = true }
   integration_request_parameters = { "integration.request.path.clientId" = "method.request.path.clientId" }
 

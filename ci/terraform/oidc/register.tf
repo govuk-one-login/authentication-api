@@ -19,7 +19,7 @@ module "register" {
 
   endpoint_name   = "register"
   path_part       = "register"
-  endpoint_method = "POST"
+  endpoint_method = ["POST"]
 
   handler_environment_variables = {
     ENVIRONMENT          = var.environment

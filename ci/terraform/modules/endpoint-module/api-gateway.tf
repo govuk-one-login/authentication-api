@@ -6,9 +6,10 @@ resource "aws_api_gateway_resource" "endpoint_resource" {
 }
 
 resource "aws_api_gateway_method" "endpoint_method" {
+  for_each    = toset(var.endpoint_method)
   rest_api_id = var.rest_api_id
   resource_id = var.create_endpoint ? aws_api_gateway_resource.endpoint_resource[0].id : var.root_resource_id
-  http_method = var.endpoint_method
+  http_method = each.key
 
   authorization = var.authorizer_id == null ? "NONE" : "CUSTOM"
   authorizer_id = var.authorizer_id
@@ -21,9 +22,10 @@ resource "aws_api_gateway_method" "endpoint_method" {
 }
 
 resource "aws_api_gateway_integration" "endpoint_integration" {
+  for_each           = toset(var.endpoint_method)
   rest_api_id        = var.rest_api_id
   resource_id        = var.create_endpoint ? aws_api_gateway_resource.endpoint_resource[0].id : var.root_resource_id
-  http_method        = aws_api_gateway_method.endpoint_method.http_method
+  http_method        = aws_api_gateway_method.endpoint_method[each.key].http_method
   request_parameters = var.integration_request_parameters
 
   integration_http_method = "POST"
