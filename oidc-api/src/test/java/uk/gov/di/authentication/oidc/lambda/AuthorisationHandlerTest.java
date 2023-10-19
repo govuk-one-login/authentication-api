@@ -74,6 +74,8 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.net.URLDecoder;
+import java.net.URLEncoder;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.util.HashMap;
@@ -531,6 +533,7 @@ class AuthorisationHandlerTest {
         @Test
         void shouldReturn400WhenAuthorisationRequestCannotBeParsed() {
             APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+            event.setHttpMethod("GET");
             event.setQueryStringParameters(
                     Map.of(
                             "client_id",
@@ -582,6 +585,7 @@ class AuthorisationHandlerTest {
                                             URI.create("http://localhost:8080"))));
 
             APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+            event.setHttpMethod("GET");
             event.setQueryStringParameters(
                     Map.of(
                             "client_id", "test-id",
@@ -614,8 +618,48 @@ class AuthorisationHandlerTest {
         }
 
         @Test
+        void shouldReturn400WhenAuthorisationRequestBodyContainsInvalidScope() {
+            when(orchestrationAuthorizationService.validateAuthRequest(
+                            any(AuthenticationRequest.class), anyBoolean()))
+                    .thenReturn(
+                            Optional.of(
+                                    new AuthRequestError(
+                                            OAuth2Error.INVALID_SCOPE,
+                                            URI.create("http://localhost:8080"))));
+
+            APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+            event.setBody(
+                    "client_id=test-id&redirect_uri=http%3A%2F%2Flocalhost%3A8080&scope=email+openid+profile+non-existent-scope&response_type=code");
+            event.setHttpMethod("POST");
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
+            APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
+
+            assertThat(response, hasStatus(302));
+            assertEquals(
+                    "http://localhost:8080?error=invalid_scope&error_description=Invalid%2C+unknown+or+malformed+scope",
+                    response.getHeaders().get(ResponseHeaders.LOCATION));
+
+            verify(auditService)
+                    .submitAuditEvent(
+                            AUTHORISATION_REQUEST_ERROR,
+                            CLIENT_SESSION_ID,
+                            "",
+                            CLIENT_ID.getValue(),
+                            "",
+                            "",
+                            "123.123.123.123",
+                            "",
+                            PERSISTENT_SESSION_ID,
+                            pair("description", OAuth2Error.INVALID_SCOPE.getDescription()));
+        }
+
+        @Test
         void shouldThrowExceptionWhenNoQueryStringParametersArePresent() {
             APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+            event.setHttpMethod("GET");
             event.setRequestContext(
                     new ProxyRequestContext()
                             .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
@@ -629,7 +673,7 @@ class AuthorisationHandlerTest {
             assertThat(
                     expectedException.getMessage(),
                     equalTo(
-                            "No query string parameters are present in the Authentication request"));
+                            "No parameters are present in the Authentication request query string or body"));
         }
 
         @Test
@@ -688,6 +732,68 @@ class AuthorisationHandlerTest {
                             "code",
                             "request",
                             generateSignedJWT(jwtClaimsSet, keyPair).serialize()));
+            event.setHttpMethod("GET");
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
+            var response = makeHandlerRequest(event);
+
+            assertThat(response, hasStatus(302));
+            var uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
+
+            assertEquals(LOGIN_URL.getAuthority(), uri.getAuthority());
+            assertTrue(
+                    response.getMultiValueHeaders()
+                            .get(ResponseHeaders.SET_COOKIE)
+                            .contains(EXPECTED_SESSION_COOKIE_STRING));
+            assertTrue(
+                    response.getMultiValueHeaders()
+                            .get(ResponseHeaders.SET_COOKIE)
+                            .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
+            verify(sessionService).save(session);
+
+            inOrder.verify(auditService)
+                    .submitAuditEvent(
+                            OidcAuditableEvent.AUTHORISATION_INITIATED,
+                            CLIENT_SESSION_ID,
+                            session.getSessionId(),
+                            CLIENT_ID.getValue(),
+                            AuditService.UNKNOWN,
+                            AuditService.UNKNOWN,
+                            "123.123.123.123",
+                            AuditService.UNKNOWN,
+                            PERSISTENT_SESSION_ID,
+                            pair("client-name", RP_CLIENT_NAME));
+        }
+
+        @Test
+        void shouldRedirectToLoginWhenPostRequestObjectIsValid() throws JOSEException {
+            var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+            when(configService.isDocAppApiEnabled()).thenReturn(true);
+            when(requestObjectService.validateRequestObject(any(AuthenticationRequest.class)))
+                    .thenReturn(Optional.empty());
+            var event = new APIGatewayProxyRequestEvent();
+            event.setHttpMethod("POST");
+            var jwtClaimsSet =
+                    new JWTClaimsSet.Builder()
+                            .audience("https://localhost/authorize")
+                            .claim("redirect_uri", REDIRECT_URI)
+                            .claim("response_type", ResponseType.CODE.toString())
+                            .claim("scope", SCOPE)
+                            .claim("state", STATE.getValue())
+                            .claim("nonce", NONCE.getValue())
+                            .claim("client_id", CLIENT_ID.getValue())
+                            .issuer(CLIENT_ID.getValue())
+                            .build();
+            event.setBody(
+                    String.format(
+                            "client_id=%s&scope=openid&response_type=code&request=%s",
+                            URLEncoder.encode(CLIENT_ID.getValue(), Charset.defaultCharset()),
+                            URLEncoder.encode(
+                                    generateSignedJWT(jwtClaimsSet, keyPair).serialize(),
+                                    Charset.defaultCharset())));
+
             event.setRequestContext(
                     new ProxyRequestContext()
                             .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
@@ -848,6 +954,7 @@ class AuthorisationHandlerTest {
                                 new AuthRequestError(
                                         errorObject, URI.create("http://localhost:8080"))));
         var event = new APIGatewayProxyRequestEvent();
+        event.setHttpMethod("GET");
         event.setQueryStringParameters(
                 Map.of(
                         "client_id", "test-id",
@@ -970,6 +1077,7 @@ class AuthorisationHandlerTest {
 
     private APIGatewayProxyRequestEvent withRequestEvent(Map<String, String> requestParams) {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHttpMethod("GET");
         event.setQueryStringParameters(requestParams);
         event.setRequestContext(
                 new ProxyRequestContext()

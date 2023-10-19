@@ -187,18 +187,26 @@ public class AuthorisationHandler
 
         AuthenticationRequest authRequest;
         try {
-            Map<String, String> parameterMap = switch (input.getHttpMethod()) {
-                case "GET" -> input.getQueryStringParameters();
-                case "POST" -> parseRequestBody(input.getBody());
-                default -> {
-                    LOG.warn(String.format("Authentication request sent with invalid HTTP method %s", input.getHttpMethod()));
-                    throw new InvalidHttpMethodException(String.format("Authentication request does not support %s requests", input.getHttpMethod()));
-                }
-            };
-            Map<String, List<String>> requestParameters = parameterMap.entrySet().stream()
-                    .collect(
-                            Collectors.toMap(
-                                    Map.Entry::getKey, entry -> List.of(entry.getValue())));
+            Map<String, String> parameterMap =
+                    switch (input.getHttpMethod()) {
+                        case "GET" -> input.getQueryStringParameters();
+                        case "POST" -> parseRequestBody(input.getBody());
+                        default -> {
+                            LOG.warn(
+                                    String.format(
+                                            "Authentication request sent with invalid HTTP method %s",
+                                            input.getHttpMethod()));
+                            throw new InvalidHttpMethodException(
+                                    String.format(
+                                            "Authentication request does not support %s requests",
+                                            input.getHttpMethod()));
+                        }
+                    };
+            Map<String, List<String>> requestParameters =
+                    parameterMap.entrySet().stream()
+                            .collect(
+                                    Collectors.toMap(
+                                            Map.Entry::getKey, entry -> List.of(entry.getValue())));
             authRequest = AuthenticationRequest.parse(requestParameters);
             String clientId = authRequest.getClientID().getValue();
             client =
@@ -223,9 +231,12 @@ public class AuthorisationHandler
                     AuditService.UNKNOWN,
                     clientSessionId);
         } catch (NullPointerException e) {
-            LOG.warn("No parameters are present in the Authentication request query string or body", e);
+            LOG.warn(
+                    "No parameters are present in the Authentication request query string or body",
+                    e);
             throw new RuntimeException(
-                    "No parameters are present in the Authentication request query string or body", e);
+                    "No parameters are present in the Authentication request query string or body",
+                    e);
         }
 
         Optional<AuthRequestError> authRequestError;

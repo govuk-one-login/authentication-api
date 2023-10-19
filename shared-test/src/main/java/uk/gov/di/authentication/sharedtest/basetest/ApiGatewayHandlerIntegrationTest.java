@@ -36,6 +36,7 @@ public abstract class ApiGatewayHandlerIntegrationTest
         request.withHeaders(headers)
                 .withQueryStringParameters(queryString)
                 .withPathParameters(pathParams)
+                .withHttpMethod("GET")
                 .withRequestContext(
                         new APIGatewayProxyRequestEvent.ProxyRequestContext()
                                 .withRequestId(requestId));
