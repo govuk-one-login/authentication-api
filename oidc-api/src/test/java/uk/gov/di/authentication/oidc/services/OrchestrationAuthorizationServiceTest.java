@@ -180,7 +180,7 @@ class OrchestrationAuthorizationServiceTest {
                 orchestrationAuthorizationService.getExistingOrCreateNewPersistentSessionId(
                         requestCookieHeader);
 
-        assertThat(persistentSessionId, equalTo("some-persistent-id"));
+        assertTrue(CookieHelper.isValidCookieWithDoubleDashedTimestamp(persistentSessionId));
     }
 
     @ParameterizedTest

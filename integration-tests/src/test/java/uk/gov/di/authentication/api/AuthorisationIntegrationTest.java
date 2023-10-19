@@ -31,6 +31,7 @@ import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
+import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.DocAppJwksExtension;
@@ -171,7 +172,10 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 getHttpCookieFromMultiValueResponseHeaders(
                         response.getMultiValueHeaders(), "di-persistent-session-id");
         assertThat(persistentCookie.isPresent(), equalTo(true));
-        assertThat(persistentCookie.get().getValue(), equalTo("persistent-id-value"));
+        assertThat(persistentCookie.get().getValue(), containsString("persistent-id-value--"));
+        assertTrue(
+                CookieHelper.isValidCookieWithDoubleDashedTimestamp(
+                        persistentCookie.get().getValue()));
 
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
@@ -205,7 +209,10 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 getHttpCookieFromMultiValueResponseHeaders(
                         response.getMultiValueHeaders(), "di-persistent-session-id");
         assertThat(persistentCookie.isPresent(), equalTo(true));
-        assertThat(persistentCookie.get().getValue(), equalTo("persistent-id-value"));
+        assertThat(persistentCookie.get().getValue(), containsString("persistent-id-value--"));
+        assertTrue(
+                CookieHelper.isValidCookieWithDoubleDashedTimestamp(
+                        persistentCookie.get().getValue()));
         var languageCookie =
                 getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "lng");
         assertThat(languageCookie.isPresent(), equalTo(true));
