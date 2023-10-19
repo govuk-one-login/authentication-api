@@ -23,12 +23,14 @@ import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent;
 import uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService;
 import uk.gov.di.authentication.oidc.services.AuthenticationTokenService;
 import uk.gov.di.authentication.oidc.services.AuthenticationUserInfoStorageService;
 import uk.gov.di.authentication.oidc.services.InitiateIPVAuthorisationService;
 import uk.gov.di.authentication.shared.conditions.IdentityHelper;
+import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ClientType;
@@ -68,6 +70,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class AuthenticationCallbackHandlerTest {
@@ -136,6 +139,7 @@ class AuthenticationCallbackHandlerTest {
         when(USER_INFO.getEmailAddress()).thenReturn(TEST_EMAIL_ADDRESS);
         when(USER_INFO.getSubject()).thenReturn(PAIRWISE_SUBJECT_ID);
         when(USER_INFO.getClaim("new_account")).thenReturn("true");
+        when(USER_INFO.getClaim("rp_client_id")).thenReturn(PAIRWISE_SUBJECT_ID.getValue());
     }
 
     @BeforeEach
@@ -186,6 +190,20 @@ class AuthenticationCallbackHandlerTest {
                         OrchestrationAuditableEvent.AUTH_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                         OrchestrationAuditableEvent.AUTH_SUCCESSFUL_USERINFO_RESPONSE_RECEIVED),
                 auditService);
+        verify(auditService)
+                .submitAuditEvent(
+                        eq(OidcAuditableEvent.AUTH_CODE_ISSUED),
+                        eq(CLIENT_SESSION_ID),
+                        eq(SESSION_ID),
+                        eq(CLIENT_ID.getValue()),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        eq(pair("internalSubjectId", AuditService.UNKNOWN)),
+                        eq(pair("isNewAccount", "true")),
+                        eq(pair("rpPairwiseId", PAIRWISE_SUBJECT_ID.getValue())));
     }
 
     @Test
@@ -376,8 +394,8 @@ class AuthenticationCallbackHandlerTest {
     }
 
     private static void verifyAuditEvents(
-            List<OrchestrationAuditableEvent> auditEvents, AuditService auditService) {
-        for (OrchestrationAuditableEvent event : auditEvents) {
+            List<AuditableEvent> auditEvents, AuditService auditService) {
+        for (AuditableEvent event : auditEvents) {
             verify(auditService)
                     .submitAuditEvent(
                             eq(event),
