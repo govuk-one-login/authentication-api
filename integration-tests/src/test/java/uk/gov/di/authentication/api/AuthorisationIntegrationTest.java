@@ -105,7 +105,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 makeRequest(
                         Optional.empty(),
                         constructHeaders(Optional.empty()),
-                        constructQueryStringParameters(CLIENT_ID, null, "openid", "Cl.Cm"));
+                        constructQueryStringParameters(CLIENT_ID, null, "openid", "Cl.Cm"),
+                        Optional.of("GET"));
         assertThat(response, hasStatus(302));
         assertThat(
                 getLocationResponseHeader(response),
@@ -126,7 +127,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 makeRequest(
                         Optional.empty(),
                         constructHeaders(Optional.empty()),
-                        constructQueryStringParameters(CLIENT_ID, null, "openid", "P2.Cl.Cm"));
+                        constructQueryStringParameters(CLIENT_ID, null, "openid", "P2.Cl.Cm"),
+                        Optional.of("GET"));
         assertThat(response, hasStatus(302));
 
         String redirectUri = getLocationResponseHeader(response);
@@ -152,7 +154,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                         new HttpCookie(
                                                 "di-persistent-session-id",
                                                 "persistent-id-value"))),
-                        constructQueryStringParameters(CLIENT_ID, null, "openid", "Cl.Cm"));
+                        constructQueryStringParameters(CLIENT_ID, null, "openid", "Cl.Cm"),
+                        Optional.of("GET"));
 
         assertThat(response, hasStatus(302));
         String redirectUri = getLocationResponseHeader(response);
@@ -185,7 +188,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                         new HttpCookie(
                                                 "di-persistent-session-id",
                                                 "persistent-id-value"))),
-                        constructQueryStringParameters(CLIENT_ID, null, "openid", "Cl.Cm", "en"));
+                        constructQueryStringParameters(CLIENT_ID, null, "openid", "Cl.Cm", "en"),
+                        Optional.of("GET"));
 
         assertThat(response, hasStatus(302));
         String redirectUri = getLocationResponseHeader(response);
@@ -219,7 +223,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 makeRequest(
                         Optional.empty(),
                         constructHeaders(Optional.empty()),
-                        constructQueryStringParameters(AM_CLIENT_ID, null, "openid am", null));
+                        constructQueryStringParameters(AM_CLIENT_ID, null, "openid am", null),
+                        Optional.of("GET"));
 
         assertThat(response, hasStatus(302));
         String redirectUri = getLocationResponseHeader(response);
@@ -246,7 +251,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 makeRequest(
                         Optional.empty(),
                         constructHeaders(Optional.empty()),
-                        constructQueryStringParameters(CLIENT_ID, null, "openid am", null));
+                        constructQueryStringParameters(CLIENT_ID, null, "openid am", null),
+                        Optional.of("GET"));
 
         assertThat(response, hasStatus(302));
         String redirectUri = getLocationResponseHeader(response);
@@ -265,7 +271,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 makeRequest(
                         Optional.empty(),
                         constructHeaders(Optional.of(new HttpCookie("gs", "this is bad"))),
-                        constructQueryStringParameters(CLIENT_ID, null, "openid", null));
+                        constructQueryStringParameters(CLIENT_ID, null, "openid", null),
+                        Optional.of("GET"));
 
         assertThat(response, hasStatus(302));
         String redirectUri = getLocationResponseHeader(response);
@@ -293,7 +300,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Optional.empty(),
                         constructHeaders(
                                 Optional.of(buildSessionCookie("123", DUMMY_CLIENT_SESSION_ID))),
-                        constructQueryStringParameters(CLIENT_ID, null, "openid", null));
+                        constructQueryStringParameters(CLIENT_ID, null, "openid", null),
+                        Optional.of("GET"));
 
         assertThat(response, hasStatus(302));
         String redirectUri = getLocationResponseHeader(response);
@@ -326,7 +334,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         constructHeaders(
                                 Optional.of(
                                         buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID))),
-                        constructQueryStringParameters(CLIENT_ID, null, "openid", null));
+                        constructQueryStringParameters(CLIENT_ID, null, "openid", null),
+                        Optional.of("GET"));
 
         assertThat(response, hasStatus(302));
         String redirectUri = getLocationResponseHeader(response);
@@ -358,7 +367,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         constructHeaders(
                                 Optional.of(
                                         buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID))),
-                        constructQueryStringParameters(CLIENT_ID, null, "openid", null));
+                        constructQueryStringParameters(CLIENT_ID, null, "openid", null),
+                        Optional.of("GET"));
 
         assertThat(response, hasStatus(302));
 
@@ -389,7 +399,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         constructHeaders(
                                 Optional.of(
                                         buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID))),
-                        constructQueryStringParameters(CLIENT_ID, null, "openid", "P2.Cl.Cm"));
+                        constructQueryStringParameters(CLIENT_ID, null, "openid", "P2.Cl.Cm"),
+                        Optional.of("GET"));
 
         assertThat(response, hasStatus(302));
 
@@ -414,7 +425,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 makeRequest(
                         Optional.empty(),
                         constructHeaders(Optional.empty()),
-                        constructQueryStringParameters(CLIENT_ID, NONE.toString(), "openid", null));
+                        constructQueryStringParameters(CLIENT_ID, NONE.toString(), "openid", null),
+                        Optional.of("GET"));
         assertThat(response, hasStatus(302));
 
         String redirectUri = getLocationResponseHeader(response);
@@ -439,7 +451,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 Optional.of(
                                         buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID))),
                         constructQueryStringParameters(
-                                CLIENT_ID, NONE.toString(), OPENID.getValue(), null));
+                                CLIENT_ID, NONE.toString(), OPENID.getValue(), null),
+                        Optional.of("GET"));
 
         assertThat(response, hasStatus(302));
         var cookie =
@@ -474,7 +487,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 Optional.of(
                                         buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID))),
                         constructQueryStringParameters(
-                                CLIENT_ID, LOGIN.toString(), OPENID.getValue(), null));
+                                CLIENT_ID, LOGIN.toString(), OPENID.getValue(), null),
+                        Optional.of("GET"));
 
         assertThat(response, hasStatus(302));
         var cookie =
@@ -509,7 +523,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 Optional.of(
                                         buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID))),
                         constructQueryStringParameters(
-                                CLIENT_ID, null, OPENID.getValue(), MEDIUM_LEVEL.getValue()));
+                                CLIENT_ID, null, OPENID.getValue(), MEDIUM_LEVEL.getValue()),
+                        Optional.of("GET"));
 
         assertThat(response, hasStatus(302));
 
@@ -544,7 +559,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 Optional.of(
                                         buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID))),
                         constructQueryStringParameters(
-                                CLIENT_ID, NONE.toString(), OPENID.getValue(), null));
+                                CLIENT_ID, NONE.toString(), OPENID.getValue(), null),
+                        Optional.of("GET"));
 
         assertThat(response, hasStatus(302));
 
@@ -591,7 +607,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 makeRequest(
                         Optional.empty(),
                         constructHeaders(Optional.empty()),
-                        queryStringParameters);
+                        queryStringParameters,
+                        Optional.of("GET"));
         assertThat(response, hasStatus(302));
         assertThat(
                 getLocationResponseHeader(response),
@@ -646,7 +663,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                         new HttpCookie(
                                                 "di-persistent-session-id",
                                                 "persistent-id-value"))),
-                        requestParams);
+                        requestParams,
+                        Optional.of("GET"));
 
         var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
         var expectedQueryStringRegex = "response_type=code&request=.*&client_id=doc-app-client-id";
