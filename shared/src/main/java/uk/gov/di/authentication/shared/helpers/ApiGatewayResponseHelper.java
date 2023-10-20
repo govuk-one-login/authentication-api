@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 public class ApiGatewayResponseHelper {
 
     public enum SecurityHeaders {
-        XSS_PROTECTION("X-XSS-Protection", "1; mode=block"),
+        XSS_PROTECTION("X-XSS-Protection", "0"),
         CONTENT_TYPE_OPTIONS("X-Content-Type-Options", "nosniff"),
         CONTENT_SECURITY_POLICY("Content-Security-Policy", "frame-ancestors 'none'"),
         STRICT_TRANSPORT_SECURITY(
