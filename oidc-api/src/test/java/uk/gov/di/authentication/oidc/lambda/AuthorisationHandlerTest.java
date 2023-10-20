@@ -49,6 +49,7 @@ import org.mockito.MockedStatic;
 import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
+import uk.gov.di.authentication.oidc.exceptions.InvalidHttpMethodException;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
 import uk.gov.di.authentication.oidc.services.RequestObjectService;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
@@ -674,6 +675,35 @@ class AuthorisationHandlerTest {
                     expectedException.getMessage(),
                     equalTo(
                             "No parameters are present in the Authentication request query string or body"));
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {"PUT", "DELETE", "PATCH"})
+        void shouldThrowExceptionWhenMethodIsNotGetOrPost(String method) {
+            APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+            event.setHttpMethod(method);
+            event.setQueryStringParameters(
+                    Map.of(
+                            "client_id", "test-id",
+                            "redirect_uri", "http://localhost:8080",
+                            "scope", "email,openid,profile",
+                            "response_type", "code"));
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
+            RuntimeException expectedException =
+                    assertThrows(
+                            InvalidHttpMethodException.class,
+                            () -> makeHandlerRequest(event),
+                            "Expected to throw InvalidHttpMethodException");
+
+            assertThat(
+                    expectedException.getMessage(),
+                    equalTo(
+                            String.format(
+                                    "Authentication request does not support %s requests",
+                                    method)));
         }
 
         @Test
