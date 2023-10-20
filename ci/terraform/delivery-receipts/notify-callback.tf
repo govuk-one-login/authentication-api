@@ -19,8 +19,9 @@ module "notify_callback" {
   environment     = var.environment
 
   handler_environment_variables = merge(var.notify_template_map, {
-    ENVIRONMENT         = var.environment
-    LOCALSTACK_ENDPOINT = var.use_localstack ? var.localstack_endpoint : null
+    ENVIRONMENT             = var.environment
+    LOCALSTACK_ENDPOINT     = var.use_localstack ? var.localstack_endpoint : null
+    BULK_USER_EMAIL_ENABLED = local.deploy_bulk_email_users_count
   })
   handler_function_name = "uk.gov.di.authentication.deliveryreceiptsapi.lambda.NotifyCallbackHandler::handleRequest"
 
