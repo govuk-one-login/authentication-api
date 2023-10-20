@@ -40,17 +40,34 @@ class NotifyCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
     private final Context context = mock(Context.class);
     private NotifyCallbackHandler handler;
 
+    private static final IntegrationTestConfigurationService CONFIGURATION_SERVICE =
+            new IntegrationTestConfigurationService(
+                    auditTopic,
+                    notificationsQueue,
+                    auditSigningKey,
+                    tokenSigner,
+                    ipvPrivateKeyJwtSigner,
+                    spotQueue,
+                    docAppPrivateKeyJwtSigner,
+                    configurationParameters,
+                    new SystemService()) {
+                @Override
+                public boolean isBulkUserEmailEnabled() {
+                    return true;
+                }
+            };
+
     @RegisterExtension
     protected static final BulkEmailUsersExtension bulkEmailUsersExtension =
             new BulkEmailUsersExtension();
 
     protected final BulkEmailUsersService bulkEmailUsersService =
-            new BulkEmailUsersService(TEST_CONFIGURATION_SERVICE);
+            new BulkEmailUsersService(CONFIGURATION_SERVICE);
 
     @BeforeEach
     void setup() {
-        TEST_CONFIGURATION_SERVICE.setSystemService(new SystemService());
-        handler = new NotifyCallbackHandler(TEST_CONFIGURATION_SERVICE);
+        CONFIGURATION_SERVICE.setSystemService(new SystemService());
+        handler = new NotifyCallbackHandler(CONFIGURATION_SERVICE);
     }
 
     @Test
