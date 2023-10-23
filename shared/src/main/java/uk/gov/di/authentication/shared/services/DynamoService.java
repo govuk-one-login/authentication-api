@@ -81,7 +81,7 @@ public class DynamoService implements AuthenticationService {
     @Override
     public User signUp(
             String email, String password, Subject subject, TermsAndConditions termsAndConditions) {
-        return signUp(email, password, subject, termsAndConditions, false, 1);
+        return signUp(email, password, subject, termsAndConditions, false, 0);
     }
 
     public User signUp(
