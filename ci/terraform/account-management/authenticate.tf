@@ -17,7 +17,7 @@ module "authenticate" {
 
   endpoint_name   = "authenticate"
   path_part       = "authenticate"
-  endpoint_method = "POST"
+  endpoint_method = ["POST"]
   handler_environment_variables = {
     ENVIRONMENT          = var.environment
     DYNAMO_ENDPOINT      = var.use_localstack ? var.lambda_dynamo_endpoint : null
@@ -58,4 +58,9 @@ module "authenticate" {
   default_tags                           = local.default_tags
 
   use_localstack = var.use_localstack
+}
+
+moved {
+  from = module.authenticate.aws_api_gateway_method.endpoint_method
+  to   = module.authenticate.aws_api_gateway_method.endpoint_method["POST"]
 }

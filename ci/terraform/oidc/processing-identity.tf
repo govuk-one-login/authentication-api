@@ -21,7 +21,7 @@ module "processing-identity" {
 
   endpoint_name   = "processing-identity"
   path_part       = "processing-identity"
-  endpoint_method = "POST"
+  endpoint_method = ["POST"]
   environment     = var.environment
 
   handler_environment_variables = {
@@ -68,4 +68,9 @@ module "processing-identity" {
   ]
 
   use_localstack = var.use_localstack
+}
+
+moved {
+  from = module.processing-identity.aws_api_gateway_method.endpoint_method
+  to   = module.processing-identity.aws_api_gateway_method.endpoint_method["POST"]
 }

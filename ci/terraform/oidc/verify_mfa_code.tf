@@ -22,7 +22,7 @@ module "verify_mfa_code" {
 
   endpoint_name   = "verify-mfa-code"
   path_part       = "verify-mfa-code"
-  endpoint_method = "POST"
+  endpoint_method = ["POST"]
   environment     = var.environment
 
   handler_environment_variables = {
@@ -72,4 +72,9 @@ module "verify_mfa_code" {
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_frontend_api,
   ]
+}
+
+moved {
+  from = module.verify_mfa_code.aws_api_gateway_method.endpoint_method
+  to   = module.verify_mfa_code.aws_api_gateway_method.endpoint_method["POST"]
 }

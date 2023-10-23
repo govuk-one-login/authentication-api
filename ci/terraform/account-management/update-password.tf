@@ -18,7 +18,7 @@ module "update_password" {
 
   endpoint_name   = "update-password"
   path_part       = "update-password"
-  endpoint_method = "POST"
+  endpoint_method = ["POST"]
   handler_environment_variables = {
     ENVIRONMENT          = var.environment
     DYNAMO_ENDPOINT      = var.use_localstack ? var.lambda_dynamo_endpoint : null
@@ -59,4 +59,9 @@ module "update_password" {
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
 
+}
+
+moved {
+  from = module.update_password.aws_api_gateway_method.endpoint_method
+  to   = module.update_password.aws_api_gateway_method.endpoint_method["POST"]
 }

@@ -22,7 +22,7 @@ module "ipv-authorize" {
 
   endpoint_name   = "ipv-authorize"
   path_part       = "ipv-authorize"
-  endpoint_method = "POST"
+  endpoint_method = ["POST"]
   environment     = var.environment
 
   handler_environment_variables = {
@@ -77,4 +77,9 @@ module "ipv-authorize" {
     aws_api_gateway_resource.connect_resource,
     aws_api_gateway_resource.wellknown_resource,
   ]
+}
+
+moved {
+  from = module.ipv-authorize.aws_api_gateway_method.endpoint_method
+  to   = module.ipv-authorize.aws_api_gateway_method.endpoint_method["POST"]
 }

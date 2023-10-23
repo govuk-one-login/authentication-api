@@ -22,7 +22,7 @@ module "userinfo" {
 
   endpoint_name   = "userinfo"
   path_part       = "userinfo"
-  endpoint_method = "GET"
+  endpoint_method = ["GET"]
   environment     = var.environment
 
   handler_environment_variables = {
@@ -72,4 +72,9 @@ module "userinfo" {
     aws_api_gateway_resource.connect_resource,
     aws_api_gateway_resource.wellknown_resource,
   ]
+}
+
+moved {
+  from = module.userinfo.aws_api_gateway_method.endpoint_method
+  to   = module.userinfo.aws_api_gateway_method.endpoint_method["GET"]
 }

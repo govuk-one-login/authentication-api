@@ -19,7 +19,7 @@ module "doc-app-authorize" {
 
   endpoint_name   = "doc-app-authorize"
   path_part       = "doc-app-authorize"
-  endpoint_method = "POST"
+  endpoint_method = ["POST"]
   environment     = var.environment
 
   handler_environment_variables = {
@@ -75,4 +75,9 @@ module "doc-app-authorize" {
     aws_api_gateway_resource.connect_resource,
     aws_api_gateway_resource.wellknown_resource,
   ]
+}
+
+moved {
+  from = module.doc-app-authorize.aws_api_gateway_method.endpoint_method
+  to   = module.doc-app-authorize.aws_api_gateway_method.endpoint_method["POST"]
 }

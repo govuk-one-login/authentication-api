@@ -19,7 +19,7 @@ module "update_email" {
 
   endpoint_name   = "update-email"
   path_part       = "update-email"
-  endpoint_method = "POST"
+  endpoint_method = ["POST"]
   handler_environment_variables = {
     ENVIRONMENT          = var.environment
     DYNAMO_ENDPOINT      = var.use_localstack ? var.lambda_dynamo_endpoint : null
@@ -61,4 +61,9 @@ module "update_email" {
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
 
+}
+
+moved {
+  from = module.update_email.aws_api_gateway_method.endpoint_method
+  to   = module.update_email.aws_api_gateway_method.endpoint_method["POST"]
 }

@@ -24,7 +24,7 @@ module "ipv-callback" {
 
   endpoint_name   = "ipv-callback"
   path_part       = "ipv-callback"
-  endpoint_method = "GET"
+  endpoint_method = ["GET"]
   environment     = var.environment
 
   handler_environment_variables = {
@@ -83,4 +83,9 @@ module "ipv-callback" {
     aws_api_gateway_resource.connect_resource,
     aws_api_gateway_resource.wellknown_resource,
   ]
+}
+
+moved {
+  from = module.ipv-callback.aws_api_gateway_method.endpoint_method
+  to   = module.ipv-callback.aws_api_gateway_method.endpoint_method["GET"]
 }

@@ -19,7 +19,7 @@ module "register" {
 
   endpoint_name   = "register"
   path_part       = "register"
-  endpoint_method = "POST"
+  endpoint_method = ["POST"]
 
   handler_environment_variables = {
     ENVIRONMENT          = var.environment
@@ -64,4 +64,9 @@ module "register" {
     aws_api_gateway_resource.wellknown_resource,
     aws_api_gateway_resource.register_resource,
   ]
+}
+
+moved {
+  from = module.register[0].aws_api_gateway_method.endpoint_method
+  to   = module.register[0].aws_api_gateway_method.endpoint_method["POST"]
 }

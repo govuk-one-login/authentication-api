@@ -27,7 +27,7 @@ variable "integration_request_parameters" {
 }
 
 variable "endpoint_method" {
-  type = string
+  type = list(string)
 }
 
 variable "source_bucket" {

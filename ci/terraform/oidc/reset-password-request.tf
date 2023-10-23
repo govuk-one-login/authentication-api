@@ -19,7 +19,7 @@ module "reset-password-request" {
 
   endpoint_name   = "reset-password-request"
   path_part       = "reset-password-request"
-  endpoint_method = "POST"
+  endpoint_method = ["POST"]
   environment     = var.environment
 
   handler_environment_variables = {
@@ -73,4 +73,9 @@ module "reset-password-request" {
     aws_api_gateway_resource.wellknown_resource,
     aws_sqs_queue.email_queue,
   ]
+}
+
+moved {
+  from = module.reset-password-request.aws_api_gateway_method.endpoint_method
+  to   = module.reset-password-request.aws_api_gateway_method.endpoint_method["POST"]
 }

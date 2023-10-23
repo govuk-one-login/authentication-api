@@ -20,7 +20,7 @@ module "logout" {
 
   endpoint_name   = "logout"
   path_part       = "logout"
-  endpoint_method = "GET"
+  endpoint_method = ["GET"]
   environment     = var.environment
 
   handler_environment_variables = {
@@ -72,4 +72,9 @@ module "logout" {
     aws_api_gateway_resource.connect_resource,
     aws_api_gateway_resource.wellknown_resource,
   ]
+}
+
+moved {
+  from = module.logout.aws_api_gateway_method.endpoint_method
+  to   = module.logout.aws_api_gateway_method.endpoint_method["GET"]
 }

@@ -11,7 +11,7 @@ module "openid_configuration_discovery" {
 
   endpoint_name   = "openid-configuration"
   path_part       = "openid-configuration"
-  endpoint_method = "GET"
+  endpoint_method = ["GET"]
   environment     = var.environment
 
   handler_environment_variables = {
@@ -54,4 +54,9 @@ module "openid_configuration_discovery" {
     aws_api_gateway_resource.wellknown_resource,
     module.openid_configuration_role
   ]
+}
+
+moved {
+  from = module.openid_configuration_discovery.aws_api_gateway_method.endpoint_method
+  to   = module.openid_configuration_discovery.aws_api_gateway_method.endpoint_method["GET"]
 }

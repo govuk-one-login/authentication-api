@@ -23,7 +23,7 @@ module "login" {
 
   endpoint_name   = "login"
   path_part       = "login"
-  endpoint_method = "POST"
+  endpoint_method = ["POST"]
   environment     = var.environment
 
   handler_environment_variables = {
@@ -67,4 +67,9 @@ module "login" {
   api_key_required                       = true
 
   use_localstack = var.use_localstack
+}
+
+moved {
+  from = module.login.aws_api_gateway_method.endpoint_method
+  to   = module.login.aws_api_gateway_method.endpoint_method["POST"]
 }

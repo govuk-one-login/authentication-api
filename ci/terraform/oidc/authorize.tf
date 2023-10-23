@@ -23,7 +23,7 @@ module "authorize" {
 
   endpoint_name   = "authorize"
   path_part       = "authorize"
-  endpoint_method = "GET"
+  endpoint_method = ["GET", "POST"]
   environment     = var.environment
 
   handler_environment_variables = {
@@ -90,4 +90,9 @@ module "authorize" {
     aws_api_gateway_resource.connect_resource,
     aws_api_gateway_resource.wellknown_resource,
   ]
+}
+
+moved {
+  from = module.authorize.aws_api_gateway_method.endpoint_method
+  to   = module.authorize.aws_api_gateway_method.endpoint_method["GET"]
 }

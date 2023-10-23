@@ -22,7 +22,7 @@ module "verify_code" {
 
   endpoint_name   = "verify-code"
   path_part       = "verify-code"
-  endpoint_method = "POST"
+  endpoint_method = ["POST"]
   environment     = var.environment
 
   handler_environment_variables = {
@@ -76,4 +76,9 @@ module "verify_code" {
     aws_api_gateway_resource.wellknown_resource,
     aws_sqs_queue.email_queue,
   ]
+}
+
+moved {
+  from = module.verify_code.aws_api_gateway_method.endpoint_method
+  to   = module.verify_code.aws_api_gateway_method.endpoint_method["POST"]
 }

@@ -20,7 +20,7 @@ module "update_profile" {
 
   endpoint_name   = "update-profile"
   path_part       = "update-profile"
-  endpoint_method = "POST"
+  endpoint_method = ["POST"]
   environment     = var.environment
 
   handler_environment_variables = {
@@ -70,4 +70,9 @@ module "update_profile" {
     aws_api_gateway_resource.connect_resource,
     aws_api_gateway_resource.wellknown_resource,
   ]
+}
+
+moved {
+  from = module.update_profile.aws_api_gateway_method.endpoint_method
+  to   = module.update_profile.aws_api_gateway_method.endpoint_method["POST"]
 }

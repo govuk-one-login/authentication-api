@@ -11,7 +11,7 @@ module "trustmarks" {
 
   endpoint_name   = "trustmark"
   path_part       = "trustmark"
-  endpoint_method = "GET"
+  endpoint_method = ["GET"]
   environment     = var.environment
 
   handler_environment_variables = {
@@ -54,4 +54,9 @@ module "trustmarks" {
     aws_api_gateway_resource.connect_resource,
     aws_api_gateway_resource.wellknown_resource,
   ]
+}
+
+moved {
+  from = module.trustmarks.aws_api_gateway_method.endpoint_method
+  to   = module.trustmarks.aws_api_gateway_method.endpoint_method["GET"]
 }

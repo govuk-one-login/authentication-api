@@ -21,7 +21,7 @@ module "doc-app-callback" {
 
   endpoint_name   = "doc-app-callback"
   path_part       = "doc-app-callback"
-  endpoint_method = "GET"
+  endpoint_method = ["GET"]
   environment     = var.environment
 
   handler_environment_variables = {
@@ -80,4 +80,9 @@ module "doc-app-callback" {
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_api,
   ]
+}
+
+moved {
+  from = module.doc-app-callback.aws_api_gateway_method.endpoint_method
+  to   = module.doc-app-callback.aws_api_gateway_method.endpoint_method["GET"]
 }

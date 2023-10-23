@@ -19,7 +19,7 @@ module "start" {
 
   endpoint_name   = "start"
   path_part       = "start"
-  endpoint_method = "GET"
+  endpoint_method = ["GET"]
   environment     = var.environment
 
   handler_environment_variables = {
@@ -72,4 +72,9 @@ module "start" {
     aws_api_gateway_resource.connect_resource,
     aws_api_gateway_resource.wellknown_resource,
   ]
+}
+
+moved {
+  from = module.start.aws_api_gateway_method.endpoint_method
+  to   = module.start.aws_api_gateway_method.endpoint_method["GET"]
 }

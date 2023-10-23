@@ -22,7 +22,7 @@ module "authentication_callback" {
 
   endpoint_name   = "orchestration-redirect"
   path_part       = "orchestration-redirect"
-  endpoint_method = "GET"
+  endpoint_method = ["GET"]
   environment     = var.environment
 
   handler_environment_variables = {
@@ -76,4 +76,9 @@ module "authentication_callback" {
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_api
   ]
+}
+
+moved {
+  from = module.authentication_callback.aws_api_gateway_method.endpoint_method
+  to   = module.authentication_callback.aws_api_gateway_method.endpoint_method["GET"]
 }

@@ -22,7 +22,7 @@ module "account_recovery" {
 
   endpoint_name   = "account-recovery"
   path_part       = "account-recovery"
-  endpoint_method = "POST"
+  endpoint_method = ["POST"]
   environment     = var.environment
 
   handler_environment_variables = {
@@ -65,4 +65,8 @@ module "account_recovery" {
   api_key_required                       = true
 
   use_localstack = var.use_localstack
+}
+moved {
+  from = module.account_recovery.aws_api_gateway_method.endpoint_method
+  to   = module.account_recovery.aws_api_gateway_method.endpoint_method["POST"]
 }

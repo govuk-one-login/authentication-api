@@ -19,7 +19,7 @@ module "send_notification" {
 
   endpoint_name   = "send-notification"
   path_part       = "send-notification"
-  endpoint_method = "POST"
+  endpoint_method = ["POST"]
   environment     = var.environment
 
   handler_environment_variables = {
@@ -72,4 +72,9 @@ module "send_notification" {
     aws_api_gateway_resource.wellknown_resource,
     aws_sqs_queue.email_queue,
   ]
+}
+
+moved {
+  from = module.send_notification.aws_api_gateway_method.endpoint_method
+  to   = module.send_notification.aws_api_gateway_method.endpoint_method["POST"]
 }

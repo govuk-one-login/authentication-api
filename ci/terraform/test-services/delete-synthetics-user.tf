@@ -16,7 +16,7 @@ module "delete-synthetics-user" {
 
   endpoint_name   = "synthetics-user"
   path_part       = "synthetics-user"
-  endpoint_method = "DELETE"
+  endpoint_method = ["DELETE"]
   environment     = var.environment
 
   handler_environment_variables = {
@@ -56,4 +56,9 @@ module "delete-synthetics-user" {
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_test_services_api,
   ]
+}
+
+moved {
+  from = module.delete-synthetics-user.aws_api_gateway_method.endpoint_method
+  to   = module.delete-synthetics-user.aws_api_gateway_method.endpoint_method["DELETE"]
 }

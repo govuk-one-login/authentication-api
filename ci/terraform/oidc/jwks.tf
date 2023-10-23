@@ -15,7 +15,7 @@ module "jwks" {
 
   endpoint_name   = "jwks.json"
   path_part       = "jwks.json"
-  endpoint_method = "GET"
+  endpoint_method = ["GET"]
   environment     = var.environment
 
   handler_environment_variables = {
@@ -60,4 +60,9 @@ module "jwks" {
     aws_api_gateway_resource.connect_resource,
     aws_api_gateway_resource.wellknown_resource,
   ]
+}
+
+moved {
+  from = module.jwks.aws_api_gateway_method.endpoint_method
+  to   = module.jwks.aws_api_gateway_method.endpoint_method["GET"]
 }

@@ -19,7 +19,7 @@ module "mfa" {
 
   endpoint_name   = "mfa"
   path_part       = "mfa"
-  endpoint_method = "POST"
+  endpoint_method = ["POST"]
   environment     = var.environment
 
   handler_environment_variables = {
@@ -73,4 +73,9 @@ module "mfa" {
     aws_api_gateway_resource.wellknown_resource,
     aws_sqs_queue.email_queue,
   ]
+}
+
+moved {
+  from = module.mfa.aws_api_gateway_method.endpoint_method
+  to   = module.mfa.aws_api_gateway_method.endpoint_method["POST"]
 }

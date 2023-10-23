@@ -20,7 +20,7 @@ module "auth_userinfo" {
 
   endpoint_name   = "auth-userinfo"
   path_part       = "userinfo"
-  endpoint_method = "GET"
+  endpoint_method = ["GET"]
   environment     = var.environment
 
   handler_environment_variables = {
@@ -65,4 +65,8 @@ module "auth_userinfo" {
   depends_on = [
     aws_api_gateway_rest_api.di_auth_ext_api,
   ]
+}
+moved {
+  from = module.auth_userinfo.aws_api_gateway_method.endpoint_method
+  to   = module.auth_userinfo.aws_api_gateway_method.endpoint_method["GET"]
 }

@@ -19,7 +19,7 @@ module "auth-code" {
 
   endpoint_name   = "auth-code"
   path_part       = "auth-code"
-  endpoint_method = "GET"
+  endpoint_method = ["GET"]
 
   handler_environment_variables = {
     TXMA_AUDIT_QUEUE_URL     = module.oidc_txma_audit.queue_url
@@ -66,4 +66,8 @@ module "auth-code" {
     aws_api_gateway_resource.connect_resource,
     aws_api_gateway_resource.wellknown_resource,
   ]
+}
+moved {
+  from = module.auth-code.aws_api_gateway_method.endpoint_method
+  to   = module.auth-code.aws_api_gateway_method.endpoint_method["GET"]
 }

@@ -18,7 +18,7 @@ module "send_otp_notification" {
 
   endpoint_name   = "send-otp-notification"
   path_part       = "send-otp-notification"
-  endpoint_method = "POST"
+  endpoint_method = ["POST"]
   environment     = var.environment
 
   handler_environment_variables = {
@@ -72,4 +72,9 @@ module "send_otp_notification" {
     aws_sqs_queue.email_queue,
     aws_elasticache_replication_group.account_management_sessions_store,
   ]
+}
+
+moved {
+  from = module.send_otp_notification.aws_api_gateway_method.endpoint_method
+  to   = module.send_otp_notification.aws_api_gateway_method.endpoint_method["POST"]
 }

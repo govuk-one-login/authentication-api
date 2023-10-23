@@ -20,7 +20,7 @@ module "userexists" {
 
   endpoint_name   = "user-exists"
   path_part       = "user-exists"
-  endpoint_method = "POST"
+  endpoint_method = ["POST"]
   environment     = var.environment
 
   handler_environment_variables = {
@@ -69,4 +69,9 @@ module "userexists" {
     aws_api_gateway_resource.connect_resource,
     aws_api_gateway_resource.wellknown_resource,
   ]
+}
+
+moved {
+  from = module.userexists.aws_api_gateway_method.endpoint_method
+  to   = module.userexists.aws_api_gateway_method.endpoint_method["POST"]
 }

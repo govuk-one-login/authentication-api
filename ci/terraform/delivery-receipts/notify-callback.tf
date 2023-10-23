@@ -15,7 +15,7 @@ module "notify_callback" {
 
   endpoint_name   = "notify-callback"
   path_part       = "notify-callback"
-  endpoint_method = "POST"
+  endpoint_method = ["POST"]
   environment     = var.environment
 
   handler_environment_variables = merge(var.notify_template_map, {
@@ -52,4 +52,8 @@ module "notify_callback" {
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_delivery_receipts_api,
   ]
+}
+moved {
+  from = module.notify_callback.aws_api_gateway_method.endpoint_method
+  to   = module.notify_callback.aws_api_gateway_method.endpoint_method["POST"]
 }

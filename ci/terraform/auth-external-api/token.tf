@@ -22,7 +22,7 @@ module "auth_token" {
 
   endpoint_name   = "auth-token"
   path_part       = "token"
-  endpoint_method = "POST"
+  endpoint_method = ["POST"]
   environment     = var.environment
 
   handler_environment_variables = {
@@ -70,4 +70,9 @@ module "auth_token" {
   depends_on = [
     aws_api_gateway_rest_api.di_auth_ext_api,
   ]
+}
+
+moved {
+  from = module.auth_token.aws_api_gateway_method.endpoint_method
+  to   = module.auth_token.aws_api_gateway_method.endpoint_method["POST"]
 }

@@ -44,7 +44,7 @@ module "token" {
 
   endpoint_name   = "token"
   path_part       = "token"
-  endpoint_method = "POST"
+  endpoint_method = ["POST"]
   environment     = var.environment
 
   handler_environment_variables = {
@@ -96,4 +96,9 @@ module "token" {
     aws_api_gateway_resource.connect_resource,
     aws_api_gateway_resource.wellknown_resource,
   ]
+}
+
+moved {
+  from = module.token.aws_api_gateway_method.endpoint_method
+  to   = module.token.aws_api_gateway_method.endpoint_method["POST"]
 }
