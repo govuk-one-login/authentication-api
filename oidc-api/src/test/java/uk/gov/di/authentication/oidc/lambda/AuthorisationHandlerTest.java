@@ -735,7 +735,8 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldValidateRequestObjectWhenRequestObjectIsPresent() throws JOSEException {
+        void shouldValidateRequestObjectWhenJARValidationIsRequired() throws JOSEException {
+            when(orchestrationAuthorizationService.isJarValidationRequired(any())).thenReturn(true);
             var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
             var event = new APIGatewayProxyRequestEvent();
             var jwtClaimsSet =
@@ -762,33 +763,40 @@ class AuthorisationHandlerTest {
             event.setRequestContext(
                     new ProxyRequestContext()
                             .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            event.setHttpMethod("GET");
 
             makeHandlerRequest(event);
             verify(requestObjectService).validateRequestObject(any());
         }
 
         @Test
-        void shouldValidateRequestQueryParamsWhenRequestObjectIsNotPresent() {
+        void shouldThrowErrorWhenJARIsRequiredButRequestObjectIsMissing() {
+            when(orchestrationAuthorizationService.isJarValidationRequired(any())).thenReturn(true);
             var event = new APIGatewayProxyRequestEvent();
             event.setQueryStringParameters(
                     Map.of(
-                            "client_id", "test-id",
-                            "redirect_uri", "http://localhost:8080",
-                            "scope", "email,openid,profile",
-                            "response_type", "code"));
+                            "client_id",
+                            CLIENT_ID.getValue(),
+                            "scope",
+                            SCOPE,
+                            "redirect_uri",
+                            "some-redirect-uri",
+                            "response_type",
+                            "code"));
             event.setRequestContext(
                     new ProxyRequestContext()
                             .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            event.setHttpMethod("GET");
 
-            makeHandlerRequest(event);
+            RuntimeException expectedException =
+                    assertThrows(
+                            RuntimeException.class,
+                            () -> makeHandlerRequest(event),
+                            "Expected to throw AccessTokenException");
 
-            InOrder inOrder = inOrder(orchestrationAuthorizationService);
-            inOrder.verify(orchestrationAuthorizationService)
-                    .getExistingOrCreateNewPersistentSessionId(any());
-            inOrder.verify(orchestrationAuthorizationService)
-                    .validateAuthRequest(any(), anyBoolean());
-
-            verifyNoInteractions(requestObjectService);
+            assertThat(
+                    expectedException.getMessage(),
+                    equalTo("JAR required for client but request does not contain Request Object"));
         }
 
         @Test
@@ -1034,7 +1042,7 @@ class AuthorisationHandlerTest {
     @ParameterizedTest
     @MethodSource("expectedErrorObjects")
     void shouldReturnErrorWhenRequestObjectIsInvalid(ErrorObject errorObject) {
-        when(configService.isDocAppApiEnabled()).thenReturn(true);
+        when(orchestrationAuthorizationService.isJarValidationRequired(any())).thenReturn(true);
         when(requestObjectService.validateRequestObject(any(AuthenticationRequest.class)))
                 .thenReturn(
                         Optional.of(
