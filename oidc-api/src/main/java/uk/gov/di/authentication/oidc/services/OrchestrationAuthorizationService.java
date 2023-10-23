@@ -37,6 +37,7 @@ import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.oidc.exceptions.InvalidJWEException;
 import uk.gov.di.authentication.oidc.exceptions.InvalidPublicKeyException;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
@@ -376,5 +377,9 @@ public class OrchestrationAuthorizationService {
                 AUTHENTICATION_STATE_STORAGE_PREFIX + sessionId,
                 state.getValue(),
                 configurationService.getSessionExpiry());
+    }
+
+    public boolean jarRequiredForClient(AuthenticationRequest authRequest) {
+        return authRequest.getScope().contains(CustomScopeValue.DOC_CHECKING_APP);
     }
 }

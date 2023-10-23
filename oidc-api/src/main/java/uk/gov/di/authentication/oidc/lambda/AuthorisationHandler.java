@@ -240,10 +240,17 @@ public class AuthorisationHandler
         }
 
         Optional<AuthRequestError> authRequestError;
-        if (authRequest.getRequestObject() != null) {
-            LOG.info("RequestObject auth request received");
+        if (orchestrationAuthorizationService.jarRequiredForClient(authRequest)) {
+            if (authRequest.getRequestObject() == null) {
+                var errorMsg =
+                        "JAR required for client but request does not contain Request Object";
+                LOG.warn(errorMsg);
+                throw new RuntimeException(errorMsg);
+            }
+            LOG.info("Validating request using JAR");
             authRequestError = requestObjectService.validateRequestObject(authRequest);
         } else {
+            LOG.info("Validating request query params");
             authRequestError =
                     orchestrationAuthorizationService.validateAuthRequest(
                             authRequest, configurationService.isNonceRequired());

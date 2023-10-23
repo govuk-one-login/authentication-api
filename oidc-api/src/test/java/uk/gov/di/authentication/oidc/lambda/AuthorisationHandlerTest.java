@@ -735,7 +735,8 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldValidateRequestObjectWhenRequestObjectIsPresent() throws JOSEException {
+        void shouldValidateRequestObjectWhenScopeRequiresJAR() throws JOSEException {
+            when(orchestrationAuthorizationService.jarRequiredForClient(any())).thenReturn(true);
             var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
             var event = new APIGatewayProxyRequestEvent();
             var jwtClaimsSet =
@@ -765,6 +766,35 @@ class AuthorisationHandlerTest {
 
             makeHandlerRequest(event);
             verify(requestObjectService).validateRequestObject(any());
+        }
+
+        @Test
+        void shouldThrowErrorWhenScopeRequiresJARButRequestObjectIsMissing() {
+            when(orchestrationAuthorizationService.jarRequiredForClient(any())).thenReturn(true);
+            var event = new APIGatewayProxyRequestEvent();
+            event.setQueryStringParameters(
+                    Map.of(
+                            "client_id",
+                            CLIENT_ID.getValue(),
+                            "scope",
+                            SCOPE,
+                            "redirect_uri",
+                            "some-redirect-uri",
+                            "response_type",
+                            "code"));
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+
+            RuntimeException expectedException =
+                    assertThrows(
+                            RuntimeException.class,
+                            () -> makeHandlerRequest(event),
+                            "Expected to throw AccessTokenException");
+
+            assertThat(
+                    expectedException.getMessage(),
+                    equalTo("JAR required for client but request does not contain Request Object"));
         }
 
         @Test
@@ -1034,7 +1064,7 @@ class AuthorisationHandlerTest {
     @ParameterizedTest
     @MethodSource("expectedErrorObjects")
     void shouldReturnErrorWhenRequestObjectIsInvalid(ErrorObject errorObject) {
-        when(configService.isDocAppApiEnabled()).thenReturn(true);
+        when(orchestrationAuthorizationService.jarRequiredForClient(any())).thenReturn(true);
         when(requestObjectService.validateRequestObject(any(AuthenticationRequest.class)))
                 .thenReturn(
                         Optional.of(
