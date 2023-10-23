@@ -4,7 +4,7 @@ Main entrypoint into One Login.
 
 - Triggered by a call to /authorize from an RP
 
-  - RP, who needs to be registered already in the client registry
+  - RP must already be in the client registry
 
 - Possible journeys through lambda (can be found in [orchestration diagrams](../../docs/diagrams/orchestration))
   - [Auth journey](../../docs/diagrams/orchestration/auth-only)
@@ -12,24 +12,24 @@ Main entrypoint into One Login.
 
 ## Functionality
 
-The lambda perform the following functions, although not all functions take place for every journey:
+The lambda performs the following functions, although not all functions take place for every journey:
 
 - Handling sessions
 
-  - See User session set or created - “parent session”
+  - User session set or created - “parent session”
   - New client session - effectively a child of user session
   - Persistent session ID created if it doesn’t already exist
   - All stored in redis
 
 - Validation
 
-  - validates the client is in the client registry
+  - Validates the client is in the client registry
   - Some things specific to individual RP, so it’s about the value itself, e.g. permitted vtr or scopes from client registry
   - Some things are general to all RPs for this lambda, mostly about the presence of particular params, e.g. must have a redirect_uri parameter
 
 - Generates redirect response
 
-  - Location header will determine where the browser should redirect to. In a success case the redirect url will be a oauth compliant authorize request.
+  - Location header will determine where the browser should redirect to. In a success case the redirect url will be an oauth compliant authorize request.
   - The auth params submitted here are converted to an encrypted jwt and will ‘follow’ an authentication flow potentially through many steps - in the first instance, they will be passed to auth frontend where they are mostly stored in the frontend session, but on their ‘way back’ they get stored in auth code and token store, and ultimately dictate what the userinfo response orch -> RP 
   - Will contain Cookies in response
 
