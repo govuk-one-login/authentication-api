@@ -25,7 +25,9 @@ public class ValidationHelper {
     private static final Pattern HOSTNAME_REGEX =
             Pattern.compile("^(xn|[a-z0-9]+)(-?-[a-z0-9]+)*$", Pattern.CASE_INSENSITIVE);
     private static final Pattern TLD_PART_REGEX =
-            Pattern.compile("^([a-z]{2,63}|xn--([a-z0-9]+-)*[a-z0-9]+)$", Pattern.CASE_INSENSITIVE);
+            Pattern.compile(
+                    "^(?:[a-z]{2,63}|xn--[a-z0-9]+(?:-[a-z0-9]+){1,4})(?:$|[^-])",
+                    Pattern.CASE_INSENSITIVE);
     private static final List<String> ALLOWED_TEST_NUMBERS =
             List.of(
                     "07700900222",

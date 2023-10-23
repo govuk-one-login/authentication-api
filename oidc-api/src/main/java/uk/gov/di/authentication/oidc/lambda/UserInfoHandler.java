@@ -13,6 +13,7 @@ import uk.gov.di.authentication.app.services.DynamoDocAppService;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
 import uk.gov.di.authentication.oidc.services.AccessTokenService;
+import uk.gov.di.authentication.oidc.services.AuthenticationUserInfoStorageService;
 import uk.gov.di.authentication.oidc.services.UserInfoService;
 import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -65,7 +66,8 @@ public class UserInfoHandler
                         new DynamoIdentityService(configurationService),
                         new DynamoDocAppService(configurationService),
                         new CloudwatchMetricsService(),
-                        configurationService);
+                        configurationService,
+                        new AuthenticationUserInfoStorageService(configurationService));
         this.accessTokenService =
                 new AccessTokenService(
                         new RedisConnectionService(configurationService),

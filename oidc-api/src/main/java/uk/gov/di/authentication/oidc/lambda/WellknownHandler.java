@@ -78,6 +78,7 @@ public class WellknownHandler
             oidcMetadata.setGrantTypes(List.of(GrantType.AUTHORIZATION_CODE));
             oidcMetadata.setClaimTypes(List.of(ClaimType.NORMAL));
             oidcMetadata.setClaims(ValidClaims.allOneLoginClaims());
+            oidcMetadata.setSupportsRequestURIParam(false);
             oidcMetadata.setIDTokenJWSAlgs(
                     configService.isRsaSigningAvailable()
                             ? List.of(JWSAlgorithm.ES256, JWSAlgorithm.RS256)

@@ -1,5 +1,5 @@
 terraform {
-  required_version = ">= 1.0.4"
+  required_version = ">= 1.3.1"
 
   required_providers {
     aws = {
@@ -59,7 +59,7 @@ locals {
   }
 
   request_tracing_allowed       = contains(["build", "sandpit"], var.environment)
-  deploy_bulk_email_users_count = 1
+  deploy_bulk_email_users_count = contains(["build", "sandpit"], var.environment) ? 0 : 1
 }
 
 data "aws_caller_identity" "current" {}

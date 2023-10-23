@@ -176,11 +176,15 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                         .map(IdentityCredentials::getAdditionalClaims)
                         .map(t -> t.get(ValidClaims.PASSPORT.getValue()))
                         .isPresent());
-
         assertTrue(
                 identityCredentials
                         .map(IdentityCredentials::getAdditionalClaims)
                         .map(t -> t.get(ValidClaims.DRIVING_PERMIT.getValue()))
+                        .isPresent());
+        assertTrue(
+                identityCredentials
+                        .map(IdentityCredentials::getAdditionalClaims)
+                        .map(t -> t.get(ValidClaims.SOCIAL_SECURITY_RECORD.getValue()))
                         .isPresent());
 
         var addressClaim =
@@ -209,6 +213,15 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 .get(ValidClaims.DRIVING_PERMIT.getValue()),
                         JSONArray.class);
         assertThat(((LinkedTreeMap) drivingPermit.get(0)).size(), equalTo(6));
+
+        var socialSecurityRecord =
+                objectMapper.readValue(
+                        identityCredentials
+                                .get()
+                                .getAdditionalClaims()
+                                .get(ValidClaims.SOCIAL_SECURITY_RECORD.getValue()),
+                        JSONArray.class);
+        assertThat(((LinkedTreeMap) socialSecurityRecord.get(0)).size(), equalTo(1));
     }
 
     @Test

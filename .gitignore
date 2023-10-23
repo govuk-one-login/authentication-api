@@ -17,3 +17,7 @@ ci/terraform/**/*.plan
 ci/terraform/**/*.tfstate*
 logs/
 .vscode/
+
+# Approval Tests
+*.received.txt
+*.received.json

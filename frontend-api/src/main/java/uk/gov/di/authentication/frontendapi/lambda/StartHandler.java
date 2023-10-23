@@ -138,7 +138,7 @@ public class StartHandler
             if (userStartInfo.isDocCheckingAppUser()) {
                 var docAppSubjectId =
                         DocAppSubjectIdHelper.calculateDocAppSubjectId(
-                                userContext.getClientSession(),
+                                userContext.getClientSession().getAuthRequestParams(),
                                 configurationService.isCustomDocAppClaimEnabled(),
                                 configurationService.getDocAppDomain());
                 clientSessionService.saveClientSession(

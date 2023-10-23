@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.app.services;
+package uk.gov.di.authentication.shared.services;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
@@ -31,11 +31,6 @@ import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.JwksService;
-import uk.gov.di.authentication.shared.services.KmsConnectionService;
-import uk.gov.di.authentication.shared.services.RedisConnectionService;
-import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -59,8 +54,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.app.services.DocAppAuthorisationService.STATE_STORAGE_PREFIX;
 import static uk.gov.di.authentication.shared.helpers.HashHelper.hashSha256String;
+import static uk.gov.di.authentication.shared.services.DocAppAuthorisationService.STATE_STORAGE_PREFIX;
 
 class DocAppAuthorisationServiceTest {
 

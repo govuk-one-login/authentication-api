@@ -44,6 +44,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.shared.entity.NotificationType.TERMS_AND_CONDITIONS_BULK_EMAIL;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.authentication.utils.lambda.BulkUserEmailSenderScheduledEventHandler.DELIVERY_RECEIPT_STATUS_TEMPORARY_FAILURE;
 
 class BulkUserEmailSenderScheduledEventHandlerTest {
 
@@ -415,6 +416,48 @@ class BulkUserEmailSenderScheduledEventHandlerTest {
                         LocaleHelper.SupportedLanguage.EN);
         verify(bulkEmailUsersService, times(1))
                 .updateUserStatus(SUBJECT_ID, BulkEmailStatus.EMAIL_SENT);
+    }
+
+    @Test
+    void
+            shouldSendEmailToUsersWithAStatusOfNotifyErrorWhenTheSendModeIsSetToDeliveryReceiptTemporaryFailureRetries()
+                    throws NotificationClientException {
+        setupBulkUsersConfiguration(1, 1, 1L, true, List.of("1.0", "1.1"));
+        when(configurationService.getBulkEmailUserSendMode())
+                .thenReturn("DELIVERY_RECEIPT_TEMPORARY_FAILURE_RETRIES");
+
+        when(bulkEmailUsersService.getNSubjectIdsByDeliveryReceiptStatus(
+                        1, DELIVERY_RECEIPT_STATUS_TEMPORARY_FAILURE))
+                .thenReturn(List.of(SUBJECT_ID));
+        when(dynamoService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
+        when(dynamoService.getOptionalUserProfileFromSubject(SUBJECT_ID))
+                .thenReturn(
+                        Optional.of(
+                                new UserProfile()
+                                        .withEmail(EMAIL)
+                                        .withSubjectID(SUBJECT_ID)
+                                        .withTermsAndConditions(
+                                                new TermsAndConditions(
+                                                        "1.0",
+                                                        NowHelper.now().toInstant().toString()))));
+        when(bulkEmailUsersService.updateUserStatus(SUBJECT_ID, BulkEmailStatus.EMAIL_SENT))
+                .thenReturn(
+                        Optional.of(
+                                new BulkEmailUser()
+                                        .withBulkEmailStatus(BulkEmailStatus.EMAIL_SENT)
+                                        .withSubjectID(SUBJECT_ID)));
+
+        bulkUserEmailSenderScheduledEventHandler.handleRequest(scheduledEvent, mockContext);
+
+        verify(bulkEmailUsersService, never()).getNSubjectIdsByStatus(anyInt(), any());
+        verify(notificationService, times(1))
+                .sendEmail(
+                        EMAIL,
+                        Map.of(),
+                        TERMS_AND_CONDITIONS_BULK_EMAIL,
+                        LocaleHelper.SupportedLanguage.EN);
+        verify(bulkEmailUsersService, times(1))
+                .updateUserStatus(SUBJECT_ID, BulkEmailStatus.RETRY_EMAIL_SENT);
     }
 
     @Test

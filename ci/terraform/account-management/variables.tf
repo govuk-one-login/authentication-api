@@ -162,7 +162,7 @@ variable "localstack_endpoint" {
 }
 
 variable "endpoint_memory_size" {
-  default = 1024
+  default = 1536
   type    = number
 }
 

@@ -6,6 +6,7 @@ import com.amazonaws.services.lambda.runtime.events.ScheduledEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.shared.entity.BulkEmailStatus;
+import uk.gov.di.authentication.shared.entity.BulkEmailUserSendMode;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
@@ -26,7 +27,6 @@ import uk.gov.service.notify.NotificationClientException;
 import java.util.List;
 import java.util.Map;
 
-import static java.lang.String.format;
 import static uk.gov.di.authentication.shared.entity.NotificationType.TERMS_AND_CONDITIONS_BULK_EMAIL;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
@@ -35,6 +35,8 @@ public class BulkUserEmailSenderScheduledEventHandler
 
     private static final Logger LOG =
             LogManager.getLogger(BulkUserEmailSenderScheduledEventHandler.class);
+
+    public static final String DELIVERY_RECEIPT_STATUS_TEMPORARY_FAILURE = "temporary-failure";
 
     private final BulkEmailUsersService bulkEmailUsersService;
 
@@ -96,18 +98,27 @@ public class BulkUserEmailSenderScheduledEventHandler
                 configurationService.getBulkUserEmailBatchPauseDuration();
         final List<String> bulkUserEmailIncludedTermsAndConditions =
                 configurationService.getBulkUserEmailIncludedTermsAndConditions();
-        final String bulkEmailUserSendMode = configurationService.getBulkEmailUserSendMode();
+        final BulkEmailUserSendMode bulkEmailUserSendMode =
+                readBulkEmailUserSendModeConfiguration(
+                        configurationService.getBulkEmailUserSendMode());
+        final BulkEmailStatus successStatus = bulkEmailUserSendMode.mapToSuccessStatus();
+        final UtilsAuditableEvent auditableEvent =
+                BulkEmailUserSendMode.DELIVERY_RECEIPT_TEMPORARY_FAILURE_RETRIES.equals(
+                                bulkEmailUserSendMode)
+                        ? UtilsAuditableEvent.BULK_RETRY_EMAIL_SENT
+                        : UtilsAuditableEvent.BULK_EMAIL_SENT;
 
         if (bulkUserEmailIncludedTermsAndConditions.isEmpty()) {
             throw new IncludedTermsAndConditionsConfigMissingException();
         }
 
         LOG.info(
-                "Bulk User Email Send configuration - bulkUserEmailBatchQueryLimit: {}, bulkUserEmailMaxBatchCount: {}, bulkUserEmailBatchPauseDuration: {}, includedTermsAndConditions: {}",
+                "Bulk User Email Send configuration - bulkUserEmailBatchQueryLimit: {}, bulkUserEmailMaxBatchCount: {}, bulkUserEmailBatchPauseDuration: {}, includedTermsAndConditions: {}, bulkEmailUserSendMode: {}",
                 bulkUserEmailBatchQueryLimit,
                 bulkUserEmailMaxBatchCount,
                 bulkUserEmailBatchPauseDuration,
-                bulkUserEmailIncludedTermsAndConditions);
+                bulkUserEmailIncludedTermsAndConditions,
+                bulkEmailUserSendMode);
 
         updateTableSizeMetric();
 
@@ -133,7 +144,9 @@ public class BulkUserEmailSenderScheduledEventHandler
                                                 sendEmailIfRequiredAndUpdateStatus(
                                                         userProfile,
                                                         subjectId,
-                                                        bulkUserEmailIncludedTermsAndConditions),
+                                                        bulkUserEmailIncludedTermsAndConditions,
+                                                        successStatus,
+                                                        auditableEvent),
                                         () -> {
                                             LOG.warn("User not found by subject id");
                                             updateBulkUserStatus(
@@ -159,19 +172,19 @@ public class BulkUserEmailSenderScheduledEventHandler
         return null;
     }
 
-    private List<String> getUserIdSubjectBatch(String sendMode, Integer limit) {
-        BulkEmailStatus statusRequired =
-                switch (sendMode) {
-                    case "PENDING":
-                        yield BulkEmailStatus.PENDING;
-                    case "NOTIFY_ERROR_RETRIES":
-                        yield BulkEmailStatus.ERROR_SENDING_EMAIL;
-                    default:
-                        var errorMessage = format("Didn't recognise send mode %s", sendMode);
-                        throw new UnrecognisedSendModeException(errorMessage);
-                };
-
-        return bulkEmailUsersService.getNSubjectIdsByStatus(limit, statusRequired);
+    private List<String> getUserIdSubjectBatch(BulkEmailUserSendMode sendMode, Integer limit) {
+        switch (sendMode) {
+            case PENDING:
+                return bulkEmailUsersService.getNSubjectIdsByStatus(limit, BulkEmailStatus.PENDING);
+            case NOTIFY_ERROR_RETRIES:
+                return bulkEmailUsersService.getNSubjectIdsByStatus(
+                        limit, BulkEmailStatus.ERROR_SENDING_EMAIL);
+            case DELIVERY_RECEIPT_TEMPORARY_FAILURE_RETRIES:
+                return bulkEmailUsersService.getNSubjectIdsByDeliveryReceiptStatus(
+                        limit, DELIVERY_RECEIPT_STATUS_TEMPORARY_FAILURE);
+            default:
+                throw new UnrecognisedSendModeException(sendMode.getValue());
+        }
     }
 
     private boolean sendNotifyEmail(String email) throws NotificationClientException {
@@ -192,7 +205,9 @@ public class BulkUserEmailSenderScheduledEventHandler
     private void sendEmailIfRequiredAndUpdateStatus(
             UserProfile userProfile,
             String subjectId,
-            List<String> bulkUserEmailIncludedTermsAndConditions) {
+            List<String> bulkUserEmailIncludedTermsAndConditions,
+            BulkEmailStatus successStatus,
+            UtilsAuditableEvent utilsAuditableEvent) {
         boolean hasAcceptedRecentTermsAndConditions =
                 (userProfile.getTermsAndConditions() != null
                         && !bulkUserEmailIncludedTermsAndConditions.contains(
@@ -202,9 +217,9 @@ public class BulkUserEmailSenderScheduledEventHandler
         } else {
             try {
                 if (sendNotifyEmail(userProfile.getEmail())) {
-                    addAuditEventForEmailSent(userProfile);
+                    addAuditEventForEmailSent(userProfile, utilsAuditableEvent);
                 }
-                updateBulkUserStatus(subjectId, BulkEmailStatus.EMAIL_SENT);
+                updateBulkUserStatus(subjectId, successStatus);
             } catch (NotificationClientException e) {
                 LOG.error("Unable to send bulk email to user: {}", e.getMessage());
                 updateBulkUserStatus(subjectId, BulkEmailStatus.ERROR_SENDING_EMAIL);
@@ -238,7 +253,8 @@ public class BulkUserEmailSenderScheduledEventHandler
                         configurationService.getEnvironment()));
     }
 
-    private void addAuditEventForEmailSent(UserProfile userProfile) {
+    private void addAuditEventForEmailSent(
+            UserProfile userProfile, UtilsAuditableEvent utilsAuditableEvent) {
         var internalCommonSubjectIdentifier =
                 userProfile.getSalt() != null
                         ? ClientSubjectHelper.getSubjectWithSectorIdentifier(
@@ -248,7 +264,7 @@ public class BulkUserEmailSenderScheduledEventHandler
                                 .getValue()
                         : AuditService.UNKNOWN;
         auditService.submitAuditEvent(
-                UtilsAuditableEvent.BULK_EMAIL_SENT,
+                utilsAuditableEvent,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
@@ -259,5 +275,13 @@ public class BulkUserEmailSenderScheduledEventHandler
                 AuditService.UNKNOWN,
                 pair("internalSubjectId", userProfile.getSubjectID()),
                 pair("bulk-email-type", BulkEmailType.VC_EXPIRY_BULK_EMAIL.name()));
+    }
+
+    BulkEmailUserSendMode readBulkEmailUserSendModeConfiguration(String bulkEmailUserSendMode) {
+        try {
+            return BulkEmailUserSendMode.valueOf(bulkEmailUserSendMode);
+        } catch (IllegalArgumentException e) {
+            throw new UnrecognisedSendModeException(bulkEmailUserSendMode);
+        }
     }
 }
