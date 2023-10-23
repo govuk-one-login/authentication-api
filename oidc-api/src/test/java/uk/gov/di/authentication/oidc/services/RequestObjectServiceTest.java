@@ -253,13 +253,9 @@ class RequestObjectServiceTest {
 
         var authRequest =
                 new AuthenticationRequest.Builder(
-                                ResponseType.IDTOKEN,
-                                new Scope(OIDCScopeValue.OPENID),
-                                CLIENT_ID,
-                                URI.create(REDIRECT_URI))
-                        .state(STATE)
-                        .nonce(new Nonce())
-                        .requestObject(generateSignedJWT(jwtClaimsSet, keyPair))
+                                generateSignedJWT(jwtClaimsSet, keyPair), CLIENT_ID)
+                        .scope(new Scope(OIDCScopeValue.OPENID))
+                        .responseType(ResponseType.IDTOKEN)
                         .build();
         var requestObjectError = service.validateRequestObject(authRequest);
 
@@ -589,11 +585,9 @@ class RequestObjectServiceTest {
     private AuthenticationRequest generateAuthRequest(SignedJWT signedJWT, Scope scope) {
 
         AuthenticationRequest.Builder builder =
-                new AuthenticationRequest.Builder(
-                                ResponseType.CODE, scope, CLIENT_ID, URI.create(REDIRECT_URI))
-                        .state(STATE)
-                        .nonce(new Nonce())
-                        .requestObject(signedJWT);
+                new AuthenticationRequest.Builder(signedJWT, CLIENT_ID)
+                        .scope(scope)
+                        .responseType(ResponseType.CODE);
         return builder.build();
     }
 }

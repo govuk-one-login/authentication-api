@@ -21,6 +21,7 @@ import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseMode;
 import com.nimbusds.oauth2.sdk.ResponseType;
+import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
@@ -37,6 +38,7 @@ import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.oidc.exceptions.InvalidJWEException;
 import uk.gov.di.authentication.oidc.exceptions.InvalidPublicKeyException;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
+import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
@@ -57,6 +59,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import static com.nimbusds.oauth2.sdk.ResponseType.CODE;
 import static java.lang.String.format;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
@@ -381,5 +384,78 @@ public class OrchestrationAuthorizationService {
 
     public boolean jarRequiredForClient(AuthenticationRequest authRequest) {
         return authRequest.getScope().contains(CustomScopeValue.DOC_CHECKING_APP);
+    }
+
+    public Optional<AuthRequestError> validateJarParameters(AuthenticationRequest authRequest)
+            throws ParseException {
+
+        // TODO: all this is duplicated but can be extracted when logic in RequestObjectService is
+        // moved to this class
+        var clientId = authRequest.getClientID().toString();
+        attachLogFieldToLogs(CLIENT_ID, clientId);
+        var client = dynamoClientService.getClient(clientId).orElse(null);
+
+        var signedJWT = (SignedJWT) authRequest.getRequestObject();
+        var jwtClaimsSet = signedJWT.getJWTClaimsSet();
+
+        if (jwtClaimsSet.getStringClaim("redirect_uri") == null
+                || !client.getRedirectUrls()
+                        .contains(jwtClaimsSet.getStringClaim("redirect_uri"))) {
+            throw new RuntimeException("Invalid Redirect URI in request JWT");
+        }
+
+        var redirectURI = URI.create((String) jwtClaimsSet.getClaim("redirect_uri"));
+
+        // ---------
+
+        var params = authRequest.toParameters();
+        if (params.size() != 4) {
+            return errorResponse(redirectURI, OAuth2Error.INVALID_REQUEST);
+        }
+
+        if (!(params.containsKey("response_type")
+                && params.containsKey("client_id")
+                && params.containsKey("scope")
+                && params.containsKey("request"))) {
+            return errorResponse(redirectURI, OAuth2Error.INVALID_REQUEST);
+        }
+
+        // TODO: this should be moved to a "validateClient" method
+        if (!ClientType.APP.getValue().equals(client.getClientType())
+                && !ClientType.WEB.getValue().equals(client.getClientType())) {
+            LOG.error("ClientType of client is not 'app' or 'web'");
+            return errorResponse(redirectURI, OAuth2Error.UNAUTHORIZED_CLIENT);
+        }
+
+        if (!CODE.toString().equals(authRequest.getResponseType().toString())) {
+            LOG.error(
+                    "Unsupported responseType included in request. Expected responseType of code");
+            return errorResponse(redirectURI, OAuth2Error.UNSUPPORTED_RESPONSE_TYPE);
+        }
+
+        if (requestContainsInvalidScopes(authRequest.getScope(), client)) {
+            LOG.error(
+                    "Invalid scopes in authRequest. Scopes in request: {}",
+                    authRequest.getScope().toStringList());
+            return errorResponse(redirectURI, OAuth2Error.INVALID_SCOPE);
+        }
+
+        return Optional.empty();
+    }
+
+    private static Optional<AuthRequestError> errorResponse(URI uri, ErrorObject error) {
+        return Optional.of(new AuthRequestError(error, uri));
+    }
+
+    private boolean requestContainsInvalidScopes(Scope scopes, ClientRegistry clientRegistry) {
+        for (String scope : scopes.toStringList()) {
+            if (!ValidScopes.getAllValidScopes().contains(scope)) {
+                return true;
+            }
+            if (!clientRegistry.getScopes().contains(scope)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

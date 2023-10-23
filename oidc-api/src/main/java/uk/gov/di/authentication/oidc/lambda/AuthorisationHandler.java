@@ -161,7 +161,8 @@ public class AuthorisationHandler
     }
 
     public APIGatewayProxyResponseEvent authoriseRequestHandler(
-            APIGatewayProxyRequestEvent input, Context context) throws ClientNotFoundException {
+            APIGatewayProxyRequestEvent input, Context context)
+            throws ClientNotFoundException, java.text.ParseException {
         var client = new ClientRegistry();
         var persistentSessionId =
                 orchestrationAuthorizationService.getExistingOrCreateNewPersistentSessionId(
@@ -248,7 +249,10 @@ public class AuthorisationHandler
                 throw new RuntimeException(errorMsg);
             }
             LOG.info("Validating request using JAR");
-            authRequestError = requestObjectService.validateRequestObject(authRequest);
+            authRequestError = orchestrationAuthorizationService.validateJarParameters(authRequest);
+            if (!authRequestError.isPresent()) {
+                authRequestError = requestObjectService.validateRequestObject(authRequest);
+            }
         } else {
             LOG.info("Validating request query params");
             authRequestError =
