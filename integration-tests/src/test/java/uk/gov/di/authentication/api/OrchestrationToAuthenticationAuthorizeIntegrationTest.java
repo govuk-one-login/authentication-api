@@ -84,7 +84,8 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
                 makeRequest(
                         Optional.empty(),
                         constructHeaders(Optional.empty()),
-                        constructQueryStringParameters(rpRequestedScopes.toString(), "P2.Cl.Cm"));
+                        constructQueryStringParameters(rpRequestedScopes.toString(), "P2.Cl.Cm"),
+                        Optional.of("GET"));
 
         var claimsRequest = getValidatedClaimsRequest(response);
 
@@ -106,7 +107,8 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
                 makeRequest(
                         Optional.empty(),
                         constructHeaders(Optional.empty()),
-                        constructQueryStringParameters(rpRequestedScopes.toString(), null));
+                        constructQueryStringParameters(rpRequestedScopes.toString(), null),
+                        Optional.of("GET"));
 
         var claimsRequest = getValidatedClaimsRequest(response);
 
@@ -127,7 +129,8 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
                 makeRequest(
                         Optional.empty(),
                         constructHeaders(Optional.empty()),
-                        constructQueryStringParameters(rpRequestedScopes.toString(), null));
+                        constructQueryStringParameters(rpRequestedScopes.toString(), null),
+                        Optional.of("GET"));
 
         var claimsRequest = getValidatedClaimsRequest(response);
 
@@ -150,7 +153,8 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
                 makeRequest(
                         Optional.empty(),
                         constructHeaders(Optional.empty()),
-                        constructQueryStringParameters(rpRequestedScopes.toString(), null));
+                        constructQueryStringParameters(rpRequestedScopes.toString(), null),
+                        Optional.of("GET"));
 
         var claimsRequest = getValidatedClaimsRequest(response);
 
@@ -171,7 +175,8 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
                 makeRequest(
                         Optional.empty(),
                         constructHeaders(Optional.empty()),
-                        constructQueryStringParameters(rpRequestedScopes.toString(), null));
+                        constructQueryStringParameters(rpRequestedScopes.toString(), null),
+                        Optional.of("GET"));
 
         var claimsRequest = getValidatedClaimsRequest(response);
 

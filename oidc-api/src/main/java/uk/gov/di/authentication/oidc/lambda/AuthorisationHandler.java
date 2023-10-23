@@ -28,6 +28,7 @@ import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
+import uk.gov.di.authentication.oidc.exceptions.InvalidHttpMethodException;
 import uk.gov.di.authentication.oidc.helpers.RequestObjectToAuthRequestHelper;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
 import uk.gov.di.authentication.oidc.services.RequestObjectService;
@@ -81,6 +82,7 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFie
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.updateAttachedLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.updateAttachedSessionIdToLogs;
+import static uk.gov.di.authentication.shared.helpers.RequestBodyHelper.parseRequestBody;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class AuthorisationHandler
@@ -183,15 +185,29 @@ public class AuthorisationHandler
         attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
         LOG.info("Received authentication request");
 
-        Map<String, List<String>> queryStringParameters;
         AuthenticationRequest authRequest;
         try {
-            queryStringParameters =
-                    input.getQueryStringParameters().entrySet().stream()
+            Map<String, String> parameterMap =
+                    switch (input.getHttpMethod()) {
+                        case "GET" -> input.getQueryStringParameters();
+                        case "POST" -> parseRequestBody(input.getBody());
+                        default -> {
+                            LOG.warn(
+                                    String.format(
+                                            "Authentication request sent with invalid HTTP method %s",
+                                            input.getHttpMethod()));
+                            throw new InvalidHttpMethodException(
+                                    String.format(
+                                            "Authentication request does not support %s requests",
+                                            input.getHttpMethod()));
+                        }
+                    };
+            Map<String, List<String>> requestParameters =
+                    parameterMap.entrySet().stream()
                             .collect(
                                     Collectors.toMap(
                                             Map.Entry::getKey, entry -> List.of(entry.getValue())));
-            authRequest = AuthenticationRequest.parse(queryStringParameters);
+            authRequest = AuthenticationRequest.parse(requestParameters);
             String clientId = authRequest.getClientID().getValue();
             client =
                     clientService
@@ -215,9 +231,12 @@ public class AuthorisationHandler
                     AuditService.UNKNOWN,
                     clientSessionId);
         } catch (NullPointerException e) {
-            LOG.warn("No query string parameters are present in the Authentication request", e);
+            LOG.warn(
+                    "No parameters are present in the Authentication request query string or body",
+                    e);
             throw new RuntimeException(
-                    "No query string parameters are present in the Authentication request", e);
+                    "No parameters are present in the Authentication request query string or body",
+                    e);
         }
 
         Optional<AuthRequestError> authRequestError;

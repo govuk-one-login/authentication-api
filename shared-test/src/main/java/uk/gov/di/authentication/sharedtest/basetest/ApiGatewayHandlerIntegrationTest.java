@@ -14,7 +14,27 @@ public abstract class ApiGatewayHandlerIntegrationTest
 
     protected APIGatewayProxyResponseEvent makeRequest(
             Optional<Object> body, Map<String, String> headers, Map<String, String> queryString) {
-        return makeRequest(body, headers, queryString, Collections.emptyMap());
+        return makeRequest(
+                body,
+                headers,
+                queryString,
+                Collections.emptyMap(),
+                Collections.emptyMap(),
+                Optional.empty());
+    }
+
+    protected APIGatewayProxyResponseEvent makeRequest(
+            Optional<Object> body,
+            Map<String, String> headers,
+            Map<String, String> queryString,
+            Optional<String> httpMethod) {
+        return makeRequest(
+                body,
+                headers,
+                queryString,
+                Collections.emptyMap(),
+                Collections.emptyMap(),
+                httpMethod);
     }
 
     protected APIGatewayProxyResponseEvent makeRequest(
@@ -22,7 +42,8 @@ public abstract class ApiGatewayHandlerIntegrationTest
             Map<String, String> headers,
             Map<String, String> queryString,
             Map<String, String> pathParams) {
-        return makeRequest(body, headers, queryString, pathParams, Collections.emptyMap());
+        return makeRequest(
+                body, headers, queryString, pathParams, Collections.emptyMap(), Optional.empty());
     }
 
     protected APIGatewayProxyResponseEvent makeRequest(
@@ -31,11 +52,23 @@ public abstract class ApiGatewayHandlerIntegrationTest
             Map<String, String> queryString,
             Map<String, String> pathParams,
             Map<String, Object> authorizerParams) {
+        return makeRequest(
+                body, headers, queryString, pathParams, authorizerParams, Optional.empty());
+    }
+
+    protected APIGatewayProxyResponseEvent makeRequest(
+            Optional<Object> body,
+            Map<String, String> headers,
+            Map<String, String> queryString,
+            Map<String, String> pathParams,
+            Map<String, Object> authorizerParams,
+            Optional<String> httpMethod) {
         String requestId = UUID.randomUUID().toString();
         APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
         request.withHeaders(headers)
                 .withQueryStringParameters(queryString)
                 .withPathParameters(pathParams)
+                .withHttpMethod(httpMethod.orElse(null))
                 .withRequestContext(
                         new APIGatewayProxyRequestEvent.ProxyRequestContext()
                                 .withRequestId(requestId));
