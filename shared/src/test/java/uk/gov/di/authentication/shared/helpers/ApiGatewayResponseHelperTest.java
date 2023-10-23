@@ -18,7 +18,7 @@ public class ApiGatewayResponseHelperTest {
 
         assertThat(result.getHeaders(), hasEntry(HttpHeaders.CACHE_CONTROL, "no-cache, no-store"));
         assertThat(result.getHeaders(), hasEntry(HttpHeaders.PRAGMA, "no-cache"));
-        assertThat(result.getHeaders(), hasEntry("X-XSS-Protection", "1; mode=block"));
+        assertThat(result.getHeaders(), hasEntry("X-XSS-Protection", "0"));
         assertThat(result.getHeaders(), hasEntry("X-Content-Type-Options", "nosniff"));
         assertThat(
                 result.getHeaders(), hasEntry("Content-Security-Policy", "frame-ancestors 'none'"));
@@ -37,7 +37,7 @@ public class ApiGatewayResponseHelperTest {
 
         assertThat(result.getHeaders(), hasEntry(HttpHeaders.CACHE_CONTROL, "no-cache, no-store"));
         assertThat(result.getHeaders(), hasEntry(HttpHeaders.PRAGMA, "no-cache"));
-        assertThat(result.getHeaders(), hasEntry("X-XSS-Protection", "1; mode=block"));
+        assertThat(result.getHeaders(), hasEntry("X-XSS-Protection", "0"));
         assertThat(result.getHeaders(), hasEntry("X-Content-Type-Options", "nosniff"));
         assertThat(
                 result.getHeaders(), hasEntry("Content-Security-Policy", "frame-ancestors 'none'"));
@@ -56,7 +56,7 @@ public class ApiGatewayResponseHelperTest {
 
         assertThat(result.getHeaders(), hasEntry(HttpHeaders.CACHE_CONTROL, "no-cache, no-store"));
         assertThat(result.getHeaders(), hasEntry(HttpHeaders.PRAGMA, "no-cache"));
-        assertThat(result.getHeaders(), hasEntry("X-XSS-Protection", "1; mode=block"));
+        assertThat(result.getHeaders(), hasEntry("X-XSS-Protection", "0"));
         assertThat(result.getHeaders(), hasEntry("X-Content-Type-Options", "nosniff"));
         assertThat(
                 result.getHeaders(), hasEntry("Content-Security-Policy", "frame-ancestors 'none'"));
