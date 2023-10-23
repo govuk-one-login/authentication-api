@@ -73,8 +73,3 @@ module "verify_mfa_code" {
     aws_api_gateway_rest_api.di_authentication_frontend_api,
   ]
 }
-
-moved {
-  from = module.verify_mfa_code.aws_api_gateway_method.endpoint_method
-  to   = module.verify_mfa_code.aws_api_gateway_method.endpoint_method["POST"]
-}

@@ -66,7 +66,3 @@ module "account_recovery" {
 
   use_localstack = var.use_localstack
 }
-moved {
-  from = module.account_recovery.aws_api_gateway_method.endpoint_method
-  to   = module.account_recovery.aws_api_gateway_method.endpoint_method["POST"]
-}

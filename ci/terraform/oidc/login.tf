@@ -68,8 +68,3 @@ module "login" {
 
   use_localstack = var.use_localstack
 }
-
-moved {
-  from = module.login.aws_api_gateway_method.endpoint_method
-  to   = module.login.aws_api_gateway_method.endpoint_method["POST"]
-}

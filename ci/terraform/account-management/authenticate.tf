@@ -59,8 +59,3 @@ module "authenticate" {
 
   use_localstack = var.use_localstack
 }
-
-moved {
-  from = module.authenticate.aws_api_gateway_method.endpoint_method
-  to   = module.authenticate.aws_api_gateway_method.endpoint_method["POST"]
-}
