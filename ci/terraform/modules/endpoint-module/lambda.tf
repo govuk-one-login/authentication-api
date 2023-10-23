@@ -120,6 +120,6 @@ resource "aws_appautoscaling_policy" "provisioned-concurrency-policy" {
 }
 
 locals {
-  deploy_dynatrace = true
+  deploy_dynatrace = var.environment != "production"
   lambda_layers    = flatten(local.deploy_dynatrace ? [local.dynatrace_layer_arn] : [])
 }
