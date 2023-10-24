@@ -20,6 +20,7 @@ import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.oidc.exceptions.UserInfoException;
 import uk.gov.di.authentication.oidc.lambda.UserInfoHandler;
 import uk.gov.di.authentication.shared.entity.AccessTokenStore;
@@ -31,6 +32,7 @@ import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.authentication.sharedtest.extensions.AuthenticationCallbackUserInfoStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.DocumentAppCredentialStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.IdentityStoreExtension;
 import uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper;
@@ -88,6 +90,10 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     OIDCScopeValue.EMAIL.getValue(),
                     OIDCScopeValue.PHONE.getValue());
     private static final Date EXPIRY_DATE = NowHelper.nowPlus(10, ChronoUnit.MINUTES);
+
+    @RegisterExtension
+    protected static final AuthenticationCallbackUserInfoStoreExtension userInfoStorageExtension =
+            new AuthenticationCallbackUserInfoStoreExtension(180);
 
     @BeforeEach
     void setup() throws JOSEException, NoSuchAlgorithmException {

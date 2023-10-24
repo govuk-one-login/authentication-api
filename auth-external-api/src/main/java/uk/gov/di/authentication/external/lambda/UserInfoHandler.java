@@ -11,14 +11,17 @@ import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
+import uk.gov.di.authentication.external.domain.AuthExternalApiAuditableEvent;
 import uk.gov.di.authentication.external.services.UserInfoService;
 import uk.gov.di.authentication.shared.entity.token.AccessTokenStore;
 import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.AccessTokenService;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 
+import java.util.Objects;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.AUTHORIZATION_HEADER;
@@ -34,14 +37,17 @@ public class UserInfoHandler
     private final ConfigurationService configurationService;
     private final UserInfoService userInfoService;
     private final AccessTokenService accessTokenService;
+    private final AuditService auditService;
 
     public UserInfoHandler(
             ConfigurationService configurationService,
             UserInfoService userInfoService,
-            AccessTokenService accessTokenService) {
+            AccessTokenService accessTokenService,
+            AuditService auditService) {
         this.configurationService = configurationService;
         this.userInfoService = userInfoService;
         this.accessTokenService = accessTokenService;
+        this.auditService = auditService;
     }
 
     public UserInfoHandler() {
@@ -53,6 +59,7 @@ public class UserInfoHandler
         this.userInfoService =
                 new UserInfoService(new DynamoService(configurationService), configurationService);
         this.accessTokenService = new AccessTokenService(configurationService);
+        this.auditService = new AuditService(configurationService);
     }
 
     @Override
@@ -120,6 +127,23 @@ public class UserInfoHandler
 
         LOG.info(
                 "Successfully processed UserInfo request. Setting token status to used and sending back UserInfo response");
+
+        auditService.submitAuditEvent(
+                AuthExternalApiAuditableEvent.USERINFO_SENT_TO_ORCHESTRATION,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                Objects.isNull(accessTokenStore.getSubjectID())
+                        ? AuditService.UNKNOWN
+                        : accessTokenStore.getSubjectID(),
+                Objects.isNull(userInfo.getEmailAddress())
+                        ? AuditService.UNKNOWN
+                        : userInfo.getEmailAddress(),
+                AuditService.UNKNOWN,
+                Objects.isNull(userInfo.getPhoneNumber())
+                        ? AuditService.UNKNOWN
+                        : userInfo.getPhoneNumber(),
+                AuditService.UNKNOWN);
 
         Optional<AccessTokenStore> updatedTokenStore =
                 accessTokenService.setAccessTokenStoreUsed(accessToken.getValue(), true);

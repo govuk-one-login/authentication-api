@@ -10,6 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import software.amazon.awssdk.core.SdkBytes;
+import uk.gov.di.authentication.external.domain.AuthExternalApiAuditableEvent;
 import uk.gov.di.authentication.external.lambda.UserInfoHandler;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -22,11 +23,13 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static com.nimbusds.oauth2.sdk.token.BearerTokenError.INVALID_TOKEN;
+import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -57,6 +60,11 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
                     @Override
                     public boolean isAuthOrchSplitEnabled() {
                         return true;
+                    }
+
+                    @Override
+                    public String getTxmaAuditQueueUrl() {
+                        return txmaAuditQueue.getQueueUrl();
                     }
                 };
 
@@ -110,6 +118,9 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
         assertNull(userInfoResponse.getClaim("salt"));
 
         assertTrue(accessTokenStoreExtension.getAccessToken(accessTokenAsString).get().isUsed());
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue,
+                singletonList(AuthExternalApiAuditableEvent.USERINFO_SENT_TO_ORCHESTRATION));
     }
 
     @Test
