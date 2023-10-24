@@ -51,7 +51,6 @@ import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.oidc.exceptions.InvalidHttpMethodException;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
-import uk.gov.di.authentication.oidc.services.RequestObjectService;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
@@ -131,7 +130,6 @@ class AuthorisationHandlerTest {
 
     private final NoSessionOrchestrationService noSessionOrchestrationService =
             mock(NoSessionOrchestrationService.class);
-    private final RequestObjectService requestObjectService = mock(RequestObjectService.class);
     private final ClientService clientService = mock(ClientService.class);
     private final InOrder inOrder = inOrder(auditService);
     private static final String EXPECTED_SESSION_COOKIE_STRING =
@@ -177,7 +175,7 @@ class AuthorisationHandlerTest {
             new CaptureLoggingExtension(AuthorisationHandler.class);
 
     @BeforeEach
-    public void setUp() {
+    public void setUp() throws ParseException {
         when(configService.getEnvironment()).thenReturn("test-env");
         when(configService.getDomainName()).thenReturn("auth.ida.digital.cabinet-office.gov.uk");
         when(configService.getLoginURI()).thenReturn(LOGIN_URL);
@@ -201,7 +199,6 @@ class AuthorisationHandlerTest {
                         clientSessionService,
                         orchestrationAuthorizationService,
                         auditService,
-                        requestObjectService,
                         clientService,
                         docAppAuthorisationService,
                         cloudwatchMetricsService,
@@ -528,7 +525,6 @@ class AuthorisationHandlerTest {
                     () -> makeDocAppHandlerRequest(),
                     format("No Client found for ClientID: %s", CLIENT_ID.getValue()));
             verifyNoInteractions(configService);
-            verifyNoInteractions(requestObjectService);
         }
 
         @Test
@@ -576,7 +572,7 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldReturn400WhenAuthorisationRequestContainsInvalidScope() {
+        void shouldReturn400WhenAuthorisationRequestContainsInvalidScope() throws ParseException {
             when(orchestrationAuthorizationService.validateAuthRequest(
                             any(AuthenticationRequest.class), anyBoolean()))
                     .thenReturn(
@@ -619,7 +615,8 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldReturn400WhenAuthorisationRequestBodyContainsInvalidScope() {
+        void shouldReturn400WhenAuthorisationRequestBodyContainsInvalidScope()
+                throws ParseException {
             when(orchestrationAuthorizationService.validateAuthRequest(
                             any(AuthenticationRequest.class), anyBoolean()))
                     .thenReturn(
@@ -735,97 +732,11 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldValidateRequestObjectWhenScopeRequiresJAR() throws JOSEException {
-            when(orchestrationAuthorizationService.jarRequiredForClient(any())).thenReturn(true);
-            var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
-            var event = new APIGatewayProxyRequestEvent();
-            var jwtClaimsSet =
-                    new JWTClaimsSet.Builder()
-                            .audience("https://localhost/authorize")
-                            .claim("redirect_uri", REDIRECT_URI)
-                            .claim("response_type", ResponseType.CODE.toString())
-                            .claim("scope", SCOPE)
-                            .claim("state", STATE.getValue())
-                            .claim("nonce", NONCE.getValue())
-                            .claim("client_id", CLIENT_ID.getValue())
-                            .issuer(CLIENT_ID.getValue())
-                            .build();
-            event.setQueryStringParameters(
-                    Map.of(
-                            "client_id",
-                            CLIENT_ID.getValue(),
-                            "scope",
-                            "openid",
-                            "response_type",
-                            "code",
-                            "request",
-                            generateSignedJWT(jwtClaimsSet, keyPair).serialize()));
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-
-            makeHandlerRequest(event);
-            verify(requestObjectService).validateRequestObject(any());
-        }
-
-        @Test
-        void shouldThrowErrorWhenScopeRequiresJARButRequestObjectIsMissing() {
-            when(orchestrationAuthorizationService.jarRequiredForClient(any())).thenReturn(true);
-            var event = new APIGatewayProxyRequestEvent();
-            event.setQueryStringParameters(
-                    Map.of(
-                            "client_id",
-                            CLIENT_ID.getValue(),
-                            "scope",
-                            SCOPE,
-                            "redirect_uri",
-                            "some-redirect-uri",
-                            "response_type",
-                            "code"));
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-
-            RuntimeException expectedException =
-                    assertThrows(
-                            RuntimeException.class,
-                            () -> makeHandlerRequest(event),
-                            "Expected to throw AccessTokenException");
-
-            assertThat(
-                    expectedException.getMessage(),
-                    equalTo("JAR required for client but request does not contain Request Object"));
-        }
-
-        @Test
-        void shouldValidateRequestQueryParamsWhenRequestObjectIsNotPresent() {
-            var event = new APIGatewayProxyRequestEvent();
-            event.setQueryStringParameters(
-                    Map.of(
-                            "client_id", "test-id",
-                            "redirect_uri", "http://localhost:8080",
-                            "scope", "email,openid,profile",
-                            "response_type", "code"));
-            event.setRequestContext(
-                    new ProxyRequestContext()
-                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-
-            makeHandlerRequest(event);
-
-            InOrder inOrder = inOrder(orchestrationAuthorizationService);
-            inOrder.verify(orchestrationAuthorizationService)
-                    .getExistingOrCreateNewPersistentSessionId(any());
-            inOrder.verify(orchestrationAuthorizationService)
-                    .validateAuthRequest(any(), anyBoolean());
-
-            verifyNoInteractions(requestObjectService);
-        }
-
-        @Test
-        void shouldRedirectToLoginWhenRequestObjectIsValid() throws JOSEException {
+        void shouldRedirectToLoginWhenRequestObjectIsValid() throws JOSEException, ParseException {
             var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
             when(configService.isDocAppApiEnabled()).thenReturn(true);
-            when(requestObjectService.validateRequestObject(any(AuthenticationRequest.class)))
+            when(orchestrationAuthorizationService.validateAuthRequest(
+                            any(AuthenticationRequest.class), anyBoolean()))
                     .thenReturn(Optional.empty());
             var event = new APIGatewayProxyRequestEvent();
             var jwtClaimsSet =
@@ -885,10 +796,12 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldRedirectToLoginWhenPostRequestObjectIsValid() throws JOSEException {
+        void shouldRedirectToLoginWhenPostRequestObjectIsValid()
+                throws JOSEException, ParseException {
             var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
             when(configService.isDocAppApiEnabled()).thenReturn(true);
-            when(requestObjectService.validateRequestObject(any(AuthenticationRequest.class)))
+            when(orchestrationAuthorizationService.validateAuthRequest(
+                            any(AuthenticationRequest.class), anyBoolean()))
                     .thenReturn(Optional.empty());
             var event = new APIGatewayProxyRequestEvent();
             event.setHttpMethod("POST");
@@ -1053,19 +966,13 @@ class AuthorisationHandlerTest {
         }
     }
 
-    private static Stream<ErrorObject> expectedErrorObjects() {
-        return Stream.of(
-                OAuth2Error.UNSUPPORTED_RESPONSE_TYPE,
-                OAuth2Error.INVALID_SCOPE,
-                OAuth2Error.UNAUTHORIZED_CLIENT,
-                OAuth2Error.INVALID_REQUEST);
-    }
-
     @ParameterizedTest
     @MethodSource("expectedErrorObjects")
-    void shouldReturnErrorWhenRequestObjectIsInvalid(ErrorObject errorObject) {
-        when(orchestrationAuthorizationService.jarRequiredForClient(any())).thenReturn(true);
-        when(requestObjectService.validateRequestObject(any(AuthenticationRequest.class)))
+    void shouldReturnErrorWhenRequestObjectIsInvalid(ErrorObject errorObject)
+            throws ParseException {
+        when(configService.isDocAppApiEnabled()).thenReturn(true);
+        when(orchestrationAuthorizationService.validateAuthRequest(
+                        any(AuthenticationRequest.class), anyBoolean()))
                 .thenReturn(
                         Optional.of(
                                 new AuthRequestError(
@@ -1104,6 +1011,14 @@ class AuthorisationHandlerTest {
                         "",
                         PERSISTENT_SESSION_ID,
                         pair("description", errorObject.getDescription()));
+    }
+
+    private static Stream<ErrorObject> expectedErrorObjects() {
+        return Stream.of(
+                OAuth2Error.UNSUPPORTED_RESPONSE_TYPE,
+                OAuth2Error.INVALID_SCOPE,
+                OAuth2Error.UNAUTHORIZED_CLIENT,
+                OAuth2Error.INVALID_REQUEST);
     }
 
     private static Stream<Arguments> invalidPromptValues() {

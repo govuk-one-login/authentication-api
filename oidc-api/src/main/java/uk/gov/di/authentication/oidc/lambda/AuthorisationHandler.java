@@ -31,7 +31,6 @@ import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.oidc.exceptions.InvalidHttpMethodException;
 import uk.gov.di.authentication.oidc.helpers.RequestObjectToAuthRequestHelper;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
-import uk.gov.di.authentication.oidc.services.RequestObjectService;
 import uk.gov.di.authentication.shared.conditions.DocAppUserHelper;
 import uk.gov.di.authentication.shared.conditions.IdentityHelper;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -95,7 +94,6 @@ public class AuthorisationHandler
     private final ConfigurationService configurationService;
     private final ClientSessionService clientSessionService;
     private final OrchestrationAuthorizationService orchestrationAuthorizationService;
-    private final RequestObjectService requestObjectService;
     private final AuditService auditService;
     private final ClientService clientService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
@@ -109,7 +107,6 @@ public class AuthorisationHandler
             ClientSessionService clientSessionService,
             OrchestrationAuthorizationService orchestrationAuthorizationService,
             AuditService auditService,
-            RequestObjectService requestObjectService,
             ClientService clientService,
             DocAppAuthorisationService docAppAuthorisationService,
             CloudwatchMetricsService cloudwatchMetricsService,
@@ -119,7 +116,6 @@ public class AuthorisationHandler
         this.clientSessionService = clientSessionService;
         this.orchestrationAuthorizationService = orchestrationAuthorizationService;
         this.auditService = auditService;
-        this.requestObjectService = requestObjectService;
         this.clientService = clientService;
         this.docAppAuthorisationService = docAppAuthorisationService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
@@ -133,7 +129,6 @@ public class AuthorisationHandler
         this.orchestrationAuthorizationService =
                 new OrchestrationAuthorizationService(configurationService);
         this.auditService = new AuditService(configurationService);
-        this.requestObjectService = new RequestObjectService(configurationService);
         this.clientService = new DynamoClientService(configurationService);
         var kmsConnectionService = new KmsConnectionService(configurationService);
         this.docAppAuthorisationService =
@@ -240,25 +235,9 @@ public class AuthorisationHandler
                     e);
         }
 
-        Optional<AuthRequestError> authRequestError;
-        if (orchestrationAuthorizationService.jarRequiredForClient(authRequest)) {
-            if (authRequest.getRequestObject() == null) {
-                var errorMsg =
-                        "JAR required for client but request does not contain Request Object";
-                LOG.warn(errorMsg);
-                throw new RuntimeException(errorMsg);
-            }
-            LOG.info("Validating request using JAR");
-            authRequestError = orchestrationAuthorizationService.validateJarParameters(authRequest);
-            if (!authRequestError.isPresent()) {
-                authRequestError = requestObjectService.validateRequestObject(authRequest);
-            }
-        } else {
-            LOG.info("Validating request query params");
-            authRequestError =
-                    orchestrationAuthorizationService.validateAuthRequest(
-                            authRequest, configurationService.isNonceRequired());
-        }
+        Optional<AuthRequestError> authRequestError =
+                orchestrationAuthorizationService.validateAuthRequest(
+                        authRequest, configurationService.isNonceRequired());
 
         if (authRequestError.isPresent()) {
             return generateErrorResponse(

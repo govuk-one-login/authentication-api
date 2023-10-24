@@ -177,7 +177,8 @@ class AuthorizationServiceTest {
     }
 
     @Test
-    void shouldSuccessfullyValidateAuthRequestWhenIdentityValuesAreIncludedInVtrAttribute() {
+    void shouldSuccessfullyValidateAuthRequestWhenIdentityValuesAreIncludedInVtrAttribute()
+            throws ParseException {
         when(ipvCapacityService.isIPVCapacityAvailable()).thenReturn(true);
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
@@ -200,7 +201,7 @@ class AuthorizationServiceTest {
     }
 
     @Test
-    void shouldReturnErrorWhenInvalidVtrAttributeIsSentInRequest() {
+    void shouldReturnErrorWhenInvalidVtrAttributeIsSentInRequest() throws ParseException {
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
         when(dynamoClientService.getClient(CLIENT_ID.toString()))
@@ -228,7 +229,7 @@ class AuthorizationServiceTest {
     }
 
     @Test
-    void shouldSuccessfullyValidateAuthRequest() {
+    void shouldSuccessfullyValidateAuthRequest() throws ParseException {
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
@@ -245,8 +246,8 @@ class AuthorizationServiceTest {
     }
 
     @Test
-    void
-            shouldSuccessfullyValidateAuthRequestWhenNonceIsNotIncludedButOptionalButGivenEnvironment() {
+    void shouldSuccessfullyValidateAuthRequestWhenNonceIsNotIncludedButOptionalButGivenEnvironment()
+            throws ParseException {
         when(dynamoClientService.getClient(CLIENT_ID.toString()))
                 .thenReturn(
                         Optional.of(
@@ -266,7 +267,7 @@ class AuthorizationServiceTest {
     }
 
     @Test
-    void shouldSuccessfullyValidateAuthRequestWhenValidClaimsArePresent() {
+    void shouldSuccessfullyValidateAuthRequestWhenValidClaimsArePresent() throws ParseException {
         var scope = new Scope(OIDCScopeValue.OPENID);
         var clientRegistry =
                 new ClientRegistry()
@@ -297,7 +298,8 @@ class AuthorizationServiceTest {
     }
 
     @Test
-    void shouldReturnErrorWhenValidatingAuthRequestWhichContainsInvalidClaims() {
+    void shouldReturnErrorWhenValidatingAuthRequestWhichContainsInvalidClaims()
+            throws ParseException {
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
@@ -327,7 +329,7 @@ class AuthorizationServiceTest {
     }
 
     @Test
-    void shouldSuccessfullyValidateAccountManagementAuthRequest() {
+    void shouldSuccessfullyValidateAccountManagementAuthRequest() throws ParseException {
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         Scope scope = new Scope(OIDCScopeValue.OPENID, CustomScopeValue.ACCOUNT_MANAGEMENT);
         when(dynamoClientService.getClient(CLIENT_ID.toString()))
@@ -345,7 +347,8 @@ class AuthorizationServiceTest {
     }
 
     @Test
-    void shouldReturnErrorForAccountManagementAuthRequestWhenScopeNotInClient() {
+    void shouldReturnErrorForAccountManagementAuthRequestWhenScopeNotInClient()
+            throws ParseException {
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         Scope scope = new Scope(OIDCScopeValue.OPENID, CustomScopeValue.ACCOUNT_MANAGEMENT);
         when(dynamoClientService.getClient(CLIENT_ID.toString()))
@@ -382,7 +385,7 @@ class AuthorizationServiceTest {
     }
 
     @Test
-    void shouldReturnErrorWhenResponseCodeIsNotValidInAuthRequest() {
+    void shouldReturnErrorWhenResponseCodeIsNotValidInAuthRequest() throws ParseException {
         ResponseType responseType =
                 new ResponseType(ResponseType.Value.TOKEN, ResponseType.Value.CODE);
         Scope scope = new Scope();
@@ -401,7 +404,7 @@ class AuthorizationServiceTest {
     }
 
     @Test
-    void shouldReturnErrorWhenScopeIsNotValidInAuthRequest() {
+    void shouldReturnErrorWhenScopeIsNotValidInAuthRequest() throws ParseException {
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
@@ -420,7 +423,7 @@ class AuthorizationServiceTest {
     }
 
     @Test
-    void shouldReturnErrorWhenStateIsNotIncludedInAuthRequest() {
+    void shouldReturnErrorWhenStateIsNotIncludedInAuthRequest() throws ParseException {
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
@@ -446,7 +449,7 @@ class AuthorizationServiceTest {
     }
 
     @Test
-    void shouldReturnErrorWhenNonceIsNotIncludedInAuthRequest() {
+    void shouldReturnErrorWhenNonceIsNotIncludedInAuthRequest() throws ParseException {
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
@@ -472,7 +475,7 @@ class AuthorizationServiceTest {
     }
 
     @Test
-    void shouldReturnErrorWhenInvalidVtrIsIncludedInAuthRequest() {
+    void shouldReturnErrorWhenInvalidVtrIsIncludedInAuthRequest() throws ParseException {
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
@@ -498,7 +501,8 @@ class AuthorizationServiceTest {
     }
 
     @Test
-    void shouldReturnErrorWhenIdentityIsRequiredButNoIPVCapacityIsAvailable() {
+    void shouldReturnErrorWhenIdentityIsRequiredButNoIPVCapacityIsAvailable()
+            throws ParseException {
         when(ipvCapacityService.isIPVCapacityAvailable()).thenReturn(false);
         var responseType = new ResponseType(ResponseType.Value.CODE);
         var scope = new Scope(OIDCScopeValue.OPENID);
@@ -521,7 +525,8 @@ class AuthorizationServiceTest {
 
     @Test
     void
-            shouldNotReturnErrorWhenIdentityIsRequiredButNoIPVCapacityIsAvailableAndTheClientIsATestClient() {
+            shouldNotReturnErrorWhenIdentityIsRequiredButNoIPVCapacityIsAvailableAndTheClientIsATestClient()
+                    throws ParseException {
         when(ipvCapacityService.isIPVCapacityAvailable()).thenReturn(false);
         var responseType = new ResponseType(ResponseType.Value.CODE);
         var scope = new Scope(OIDCScopeValue.OPENID);
@@ -584,7 +589,7 @@ class AuthorizationServiceTest {
     }
 
     @Test
-    void shouldReturnErrorWhenRequestURIIsPresent() {
+    void shouldReturnErrorWhenRequestURIIsPresent() throws ParseException {
         when(dynamoClientService.getClient(CLIENT_ID.toString()))
                 .thenReturn(
                         Optional.of(
@@ -609,7 +614,7 @@ class AuthorizationServiceTest {
     }
 
     @Test
-    void shouldReturnErrorWhenRequestObjectIsPresent() {
+    void shouldReturnErrorWhenRequestObjectIsPresent() throws ParseException {
         when(dynamoClientService.getClient(CLIENT_ID.toString()))
                 .thenReturn(
                         Optional.of(
