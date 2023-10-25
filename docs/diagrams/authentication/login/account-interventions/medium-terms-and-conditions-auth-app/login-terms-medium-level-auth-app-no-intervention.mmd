@@ -13,6 +13,7 @@ sequenceDiagram
     auth_frontend ->> auth_internal_api : Request to /user-exists (CheckUserExistsHandler.java)
     auth_internal_api ->> auth_internal_api : Checks if account with email already exists
     auth_internal_api ->> auth_frontend: CheckUserExistsResponse.java object returned
+    auth_frontend ->> auth_frontend: Validates that the user already has an account
     auth_frontend ->> auth_internal_api : Request to /login (LoginHandler.java)
     auth_internal_api ->> auth_internal_api : Validates if password is correct
     auth_internal_api ->> auth_frontend: LoginResponse.java object returned
