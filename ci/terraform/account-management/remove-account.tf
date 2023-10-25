@@ -61,8 +61,3 @@ module "delete_account" {
   lambda_env_vars_encryption_kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
 
 }
-
-moved {
-  from = module.delete_account.aws_api_gateway_method.endpoint_method
-  to   = module.delete_account.aws_api_gateway_method.endpoint_method["POST"]
-}

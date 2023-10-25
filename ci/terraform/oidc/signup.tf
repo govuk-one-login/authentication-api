@@ -72,7 +72,3 @@ module "signup" {
     aws_api_gateway_resource.wellknown_resource,
   ]
 }
-moved {
-  from = module.signup.aws_api_gateway_method.endpoint_method
-  to   = module.signup.aws_api_gateway_method.endpoint_method["POST"]
-}

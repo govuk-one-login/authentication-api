@@ -73,8 +73,3 @@ module "send_otp_notification" {
     aws_elasticache_replication_group.account_management_sessions_store,
   ]
 }
-
-moved {
-  from = module.send_otp_notification.aws_api_gateway_method.endpoint_method
-  to   = module.send_otp_notification.aws_api_gateway_method.endpoint_method["POST"]
-}

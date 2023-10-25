@@ -69,8 +69,3 @@ module "processing-identity" {
 
   use_localstack = var.use_localstack
 }
-
-moved {
-  from = module.processing-identity.aws_api_gateway_method.endpoint_method
-  to   = module.processing-identity.aws_api_gateway_method.endpoint_method["POST"]
-}

@@ -77,8 +77,3 @@ module "authentication_callback" {
     aws_api_gateway_rest_api.di_authentication_api
   ]
 }
-
-moved {
-  from = module.authentication_callback.aws_api_gateway_method.endpoint_method
-  to   = module.authentication_callback.aws_api_gateway_method.endpoint_method["GET"]
-}

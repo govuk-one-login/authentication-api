@@ -73,8 +73,3 @@ module "logout" {
     aws_api_gateway_resource.wellknown_resource,
   ]
 }
-
-moved {
-  from = module.logout.aws_api_gateway_method.endpoint_method
-  to   = module.logout.aws_api_gateway_method.endpoint_method["GET"]
-}

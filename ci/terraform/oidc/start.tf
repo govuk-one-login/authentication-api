@@ -73,8 +73,3 @@ module "start" {
     aws_api_gateway_resource.wellknown_resource,
   ]
 }
-
-moved {
-  from = module.start.aws_api_gateway_method.endpoint_method
-  to   = module.start.aws_api_gateway_method.endpoint_method["GET"]
-}
