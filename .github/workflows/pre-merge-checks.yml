@@ -6,6 +6,7 @@ on:
       - reopened
       - ready_for_review
       - synchronize
+  merge_group:
 
 jobs:
   style-checks:
