@@ -1,10 +1,10 @@
 package uk.gov.di.authentication.sharedtest.httpstub;
 
+import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Response;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
-import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.util.Callback;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 
@@ -161,13 +161,15 @@ class HttpStub {
     private class TestHandler extends Handler.Abstract {
 
         @Override
-        public boolean handle(Request request, Response response, Callback callback) throws Exception {
+        public boolean handle(Request request, Response response, Callback callback)
+                throws Exception {
             recordedRequests.add(new RecordedRequest(request));
             RegisteredResponse registeredResponse = registeredResponses.get(request.getHttpURI());
             if (registeredResponse != null) {
                 response.setStatus(registeredResponse.getStatus());
                 // response.setContentType(registeredResponse.getContentType());
-                response.write(true, ByteBuffer.wrap(registeredResponse.getBody().getBytes()), null);
+                response.write(
+                        true, ByteBuffer.wrap(registeredResponse.getBody().getBytes()), null);
                 // request.setHandled(true);
             }
             return true;
