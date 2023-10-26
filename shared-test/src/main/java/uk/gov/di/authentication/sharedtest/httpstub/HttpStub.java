@@ -164,7 +164,8 @@ class HttpStub {
         public boolean handle(Request request, Response response, Callback callback)
                 throws Exception {
             recordedRequests.add(new RecordedRequest(request));
-            RegisteredResponse registeredResponse = registeredResponses.get(request.getHttpURI().getPath());
+            RegisteredResponse registeredResponse =
+                    registeredResponses.get(request.getHttpURI().getPath());
             if (registeredResponse != null) {
                 response.setStatus(registeredResponse.getStatus());
                 if (registeredResponse.getContentType() != null) {
