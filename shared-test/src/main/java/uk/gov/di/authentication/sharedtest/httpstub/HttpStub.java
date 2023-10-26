@@ -1,15 +1,16 @@
 package uk.gov.di.authentication.sharedtest.httpstub;
 
+import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Response;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.util.BufferUtil;
 import org.eclipse.jetty.util.Callback;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 
 import java.io.File;
-import java.nio.ByteBuffer;
 import java.security.KeyStore;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -107,6 +108,7 @@ class HttpStub {
         try {
             server.start();
         } catch (Exception e) {
+            e.printStackTrace();
             throw new RuntimeException(e);
         }
     }
@@ -169,10 +171,12 @@ class HttpStub {
             if (registeredResponse != null) {
                 response.setStatus(registeredResponse.getStatus());
                 if (registeredResponse.getContentType() != null) {
-                    response.getHeaders().add("Content-Type", registeredResponse.getContentType());
+                    response.getHeaders().put(HttpHeader.CONTENT_TYPE, registeredResponse.getContentType());
                 }
-                response.write(
-                        true, ByteBuffer.wrap(registeredResponse.getBody().getBytes()), callback);
+                if (!registeredResponse.getBody().isEmpty()) {
+                    response.write(
+                            true, BufferUtil.toBuffer(registeredResponse.getBody()), callback);
+                }
             }
             return true;
         }
