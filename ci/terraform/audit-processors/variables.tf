@@ -1,5 +1,5 @@
 variable "deployer_role_arn" {
-  default     = ""
+  default     = null
   description = "The name of the AWS role to assume, leave blank when running locally"
   type        = string
 }

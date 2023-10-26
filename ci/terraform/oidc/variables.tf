@@ -53,7 +53,7 @@ variable "doc_app_p1_alarm_error_time_period" {
 }
 
 variable "deployer_role_arn" {
-  default     = ""
+  default     = null
   description = "The name of the AWS role to assume, leave blank when running locally"
   type        = string
 }
