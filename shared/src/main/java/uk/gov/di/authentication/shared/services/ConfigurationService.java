@@ -125,7 +125,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public boolean isBulkUserEmailEnabled() {
-        return systemService.getOrDefault("BULK_USER_EMAIL_ENABLED", "0").equals("1");
+        return System.getenv().getOrDefault("BULK_USER_EMAIL_ENABLED", "0").equals("1");
     }
 
     public long getDefaultOtpCodeExpiry() {
