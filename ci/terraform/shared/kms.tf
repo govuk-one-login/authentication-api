@@ -450,3 +450,171 @@ resource "aws_kms_alias" "authentication_callback_userinfo_encryption_key_alias"
   name          = "alias/${var.environment}-authentication-callback-userinfo-encryption-key-alias"
   target_key_id = aws_kms_key.authentication_callback_userinfo_encryption_key.key_id
 }
+
+resource "aws_kms_key" "user_credentials_table_encryption_key" {
+  description              = "KMS encryption key for user credentials table in DynamoDB"
+  deletion_window_in_days  = 30
+  key_usage                = "ENCRYPT_DECRYPT"
+  customer_master_key_spec = "SYMMETRIC_DEFAULT"
+  enable_key_rotation      = true
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Id      = "key-policy-dynamodb",
+    Statement = [
+      {
+        Sid       = "Allow IAM to manage this key",
+        Effect    = "Allow",
+        Principal = { AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root" }
+        Action = [
+          "kms:*"
+        ],
+        Resource = "*"
+      }
+    ]
+  })
+  tags = local.default_tags
+}
+
+resource "aws_kms_key" "user_profile_table_encryption_key" {
+  description              = "KMS encryption key for user profile table in DynamoDB"
+  deletion_window_in_days  = 30
+  key_usage                = "ENCRYPT_DECRYPT"
+  customer_master_key_spec = "SYMMETRIC_DEFAULT"
+  enable_key_rotation      = true
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Id      = "key-policy-dynamodb",
+    Statement = [
+      {
+        Sid       = "Allow IAM to manage this key",
+        Effect    = "Allow",
+        Principal = { AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root" }
+        Action = [
+          "kms:*"
+        ],
+        Resource = "*"
+      }
+    ]
+  })
+  tags = local.default_tags
+}
+
+resource "aws_kms_key" "client_registry_table_encryption_key" {
+  description              = "KMS encryption key for client registry table in DynamoDB"
+  deletion_window_in_days  = 30
+  key_usage                = "ENCRYPT_DECRYPT"
+  customer_master_key_spec = "SYMMETRIC_DEFAULT"
+  enable_key_rotation      = true
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Id      = "key-policy-dynamodb",
+    Statement = [
+      {
+        Sid       = "Allow IAM to manage this key",
+        Effect    = "Allow",
+        Principal = { AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root" }
+        Action = [
+          "kms:*"
+        ],
+        Resource = "*"
+      }
+    ]
+  })
+  tags = local.default_tags
+}
+
+resource "aws_kms_key" "identity_credentials_table_encryption_key" {
+  description              = "KMS encryption key for identity credentials table in DynamoDB"
+  deletion_window_in_days  = 30
+  key_usage                = "ENCRYPT_DECRYPT"
+  customer_master_key_spec = "SYMMETRIC_DEFAULT"
+  enable_key_rotation      = true
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Id      = "key-policy-dynamodb",
+    Statement = [
+      {
+        Sid       = "Allow IAM to manage this key",
+        Effect    = "Allow",
+        Principal = { AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root" }
+        Action = [
+          "kms:*"
+        ],
+        Resource = "*"
+      }
+    ]
+  })
+  tags = local.default_tags
+}
+
+resource "aws_kms_key" "doc_app_credential_table_encryption_key" {
+  description              = "KMS encryption key for doc app credential table in DynamoDB"
+  deletion_window_in_days  = 30
+  key_usage                = "ENCRYPT_DECRYPT"
+  customer_master_key_spec = "SYMMETRIC_DEFAULT"
+  enable_key_rotation      = true
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Id      = "key-policy-dynamodb",
+    Statement = [
+      {
+        Sid       = "Allow IAM to manage this key",
+        Effect    = "Allow",
+        Principal = { AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root" }
+        Action = [
+          "kms:*"
+        ],
+        Resource = "*"
+      }
+    ]
+  })
+  tags = local.default_tags
+}
+
+resource "aws_kms_key" "common_passwords_table_encryption_key" {
+  description              = "KMS encryption key for common passwords table in DynamoDB"
+  deletion_window_in_days  = 30
+  key_usage                = "ENCRYPT_DECRYPT"
+  customer_master_key_spec = "SYMMETRIC_DEFAULT"
+  enable_key_rotation      = true
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Id      = "key-policy-dynamodb",
+    Statement = [
+      {
+        Sid       = "Allow IAM to manage this key",
+        Effect    = "Allow",
+        Principal = { AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root" }
+        Action = [
+          "kms:*"
+        ],
+        Resource = "*"
+      }
+    ]
+  })
+  tags = local.default_tags
+}
+
+resource "aws_kms_key" "account_modifiers_table_encryption_key" {
+  description              = "KMS encryption key for account modifiers table in DynamoDB"
+  deletion_window_in_days  = 30
+  key_usage                = "ENCRYPT_DECRYPT"
+  customer_master_key_spec = "SYMMETRIC_DEFAULT"
+  enable_key_rotation      = true
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Id      = "key-policy-dynamodb",
+    Statement = [
+      {
+        Sid       = "Allow IAM to manage this key",
+        Effect    = "Allow",
+        Principal = { AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root" }
+        Action = [
+          "kms:*"
+        ],
+        Resource = "*"
+      }
+    ]
+  })
+  tags = local.default_tags
+}

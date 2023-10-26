@@ -39,7 +39,8 @@ resource "aws_dynamodb_table" "user_credentials_table" {
   }
 
   server_side_encryption {
-    enabled = !var.use_localstack
+    enabled     = true
+    kms_key_arn = aws_kms_key.user_credentials_table_encryption_key.arn
   }
 
   point_in_time_recovery {
@@ -123,7 +124,8 @@ resource "aws_dynamodb_table" "user_profile_table" {
   }
 
   server_side_encryption {
-    enabled = !var.use_localstack
+    enabled     = true
+    kms_key_arn = aws_kms_key.user_profile_table_encryption_key.arn
   }
 
   point_in_time_recovery {
@@ -168,7 +170,8 @@ resource "aws_dynamodb_table" "client_registry_table" {
   }
 
   server_side_encryption {
-    enabled = !var.use_localstack
+    enabled     = true
+    kms_key_arn = aws_kms_key.client_registry_table_encryption_key.arn
   }
 
   lifecycle {
@@ -196,7 +199,8 @@ resource "aws_dynamodb_table" "identity_credentials_table" {
   }
 
   server_side_encryption {
-    enabled = !var.use_localstack
+    enabled     = true
+    kms_key_arn = aws_kms_key.identity_credentials_table_encryption_key.arn
   }
 
   lifecycle {
@@ -229,7 +233,8 @@ resource "aws_dynamodb_table" "doc_app_credential_table" {
   }
 
   server_side_encryption {
-    enabled = !var.use_localstack
+    enabled     = true
+    kms_key_arn = aws_kms_key.doc_app_credential_table_encryption_key.arn
   }
 
   lifecycle {
@@ -258,7 +263,8 @@ resource "aws_dynamodb_table" "common_passwords_table" {
   }
 
   server_side_encryption {
-    enabled = !var.use_localstack
+    enabled     = true
+    kms_key_arn = aws_kms_key.common_passwords_table_encryption_key.arn
   }
 
   point_in_time_recovery {
@@ -290,7 +296,8 @@ resource "aws_dynamodb_table" "account_modifiers_table" {
   }
 
   server_side_encryption {
-    enabled = !var.use_localstack
+    enabled     = true
+    kms_key_arn = aws_kms_key.account_modifiers_table_encryption_key.arn
   }
 
   lifecycle {
