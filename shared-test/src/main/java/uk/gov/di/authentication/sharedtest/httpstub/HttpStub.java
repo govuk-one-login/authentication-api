@@ -164,13 +164,14 @@ class HttpStub {
         public boolean handle(Request request, Response response, Callback callback)
                 throws Exception {
             recordedRequests.add(new RecordedRequest(request));
-            RegisteredResponse registeredResponse = registeredResponses.get(request.getHttpURI());
+            RegisteredResponse registeredResponse = registeredResponses.get(request.getHttpURI().getPath());
             if (registeredResponse != null) {
                 response.setStatus(registeredResponse.getStatus());
-                // response.setContentType(registeredResponse.getContentType());
+                if (registeredResponse.getContentType() != null) {
+                    response.getHeaders().add("Content-Type", registeredResponse.getContentType());
+                }
                 response.write(
-                        true, ByteBuffer.wrap(registeredResponse.getBody().getBytes()), null);
-                // request.setHandled(true);
+                        true, ByteBuffer.wrap(registeredResponse.getBody().getBytes()), callback);
             }
             return true;
         }
