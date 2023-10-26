@@ -17,6 +17,7 @@ import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.authentication.shared.services.SystemService;
 
 import java.util.Map;
 import java.util.Objects;
@@ -62,6 +63,7 @@ public class NotifyCallbackHandler
 
     public NotifyCallbackHandler() {
         this(ConfigurationService.getInstance());
+        this.configurationService.setSystemService(new SystemService());
     }
 
     @Override
