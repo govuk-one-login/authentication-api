@@ -31,9 +31,9 @@ public class NotifyCallbackHandler
 
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private final ConfigurationService configurationService;
-    private DynamoService dynamoService = null;
+    private final DynamoService dynamoService;
 
-    private BulkEmailUsersService bulkEmailUsersService = null;
+    private final BulkEmailUsersService bulkEmailUsersService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final Json objectMapper = SerializationService.getInstance();
 
@@ -46,19 +46,15 @@ public class NotifyCallbackHandler
             BulkEmailUsersService bulkEmailUsersService) {
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.configurationService = configurationService;
-        if (configurationService.isBulkUserEmailEnabled()) {
-            this.dynamoService = dynamoService;
-            this.bulkEmailUsersService = bulkEmailUsersService;
-        }
+        this.dynamoService = dynamoService;
+        this.bulkEmailUsersService = bulkEmailUsersService;
     }
 
     public NotifyCallbackHandler(ConfigurationService configurationService) {
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
         this.configurationService = configurationService;
-        if (configurationService.isBulkUserEmailEnabled()) {
-            this.dynamoService = new DynamoService(configurationService);
-            this.bulkEmailUsersService = new BulkEmailUsersService(configurationService);
-        }
+        this.dynamoService = new DynamoService(configurationService);
+        this.bulkEmailUsersService = new BulkEmailUsersService(configurationService);
     }
 
     public NotifyCallbackHandler() {
@@ -117,9 +113,7 @@ public class NotifyCallbackHandler
                                 configurationService.getEnvironment(),
                                 "NotifyStatus",
                                 deliveryReceipt.getStatus()));
-                if (configurationService.isBulkUserEmailEnabled()
-                        && templateName.equals(
-                                TERMS_AND_CONDITIONS_BULK_EMAIL.getTemplateAlias())) {
+                if (templateName.equals(TERMS_AND_CONDITIONS_BULK_EMAIL.getTemplateAlias())) {
                     LOG.info("Updating bulk email table for delivery receipt");
                     var maybeProfile =
                             dynamoService.getUserProfileByEmailMaybe(deliveryReceipt.getTo());
