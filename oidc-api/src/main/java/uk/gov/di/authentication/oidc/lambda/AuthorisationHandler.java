@@ -208,11 +208,13 @@ public class AuthorisationHandler
                                     Collectors.toMap(
                                             Map.Entry::getKey, entry -> List.of(entry.getValue())));
             authRequest = AuthenticationRequest.parse(requestParameters);
+
             String clientId = authRequest.getClientID().getValue();
             client =
                     clientService
                             .getClient(clientId)
                             .orElseThrow(() -> new ClientNotFoundException(clientId));
+            updateAttachedLogFieldToLogs(CLIENT_ID, clientId);
         } catch (ParseException e) {
             if (e.getRedirectionURI() == null) {
                 LOG.warn(
@@ -333,7 +335,6 @@ public class AuthorisationHandler
         session.addClientSession(clientSessionId);
         updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
         updateAttachedLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
-        updateAttachedLogFieldToLogs(CLIENT_ID, authenticationRequest.getClientID().getValue());
         sessionService.save(session);
         LOG.info("Session saved successfully");
 
@@ -435,7 +436,6 @@ public class AuthorisationHandler
         session.addClientSession(clientSessionId);
         updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
         updateAttachedLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
-        updateAttachedLogFieldToLogs(CLIENT_ID, authenticationRequest.getClientID().getValue());
         sessionService.save(session);
         LOG.info("Session saved successfully");
         return generateAuthRedirect(
