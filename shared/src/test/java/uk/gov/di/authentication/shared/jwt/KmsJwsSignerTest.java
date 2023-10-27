@@ -8,7 +8,10 @@ import com.nimbusds.jose.util.Base64URL;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
+import java.util.Set;
+
 import static com.nimbusds.jose.JWSAlgorithm.ES256;
+import static com.nimbusds.jose.JWSAlgorithm.RS256;
 import static com.nimbusds.jose.crypto.impl.ECDSA.getSignatureByteArrayLength;
 import static com.nimbusds.jose.crypto.impl.ECDSA.transcodeSignatureToConcat;
 import static org.hamcrest.CoreMatchers.is;
@@ -59,5 +62,10 @@ class KmsJwsSignerTest {
                         transcodeSignatureToConcat(output, getSignatureByteArrayLength(ES256)));
 
         assertThat(signer.sign(header, data), is(expectedOutput));
+    }
+
+    @Test
+    void shouldOnlySupportRS256AndES256Signing() {
+        assertThat(signer.supportedJWSAlgorithms(), is(Set.of(RS256, ES256)));
     }
 }

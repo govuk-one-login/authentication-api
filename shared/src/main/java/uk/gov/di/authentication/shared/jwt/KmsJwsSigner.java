@@ -9,7 +9,6 @@ import com.nimbusds.jose.jca.JCAContext;
 import com.nimbusds.jose.util.Base64URL;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
-import java.util.Collections;
 import java.util.Set;
 
 import static software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec.ECDSA_SHA_256;
@@ -54,7 +53,7 @@ public class KmsJwsSigner implements JWSSigner {
 
     @Override
     public Set<JWSAlgorithm> supportedJWSAlgorithms() {
-        return Collections.emptySet();
+        return Set.of(JWSAlgorithm.RS256, JWSAlgorithm.ES256);
     }
 
     @Override
