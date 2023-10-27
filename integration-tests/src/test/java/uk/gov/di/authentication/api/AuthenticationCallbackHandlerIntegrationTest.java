@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
+import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AuthenticationUserInfo;
 import uk.gov.di.authentication.oidc.lambda.AuthenticationCallbackHandler;
@@ -138,8 +139,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                     List.of(
                             OrchestrationAuditableEvent.AUTH_CALLBACK_RESPONSE_RECEIVED,
                             OrchestrationAuditableEvent.AUTH_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
-                            OrchestrationAuditableEvent
-                                    .AUTH_SUCCESSFUL_USERINFO_RESPONSE_RECEIVED));
+                            OrchestrationAuditableEvent.AUTH_SUCCESSFUL_USERINFO_RESPONSE_RECEIVED,
+                            OidcAuditableEvent.AUTH_CODE_ISSUED));
 
             Optional<AuthenticationUserInfo> userInfoDbEntry =
                     userInfoStoreExtension.getUserInfoBySubjectId(SUBJECT_ID.getValue());

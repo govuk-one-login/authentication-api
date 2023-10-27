@@ -18,6 +18,7 @@ import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
+import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent;
 import uk.gov.di.authentication.oidc.exceptions.AuthenticationCallbackException;
 import uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService;
@@ -31,6 +32,7 @@ import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.authentication.shared.helpers.ConstructUriHelper;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
+import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
@@ -60,6 +62,7 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class AuthenticationCallbackHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -339,6 +342,24 @@ public class AuthenticationCallbackHandler
                                 clientRedirectURI, authCode, null, null, state, null, responseMode);
 
                 LOG.info("Successfully processed request");
+
+                auditService.submitAuditEvent(
+                        OidcAuditableEvent.AUTH_CODE_ISSUED,
+                        clientSessionId,
+                        userSession.getSessionId(),
+                        clientId,
+                        userInfo.getSubject().getValue(),
+                        Objects.isNull(userSession.getEmailAddress())
+                                ? AuditService.UNKNOWN
+                                : userSession.getEmailAddress(),
+                        IpAddressHelper.extractIpAddress(input),
+                        Objects.isNull(userInfo.getPhoneNumber())
+                                ? AuditService.UNKNOWN
+                                : userInfo.getPhoneNumber(),
+                        persistentSessionId,
+                        pair("internalSubjectId", AuditService.UNKNOWN),
+                        pair("isNewAccount", userInfo.getClaim("new_account")),
+                        pair("rpPairwiseId", userInfo.getClaim("rp_client_id")));
 
                 return generateApiGatewayProxyResponse(
                         302,
