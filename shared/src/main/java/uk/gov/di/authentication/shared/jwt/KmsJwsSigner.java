@@ -11,17 +11,25 @@ import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import java.util.Collections;
 import java.util.Set;
 
+import static software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec.RSASSA_PKCS1_V1_5_SHA_256;
+
 public class KmsJwsSigner implements JWSSigner {
 
     private final KmsConnectionService kms;
+    private final String rsaSigningKeyId;
 
-    public KmsJwsSigner(KmsConnectionService kms) {
+    public KmsJwsSigner(KmsConnectionService kms, String rsaSigningKeyId) {
         this.kms = kms;
+        this.rsaSigningKeyId = rsaSigningKeyId;
     }
 
     @Override
     public Base64URL sign(JWSHeader header, byte[] signingInput) throws JOSEException {
-        return new Base64URL("");
+        if (signingInput.length == 0) {
+            return new Base64URL("");
+        }
+
+        return Base64URL.encode(kms.sign(rsaSigningKeyId, RSASSA_PKCS1_V1_5_SHA_256, signingInput));
     }
 
     @Override
