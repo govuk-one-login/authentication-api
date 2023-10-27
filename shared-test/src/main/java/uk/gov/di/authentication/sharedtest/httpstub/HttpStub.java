@@ -108,7 +108,6 @@ class HttpStub {
         try {
             server.start();
         } catch (Exception e) {
-            e.printStackTrace();
             throw new RuntimeException(e);
         }
     }
@@ -171,7 +170,8 @@ class HttpStub {
             if (registeredResponse != null) {
                 response.setStatus(registeredResponse.getStatus());
                 if (registeredResponse.getContentType() != null) {
-                    response.getHeaders().put(HttpHeader.CONTENT_TYPE, registeredResponse.getContentType());
+                    response.getHeaders()
+                            .put(HttpHeader.CONTENT_TYPE, registeredResponse.getContentType());
                 }
                 if (!registeredResponse.getBody().isEmpty()) {
                     response.write(
