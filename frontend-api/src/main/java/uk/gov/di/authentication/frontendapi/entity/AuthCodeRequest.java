@@ -20,7 +20,6 @@ public class AuthCodeRequest {
 
     @SerializedName("claims")
     @Expose
-    @Required
     private List<String> claims;
 
     @SerializedName("rp-sector-uri")
