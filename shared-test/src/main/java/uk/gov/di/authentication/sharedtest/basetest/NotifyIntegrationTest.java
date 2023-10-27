@@ -103,7 +103,7 @@ public abstract class NotifyIntegrationTest {
 
         @Override
         public String getContactUsLinkRoute() {
-            return "contact-us";
+            return "contact-gov-uk-one-login";
         }
     }
 }

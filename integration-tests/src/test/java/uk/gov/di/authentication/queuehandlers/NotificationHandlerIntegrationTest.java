@@ -113,7 +113,7 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
     @ParameterizedTest
     @MethodSource("confirmationEmails")
     void shouldCallNotifyWhenValidAccountCreatedRequestIsAddedToQueue(
-            NotificationType notificationType, String referer) throws Json.JsonException {
+            NotificationType notificationType) throws Json.JsonException {
         handler.handleRequest(
                 createSqsEvent(
                         new NotifyRequest(
@@ -130,6 +130,6 @@ public class NotificationHandlerIntegrationTest extends NotifyIntegrationTest {
                 personalisation,
                 hasFieldWithValue(
                         "contact-us-link",
-                        equalTo("http://localhost:3000/frontend/contact-us?referer=" + referer)));
+                        equalTo("http://localhost:3000/frontend/contact-gov-uk-one-login")));
     }
 }
