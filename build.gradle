@@ -347,8 +347,8 @@ task utilsTerraform (type: Terraform) {
 
 sonarqube {
     properties {
-        property "sonar.projectKey", "alphagov_di-authentication-api"
-        property "sonar.organization", "alphagov"
+        property "sonar.projectKey", "govuk-one-login_authentication-api"
+        property "sonar.organization", "govuk-one-login"
         property "sonar.host.url", "https://sonarcloud.io"
         property "sonar.coverage.exclusions", "**/shared-test/**"
     }
