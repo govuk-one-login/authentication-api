@@ -196,6 +196,7 @@ resource "aws_kms_key" "lambda_env_vars_encryption_key" {
   deletion_window_in_days  = 30
   key_usage                = "ENCRYPT_DECRYPT"
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
+  enable_key_rotation      = true
 
   tags = local.default_tags
 }
