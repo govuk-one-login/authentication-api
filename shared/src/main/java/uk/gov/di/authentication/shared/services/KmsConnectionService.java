@@ -3,12 +3,14 @@ package uk.gov.di.authentication.shared.services;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
+import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.kms.KmsClient;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyResponse;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
+import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 
 import java.net.URI;
 import java.util.Optional;
@@ -53,6 +55,17 @@ public class KmsConnectionService {
     public SignResponse sign(SignRequest signRequest) {
         LOG.info("Calling KMS with SignRequest and KeyId {}", signRequest.keyId());
         return kmsClient.sign(signRequest);
+    }
+
+    public byte[] sign(String keyId, SigningAlgorithmSpec algorithm, byte[] data) {
+        var signRequest =
+                SignRequest.builder()
+                        .message(SdkBytes.fromByteArray(data))
+                        .keyId(keyId)
+                        .signingAlgorithm(algorithm)
+                        .build();
+
+        return sign(signRequest).signature().asByteArray();
     }
 
     private void warmUp(String keyId) {
