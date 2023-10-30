@@ -223,6 +223,19 @@ variable "test_clients_enabled" {
   default = "false"
 }
 
+variable "provenance_environment_variables" {
+  type        = map(string)
+  description = "A map of environment variables to be added to the lambda functions for provenance"
+  validation {
+    condition     = contains(keys(var.provenance_environment_variables), "GIT_COMMIT_SHA")
+    error_message = "GIT_COMMIT_SHA must be provided in provenance_environment_variables"
+  }
+  validation {
+    condition     = contains(keys(var.provenance_environment_variables), "GIT_REPOSITORY")
+    error_message = "GIT_REPOSITORY must be provided in provenance_environment_variables"
+  }
+}
+
 locals {
   default_performance_parameters = {
     memory          = var.endpoint_memory_size

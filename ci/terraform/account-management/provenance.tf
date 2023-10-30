@@ -1,46 +1,38 @@
-module "account_management_api_update_phone_number_role" {
+module "account_management_api_provenance_role" {
   source      = "../modules/lambda-role"
   environment = var.environment
-  role_name   = "account-management-api-update-phone-number-role"
+  role_name   = "account-management-api-provenance-role"
   vpc_arn     = local.vpc_arn
 
   policies_to_attach = [
-    aws_iam_policy.dynamo_am_user_read_access_policy.arn,
-    aws_iam_policy.dynamo_am_user_write_access_policy.arn,
-    aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
-    aws_iam_policy.parameter_policy.arn,
     module.account_management_txma_audit.access_policy_arn
   ]
 }
 
-module "update_phone_number" {
+module "provenance" {
   source = "../modules/endpoint-module"
 
-  endpoint_name   = "update-phone-number"
-  path_part       = "update-phone-number"
-  endpoint_method = ["POST"]
+  endpoint_name   = "account-management-api-provenance"
+  path_part       = "provenance"
+  endpoint_method = ["GET"]
+
   handler_environment_variables = {
     ENVIRONMENT          = var.environment
-    DYNAMO_ENDPOINT      = var.use_localstack ? var.lambda_dynamo_endpoint : null
-    EMAIL_QUEUE_URL      = aws_sqs_queue.email_queue.id
-    LOCALSTACK_ENDPOINT  = var.use_localstack ? var.localstack_endpoint : null
-    REDIS_KEY            = local.redis_key
     TXMA_AUDIT_QUEUE_URL = module.account_management_txma_audit.queue_url
-    INTERNAl_SECTOR_URI  = var.internal_sector_uri
   }
-  handler_function_name = "uk.gov.di.accountmanagement.lambda.UpdatePhoneNumberHandler::handleRequest"
+  handler_function_name = "uk.gov.di.authentication.shared.lambda.ProvenanceHandler::handleRequest"
+  handler_runtime       = "java17"
 
   provenance_environment_variables = var.provenance_environment_variables
 
-  authorizer_id    = aws_api_gateway_authorizer.di_account_management_api.id
   rest_api_id      = aws_api_gateway_rest_api.di_account_management_api.id
   root_resource_id = aws_api_gateway_rest_api.di_account_management_api.root_resource_id
   execution_arn    = aws_api_gateway_rest_api.di_account_management_api.execution_arn
 
-  memory_size                 = lookup(var.performance_tuning, "update-phone-number", local.default_performance_parameters).memory
-  provisioned_concurrency     = lookup(var.performance_tuning, "update-phone-number", local.default_performance_parameters).concurrency
-  max_provisioned_concurrency = lookup(var.performance_tuning, "update-phone-number", local.default_performance_parameters).max_concurrency
-  scaling_trigger             = lookup(var.performance_tuning, "update-phone-number", local.default_performance_parameters).scaling_trigger
+  memory_size                 = lookup(var.performance_tuning, "provenance", local.default_performance_parameters).memory
+  provisioned_concurrency     = lookup(var.performance_tuning, "provenance", local.default_performance_parameters).concurrency
+  max_provisioned_concurrency = lookup(var.performance_tuning, "provenance", local.default_performance_parameters).max_concurrency
+  scaling_trigger             = lookup(var.performance_tuning, "provenance", local.default_performance_parameters).scaling_trigger
 
   source_bucket           = aws_s3_bucket.source_bucket.bucket
   lambda_zip_file         = aws_s3_object.account_management_api_release_zip.key
@@ -50,11 +42,11 @@ module "update_phone_number" {
   authentication_vpc_arn = local.vpc_arn
   security_group_ids = [
     local.allow_aws_service_access_security_group_id,
-    aws_security_group.allow_access_to_am_redis.id,
   ]
+
   subnet_id                              = local.private_subnet_ids
   environment                            = var.environment
-  lambda_role_arn                        = module.account_management_api_update_phone_number_role.arn
+  lambda_role_arn                        = module.account_management_api_update_password_role.arn
   use_localstack                         = var.use_localstack
   default_tags                           = local.default_tags
   logging_endpoint_arns                  = var.logging_endpoint_arns

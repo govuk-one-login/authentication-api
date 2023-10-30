@@ -25,6 +25,7 @@ resource "aws_lambda_function" "endpoint_lambda" {
   environment {
     variables = merge(
       var.handler_environment_variables,
+      var.provenance_environment_variables,
       local.deploy_dynatrace ? local.dynatrace_environment_variables : {},
       {
         JAVA_TOOL_OPTIONS = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1"
