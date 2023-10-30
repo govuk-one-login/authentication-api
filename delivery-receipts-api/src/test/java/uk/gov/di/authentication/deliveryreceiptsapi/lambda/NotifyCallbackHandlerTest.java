@@ -44,6 +44,7 @@ class NotifyCallbackHandlerTest {
     private static final String BEARER_TOKEN = "1244656456457657566345";
     private static final String ENVIRONMENT = "test";
     private NotifyCallbackHandler handler;
+
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
@@ -157,6 +158,13 @@ class NotifyCallbackHandlerTest {
         var templateID = IdGenerator.generate();
         when(configurationService.getNotificationTypeFromTemplateId(templateID))
                 .thenReturn(Optional.of(TERMS_AND_CONDITIONS_BULK_EMAIL));
+        when(configurationService.isBulkUserEmailEnabled()).thenReturn(true);
+        NotifyCallbackHandler handlerBulkEmailOn =
+                new NotifyCallbackHandler(
+                        cloudwatchMetricsService,
+                        configurationService,
+                        dynamoService,
+                        bulkEmailUsersService);
         var deliveryReceipt = createDeliveryReceipt(email, "delivered", "email", templateID);
         var event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Authorization", "Bearer " + BEARER_TOKEN));
@@ -164,7 +172,7 @@ class NotifyCallbackHandlerTest {
         String subjectId = "subject-id-1";
         UserProfile userProfile = new UserProfile().withEmail(email).withSubjectID(subjectId);
         when(dynamoService.getUserProfileByEmailMaybe(email)).thenReturn(Optional.of(userProfile));
-        handler.handleRequest(event, context);
+        handlerBulkEmailOn.handleRequest(event, context);
 
         verify(dynamoService).getUserProfileByEmailMaybe(email);
 
@@ -172,17 +180,67 @@ class NotifyCallbackHandlerTest {
     }
 
     @Test
-    void shouldNotUpdateBulkEmailDeliveryReceiptsStatusForTermsAndConditionsEmailType()
-            throws Json.JsonException {
+    void
+            shouldNotUpdateBulkEmailDeliveryReceiptsStatusForTermsAndConditionsEmailTypeWhenBulkEmailSwitchedOn()
+                    throws Json.JsonException {
         String email = "jim@test.com";
         var templateID = IdGenerator.generate();
         when(configurationService.getNotificationTypeFromTemplateId(templateID))
                 .thenReturn(Optional.of(EMAIL_UPDATED));
+        NotifyCallbackHandler handlerBulkEmailOn =
+                new NotifyCallbackHandler(
+                        cloudwatchMetricsService,
+                        configurationService,
+                        dynamoService,
+                        bulkEmailUsersService);
+        var deliveryReceipt = createDeliveryReceipt(email, "delivered", "email", templateID);
+        var event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Authorization", "Bearer " + BEARER_TOKEN));
+        event.setBody(objectMapper.writeValueAsString(deliveryReceipt));
+        handlerBulkEmailOn.handleRequest(event, context);
+
+        verify(dynamoService, never()).getUserProfileByEmailMaybe(anyString());
+        verify(bulkEmailUsersService, never())
+                .updateDeliveryReceiptStatus(anyString(), anyString());
+    }
+
+    @Test
+    void shouldNotUpdateBulkEmailDeliveryReceiptsStatusWhenBulkEmailSwitchedOff()
+            throws Json.JsonException {
+        String email = "jim@test.com";
+        var templateID = IdGenerator.generate();
+        when(configurationService.getNotificationTypeFromTemplateId(templateID))
+                .thenReturn(Optional.of(TERMS_AND_CONDITIONS_BULK_EMAIL));
         var deliveryReceipt = createDeliveryReceipt(email, "delivered", "email", templateID);
         var event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Authorization", "Bearer " + BEARER_TOKEN));
         event.setBody(objectMapper.writeValueAsString(deliveryReceipt));
         handler.handleRequest(event, context);
+
+        verify(dynamoService, never()).getUserProfileByEmailMaybe(anyString());
+        verify(bulkEmailUsersService, never())
+                .updateDeliveryReceiptStatus(anyString(), anyString());
+    }
+
+    @Test
+    void shouldNotUpdateBulkEmailDeliveryReceiptsStatusForEmailUpdatedEmailType()
+            throws Json.JsonException {
+        String email = "jim@test.com";
+        var templateID = IdGenerator.generate();
+        when(configurationService.getNotificationTypeFromTemplateId(templateID))
+                .thenReturn(Optional.of(EMAIL_UPDATED));
+        when(configurationService.isBulkUserEmailEnabled()).thenReturn(true);
+        NotifyCallbackHandler handlerBulkEmailOn =
+                new NotifyCallbackHandler(
+                        cloudwatchMetricsService,
+                        configurationService,
+                        dynamoService,
+                        bulkEmailUsersService);
+        var deliveryReceipt = createDeliveryReceipt(email, "delivered", "email", templateID);
+        var event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Authorization", "Bearer " + BEARER_TOKEN));
+        event.setBody(objectMapper.writeValueAsString(deliveryReceipt));
+        handlerBulkEmailOn.handleRequest(event, context);
 
         verify(dynamoService, never()).getUserProfileByEmailMaybe(anyString());
         verify(bulkEmailUsersService, never())
