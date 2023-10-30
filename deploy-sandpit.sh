@@ -124,6 +124,19 @@ echo -n "Getting Terraform variables from Secrets Manager ... "
 source "${DIR}/scripts/read_secrets__main.sh" "sandpit"
 echo "done!"
 
+echo -n "Getting provenance information ... "
+GIT_COMMIT_SHA=$(git rev-parse HEAD); export GIT_COMMIT_SHA
+DEPLOY_DATE=$(date -Iseconds); export DEPLOY_DATE
+export GIT_REPOSITORY="govuk-one-login/authentication-api"
+GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD); export GIT_BRANCH
+export TF_VAR_provenance_environment_variables="{
+  \"GIT_COMMIT_SHA\": \"${GIT_COMMIT_SHA}\",
+  \"DEPLOY_DATE\": \"${DEPLOY_DATE}\",
+  \"GIT_REPOSITORY\": \"${GIT_REPOSITORY}\",
+  \"GIT_BRANCH\": \"${GIT_BRANCH}\"
+}"
+echo "done!"
+
 if [[ $SHARED == "1" ]]; then
   runTerraform "shared" "${TERRAFORM_OPTS}"
 fi
