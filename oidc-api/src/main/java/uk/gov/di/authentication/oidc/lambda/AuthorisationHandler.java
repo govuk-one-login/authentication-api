@@ -599,7 +599,7 @@ public class AuthorisationHandler
             claimsSetRequest = claimsSetRequest.add("phone_number").add("phone_number_verified");
         }
         if (Boolean.TRUE.equals(emailScopePresent)) {
-            LOG.info("email scope is present. Adding the legacy_subject_id claim");
+            LOG.info("email scope is present. Adding the email and email_verified claim");
             claimsSetRequest = claimsSetRequest.add("email").add("email_verified");
         }
         if (claimsSetRequest.getEntries().isEmpty()) {
