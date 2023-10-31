@@ -10,10 +10,12 @@ import com.nimbusds.oauth2.sdk.token.BearerTokenError;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.external.domain.AuthExternalApiAuditableEvent;
 import uk.gov.di.authentication.external.services.UserInfoService;
 import uk.gov.di.authentication.shared.entity.token.AccessTokenStore;
 import uk.gov.di.authentication.shared.exceptions.AccessTokenException;
 import uk.gov.di.authentication.shared.services.AccessTokenService;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.util.List;
@@ -25,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -39,6 +42,7 @@ class UserInfoHandlerTest {
     private static final AccessTokenStore accessTokenStore = mock(AccessTokenStore.class);
     private static final Subject TEST_SUBJECT = new Subject();
     private static final UserInfo TEST_SUBJECT_USER_INFO = new UserInfo(TEST_SUBJECT);
+    private final AuditService auditService = mock(AuditService.class);
 
     @BeforeEach
     public void setUp() {
@@ -51,9 +55,13 @@ class UserInfoHandlerTest {
         accessTokenService = mock(AccessTokenService.class);
         when(accessTokenService.getAccessTokenStore(any()))
                 .thenReturn(Optional.of(accessTokenStore));
-
         userInfoHandler =
-                new UserInfoHandler(configurationService, userInfoService, accessTokenService);
+                new UserInfoHandler(
+                        configurationService, userInfoService, accessTokenService, auditService);
+
+        TEST_SUBJECT_USER_INFO.setEmailAddress("test@test.com");
+        TEST_SUBJECT_USER_INFO.setPhoneNumber("0123456789");
+        when(accessTokenStore.getSubjectID()).thenReturn("testSubjectId");
     }
 
     @Test
@@ -70,10 +78,22 @@ class UserInfoHandlerTest {
         APIGatewayProxyResponseEvent response = userInfoHandler.userInfoRequestHandler(request);
 
         assertEquals(200, response.getStatusCode());
-        assertEquals(
-                String.format("{\"sub\":\"%s\"}", TEST_SUBJECT.getValue()), response.getBody());
+        assertTrue(
+                response.getBody()
+                        .contains(String.format("\"sub\":\"%s\"", TEST_SUBJECT.getValue())));
 
         verify(accessTokenService, times(1)).setAccessTokenStoreUsed(validToken.getValue(), true);
+        verify(auditService)
+                .submitAuditEvent(
+                        eq(AuthExternalApiAuditableEvent.USERINFO_SENT_TO_ORCHESTRATION),
+                        any(),
+                        any(),
+                        any(),
+                        eq("testSubjectId"),
+                        eq("test@test.com"),
+                        any(),
+                        eq("0123456789"),
+                        any());
     }
 
     @Test
