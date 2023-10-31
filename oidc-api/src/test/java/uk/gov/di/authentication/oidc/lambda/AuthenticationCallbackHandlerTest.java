@@ -106,6 +106,7 @@ class AuthenticationCallbackHandlerTest {
     private static final URI REDIRECT_URI = URI.create("https://test.rp.redirect.uri");
     private static final URI IPV_REDIRECT_URI = URI.create("https://test.ipv.redirect.uri");
     private static final State RP_STATE = new State();
+    private static final Nonce RP_NONCE = new Nonce();
     private static final ClientSession clientSession =
             new ClientSession(
                     generateRPAuthRequestForClientSession().toParameters(),
@@ -203,7 +204,8 @@ class AuthenticationCallbackHandlerTest {
                         any(),
                         eq(pair("internalSubjectId", AuditService.UNKNOWN)),
                         eq(pair("isNewAccount", "true")),
-                        eq(pair("rpPairwiseId", PAIRWISE_SUBJECT_ID.getValue())));
+                        eq(pair("rpPairwiseId", PAIRWISE_SUBJECT_ID.getValue())),
+                        eq(pair("nonce", RP_NONCE)));
     }
 
     @Test
@@ -371,13 +373,12 @@ class AuthenticationCallbackHandlerTest {
     private static AuthenticationRequest generateRPAuthRequestForClientSession() {
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         Scope scope = new Scope();
-        Nonce nonce = new Nonce();
         scope.add(OIDCScopeValue.OPENID);
         scope.add("phone");
         scope.add("email");
         return new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
                 .state(RP_STATE)
-                .nonce(nonce)
+                .nonce(RP_NONCE)
                 .build();
     }
 
