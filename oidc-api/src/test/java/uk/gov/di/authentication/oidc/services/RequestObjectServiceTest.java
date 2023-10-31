@@ -183,10 +183,10 @@ class RequestObjectServiceTest {
     }
 
     @Test
-    void shouldReturnErrorWhenClientTypeIsNotAppOrWeb() throws JOSEException {
+    void shouldReturnErrorWhenClientTypeIsNotApp() throws JOSEException {
         var clientRegistry =
                 generateClientRegistry(
-                        "not-app-or-web",
+                        ClientType.WEB.getValue(),
                         new Scope(
                                 OIDCScopeValue.OPENID.getValue(),
                                 CustomScopeValue.DOC_CHECKING_APP.getValue()));
@@ -300,6 +300,27 @@ class RequestObjectServiceTest {
                         .claim("redirect_uri", REDIRECT_URI)
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", "openid profile")
+                        .claim("nonce", NONCE.getValue())
+                        .claim("state", STATE.toString())
+                        .claim("client_id", CLIENT_ID.getValue())
+                        .issuer(CLIENT_ID.getValue())
+                        .build();
+        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+        var requestObjectError = service.validateRequestObject(authRequest);
+
+        assertTrue(requestObjectError.isPresent());
+        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
+        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+    }
+
+    @Test
+    void shouldReturnErrorWhenRequestObjectDoesNotContainDocAppScope() throws JOSEException {
+        var jwtClaimsSet =
+                new JWTClaimsSet.Builder()
+                        .audience(AUDIENCE)
+                        .claim("redirect_uri", REDIRECT_URI)
+                        .claim("response_type", ResponseType.CODE.toString())
+                        .claim("scope", "openid")
                         .claim("nonce", NONCE.getValue())
                         .claim("state", STATE.toString())
                         .claim("client_id", CLIENT_ID.getValue())

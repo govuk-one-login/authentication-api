@@ -208,13 +208,11 @@ public class AuthorisationHandler
                                     Collectors.toMap(
                                             Map.Entry::getKey, entry -> List.of(entry.getValue())));
             authRequest = AuthenticationRequest.parse(requestParameters);
-
             String clientId = authRequest.getClientID().getValue();
             client =
                     clientService
                             .getClient(clientId)
                             .orElseThrow(() -> new ClientNotFoundException(clientId));
-            updateAttachedLogFieldToLogs(CLIENT_ID, clientId);
         } catch (ParseException e) {
             if (e.getRedirectionURI() == null) {
                 LOG.warn(
@@ -242,17 +240,10 @@ public class AuthorisationHandler
         }
 
         Optional<AuthRequestError> authRequestError;
-        if (orchestrationAuthorizationService.isJarValidationRequired(authRequest)) {
-            if (authRequest.getRequestObject() == null) {
-                var errorMsg =
-                        "JAR required for client but request does not contain Request Object";
-                LOG.warn(errorMsg);
-                throw new RuntimeException(errorMsg);
-            }
-            LOG.info("Validating request using JAR");
+        if (authRequest.getRequestObject() != null && configurationService.isDocAppApiEnabled()) {
+            LOG.info("RequestObject auth request received");
             authRequestError = requestObjectService.validateRequestObject(authRequest);
         } else {
-            LOG.info("Validating request query params");
             authRequestError =
                     orchestrationAuthorizationService.validateAuthRequest(
                             authRequest, configurationService.isNonceRequired());
@@ -335,6 +326,7 @@ public class AuthorisationHandler
         session.addClientSession(clientSessionId);
         updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
         updateAttachedLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
+        updateAttachedLogFieldToLogs(CLIENT_ID, authenticationRequest.getClientID().getValue());
         sessionService.save(session);
         LOG.info("Session saved successfully");
 
@@ -436,6 +428,7 @@ public class AuthorisationHandler
         session.addClientSession(clientSessionId);
         updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
         updateAttachedLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
+        updateAttachedLogFieldToLogs(CLIENT_ID, authenticationRequest.getClientID().getValue());
         sessionService.save(session);
         LOG.info("Session saved successfully");
         return generateAuthRedirect(
