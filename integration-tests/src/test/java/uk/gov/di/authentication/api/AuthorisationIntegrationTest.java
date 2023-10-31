@@ -600,7 +600,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 "client_id",
                                 CLIENT_ID,
                                 "scope",
-                                "openid doc-checking-app",
+                                "openid",
                                 "request",
                                 signedJWT.serialize()));
         var response =
@@ -653,7 +653,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         "request",
                         signedJWT.serialize(),
                         "scope",
-                        "openid doc-checking-app");
+                        "openid");
 
         var response =
                 makeRequest(

@@ -16,6 +16,7 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientType;
+import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -30,7 +31,6 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.text.ParseException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
@@ -97,9 +97,8 @@ public class RequestObjectService {
 
             var redirectURI = URI.create((String) jwtClaimsSet.getClaim("redirect_uri"));
 
-            if (Arrays.stream(ClientType.values())
-                    .noneMatch(type -> type.getValue().equals(client.getClientType()))) {
-                LOG.error("ClientType value of {} is not recognised", client.getClientType());
+            if (!ClientType.APP.getValue().equals(client.getClientType())) {
+                LOG.error("ClientType of client is not 'app'");
                 return errorResponse(redirectURI, OAuth2Error.UNAUTHORIZED_CLIENT);
             }
 
@@ -109,7 +108,7 @@ public class RequestObjectService {
                 return errorResponse(redirectURI, OAuth2Error.UNSUPPORTED_RESPONSE_TYPE);
             }
 
-            if (requestContainsInvalidScopes(authRequest.getScope(), client)) {
+            if (requestContainsInvalidScopes(authRequest.getScope(), client, false)) {
                 LOG.error(
                         "Invalid scopes in authRequest. Scopes in request: {}",
                         authRequest.getScope().toStringList());
@@ -153,7 +152,7 @@ public class RequestObjectService {
             }
             if (Objects.isNull(jwtClaimsSet.getClaim("scope"))
                     || requestContainsInvalidScopes(
-                            Scope.parse(jwtClaimsSet.getClaim("scope").toString()), client)) {
+                            Scope.parse(jwtClaimsSet.getClaim("scope").toString()), client, true)) {
                 LOG.error("Invalid scopes in request JWT");
                 return errorResponse(redirectURI, OAuth2Error.INVALID_SCOPE);
             }
@@ -197,7 +196,11 @@ public class RequestObjectService {
         }
     }
 
-    private boolean requestContainsInvalidScopes(Scope scopes, ClientRegistry clientRegistry) {
+    private boolean requestContainsInvalidScopes(
+            Scope scopes, ClientRegistry clientRegistry, boolean requestObject) {
+        if (requestObject && !scopes.contains(CustomScopeValue.DOC_CHECKING_APP.getValue())) {
+            return true;
+        }
 
         for (String scope : scopes.toStringList()) {
             if (!ValidScopes.getAllValidScopes().contains(scope)) {
