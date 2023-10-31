@@ -298,7 +298,8 @@ public class AuthCodeHandler
                     PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
                     pair("internalSubjectId", internalSubjectId),
                     pair("isNewAccount", session.isNewAccount()),
-                    pair("rpPairwiseId", rpPairwiseId));
+                    pair("rpPairwiseId", rpPairwiseId),
+                    pair("nonce", authenticationRequest.getNonce()));
 
             cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
             cloudwatchMetricsService.incrementSignInByClient(
