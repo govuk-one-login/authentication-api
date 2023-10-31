@@ -178,6 +178,7 @@ class HttpStub {
                             true, BufferUtil.toBuffer(registeredResponse.getBody()), callback);
                 }
             }
+            callback.succeeded();
             return true;
         }
     }
