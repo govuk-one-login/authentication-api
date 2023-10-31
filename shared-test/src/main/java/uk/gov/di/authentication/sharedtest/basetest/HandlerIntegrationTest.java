@@ -77,14 +77,15 @@ public abstract class HandlerIntegrationTest<Q, S> {
 
     @RegisterExtension
     protected static final SqsQueueExtension notificationsQueue =
-            new SqsQueueExtension("notification-queue");
+            SqsQueueExtension.getOrCreate("notification-queue");
 
     @RegisterExtension
-    protected static final SqsQueueExtension spotQueue = new SqsQueueExtension("spot-queue");
+    protected static final SqsQueueExtension spotQueue =
+            SqsQueueExtension.getOrCreate("spot-queue");
 
     @RegisterExtension
     protected static final SqsQueueExtension txmaAuditQueue =
-            new SqsQueueExtension("txma-audit-queue");
+            SqsQueueExtension.getOrCreate("txma-audit-queue");
 
     @RegisterExtension
     protected static final AuditSnsTopicExtension auditTopic =
@@ -192,7 +193,8 @@ public abstract class HandlerIntegrationTest<Q, S> {
 
     @RegisterExtension
     protected static final RedisExtension redis =
-            new RedisExtension(SerializationService.getInstance(), TEST_CONFIGURATION_SERVICE);
+            RedisExtension.getInstance(
+                    SerializationService.getInstance(), TEST_CONFIGURATION_SERVICE);
 
     @RegisterExtension
     protected static final UserStoreExtension userStore = new UserStoreExtension();

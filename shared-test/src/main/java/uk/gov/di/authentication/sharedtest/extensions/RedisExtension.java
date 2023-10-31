@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static java.util.Objects.isNull;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
@@ -38,6 +39,7 @@ import static uk.gov.di.authentication.shared.services.ClientSessionService.CLIE
 
 public class RedisExtension
         implements Extension, BeforeAllCallback, AfterAllCallback, AfterEachCallback {
+    private static RedisExtension instance;
     private final ConfigurationService configurationService;
     private final CodeStorageService codeStorageService;
 
@@ -46,10 +48,18 @@ public class RedisExtension
     private RedisConnectionService redis;
     private RedisClient client;
 
-    public RedisExtension(Json objectMapper, ConfigurationService configurationService) {
+    private RedisExtension(Json objectMapper, ConfigurationService configurationService) {
         this.objectMapper = objectMapper;
         this.configurationService = configurationService;
         this.codeStorageService = new CodeStorageService(configurationService);
+    }
+
+    public static RedisExtension getInstance(
+            Json objectMapper, ConfigurationService configurationService) {
+        if (isNull(instance)) {
+            instance = new RedisExtension(objectMapper, configurationService);
+        }
+        return instance;
     }
 
     public String createSession(String sessionId) throws Json.JsonException {

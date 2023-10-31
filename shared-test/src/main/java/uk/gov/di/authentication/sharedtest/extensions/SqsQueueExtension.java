@@ -17,6 +17,7 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.net.URI;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -27,13 +28,15 @@ public class SqsQueueExtension extends BaseAwsResourceExtension implements Befor
 
     public static final int DEFAULT_NUMBER_OF_MESSAGES = 10;
 
+    private static final HashMap<String, SqsQueueExtension> extensions = new HashMap<>();
+
     private final String queueNameSuffix;
     private final SqsClient sqsClient;
     private final Json objectMapper = SerializationService.getInstance();
 
     private String queueUrl;
 
-    public SqsQueueExtension(String queueNameSuffix) {
+    private SqsQueueExtension(String queueNameSuffix) {
         this.queueNameSuffix = queueNameSuffix;
         this.sqsClient =
                 SqsClient.builder()
@@ -41,6 +44,11 @@ public class SqsQueueExtension extends BaseAwsResourceExtension implements Befor
                         .credentialsProvider(EnvironmentVariableCredentialsProvider.create())
                         .region(Region.of(REGION))
                         .build();
+    }
+
+    public static SqsQueueExtension getOrCreate(String queueNameSuffix) {
+        return extensions.computeIfAbsent(
+                queueNameSuffix, s -> new SqsQueueExtension(queueNameSuffix));
     }
 
     public String getQueueUrl() {
