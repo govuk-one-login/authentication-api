@@ -77,7 +77,7 @@ resource "time_sleep" "wait_for_alias_to_reassign" {
 }
 
 resource "aws_lambda_provisioned_concurrency_config" "endpoint_lambda_concurrency_config" {
-  count = 1
+  count = local.authorizer_provisioned_concurrency == 0 ? 0 : 1
 
   function_name = aws_lambda_function.authorizer.function_name
   qualifier     = aws_lambda_alias.authorizer_alias.name
