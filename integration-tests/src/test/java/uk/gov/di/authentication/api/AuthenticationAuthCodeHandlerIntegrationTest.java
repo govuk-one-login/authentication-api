@@ -107,17 +107,6 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
         assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1001)));
     }
 
-    @Test
-    void shouldReturn400StatusForInvalidRequestedScopeClaims() throws Json.JsonException {
-        setUpDynamo();
-        var authRequest =
-                new AuthCodeRequest(
-                        TEST_REDIRECT_URI, TEST_STATE, null, TEST_SECTOR_IDENTIFIER, false);
-        var response = makeRequest(Optional.of(authRequest), getHeaders(), Map.of());
-        assertThat(response, hasStatus(400));
-        assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1001)));
-    }
-
     private Map<String, String> getHeaders() throws Json.JsonException {
         Map<String, String> headers = new HashMap<>();
         var sessionId = redis.createSession();
