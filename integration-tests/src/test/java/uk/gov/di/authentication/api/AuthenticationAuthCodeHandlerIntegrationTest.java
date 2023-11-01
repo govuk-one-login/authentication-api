@@ -67,6 +67,17 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
     }
 
     @Test
+    void shouldReturn200StatusAndReturnMatchingAuthCodeForAuthCodeRequestWithNoClaims()
+            throws Json.JsonException {
+        setUpDynamo();
+        var authRequest =
+                new AuthCodeRequest(
+                        TEST_REDIRECT_URI, TEST_STATE, null, TEST_SECTOR_IDENTIFIER, false);
+        var response = makeRequest(Optional.of(authRequest), getHeaders(), Map.of());
+        assertThat(response, hasStatus(200));
+    }
+
+    @Test
     void shouldReturn400StatusForInvalidRedirectUri() throws Json.JsonException {
         setUpDynamo();
         var authRequest =
@@ -91,17 +102,6 @@ class AuthenticationAuthCodeHandlerIntegrationTest extends ApiGatewayHandlerInte
                         List.of(EMAIL_VERIFIED.getValue(), EMAIL.getValue()),
                         TEST_SECTOR_IDENTIFIER,
                         false);
-        var response = makeRequest(Optional.of(authRequest), getHeaders(), Map.of());
-        assertThat(response, hasStatus(400));
-        assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1001)));
-    }
-
-    @Test
-    void shouldReturn400StatusForInvalidRequestedScopeClaims() throws Json.JsonException {
-        setUpDynamo();
-        var authRequest =
-                new AuthCodeRequest(
-                        TEST_REDIRECT_URI, TEST_STATE, null, TEST_SECTOR_IDENTIFIER, false);
         var response = makeRequest(Optional.of(authRequest), getHeaders(), Map.of());
         assertThat(response, hasStatus(400));
         assertThat(response, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1001)));
