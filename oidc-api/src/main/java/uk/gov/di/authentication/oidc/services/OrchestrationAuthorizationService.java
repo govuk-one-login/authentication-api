@@ -379,7 +379,7 @@ public class OrchestrationAuthorizationService {
                 configurationService.getSessionExpiry());
     }
 
-    public boolean isJarValidationRequired(AuthenticationRequest authRequest) {
-        return authRequest.getScope().contains(CustomScopeValue.DOC_CHECKING_APP);
+    public boolean isJarValidationRequired(ClientRegistry client) {
+        return client.getScopes().contains(CustomScopeValue.DOC_CHECKING_APP.getValue());
     }
 }

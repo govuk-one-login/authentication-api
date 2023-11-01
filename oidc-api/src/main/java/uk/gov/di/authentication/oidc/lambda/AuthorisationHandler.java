@@ -162,7 +162,7 @@ public class AuthorisationHandler
 
     public APIGatewayProxyResponseEvent authoriseRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) throws ClientNotFoundException {
-        var client = new ClientRegistry();
+        ClientRegistry client;
         var persistentSessionId =
                 orchestrationAuthorizationService.getExistingOrCreateNewPersistentSessionId(
                         input.getHeaders());
@@ -242,7 +242,7 @@ public class AuthorisationHandler
         }
 
         Optional<AuthRequestError> authRequestError;
-        if (orchestrationAuthorizationService.isJarValidationRequired(authRequest)) {
+        if (orchestrationAuthorizationService.isJarValidationRequired(client)) {
             if (authRequest.getRequestObject() == null) {
                 var errorMsg =
                         "JAR required for client but request does not contain Request Object";
