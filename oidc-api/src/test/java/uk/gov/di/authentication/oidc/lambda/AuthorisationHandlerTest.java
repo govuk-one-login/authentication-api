@@ -739,17 +739,33 @@ class AuthorisationHandlerTest {
             when(orchestrationAuthorizationService.isJarValidationRequired(any())).thenReturn(true);
             var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
             var event = new APIGatewayProxyRequestEvent();
-            var jwtClaimsSet =
-                    new JWTClaimsSet.Builder()
-                            .audience("https://localhost/authorize")
-                            .claim("redirect_uri", REDIRECT_URI)
-                            .claim("response_type", ResponseType.CODE.toString())
-                            .claim("scope", SCOPE)
-                            .claim("state", STATE.getValue())
-                            .claim("nonce", NONCE.getValue())
-                            .claim("client_id", CLIENT_ID.getValue())
-                            .issuer(CLIENT_ID.getValue())
-                            .build();
+            var jwtClaimsSet = buildjwtClaimsSet();
+            event.setQueryStringParameters(
+                    Map.of(
+                            "client_id",
+                            CLIENT_ID.getValue(),
+                            "scope",
+                            "openid",
+                            "response_type",
+                            "code",
+                            "request",
+                            generateSignedJWT(jwtClaimsSet, keyPair).serialize()));
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            event.setHttpMethod("GET");
+
+            makeHandlerRequest(event);
+            verify(requestObjectService).validateRequestObject(any());
+        }
+
+        @Test
+        void shouldValidateRequestObjectWhenJARValidationIsNotRequired() throws JOSEException {
+            when(orchestrationAuthorizationService.isJarValidationRequired(any()))
+                    .thenReturn(false);
+            var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+            var event = new APIGatewayProxyRequestEvent();
+            var jwtClaimsSet = buildjwtClaimsSet();
             event.setQueryStringParameters(
                     Map.of(
                             "client_id",
@@ -806,17 +822,7 @@ class AuthorisationHandlerTest {
             when(requestObjectService.validateRequestObject(any(AuthenticationRequest.class)))
                     .thenReturn(Optional.empty());
             var event = new APIGatewayProxyRequestEvent();
-            var jwtClaimsSet =
-                    new JWTClaimsSet.Builder()
-                            .audience("https://localhost/authorize")
-                            .claim("redirect_uri", REDIRECT_URI)
-                            .claim("response_type", ResponseType.CODE.toString())
-                            .claim("scope", SCOPE)
-                            .claim("state", STATE.getValue())
-                            .claim("nonce", NONCE.getValue())
-                            .claim("client_id", CLIENT_ID.getValue())
-                            .issuer(CLIENT_ID.getValue())
-                            .build();
+            var jwtClaimsSet = buildjwtClaimsSet();
             event.setQueryStringParameters(
                     Map.of(
                             "client_id",
@@ -848,6 +854,8 @@ class AuthorisationHandlerTest {
                             .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
             verify(sessionService).save(session);
 
+            verify(requestObjectService).validateRequestObject(any());
+
             inOrder.verify(auditService)
                     .submitAuditEvent(
                             OidcAuditableEvent.AUTHORISATION_INITIATED,
@@ -870,17 +878,7 @@ class AuthorisationHandlerTest {
                     .thenReturn(Optional.empty());
             var event = new APIGatewayProxyRequestEvent();
             event.setHttpMethod("POST");
-            var jwtClaimsSet =
-                    new JWTClaimsSet.Builder()
-                            .audience("https://localhost/authorize")
-                            .claim("redirect_uri", REDIRECT_URI)
-                            .claim("response_type", ResponseType.CODE.toString())
-                            .claim("scope", SCOPE)
-                            .claim("state", STATE.getValue())
-                            .claim("nonce", NONCE.getValue())
-                            .claim("client_id", CLIENT_ID.getValue())
-                            .issuer(CLIENT_ID.getValue())
-                            .build();
+            var jwtClaimsSet = buildjwtClaimsSet();
             event.setBody(
                     String.format(
                             "client_id=%s&scope=openid&response_type=code&request=%s",
@@ -1284,5 +1282,18 @@ class AuthorisationHandlerTest {
                             any(),
                             any());
         }
+    }
+
+    private static JWTClaimsSet buildjwtClaimsSet() {
+        return new JWTClaimsSet.Builder()
+                .audience("https://localhost/authorize")
+                .claim("redirect_uri", REDIRECT_URI)
+                .claim("response_type", ResponseType.CODE.toString())
+                .claim("scope", SCOPE)
+                .claim("state", STATE.getValue())
+                .claim("nonce", NONCE.getValue())
+                .claim("client_id", CLIENT_ID.getValue())
+                .issuer(CLIENT_ID.getValue())
+                .build();
     }
 }
