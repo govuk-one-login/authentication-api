@@ -290,7 +290,8 @@ resource "aws_dynamodb_table" "account_modifiers_table" {
   }
 
   server_side_encryption {
-    enabled = !var.use_localstack
+    enabled     = true
+    kms_key_arn = aws_kms_key.account_modifiers_table_encryption_key.arn
   }
 
   lifecycle {

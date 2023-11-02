@@ -10,7 +10,8 @@ module "frontend_api_reset_password_request_role" {
     aws_iam_policy.dynamo_client_registry_read_access_policy.arn,
     aws_iam_policy.lambda_sns_policy.arn,
     aws_iam_policy.redis_parameter_policy.arn,
-    module.oidc_txma_audit.access_policy_arn
+    module.oidc_txma_audit.access_policy_arn,
+    local.account_modifiers_encryption_policy_arn
   ]
 }
 
