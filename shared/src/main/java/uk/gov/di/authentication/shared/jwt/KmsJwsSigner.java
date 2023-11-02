@@ -4,13 +4,14 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSSigner;
-import com.nimbusds.jose.crypto.impl.ECDSA;
 import com.nimbusds.jose.jca.JCAContext;
 import com.nimbusds.jose.util.Base64URL;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 
 import java.util.Set;
 
+import static com.nimbusds.jose.crypto.impl.ECDSA.getSignatureByteArrayLength;
+import static com.nimbusds.jose.crypto.impl.ECDSA.transcodeSignatureToConcat;
 import static software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec.ECDSA_SHA_256;
 import static software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec.RSASSA_PKCS1_V1_5_SHA_256;
 
@@ -32,23 +33,23 @@ public class KmsJwsSigner implements JWSSigner {
             return new Base64URL("");
         }
 
-        var signingKey =
-                header.getAlgorithm() == JWSAlgorithm.RS256 ? rsaSigningKeyId : ecSigningKeyId;
+        return header.getAlgorithm() == JWSAlgorithm.RS256
+                ? signWithRsa(signingInput)
+                : signWithEc(signingInput);
+    }
 
-        var signingAlgorithm =
-                header.getAlgorithm() == JWSAlgorithm.RS256
-                        ? RSASSA_PKCS1_V1_5_SHA_256
-                        : ECDSA_SHA_256;
+    private Base64URL signWithRsa(byte[] signingInput) {
+        var signedOutput = kms.sign(rsaSigningKeyId, RSASSA_PKCS1_V1_5_SHA_256, signingInput);
 
-        var signedOutput = kms.sign(signingKey, signingAlgorithm, signingInput);
+        return Base64URL.encode(signedOutput);
+    }
 
-        if (header.getAlgorithm() == JWSAlgorithm.RS256) {
-            return Base64URL.encode(signedOutput);
-        } else {
-            return Base64URL.encode(
-                    ECDSA.transcodeSignatureToConcat(
-                            signedOutput, ECDSA.getSignatureByteArrayLength(JWSAlgorithm.ES256)));
-        }
+    private Base64URL signWithEc(byte[] signingInput) throws JOSEException {
+        var signedOutput = kms.sign(ecSigningKeyId, ECDSA_SHA_256, signingInput);
+
+        return Base64URL.encode(
+                transcodeSignatureToConcat(
+                        signedOutput, getSignatureByteArrayLength(JWSAlgorithm.ES256)));
     }
 
     @Override
