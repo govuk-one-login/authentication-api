@@ -162,7 +162,7 @@ public class AuthorisationHandler
 
     public APIGatewayProxyResponseEvent authoriseRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) throws ClientNotFoundException {
-        var client = new ClientRegistry();
+        ClientRegistry client;
         var persistentSessionId =
                 orchestrationAuthorizationService.getExistingOrCreateNewPersistentSessionId(
                         input.getHeaders());
@@ -208,11 +208,13 @@ public class AuthorisationHandler
                                     Collectors.toMap(
                                             Map.Entry::getKey, entry -> List.of(entry.getValue())));
             authRequest = AuthenticationRequest.parse(requestParameters);
+
             String clientId = authRequest.getClientID().getValue();
             client =
                     clientService
                             .getClient(clientId)
                             .orElseThrow(() -> new ClientNotFoundException(clientId));
+            updateAttachedLogFieldToLogs(CLIENT_ID, clientId);
         } catch (ParseException e) {
             if (e.getRedirectionURI() == null) {
                 LOG.warn(
@@ -240,10 +242,17 @@ public class AuthorisationHandler
         }
 
         Optional<AuthRequestError> authRequestError;
-        if (authRequest.getRequestObject() != null && configurationService.isDocAppApiEnabled()) {
-            LOG.info("RequestObject auth request received");
+        if (orchestrationAuthorizationService.isJarValidationRequired(client)) {
+            if (authRequest.getRequestObject() == null) {
+                var errorMsg =
+                        "JAR required for client but request does not contain Request Object";
+                LOG.warn(errorMsg);
+                throw new RuntimeException(errorMsg);
+            }
+            LOG.info("Validating request using JAR");
             authRequestError = requestObjectService.validateRequestObject(authRequest);
         } else {
+            LOG.info("Validating request query params");
             authRequestError =
                     orchestrationAuthorizationService.validateAuthRequest(
                             authRequest, configurationService.isNonceRequired());
@@ -326,7 +335,6 @@ public class AuthorisationHandler
         session.addClientSession(clientSessionId);
         updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
         updateAttachedLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
-        updateAttachedLogFieldToLogs(CLIENT_ID, authenticationRequest.getClientID().getValue());
         sessionService.save(session);
         LOG.info("Session saved successfully");
 
@@ -428,7 +436,6 @@ public class AuthorisationHandler
         session.addClientSession(clientSessionId);
         updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
         updateAttachedLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
-        updateAttachedLogFieldToLogs(CLIENT_ID, authenticationRequest.getClientID().getValue());
         sessionService.save(session);
         LOG.info("Session saved successfully");
         return generateAuthRedirect(
