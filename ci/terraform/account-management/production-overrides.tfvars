@@ -13,7 +13,7 @@ cloudwatch_log_retention = 5
 
 performance_tuning = {
   authorizer = {
-    memory          = 1024
+    memory          = 1536
     concurrency     = 3
     max_concurrency = 10
     scaling_trigger = 0.6

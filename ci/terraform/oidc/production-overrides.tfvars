@@ -67,28 +67,28 @@ EOT
 
 performance_tuning = {
   register = {
-    memory          = 512
+    memory          = 1536
     concurrency     = 0
     max_concurrency = 0
     scaling_trigger = 0
   }
 
   update = {
-    memory          = 512
+    memory          = 1536
     concurrency     = 0
     max_concurrency = 0
     scaling_trigger = 0
   }
 
   reset-password = {
-    memory          = 1024
+    memory          = 1536
     concurrency     = 2
     max_concurrency = 10
     scaling_trigger = 0.5
   }
 
   reset-password-request = {
-    memory          = 1024
+    memory          = 1536
     concurrency     = 2
     max_concurrency = 10
     scaling_trigger = 0.5
