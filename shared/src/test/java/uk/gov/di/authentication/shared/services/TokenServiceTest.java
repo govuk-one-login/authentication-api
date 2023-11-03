@@ -91,7 +91,12 @@ public class TokenServiceTest {
             new NowClock(Clock.fixed(new Date(0).toInstant(), ZoneId.systemDefault()));
     private final TokenService tokenService =
             new TokenService(
-                    configurationService, redisConnectionService, kmsConnectionService, clock);
+                    configurationService, redisConnectionService, kmsConnectionService, clock) {
+                @Override
+                protected String newJwtId() {
+                    return "jwt-id";
+                }
+            };
     private static final Subject PUBLIC_SUBJECT = SubjectHelper.govUkSignInSubject();
     private static final Subject INTERNAL_SUBJECT = SubjectHelper.govUkSignInSubject();
     private static final Scope SCOPES =
@@ -500,6 +505,7 @@ public class TokenServiceTest {
                         AccessTokenHash.compute(responseAccessToken, JWSAlgorithm.ES256, null)
                                 .toString()));
 
+        assertThat(responseIdToken.getJWTClaimsSet().getJWTID(), is("jwt-id"));
         assertThat(
                 responseIdToken.getJWTClaimsSet().getStringClaim("sid"), is("client-session-id"));
         assertThat(responseIdToken.getJWTClaimsSet().getIssueTime().getTime(), is(0L));
@@ -519,6 +525,7 @@ public class TokenServiceTest {
 
         var accessToken = SignedJWT.parse(responseAccessToken.getValue());
 
+        assertThat(accessToken.getJWTClaimsSet().getJWTID(), is("jwt-id"));
         assertThat(accessToken.getJWTClaimsSet().getIssueTime().getTime(), is(0L));
         assertThat(accessToken.getJWTClaimsSet().getExpirationTime().getTime(), is(300 * 1000L));
     }

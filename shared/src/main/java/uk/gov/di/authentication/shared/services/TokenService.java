@@ -12,8 +12,6 @@ import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.GrantType;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.Scope;
-import com.nimbusds.oauth2.sdk.id.Audience;
-import com.nimbusds.oauth2.sdk.id.Issuer;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
@@ -37,13 +35,11 @@ import uk.gov.di.authentication.shared.entity.AccessTokenStore;
 import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
-import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper.NowClock;
 import uk.gov.di.authentication.shared.helpers.RequestBodyHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 
-import java.net.URI;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
@@ -245,26 +241,31 @@ public class TokenService {
             String journeyId) {
 
         LOG.info("Generating IdToken");
-        URI trustMarkUri = buildURI(configService.getOidcApiBaseURL().get(), "/trustmark");
         Date expiryDate = nowClock.nowPlus(configService.getIDTokenExpiry(), ChronoUnit.SECONDS);
-        IDTokenClaimsSet idTokenClaims =
-                new IDTokenClaimsSet(
-                        new Issuer(configService.getOidcApiBaseURL().get()),
-                        subject,
-                        List.of(new Audience(clientId)),
-                        expiryDate,
-                        nowClock.now());
-
-        idTokenClaims.setAccessTokenHash(accessTokenHash);
-        idTokenClaims.setSessionID(new SessionID(journeyId));
-
-        idTokenClaims.putAll(additionalTokenClaims);
-        if (!isDocAppJourney) {
-            idTokenClaims.setClaim("vot", vot);
-        }
-        idTokenClaims.setClaim("vtm", trustMarkUri.toString());
+        var baseClaims =
+                new JWTClaimsSet.Builder()
+                        .issuer(configService.getOidcApiBaseURL().get())
+                        .subject(subject.getValue())
+                        .audience(clientId)
+                        .expirationTime(expiryDate)
+                        .issueTime(nowClock.now())
+                        .jwtID(newJwtId())
+                        .build();
 
         try {
+            var idTokenClaims = new IDTokenClaimsSet(baseClaims);
+
+            idTokenClaims.setAccessTokenHash(accessTokenHash);
+            idTokenClaims.setSessionID(new SessionID(journeyId));
+
+            idTokenClaims.putAll(additionalTokenClaims);
+            if (!isDocAppJourney) {
+                idTokenClaims.setClaim("vot", vot);
+            }
+            idTokenClaims.setClaim(
+                    "vtm",
+                    buildURI(configService.getOidcApiBaseURL().get(), "/trustmark").toString());
+
             return generateSignedJWT(
                     idTokenClaims.toJWTClaimsSet(), Optional.empty(), signingAlgorithm);
         } catch (com.nimbusds.oauth2.sdk.ParseException e) {
@@ -284,7 +285,7 @@ public class TokenService {
         LOG.info("Generating AccessToken");
         Date expiryDate =
                 nowClock.nowPlus(configService.getAccessTokenExpiry(), ChronoUnit.SECONDS);
-        var jwtID = UUID.randomUUID().toString();
+        var jwtID = newJwtId();
 
         LOG.info("AccessToken being created with JWTID: {}", jwtID);
 
@@ -296,7 +297,7 @@ public class TokenService {
                         .issueTime(nowClock.now())
                         .claim("client_id", clientId)
                         .subject(subject.getValue())
-                        .jwtID(jwtID);
+                        .jwtID(newJwtId());
 
         if (Objects.nonNull(claimsRequest)) {
             LOG.info("Populating identity claims in access token");
@@ -329,6 +330,10 @@ public class TokenService {
         return accessToken;
     }
 
+    protected String newJwtId() {
+        return UUID.randomUUID().toString();
+    }
+
     private RefreshToken generateAndStoreRefreshToken(
             String clientId,
             Subject internalSubject,
@@ -337,7 +342,7 @@ public class TokenService {
             JWSAlgorithm signingAlgorithm) {
         LOG.info("Generating RefreshToken");
         Date expiryDate = nowClock.nowPlus(configService.getSessionExpiry(), ChronoUnit.SECONDS);
-        var jwtId = IdGenerator.generate();
+        var jwtId = newJwtId();
         JWTClaimsSet claimsSet =
                 new JWTClaimsSet.Builder()
                         .claim("scope", scopes)
