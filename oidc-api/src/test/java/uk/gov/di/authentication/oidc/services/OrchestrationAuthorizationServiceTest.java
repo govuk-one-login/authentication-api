@@ -145,10 +145,7 @@ class OrchestrationAuthorizationServiceTest {
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
-        assertThrows(
-                RuntimeException.class,
-                () -> service.validateRequestObject(authRequest),
-                "Expected to throw exception");
+        assertRuntimeExceptionThrown(authRequest, "Invalid Redirect URI in request JWT");
     }
 
     @Test
@@ -165,10 +162,7 @@ class OrchestrationAuthorizationServiceTest {
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
-        assertThrows(
-                RuntimeException.class,
-                () -> service.validateRequestObject(authRequest),
-                "Expected to throw exception");
+        assertRuntimeExceptionThrown(authRequest, "Invalid Redirect URI in request JWT");
     }
 
     @Test
@@ -187,10 +181,7 @@ class OrchestrationAuthorizationServiceTest {
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
-        assertThrows(
-                RuntimeException.class,
-                () -> service.validateRequestObject(authRequest),
-                "Expected to throw exception");
+        assertRuntimeExceptionThrown(authRequest, "No Client found with given ClientID");
     }
 
     @Test
@@ -509,10 +500,7 @@ class OrchestrationAuthorizationServiceTest {
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair2));
 
-        assertThrows(
-                RuntimeException.class,
-                () -> service.validateRequestObject(authRequest),
-                "Expected to throw exception");
+        assertRuntimeExceptionThrown(authRequest, null);
     }
 
     @Test
@@ -613,5 +601,14 @@ class OrchestrationAuthorizationServiceTest {
                         .nonce(new Nonce())
                         .requestObject(signedJWT);
         return builder.build();
+    }
+
+    private void assertRuntimeExceptionThrown(AuthenticationRequest authRequest, String message) {
+        RuntimeException expectedException =
+                assertThrows(
+                        RuntimeException.class,
+                        () -> service.validateRequestObject(authRequest),
+                        "Expected to throw exception");
+        assertThat(expectedException.getMessage(), equalTo(message));
     }
 }
