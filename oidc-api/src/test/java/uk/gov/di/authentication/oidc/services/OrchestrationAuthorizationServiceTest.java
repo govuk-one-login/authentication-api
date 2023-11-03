@@ -3,6 +3,7 @@ package uk.gov.di.authentication.oidc.services;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
@@ -13,6 +14,7 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
@@ -210,10 +212,7 @@ class OrchestrationAuthorizationServiceTest {
 
         var requestObjectError = service.validateRequestObject(authRequest);
 
-        assertTrue(requestObjectError.isPresent());
-        assertThat(
-                requestObjectError.get().errorObject(), equalTo(OAuth2Error.UNAUTHORIZED_CLIENT));
-        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        assertOAuthError(requestObjectError, OAuth2Error.UNAUTHORIZED_CLIENT, REDIRECT_URI);
     }
 
     @Test
@@ -233,11 +232,7 @@ class OrchestrationAuthorizationServiceTest {
 
         var requestObjectError = service.validateRequestObject(authRequest);
 
-        assertTrue(requestObjectError.isPresent());
-        assertThat(
-                requestObjectError.get().errorObject(),
-                equalTo(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE));
-        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        assertOAuthError(requestObjectError, OAuth2Error.UNSUPPORTED_RESPONSE_TYPE, REDIRECT_URI);
     }
 
     @Test
@@ -265,11 +260,7 @@ class OrchestrationAuthorizationServiceTest {
                         .build();
         var requestObjectError = service.validateRequestObject(authRequest);
 
-        assertTrue(requestObjectError.isPresent());
-        assertThat(
-                requestObjectError.get().errorObject(),
-                equalTo(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE));
-        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        assertOAuthError(requestObjectError, OAuth2Error.UNSUPPORTED_RESPONSE_TYPE, REDIRECT_URI);
     }
 
     @Test
@@ -289,10 +280,7 @@ class OrchestrationAuthorizationServiceTest {
 
         var requestObjectError = service.validateRequestObject(authRequest);
 
-        assertTrue(requestObjectError.isPresent());
-        assertThat(
-                requestObjectError.get().errorObject(), equalTo(OAuth2Error.UNAUTHORIZED_CLIENT));
-        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        assertOAuthError(requestObjectError, OAuth2Error.UNAUTHORIZED_CLIENT, REDIRECT_URI);
     }
 
     @Test
@@ -312,9 +300,7 @@ class OrchestrationAuthorizationServiceTest {
 
         var requestObjectError = service.validateRequestObject(authRequest);
 
-        assertTrue(requestObjectError.isPresent());
-        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
-        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        assertOAuthError(requestObjectError, OAuth2Error.INVALID_SCOPE, REDIRECT_URI);
     }
 
     @Test
@@ -340,9 +326,7 @@ class OrchestrationAuthorizationServiceTest {
 
         var requestObjectError = service.validateRequestObject(authRequest);
 
-        assertTrue(requestObjectError.isPresent());
-        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
-        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        assertOAuthError(requestObjectError, OAuth2Error.INVALID_SCOPE, REDIRECT_URI);
     }
 
     @Test
@@ -365,9 +349,7 @@ class OrchestrationAuthorizationServiceTest {
                                 generateSignedJWT(jwtClaimsSet, keyPair),
                                 new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL)));
 
-        assertTrue(requestObjectError.isPresent());
-        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
-        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        assertOAuthError(requestObjectError, OAuth2Error.INVALID_SCOPE, REDIRECT_URI);
     }
 
     @Test
@@ -387,9 +369,7 @@ class OrchestrationAuthorizationServiceTest {
 
         var requestObjectError = service.validateRequestObject(authRequest);
 
-        assertTrue(requestObjectError.isPresent());
-        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
-        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        assertOAuthError(requestObjectError, OAuth2Error.INVALID_SCOPE, REDIRECT_URI);
     }
 
     @Test
@@ -409,9 +389,7 @@ class OrchestrationAuthorizationServiceTest {
 
         var requestObjectError = service.validateRequestObject(authRequest);
 
-        assertTrue(requestObjectError.isPresent());
-        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.ACCESS_DENIED));
-        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        assertOAuthError(requestObjectError, OAuth2Error.ACCESS_DENIED, REDIRECT_URI);
     }
 
     @Test
@@ -431,10 +409,7 @@ class OrchestrationAuthorizationServiceTest {
 
         var requestObjectError = service.validateRequestObject(authRequest);
 
-        assertTrue(requestObjectError.isPresent());
-        assertThat(
-                requestObjectError.get().errorObject(), equalTo(OAuth2Error.UNAUTHORIZED_CLIENT));
-        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        assertOAuthError(requestObjectError, OAuth2Error.UNAUTHORIZED_CLIENT, REDIRECT_URI);
     }
 
     @Test
@@ -455,9 +430,7 @@ class OrchestrationAuthorizationServiceTest {
 
         var requestObjectError = service.validateRequestObject(authRequest);
 
-        assertTrue(requestObjectError.isPresent());
-        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
-        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        assertOAuthError(requestObjectError, OAuth2Error.INVALID_REQUEST, REDIRECT_URI);
     }
 
     @Test
@@ -478,9 +451,7 @@ class OrchestrationAuthorizationServiceTest {
 
         var requestObjectError = service.validateRequestObject(authRequest);
 
-        assertTrue(requestObjectError.isPresent());
-        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
-        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        assertOAuthError(requestObjectError, OAuth2Error.INVALID_REQUEST, REDIRECT_URI);
     }
 
     @Test
@@ -519,12 +490,10 @@ class OrchestrationAuthorizationServiceTest {
 
         var requestObjectError = service.validateRequestObject(authRequest);
 
-        assertTrue(requestObjectError.isPresent());
-        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
         assertThat(
                 requestObjectError.get().errorObject().getDescription(),
                 equalTo("Request is missing state parameter"));
-        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        assertOAuthError(requestObjectError, OAuth2Error.INVALID_REQUEST, REDIRECT_URI);
     }
 
     @Test
@@ -543,12 +512,10 @@ class OrchestrationAuthorizationServiceTest {
 
         var requestObjectError = service.validateRequestObject(authRequest);
 
-        assertTrue(requestObjectError.isPresent());
-        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
         assertThat(
                 requestObjectError.get().errorObject().getDescription(),
                 equalTo("Request is missing nonce parameter"));
-        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        assertOAuthError(requestObjectError, OAuth2Error.INVALID_REQUEST, REDIRECT_URI);
     }
 
     @Test
@@ -569,9 +536,7 @@ class OrchestrationAuthorizationServiceTest {
 
         var requestObjectError = service.validateRequestObject(authRequest);
 
-        assertTrue(requestObjectError.isPresent());
-        assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
-        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(REDIRECT_URI));
+        assertOAuthError(requestObjectError, OAuth2Error.INVALID_REQUEST, REDIRECT_URI);
     }
 
     private ClientRegistry generateClientRegistry(String clientType, Scope scope) {
@@ -610,5 +575,14 @@ class OrchestrationAuthorizationServiceTest {
                         () -> service.validateRequestObject(authRequest),
                         "Expected to throw exception");
         assertThat(expectedException.getMessage(), equalTo(message));
+    }
+
+    private void assertOAuthError(
+            Optional<AuthRequestError> requestObjectError,
+            ErrorObject errorObject,
+            String redirectUri) {
+        assertTrue(requestObjectError.isPresent());
+        assertThat(requestObjectError.get().errorObject(), equalTo(errorObject));
+        assertThat(requestObjectError.get().redirectURI().toString(), equalTo(redirectUri));
     }
 }
