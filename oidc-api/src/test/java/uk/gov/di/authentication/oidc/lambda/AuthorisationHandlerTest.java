@@ -51,7 +51,6 @@ import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.oidc.exceptions.InvalidHttpMethodException;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
-import uk.gov.di.authentication.oidc.services.RequestObjectService;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
@@ -131,7 +130,6 @@ class AuthorisationHandlerTest {
 
     private final NoSessionOrchestrationService noSessionOrchestrationService =
             mock(NoSessionOrchestrationService.class);
-    private final RequestObjectService requestObjectService = mock(RequestObjectService.class);
     private final ClientService clientService = mock(ClientService.class);
     private final InOrder inOrder = inOrder(auditService);
     private static final String EXPECTED_SESSION_COOKIE_STRING =
@@ -201,7 +199,6 @@ class AuthorisationHandlerTest {
                         clientSessionService,
                         orchestrationAuthorizationService,
                         auditService,
-                        requestObjectService,
                         clientService,
                         docAppAuthorisationService,
                         cloudwatchMetricsService,
@@ -528,7 +525,6 @@ class AuthorisationHandlerTest {
                     () -> makeDocAppHandlerRequest(),
                     format("No Client found for ClientID: %s", CLIENT_ID.getValue()));
             verifyNoInteractions(configService);
-            verifyNoInteractions(requestObjectService);
         }
 
         @Test
@@ -756,7 +752,7 @@ class AuthorisationHandlerTest {
             event.setHttpMethod("GET");
 
             makeHandlerRequest(event);
-            verify(requestObjectService).validateRequestObject(any());
+            verify(orchestrationAuthorizationService).validateRequestObject(any());
         }
 
         @Test
@@ -782,7 +778,7 @@ class AuthorisationHandlerTest {
             event.setHttpMethod("GET");
 
             makeHandlerRequest(event);
-            verify(requestObjectService).validateRequestObject(any());
+            verify(orchestrationAuthorizationService).validateRequestObject(any());
         }
 
         @Test
@@ -819,7 +815,8 @@ class AuthorisationHandlerTest {
         void shouldRedirectToLoginWhenRequestObjectIsValid() throws JOSEException {
             var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
             when(configService.isDocAppApiEnabled()).thenReturn(true);
-            when(requestObjectService.validateRequestObject(any(AuthenticationRequest.class)))
+            when(orchestrationAuthorizationService.validateRequestObject(
+                            any(AuthenticationRequest.class)))
                     .thenReturn(Optional.empty());
             var event = new APIGatewayProxyRequestEvent();
             var jwtClaimsSet = buildjwtClaimsSet();
@@ -854,7 +851,7 @@ class AuthorisationHandlerTest {
                             .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
             verify(sessionService).save(session);
 
-            verify(requestObjectService).validateRequestObject(any());
+            verify(orchestrationAuthorizationService).validateRequestObject(any());
 
             inOrder.verify(auditService)
                     .submitAuditEvent(
@@ -874,7 +871,8 @@ class AuthorisationHandlerTest {
         void shouldRedirectToLoginWhenPostRequestObjectIsValid() throws JOSEException {
             var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
             when(configService.isDocAppApiEnabled()).thenReturn(true);
-            when(requestObjectService.validateRequestObject(any(AuthenticationRequest.class)))
+            when(orchestrationAuthorizationService.validateRequestObject(
+                            any(AuthenticationRequest.class)))
                     .thenReturn(Optional.empty());
             var event = new APIGatewayProxyRequestEvent();
             event.setHttpMethod("POST");
@@ -1041,7 +1039,8 @@ class AuthorisationHandlerTest {
     @MethodSource("expectedErrorObjects")
     void shouldReturnErrorWhenRequestObjectIsInvalid(ErrorObject errorObject) {
         when(orchestrationAuthorizationService.isJarValidationRequired(any())).thenReturn(true);
-        when(requestObjectService.validateRequestObject(any(AuthenticationRequest.class)))
+        when(orchestrationAuthorizationService.validateRequestObject(
+                        any(AuthenticationRequest.class)))
                 .thenReturn(
                         Optional.of(
                                 new AuthRequestError(

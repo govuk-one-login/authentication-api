@@ -18,6 +18,8 @@ import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
+import uk.gov.di.authentication.shared.services.KmsConnectionService;
+import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 
@@ -39,12 +41,15 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.oidc.helper.RequestObjectTestHelper.generateSignedJWT;
 
-class RequestObjectServiceTest {
+class OrchestrationAuthorizationServiceTest {
 
     private static final String REDIRECT_URI = "https://localhost:8080";
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final IPVCapacityService ipvCapacityService = mock(IPVCapacityService.class);
+    private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
+    private final RedisConnectionService redisConnectionService =
+            mock(RedisConnectionService.class);
     private KeyPair keyPair;
     private static final String SCOPE = "openid doc-checking-app";
     private static final State STATE = new State();
@@ -52,15 +57,19 @@ class RequestObjectServiceTest {
     private static final ClientID CLIENT_ID = new ClientID("test-id");
     private static final String OIDC_BASE_URI = "https://localhost";
     private static final String AUDIENCE = "https://localhost/authorize";
-    private RequestObjectService service;
+    private OrchestrationAuthorizationService service;
 
     @BeforeEach
     void setup() {
         when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_BASE_URI));
         keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         service =
-                new RequestObjectService(
-                        dynamoClientService, configurationService, ipvCapacityService);
+                new OrchestrationAuthorizationService(
+                        configurationService,
+                        dynamoClientService,
+                        ipvCapacityService,
+                        kmsConnectionService,
+                        redisConnectionService);
         var clientRegistry =
                 generateClientRegistry(
                         ClientType.APP.getValue(),
