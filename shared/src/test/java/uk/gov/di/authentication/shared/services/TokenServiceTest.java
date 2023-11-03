@@ -9,6 +9,7 @@ import com.nimbusds.jose.crypto.impl.ECDSA;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
+import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ErrorObject;
@@ -16,6 +17,7 @@ import com.nimbusds.oauth2.sdk.GrantType;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.RefreshToken;
 import com.nimbusds.oauth2.sdk.util.JSONArrayUtils;
 import com.nimbusds.oauth2.sdk.util.URLUtils;
@@ -466,69 +468,58 @@ public class TokenServiceTest {
 
     private void assertSuccessfulTokenResponse(OIDCTokenResponse tokenResponse)
             throws ParseException, Json.JsonException {
-        String accessTokenKey = ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT;
-        assertNotNull(tokenResponse.getOIDCTokens().getAccessToken());
-        AccessTokenStore accessTokenStore =
-                new AccessTokenStore(
-                        tokenResponse.getOIDCTokens().getAccessToken().getValue(),
-                        INTERNAL_SUBJECT.getValue());
-        verify(redisConnectionService)
-                .saveWithExpiry(
-                        accessTokenKey, objectMapper.writeValueAsString(accessTokenStore), 300L);
 
-        var accessToken =
-                SignedJWT.parse(tokenResponse.getOIDCTokens().getAccessToken().getValue());
+        AccessToken responseAccessToken = tokenResponse.getOIDCTokens().getAccessToken();
+        assertAccessTokenIsValid(responseAccessToken);
 
-        assertThat(accessToken.getJWTClaimsSet().getIssueTime().getTime(), is(0L));
-        assertThat(accessToken.getJWTClaimsSet().getExpirationTime().getTime(), is(300 * 1000L));
+        JWT responseIdToken = tokenResponse.getOIDCTokens().getIDToken();
+        assertIdTokenIsValid(responseAccessToken, responseIdToken);
+    }
 
-        var header = (JWSHeader) tokenResponse.getOIDCTokens().getIDToken().getHeader();
+    private void assertIdTokenIsValid(AccessToken responseAccessToken, JWT responseIdToken)
+            throws ParseException {
+        var header = (JWSHeader) responseIdToken.getHeader();
 
-        assertThat(tokenResponse.getOIDCTokens().getAccessToken().getLifetime(), is(300L));
+        assertThat(responseAccessToken.getLifetime(), is(300L));
 
         assertThat(
                 header.getKeyID(),
                 is("1d504aece298a14d74ee0a02b6740b4372a1fab4206778e486ba72770ff4beb8"));
 
         assertThat(
-                tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaim("sub"),
+                responseIdToken.getJWTClaimsSet().getClaim("sub"),
                 equalTo(PUBLIC_SUBJECT.getValue()));
+        assertThat(responseIdToken.getJWTClaimsSet().getClaim("nonce"), equalTo(nonce.getValue()));
         assertThat(
-                tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaim("nonce"),
-                equalTo(nonce.getValue()));
-        assertThat(
-                tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaim("vtm"),
+                responseIdToken.getJWTClaimsSet().getClaim("vtm"),
                 equalTo(buildURI(BASE_URL, "/trustmark").toString()));
+        assertThat(responseIdToken.getJWTClaimsSet().getIssuer(), equalTo(BASE_URL));
         assertThat(
-                tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getIssuer(),
-                equalTo(BASE_URL));
-        assertThat(
-                tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaim("at_hash"),
+                responseIdToken.getJWTClaimsSet().getClaim("at_hash"),
                 equalTo(
-                        AccessTokenHash.compute(
-                                        tokenResponse.getOIDCTokens().getAccessToken(),
-                                        JWSAlgorithm.ES256,
-                                        null)
+                        AccessTokenHash.compute(responseAccessToken, JWSAlgorithm.ES256, null)
                                 .toString()));
 
         assertThat(
-                tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getStringClaim("sid"),
-                is("client-session-id"));
+                responseIdToken.getJWTClaimsSet().getStringClaim("sid"), is("client-session-id"));
+        assertThat(responseIdToken.getJWTClaimsSet().getIssueTime().getTime(), is(0L));
         assertThat(
-                tokenResponse
-                        .getOIDCTokens()
-                        .getIDToken()
-                        .getJWTClaimsSet()
-                        .getIssueTime()
-                        .getTime(),
-                is(0L));
-        assertThat(
-                tokenResponse
-                        .getOIDCTokens()
-                        .getIDToken()
-                        .getJWTClaimsSet()
-                        .getExpirationTime()
-                        .getTime(),
-                is(120 * 1000L));
+                responseIdToken.getJWTClaimsSet().getExpirationTime().getTime(), is(120 * 1000L));
+    }
+
+    private void assertAccessTokenIsValid(AccessToken responseAccessToken)
+            throws Json.JsonException, ParseException {
+        String accessTokenKey = ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT;
+        assertNotNull(responseAccessToken);
+        AccessTokenStore accessTokenStore =
+                new AccessTokenStore(responseAccessToken.getValue(), INTERNAL_SUBJECT.getValue());
+        verify(redisConnectionService)
+                .saveWithExpiry(
+                        accessTokenKey, objectMapper.writeValueAsString(accessTokenStore), 300L);
+
+        var accessToken = SignedJWT.parse(responseAccessToken.getValue());
+
+        assertThat(accessToken.getJWTClaimsSet().getIssueTime().getTime(), is(0L));
+        assertThat(accessToken.getJWTClaimsSet().getExpirationTime().getTime(), is(300 * 1000L));
     }
 }
