@@ -42,16 +42,16 @@ import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildUR
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 
-public class RequestObjectService {
+public class RequestObjectValidationService {
 
-    private static final Logger LOG = LogManager.getLogger(RequestObjectService.class);
+    private static final Logger LOG = LogManager.getLogger(RequestObjectValidationService.class);
 
     public static final String VTR_PARAM = "vtr";
     private final DynamoClientService dynamoClientService;
     private final ConfigurationService configurationService;
     private final IPVCapacityService ipvCapacityService;
 
-    public RequestObjectService(
+    public RequestObjectValidationService(
             DynamoClientService dynamoClientService,
             ConfigurationService configurationService,
             IPVCapacityService ipvCapacityService) {
@@ -60,7 +60,7 @@ public class RequestObjectService {
         this.ipvCapacityService = ipvCapacityService;
     }
 
-    public RequestObjectService(ConfigurationService configurationService) {
+    public RequestObjectValidationService(ConfigurationService configurationService) {
         this(
                 new DynamoClientService(configurationService),
                 configurationService,
