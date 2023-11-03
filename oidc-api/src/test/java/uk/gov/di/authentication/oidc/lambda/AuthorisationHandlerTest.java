@@ -183,7 +183,7 @@ class AuthorisationHandlerTest {
         when(configService.getSessionCookieAttributes()).thenReturn("Secure; HttpOnly;");
         when(configService.getSessionCookieMaxAge()).thenReturn(3600);
         when(configService.getPersistentCookieMaxAge()).thenReturn(34190000);
-        when(orchestrationAuthorizationService.validateAuthRequest(
+        when(orchestrationAuthorizationService.validateQueryParams(
                         any(AuthenticationRequest.class), anyBoolean()))
                 .thenReturn(Optional.empty());
         when(orchestrationAuthorizationService.getExistingOrCreateNewPersistentSessionId(any()))
@@ -573,7 +573,7 @@ class AuthorisationHandlerTest {
 
         @Test
         void shouldReturn400WhenAuthorisationRequestContainsInvalidScope() {
-            when(orchestrationAuthorizationService.validateAuthRequest(
+            when(orchestrationAuthorizationService.validateQueryParams(
                             any(AuthenticationRequest.class), anyBoolean()))
                     .thenReturn(
                             Optional.of(
@@ -616,7 +616,7 @@ class AuthorisationHandlerTest {
 
         @Test
         void shouldReturn400WhenAuthorisationRequestBodyContainsInvalidScope() {
-            when(orchestrationAuthorizationService.validateAuthRequest(
+            when(orchestrationAuthorizationService.validateQueryParams(
                             any(AuthenticationRequest.class), anyBoolean()))
                     .thenReturn(
                             Optional.of(

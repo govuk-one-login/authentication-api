@@ -139,7 +139,7 @@ public class OrchestrationAuthorizationService {
                 authRequest.getResponseMode());
     }
 
-    public Optional<AuthRequestError> validateAuthRequest(
+    public Optional<AuthRequestError> validateQueryParams(
             AuthenticationRequest authRequest, boolean isNonceRequired) {
         var clientId = authRequest.getClientID().toString();
 

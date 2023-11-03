@@ -194,7 +194,7 @@ class AuthorizationServiceTest {
                         scope,
                         jsonArrayOf("P2.Cl.Cm"),
                         Optional.empty());
-        var errorObject = orchestrationAuthorizationService.validateAuthRequest(authRequest, true);
+        var errorObject = orchestrationAuthorizationService.validateQueryParams(authRequest, true);
 
         assertThat(errorObject, equalTo(Optional.empty()));
     }
@@ -216,7 +216,7 @@ class AuthorizationServiceTest {
                         scope,
                         jsonArrayOf("Cm.Cl.P1", "P1.Cl"),
                         Optional.empty());
-        var errorObject = orchestrationAuthorizationService.validateAuthRequest(authRequest, true);
+        var errorObject = orchestrationAuthorizationService.validateQueryParams(authRequest, true);
 
         assertTrue(errorObject.isPresent());
 
@@ -238,7 +238,7 @@ class AuthorizationServiceTest {
                                 generateClientRegistry(
                                         REDIRECT_URI.toString(), CLIENT_ID.toString())));
         var errorObject =
-                orchestrationAuthorizationService.validateAuthRequest(
+                orchestrationAuthorizationService.validateQueryParams(
                         generateAuthRequest(REDIRECT_URI.toString(), responseType, scope), true);
 
         assertTrue(errorObject.isEmpty());
@@ -260,7 +260,7 @@ class AuthorizationServiceTest {
                                 URI.create(REDIRECT_URI.toString()))
                         .state(STATE)
                         .build();
-        var errorObject = orchestrationAuthorizationService.validateAuthRequest(authRequest, false);
+        var errorObject = orchestrationAuthorizationService.validateQueryParams(authRequest, false);
 
         assertTrue(errorObject.isEmpty());
     }
@@ -291,7 +291,7 @@ class AuthorizationServiceTest {
                         scope,
                         jsonArrayOf("Cl.Cm", "Cl"),
                         Optional.of(oidcClaimsRequest));
-        var errorObject = orchestrationAuthorizationService.validateAuthRequest(authRequest, true);
+        var errorObject = orchestrationAuthorizationService.validateQueryParams(authRequest, true);
 
         assertTrue(errorObject.isEmpty());
     }
@@ -315,7 +315,7 @@ class AuthorizationServiceTest {
                         scope,
                         jsonArrayOf("Cl.Cm", "Cl"),
                         Optional.of(oidcClaimsRequest));
-        var errorObject = orchestrationAuthorizationService.validateAuthRequest(authRequest, true);
+        var errorObject = orchestrationAuthorizationService.validateQueryParams(authRequest, true);
 
         assertTrue(errorObject.isPresent());
         assertThat(
@@ -338,7 +338,7 @@ class AuthorizationServiceTest {
                                         CLIENT_ID.toString(),
                                         List.of("openid", "am"))));
         var errorObject =
-                orchestrationAuthorizationService.validateAuthRequest(
+                orchestrationAuthorizationService.validateQueryParams(
                         generateAuthRequest(REDIRECT_URI.toString(), responseType, scope), true);
 
         assertTrue(errorObject.isEmpty());
@@ -354,7 +354,7 @@ class AuthorizationServiceTest {
                                 generateClientRegistry(
                                         REDIRECT_URI.toString(), CLIENT_ID.toString())));
         var errorObject =
-                orchestrationAuthorizationService.validateAuthRequest(
+                orchestrationAuthorizationService.validateQueryParams(
                         generateAuthRequest(REDIRECT_URI.toString(), responseType, scope), true);
 
         assertTrue(errorObject.isPresent());
@@ -372,7 +372,7 @@ class AuthorizationServiceTest {
                 assertThrows(
                         RuntimeException.class,
                         () ->
-                                orchestrationAuthorizationService.validateAuthRequest(
+                                orchestrationAuthorizationService.validateQueryParams(
                                         generateAuthRequest(
                                                 REDIRECT_URI.toString(), responseType, scope),
                                         true),
@@ -393,7 +393,7 @@ class AuthorizationServiceTest {
                                 generateClientRegistry(
                                         REDIRECT_URI.toString(), CLIENT_ID.toString())));
         var errorObject =
-                orchestrationAuthorizationService.validateAuthRequest(
+                orchestrationAuthorizationService.validateQueryParams(
                         generateAuthRequest(REDIRECT_URI.toString(), responseType, scope), true);
 
         assertTrue(errorObject.isPresent());
@@ -412,7 +412,7 @@ class AuthorizationServiceTest {
                                 generateClientRegistry(
                                         REDIRECT_URI.toString(), CLIENT_ID.toString())));
         var errorObject =
-                orchestrationAuthorizationService.validateAuthRequest(
+                orchestrationAuthorizationService.validateQueryParams(
                         generateAuthRequest(REDIRECT_URI.toString(), responseType, scope), true);
 
         assertTrue(errorObject.isPresent());
@@ -434,7 +434,7 @@ class AuthorizationServiceTest {
                                 responseType, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
                         .nonce(new Nonce())
                         .build();
-        var errorObject = orchestrationAuthorizationService.validateAuthRequest(authRequest, true);
+        var errorObject = orchestrationAuthorizationService.validateQueryParams(authRequest, true);
 
         assertTrue(errorObject.isPresent());
         assertThat(
@@ -460,7 +460,7 @@ class AuthorizationServiceTest {
                                 responseType, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
                         .state(new State())
                         .build();
-        var errorObject = orchestrationAuthorizationService.validateAuthRequest(authRequest, true);
+        var errorObject = orchestrationAuthorizationService.validateQueryParams(authRequest, true);
 
         assertTrue(errorObject.isPresent());
         assertThat(
@@ -487,7 +487,7 @@ class AuthorizationServiceTest {
                         .nonce(new Nonce())
                         .customParameter("vtr", jsonArrayOf("Cm"))
                         .build();
-        var errorObject = orchestrationAuthorizationService.validateAuthRequest(authRequest, true);
+        var errorObject = orchestrationAuthorizationService.validateQueryParams(authRequest, true);
 
         assertTrue(errorObject.isPresent());
         assertThat(
@@ -513,7 +513,7 @@ class AuthorizationServiceTest {
                         .nonce(new Nonce())
                         .customParameter("vtr", jsonArrayOf("P2.Cl.Cm"))
                         .build();
-        var errorObject = orchestrationAuthorizationService.validateAuthRequest(authRequest, true);
+        var errorObject = orchestrationAuthorizationService.validateQueryParams(authRequest, true);
 
         assertTrue(errorObject.isPresent());
         assertThat(errorObject.get().errorObject(), equalTo(OAuth2Error.TEMPORARILY_UNAVAILABLE));
@@ -539,7 +539,7 @@ class AuthorizationServiceTest {
                         .nonce(new Nonce())
                         .customParameter("vtr", jsonArrayOf("P2.Cl.Cm"))
                         .build();
-        var errorObject = orchestrationAuthorizationService.validateAuthRequest(authRequest, true);
+        var errorObject = orchestrationAuthorizationService.validateQueryParams(authRequest, true);
 
         assertTrue(errorObject.isEmpty());
     }
@@ -560,7 +560,7 @@ class AuthorizationServiceTest {
                 assertThrows(
                         RuntimeException.class,
                         () ->
-                                orchestrationAuthorizationService.validateAuthRequest(
+                                orchestrationAuthorizationService.validateQueryParams(
                                         generateAuthRequest(redirectURi, responseType, scope),
                                         true),
                         "Expected to throw exception");
@@ -600,7 +600,7 @@ class AuthorizationServiceTest {
                         .build();
 
         var authRequestError =
-                orchestrationAuthorizationService.validateAuthRequest(authenticationRequest, true);
+                orchestrationAuthorizationService.validateQueryParams(authenticationRequest, true);
 
         assertTrue(authRequestError.isPresent());
         assertThat(
@@ -625,7 +625,7 @@ class AuthorizationServiceTest {
                         .build();
 
         var authRequestError =
-                orchestrationAuthorizationService.validateAuthRequest(authenticationRequest, true);
+                orchestrationAuthorizationService.validateQueryParams(authenticationRequest, true);
 
         assertTrue(authRequestError.isPresent());
         assertThat(
