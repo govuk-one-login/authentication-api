@@ -359,7 +359,8 @@ public class AuthenticationCallbackHandler
                         persistentSessionId,
                         pair("internalSubjectId", AuditService.UNKNOWN),
                         pair("isNewAccount", userInfo.getClaim("new_account")),
-                        pair("rpPairwiseId", userInfo.getClaim("rp_client_id")));
+                        pair("rpPairwiseId", userInfo.getClaim("rp_client_id")),
+                        pair("nonce", authenticationRequest.getNonce()));
 
                 return generateApiGatewayProxyResponse(
                         302,

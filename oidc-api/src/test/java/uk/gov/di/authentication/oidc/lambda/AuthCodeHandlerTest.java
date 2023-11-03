@@ -241,7 +241,8 @@ class AuthCodeHandlerTest {
                         PERSISTENT_SESSION_ID,
                         pair("internalSubjectId", SUBJECT.getValue()),
                         pair("isNewAccount", AccountState.NEW),
-                        pair("rpPairwiseId", expectedRpPairwiseId));
+                        pair("rpPairwiseId", expectedRpPairwiseId),
+                        pair("nonce", NONCE));
 
         var dimensions =
                 Map.of(
@@ -322,7 +323,8 @@ class AuthCodeHandlerTest {
                         PERSISTENT_SESSION_ID,
                         pair("internalSubjectId", AuditService.UNKNOWN),
                         pair("isNewAccount", AccountState.UNKNOWN),
-                        pair("rpPairwiseId", AuditService.UNKNOWN));
+                        pair("rpPairwiseId", AuditService.UNKNOWN),
+                        pair("nonce", NONCE));
 
         var expectedDimensions =
                 Map.of(
