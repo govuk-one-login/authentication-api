@@ -97,9 +97,9 @@ class OrchestrationAuthorizationServiceTest {
                         .claim("client_id", CLIENT_ID.getValue())
                         .issuer(CLIENT_ID.getValue())
                         .build();
-        var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
+        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
-        var requestObjectError = service.validateRequestObject(generateAuthRequest(signedJWT));
+        var requestObjectError = service.validateRequestObject(authRequest);
 
         assertThat(requestObjectError, equalTo(Optional.empty()));
     }
@@ -123,9 +123,9 @@ class OrchestrationAuthorizationServiceTest {
                         .claim("vtr", JsonArrayHelper.jsonArrayOf("P2.Cl.Cm"))
                         .issuer(CLIENT_ID.getValue())
                         .build();
-        var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
+        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
-        var requestObjectError = service.validateRequestObject(generateAuthRequest(signedJWT));
+        var requestObjectError = service.validateRequestObject(authRequest);
 
         assertThat(requestObjectError, equalTo(Optional.empty()));
     }
@@ -144,6 +144,7 @@ class OrchestrationAuthorizationServiceTest {
                         .issuer(CLIENT_ID.getValue())
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+
         assertThrows(
                 RuntimeException.class,
                 () -> service.validateRequestObject(authRequest),
@@ -163,6 +164,7 @@ class OrchestrationAuthorizationServiceTest {
                         .issuer(CLIENT_ID.getValue())
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+
         assertThrows(
                 RuntimeException.class,
                 () -> service.validateRequestObject(authRequest),
@@ -183,11 +185,11 @@ class OrchestrationAuthorizationServiceTest {
                         .claim("client_id", CLIENT_ID.getValue())
                         .issuer(CLIENT_ID.getValue())
                         .build();
-        var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
+        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
         assertThrows(
                 RuntimeException.class,
-                () -> service.validateRequestObject(generateAuthRequest(signedJWT)),
+                () -> service.validateRequestObject(authRequest),
                 "Expected to throw exception");
     }
 
@@ -213,9 +215,9 @@ class OrchestrationAuthorizationServiceTest {
                         .claim("client_id", CLIENT_ID.getValue())
                         .issuer(CLIENT_ID.getValue())
                         .build();
-        var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
+        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
-        var requestObjectError = service.validateRequestObject(generateAuthRequest(signedJWT));
+        var requestObjectError = service.validateRequestObject(authRequest);
 
         assertTrue(requestObjectError.isPresent());
         assertThat(
@@ -237,6 +239,7 @@ class OrchestrationAuthorizationServiceTest {
                         .claim("client_id", CLIENT_ID.getValue())
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+
         var requestObjectError = service.validateRequestObject(authRequest);
 
         assertTrue(requestObjectError.isPresent());
@@ -259,7 +262,6 @@ class OrchestrationAuthorizationServiceTest {
                         .issuer(CLIENT_ID.getValue())
                         .claim("client_id", CLIENT_ID.getValue())
                         .build();
-
         var authRequest =
                 new AuthenticationRequest.Builder(
                                 ResponseType.IDTOKEN,
@@ -293,6 +295,7 @@ class OrchestrationAuthorizationServiceTest {
                         .claim("client_id", "invalid-client-id")
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+
         var requestObjectError = service.validateRequestObject(authRequest);
 
         assertTrue(requestObjectError.isPresent());
@@ -315,6 +318,7 @@ class OrchestrationAuthorizationServiceTest {
                         .issuer(CLIENT_ID.getValue())
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+
         var requestObjectError = service.validateRequestObject(authRequest);
 
         assertTrue(requestObjectError.isPresent());
@@ -341,9 +345,9 @@ class OrchestrationAuthorizationServiceTest {
                         .claim("client_id", CLIENT_ID.getValue())
                         .issuer(CLIENT_ID.getValue())
                         .build();
-        var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
+        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
-        var requestObjectError = service.validateRequestObject(generateAuthRequest(signedJWT));
+        var requestObjectError = service.validateRequestObject(authRequest);
 
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
@@ -363,12 +367,12 @@ class OrchestrationAuthorizationServiceTest {
                         .claim("client_id", CLIENT_ID.getValue())
                         .issuer(CLIENT_ID.getValue())
                         .build();
-        var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
 
         var requestObjectError =
                 service.validateRequestObject(
                         generateAuthRequest(
-                                signedJWT, new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL)));
+                                generateSignedJWT(jwtClaimsSet, keyPair),
+                                new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL)));
 
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
@@ -389,6 +393,7 @@ class OrchestrationAuthorizationServiceTest {
                         .issuer(CLIENT_ID.getValue())
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+
         var requestObjectError = service.validateRequestObject(authRequest);
 
         assertTrue(requestObjectError.isPresent());
@@ -409,8 +414,8 @@ class OrchestrationAuthorizationServiceTest {
                         .claim("client_id", CLIENT_ID.getValue())
                         .issuer(CLIENT_ID.getValue())
                         .build();
-
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+
         var requestObjectError = service.validateRequestObject(authRequest);
 
         assertTrue(requestObjectError.isPresent());
@@ -432,6 +437,7 @@ class OrchestrationAuthorizationServiceTest {
                         .issuer("invalid-client")
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+
         var requestObjectError = service.validateRequestObject(authRequest);
 
         assertTrue(requestObjectError.isPresent());
@@ -454,8 +460,8 @@ class OrchestrationAuthorizationServiceTest {
                         .claim("request", "some-random-request-value")
                         .issuer(CLIENT_ID.getValue())
                         .build();
-        generateSignedJWT(jwtClaimsSet, keyPair);
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+
         var requestObjectError = service.validateRequestObject(authRequest);
 
         assertTrue(requestObjectError.isPresent());
@@ -478,6 +484,7 @@ class OrchestrationAuthorizationServiceTest {
                         .issuer(CLIENT_ID.getValue())
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+
         var requestObjectError = service.validateRequestObject(authRequest);
 
         assertTrue(requestObjectError.isPresent());
@@ -501,6 +508,7 @@ class OrchestrationAuthorizationServiceTest {
                         .issuer(CLIENT_ID.getValue())
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair2));
+
         assertThrows(
                 RuntimeException.class,
                 () -> service.validateRequestObject(authRequest),
@@ -519,9 +527,9 @@ class OrchestrationAuthorizationServiceTest {
                         .claim("client_id", CLIENT_ID.getValue())
                         .issuer(CLIENT_ID.getValue())
                         .build();
-        var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
+        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
-        var requestObjectError = service.validateRequestObject(generateAuthRequest(signedJWT));
+        var requestObjectError = service.validateRequestObject(authRequest);
 
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
@@ -543,9 +551,9 @@ class OrchestrationAuthorizationServiceTest {
                         .claim("client_id", CLIENT_ID.getValue())
                         .issuer(CLIENT_ID.getValue())
                         .build();
-        var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
+        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
-        var requestObjectError = service.validateRequestObject(generateAuthRequest(signedJWT));
+        var requestObjectError = service.validateRequestObject(authRequest);
 
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
@@ -570,6 +578,7 @@ class OrchestrationAuthorizationServiceTest {
                         .claim("ui_locales", "123456")
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+
         var requestObjectError = service.validateRequestObject(authRequest);
 
         assertTrue(requestObjectError.isPresent());
