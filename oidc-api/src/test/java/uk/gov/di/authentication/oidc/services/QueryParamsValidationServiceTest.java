@@ -1,18 +1,11 @@
 package uk.gov.di.authentication.oidc.services;
 
 import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.JWSHeader;
-import com.nimbusds.jose.crypto.ECDSASigner;
 import com.nimbusds.jose.crypto.RSADecrypter;
-import com.nimbusds.jose.crypto.impl.ECDSA;
-import com.nimbusds.jose.jwk.Curve;
-import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.PlainJWT;
 import com.nimbusds.jwt.SignedJWT;
-import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
@@ -20,27 +13,17 @@ import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
-import software.amazon.awssdk.core.SdkBytes;
-import software.amazon.awssdk.services.kms.model.SignRequest;
-import software.amazon.awssdk.services.kms.model.SignResponse;
-import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
-import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
-import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
@@ -52,10 +35,8 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
-import java.text.ParseException;
 import java.util.Base64;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static java.lang.String.format;
@@ -64,24 +45,21 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
-class AuthorizationServiceTest {
+class QueryParamsValidationServiceTest {
 
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
     private static final ClientID CLIENT_ID = new ClientID();
     private static final State STATE = new State();
     private static final Nonce NONCE = new Nonce();
     private static final String KEY_ID = "14342354354353";
-    private OrchestrationAuthorizationService orchestrationAuthorizationService;
+    private QueryParamsValidationService queryParamsValidationService;
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final IPVCapacityService ipvCapacityService = mock(IPVCapacityService.class);
@@ -92,12 +70,12 @@ class AuthorizationServiceTest {
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
-            new CaptureLoggingExtension(OrchestrationAuthorizationService.class);
+            new CaptureLoggingExtension(QueryParamsValidationService.class);
 
     @BeforeEach
     void setUp() {
-        orchestrationAuthorizationService =
-                new OrchestrationAuthorizationService(
+        queryParamsValidationService =
+                new QueryParamsValidationService(
                         configurationService,
                         dynamoClientService,
                         ipvCapacityService,
@@ -119,64 +97,6 @@ class AuthorizationServiceTest {
     }
 
     @Test
-    void shouldThrowClientNotFoundExceptionWhenClientDoesNotExist() {
-        when(dynamoClientService.getClient(CLIENT_ID.toString())).thenReturn(Optional.empty());
-
-        ClientNotFoundException exception =
-                Assertions.assertThrows(
-                        ClientNotFoundException.class,
-                        () ->
-                                orchestrationAuthorizationService.isClientRedirectUriValid(
-                                        CLIENT_ID, REDIRECT_URI),
-                        "Expected to throw exception");
-
-        assertThat(
-                exception.getMessage(),
-                equalTo(format("No Client found for ClientID: %s", CLIENT_ID)));
-    }
-
-    @Test
-    void shouldReturnFalseIfClientUriIsInvalid() throws ClientNotFoundException {
-        when(dynamoClientService.getClient(CLIENT_ID.toString()))
-                .thenReturn(
-                        Optional.of(
-                                generateClientRegistry(
-                                        "http://localhost//", CLIENT_ID.toString())));
-        assertFalse(
-                orchestrationAuthorizationService.isClientRedirectUriValid(
-                        CLIENT_ID, REDIRECT_URI));
-    }
-
-    @Test
-    void shouldReturnTrueIfRedirectUriIsValid() throws ClientNotFoundException {
-        when(dynamoClientService.getClient(CLIENT_ID.toString()))
-                .thenReturn(
-                        Optional.of(
-                                generateClientRegistry(
-                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
-        assertTrue(
-                orchestrationAuthorizationService.isClientRedirectUriValid(
-                        CLIENT_ID, REDIRECT_URI));
-    }
-
-    @Test
-    void shouldGenerateSuccessfulAuthResponse() {
-        AuthorizationCode authCode = new AuthorizationCode();
-        Scope scope = new Scope();
-        scope.add(OIDCScopeValue.OPENID);
-        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
-        AuthenticationRequest authRequest =
-                generateAuthRequest(REDIRECT_URI.toString(), responseType, scope);
-
-        AuthenticationSuccessResponse authSuccessResponse =
-                orchestrationAuthorizationService.generateSuccessfulAuthResponse(
-                        authRequest, authCode, REDIRECT_URI, STATE);
-        assertThat(authSuccessResponse.getState(), equalTo(STATE));
-        assertThat(authSuccessResponse.getAuthorizationCode(), equalTo(authCode));
-        assertThat(authSuccessResponse.getRedirectionURI(), equalTo(REDIRECT_URI));
-    }
-
-    @Test
     void shouldSuccessfullyValidateAuthRequestWhenIdentityValuesAreIncludedInVtrAttribute() {
         when(ipvCapacityService.isIPVCapacityAvailable()).thenReturn(true);
         Scope scope = new Scope();
@@ -194,7 +114,7 @@ class AuthorizationServiceTest {
                         scope,
                         jsonArrayOf("P2.Cl.Cm"),
                         Optional.empty());
-        var errorObject = orchestrationAuthorizationService.validateAuthRequest(authRequest, true);
+        var errorObject = queryParamsValidationService.validate(authRequest, true);
 
         assertThat(errorObject, equalTo(Optional.empty()));
     }
@@ -216,7 +136,7 @@ class AuthorizationServiceTest {
                         scope,
                         jsonArrayOf("Cm.Cl.P1", "P1.Cl"),
                         Optional.empty());
-        var errorObject = orchestrationAuthorizationService.validateAuthRequest(authRequest, true);
+        var errorObject = queryParamsValidationService.validate(authRequest, true);
 
         assertTrue(errorObject.isPresent());
 
@@ -238,7 +158,7 @@ class AuthorizationServiceTest {
                                 generateClientRegistry(
                                         REDIRECT_URI.toString(), CLIENT_ID.toString())));
         var errorObject =
-                orchestrationAuthorizationService.validateAuthRequest(
+                queryParamsValidationService.validate(
                         generateAuthRequest(REDIRECT_URI.toString(), responseType, scope), true);
 
         assertTrue(errorObject.isEmpty());
@@ -260,7 +180,7 @@ class AuthorizationServiceTest {
                                 URI.create(REDIRECT_URI.toString()))
                         .state(STATE)
                         .build();
-        var errorObject = orchestrationAuthorizationService.validateAuthRequest(authRequest, false);
+        var errorObject = queryParamsValidationService.validate(authRequest, false);
 
         assertTrue(errorObject.isEmpty());
     }
@@ -291,7 +211,7 @@ class AuthorizationServiceTest {
                         scope,
                         jsonArrayOf("Cl.Cm", "Cl"),
                         Optional.of(oidcClaimsRequest));
-        var errorObject = orchestrationAuthorizationService.validateAuthRequest(authRequest, true);
+        var errorObject = queryParamsValidationService.validate(authRequest, true);
 
         assertTrue(errorObject.isEmpty());
     }
@@ -315,7 +235,7 @@ class AuthorizationServiceTest {
                         scope,
                         jsonArrayOf("Cl.Cm", "Cl"),
                         Optional.of(oidcClaimsRequest));
-        var errorObject = orchestrationAuthorizationService.validateAuthRequest(authRequest, true);
+        var errorObject = queryParamsValidationService.validate(authRequest, true);
 
         assertTrue(errorObject.isPresent());
         assertThat(
@@ -338,7 +258,7 @@ class AuthorizationServiceTest {
                                         CLIENT_ID.toString(),
                                         List.of("openid", "am"))));
         var errorObject =
-                orchestrationAuthorizationService.validateAuthRequest(
+                queryParamsValidationService.validate(
                         generateAuthRequest(REDIRECT_URI.toString(), responseType, scope), true);
 
         assertTrue(errorObject.isEmpty());
@@ -354,7 +274,7 @@ class AuthorizationServiceTest {
                                 generateClientRegistry(
                                         REDIRECT_URI.toString(), CLIENT_ID.toString())));
         var errorObject =
-                orchestrationAuthorizationService.validateAuthRequest(
+                queryParamsValidationService.validate(
                         generateAuthRequest(REDIRECT_URI.toString(), responseType, scope), true);
 
         assertTrue(errorObject.isPresent());
@@ -372,7 +292,7 @@ class AuthorizationServiceTest {
                 assertThrows(
                         RuntimeException.class,
                         () ->
-                                orchestrationAuthorizationService.validateAuthRequest(
+                                queryParamsValidationService.validate(
                                         generateAuthRequest(
                                                 REDIRECT_URI.toString(), responseType, scope),
                                         true),
@@ -393,7 +313,7 @@ class AuthorizationServiceTest {
                                 generateClientRegistry(
                                         REDIRECT_URI.toString(), CLIENT_ID.toString())));
         var errorObject =
-                orchestrationAuthorizationService.validateAuthRequest(
+                queryParamsValidationService.validate(
                         generateAuthRequest(REDIRECT_URI.toString(), responseType, scope), true);
 
         assertTrue(errorObject.isPresent());
@@ -412,7 +332,7 @@ class AuthorizationServiceTest {
                                 generateClientRegistry(
                                         REDIRECT_URI.toString(), CLIENT_ID.toString())));
         var errorObject =
-                orchestrationAuthorizationService.validateAuthRequest(
+                queryParamsValidationService.validate(
                         generateAuthRequest(REDIRECT_URI.toString(), responseType, scope), true);
 
         assertTrue(errorObject.isPresent());
@@ -434,7 +354,7 @@ class AuthorizationServiceTest {
                                 responseType, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
                         .nonce(new Nonce())
                         .build();
-        var errorObject = orchestrationAuthorizationService.validateAuthRequest(authRequest, true);
+        var errorObject = queryParamsValidationService.validate(authRequest, true);
 
         assertTrue(errorObject.isPresent());
         assertThat(
@@ -460,7 +380,7 @@ class AuthorizationServiceTest {
                                 responseType, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
                         .state(new State())
                         .build();
-        var errorObject = orchestrationAuthorizationService.validateAuthRequest(authRequest, true);
+        var errorObject = queryParamsValidationService.validate(authRequest, true);
 
         assertTrue(errorObject.isPresent());
         assertThat(
@@ -487,7 +407,7 @@ class AuthorizationServiceTest {
                         .nonce(new Nonce())
                         .customParameter("vtr", jsonArrayOf("Cm"))
                         .build();
-        var errorObject = orchestrationAuthorizationService.validateAuthRequest(authRequest, true);
+        var errorObject = queryParamsValidationService.validate(authRequest, true);
 
         assertTrue(errorObject.isPresent());
         assertThat(
@@ -513,7 +433,7 @@ class AuthorizationServiceTest {
                         .nonce(new Nonce())
                         .customParameter("vtr", jsonArrayOf("P2.Cl.Cm"))
                         .build();
-        var errorObject = orchestrationAuthorizationService.validateAuthRequest(authRequest, true);
+        var errorObject = queryParamsValidationService.validate(authRequest, true);
 
         assertTrue(errorObject.isPresent());
         assertThat(errorObject.get().errorObject(), equalTo(OAuth2Error.TEMPORARILY_UNAVAILABLE));
@@ -539,7 +459,7 @@ class AuthorizationServiceTest {
                         .nonce(new Nonce())
                         .customParameter("vtr", jsonArrayOf("P2.Cl.Cm"))
                         .build();
-        var errorObject = orchestrationAuthorizationService.validateAuthRequest(authRequest, true);
+        var errorObject = queryParamsValidationService.validate(authRequest, true);
 
         assertTrue(errorObject.isEmpty());
     }
@@ -560,27 +480,13 @@ class AuthorizationServiceTest {
                 assertThrows(
                         RuntimeException.class,
                         () ->
-                                orchestrationAuthorizationService.validateAuthRequest(
+                                queryParamsValidationService.validate(
                                         generateAuthRequest(redirectURi, responseType, scope),
                                         true),
                         "Expected to throw exception");
         assertThat(
                 exception.getMessage(),
                 equalTo(format("Invalid Redirect in request %s", redirectURi)));
-    }
-
-    @Test
-    void shouldGetPersistentCookieIdFromExistingCookie() {
-        Map<String, String> requestCookieHeader =
-                Map.of(
-                        CookieHelper.REQUEST_COOKIE_HEADER,
-                        "di-persistent-session-id=some-persistent-id;gs=session-id.456");
-
-        String persistentSessionId =
-                orchestrationAuthorizationService.getExistingOrCreateNewPersistentSessionId(
-                        requestCookieHeader);
-
-        assertThat(persistentSessionId, equalTo("some-persistent-id"));
     }
 
     @Test
@@ -599,8 +505,7 @@ class AuthorizationServiceTest {
                         .requestURI(URI.create("https://localhost/redirect-uri"))
                         .build();
 
-        var authRequestError =
-                orchestrationAuthorizationService.validateAuthRequest(authenticationRequest, true);
+        var authRequestError = queryParamsValidationService.validate(authenticationRequest, true);
 
         assertTrue(authRequestError.isPresent());
         assertThat(
@@ -624,67 +529,11 @@ class AuthorizationServiceTest {
                         .requestObject(new PlainJWT(new JWTClaimsSet.Builder().build()))
                         .build();
 
-        var authRequestError =
-                orchestrationAuthorizationService.validateAuthRequest(authenticationRequest, true);
+        var authRequestError = queryParamsValidationService.validate(authenticationRequest, true);
 
         assertTrue(authRequestError.isPresent());
         assertThat(
                 authRequestError.get().errorObject(), equalTo(OAuth2Error.REQUEST_NOT_SUPPORTED));
-    }
-
-    @ParameterizedTest
-    @ValueSource(booleans = {true, false})
-    void shouldIdentifyATestUserJourney(boolean dynamoClientServiceReturns) {
-        when(dynamoClientService.isTestJourney(CLIENT_ID.toString(), "test@test.com"))
-                .thenReturn(dynamoClientServiceReturns);
-
-        assertThat(
-                orchestrationAuthorizationService.isTestJourney(CLIENT_ID, "test@test.com"),
-                equalTo(dynamoClientServiceReturns));
-        assertThat(
-                orchestrationAuthorizationService.isTestJourney(CLIENT_ID, "test@test.com"),
-                equalTo(dynamoClientServiceReturns));
-    }
-
-    @Test
-    void shouldConstructASignedAndEncryptedRequestJWT() throws JOSEException, ParseException {
-        var claim1Value = "JWT claim 1";
-        var ecSigningKey =
-                new ECKeyGenerator(Curve.P_256)
-                        .keyID(KEY_ID)
-                        .algorithm(JWSAlgorithm.ES256)
-                        .generate();
-        var ecdsaSigner = new ECDSASigner(ecSigningKey);
-        var jwtClaimsSet = new JWTClaimsSet.Builder().claim("claim1", claim1Value).build();
-        var jwsHeader = new JWSHeader(JWSAlgorithm.ES256);
-        var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSet);
-        signedJWT.sign(ecdsaSigner);
-        byte[] signatureToDER = ECDSA.transcodeSignatureToDER(signedJWT.getSignature().decode());
-        var signResult =
-                SignResponse.builder()
-                        .signature(SdkBytes.fromByteArray(signatureToDER))
-                        .keyId(KEY_ID)
-                        .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
-                        .build();
-        when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(signResult);
-
-        var encryptedJWT = orchestrationAuthorizationService.getSignedAndEncryptedJWT(jwtClaimsSet);
-
-        var signedJWTResponse = decryptJWT(encryptedJWT);
-
-        assertThat(signedJWTResponse.getJWTClaimsSet().getClaim("claim1"), equalTo(claim1Value));
-    }
-
-    @Test
-    void shouldSaveStateInRedis() {
-        when(configurationService.getSessionExpiry()).thenReturn(3600L);
-        var sessionId = "new-session-id";
-        var state = new State();
-
-        orchestrationAuthorizationService.storeState(sessionId, state);
-
-        verify(redisConnectionService)
-                .saveWithExpiry("auth-state:" + sessionId, state.getValue(), 3600);
     }
 
     private ClientRegistry generateClientRegistry(String redirectURI, String clientID) {

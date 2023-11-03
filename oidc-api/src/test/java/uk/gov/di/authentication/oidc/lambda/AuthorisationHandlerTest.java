@@ -51,6 +51,7 @@ import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.oidc.exceptions.InvalidHttpMethodException;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
+import uk.gov.di.authentication.oidc.services.QueryParamsValidationService;
 import uk.gov.di.authentication.oidc.services.RequestObjectValidationService;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -131,7 +132,10 @@ class AuthorisationHandlerTest {
 
     private final NoSessionOrchestrationService noSessionOrchestrationService =
             mock(NoSessionOrchestrationService.class);
-    private final RequestObjectValidationService requestObjectValidationService = mock(RequestObjectValidationService.class);
+    private final RequestObjectValidationService requestObjectValidationService =
+            mock(RequestObjectValidationService.class);
+    private final QueryParamsValidationService queryParamsValidationService =
+            mock(QueryParamsValidationService.class);
     private final ClientService clientService = mock(ClientService.class);
     private final InOrder inOrder = inOrder(auditService);
     private static final String EXPECTED_SESSION_COOKIE_STRING =
@@ -185,8 +189,7 @@ class AuthorisationHandlerTest {
         when(configService.getSessionCookieAttributes()).thenReturn("Secure; HttpOnly;");
         when(configService.getSessionCookieMaxAge()).thenReturn(3600);
         when(configService.getPersistentCookieMaxAge()).thenReturn(34190000);
-        when(orchestrationAuthorizationService.validateAuthRequest(
-                        any(AuthenticationRequest.class), anyBoolean()))
+        when(queryParamsValidationService.validate(any(AuthenticationRequest.class), anyBoolean()))
                 .thenReturn(Optional.empty());
         when(orchestrationAuthorizationService.getExistingOrCreateNewPersistentSessionId(any()))
                 .thenReturn(PERSISTENT_SESSION_ID);
@@ -201,6 +204,7 @@ class AuthorisationHandlerTest {
                         clientSessionService,
                         orchestrationAuthorizationService,
                         auditService,
+                        queryParamsValidationService,
                         requestObjectValidationService,
                         clientService,
                         docAppAuthorisationService,
@@ -577,7 +581,7 @@ class AuthorisationHandlerTest {
 
         @Test
         void shouldReturn400WhenAuthorisationRequestContainsInvalidScope() {
-            when(orchestrationAuthorizationService.validateAuthRequest(
+            when(queryParamsValidationService.validate(
                             any(AuthenticationRequest.class), anyBoolean()))
                     .thenReturn(
                             Optional.of(
@@ -620,7 +624,7 @@ class AuthorisationHandlerTest {
 
         @Test
         void shouldReturn400WhenAuthorisationRequestBodyContainsInvalidScope() {
-            when(orchestrationAuthorizationService.validateAuthRequest(
+            when(queryParamsValidationService.validate(
                             any(AuthenticationRequest.class), anyBoolean()))
                     .thenReturn(
                             Optional.of(

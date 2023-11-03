@@ -31,6 +31,7 @@ import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.oidc.exceptions.InvalidHttpMethodException;
 import uk.gov.di.authentication.oidc.helpers.RequestObjectToAuthRequestHelper;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
+import uk.gov.di.authentication.oidc.services.QueryParamsValidationService;
 import uk.gov.di.authentication.oidc.services.RequestObjectValidationService;
 import uk.gov.di.authentication.shared.conditions.DocAppUserHelper;
 import uk.gov.di.authentication.shared.conditions.IdentityHelper;
@@ -95,6 +96,7 @@ public class AuthorisationHandler
     private final ConfigurationService configurationService;
     private final ClientSessionService clientSessionService;
     private final OrchestrationAuthorizationService orchestrationAuthorizationService;
+    private final QueryParamsValidationService queryParamsValidationService;
     private final RequestObjectValidationService requestObjectValidationService;
     private final AuditService auditService;
     private final ClientService clientService;
@@ -109,6 +111,7 @@ public class AuthorisationHandler
             ClientSessionService clientSessionService,
             OrchestrationAuthorizationService orchestrationAuthorizationService,
             AuditService auditService,
+            QueryParamsValidationService queryParamsValidationService,
             RequestObjectValidationService requestObjectValidationService,
             ClientService clientService,
             DocAppAuthorisationService docAppAuthorisationService,
@@ -119,6 +122,7 @@ public class AuthorisationHandler
         this.clientSessionService = clientSessionService;
         this.orchestrationAuthorizationService = orchestrationAuthorizationService;
         this.auditService = auditService;
+        this.queryParamsValidationService = queryParamsValidationService;
         this.requestObjectValidationService = requestObjectValidationService;
         this.clientService = clientService;
         this.docAppAuthorisationService = docAppAuthorisationService;
@@ -133,7 +137,9 @@ public class AuthorisationHandler
         this.orchestrationAuthorizationService =
                 new OrchestrationAuthorizationService(configurationService);
         this.auditService = new AuditService(configurationService);
-        this.requestObjectValidationService = new RequestObjectValidationService(configurationService);
+        this.queryParamsValidationService = new QueryParamsValidationService(configurationService);
+        this.requestObjectValidationService =
+                new RequestObjectValidationService(configurationService);
         this.clientService = new DynamoClientService(configurationService);
         var kmsConnectionService = new KmsConnectionService(configurationService);
         this.docAppAuthorisationService =
@@ -252,7 +258,7 @@ public class AuthorisationHandler
         if (authRequest.getRequestObject() == null) {
             LOG.info("Validating request query params");
             authRequestError =
-                    orchestrationAuthorizationService.validateAuthRequest(
+                    queryParamsValidationService.validate(
                             authRequest, configurationService.isNonceRequired());
         } else {
             LOG.info("Validating request object");

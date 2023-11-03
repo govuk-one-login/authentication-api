@@ -39,7 +39,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.oidc.helper.RequestObjectTestHelper.generateSignedJWT;
 
-class RequestObjectServiceTest {
+class RequestObjectValidationServiceTest {
 
     private static final String REDIRECT_URI = "https://localhost:8080";
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
