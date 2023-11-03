@@ -13,6 +13,7 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -82,461 +83,470 @@ class OrchestrationAuthorizationServiceTest {
                 .thenReturn(Optional.of(clientRegistry));
     }
 
-    @Test
-    void shouldSuccessfullyProcessRequestUriPayload() throws JOSEException {
-        List<String> scopes = new ArrayList<>();
-        scopes.add("openid");
-        scopes.add("doc-checking-app");
-        var scope = Scope.parse(scopes);
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", scope.toString())
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+    @Nested
+    class ValidateQueryParams {}
 
-        var requestObjectError = service.validateRequestObject(authRequest);
+    @Nested
+    class ValidateRequestObject {
 
-        assertThat(requestObjectError, equalTo(Optional.empty()));
-    }
+        @Test
+        void shouldSuccessfullyProcessRequestUriPayload() throws JOSEException {
+            List<String> scopes = new ArrayList<>();
+            scopes.add("openid");
+            scopes.add("doc-checking-app");
+            var scope = Scope.parse(scopes);
+            var jwtClaimsSet =
+                    new JWTClaimsSet.Builder()
+                            .audience(AUDIENCE)
+                            .claim("redirect_uri", REDIRECT_URI)
+                            .claim("response_type", ResponseType.CODE.toString())
+                            .claim("scope", scope.toString())
+                            .claim("nonce", NONCE.getValue())
+                            .claim("state", STATE.toString())
+                            .claim("client_id", CLIENT_ID.getValue())
+                            .issuer(CLIENT_ID.getValue())
+                            .build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
-    @Test
-    void shouldSuccessfullyProcessRequestUriPayloadWhenVtrIsPresent() throws JOSEException {
-        when(ipvCapacityService.isIPVCapacityAvailable()).thenReturn(true);
-        List<String> scopes = new ArrayList<>();
-        scopes.add("openid");
-        scopes.add("doc-checking-app");
-        var scope = Scope.parse(scopes);
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", scope.toString())
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .claim("vtr", JsonArrayHelper.jsonArrayOf("P2.Cl.Cm"))
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+            var requestObjectError = service.validateRequestObject(authRequest);
 
-        var requestObjectError = service.validateRequestObject(authRequest);
+            assertThat(requestObjectError, equalTo(Optional.empty()));
+        }
 
-        assertThat(requestObjectError, equalTo(Optional.empty()));
-    }
+        @Test
+        void shouldSuccessfullyProcessRequestUriPayloadWhenVtrIsPresent() throws JOSEException {
+            when(ipvCapacityService.isIPVCapacityAvailable()).thenReturn(true);
+            List<String> scopes = new ArrayList<>();
+            scopes.add("openid");
+            scopes.add("doc-checking-app");
+            var scope = Scope.parse(scopes);
+            var jwtClaimsSet =
+                    new JWTClaimsSet.Builder()
+                            .audience(AUDIENCE)
+                            .claim("redirect_uri", REDIRECT_URI)
+                            .claim("response_type", ResponseType.CODE.toString())
+                            .claim("scope", scope.toString())
+                            .claim("nonce", NONCE.getValue())
+                            .claim("state", STATE.toString())
+                            .claim("client_id", CLIENT_ID.getValue())
+                            .claim("vtr", JsonArrayHelper.jsonArrayOf("P2.Cl.Cm"))
+                            .issuer(CLIENT_ID.getValue())
+                            .build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
-    @Test
-    void shouldThrowWhenRedirectUriIsInvalid() throws JOSEException {
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
-                        .claim("redirect_uri", "https://invalid-redirect-uri")
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", SCOPE)
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+            var requestObjectError = service.validateRequestObject(authRequest);
 
-        assertRuntimeExceptionThrown(authRequest, "Invalid Redirect URI in request JWT");
-    }
+            assertThat(requestObjectError, equalTo(Optional.empty()));
+        }
 
-    @Test
-    void shouldThrowWhenRedirectUriIsAbsent() throws JOSEException {
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", SCOPE)
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+        @Test
+        void shouldThrowWhenRedirectUriIsInvalid() throws JOSEException {
+            var jwtClaimsSet =
+                    new JWTClaimsSet.Builder()
+                            .audience(AUDIENCE)
+                            .claim("redirect_uri", "https://invalid-redirect-uri")
+                            .claim("response_type", ResponseType.CODE.toString())
+                            .claim("scope", SCOPE)
+                            .claim("nonce", NONCE.getValue())
+                            .claim("state", STATE.toString())
+                            .claim("client_id", CLIENT_ID.getValue())
+                            .issuer(CLIENT_ID.getValue())
+                            .build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
-        assertRuntimeExceptionThrown(authRequest, "Invalid Redirect URI in request JWT");
-    }
+            assertRuntimeExceptionThrown(authRequest, "Invalid Redirect URI in request JWT");
+        }
 
-    @Test
-    void shouldThrowWhenInvalidClient() throws JOSEException {
-        when(dynamoClientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.empty());
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", SCOPE)
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+        @Test
+        void shouldThrowWhenRedirectUriIsAbsent() throws JOSEException {
+            var jwtClaimsSet =
+                    new JWTClaimsSet.Builder()
+                            .audience(AUDIENCE)
+                            .claim("response_type", ResponseType.CODE.toString())
+                            .claim("scope", SCOPE)
+                            .claim("nonce", NONCE.getValue())
+                            .claim("state", STATE.toString())
+                            .claim("client_id", CLIENT_ID.getValue())
+                            .issuer(CLIENT_ID.getValue())
+                            .build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
-        assertRuntimeExceptionThrown(authRequest, "No Client found with given ClientID");
-    }
+            assertRuntimeExceptionThrown(authRequest, "Invalid Redirect URI in request JWT");
+        }
 
-    @Test
-    void shouldReturnErrorWhenClientTypeIsNotAppOrWeb() throws JOSEException {
-        var clientRegistry =
-                generateClientRegistry(
-                        "not-app-or-web",
-                        new Scope(
-                                OIDCScopeValue.OPENID.getValue(),
-                                CustomScopeValue.DOC_CHECKING_APP.getValue()));
-        when(dynamoClientService.getClient(CLIENT_ID.getValue()))
-                .thenReturn(Optional.of(clientRegistry));
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", SCOPE)
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .claim("state", new State())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+        @Test
+        void shouldThrowWhenInvalidClient() throws JOSEException {
+            when(dynamoClientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.empty());
+            var jwtClaimsSet =
+                    new JWTClaimsSet.Builder()
+                            .audience(AUDIENCE)
+                            .claim("redirect_uri", REDIRECT_URI)
+                            .claim("response_type", ResponseType.CODE.toString())
+                            .claim("scope", SCOPE)
+                            .claim("nonce", NONCE.getValue())
+                            .claim("state", STATE.toString())
+                            .claim("client_id", CLIENT_ID.getValue())
+                            .issuer(CLIENT_ID.getValue())
+                            .build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
-        var requestObjectError = service.validateRequestObject(authRequest);
+            assertRuntimeExceptionThrown(authRequest, "No Client found with given ClientID");
+        }
 
-        assertOAuthError(requestObjectError, OAuth2Error.UNAUTHORIZED_CLIENT, REDIRECT_URI);
-    }
+        @Test
+        void shouldReturnErrorWhenClientTypeIsNotAppOrWeb() throws JOSEException {
+            var clientRegistry =
+                    generateClientRegistry(
+                            "not-app-or-web",
+                            new Scope(
+                                    OIDCScopeValue.OPENID.getValue(),
+                                    CustomScopeValue.DOC_CHECKING_APP.getValue()));
+            when(dynamoClientService.getClient(CLIENT_ID.getValue()))
+                    .thenReturn(Optional.of(clientRegistry));
+            var jwtClaimsSet =
+                    new JWTClaimsSet.Builder()
+                            .audience(AUDIENCE)
+                            .claim("redirect_uri", REDIRECT_URI)
+                            .claim("response_type", ResponseType.CODE.toString())
+                            .claim("scope", SCOPE)
+                            .claim("nonce", NONCE.getValue())
+                            .claim("state", STATE.toString())
+                            .claim("state", new State())
+                            .claim("client_id", CLIENT_ID.getValue())
+                            .issuer(CLIENT_ID.getValue())
+                            .build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
-    @Test
-    void shouldReturnErrorForInvalidResponseType() throws JOSEException {
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE_IDTOKEN.toString())
-                        .claim("scope", SCOPE)
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .issuer(CLIENT_ID.getValue())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+            var requestObjectError = service.validateRequestObject(authRequest);
 
-        var requestObjectError = service.validateRequestObject(authRequest);
+            assertOAuthError(requestObjectError, OAuth2Error.UNAUTHORIZED_CLIENT, REDIRECT_URI);
+        }
 
-        assertOAuthError(requestObjectError, OAuth2Error.UNSUPPORTED_RESPONSE_TYPE, REDIRECT_URI);
-    }
+        @Test
+        void shouldReturnErrorForInvalidResponseType() throws JOSEException {
+            var jwtClaimsSet =
+                    new JWTClaimsSet.Builder()
+                            .audience(AUDIENCE)
+                            .claim("redirect_uri", REDIRECT_URI)
+                            .claim("response_type", ResponseType.CODE_IDTOKEN.toString())
+                            .claim("scope", SCOPE)
+                            .claim("nonce", NONCE.getValue())
+                            .claim("state", STATE.toString())
+                            .issuer(CLIENT_ID.getValue())
+                            .claim("client_id", CLIENT_ID.getValue())
+                            .build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
-    @Test
-    void shouldReturnErrorForInvalidResponseTypeInQueryParams() throws JOSEException {
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", SCOPE)
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .issuer(CLIENT_ID.getValue())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .build();
-        var authRequest =
-                new AuthenticationRequest.Builder(
-                                ResponseType.IDTOKEN,
-                                new Scope(OIDCScopeValue.OPENID),
-                                CLIENT_ID,
-                                URI.create(REDIRECT_URI))
-                        .state(STATE)
-                        .nonce(new Nonce())
-                        .requestObject(generateSignedJWT(jwtClaimsSet, keyPair))
-                        .build();
-        var requestObjectError = service.validateRequestObject(authRequest);
+            var requestObjectError = service.validateRequestObject(authRequest);
 
-        assertOAuthError(requestObjectError, OAuth2Error.UNSUPPORTED_RESPONSE_TYPE, REDIRECT_URI);
-    }
+            assertOAuthError(
+                    requestObjectError, OAuth2Error.UNSUPPORTED_RESPONSE_TYPE, REDIRECT_URI);
+        }
 
-    @Test
-    void shouldReturnErrorWhenClientIDIsInvalid() throws JOSEException {
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", SCOPE)
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .issuer(CLIENT_ID.getValue())
-                        .claim("client_id", "invalid-client-id")
-                        .build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+        @Test
+        void shouldReturnErrorForInvalidResponseTypeInQueryParams() throws JOSEException {
+            var jwtClaimsSet =
+                    new JWTClaimsSet.Builder()
+                            .audience(AUDIENCE)
+                            .claim("redirect_uri", REDIRECT_URI)
+                            .claim("response_type", ResponseType.CODE.toString())
+                            .claim("scope", SCOPE)
+                            .claim("nonce", NONCE.getValue())
+                            .claim("state", STATE.toString())
+                            .issuer(CLIENT_ID.getValue())
+                            .claim("client_id", CLIENT_ID.getValue())
+                            .build();
+            var authRequest =
+                    new AuthenticationRequest.Builder(
+                                    ResponseType.IDTOKEN,
+                                    new Scope(OIDCScopeValue.OPENID),
+                                    CLIENT_ID,
+                                    URI.create(REDIRECT_URI))
+                            .state(STATE)
+                            .nonce(new Nonce())
+                            .requestObject(generateSignedJWT(jwtClaimsSet, keyPair))
+                            .build();
+            var requestObjectError = service.validateRequestObject(authRequest);
 
-        var requestObjectError = service.validateRequestObject(authRequest);
+            assertOAuthError(
+                    requestObjectError, OAuth2Error.UNSUPPORTED_RESPONSE_TYPE, REDIRECT_URI);
+        }
 
-        assertOAuthError(requestObjectError, OAuth2Error.UNAUTHORIZED_CLIENT, REDIRECT_URI);
-    }
+        @Test
+        void shouldReturnErrorWhenClientIDIsInvalid() throws JOSEException {
+            var jwtClaimsSet =
+                    new JWTClaimsSet.Builder()
+                            .audience(AUDIENCE)
+                            .claim("redirect_uri", REDIRECT_URI)
+                            .claim("response_type", ResponseType.CODE.toString())
+                            .claim("scope", SCOPE)
+                            .claim("nonce", NONCE.getValue())
+                            .claim("state", STATE.toString())
+                            .issuer(CLIENT_ID.getValue())
+                            .claim("client_id", "invalid-client-id")
+                            .build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
-    @Test
-    void shouldReturnErrorForUnsupportedScope() throws JOSEException {
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", "openid profile")
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+            var requestObjectError = service.validateRequestObject(authRequest);
 
-        var requestObjectError = service.validateRequestObject(authRequest);
+            assertOAuthError(requestObjectError, OAuth2Error.UNAUTHORIZED_CLIENT, REDIRECT_URI);
+        }
 
-        assertOAuthError(requestObjectError, OAuth2Error.INVALID_SCOPE, REDIRECT_URI);
-    }
+        @Test
+        void shouldReturnErrorForUnsupportedScope() throws JOSEException {
+            var jwtClaimsSet =
+                    new JWTClaimsSet.Builder()
+                            .audience(AUDIENCE)
+                            .claim("redirect_uri", REDIRECT_URI)
+                            .claim("response_type", ResponseType.CODE.toString())
+                            .claim("scope", "openid profile")
+                            .claim("nonce", NONCE.getValue())
+                            .claim("state", STATE.toString())
+                            .claim("client_id", CLIENT_ID.getValue())
+                            .issuer(CLIENT_ID.getValue())
+                            .build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
-    @Test
-    void shouldReturnErrorWhenClientHasNotRegisteredDocAppScope() throws JOSEException {
-        var clientRegistry =
-                generateClientRegistry(
-                        ClientType.APP.getValue(), new Scope(OIDCScopeValue.OPENID.getValue()));
-        when(dynamoClientService.getClient(CLIENT_ID.getValue()))
-                .thenReturn(Optional.of(clientRegistry));
+            var requestObjectError = service.validateRequestObject(authRequest);
 
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", SCOPE)
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+            assertOAuthError(requestObjectError, OAuth2Error.INVALID_SCOPE, REDIRECT_URI);
+        }
 
-        var requestObjectError = service.validateRequestObject(authRequest);
+        @Test
+        void shouldReturnErrorWhenClientHasNotRegisteredDocAppScope() throws JOSEException {
+            var clientRegistry =
+                    generateClientRegistry(
+                            ClientType.APP.getValue(), new Scope(OIDCScopeValue.OPENID.getValue()));
+            when(dynamoClientService.getClient(CLIENT_ID.getValue()))
+                    .thenReturn(Optional.of(clientRegistry));
 
-        assertOAuthError(requestObjectError, OAuth2Error.INVALID_SCOPE, REDIRECT_URI);
-    }
+            var jwtClaimsSet =
+                    new JWTClaimsSet.Builder()
+                            .audience(AUDIENCE)
+                            .claim("redirect_uri", REDIRECT_URI)
+                            .claim("response_type", ResponseType.CODE.toString())
+                            .claim("scope", SCOPE)
+                            .claim("nonce", NONCE.getValue())
+                            .claim("state", STATE.toString())
+                            .claim("client_id", CLIENT_ID.getValue())
+                            .issuer(CLIENT_ID.getValue())
+                            .build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
-    @Test
-    void shouldReturnErrorWhenAuthRequestContainsInvalidScope() throws JOSEException {
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", SCOPE)
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.getValue())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
+            var requestObjectError = service.validateRequestObject(authRequest);
 
-        var requestObjectError =
-                service.validateRequestObject(
-                        generateAuthRequest(
-                                generateSignedJWT(jwtClaimsSet, keyPair),
-                                new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL)));
+            assertOAuthError(requestObjectError, OAuth2Error.INVALID_SCOPE, REDIRECT_URI);
+        }
 
-        assertOAuthError(requestObjectError, OAuth2Error.INVALID_SCOPE, REDIRECT_URI);
-    }
+        @Test
+        void shouldReturnErrorWhenAuthRequestContainsInvalidScope() throws JOSEException {
+            var jwtClaimsSet =
+                    new JWTClaimsSet.Builder()
+                            .audience(AUDIENCE)
+                            .claim("redirect_uri", REDIRECT_URI)
+                            .claim("response_type", ResponseType.CODE.toString())
+                            .claim("scope", SCOPE)
+                            .claim("nonce", NONCE.getValue())
+                            .claim("state", STATE.getValue())
+                            .claim("client_id", CLIENT_ID.getValue())
+                            .issuer(CLIENT_ID.getValue())
+                            .build();
 
-    @Test
-    void shouldReturnErrorForUnregisteredScope() throws JOSEException {
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", "openid email")
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.getValue())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+            var requestObjectError =
+                    service.validateRequestObject(
+                            generateAuthRequest(
+                                    generateSignedJWT(jwtClaimsSet, keyPair),
+                                    new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL)));
 
-        var requestObjectError = service.validateRequestObject(authRequest);
+            assertOAuthError(requestObjectError, OAuth2Error.INVALID_SCOPE, REDIRECT_URI);
+        }
 
-        assertOAuthError(requestObjectError, OAuth2Error.INVALID_SCOPE, REDIRECT_URI);
-    }
+        @Test
+        void shouldReturnErrorForUnregisteredScope() throws JOSEException {
+            var jwtClaimsSet =
+                    new JWTClaimsSet.Builder()
+                            .audience(AUDIENCE)
+                            .claim("redirect_uri", REDIRECT_URI)
+                            .claim("response_type", ResponseType.CODE.toString())
+                            .claim("scope", "openid email")
+                            .claim("nonce", NONCE.getValue())
+                            .claim("state", STATE.getValue())
+                            .claim("client_id", CLIENT_ID.getValue())
+                            .issuer(CLIENT_ID.getValue())
+                            .build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
-    @Test
-    void shouldReturnErrorForInvalidAudience() throws JOSEException {
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience("invalid-audience")
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", "openid")
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.getValue())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+            var requestObjectError = service.validateRequestObject(authRequest);
 
-        var requestObjectError = service.validateRequestObject(authRequest);
+            assertOAuthError(requestObjectError, OAuth2Error.INVALID_SCOPE, REDIRECT_URI);
+        }
 
-        assertOAuthError(requestObjectError, OAuth2Error.ACCESS_DENIED, REDIRECT_URI);
-    }
+        @Test
+        void shouldReturnErrorForInvalidAudience() throws JOSEException {
+            var jwtClaimsSet =
+                    new JWTClaimsSet.Builder()
+                            .audience("invalid-audience")
+                            .claim("redirect_uri", REDIRECT_URI)
+                            .claim("response_type", ResponseType.CODE.toString())
+                            .claim("scope", "openid")
+                            .claim("nonce", NONCE.getValue())
+                            .claim("state", STATE.getValue())
+                            .claim("client_id", CLIENT_ID.getValue())
+                            .issuer(CLIENT_ID.getValue())
+                            .build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
-    @Test
-    void shouldReturnErrorForInvalidIssuer() throws JOSEException {
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", "openid")
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.getValue())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .issuer("invalid-client")
-                        .build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+            var requestObjectError = service.validateRequestObject(authRequest);
 
-        var requestObjectError = service.validateRequestObject(authRequest);
+            assertOAuthError(requestObjectError, OAuth2Error.ACCESS_DENIED, REDIRECT_URI);
+        }
 
-        assertOAuthError(requestObjectError, OAuth2Error.UNAUTHORIZED_CLIENT, REDIRECT_URI);
-    }
+        @Test
+        void shouldReturnErrorForInvalidIssuer() throws JOSEException {
+            var jwtClaimsSet =
+                    new JWTClaimsSet.Builder()
+                            .audience(AUDIENCE)
+                            .claim("redirect_uri", REDIRECT_URI)
+                            .claim("response_type", ResponseType.CODE.toString())
+                            .claim("scope", "openid")
+                            .claim("nonce", NONCE.getValue())
+                            .claim("state", STATE.getValue())
+                            .claim("client_id", CLIENT_ID.getValue())
+                            .issuer("invalid-client")
+                            .build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
-    @Test
-    void shouldReturnErrorIfRequestClaimIsPresentJwt() throws JOSEException {
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", "openid")
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.getValue())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .claim("request", "some-random-request-value")
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+            var requestObjectError = service.validateRequestObject(authRequest);
 
-        var requestObjectError = service.validateRequestObject(authRequest);
+            assertOAuthError(requestObjectError, OAuth2Error.UNAUTHORIZED_CLIENT, REDIRECT_URI);
+        }
 
-        assertOAuthError(requestObjectError, OAuth2Error.INVALID_REQUEST, REDIRECT_URI);
-    }
+        @Test
+        void shouldReturnErrorIfRequestClaimIsPresentJwt() throws JOSEException {
+            var jwtClaimsSet =
+                    new JWTClaimsSet.Builder()
+                            .audience(AUDIENCE)
+                            .claim("redirect_uri", REDIRECT_URI)
+                            .claim("response_type", ResponseType.CODE.toString())
+                            .claim("scope", "openid")
+                            .claim("nonce", NONCE.getValue())
+                            .claim("state", STATE.getValue())
+                            .claim("client_id", CLIENT_ID.getValue())
+                            .claim("request", "some-random-request-value")
+                            .issuer(CLIENT_ID.getValue())
+                            .build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
-    @Test
-    void shouldReturnErrorIfRequestUriClaimIsPresentJwt() throws JOSEException {
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", "openid")
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.getValue())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .claim("request_uri", URI.create("https://localhost/request_uri"))
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+            var requestObjectError = service.validateRequestObject(authRequest);
 
-        var requestObjectError = service.validateRequestObject(authRequest);
+            assertOAuthError(requestObjectError, OAuth2Error.INVALID_REQUEST, REDIRECT_URI);
+        }
 
-        assertOAuthError(requestObjectError, OAuth2Error.INVALID_REQUEST, REDIRECT_URI);
-    }
+        @Test
+        void shouldReturnErrorIfRequestUriClaimIsPresentJwt() throws JOSEException {
+            var jwtClaimsSet =
+                    new JWTClaimsSet.Builder()
+                            .audience(AUDIENCE)
+                            .claim("redirect_uri", REDIRECT_URI)
+                            .claim("response_type", ResponseType.CODE.toString())
+                            .claim("scope", "openid")
+                            .claim("nonce", NONCE.getValue())
+                            .claim("state", STATE.getValue())
+                            .claim("client_id", CLIENT_ID.getValue())
+                            .claim("request_uri", URI.create("https://localhost/request_uri"))
+                            .issuer(CLIENT_ID.getValue())
+                            .build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
-    @Test
-    void shouldThrowWhenUnableToValidateRequestJwtSignature()
-            throws JOSEException, NoSuchAlgorithmException {
-        var keyPair2 = KeyPairGenerator.getInstance("RSA").generateKeyPair();
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", SCOPE)
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.getValue())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair2));
+            var requestObjectError = service.validateRequestObject(authRequest);
 
-        assertRuntimeExceptionThrown(authRequest, null);
-    }
+            assertOAuthError(requestObjectError, OAuth2Error.INVALID_REQUEST, REDIRECT_URI);
+        }
 
-    @Test
-    void shouldReturnErrorIfStateIsMissingFromRequestObject() throws JOSEException {
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", SCOPE)
-                        .claim("nonce", NONCE.getValue())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+        @Test
+        void shouldThrowWhenUnableToValidateRequestJwtSignature()
+                throws JOSEException, NoSuchAlgorithmException {
+            var keyPair2 = KeyPairGenerator.getInstance("RSA").generateKeyPair();
+            var jwtClaimsSet =
+                    new JWTClaimsSet.Builder()
+                            .audience(AUDIENCE)
+                            .claim("redirect_uri", REDIRECT_URI)
+                            .claim("response_type", ResponseType.CODE.toString())
+                            .claim("scope", SCOPE)
+                            .claim("nonce", NONCE.getValue())
+                            .claim("state", STATE.getValue())
+                            .claim("client_id", CLIENT_ID.getValue())
+                            .issuer(CLIENT_ID.getValue())
+                            .build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair2));
 
-        var requestObjectError = service.validateRequestObject(authRequest);
+            assertRuntimeExceptionThrown(authRequest, null);
+        }
 
-        assertThat(
-                requestObjectError.get().errorObject().getDescription(),
-                equalTo("Request is missing state parameter"));
-        assertOAuthError(requestObjectError, OAuth2Error.INVALID_REQUEST, REDIRECT_URI);
-    }
+        @Test
+        void shouldReturnErrorIfStateIsMissingFromRequestObject() throws JOSEException {
+            var jwtClaimsSet =
+                    new JWTClaimsSet.Builder()
+                            .audience(AUDIENCE)
+                            .claim("redirect_uri", REDIRECT_URI)
+                            .claim("response_type", ResponseType.CODE.toString())
+                            .claim("scope", SCOPE)
+                            .claim("nonce", NONCE.getValue())
+                            .claim("client_id", CLIENT_ID.getValue())
+                            .issuer(CLIENT_ID.getValue())
+                            .build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
-    @Test
-    void shouldReturnErrorIfNonceIsMissingFromRequestObject() throws JOSEException {
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", SCOPE)
-                        .claim("state", STATE.getValue())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .issuer(CLIENT_ID.getValue())
-                        .build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+            var requestObjectError = service.validateRequestObject(authRequest);
 
-        var requestObjectError = service.validateRequestObject(authRequest);
+            assertThat(
+                    requestObjectError.get().errorObject().getDescription(),
+                    equalTo("Request is missing state parameter"));
+            assertOAuthError(requestObjectError, OAuth2Error.INVALID_REQUEST, REDIRECT_URI);
+        }
 
-        assertThat(
-                requestObjectError.get().errorObject().getDescription(),
-                equalTo("Request is missing nonce parameter"));
-        assertOAuthError(requestObjectError, OAuth2Error.INVALID_REQUEST, REDIRECT_URI);
-    }
+        @Test
+        void shouldReturnErrorIfNonceIsMissingFromRequestObject() throws JOSEException {
+            var jwtClaimsSet =
+                    new JWTClaimsSet.Builder()
+                            .audience(AUDIENCE)
+                            .claim("redirect_uri", REDIRECT_URI)
+                            .claim("response_type", ResponseType.CODE.toString())
+                            .claim("scope", SCOPE)
+                            .claim("state", STATE.getValue())
+                            .claim("client_id", CLIENT_ID.getValue())
+                            .issuer(CLIENT_ID.getValue())
+                            .build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
 
-    @Test
-    void shouldReturnErrorForInvalidUILocales() throws JOSEException {
-        var jwtClaimsSet =
-                new JWTClaimsSet.Builder()
-                        .audience(AUDIENCE)
-                        .claim("redirect_uri", REDIRECT_URI)
-                        .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", SCOPE)
-                        .claim("nonce", NONCE.getValue())
-                        .claim("state", STATE.toString())
-                        .issuer(CLIENT_ID.getValue())
-                        .claim("client_id", CLIENT_ID.getValue())
-                        .claim("ui_locales", "123456")
-                        .build();
-        var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+            var requestObjectError = service.validateRequestObject(authRequest);
 
-        var requestObjectError = service.validateRequestObject(authRequest);
+            assertThat(
+                    requestObjectError.get().errorObject().getDescription(),
+                    equalTo("Request is missing nonce parameter"));
+            assertOAuthError(requestObjectError, OAuth2Error.INVALID_REQUEST, REDIRECT_URI);
+        }
 
-        assertOAuthError(requestObjectError, OAuth2Error.INVALID_REQUEST, REDIRECT_URI);
+        @Test
+        void shouldReturnErrorForInvalidUILocales() throws JOSEException {
+            var jwtClaimsSet =
+                    new JWTClaimsSet.Builder()
+                            .audience(AUDIENCE)
+                            .claim("redirect_uri", REDIRECT_URI)
+                            .claim("response_type", ResponseType.CODE.toString())
+                            .claim("scope", SCOPE)
+                            .claim("nonce", NONCE.getValue())
+                            .claim("state", STATE.toString())
+                            .issuer(CLIENT_ID.getValue())
+                            .claim("client_id", CLIENT_ID.getValue())
+                            .claim("ui_locales", "123456")
+                            .build();
+            var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
+
+            var requestObjectError = service.validateRequestObject(authRequest);
+
+            assertOAuthError(requestObjectError, OAuth2Error.INVALID_REQUEST, REDIRECT_URI);
+        }
     }
 
     private ClientRegistry generateClientRegistry(String clientType, Scope scope) {
