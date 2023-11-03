@@ -26,8 +26,6 @@ import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
-import uk.gov.di.authentication.shared.services.KmsConnectionService;
-import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
@@ -58,14 +56,10 @@ class QueryParamsValidationServiceTest {
     private static final ClientID CLIENT_ID = new ClientID();
     private static final State STATE = new State();
     private static final Nonce NONCE = new Nonce();
-    private static final String KEY_ID = "14342354354353";
     private QueryParamsValidationService queryParamsValidationService;
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final IPVCapacityService ipvCapacityService = mock(IPVCapacityService.class);
-    private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
-    private final RedisConnectionService redisConnectionService =
-            mock(RedisConnectionService.class);
     private PrivateKey privateKey;
 
     @RegisterExtension
@@ -76,11 +70,7 @@ class QueryParamsValidationServiceTest {
     void setUp() {
         queryParamsValidationService =
                 new QueryParamsValidationService(
-                        configurationService,
-                        dynamoClientService,
-                        ipvCapacityService,
-                        kmsConnectionService,
-                        redisConnectionService);
+                        configurationService, dynamoClientService, ipvCapacityService);
         var keyPair = generateRsaKeyPair();
         privateKey = keyPair.getPrivate();
         String publicCertificateAsPem =
@@ -89,6 +79,7 @@ class QueryParamsValidationServiceTest {
                         + "\n-----END PUBLIC KEY-----\n";
         when(configurationService.getOrchestrationToAuthenticationEncryptionPublicKey())
                 .thenReturn(publicCertificateAsPem);
+        when(configurationService.isNonceRequired()).thenReturn(true);
     }
 
     @AfterEach
@@ -114,7 +105,7 @@ class QueryParamsValidationServiceTest {
                         scope,
                         jsonArrayOf("P2.Cl.Cm"),
                         Optional.empty());
-        var errorObject = queryParamsValidationService.validate(authRequest, true);
+        var errorObject = queryParamsValidationService.validate(authRequest);
 
         assertThat(errorObject, equalTo(Optional.empty()));
     }
@@ -136,7 +127,7 @@ class QueryParamsValidationServiceTest {
                         scope,
                         jsonArrayOf("Cm.Cl.P1", "P1.Cl"),
                         Optional.empty());
-        var errorObject = queryParamsValidationService.validate(authRequest, true);
+        var errorObject = queryParamsValidationService.validate(authRequest);
 
         assertTrue(errorObject.isPresent());
 
@@ -159,7 +150,7 @@ class QueryParamsValidationServiceTest {
                                         REDIRECT_URI.toString(), CLIENT_ID.toString())));
         var errorObject =
                 queryParamsValidationService.validate(
-                        generateAuthRequest(REDIRECT_URI.toString(), responseType, scope), true);
+                        generateAuthRequest(REDIRECT_URI.toString(), responseType, scope));
 
         assertTrue(errorObject.isEmpty());
     }
@@ -167,6 +158,7 @@ class QueryParamsValidationServiceTest {
     @Test
     void
             shouldSuccessfullyValidateAuthRequestWhenNonceIsNotIncludedButOptionalButGivenEnvironment() {
+        when(configurationService.isNonceRequired()).thenReturn(false);
         when(dynamoClientService.getClient(CLIENT_ID.toString()))
                 .thenReturn(
                         Optional.of(
@@ -180,7 +172,7 @@ class QueryParamsValidationServiceTest {
                                 URI.create(REDIRECT_URI.toString()))
                         .state(STATE)
                         .build();
-        var errorObject = queryParamsValidationService.validate(authRequest, false);
+        var errorObject = queryParamsValidationService.validate(authRequest);
 
         assertTrue(errorObject.isEmpty());
     }
@@ -211,7 +203,7 @@ class QueryParamsValidationServiceTest {
                         scope,
                         jsonArrayOf("Cl.Cm", "Cl"),
                         Optional.of(oidcClaimsRequest));
-        var errorObject = queryParamsValidationService.validate(authRequest, true);
+        var errorObject = queryParamsValidationService.validate(authRequest);
 
         assertTrue(errorObject.isEmpty());
     }
@@ -235,7 +227,7 @@ class QueryParamsValidationServiceTest {
                         scope,
                         jsonArrayOf("Cl.Cm", "Cl"),
                         Optional.of(oidcClaimsRequest));
-        var errorObject = queryParamsValidationService.validate(authRequest, true);
+        var errorObject = queryParamsValidationService.validate(authRequest);
 
         assertTrue(errorObject.isPresent());
         assertThat(
@@ -259,7 +251,7 @@ class QueryParamsValidationServiceTest {
                                         List.of("openid", "am"))));
         var errorObject =
                 queryParamsValidationService.validate(
-                        generateAuthRequest(REDIRECT_URI.toString(), responseType, scope), true);
+                        generateAuthRequest(REDIRECT_URI.toString(), responseType, scope));
 
         assertTrue(errorObject.isEmpty());
     }
@@ -275,7 +267,7 @@ class QueryParamsValidationServiceTest {
                                         REDIRECT_URI.toString(), CLIENT_ID.toString())));
         var errorObject =
                 queryParamsValidationService.validate(
-                        generateAuthRequest(REDIRECT_URI.toString(), responseType, scope), true);
+                        generateAuthRequest(REDIRECT_URI.toString(), responseType, scope));
 
         assertTrue(errorObject.isPresent());
         assertThat(errorObject.get().errorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
@@ -294,8 +286,7 @@ class QueryParamsValidationServiceTest {
                         () ->
                                 queryParamsValidationService.validate(
                                         generateAuthRequest(
-                                                REDIRECT_URI.toString(), responseType, scope),
-                                        true),
+                                                REDIRECT_URI.toString(), responseType, scope)),
                         "Expected to throw exception");
 
         assertThat(runtimeException.getMessage(), equalTo("No Client found with given ClientID"));
@@ -314,7 +305,7 @@ class QueryParamsValidationServiceTest {
                                         REDIRECT_URI.toString(), CLIENT_ID.toString())));
         var errorObject =
                 queryParamsValidationService.validate(
-                        generateAuthRequest(REDIRECT_URI.toString(), responseType, scope), true);
+                        generateAuthRequest(REDIRECT_URI.toString(), responseType, scope));
 
         assertTrue(errorObject.isPresent());
         assertThat(errorObject.get().errorObject(), equalTo(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE));
@@ -333,7 +324,7 @@ class QueryParamsValidationServiceTest {
                                         REDIRECT_URI.toString(), CLIENT_ID.toString())));
         var errorObject =
                 queryParamsValidationService.validate(
-                        generateAuthRequest(REDIRECT_URI.toString(), responseType, scope), true);
+                        generateAuthRequest(REDIRECT_URI.toString(), responseType, scope));
 
         assertTrue(errorObject.isPresent());
         assertThat(errorObject.get().errorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
@@ -354,7 +345,7 @@ class QueryParamsValidationServiceTest {
                                 responseType, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
                         .nonce(new Nonce())
                         .build();
-        var errorObject = queryParamsValidationService.validate(authRequest, true);
+        var errorObject = queryParamsValidationService.validate(authRequest);
 
         assertTrue(errorObject.isPresent());
         assertThat(
@@ -380,7 +371,7 @@ class QueryParamsValidationServiceTest {
                                 responseType, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
                         .state(new State())
                         .build();
-        var errorObject = queryParamsValidationService.validate(authRequest, true);
+        var errorObject = queryParamsValidationService.validate(authRequest);
 
         assertTrue(errorObject.isPresent());
         assertThat(
@@ -407,7 +398,7 @@ class QueryParamsValidationServiceTest {
                         .nonce(new Nonce())
                         .customParameter("vtr", jsonArrayOf("Cm"))
                         .build();
-        var errorObject = queryParamsValidationService.validate(authRequest, true);
+        var errorObject = queryParamsValidationService.validate(authRequest);
 
         assertTrue(errorObject.isPresent());
         assertThat(
@@ -433,7 +424,7 @@ class QueryParamsValidationServiceTest {
                         .nonce(new Nonce())
                         .customParameter("vtr", jsonArrayOf("P2.Cl.Cm"))
                         .build();
-        var errorObject = queryParamsValidationService.validate(authRequest, true);
+        var errorObject = queryParamsValidationService.validate(authRequest);
 
         assertTrue(errorObject.isPresent());
         assertThat(errorObject.get().errorObject(), equalTo(OAuth2Error.TEMPORARILY_UNAVAILABLE));
@@ -459,7 +450,7 @@ class QueryParamsValidationServiceTest {
                         .nonce(new Nonce())
                         .customParameter("vtr", jsonArrayOf("P2.Cl.Cm"))
                         .build();
-        var errorObject = queryParamsValidationService.validate(authRequest, true);
+        var errorObject = queryParamsValidationService.validate(authRequest);
 
         assertTrue(errorObject.isEmpty());
     }
@@ -481,8 +472,7 @@ class QueryParamsValidationServiceTest {
                         RuntimeException.class,
                         () ->
                                 queryParamsValidationService.validate(
-                                        generateAuthRequest(redirectURi, responseType, scope),
-                                        true),
+                                        generateAuthRequest(redirectURi, responseType, scope)),
                         "Expected to throw exception");
         assertThat(
                 exception.getMessage(),
@@ -505,7 +495,7 @@ class QueryParamsValidationServiceTest {
                         .requestURI(URI.create("https://localhost/redirect-uri"))
                         .build();
 
-        var authRequestError = queryParamsValidationService.validate(authenticationRequest, true);
+        var authRequestError = queryParamsValidationService.validate(authenticationRequest);
 
         assertTrue(authRequestError.isPresent());
         assertThat(
@@ -529,7 +519,7 @@ class QueryParamsValidationServiceTest {
                         .requestObject(new PlainJWT(new JWTClaimsSet.Builder().build()))
                         .build();
 
-        var authRequestError = queryParamsValidationService.validate(authenticationRequest, true);
+        var authRequestError = queryParamsValidationService.validate(authenticationRequest);
 
         assertTrue(authRequestError.isPresent());
         assertThat(

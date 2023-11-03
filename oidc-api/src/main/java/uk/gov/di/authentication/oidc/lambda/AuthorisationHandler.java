@@ -257,9 +257,7 @@ public class AuthorisationHandler
         }
         if (authRequest.getRequestObject() == null) {
             LOG.info("Validating request query params");
-            authRequestError =
-                    queryParamsValidationService.validate(
-                            authRequest, configurationService.isNonceRequired());
+            authRequestError = queryParamsValidationService.validate(authRequest);
         } else {
             LOG.info("Validating request object");
             authRequestError = requestObjectValidationService.validate(authRequest);

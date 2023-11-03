@@ -11,8 +11,6 @@ import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientType;
@@ -42,31 +40,23 @@ import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildUR
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 
-public class RequestObjectValidationService {
-
-    private static final Logger LOG = LogManager.getLogger(RequestObjectValidationService.class);
-
-    public static final String VTR_PARAM = "vtr";
-    private final DynamoClientService dynamoClientService;
-    private final ConfigurationService configurationService;
-    private final IPVCapacityService ipvCapacityService;
+public class RequestObjectValidationService extends AbstractValidationService {
 
     public RequestObjectValidationService(
             DynamoClientService dynamoClientService,
             ConfigurationService configurationService,
             IPVCapacityService ipvCapacityService) {
-        this.dynamoClientService = dynamoClientService;
-        this.configurationService = configurationService;
-        this.ipvCapacityService = ipvCapacityService;
+        super(configurationService, dynamoClientService, ipvCapacityService);
     }
 
     public RequestObjectValidationService(ConfigurationService configurationService) {
-        this(
-                new DynamoClientService(configurationService),
+        super(
                 configurationService,
+                new DynamoClientService(configurationService),
                 new IPVCapacityService(configurationService));
     }
 
+    @Override
     public Optional<AuthRequestError> validate(AuthenticationRequest authRequest) {
         var clientId = authRequest.getClientID().toString();
 

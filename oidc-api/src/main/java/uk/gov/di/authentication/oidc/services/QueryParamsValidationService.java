@@ -1,14 +1,11 @@
 package uk.gov.di.authentication.oidc.services;
 
-import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
@@ -17,8 +14,6 @@ import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.ClientRegistryValidationException;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
-import uk.gov.di.authentication.shared.services.KmsConnectionService;
-import uk.gov.di.authentication.shared.services.RedisConnectionService;
 
 import java.util.List;
 import java.util.Optional;
@@ -28,44 +23,24 @@ import static java.lang.String.format;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 
-public class QueryParamsValidationService {
-
-    public static final String VTR_PARAM = "vtr";
-    public static final String AUTHENTICATION_STATE_STORAGE_PREFIX = "auth-state:";
-    private static final JWSAlgorithm SIGNING_ALGORITHM = JWSAlgorithm.ES256;
-    private final ConfigurationService configurationService;
-    private final DynamoClientService dynamoClientService;
-    private final IPVCapacityService ipvCapacityService;
-    private final KmsConnectionService kmsConnectionService;
-    private final RedisConnectionService redisConnectionService;
-    private static final Logger LOG =
-            LogManager.getLogger(
-                    uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService.class);
+public class QueryParamsValidationService extends AbstractValidationService {
 
     public QueryParamsValidationService(
             ConfigurationService configurationService,
             DynamoClientService dynamoClientService,
-            IPVCapacityService ipvCapacityService,
-            KmsConnectionService kmsConnectionService,
-            RedisConnectionService redisConnectionService) {
-        this.configurationService = configurationService;
-        this.dynamoClientService = dynamoClientService;
-        this.ipvCapacityService = ipvCapacityService;
-        this.kmsConnectionService = kmsConnectionService;
-        this.redisConnectionService = redisConnectionService;
+            IPVCapacityService ipvCapacityService) {
+        super(configurationService, dynamoClientService, ipvCapacityService);
     }
 
     public QueryParamsValidationService(ConfigurationService configurationService) {
         this(
                 configurationService,
                 new DynamoClientService(configurationService),
-                new IPVCapacityService(configurationService),
-                new KmsConnectionService(configurationService),
-                new RedisConnectionService(configurationService));
+                new IPVCapacityService(configurationService));
     }
 
-    public Optional<AuthRequestError> validate(
-            AuthenticationRequest authRequest, boolean isNonceRequired) {
+    @Override
+    public Optional<AuthRequestError> validate(AuthenticationRequest authRequest) {
         var clientId = authRequest.getClientID().toString();
 
         attachLogFieldToLogs(CLIENT_ID, clientId);
@@ -113,7 +88,7 @@ public class QueryParamsValidationService {
                                     "Request contains invalid claims"),
                             redirectURI));
         }
-        if (authRequest.getNonce() == null && isNonceRequired) {
+        if (authRequest.getNonce() == null && configurationService.isNonceRequired()) {
             LOG.error("Nonce is missing from authRequest");
             return Optional.of(
                     new AuthRequestError(
