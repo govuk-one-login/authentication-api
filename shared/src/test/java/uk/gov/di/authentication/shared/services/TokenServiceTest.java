@@ -43,12 +43,14 @@ import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
+import uk.gov.di.authentication.shared.helpers.NowHelper.NowClock;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.helper.SubjectHelper;
 import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.text.ParseException;
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
@@ -83,12 +85,11 @@ public class TokenServiceTest {
     private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
     private final RedisConnectionService redisConnectionService =
             mock(RedisConnectionService.class);
+    private final NowClock clock =
+            new NowClock(Clock.fixed(new Date(0).toInstant(), ZoneId.systemDefault()));
     private final TokenService tokenService =
             new TokenService(
-                    configurationService,
-                    redisConnectionService,
-                    kmsConnectionService,
-                    NowHelper.utcClock());
+                    configurationService, redisConnectionService, kmsConnectionService, clock);
     private static final Subject PUBLIC_SUBJECT = SubjectHelper.govUkSignInSubject();
     private static final Subject INTERNAL_SUBJECT = SubjectHelper.govUkSignInSubject();
     private static final Scope SCOPES =
@@ -507,5 +508,21 @@ public class TokenServiceTest {
         assertThat(
                 tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getStringClaim("sid"),
                 is("client-session-id"));
+        assertThat(
+                tokenResponse
+                        .getOIDCTokens()
+                        .getIDToken()
+                        .getJWTClaimsSet()
+                        .getIssueTime()
+                        .getTime(),
+                is(0L));
+        assertThat(
+                tokenResponse
+                        .getOIDCTokens()
+                        .getIDToken()
+                        .getJWTClaimsSet()
+                        .getExpirationTime()
+                        .getTime(),
+                is(120 * 1000L));
     }
 }
