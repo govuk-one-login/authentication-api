@@ -476,6 +476,12 @@ public class TokenServiceTest {
                 .saveWithExpiry(
                         accessTokenKey, objectMapper.writeValueAsString(accessTokenStore), 300L);
 
+        var accessToken =
+                SignedJWT.parse(tokenResponse.getOIDCTokens().getAccessToken().getValue());
+
+        assertThat(accessToken.getJWTClaimsSet().getIssueTime().getTime(), is(0L));
+        assertThat(accessToken.getJWTClaimsSet().getExpirationTime().getTime(), is(300 * 1000L));
+
         var header = (JWSHeader) tokenResponse.getOIDCTokens().getIDToken().getHeader();
 
         assertThat(tokenResponse.getOIDCTokens().getAccessToken().getLifetime(), is(300L));
