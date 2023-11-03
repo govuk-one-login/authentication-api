@@ -141,19 +141,12 @@ public class OrchestrationAuthorizationService {
 
     public Optional<AuthRequestError> validateQueryParams(
             AuthenticationRequest authRequest, boolean isNonceRequired) {
+
         var clientId = authRequest.getClientID().toString();
-
         attachLogFieldToLogs(CLIENT_ID, clientId);
+        ClientRegistry client = getClientFromDynamo(clientId);
 
-        Optional<ClientRegistry> client = dynamoClientService.getClient(clientId);
-
-        if (client.isEmpty()) {
-            var errorMsg = "No Client found with given ClientID";
-            LOG.warn(errorMsg);
-            throw new ClientRegistryValidationException(errorMsg);
-        }
-
-        if (!client.get().getRedirectUrls().contains(authRequest.getRedirectionURI().toString())) {
+        if (!client.getRedirectUrls().contains(authRequest.getRedirectionURI().toString())) {
             LOG.warn("Invalid Redirect URI in request {}", authRequest.getRedirectionURI());
             throw new ClientRegistryValidationException(
                     format(
@@ -177,10 +170,10 @@ public class OrchestrationAuthorizationService {
             return Optional.of(
                     new AuthRequestError(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE, redirectURI));
         }
-        if (!areScopesValid(authRequest.getScope().toStringList(), client.get())) {
+        if (!areScopesValid(authRequest.getScope().toStringList(), client)) {
             return Optional.of(new AuthRequestError(OAuth2Error.INVALID_SCOPE, redirectURI));
         }
-        if (!areClaimsValid(authRequest.getOIDCClaims(), client.get())) {
+        if (!areClaimsValid(authRequest.getOIDCClaims(), client)) {
             return Optional.of(
                     new AuthRequestError(
                             new ErrorObject(
@@ -211,7 +204,7 @@ public class OrchestrationAuthorizationService {
             var vectorOfTrust = VectorOfTrust.parseFromAuthRequestAttribute(authRequestVtr);
             if (vectorOfTrust.containsLevelOfConfidence()
                     && !ipvCapacityService.isIPVCapacityAvailable()
-                    && !client.get().isTestClient()) {
+                    && !client.isTestClient()) {
                 return Optional.of(
                         new AuthRequestError(OAuth2Error.TEMPORARILY_UNAVAILABLE, redirectURI));
             }
@@ -402,17 +395,11 @@ public class OrchestrationAuthorizationService {
     }
 
     public Optional<AuthRequestError> validateRequestObject(AuthenticationRequest authRequest) {
+
         var clientId = authRequest.getClientID().toString();
-
         attachLogFieldToLogs(CLIENT_ID, clientId);
+        ClientRegistry client = getClientFromDynamo(clientId);
 
-        var client = dynamoClientService.getClient(clientId).orElse(null);
-
-        if (Objects.isNull(client)) {
-            var errorMsg = "No Client found with given ClientID";
-            LOG.warn(errorMsg);
-            throw new RuntimeException(errorMsg);
-        }
         var signedJWT = (SignedJWT) authRequest.getRequestObject();
         var signatureValid = isSignatureValid(signedJWT, client.getPublicKey());
         if (!signatureValid) {
@@ -586,5 +573,15 @@ public class OrchestrationAuthorizationService {
 
     private static Optional<AuthRequestError> errorResponse(URI uri, ErrorObject error) {
         return Optional.of(new AuthRequestError(error, uri));
+    }
+
+    private ClientRegistry getClientFromDynamo(String clientId) {
+        Optional<ClientRegistry> client = dynamoClientService.getClient(clientId);
+        if (client.isEmpty()) {
+            var errorMsg = "No Client found with given ClientID";
+            LOG.warn(errorMsg);
+            throw new ClientRegistryValidationException(errorMsg);
+        }
+        return client.get();
     }
 }
