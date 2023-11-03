@@ -256,7 +256,7 @@ public class AuthorisationHandler
                             authRequest, configurationService.isNonceRequired());
         } else {
             LOG.info("Validating request object");
-            authRequestError = requestObjectValidationService.validateRequestObject(authRequest);
+            authRequestError = requestObjectValidationService.validate(authRequest);
         }
 
         if (authRequestError.isPresent()) {

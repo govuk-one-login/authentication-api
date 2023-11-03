@@ -756,7 +756,7 @@ class AuthorisationHandlerTest {
             event.setHttpMethod("GET");
 
             makeHandlerRequest(event);
-            verify(requestObjectValidationService).validateRequestObject(any());
+            verify(requestObjectValidationService).validate(any());
         }
 
         @Test
@@ -782,7 +782,7 @@ class AuthorisationHandlerTest {
             event.setHttpMethod("GET");
 
             makeHandlerRequest(event);
-            verify(requestObjectValidationService).validateRequestObject(any());
+            verify(requestObjectValidationService).validate(any());
         }
 
         @Test
@@ -819,7 +819,7 @@ class AuthorisationHandlerTest {
         void shouldRedirectToLoginWhenRequestObjectIsValid() throws JOSEException {
             var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
             when(configService.isDocAppApiEnabled()).thenReturn(true);
-            when(requestObjectValidationService.validateRequestObject(any(AuthenticationRequest.class)))
+            when(requestObjectValidationService.validate(any(AuthenticationRequest.class)))
                     .thenReturn(Optional.empty());
             var event = new APIGatewayProxyRequestEvent();
             var jwtClaimsSet = buildjwtClaimsSet();
@@ -854,7 +854,7 @@ class AuthorisationHandlerTest {
                             .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
             verify(sessionService).save(session);
 
-            verify(requestObjectValidationService).validateRequestObject(any());
+            verify(requestObjectValidationService).validate(any());
 
             inOrder.verify(auditService)
                     .submitAuditEvent(
@@ -874,7 +874,7 @@ class AuthorisationHandlerTest {
         void shouldRedirectToLoginWhenPostRequestObjectIsValid() throws JOSEException {
             var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
             when(configService.isDocAppApiEnabled()).thenReturn(true);
-            when(requestObjectValidationService.validateRequestObject(any(AuthenticationRequest.class)))
+            when(requestObjectValidationService.validate(any(AuthenticationRequest.class)))
                     .thenReturn(Optional.empty());
             var event = new APIGatewayProxyRequestEvent();
             event.setHttpMethod("POST");
@@ -1041,7 +1041,7 @@ class AuthorisationHandlerTest {
     @MethodSource("expectedErrorObjects")
     void shouldReturnErrorWhenRequestObjectIsInvalid(ErrorObject errorObject) {
         when(orchestrationAuthorizationService.isJarValidationRequired(any())).thenReturn(true);
-        when(requestObjectValidationService.validateRequestObject(any(AuthenticationRequest.class)))
+        when(requestObjectValidationService.validate(any(AuthenticationRequest.class)))
                 .thenReturn(
                         Optional.of(
                                 new AuthRequestError(

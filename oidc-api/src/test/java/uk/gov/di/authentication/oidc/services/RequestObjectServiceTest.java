@@ -90,7 +90,7 @@ class RequestObjectServiceTest {
                         .build();
         var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
 
-        var requestObjectError = service.validateRequestObject(generateAuthRequest(signedJWT));
+        var requestObjectError = service.validate(generateAuthRequest(signedJWT));
 
         assertThat(requestObjectError, equalTo(Optional.empty()));
     }
@@ -116,7 +116,7 @@ class RequestObjectServiceTest {
                         .build();
         var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
 
-        var requestObjectError = service.validateRequestObject(generateAuthRequest(signedJWT));
+        var requestObjectError = service.validate(generateAuthRequest(signedJWT));
 
         assertThat(requestObjectError, equalTo(Optional.empty()));
     }
@@ -137,7 +137,7 @@ class RequestObjectServiceTest {
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
         assertThrows(
                 RuntimeException.class,
-                () -> service.validateRequestObject(authRequest),
+                () -> service.validate(authRequest),
                 "Expected to throw exception");
     }
 
@@ -156,7 +156,7 @@ class RequestObjectServiceTest {
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
         assertThrows(
                 RuntimeException.class,
-                () -> service.validateRequestObject(authRequest),
+                () -> service.validate(authRequest),
                 "Expected to throw exception");
     }
 
@@ -178,7 +178,7 @@ class RequestObjectServiceTest {
 
         assertThrows(
                 RuntimeException.class,
-                () -> service.validateRequestObject(generateAuthRequest(signedJWT)),
+                () -> service.validate(generateAuthRequest(signedJWT)),
                 "Expected to throw exception");
     }
 
@@ -206,7 +206,7 @@ class RequestObjectServiceTest {
                         .build();
         var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
 
-        var requestObjectError = service.validateRequestObject(generateAuthRequest(signedJWT));
+        var requestObjectError = service.validate(generateAuthRequest(signedJWT));
 
         assertTrue(requestObjectError.isPresent());
         assertThat(
@@ -228,7 +228,7 @@ class RequestObjectServiceTest {
                         .claim("client_id", CLIENT_ID.getValue())
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        var requestObjectError = service.validateRequestObject(authRequest);
+        var requestObjectError = service.validate(authRequest);
 
         assertTrue(requestObjectError.isPresent());
         assertThat(
@@ -261,7 +261,7 @@ class RequestObjectServiceTest {
                         .nonce(new Nonce())
                         .requestObject(generateSignedJWT(jwtClaimsSet, keyPair))
                         .build();
-        var requestObjectError = service.validateRequestObject(authRequest);
+        var requestObjectError = service.validate(authRequest);
 
         assertTrue(requestObjectError.isPresent());
         assertThat(
@@ -284,7 +284,7 @@ class RequestObjectServiceTest {
                         .claim("client_id", "invalid-client-id")
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        var requestObjectError = service.validateRequestObject(authRequest);
+        var requestObjectError = service.validate(authRequest);
 
         assertTrue(requestObjectError.isPresent());
         assertThat(
@@ -306,7 +306,7 @@ class RequestObjectServiceTest {
                         .issuer(CLIENT_ID.getValue())
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        var requestObjectError = service.validateRequestObject(authRequest);
+        var requestObjectError = service.validate(authRequest);
 
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
@@ -334,7 +334,7 @@ class RequestObjectServiceTest {
                         .build();
         var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
 
-        var requestObjectError = service.validateRequestObject(generateAuthRequest(signedJWT));
+        var requestObjectError = service.validate(generateAuthRequest(signedJWT));
 
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
@@ -357,7 +357,7 @@ class RequestObjectServiceTest {
         var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
 
         var requestObjectError =
-                service.validateRequestObject(
+                service.validate(
                         generateAuthRequest(
                                 signedJWT, new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL)));
 
@@ -380,7 +380,7 @@ class RequestObjectServiceTest {
                         .issuer(CLIENT_ID.getValue())
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        var requestObjectError = service.validateRequestObject(authRequest);
+        var requestObjectError = service.validate(authRequest);
 
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_SCOPE));
@@ -402,7 +402,7 @@ class RequestObjectServiceTest {
                         .build();
 
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        var requestObjectError = service.validateRequestObject(authRequest);
+        var requestObjectError = service.validate(authRequest);
 
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.ACCESS_DENIED));
@@ -423,7 +423,7 @@ class RequestObjectServiceTest {
                         .issuer("invalid-client")
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        var requestObjectError = service.validateRequestObject(authRequest);
+        var requestObjectError = service.validate(authRequest);
 
         assertTrue(requestObjectError.isPresent());
         assertThat(
@@ -447,7 +447,7 @@ class RequestObjectServiceTest {
                         .build();
         generateSignedJWT(jwtClaimsSet, keyPair);
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        var requestObjectError = service.validateRequestObject(authRequest);
+        var requestObjectError = service.validate(authRequest);
 
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
@@ -469,7 +469,7 @@ class RequestObjectServiceTest {
                         .issuer(CLIENT_ID.getValue())
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        var requestObjectError = service.validateRequestObject(authRequest);
+        var requestObjectError = service.validate(authRequest);
 
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
@@ -494,7 +494,7 @@ class RequestObjectServiceTest {
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair2));
         assertThrows(
                 RuntimeException.class,
-                () -> service.validateRequestObject(authRequest),
+                () -> service.validate(authRequest),
                 "Expected to throw exception");
     }
 
@@ -512,7 +512,7 @@ class RequestObjectServiceTest {
                         .build();
         var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
 
-        var requestObjectError = service.validateRequestObject(generateAuthRequest(signedJWT));
+        var requestObjectError = service.validate(generateAuthRequest(signedJWT));
 
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
@@ -536,7 +536,7 @@ class RequestObjectServiceTest {
                         .build();
         var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
 
-        var requestObjectError = service.validateRequestObject(generateAuthRequest(signedJWT));
+        var requestObjectError = service.validate(generateAuthRequest(signedJWT));
 
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));
@@ -561,7 +561,7 @@ class RequestObjectServiceTest {
                         .claim("ui_locales", "123456")
                         .build();
         var authRequest = generateAuthRequest(generateSignedJWT(jwtClaimsSet, keyPair));
-        var requestObjectError = service.validateRequestObject(authRequest);
+        var requestObjectError = service.validate(authRequest);
 
         assertTrue(requestObjectError.isPresent());
         assertThat(requestObjectError.get().errorObject(), equalTo(OAuth2Error.INVALID_REQUEST));

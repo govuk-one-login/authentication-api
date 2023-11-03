@@ -67,7 +67,7 @@ public class RequestObjectValidationService {
                 new IPVCapacityService(configurationService));
     }
 
-    public Optional<AuthRequestError> validateRequestObject(AuthenticationRequest authRequest) {
+    public Optional<AuthRequestError> validate(AuthenticationRequest authRequest) {
         var clientId = authRequest.getClientID().toString();
 
         attachLogFieldToLogs(CLIENT_ID, clientId);
