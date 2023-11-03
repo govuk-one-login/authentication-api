@@ -41,19 +41,12 @@ public class QueryParamsValidationService extends AbstractValidationService {
 
     @Override
     public Optional<AuthRequestError> validate(AuthenticationRequest authRequest) {
+
         var clientId = authRequest.getClientID().toString();
-
         attachLogFieldToLogs(CLIENT_ID, clientId);
+        ClientRegistry client = getClientFromDynamo(clientId);
 
-        Optional<ClientRegistry> client = dynamoClientService.getClient(clientId);
-
-        if (client.isEmpty()) {
-            var errorMsg = "No Client found with given ClientID";
-            LOG.warn(errorMsg);
-            throw new ClientRegistryValidationException(errorMsg);
-        }
-
-        if (!client.get().getRedirectUrls().contains(authRequest.getRedirectionURI().toString())) {
+        if (!client.getRedirectUrls().contains(authRequest.getRedirectionURI().toString())) {
             LOG.warn("Invalid Redirect URI in request {}", authRequest.getRedirectionURI());
             throw new ClientRegistryValidationException(
                     format(
@@ -77,10 +70,10 @@ public class QueryParamsValidationService extends AbstractValidationService {
             return Optional.of(
                     new AuthRequestError(OAuth2Error.UNSUPPORTED_RESPONSE_TYPE, redirectURI));
         }
-        if (!areScopesValid(authRequest.getScope().toStringList(), client.get())) {
+        if (!areScopesValid(authRequest.getScope().toStringList(), client)) {
             return Optional.of(new AuthRequestError(OAuth2Error.INVALID_SCOPE, redirectURI));
         }
-        if (!areClaimsValid(authRequest.getOIDCClaims(), client.get())) {
+        if (!areClaimsValid(authRequest.getOIDCClaims(), client)) {
             return Optional.of(
                     new AuthRequestError(
                             new ErrorObject(
@@ -111,7 +104,7 @@ public class QueryParamsValidationService extends AbstractValidationService {
             var vectorOfTrust = VectorOfTrust.parseFromAuthRequestAttribute(authRequestVtr);
             if (vectorOfTrust.containsLevelOfConfidence()
                     && !ipvCapacityService.isIPVCapacityAvailable()
-                    && !client.get().isTestClient()) {
+                    && !client.isTestClient()) {
                 return Optional.of(
                         new AuthRequestError(OAuth2Error.TEMPORARILY_UNAVAILABLE, redirectURI));
             }

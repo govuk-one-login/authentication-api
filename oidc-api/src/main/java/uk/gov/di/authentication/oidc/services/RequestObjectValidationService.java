@@ -58,17 +58,11 @@ public class RequestObjectValidationService extends AbstractValidationService {
 
     @Override
     public Optional<AuthRequestError> validate(AuthenticationRequest authRequest) {
+
         var clientId = authRequest.getClientID().toString();
-
         attachLogFieldToLogs(CLIENT_ID, clientId);
+        ClientRegistry client = getClientFromDynamo(clientId);
 
-        var client = dynamoClientService.getClient(clientId).orElse(null);
-
-        if (Objects.isNull(client)) {
-            var errorMsg = "No Client found with given ClientID";
-            LOG.warn(errorMsg);
-            throw new RuntimeException(errorMsg);
-        }
         var signedJWT = (SignedJWT) authRequest.getRequestObject();
         var signatureValid = isSignatureValid(signedJWT, client.getPublicKey());
         if (!signatureValid) {

@@ -4,9 +4,11 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
+import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
 
+import java.util.Objects;
 import java.util.Optional;
 
 public abstract class AbstractValidationService {
@@ -27,4 +29,15 @@ public abstract class AbstractValidationService {
     }
 
     public abstract Optional<AuthRequestError> validate(AuthenticationRequest authRequest);
+
+    ClientRegistry getClientFromDynamo(String clientId) {
+        var client = dynamoClientService.getClient(clientId).orElse(null);
+
+        if (Objects.isNull(client)) {
+            var errorMsg = "No Client found with given ClientID";
+            LOG.warn(errorMsg);
+            throw new RuntimeException(errorMsg);
+        }
+        return client;
+    }
 }
