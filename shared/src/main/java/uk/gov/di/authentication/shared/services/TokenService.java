@@ -38,7 +38,6 @@ import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
-import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper.NowClock;
 import uk.gov.di.authentication.shared.helpers.RequestBodyHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -247,14 +246,14 @@ public class TokenService {
 
         LOG.info("Generating IdToken");
         URI trustMarkUri = buildURI(configService.getOidcApiBaseURL().get(), "/trustmark");
-        Date expiryDate = NowHelper.nowPlus(configService.getIDTokenExpiry(), ChronoUnit.SECONDS);
+        Date expiryDate = nowClock.nowPlus(configService.getIDTokenExpiry(), ChronoUnit.SECONDS);
         IDTokenClaimsSet idTokenClaims =
                 new IDTokenClaimsSet(
                         new Issuer(configService.getOidcApiBaseURL().get()),
                         subject,
                         List.of(new Audience(clientId)),
                         expiryDate,
-                        NowHelper.now());
+                        nowClock.now());
 
         idTokenClaims.setAccessTokenHash(accessTokenHash);
         idTokenClaims.setSessionID(new SessionID(journeyId));
@@ -284,7 +283,7 @@ public class TokenService {
 
         LOG.info("Generating AccessToken");
         Date expiryDate =
-                NowHelper.nowPlus(configService.getAccessTokenExpiry(), ChronoUnit.SECONDS);
+                nowClock.nowPlus(configService.getAccessTokenExpiry(), ChronoUnit.SECONDS);
         var jwtID = UUID.randomUUID().toString();
 
         LOG.info("AccessToken being created with JWTID: {}", jwtID);
@@ -294,7 +293,7 @@ public class TokenService {
                         .claim("scope", scopes)
                         .issuer(configService.getOidcApiBaseURL().get())
                         .expirationTime(expiryDate)
-                        .issueTime(NowHelper.now())
+                        .issueTime(nowClock.now())
                         .claim("client_id", clientId)
                         .subject(subject.getValue())
                         .jwtID(jwtID);
@@ -337,14 +336,14 @@ public class TokenService {
             Subject subject,
             JWSAlgorithm signingAlgorithm) {
         LOG.info("Generating RefreshToken");
-        Date expiryDate = NowHelper.nowPlus(configService.getSessionExpiry(), ChronoUnit.SECONDS);
+        Date expiryDate = nowClock.nowPlus(configService.getSessionExpiry(), ChronoUnit.SECONDS);
         var jwtId = IdGenerator.generate();
         JWTClaimsSet claimsSet =
                 new JWTClaimsSet.Builder()
                         .claim("scope", scopes)
                         .issuer(configService.getOidcApiBaseURL().get())
                         .expirationTime(expiryDate)
-                        .issueTime(NowHelper.now())
+                        .issueTime(nowClock.now())
                         .claim("client_id", clientId)
                         .subject(subject.getValue())
                         .jwtID(jwtId)
