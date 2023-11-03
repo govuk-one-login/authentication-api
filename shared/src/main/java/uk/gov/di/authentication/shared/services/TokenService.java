@@ -39,6 +39,7 @@ import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
+import uk.gov.di.authentication.shared.helpers.NowHelper.NowClock;
 import uk.gov.di.authentication.shared.helpers.RequestBodyHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
@@ -63,6 +64,7 @@ public class TokenService {
     private final ConfigurationService configService;
     private final RedisConnectionService redisConnectionService;
     private final KmsConnectionService kmsConnectionService;
+    private final NowClock nowClock;
     private static final JWSAlgorithm TOKEN_ALGORITHM = JWSAlgorithm.ES256;
     private static final Logger LOG = LogManager.getLogger(TokenService.class);
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
@@ -75,10 +77,12 @@ public class TokenService {
     public TokenService(
             ConfigurationService configService,
             RedisConnectionService redisConnectionService,
-            KmsConnectionService kmsConnectionService) {
+            KmsConnectionService kmsConnectionService,
+            NowClock nowClock) {
         this.configService = configService;
         this.redisConnectionService = redisConnectionService;
         this.kmsConnectionService = kmsConnectionService;
+        this.nowClock = nowClock;
     }
 
     public OIDCTokenResponse generateTokenResponse(

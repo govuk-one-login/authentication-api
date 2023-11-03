@@ -25,6 +25,7 @@ import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
@@ -99,7 +100,11 @@ public class TokenHandler
         this.configurationService = configurationService;
         this.redisConnectionService = new RedisConnectionService(configurationService);
         this.tokenService =
-                new TokenService(configurationService, this.redisConnectionService, kms);
+                new TokenService(
+                        configurationService,
+                        this.redisConnectionService,
+                        kms,
+                        NowHelper.utcClock());
         this.dynamoService = new DynamoService(configurationService);
         this.authorisationCodeService =
                 new AuthorisationCodeService(

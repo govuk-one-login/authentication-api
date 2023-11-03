@@ -84,7 +84,11 @@ public class TokenServiceTest {
     private final RedisConnectionService redisConnectionService =
             mock(RedisConnectionService.class);
     private final TokenService tokenService =
-            new TokenService(configurationService, redisConnectionService, kmsConnectionService);
+            new TokenService(
+                    configurationService,
+                    redisConnectionService,
+                    kmsConnectionService,
+                    NowHelper.utcClock());
     private static final Subject PUBLIC_SUBJECT = SubjectHelper.govUkSignInSubject();
     private static final Subject INTERNAL_SUBJECT = SubjectHelper.govUkSignInSubject();
     private static final Scope SCOPES =
