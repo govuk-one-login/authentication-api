@@ -11,7 +11,6 @@ notify_template_map = {
 }
 
 custom_doc_app_claim_enabled     = true
-doc_app_api_enabled              = true
 doc_app_cri_data_endpoint        = "userinfo"
 doc_app_cri_data_v2_endpoint     = "userinfo/v2"
 doc_app_use_cri_data_v2_endpoint = true
