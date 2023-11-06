@@ -254,7 +254,7 @@ jobs:
             account-management-integration-tests/build/jacoco/
             account-management-integration-tests/build/reports/
             delivery-receipts-integration-tests/build/jacoco/
-            delivery--receipts-integration-tests/build/reports/
+            delivery-receipts-integration-tests/build/reports/
 
   run-sonar-analysis:
     runs-on: ubuntu-latest
