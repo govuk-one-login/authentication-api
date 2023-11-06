@@ -19,3 +19,25 @@ data "aws_iam_policy_document" "account_modifiers_encryption_key_policy_document
     ]
   }
 }
+
+resource "aws_iam_policy" "client_registry_encryption_key_kms_policy" {
+  name        = "${var.environment}-client-registry-table-encryption-key-kms-policy"
+  path        = "/"
+  description = "IAM policy for managing KMS encryption of the client registry table"
+
+  policy = data.aws_iam_policy_document.client_registry_encryption_key_policy_document.json
+}
+
+data "aws_iam_policy_document" "client_registry_encryption_key_policy_document" {
+  statement {
+    sid    = "AllowAccessToClientRegistryTableKmsEncryptionKey"
+    effect = "Allow"
+
+    actions = [
+      "kms:*",
+    ]
+    resources = [
+      aws_kms_key.client_registry_table_encryption_key.arn
+    ]
+  }
+}

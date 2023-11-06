@@ -9,7 +9,8 @@ module "client_update_role" {
     aws_iam_policy.dynamo_client_registry_write_access_policy.arn,
     aws_iam_policy.dynamo_client_registry_read_access_policy.arn,
     aws_iam_policy.lambda_sns_policy.arn,
-    module.oidc_txma_audit.access_policy_arn
+    module.oidc_txma_audit.access_policy_arn,
+    local.client_registry_encryption_policy_arn
   ]
 }
 
