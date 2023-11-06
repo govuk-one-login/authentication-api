@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.oidc.entity;
+package uk.gov.di.authentication.shared.entity;
 
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
