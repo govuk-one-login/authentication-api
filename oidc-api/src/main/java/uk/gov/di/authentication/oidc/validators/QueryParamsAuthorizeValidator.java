@@ -60,11 +60,6 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
             return Optional.of(
                     new AuthRequestError(OAuth2Error.REQUEST_URI_NOT_SUPPORTED, redirectURI));
         }
-        if (authRequest.getRequestObject() != null) {
-            LOG.error("Request object not expected here");
-            return Optional.of(
-                    new AuthRequestError(OAuth2Error.REQUEST_NOT_SUPPORTED, redirectURI));
-        }
         if (!authRequest.getResponseType().toString().equals(ResponseType.CODE.toString())) {
             LOG.error(
                     "Unsupported responseType included in request. Expected responseType of code");

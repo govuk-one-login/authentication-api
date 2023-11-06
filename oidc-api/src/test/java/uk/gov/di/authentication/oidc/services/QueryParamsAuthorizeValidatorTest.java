@@ -3,8 +3,6 @@ package uk.gov.di.authentication.oidc.services;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.crypto.RSADecrypter;
 import com.nimbusds.jwt.EncryptedJWT;
-import com.nimbusds.jwt.JWTClaimsSet;
-import com.nimbusds.jwt.PlainJWT;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
@@ -502,29 +500,6 @@ class QueryParamsAuthorizeValidatorTest {
         assertThat(
                 authRequestError.get().errorObject(),
                 equalTo(OAuth2Error.REQUEST_URI_NOT_SUPPORTED));
-    }
-
-    @Test
-    void shouldReturnErrorWhenRequestObjectIsPresent() {
-        when(dynamoClientService.getClient(CLIENT_ID.toString()))
-                .thenReturn(
-                        Optional.of(
-                                generateClientRegistry(
-                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
-        var authenticationRequest =
-                new AuthenticationRequest.Builder(
-                                new ResponseType(ResponseType.Value.CODE),
-                                new Scope(OIDCScopeValue.OPENID),
-                                CLIENT_ID,
-                                REDIRECT_URI)
-                        .requestObject(new PlainJWT(new JWTClaimsSet.Builder().build()))
-                        .build();
-
-        var authRequestError = queryParamsAuthorizeValidator.validate(authenticationRequest);
-
-        assertTrue(authRequestError.isPresent());
-        assertThat(
-                authRequestError.get().errorObject(), equalTo(OAuth2Error.REQUEST_NOT_SUPPORTED));
     }
 
     private ClientRegistry generateClientRegistry(String redirectURI, String clientID) {
