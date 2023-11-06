@@ -58,10 +58,7 @@ public class JwksHandler
             List<JWK> signingKeys = new ArrayList<>();
 
             signingKeys.add(jwksService.getPublicTokenJwkWithOpaqueId());
-
-            if (configurationService.isDocAppApiEnabled()) {
-                signingKeys.add(jwksService.getPublicDocAppSigningJwkWithOpaqueId());
-            }
+            signingKeys.add(jwksService.getPublicDocAppSigningJwkWithOpaqueId());
 
             if (configurationService.isRsaSigningAvailable()) {
                 signingKeys.add(jwksService.getPublicTokenRsaJwkWithOpaqueId());
