@@ -63,4 +63,5 @@ locals {
   authentication_callback_userinfo_encryption_key_arn = data.terraform_remote_state.shared.outputs.authentication_callback_userinfo_encryption_key_arn
   account_modifiers_encryption_policy_arn             = data.terraform_remote_state.shared.outputs.account_modifiers_encryption_policy_arn
   client_registry_encryption_policy_arn               = data.terraform_remote_state.shared.outputs.client_registry_encryption_policy_arn
+  user_profile_encryption_policy_arn                  = data.terraform_remote_state.shared.outputs.user_profile_encryption_policy_arn
 }

@@ -17,6 +17,7 @@ locals {
   authentication_subnet_ids                = data.terraform_remote_state.shared.outputs.authentication_subnet_ids
   authentication_security_group_id         = data.terraform_remote_state.shared.outputs.authentication_security_group_id
   authentication_egress_security_group_id  = data.terraform_remote_state.shared.outputs.authentication_egress_security_group_id
+  user_profile_encryption_policy_arn       = data.terraform_remote_state.shared.outputs.user_profile_encryption_policy_arn
   default_performance_parameters = {
     memory  = 1024,
     timeout = 900,

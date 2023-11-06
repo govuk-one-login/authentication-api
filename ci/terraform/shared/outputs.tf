@@ -185,3 +185,7 @@ output "account_modifiers_encryption_policy_arn" {
 output "client_registry_encryption_policy_arn" {
   value = aws_iam_policy.client_registry_encryption_key_kms_policy.arn
 }
+
+output "user_profile_encryption_policy_arn" {
+  value = aws_iam_policy.user_profile_encryption_key_kms_policy.arn
+}

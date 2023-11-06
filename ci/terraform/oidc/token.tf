@@ -12,7 +12,8 @@ module "oidc_token_role" {
     aws_iam_policy.dynamo_client_registry_read_access_policy.arn,
     aws_iam_policy.redis_parameter_policy.arn,
     module.oidc_txma_audit.access_policy_arn,
-    local.client_registry_encryption_policy_arn
+    local.client_registry_encryption_policy_arn,
+    local.user_profile_encryption_policy_arn
   ]
 }
 
