@@ -61,5 +61,4 @@ locals {
   di_auth_ext_api_id                                  = var.support_auth_orch_split ? data.terraform_remote_state.auth-ext-api[0].outputs.di_auth_ext_api_id : ""
   vpce_id                                             = var.support_auth_orch_split ? data.terraform_remote_state.auth-ext-api[0].outputs.vpce_id : ""
   authentication_callback_userinfo_encryption_key_arn = data.terraform_remote_state.shared.outputs.authentication_callback_userinfo_encryption_key_arn
-  account_modifiers_encryption_policy_arn             = data.terraform_remote_state.shared.outputs.account_modifiers_encryption_policy_arn
 }

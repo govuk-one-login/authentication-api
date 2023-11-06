@@ -177,7 +177,3 @@ output "auth_code_store_signing_configuration_arn" {
 output "authentication_callback_userinfo_encryption_key_arn" {
   value = aws_kms_key.authentication_callback_userinfo_encryption_key.arn
 }
-
-output "account_modifiers_encryption_policy_arn" {
-  value = aws_iam_policy.account_modifiers_encryption_key_kms_policy.arn
-}
