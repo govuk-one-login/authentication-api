@@ -12,15 +12,15 @@ import uk.gov.di.authentication.shared.services.DynamoClientService;
 import java.util.Objects;
 import java.util.Optional;
 
-public abstract class AbstractValidationService {
+public abstract class BaseAuthorizeValidator {
 
     protected static final String VTR_PARAM = "vtr";
     protected final ConfigurationService configurationService;
     protected final DynamoClientService dynamoClientService;
     protected final IPVCapacityService ipvCapacityService;
-    protected static final Logger LOG = LogManager.getLogger(AbstractValidationService.class);
+    protected static final Logger LOG = LogManager.getLogger(BaseAuthorizeValidator.class);
 
-    protected AbstractValidationService(
+    protected BaseAuthorizeValidator(
             ConfigurationService configurationService,
             DynamoClientService dynamoClientService,
             IPVCapacityService ipvCapacityService) {

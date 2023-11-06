@@ -41,7 +41,7 @@ import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildUR
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 
-public class RequestObjectValidationService extends AbstractValidationService {
+public class RequestObjectValidationService extends BaseAuthorizeValidator {
 
     public RequestObjectValidationService(
             DynamoClientService dynamoClientService,
