@@ -51,7 +51,8 @@ import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.oidc.exceptions.InvalidHttpMethodException;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
-import uk.gov.di.authentication.oidc.services.RequestObjectService;
+import uk.gov.di.authentication.oidc.validators.QueryParamsAuthorizeValidator;
+import uk.gov.di.authentication.oidc.validators.RequestObjectAuthorizeValidator;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
@@ -131,7 +132,10 @@ class AuthorisationHandlerTest {
 
     private final NoSessionOrchestrationService noSessionOrchestrationService =
             mock(NoSessionOrchestrationService.class);
-    private final RequestObjectService requestObjectService = mock(RequestObjectService.class);
+    private final RequestObjectAuthorizeValidator requestObjectAuthorizeValidator =
+            mock(RequestObjectAuthorizeValidator.class);
+    private final QueryParamsAuthorizeValidator queryParamsAuthorizeValidator =
+            mock(QueryParamsAuthorizeValidator.class);
     private final ClientService clientService = mock(ClientService.class);
     private final InOrder inOrder = inOrder(auditService);
     private static final String EXPECTED_SESSION_COOKIE_STRING =
@@ -185,8 +189,7 @@ class AuthorisationHandlerTest {
         when(configService.getSessionCookieAttributes()).thenReturn("Secure; HttpOnly;");
         when(configService.getSessionCookieMaxAge()).thenReturn(3600);
         when(configService.getPersistentCookieMaxAge()).thenReturn(34190000);
-        when(orchestrationAuthorizationService.validateAuthRequest(
-                        any(AuthenticationRequest.class), anyBoolean()))
+        when(queryParamsAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                 .thenReturn(Optional.empty());
         when(orchestrationAuthorizationService.getExistingOrCreateNewPersistentSessionId(any()))
                 .thenReturn(PERSISTENT_SESSION_ID);
@@ -201,7 +204,8 @@ class AuthorisationHandlerTest {
                         clientSessionService,
                         orchestrationAuthorizationService,
                         auditService,
-                        requestObjectService,
+                        queryParamsAuthorizeValidator,
+                        requestObjectAuthorizeValidator,
                         clientService,
                         docAppAuthorisationService,
                         cloudwatchMetricsService,
@@ -528,7 +532,7 @@ class AuthorisationHandlerTest {
                     () -> makeDocAppHandlerRequest(),
                     format("No Client found for ClientID: %s", CLIENT_ID.getValue()));
             verifyNoInteractions(configService);
-            verifyNoInteractions(requestObjectService);
+            verifyNoInteractions(requestObjectAuthorizeValidator);
         }
 
         @Test
@@ -577,8 +581,7 @@ class AuthorisationHandlerTest {
 
         @Test
         void shouldReturn400WhenAuthorisationRequestContainsInvalidScope() {
-            when(orchestrationAuthorizationService.validateAuthRequest(
-                            any(AuthenticationRequest.class), anyBoolean()))
+            when(queryParamsAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                     .thenReturn(
                             Optional.of(
                                     new AuthRequestError(
@@ -620,8 +623,7 @@ class AuthorisationHandlerTest {
 
         @Test
         void shouldReturn400WhenAuthorisationRequestBodyContainsInvalidScope() {
-            when(orchestrationAuthorizationService.validateAuthRequest(
-                            any(AuthenticationRequest.class), anyBoolean()))
+            when(queryParamsAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                     .thenReturn(
                             Optional.of(
                                     new AuthRequestError(
@@ -756,7 +758,7 @@ class AuthorisationHandlerTest {
             event.setHttpMethod("GET");
 
             makeHandlerRequest(event);
-            verify(requestObjectService).validateRequestObject(any());
+            verify(requestObjectAuthorizeValidator).validate(any());
         }
 
         @Test
@@ -782,7 +784,7 @@ class AuthorisationHandlerTest {
             event.setHttpMethod("GET");
 
             makeHandlerRequest(event);
-            verify(requestObjectService).validateRequestObject(any());
+            verify(requestObjectAuthorizeValidator).validate(any());
         }
 
         @Test
@@ -819,7 +821,7 @@ class AuthorisationHandlerTest {
         void shouldRedirectToLoginWhenRequestObjectIsValid() throws JOSEException {
             var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
             when(configService.isDocAppApiEnabled()).thenReturn(true);
-            when(requestObjectService.validateRequestObject(any(AuthenticationRequest.class)))
+            when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                     .thenReturn(Optional.empty());
             var event = new APIGatewayProxyRequestEvent();
             var jwtClaimsSet = buildjwtClaimsSet();
@@ -854,7 +856,7 @@ class AuthorisationHandlerTest {
                             .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
             verify(sessionService).save(session);
 
-            verify(requestObjectService).validateRequestObject(any());
+            verify(requestObjectAuthorizeValidator).validate(any());
 
             inOrder.verify(auditService)
                     .submitAuditEvent(
@@ -874,7 +876,7 @@ class AuthorisationHandlerTest {
         void shouldRedirectToLoginWhenPostRequestObjectIsValid() throws JOSEException {
             var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
             when(configService.isDocAppApiEnabled()).thenReturn(true);
-            when(requestObjectService.validateRequestObject(any(AuthenticationRequest.class)))
+            when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                     .thenReturn(Optional.empty());
             var event = new APIGatewayProxyRequestEvent();
             event.setHttpMethod("POST");
@@ -1041,7 +1043,7 @@ class AuthorisationHandlerTest {
     @MethodSource("expectedErrorObjects")
     void shouldReturnErrorWhenRequestObjectIsInvalid(ErrorObject errorObject) {
         when(orchestrationAuthorizationService.isJarValidationRequired(any())).thenReturn(true);
-        when(requestObjectService.validateRequestObject(any(AuthenticationRequest.class)))
+        when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                 .thenReturn(
                         Optional.of(
                                 new AuthRequestError(

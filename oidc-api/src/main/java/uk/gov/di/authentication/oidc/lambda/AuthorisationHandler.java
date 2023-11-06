@@ -31,7 +31,8 @@ import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.oidc.exceptions.InvalidHttpMethodException;
 import uk.gov.di.authentication.oidc.helpers.RequestObjectToAuthRequestHelper;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
-import uk.gov.di.authentication.oidc.services.RequestObjectService;
+import uk.gov.di.authentication.oidc.validators.QueryParamsAuthorizeValidator;
+import uk.gov.di.authentication.oidc.validators.RequestObjectAuthorizeValidator;
 import uk.gov.di.authentication.shared.conditions.DocAppUserHelper;
 import uk.gov.di.authentication.shared.conditions.IdentityHelper;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -95,7 +96,8 @@ public class AuthorisationHandler
     private final ConfigurationService configurationService;
     private final ClientSessionService clientSessionService;
     private final OrchestrationAuthorizationService orchestrationAuthorizationService;
-    private final RequestObjectService requestObjectService;
+    private final QueryParamsAuthorizeValidator queryParamsAuthorizeValidator;
+    private final RequestObjectAuthorizeValidator requestObjectAuthorizeValidator;
     private final AuditService auditService;
     private final ClientService clientService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
@@ -109,7 +111,8 @@ public class AuthorisationHandler
             ClientSessionService clientSessionService,
             OrchestrationAuthorizationService orchestrationAuthorizationService,
             AuditService auditService,
-            RequestObjectService requestObjectService,
+            QueryParamsAuthorizeValidator queryParamsAuthorizeValidator,
+            RequestObjectAuthorizeValidator requestObjectAuthorizeValidator,
             ClientService clientService,
             DocAppAuthorisationService docAppAuthorisationService,
             CloudwatchMetricsService cloudwatchMetricsService,
@@ -119,7 +122,8 @@ public class AuthorisationHandler
         this.clientSessionService = clientSessionService;
         this.orchestrationAuthorizationService = orchestrationAuthorizationService;
         this.auditService = auditService;
-        this.requestObjectService = requestObjectService;
+        this.queryParamsAuthorizeValidator = queryParamsAuthorizeValidator;
+        this.requestObjectAuthorizeValidator = requestObjectAuthorizeValidator;
         this.clientService = clientService;
         this.docAppAuthorisationService = docAppAuthorisationService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
@@ -133,7 +137,10 @@ public class AuthorisationHandler
         this.orchestrationAuthorizationService =
                 new OrchestrationAuthorizationService(configurationService);
         this.auditService = new AuditService(configurationService);
-        this.requestObjectService = new RequestObjectService(configurationService);
+        this.queryParamsAuthorizeValidator =
+                new QueryParamsAuthorizeValidator(configurationService);
+        this.requestObjectAuthorizeValidator =
+                new RequestObjectAuthorizeValidator(configurationService);
         this.clientService = new DynamoClientService(configurationService);
         var kmsConnectionService = new KmsConnectionService(configurationService);
         this.docAppAuthorisationService =
@@ -251,12 +258,10 @@ public class AuthorisationHandler
         }
         if (authRequest.getRequestObject() == null) {
             LOG.info("Validating request query params");
-            authRequestError =
-                    orchestrationAuthorizationService.validateAuthRequest(
-                            authRequest, configurationService.isNonceRequired());
+            authRequestError = queryParamsAuthorizeValidator.validate(authRequest);
         } else {
             LOG.info("Validating request object");
-            authRequestError = requestObjectService.validateRequestObject(authRequest);
+            authRequestError = requestObjectAuthorizeValidator.validate(authRequest);
         }
 
         if (authRequestError.isPresent()) {
