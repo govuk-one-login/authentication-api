@@ -1,5 +1,4 @@
 custom_doc_app_claim_enabled       = true
-doc_app_api_enabled                = true
 ipv_capacity_allowed               = true
 ipv_api_enabled                    = true
 doc_app_authorisation_client_id    = "authOrchestratorDocApp"
