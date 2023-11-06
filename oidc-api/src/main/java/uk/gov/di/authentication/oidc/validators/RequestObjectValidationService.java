@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.oidc.services;
+package uk.gov.di.authentication.oidc.validators;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSVerifier;
@@ -12,6 +12,7 @@ import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
+import uk.gov.di.authentication.oidc.services.IPVCapacityService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.ValidScopes;

@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.oidc.services;
+package uk.gov.di.authentication.oidc.validators;
 
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
@@ -7,6 +7,8 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
+import uk.gov.di.authentication.oidc.services.IPVCapacityService;
+import uk.gov.di.authentication.oidc.validators.AbstractValidationService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
