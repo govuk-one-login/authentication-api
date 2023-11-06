@@ -15,7 +15,8 @@ module "oidc_userinfo_role" {
     aws_iam_policy.dynamo_authentication_callback_userinfo_read_policy.arn,
     module.oidc_txma_audit.access_policy_arn,
     local.client_registry_encryption_policy_arn,
-    local.identity_credentials_encryption_policy_arn
+    local.identity_credentials_encryption_policy_arn,
+    local.doc_app_auth_signing_key_arn
   ]
 }
 
