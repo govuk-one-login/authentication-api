@@ -41,16 +41,16 @@ import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildUR
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 
-public class RequestObjectValidationService extends BaseAuthorizeValidator {
+public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
 
-    public RequestObjectValidationService(
+    public RequestObjectAuthorizeValidator(
             DynamoClientService dynamoClientService,
             ConfigurationService configurationService,
             IPVCapacityService ipvCapacityService) {
         super(configurationService, dynamoClientService, ipvCapacityService);
     }
 
-    public RequestObjectValidationService(ConfigurationService configurationService) {
+    public RequestObjectAuthorizeValidator(ConfigurationService configurationService) {
         super(
                 configurationService,
                 new DynamoClientService(configurationService),

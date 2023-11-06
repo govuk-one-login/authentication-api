@@ -32,7 +32,7 @@ import uk.gov.di.authentication.oidc.exceptions.InvalidHttpMethodException;
 import uk.gov.di.authentication.oidc.helpers.RequestObjectToAuthRequestHelper;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
 import uk.gov.di.authentication.oidc.validators.QueryParamsAuthorizeValidator;
-import uk.gov.di.authentication.oidc.validators.RequestObjectValidationService;
+import uk.gov.di.authentication.oidc.validators.RequestObjectAuthorizeValidator;
 import uk.gov.di.authentication.shared.conditions.DocAppUserHelper;
 import uk.gov.di.authentication.shared.conditions.IdentityHelper;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -97,7 +97,7 @@ public class AuthorisationHandler
     private final ClientSessionService clientSessionService;
     private final OrchestrationAuthorizationService orchestrationAuthorizationService;
     private final QueryParamsAuthorizeValidator queryParamsAuthorizeValidator;
-    private final RequestObjectValidationService requestObjectValidationService;
+    private final RequestObjectAuthorizeValidator requestObjectAuthorizeValidator;
     private final AuditService auditService;
     private final ClientService clientService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
@@ -112,7 +112,7 @@ public class AuthorisationHandler
             OrchestrationAuthorizationService orchestrationAuthorizationService,
             AuditService auditService,
             QueryParamsAuthorizeValidator queryParamsAuthorizeValidator,
-            RequestObjectValidationService requestObjectValidationService,
+            RequestObjectAuthorizeValidator requestObjectAuthorizeValidator,
             ClientService clientService,
             DocAppAuthorisationService docAppAuthorisationService,
             CloudwatchMetricsService cloudwatchMetricsService,
@@ -123,7 +123,7 @@ public class AuthorisationHandler
         this.orchestrationAuthorizationService = orchestrationAuthorizationService;
         this.auditService = auditService;
         this.queryParamsAuthorizeValidator = queryParamsAuthorizeValidator;
-        this.requestObjectValidationService = requestObjectValidationService;
+        this.requestObjectAuthorizeValidator = requestObjectAuthorizeValidator;
         this.clientService = clientService;
         this.docAppAuthorisationService = docAppAuthorisationService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
@@ -139,8 +139,8 @@ public class AuthorisationHandler
         this.auditService = new AuditService(configurationService);
         this.queryParamsAuthorizeValidator =
                 new QueryParamsAuthorizeValidator(configurationService);
-        this.requestObjectValidationService =
-                new RequestObjectValidationService(configurationService);
+        this.requestObjectAuthorizeValidator =
+                new RequestObjectAuthorizeValidator(configurationService);
         this.clientService = new DynamoClientService(configurationService);
         var kmsConnectionService = new KmsConnectionService(configurationService);
         this.docAppAuthorisationService =
@@ -261,7 +261,7 @@ public class AuthorisationHandler
             authRequestError = queryParamsAuthorizeValidator.validate(authRequest);
         } else {
             LOG.info("Validating request object");
-            authRequestError = requestObjectValidationService.validate(authRequest);
+            authRequestError = requestObjectAuthorizeValidator.validate(authRequest);
         }
 
         if (authRequestError.isPresent()) {

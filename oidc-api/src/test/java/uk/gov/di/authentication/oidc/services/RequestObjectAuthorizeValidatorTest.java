@@ -13,7 +13,7 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.authentication.oidc.validators.RequestObjectValidationService;
+import uk.gov.di.authentication.oidc.validators.RequestObjectAuthorizeValidator;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
@@ -40,7 +40,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.oidc.helper.RequestObjectTestHelper.generateSignedJWT;
 
-class RequestObjectValidationServiceTest {
+class RequestObjectAuthorizeValidatorTest {
 
     private static final String REDIRECT_URI = "https://localhost:8080";
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -53,14 +53,14 @@ class RequestObjectValidationServiceTest {
     private static final ClientID CLIENT_ID = new ClientID("test-id");
     private static final String OIDC_BASE_URI = "https://localhost";
     private static final String AUDIENCE = "https://localhost/authorize";
-    private RequestObjectValidationService service;
+    private RequestObjectAuthorizeValidator service;
 
     @BeforeEach
     void setup() {
         when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_BASE_URI));
         keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         service =
-                new RequestObjectValidationService(
+                new RequestObjectAuthorizeValidator(
                         dynamoClientService, configurationService, ipvCapacityService);
         var clientRegistry =
                 generateClientRegistry(
