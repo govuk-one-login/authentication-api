@@ -78,7 +78,6 @@ class QueryParamsAuthorizeValidatorTest {
                         + "\n-----END PUBLIC KEY-----\n";
         when(configurationService.getOrchestrationToAuthenticationEncryptionPublicKey())
                 .thenReturn(publicCertificateAsPem);
-        when(configurationService.isNonceRequired()).thenReturn(true);
     }
 
     @AfterEach
@@ -150,28 +149,6 @@ class QueryParamsAuthorizeValidatorTest {
         var errorObject =
                 queryParamsAuthorizeValidator.validate(
                         generateAuthRequest(REDIRECT_URI.toString(), responseType, scope));
-
-        assertTrue(errorObject.isEmpty());
-    }
-
-    @Test
-    void
-            shouldSuccessfullyValidateAuthRequestWhenNonceIsNotIncludedButOptionalButGivenEnvironment() {
-        when(configurationService.isNonceRequired()).thenReturn(false);
-        when(dynamoClientService.getClient(CLIENT_ID.toString()))
-                .thenReturn(
-                        Optional.of(
-                                generateClientRegistry(
-                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
-        var authRequest =
-                new AuthenticationRequest.Builder(
-                                new ResponseType(ResponseType.Value.CODE),
-                                new Scope(OIDCScopeValue.OPENID),
-                                CLIENT_ID,
-                                URI.create(REDIRECT_URI.toString()))
-                        .state(STATE)
-                        .build();
-        var errorObject = queryParamsAuthorizeValidator.validate(authRequest);
 
         assertTrue(errorObject.isEmpty());
     }

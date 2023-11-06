@@ -77,7 +77,7 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
                                     "Request contains invalid claims"),
                             redirectURI));
         }
-        if (authRequest.getNonce() == null && configurationService.isNonceRequired()) {
+        if (authRequest.getNonce() == null) {
             LOG.error("Nonce is missing from authRequest");
             return Optional.of(
                     new AuthRequestError(
