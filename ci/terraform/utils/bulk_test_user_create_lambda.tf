@@ -8,6 +8,7 @@ module "bulk_test_user_create_lambda_role" {
     aws_iam_policy.user_profile_dynamo_write_access.arn,
     aws_iam_policy.user_credentials_dynamo_write_access.arn,
     aws_iam_policy.bulk_test_user_s3_read_access.arn,
+    local.user_profile_encryption_policy_arn
   ]
 }
 

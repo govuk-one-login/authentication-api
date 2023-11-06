@@ -10,7 +10,8 @@ module "bulk_user_email_audience_loader_lambda_role" {
     aws_iam_policy.bulk_user_email_audience_loader_dynamo_read_access[0].arn,
     aws_iam_policy.bulk_user_email_audience_loader_dynamo_write_access[0].arn,
     aws_iam_policy.bulk_user_email_dynamo_encryption_key_kms_policy[0].arn,
-    aws_iam_policy.bulk_user_email_audience_loader_lambda_invocation_policy[0].arn
+    aws_iam_policy.bulk_user_email_audience_loader_lambda_invocation_policy[0].arn,
+    local.user_profile_encryption_policy_arn
   ]
 }
 
