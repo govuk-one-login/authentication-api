@@ -18,19 +18,7 @@ public class JwksIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldReturn200AndClientInfoResponseForValidClient() throws ParseException {
-        var configurationService = new JwksTestConfigurationService(false);
-        handler = new JwksHandler(configurationService);
-        var response = makeRequest(Optional.empty(), Map.of(), Map.of());
-
-        assertThat(response, hasStatus(200));
-        assertThat(JWKSet.parse(response.getBody()).getKeys(), hasSize(1));
-
-        assertNoTxmaAuditEventsReceived(txmaAuditQueue);
-    }
-
-    @Test
-    void shouldReturn200And2KeysWhenDocAppIsEnabled() throws ParseException {
-        var configurationService = new JwksTestConfigurationService(true);
+        var configurationService = new JwksTestConfigurationService();
         handler = new JwksHandler(configurationService);
         var response = makeRequest(Optional.empty(), Map.of(), Map.of());
 
@@ -42,9 +30,7 @@ public class JwksIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static class JwksTestConfigurationService extends IntegrationTestConfigurationService {
 
-        private final boolean docAppEnabled;
-
-        public JwksTestConfigurationService(boolean docAppEnabled) {
+        public JwksTestConfigurationService() {
             super(
                     auditTopic,
                     notificationsQueue,
@@ -54,12 +40,6 @@ public class JwksIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     spotQueue,
                     docAppPrivateKeyJwtSigner,
                     configurationParameters);
-            this.docAppEnabled = docAppEnabled;
-        }
-
-        @Override
-        public boolean isDocAppApiEnabled() {
-            return docAppEnabled;
         }
     }
 }
