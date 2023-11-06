@@ -13,7 +13,8 @@ module "ipv_processing_identity_role" {
     aws_iam_policy.pepper_parameter_policy.arn,
     aws_iam_policy.redis_parameter_policy.arn,
     module.oidc_txma_audit.access_policy_arn,
-    local.account_modifiers_encryption_policy_arn
+    local.account_modifiers_encryption_policy_arn,
+    local.identity_credentials_encryption_policy_arn
   ]
 }
 
