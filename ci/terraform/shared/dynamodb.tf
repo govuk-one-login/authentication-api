@@ -196,7 +196,8 @@ resource "aws_dynamodb_table" "identity_credentials_table" {
   }
 
   server_side_encryption {
-    enabled = !var.use_localstack
+    enabled     = true
+    kms_key_arn = aws_kms_key.identity_credentials_table_encryption_key.arn
   }
 
   lifecycle {
