@@ -11,6 +11,7 @@ module "account_management_api_remove_account_role" {
     module.account_management_txma_audit.access_policy_arn,
     aws_iam_policy.dynamo_am_account_modifiers_read_access_policy.arn,
     aws_iam_policy.dynamo_am_account_modifiers_delete_access_policy.arn,
+    local.account_modifiers_encryption_policy_arn
   ]
 }
 
