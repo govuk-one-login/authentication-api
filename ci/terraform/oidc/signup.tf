@@ -14,6 +14,7 @@ module "frontend_api_signup_role" {
     aws_iam_policy.dynamo_common_passwords_read_access_policy.arn,
     module.oidc_txma_audit.access_policy_arn,
     local.account_modifiers_encryption_policy_arn,
+    local.common_passwords_encryption_policy_arn,
     local.client_registry_encryption_policy_arn
   ]
 }
