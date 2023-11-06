@@ -229,7 +229,8 @@ resource "aws_dynamodb_table" "doc_app_credential_table" {
   }
 
   server_side_encryption {
-    enabled = !var.use_localstack
+    enabled     = true
+    kms_key_arn = aws_kms_key.doc_app_credential_table_encryption_key
   }
 
   lifecycle {

@@ -181,3 +181,7 @@ output "authentication_callback_userinfo_encryption_key_arn" {
 output "account_modifiers_encryption_policy_arn" {
   value = aws_iam_policy.account_modifiers_encryption_key_kms_policy.arn
 }
+
+output "doc_app_credential_encryption_policy_arn" {
+  value = aws_iam_policy.doc_app_credential_encryption_key_kms_policy.arn
+}
