@@ -21,4 +21,5 @@ locals {
     memory  = 1024,
     timeout = 900,
   }
+  user_profile_encryption_policy_arn       = data.terraform_remote_state.shared.outputs.user_profile_encryption_policy_arn
 }
