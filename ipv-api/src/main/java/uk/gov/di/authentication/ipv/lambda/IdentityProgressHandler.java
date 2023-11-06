@@ -81,11 +81,14 @@ public class IdentityProgressHandler extends BaseOrchestrationHandler {
 
             UserInfo userInfo;
             try {
-                var authenticationUserInfo = userInfoStorageService.getAuthenticationUserInfoData(subjectId);
+                var authenticationUserInfo =
+                        userInfoStorageService.getAuthenticationUserInfoData(subjectId);
 
                 if (authenticationUserInfo.isPresent()) {
                     userInfo =
-                            new UserInfo(JSONObjectUtils.parse(authenticationUserInfo.get().getUserInfo()));
+                            new UserInfo(
+                                    JSONObjectUtils.parse(
+                                            authenticationUserInfo.get().getUserInfo()));
                 } else {
                     return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
                 }
