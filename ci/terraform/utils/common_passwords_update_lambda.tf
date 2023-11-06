@@ -7,6 +7,7 @@ module "common_passwords_update_lambda_role" {
   policies_to_attach = [
     aws_iam_policy.common_passwords_s3_read_access.arn,
     aws_iam_policy.common_passwords_dynamo_full_access.arn,
+    local.common_passwords_encryption_policy_arn
   ]
 }
 
