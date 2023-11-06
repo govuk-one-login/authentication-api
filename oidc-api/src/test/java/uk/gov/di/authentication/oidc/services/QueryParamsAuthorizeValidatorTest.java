@@ -21,7 +21,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import uk.gov.di.authentication.oidc.validators.QueryParamsValidationService;
+import uk.gov.di.authentication.oidc.validators.QueryParamsAuthorizeValidator;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
@@ -51,13 +51,13 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
-class QueryParamsValidationServiceTest {
+class QueryParamsAuthorizeValidatorTest {
 
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
     private static final ClientID CLIENT_ID = new ClientID();
     private static final State STATE = new State();
     private static final Nonce NONCE = new Nonce();
-    private QueryParamsValidationService queryParamsValidationService;
+    private QueryParamsAuthorizeValidator queryParamsAuthorizeValidator;
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final IPVCapacityService ipvCapacityService = mock(IPVCapacityService.class);
@@ -65,12 +65,12 @@ class QueryParamsValidationServiceTest {
 
     @RegisterExtension
     public final CaptureLoggingExtension logging =
-            new CaptureLoggingExtension(QueryParamsValidationService.class);
+            new CaptureLoggingExtension(QueryParamsAuthorizeValidator.class);
 
     @BeforeEach
     void setUp() {
-        queryParamsValidationService =
-                new QueryParamsValidationService(
+        queryParamsAuthorizeValidator =
+                new QueryParamsAuthorizeValidator(
                         configurationService, dynamoClientService, ipvCapacityService);
         var keyPair = generateRsaKeyPair();
         privateKey = keyPair.getPrivate();
@@ -106,7 +106,7 @@ class QueryParamsValidationServiceTest {
                         scope,
                         jsonArrayOf("P2.Cl.Cm"),
                         Optional.empty());
-        var errorObject = queryParamsValidationService.validate(authRequest);
+        var errorObject = queryParamsAuthorizeValidator.validate(authRequest);
 
         assertThat(errorObject, equalTo(Optional.empty()));
     }
@@ -128,7 +128,7 @@ class QueryParamsValidationServiceTest {
                         scope,
                         jsonArrayOf("Cm.Cl.P1", "P1.Cl"),
                         Optional.empty());
-        var errorObject = queryParamsValidationService.validate(authRequest);
+        var errorObject = queryParamsAuthorizeValidator.validate(authRequest);
 
         assertTrue(errorObject.isPresent());
 
@@ -150,7 +150,7 @@ class QueryParamsValidationServiceTest {
                                 generateClientRegistry(
                                         REDIRECT_URI.toString(), CLIENT_ID.toString())));
         var errorObject =
-                queryParamsValidationService.validate(
+                queryParamsAuthorizeValidator.validate(
                         generateAuthRequest(REDIRECT_URI.toString(), responseType, scope));
 
         assertTrue(errorObject.isEmpty());
@@ -173,7 +173,7 @@ class QueryParamsValidationServiceTest {
                                 URI.create(REDIRECT_URI.toString()))
                         .state(STATE)
                         .build();
-        var errorObject = queryParamsValidationService.validate(authRequest);
+        var errorObject = queryParamsAuthorizeValidator.validate(authRequest);
 
         assertTrue(errorObject.isEmpty());
     }
@@ -204,7 +204,7 @@ class QueryParamsValidationServiceTest {
                         scope,
                         jsonArrayOf("Cl.Cm", "Cl"),
                         Optional.of(oidcClaimsRequest));
-        var errorObject = queryParamsValidationService.validate(authRequest);
+        var errorObject = queryParamsAuthorizeValidator.validate(authRequest);
 
         assertTrue(errorObject.isEmpty());
     }
@@ -228,7 +228,7 @@ class QueryParamsValidationServiceTest {
                         scope,
                         jsonArrayOf("Cl.Cm", "Cl"),
                         Optional.of(oidcClaimsRequest));
-        var errorObject = queryParamsValidationService.validate(authRequest);
+        var errorObject = queryParamsAuthorizeValidator.validate(authRequest);
 
         assertTrue(errorObject.isPresent());
         assertThat(
@@ -251,7 +251,7 @@ class QueryParamsValidationServiceTest {
                                         CLIENT_ID.toString(),
                                         List.of("openid", "am"))));
         var errorObject =
-                queryParamsValidationService.validate(
+                queryParamsAuthorizeValidator.validate(
                         generateAuthRequest(REDIRECT_URI.toString(), responseType, scope));
 
         assertTrue(errorObject.isEmpty());
@@ -267,7 +267,7 @@ class QueryParamsValidationServiceTest {
                                 generateClientRegistry(
                                         REDIRECT_URI.toString(), CLIENT_ID.toString())));
         var errorObject =
-                queryParamsValidationService.validate(
+                queryParamsAuthorizeValidator.validate(
                         generateAuthRequest(REDIRECT_URI.toString(), responseType, scope));
 
         assertTrue(errorObject.isPresent());
@@ -285,7 +285,7 @@ class QueryParamsValidationServiceTest {
                 assertThrows(
                         RuntimeException.class,
                         () ->
-                                queryParamsValidationService.validate(
+                                queryParamsAuthorizeValidator.validate(
                                         generateAuthRequest(
                                                 REDIRECT_URI.toString(), responseType, scope)),
                         "Expected to throw exception");
@@ -305,7 +305,7 @@ class QueryParamsValidationServiceTest {
                                 generateClientRegistry(
                                         REDIRECT_URI.toString(), CLIENT_ID.toString())));
         var errorObject =
-                queryParamsValidationService.validate(
+                queryParamsAuthorizeValidator.validate(
                         generateAuthRequest(REDIRECT_URI.toString(), responseType, scope));
 
         assertTrue(errorObject.isPresent());
@@ -324,7 +324,7 @@ class QueryParamsValidationServiceTest {
                                 generateClientRegistry(
                                         REDIRECT_URI.toString(), CLIENT_ID.toString())));
         var errorObject =
-                queryParamsValidationService.validate(
+                queryParamsAuthorizeValidator.validate(
                         generateAuthRequest(REDIRECT_URI.toString(), responseType, scope));
 
         assertTrue(errorObject.isPresent());
@@ -346,7 +346,7 @@ class QueryParamsValidationServiceTest {
                                 responseType, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
                         .nonce(new Nonce())
                         .build();
-        var errorObject = queryParamsValidationService.validate(authRequest);
+        var errorObject = queryParamsAuthorizeValidator.validate(authRequest);
 
         assertTrue(errorObject.isPresent());
         assertThat(
@@ -372,7 +372,7 @@ class QueryParamsValidationServiceTest {
                                 responseType, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
                         .state(new State())
                         .build();
-        var errorObject = queryParamsValidationService.validate(authRequest);
+        var errorObject = queryParamsAuthorizeValidator.validate(authRequest);
 
         assertTrue(errorObject.isPresent());
         assertThat(
@@ -399,7 +399,7 @@ class QueryParamsValidationServiceTest {
                         .nonce(new Nonce())
                         .customParameter("vtr", jsonArrayOf("Cm"))
                         .build();
-        var errorObject = queryParamsValidationService.validate(authRequest);
+        var errorObject = queryParamsAuthorizeValidator.validate(authRequest);
 
         assertTrue(errorObject.isPresent());
         assertThat(
@@ -425,7 +425,7 @@ class QueryParamsValidationServiceTest {
                         .nonce(new Nonce())
                         .customParameter("vtr", jsonArrayOf("P2.Cl.Cm"))
                         .build();
-        var errorObject = queryParamsValidationService.validate(authRequest);
+        var errorObject = queryParamsAuthorizeValidator.validate(authRequest);
 
         assertTrue(errorObject.isPresent());
         assertThat(errorObject.get().errorObject(), equalTo(OAuth2Error.TEMPORARILY_UNAVAILABLE));
@@ -451,7 +451,7 @@ class QueryParamsValidationServiceTest {
                         .nonce(new Nonce())
                         .customParameter("vtr", jsonArrayOf("P2.Cl.Cm"))
                         .build();
-        var errorObject = queryParamsValidationService.validate(authRequest);
+        var errorObject = queryParamsAuthorizeValidator.validate(authRequest);
 
         assertTrue(errorObject.isEmpty());
     }
@@ -472,7 +472,7 @@ class QueryParamsValidationServiceTest {
                 assertThrows(
                         RuntimeException.class,
                         () ->
-                                queryParamsValidationService.validate(
+                                queryParamsAuthorizeValidator.validate(
                                         generateAuthRequest(redirectURi, responseType, scope)),
                         "Expected to throw exception");
         assertThat(
@@ -496,7 +496,7 @@ class QueryParamsValidationServiceTest {
                         .requestURI(URI.create("https://localhost/redirect-uri"))
                         .build();
 
-        var authRequestError = queryParamsValidationService.validate(authenticationRequest);
+        var authRequestError = queryParamsAuthorizeValidator.validate(authenticationRequest);
 
         assertTrue(authRequestError.isPresent());
         assertThat(
@@ -520,7 +520,7 @@ class QueryParamsValidationServiceTest {
                         .requestObject(new PlainJWT(new JWTClaimsSet.Builder().build()))
                         .build();
 
-        var authRequestError = queryParamsValidationService.validate(authenticationRequest);
+        var authRequestError = queryParamsAuthorizeValidator.validate(authenticationRequest);
 
         assertTrue(authRequestError.isPresent());
         assertThat(

@@ -24,16 +24,16 @@ import static java.lang.String.format;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 
-public class QueryParamsValidationService extends BaseAuthorizeValidator {
+public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
 
-    public QueryParamsValidationService(
+    public QueryParamsAuthorizeValidator(
             ConfigurationService configurationService,
             DynamoClientService dynamoClientService,
             IPVCapacityService ipvCapacityService) {
         super(configurationService, dynamoClientService, ipvCapacityService);
     }
 
-    public QueryParamsValidationService(ConfigurationService configurationService) {
+    public QueryParamsAuthorizeValidator(ConfigurationService configurationService) {
         this(
                 configurationService,
                 new DynamoClientService(configurationService),
