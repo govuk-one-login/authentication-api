@@ -13,7 +13,8 @@ module "frontend_api_account_recovery_role" {
     aws_iam_policy.redis_parameter_policy.arn,
     aws_iam_policy.dynamo_account_modifiers_read_access_policy.arn,
     module.oidc_txma_audit.access_policy_arn,
-    local.account_modifiers_encryption_policy_arn
+    local.account_modifiers_encryption_policy_arn,
+    local.user_credentials_encryption_policy_arn
   ]
 }
 
