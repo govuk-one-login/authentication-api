@@ -820,7 +820,6 @@ class AuthorisationHandlerTest {
         @Test
         void shouldRedirectToLoginWhenRequestObjectIsValid() throws JOSEException {
             var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
-            when(configService.isDocAppApiEnabled()).thenReturn(true);
             when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                     .thenReturn(Optional.empty());
             var event = new APIGatewayProxyRequestEvent();
@@ -875,7 +874,6 @@ class AuthorisationHandlerTest {
         @Test
         void shouldRedirectToLoginWhenPostRequestObjectIsValid() throws JOSEException {
             var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
-            when(configService.isDocAppApiEnabled()).thenReturn(true);
             when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                     .thenReturn(Optional.empty());
             var event = new APIGatewayProxyRequestEvent();

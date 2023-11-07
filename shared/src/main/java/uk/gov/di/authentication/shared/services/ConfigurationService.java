@@ -200,10 +200,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return URI.create(System.getenv().getOrDefault("DOC_APP_AUTHORISATION_URI", ""));
     }
 
-    public boolean isDocAppApiEnabled() {
-        return System.getenv().getOrDefault("DOC_APP_API_ENABLED", "false").equals("true");
-    }
-
     public URI getDocAppBackendURI() {
         return URI.create(System.getenv().getOrDefault("DOC_APP_BACKEND_URI", ""));
     }
