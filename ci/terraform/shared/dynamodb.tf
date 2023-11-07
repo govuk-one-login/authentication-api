@@ -39,7 +39,8 @@ resource "aws_dynamodb_table" "user_credentials_table" {
   }
 
   server_side_encryption {
-    enabled = !var.use_localstack
+    enabled = true
+    kms_key_arn = aws_kms_key.user_credentials_table_encryption_key.arn
   }
 
   point_in_time_recovery {
