@@ -107,9 +107,9 @@ jobs:
         image: localstack/localstack:2.3.2
         env:
           SERVICES: "lambda, apigateway, iam, ec2, sqs, s3, sts, kms, sns, ssm"
-          EDGE_PORT: "45678"
-          EXTERNAL_HOSTNAME: localhost
           DEFAULT_REGION: eu-west-2
+          GATEWAY_LISTEN: 0.0.0.0:45678
+          LOCALSTACK_HOST: localhost:45678
           TEST_AWS_ACCOUNT_ID: 123456789012
           KMS_PROVIDER: local-kms
         options: >-
@@ -177,12 +177,12 @@ jobs:
       - build
     services:
       localstack:
-        image: localstack/localstack:0.12.20
+        image: localstack/localstack:2.3.2
         env:
           SERVICES: "lambda, apigateway, iam, ec2, sqs, s3, sts, kms, sns, ssm"
-          EDGE_PORT: "45678"
-          EXTERNAL_HOSTNAME: localhost
           DEFAULT_REGION: eu-west-2
+          GATEWAY_LISTEN: 0.0.0.0:45678
+          LOCALSTACK_HOST: localhost:45678
           TEST_AWS_ACCOUNT_ID: 123456789012
           KMS_PROVIDER: local-kms
         options: >-
