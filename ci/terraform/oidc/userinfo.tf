@@ -17,7 +17,8 @@ module "oidc_userinfo_role" {
     module.oidc_txma_audit.access_policy_arn,
     local.client_registry_encryption_policy_arn,
     local.identity_credentials_encryption_policy_arn,
-    local.doc_app_credential_encryption_policy_arn
+    local.doc_app_credential_encryption_policy_arn,
+    local.user_credentials_encryption_policy_arn
   ]
 }
 
