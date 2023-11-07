@@ -18,7 +18,16 @@ public class JwksIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldReturn200AndClientInfoResponseForValidClient() throws ParseException {
-        var configurationService = new JwksTestConfigurationService();
+        var configurationService =
+                new IntegrationTestConfigurationService(
+                        auditTopic,
+                        notificationsQueue,
+                        auditSigningKey,
+                        tokenSigner,
+                        ipvPrivateKeyJwtSigner,
+                        spotQueue,
+                        docAppPrivateKeyJwtSigner,
+                        configurationParameters);
         handler = new JwksHandler(configurationService);
         var response = makeRequest(Optional.empty(), Map.of(), Map.of());
 
@@ -26,20 +35,5 @@ public class JwksIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(JWKSet.parse(response.getBody()).getKeys(), hasSize(2));
 
         assertNoTxmaAuditEventsReceived(txmaAuditQueue);
-    }
-
-    private static class JwksTestConfigurationService extends IntegrationTestConfigurationService {
-
-        public JwksTestConfigurationService() {
-            super(
-                    auditTopic,
-                    notificationsQueue,
-                    auditSigningKey,
-                    tokenSigner,
-                    ipvPrivateKeyJwtSigner,
-                    spotQueue,
-                    docAppPrivateKeyJwtSigner,
-                    configurationParameters);
-        }
     }
 }
