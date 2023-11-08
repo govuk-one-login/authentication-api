@@ -350,11 +350,6 @@ variable "doc_app_authorisation_client_id" {
   default = "undefined"
 }
 
-variable "doc_app_api_enabled" {
-  type    = bool
-  default = false
-}
-
 variable "doc_app_domain" {
   type    = string
   default = "undefined"
