@@ -1,37 +1,29 @@
-module "auth_userinfo_role" {
+module "auth_provenance_role" {
   source      = "../modules/lambda-role"
   environment = var.environment
-  role_name   = "auth-ext-userinfo-role"
+  role_name   = "auth-provenance-role"
   vpc_arn     = local.authentication_vpc_arn
 
   policies_to_attach = [
     module.auth_ext_txma_audit.access_policy_arn,
     aws_iam_policy.dynamo_user_read_access_policy.arn,
     aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
-    aws_iam_policy.audit_events_sns_policy.arn,
-    aws_iam_policy.dynamo_access_token_store_read_access_policy.arn,
-    aws_iam_policy.dynamo_access_token_store_write_access_policy.arn,
-    aws_iam_policy.access_token_store_signing_key_kms_policy.arn
   ]
 }
 
-module "auth_userinfo" {
+module "auth_provenance" {
   source = "../modules/endpoint-module"
 
-  endpoint_name   = "auth-userinfo"
-  path_part       = "userinfo"
+  endpoint_name   = "auth-provenance"
+  path_part       = "provenance"
   endpoint_method = ["GET"]
   environment     = var.environment
 
   handler_environment_variables = {
-    ENVIRONMENT             = var.environment
-    TXMA_AUDIT_QUEUE_URL    = module.auth_ext_txma_audit.queue_url
-    LOCALSTACK_ENDPOINT     = null
-    DYNAMO_ENDPOINT         = null
-    INTERNAl_SECTOR_URI     = var.internal_sector_uri
-    SUPPORT_AUTH_ORCH_SPLIT = var.support_auth_orch_split
+    ENVIRONMENT          = var.environment
+    TXMA_AUDIT_QUEUE_URL = module.auth_ext_txma_audit.queue_url
   }
-  handler_function_name = "uk.gov.di.authentication.external.lambda.UserInfoHandler::handleRequest"
+  handler_function_name = "uk.gov.di.authentication.shared.lambda.ProvenanceHandler::handleRequest"
   handler_runtime       = "java17"
 
   provenance_environment_variables = var.provenance_environment_variables
@@ -40,10 +32,10 @@ module "auth_userinfo" {
   root_resource_id = aws_api_gateway_rest_api.di_auth_ext_api.root_resource_id
   execution_arn    = aws_api_gateway_rest_api.di_auth_ext_api.execution_arn
 
-  memory_size                 = lookup(var.performance_tuning, "auth-userinfo", local.default_performance_parameters).memory
-  provisioned_concurrency     = lookup(var.performance_tuning, "auth-userinfo", local.default_performance_parameters).concurrency
-  max_provisioned_concurrency = lookup(var.performance_tuning, "auth-userinfo", local.default_performance_parameters).max_concurrency
-  scaling_trigger             = lookup(var.performance_tuning, "auth-userinfo", local.default_performance_parameters).scaling_trigger
+  memory_size                 = lookup(var.performance_tuning, "provenance", local.default_performance_parameters).memory
+  provisioned_concurrency     = lookup(var.performance_tuning, "provenance", local.default_performance_parameters).concurrency
+  max_provisioned_concurrency = lookup(var.performance_tuning, "provenance", local.default_performance_parameters).max_concurrency
+  scaling_trigger             = lookup(var.performance_tuning, "provenance", local.default_performance_parameters).scaling_trigger
 
   source_bucket           = aws_s3_bucket.auth_ext_source_bucket.bucket
   lambda_zip_file         = aws_s3_object.auth_ext_api_release_zip.key

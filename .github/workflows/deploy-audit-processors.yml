@@ -24,11 +24,12 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Set up AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        id: aws_credentials
+        uses: aws-actions/configure-aws-credentials@v3
         with:
           role-to-assume: ${{ env.GHA_ROLE }}
           aws-region: eu-west-2
-      
+
       - name: Download and copy Audit Processors signed lambda zip
         working-directory: ci/terraform/audit-processors
         run: |
@@ -38,14 +39,7 @@ jobs:
           mv artifacts/signed-audit-processors-*.zip artifacts/audit-processors.zip
 
       - name: Upload Audit Processors Terraform files
-        working-directory: ci/terraform
-        run: |
-          zip -r audit-processors.zip .
-          S3_RESPONSE=`aws s3api put-object \
-            --bucket $ARTIFACT_BUCKET \
-            --key audit-processors.zip \
-            --body audit-processors.zip \
-            --metadata "repository=$GITHUB_REPOSITORY,commitsha=$GITHUB_SHA,committag=$GIT_TAG,commitmessage=$COMMIT_MSG"`
-          VERSION=`echo $S3_RESPONSE | jq .VersionId -r`
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
- 
+        uses: ./.github/actions/upload-terraform
+        with:
+          artifact-bucket: ${{ env.ARTIFACT_BUCKET }}
+          artifact-key: audit-processors.zip

@@ -1,0 +1,66 @@
+name: "Hello World"
+description: "Greet someone"
+inputs:
+  artifact-bucket:
+    description: The name of the S3 bucket to store the artifact in
+    required: true
+  artifact-key:
+    description: The name to upload the file as
+    required: true
+  source-file:
+    description: The name of the file to upload (defaults to `artifact-key`)
+  working-directory:
+    description: The directory to run in (defaults to ci/terraform)
+    required: true
+    default: "./ci/terraform"
+outputs:
+  version:
+    description: The version of the artifact that was uploaded
+    value: ${{ steps.upload.outputs.version }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: 🔎 Ensure the event is workflow_run
+      if: ${{ github.event_name != 'workflow_run' }}
+      run: |
+        echo "This action only runs on workflow_run events"
+        exit 1
+      shell: bash
+
+    - name: 🏗️ Configure source-file
+      run: echo "SOURCE_FILE=${{ inputs.source-file && inputs.source-file || inputs.artifact-key }}" >> $GITHUB_ENV
+      shell: bash
+
+    - name: 📦 Zip up terraform
+      working-directory: ${{ inputs.working-directory }}
+      run: zip -r "${{ env.SOURCE_FILE }}" .
+      shell: bash
+
+    - name: ⚙️ Extract git metadata
+      id: metadata
+      env:
+        COMMIT_MESSAGE: ${{ github.event.workflow_run.head_commit.message }}
+      run: |
+        echo "repository=${GITHUB_REPOSITORY}" >> $GITHUB_OUTPUT
+        echo "commitsha=${GITHUB_SHA}" >> $GITHUB_OUTPUT
+        echo "committag=${GIT_TAG}" >> $GITHUB_OUTPUT
+        echo "commitbranch=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
+        echo "commitmessage=${COMMIT_MESSAGE}" >> $GITHUB_OUTPUT
+        echo "uploadactionurl=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_OUTPUT
+        echo "builddate=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
+      shell: bash
+
+    - name: ⤴️ Upload terraform to S3
+      working-directory: ${{ inputs.working-directory }}
+      id: upload
+      env:
+        METADATA_JSON: ${{ toJSON(steps.metadata.outputs) }}
+      run: |
+        AWS_RESPONSE="$(aws s3api put-object \
+          --bucket ${{ inputs.artifact-bucket }} \
+          --key ${{ inputs.artifact-key }} \
+          --body ${{ env.SOURCE_FILE }} \
+          --metadata "${METADATA_JSON}")"
+        echo "version=$(echo "${AWS_RESPONSE}" | jq -r '.VersionId')" >> $GITHUB_OUTPUT
+      shell: bash

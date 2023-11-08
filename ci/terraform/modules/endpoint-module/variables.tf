@@ -55,6 +55,10 @@ variable "handler_runtime" {
   default = "java17"
 }
 
+variable "provenance_environment_variables" {
+  type = map(string)
+}
+
 variable "rest_api_id" {
   type = string
 }
