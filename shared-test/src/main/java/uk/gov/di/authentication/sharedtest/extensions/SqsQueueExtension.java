@@ -90,7 +90,9 @@ public class SqsQueueExtension extends BaseAwsResourceExtension implements Befor
                         "{0}-{1}",
                         context.getTestClass().map(Class::getSimpleName).orElse("unknown"),
                         queueNameSuffix);
-        queueUrl = getQueueUrlFor(queueName).orElseGet(() -> createQueue(queueName));
+        var truncatedQueueName = queueName.substring(0, Math.min(80, queueName.length()));
+        queueUrl =
+                getQueueUrlFor(truncatedQueueName).orElseGet(() -> createQueue(truncatedQueueName));
         sqsClient.purgeQueue(PurgeQueueRequest.builder().queueUrl(queueUrl).build());
     }
 
