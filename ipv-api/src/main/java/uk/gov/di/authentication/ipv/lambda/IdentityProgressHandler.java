@@ -3,7 +3,9 @@ package uk.gov.di.authentication.ipv.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.util.JSONObjectUtils;
+import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -79,6 +81,20 @@ public class IdentityProgressHandler extends BaseOrchestrationHandler {
         try {
             var subjectId = userSession.getSession().getInternalCommonSubjectIdentifier();
 
+            AuthenticationRequest authenticationRequest;
+            try {
+                if (Objects.isNull(userSession.getClientSession())) {
+                    LOG.info("ClientSession not found");
+                    return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1018);
+                }
+                authenticationRequest =
+                        AuthenticationRequest.parse(
+                                userSession.getClientSession().getAuthRequestParams());
+            } catch (ParseException e) {
+                LOG.warn("Authentication request could not be parsed", e);
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1038);
+            }
+
             UserInfo userInfo;
             try {
                 var authenticationUserInfo =
@@ -142,7 +158,12 @@ public class IdentityProgressHandler extends BaseOrchestrationHandler {
                     "Generating IdentityProgressResponse with IdentityProgressStatus: {}",
                     processingStatus);
             return generateApiGatewayProxyResponse(
-                    200, new IdentityProgressResponse(processingStatus));
+                    200,
+                    new IdentityProgressResponse(
+                            processingStatus,
+                            userSession.getClientSession().getClientName(),
+                            authenticationRequest.getRedirectionURI(),
+                            authenticationRequest.getState()));
         } catch (Json.JsonException e) {
             LOG.error("Unable to generate IdentityProgressResponse");
             throw new RuntimeException();

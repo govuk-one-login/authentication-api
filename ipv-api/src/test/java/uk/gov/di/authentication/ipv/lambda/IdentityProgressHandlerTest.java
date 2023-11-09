@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
+import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
@@ -64,6 +65,8 @@ public class IdentityProgressHandlerTest {
                             String.format(
                                     "{\"rp_pairwise_id\": \"%s\", \"sub\": \"sub\"}",
                                     PAIRWISE_SUBJECT.getValue()));
+    private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
+    private static final State STATE = new State();
 
     private final Context context = mock(Context.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
@@ -131,7 +134,11 @@ public class IdentityProgressHandlerTest {
                 result,
                 hasBody(
                         objectMapper.writeValueAsString(
-                                new IdentityProgressResponse(IdentityProgressStatus.COMPLETED))));
+                                new IdentityProgressResponse(
+                                        IdentityProgressStatus.COMPLETED,
+                                        CLIENT_NAME,
+                                        REDIRECT_URI,
+                                        STATE))));
         verify(cloudwatchMetricsService)
                 .incrementCounter(
                         "ProcessingIdentity",
@@ -162,7 +169,11 @@ public class IdentityProgressHandlerTest {
                 result,
                 hasBody(
                         objectMapper.writeValueAsString(
-                                new IdentityProgressResponse(IdentityProgressStatus.PROCESSING))));
+                                new IdentityProgressResponse(
+                                        IdentityProgressStatus.PROCESSING,
+                                        CLIENT_NAME,
+                                        REDIRECT_URI,
+                                        STATE))));
         verify(cloudwatchMetricsService)
                 .incrementCounter(
                         "ProcessingIdentity",
@@ -190,7 +201,11 @@ public class IdentityProgressHandlerTest {
                 result,
                 hasBody(
                         objectMapper.writeValueAsString(
-                                new IdentityProgressResponse(IdentityProgressStatus.ERROR))));
+                                new IdentityProgressResponse(
+                                        IdentityProgressStatus.ERROR,
+                                        CLIENT_NAME,
+                                        REDIRECT_URI,
+                                        STATE))));
         verify(cloudwatchMetricsService)
                 .incrementCounter(
                         "ProcessingIdentity",
@@ -217,7 +232,11 @@ public class IdentityProgressHandlerTest {
                 result,
                 hasBody(
                         objectMapper.writeValueAsString(
-                                new IdentityProgressResponse(IdentityProgressStatus.NO_ENTRY))));
+                                new IdentityProgressResponse(
+                                        IdentityProgressStatus.NO_ENTRY,
+                                        CLIENT_NAME,
+                                        REDIRECT_URI,
+                                        STATE))));
         assertThat(session.getProcessingIdentityAttempts(), equalTo(0));
         verify(cloudwatchMetricsService)
                 .incrementCounter(
@@ -235,10 +254,8 @@ public class IdentityProgressHandlerTest {
         scope.add(OIDCScopeValue.OPENID);
         AuthenticationRequest authRequest =
                 new AuthenticationRequest.Builder(
-                                responseType,
-                                scope,
-                                new ClientID(CLIENT_ID),
-                                URI.create("http://localhost/redirect"))
+                                responseType, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
+                        .state(STATE)
                         .build();
 
         return new ClientSession(
