@@ -299,7 +299,8 @@ public class AuthCodeHandler
                     pair("internalSubjectId", internalSubjectId),
                     pair("isNewAccount", session.isNewAccount()),
                     pair("rpPairwiseId", rpPairwiseId),
-                    pair("nonce", authenticationRequest.getNonce()));
+                    pair("nonce", authenticationRequest.getNonce()),
+                    pair("authCode", authCode));
 
             cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
             cloudwatchMetricsService.incrementSignInByClient(

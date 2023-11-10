@@ -360,7 +360,8 @@ public class AuthenticationCallbackHandler
                         pair("internalSubjectId", AuditService.UNKNOWN),
                         pair("isNewAccount", userInfo.getClaim("new_account")),
                         pair("rpPairwiseId", userInfo.getClaim("rp_client_id")),
-                        pair("nonce", authenticationRequest.getNonce()));
+                        pair("nonce", authenticationRequest.getNonce()),
+                        pair("authCode", authCode.getValue()));
 
                 return generateApiGatewayProxyResponse(
                         302,
