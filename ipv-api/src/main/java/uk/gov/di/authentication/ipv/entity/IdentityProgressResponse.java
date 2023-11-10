@@ -7,51 +7,8 @@ import uk.gov.di.authentication.shared.validation.Required;
 
 import java.net.URI;
 
-public class IdentityProgressResponse {
-
-    @SerializedName("status")
-    @Expose
-    @Required
-    private IdentityProgressStatus status;
-
-    @SerializedName("client-name")
-    @Expose
-    @Required
-    private String clientName;
-
-    @SerializedName("redirect-uri")
-    @Expose
-    @Required
-    private URI redirectUri;
-
-    @SerializedName("state")
-    @Expose
-    @Required
-    private State state;
-
-    public IdentityProgressResponse() {}
-
-    public IdentityProgressResponse(
-            IdentityProgressStatus status, String clientName, URI redirectUri, State state) {
-        this.status = status;
-        this.clientName = clientName;
-        this.redirectUri = redirectUri;
-        this.state = state;
-    }
-
-    public IdentityProgressStatus getStatus() {
-        return status;
-    }
-
-    public String getClientName() {
-        return clientName;
-    }
-
-    public URI getRedirectUri() {
-        return redirectUri;
-    }
-
-    public State getState() {
-        return state;
-    }
-}
+public record IdentityProgressResponse(
+        @SerializedName("status") @Expose @Required IdentityProgressStatus status,
+        @SerializedName("client-name") @Expose @Required String clientName,
+        @SerializedName("redirect-uri") @Expose @Required URI redirectUri,
+        @SerializedName("state") @Expose @Required State state) {}

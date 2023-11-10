@@ -2,6 +2,7 @@ package uk.gov.di.authentication.ipv.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -9,6 +10,7 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
+import org.approvaltests.Approvals;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.ipv.entity.IdentityProgressResponse;
@@ -66,7 +68,7 @@ public class IdentityProgressHandlerTest {
                                     "{\"rp_pairwise_id\": \"%s\", \"sub\": \"sub\"}",
                                     PAIRWISE_SUBJECT.getValue()));
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
-    private static final State STATE = new State();
+    private static final State STATE = new State("test-state");
 
     private final Context context = mock(Context.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
@@ -246,6 +248,23 @@ public class IdentityProgressHandlerTest {
                                 ENVIRONMENT,
                                 "Status",
                                 IdentityProgressStatus.NO_ENTRY.toString()));
+    }
+
+    @Test
+    void shouldReturnExpectedResponseBody() {
+        usingValidSession();
+        var identityCredentials =
+                new IdentityCredentials()
+                        .withSubjectID(PAIRWISE_SUBJECT.getValue())
+                        .withAdditionalClaims(Collections.emptyMap())
+                        .withCoreIdentityJWT("a-core-identity");
+        when(dynamoIdentityService.getIdentityCredentials(anyString()))
+                .thenReturn(Optional.of(identityCredentials));
+        when(clientSessionService.getClientSessionFromRequestHeaders(any()))
+                .thenReturn(Optional.of(getClientSession()));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        Approvals.verify(result.getBody());
     }
 
     private ClientSession getClientSession() {

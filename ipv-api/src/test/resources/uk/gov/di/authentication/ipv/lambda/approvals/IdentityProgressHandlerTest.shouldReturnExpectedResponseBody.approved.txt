@@ -1,0 +1,1 @@
+{"status":"COMPLETED","client-name":"test-client-name","redirect-uri":"http://localhost/redirect","state":"test-state"}

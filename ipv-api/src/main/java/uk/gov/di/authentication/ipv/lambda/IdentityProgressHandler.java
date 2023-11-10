@@ -24,7 +24,7 @@ import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoIdentityService;
 import uk.gov.di.authentication.shared.services.SessionService;
-import uk.gov.di.authentication.shared.state.UserSession;
+import uk.gov.di.authentication.shared.state.OrchestrationUserSession;
 
 import java.util.Map;
 import java.util.Objects;
@@ -76,10 +76,13 @@ public class IdentityProgressHandler extends BaseOrchestrationHandler {
 
     @Override
     public APIGatewayProxyResponseEvent handleRequestWithUserSession(
-            APIGatewayProxyRequestEvent input, Context context, UserSession userSession) {
+            APIGatewayProxyRequestEvent input,
+            Context context,
+            OrchestrationUserSession userSession) {
         LOG.info("IdentityProgress request received");
         try {
-            var subjectId = userSession.getSession().getInternalCommonSubjectIdentifier();
+            var internalCommonSubjectIdentifier =
+                    userSession.getSession().getInternalCommonSubjectIdentifier();
 
             AuthenticationRequest authenticationRequest;
             try {
@@ -98,7 +101,8 @@ public class IdentityProgressHandler extends BaseOrchestrationHandler {
             UserInfo userInfo;
             try {
                 var authenticationUserInfo =
-                        userInfoStorageService.getAuthenticationUserInfoData(subjectId);
+                        userInfoStorageService.getAuthenticationUserInfoData(
+                                internalCommonSubjectIdentifier);
 
                 if (authenticationUserInfo.isPresent()) {
                     userInfo =

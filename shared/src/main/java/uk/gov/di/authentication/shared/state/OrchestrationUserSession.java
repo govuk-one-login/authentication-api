@@ -4,13 +4,13 @@ import org.jetbrains.annotations.Nullable;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.Session;
 
-public class UserSession {
+public class OrchestrationUserSession {
     private final Session session;
     @Nullable private final String clientId;
     @Nullable private final ClientSession clientSession;
     private final String clientSessionId;
 
-    protected UserSession(
+    protected OrchestrationUserSession(
             Session session,
             @Nullable String clientId,
             @Nullable ClientSession clientSession,
@@ -66,8 +66,8 @@ public class UserSession {
             return this;
         }
 
-        public UserSession build() {
-            return new UserSession(session, clientId, clientSession, clientSessionId);
+        public OrchestrationUserSession build() {
+            return new OrchestrationUserSession(session, clientId, clientSession, clientSessionId);
         }
     }
 }

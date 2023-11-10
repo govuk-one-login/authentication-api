@@ -10,10 +10,11 @@ import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.helpers.LogLineHelper;
+import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
-import uk.gov.di.authentication.shared.state.UserSession;
+import uk.gov.di.authentication.shared.state.OrchestrationUserSession;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -21,6 +22,7 @@ import java.util.Optional;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.UNKNOWN;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
@@ -58,7 +60,9 @@ public abstract class BaseOrchestrationHandler
     }
 
     public abstract APIGatewayProxyResponseEvent handleRequestWithUserSession(
-            APIGatewayProxyRequestEvent input, Context context, final UserSession userSession);
+            APIGatewayProxyRequestEvent input,
+            Context context,
+            final OrchestrationUserSession orchestrationUserSession);
 
     private APIGatewayProxyResponseEvent validateAndHandleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
@@ -71,8 +75,12 @@ public abstract class BaseOrchestrationHandler
         } else {
             attachSessionIdToLogs(session);
         }
+        attachLogFieldToLogs(
+                PERSISTENT_SESSION_ID,
+                PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
-        UserSession.Builder userSessionBuilder = UserSession.builder(session);
+        OrchestrationUserSession.Builder userSessionBuilder =
+                OrchestrationUserSession.builder(session);
 
         String clientSessionId =
                 getHeaderValueFromHeaders(
