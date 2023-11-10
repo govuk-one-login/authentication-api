@@ -1,9 +1,11 @@
 name: Deploy OIDC
 
 env:
-  GHA_ROLE: arn:aws:iam::761723964695:role/build-auth-deploy-pipeline-GitHubActionsRole-160U5ADTRKQ2O
-  DESTINATION_BUCKET: di-auth-lambda-signed-20220215170204376200000002
-  ARTIFACT_BUCKET: build-auth-deploy-pipeli-githubartifactsourcebuck-1o4hcrnik6ayv
+  AWS_REGION: eu-west-2
+
+#gha role is build Auth github actions role in Gds dev Account
+#Artifact bucket is Build Auth deploy github artifcat Source bucket
+#Destination Bucket is auth-lambda-signed bucket from prod tooling account
 
 on:
   workflow_run:
@@ -26,13 +28,13 @@ jobs:
       - name: Set up AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: ${{ env.GHA_ROLE }}
-          aws-region: eu-west-2
+          role-to-assume: ${{ secrets.GHA_ROLE }}
+          aws-region: ${{ env.AWS_REGION }}
       
       - name: Download and copy Audit Processors signed lambda zip
         working-directory: ci/terraform/oidc
         run: |
-          aws s3 cp s3://${{ env.DESTINATION_BUCKET }} ./artifacts \
+          aws s3 cp s3://${{ secrets.DESTINATION_BUCKET }} ./artifacts \
             --recursive --exclude "*" \
             --include "signed-oidc-api-${{ github.sha }}-*"
           mv artifacts/signed-oidc-api-*.zip artifacts/oidc-api.zip
@@ -40,7 +42,7 @@ jobs:
       - name: Download and copy Client Registry API signed artifact
         working-directory: ci/terraform/oidc
         run: |
-          aws s3 cp s3://${{ env.DESTINATION_BUCKET }} ./artifacts \
+          aws s3 cp s3://${{ secrets.DESTINATION_BUCKET }} ./artifacts \
             --recursive --exclude "*" \
             --include "signed-client-registry-api-${{ github.sha }}-*"
           mv artifacts/signed-client-registry-api-*.zip artifacts/client-registry-api.zip
@@ -48,7 +50,7 @@ jobs:
       - name: Download and copy Doc Checking App API signed artifact
         working-directory: ci/terraform/oidc
         run: |
-          aws s3 cp s3://${{ env.DESTINATION_BUCKET }} ./artifacts \
+          aws s3 cp s3://${{ secrets.DESTINATION_BUCKET }} ./artifacts \
             --recursive --exclude "*" \
             --include "signed-doc-checking-app-api-${{ github.sha }}-*"
           mv artifacts/signed-doc-checking-app-api-*.zip artifacts/doc-checking-app-api.zip
@@ -56,7 +58,7 @@ jobs:
       - name: Download and copy Frontend API signed artifact
         working-directory: ci/terraform/oidc
         run: |
-          aws s3 cp s3://${{ env.DESTINATION_BUCKET }} ./artifacts \
+          aws s3 cp s3://${{ secrets.DESTINATION_BUCKET }} ./artifacts \
             --recursive --exclude "*" \
             --include "signed-frontend-api-${{ github.sha }}-*"
           mv artifacts/signed-frontend-api-*.zip artifacts/frontend-api.zip
@@ -64,7 +66,7 @@ jobs:
       - name: Download and copy IPV API signed artifact
         working-directory: ci/terraform/oidc
         run: |
-          aws s3 cp s3://${{ env.DESTINATION_BUCKET }} ./artifacts \
+          aws s3 cp s3://${{ secrets.DESTINATION_BUCKET }} ./artifacts \
             --recursive --exclude "*" \
             --include "signed-ipv-api-${{ github.sha }}-*"
           mv artifacts/signed-ipv-api-*.zip artifacts/ipv-api.zip
@@ -74,7 +76,7 @@ jobs:
         run: |
           zip -r oidc.zip .
           S3_RESPONSE=`aws s3api put-object \
-            --bucket $ARTIFACT_BUCKET \
+            --bucket ${{ secrets.ARTIFACT_BUCKET }} \
             --key oidc.zip \
             --body oidc.zip \
             --metadata "repository=$GITHUB_REPOSITORY,commitsha=$GITHUB_SHA,committag=$GIT_TAG,commitmessage=$COMMIT_MSG"`

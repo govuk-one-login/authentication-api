@@ -1,9 +1,8 @@
 name: Build modules
 env:
-  DEPLOYER_ROLE: arn:aws:iam::114407264696:role/deployers/github-actions-publish-to-s3-for-code-signing
-  SOURCE_BUCKET: di-auth-lambda-source-20220215170204376700000003
-  DESTINATION_BUCKET: di-auth-lambda-signed-20220215170204376200000002
-  SIGNING_PROFILE: di_auth_lambda_signing_20220215170204371800000001
+  AWS_REGION: eu-west-2
+
+#Deployer role is github actions publish code signing role, Source & Destination Bucket & Signing profile all from prod tooling account
 
 on:
   push:
@@ -38,8 +37,8 @@ jobs:
     - name: Set up AWS credentials
       uses: aws-actions/configure-aws-credentials@v1-node16
       with:
-        role-to-assume: ${{ env.DEPLOYER_ROLE }}
-        aws-region: eu-west-2
+        role-to-assume: ${{ secrets.DEPLOYER_ROLE }}
+        aws-region: ${{ env.AWS_REGION }}
 
     - name: Set up JDK 17
       uses: actions/setup-java@v3
@@ -58,7 +57,7 @@ jobs:
       working-directory: ${{ matrix.module }}/build/distributions
       run: |
         S3_RESPONSE=`aws s3api put-object \
-          --bucket $SOURCE_BUCKET \
+          --bucket ${{ secrets.SOURCE_BUCKET }} \
           --key ${{ matrix.module }}/${{ github.sha }}.zip \
           --body ${{ matrix.module }}.zip`
         VERSION=`echo $S3_RESPONSE | jq .VersionId -r`
@@ -67,8 +66,8 @@ jobs:
     - name: Start signing job for ${{ matrix.module }}
       run: |
         SIGNER_RESPONSE=`aws signer start-signing-job \
-          --profile-name "${SIGNING_PROFILE}" \
-          --source "s3={bucketName=${SOURCE_BUCKET},key=${{ matrix.module }}/${{ github.sha }}.zip,version=$VERSION}" \
-          --destination "s3={bucketName=${DESTINATION_BUCKET},prefix=signed-${{ matrix.module }}-${{ github.sha }}-}"`
+          --profile-name "${{ secrets.SIGNING_PROFILE }}" \
+          --source "s3={bucketName=${{ secrets.SOURCE_BUCKET }},key=${{ matrix.module }}/${{ github.sha }}.zip,version=$VERSION}" \
+          --destination "s3={bucketName=${{ secrets.DESTINATION_BUCKET }},prefix=signed-${{ matrix.module }}-${{ github.sha }}-}"`
         JOB_ID=`echo $SIGNER_RESPONSE | jq .jobId -r`
         aws signer wait successful-signing-job --job-id $JOB_ID
