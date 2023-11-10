@@ -79,7 +79,8 @@ public class InitiateIPVAuthorisationService {
                         pairwiseSubject,
                         claimsSetRequest,
                         Optional.ofNullable(clientSessionId).orElse("unknown"),
-                        userInfo.getEmailAddress());
+                        userInfo.getEmailAddress(),
+                        authRequest.getCustomParameter("vtr"));
         var authRequestBuilder =
                 new AuthorizationRequest.Builder(
                                 new ResponseType(ResponseType.Value.CODE),

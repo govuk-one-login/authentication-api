@@ -39,6 +39,7 @@ import java.text.ParseException;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -214,7 +215,13 @@ class IPVAuthorisationServiceTest {
 
         var encryptedJWT =
                 authorisationService.constructRequestJWT(
-                        state, scope, pairwise, claims, "journey-id", "test@test.com");
+                        state,
+                        scope,
+                        pairwise,
+                        claims,
+                        "journey-id",
+                        "test@test.com",
+                        List.of("Cl.Cm.P2", "Cl.Cm.PCL200"));
 
         var signedJWTResponse = decryptJWT(encryptedJWT);
 
@@ -237,6 +244,9 @@ class IPVAuthorisationServiceTest {
         assertThat(
                 signedJWTResponse.getJWTClaimsSet().getClaim("govuk_signin_journey_id"),
                 equalTo("journey-id"));
+        assertThat(
+                signedJWTResponse.getJWTClaimsSet().getClaim("vtr"),
+                equalTo(List.of("Cl.Cm.P2", "Cl.Cm.PCL200")));
     }
 
     private SignedJWT decryptJWT(EncryptedJWT encryptedJWT) throws JOSEException {
