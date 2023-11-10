@@ -1,10 +1,8 @@
-package uk.gov.di.authentication.oidc.services;
+package uk.gov.di.authentication.shared.services;
 
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
-import uk.gov.di.authentication.oidc.entity.AuthenticationUserInfo;
+import uk.gov.di.authentication.shared.entity.AuthenticationUserInfo;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
-import uk.gov.di.authentication.shared.services.BaseDynamoService;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
