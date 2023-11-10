@@ -168,8 +168,7 @@ resource "aws_dynamodb_table" "client_registry_table" {
   }
 
   server_side_encryption {
-    enabled = true
-    kms_key_arn = aws_kms_key.client_registry_table_encryption_key
+    enabled = !var.use_localstack
   }
 
   lifecycle {
