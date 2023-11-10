@@ -15,7 +15,7 @@ import uk.gov.di.authentication.ipv.entity.IdentityProgressStatus;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
-import uk.gov.di.authentication.shared.lambda.BaseOrchestrationHandler;
+import uk.gov.di.authentication.shared.lambda.BaseOrchestrationFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationUserInfoStorageService;
@@ -32,7 +32,7 @@ import java.util.Objects;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
-public class IdentityProgressHandler extends BaseOrchestrationHandler {
+public class IdentityProgressFrontendHandler extends BaseOrchestrationFrontendHandler {
     private final DynamoIdentityService dynamoIdentityService;
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
@@ -40,7 +40,7 @@ public class IdentityProgressHandler extends BaseOrchestrationHandler {
 
     private static final Logger LOG = LogManager.getLogger(ProcessingIdentityHandler.class);
 
-    public IdentityProgressHandler(ConfigurationService configurationService) {
+    public IdentityProgressFrontendHandler(ConfigurationService configurationService) {
         super(configurationService);
         this.dynamoIdentityService = new DynamoIdentityService(configurationService);
         this.auditService = new AuditService(configurationService);
@@ -49,11 +49,11 @@ public class IdentityProgressHandler extends BaseOrchestrationHandler {
                 new AuthenticationUserInfoStorageService(configurationService);
     }
 
-    public IdentityProgressHandler() {
+    public IdentityProgressFrontendHandler() {
         this(ConfigurationService.getInstance());
     }
 
-    public IdentityProgressHandler(
+    public IdentityProgressFrontendHandler(
             ConfigurationService configurationService,
             DynamoIdentityService dynamoIdentityService,
             AuditService auditService,
@@ -172,5 +172,10 @@ public class IdentityProgressHandler extends BaseOrchestrationHandler {
             LOG.error("Unable to generate IdentityProgressResponse");
             throw new RuntimeException();
         }
+    }
+
+    @Override
+    protected String getSegmentName() {
+        return "ipv-api::";
     }
 }

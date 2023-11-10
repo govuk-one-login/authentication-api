@@ -28,7 +28,7 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFie
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
 
-public abstract class BaseOrchestrationHandler
+public abstract class BaseOrchestrationFrontendHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
     private static final Logger LOG = LogManager.getLogger(BaseFrontendHandler.class);
     private static final String CLIENT_ID = "client_id";
@@ -36,7 +36,7 @@ public abstract class BaseOrchestrationHandler
     protected final SessionService sessionService;
     protected final ClientSessionService clientSessionService;
 
-    protected BaseOrchestrationHandler(
+    protected BaseOrchestrationFrontendHandler(
             ConfigurationService configurationService,
             SessionService sessionService,
             ClientSessionService clientSessionService) {
@@ -45,7 +45,7 @@ public abstract class BaseOrchestrationHandler
         this.clientSessionService = clientSessionService;
     }
 
-    protected BaseOrchestrationHandler(ConfigurationService configurationService) {
+    protected BaseOrchestrationFrontendHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
         this.sessionService = new SessionService(configurationService);
         this.clientSessionService = new ClientSessionService(configurationService);
@@ -55,7 +55,7 @@ public abstract class BaseOrchestrationHandler
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         return segmentedFunctionCall(
-                "ipv-api::" + getClass().getSimpleName(),
+                getSegmentName() + getClass().getSimpleName(),
                 () -> validateAndHandleRequest(input, context));
     }
 
@@ -103,4 +103,6 @@ public abstract class BaseOrchestrationHandler
 
         return handleRequestWithUserSession(input, context, userSessionBuilder.build());
     }
+
+    protected abstract String getSegmentName();
 }

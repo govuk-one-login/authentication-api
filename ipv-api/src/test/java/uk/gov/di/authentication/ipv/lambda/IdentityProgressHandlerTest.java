@@ -84,7 +84,7 @@ public class IdentityProgressHandlerTest {
             new Session(SESSION_ID).setInternalCommonSubjectIdentifier(INTERNAL_SUBJECT_ID);
     private final APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
     protected final Json objectMapper = SerializationService.getInstance();
-    private IdentityProgressHandler handler;
+    private IdentityProgressFrontendHandler handler;
 
     @BeforeEach
     void setup() {
@@ -97,7 +97,7 @@ public class IdentityProgressHandlerTest {
         event.setHeaders(headers);
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         handler =
-                new IdentityProgressHandler(
+                new IdentityProgressFrontendHandler(
                         configurationService,
                         dynamoIdentityService,
                         auditService,
