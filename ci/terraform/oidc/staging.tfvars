@@ -8,3 +8,4 @@ logging_endpoint_arns                = []
 shared_state_bucket                  = "di-auth-staging-tfstate"
 test_clients_enabled                 = true
 internal_sector_uri                  = "https://identity.staging.account.gov.uk"
+orch_redirect_uri                    = "https://oidc.staging.account.gov.uk/orchestration-redirect"
