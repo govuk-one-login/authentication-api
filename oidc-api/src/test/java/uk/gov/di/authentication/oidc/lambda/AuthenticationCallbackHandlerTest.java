@@ -206,7 +206,7 @@ class AuthenticationCallbackHandlerTest {
                         eq(pair("isNewAccount", "true")),
                         eq(pair("rpPairwiseId", PAIRWISE_SUBJECT_ID.getValue())),
                         eq(pair("nonce", RP_NONCE)),
-                        eq(pair("authCode", AUTH_CODE_RP_TO_ORCH)));
+                        eq(pair("authCode", AUTH_CODE_RP_TO_ORCH.getValue())));
     }
 
     @Test
