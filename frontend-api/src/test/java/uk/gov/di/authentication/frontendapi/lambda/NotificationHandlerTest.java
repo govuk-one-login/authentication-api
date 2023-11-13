@@ -75,8 +75,7 @@ public class NotificationHandlerTest {
                 new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, "654321", SupportedLanguage.EN);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
-        var contactUsLinkUrl =
-                "https://localhost:8080/frontend/contact-us?referer=confirmEmailAddressEmail";
+        var contactUsLinkUrl = "https://localhost:8080/frontend/" + CONTACT_US_LINK_ROUTE;
 
         handler.handleRequest(sqsEvent, context);
 
@@ -97,8 +96,7 @@ public class NotificationHandlerTest {
                         TEST_EMAIL_ADDRESS, PASSWORD_RESET_CONFIRMATION, SupportedLanguage.EN);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
-        var contactUsLinkUrl =
-                "https://localhost:8080/frontend/contact-us?referer=passwordResetConfirmationEmail";
+        var contactUsLinkUrl = "https://localhost:8080/frontend/" + CONTACT_US_LINK_ROUTE;
 
         handler.handleRequest(sqsEvent, context);
 
@@ -120,8 +118,7 @@ public class NotificationHandlerTest {
                 new NotifyRequest(
                         TEST_PHONE_NUMBER, PASSWORD_RESET_CONFIRMATION_SMS, SupportedLanguage.EN);
         var sqsEvent = generateSQSEvent(objectMapper.writeValueAsString(notifyRequest));
-        var contactUsLinkUrl =
-                "https://localhost:8080/frontend/contact-us?referer=passwordResetConfirmationSms";
+        var contactUsLinkUrl = "https://localhost:8080/frontend/" + CONTACT_US_LINK_ROUTE;
 
         handler.handleRequest(sqsEvent, context);
 
@@ -139,8 +136,7 @@ public class NotificationHandlerTest {
     void shouldSuccessfullyProcessAccountCreatedConfirmationFromSQSQueue()
             throws Json.JsonException, NotificationClientException {
         String baseUrl = "http://account-management";
-        var contactUsLinkUrl =
-                "https://localhost:8080/frontend/contact-us?referer=accountCreatedEmail";
+        var contactUsLinkUrl = "https://localhost:8080/frontend/" + CONTACT_US_LINK_ROUTE;
         var govUKAccountsUrl = URI.create("https://www.gov.uk/account");
         when(configService.getAccountManagementURI()).thenReturn(baseUrl);
         when(configService.getGovUKAccountsURL()).thenReturn(govUKAccountsUrl);
@@ -208,8 +204,7 @@ public class NotificationHandlerTest {
                 new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, "654321", SupportedLanguage.EN);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
-        var contactUsLinkUrl =
-                "https://localhost:8080/frontend/contact-us?referer=confirmEmailAddressEmail";
+        var contactUsLinkUrl = "https://localhost:8080/frontend/" + CONTACT_US_LINK_ROUTE;
 
         Map<String, Object> personalisation = new HashMap<>();
         personalisation.put("validation-code", "654321");
@@ -344,7 +339,7 @@ public class NotificationHandlerTest {
         handler.handleRequest(sqsEvent, context);
 
         Map<String, Object> personalisation = new HashMap<>();
-        personalisation.put("contact-us-link", buildContactUsUrl("accountCreatedEmail"));
+        personalisation.put("contact-us-link", buildContactUsUrl());
         personalisation.put("gov-uk-accounts-url", GOV_UK_ACCOUNTS_URL.toString());
 
         verify(notificationService)
@@ -369,8 +364,7 @@ public class NotificationHandlerTest {
                         SupportedLanguage.EN);
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
-        var contactUsLinkUrl =
-                "https://localhost:8080/frontend/contact-us?referer=passwordResetRequestEmail";
+        var contactUsLinkUrl = "https://localhost:8080/frontend/" + CONTACT_US_LINK_ROUTE;
 
         handler.handleRequest(sqsEvent, context);
 
@@ -413,12 +407,8 @@ public class NotificationHandlerTest {
                         SupportedLanguage.EN);
     }
 
-    private String buildContactUsUrl(String referer) {
-        var queryParam = Map.of("referer", referer);
-        return buildURI(
-                        configService.getFrontendBaseUrl(),
-                        configService.getContactUsLinkRoute(),
-                        queryParam)
+    private String buildContactUsUrl() {
+        return buildURI(configService.getFrontendBaseUrl(), configService.getContactUsLinkRoute())
                 .toString();
     }
 

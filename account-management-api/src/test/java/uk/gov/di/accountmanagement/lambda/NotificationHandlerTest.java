@@ -35,7 +35,7 @@ public class NotificationHandlerTest {
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String TEST_PHONE_NUMBER = "01234567890";
     private static final String FRONTEND_BASE_URL = "https://localhost:8080/frontend";
-    private static final String CONTACT_US_LINK_ROUTE = "contact-us";
+    private static final String CONTACT_US_LINK_ROUTE = "contact-gov-uk-one-login";
     private final Context context = mock(Context.class);
     private final NotificationService notificationService = mock(NotificationService.class);
     private final ConfigurationService configService = mock(ConfigurationService.class);
@@ -55,8 +55,7 @@ public class NotificationHandlerTest {
 
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, "654321", SupportedLanguage.EN);
-        var contactUsLinkUrl =
-                "https://localhost:8080/frontend/contact-us?referer=confirmEmailAddressEmail";
+        var contactUsLinkUrl = "https://localhost:8080/frontend/" + CONTACT_US_LINK_ROUTE;
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
 
@@ -100,8 +99,7 @@ public class NotificationHandlerTest {
 
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_EMAIL_ADDRESS, EMAIL_UPDATED, SupportedLanguage.EN);
-        var contactUsLinkUrl =
-                "https://localhost:8080/frontend/contact-us?referer=emailAddressUpdatedEmail";
+        var contactUsLinkUrl = "https://localhost:8080/frontend/" + CONTACT_US_LINK_ROUTE;
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
 
@@ -122,8 +120,7 @@ public class NotificationHandlerTest {
 
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_EMAIL_ADDRESS, PASSWORD_UPDATED, SupportedLanguage.EN);
-        var contactUsLinkUrl =
-                "https://localhost:8080/frontend/contact-us?referer=passwordUpdatedEmail";
+        var contactUsLinkUrl = "https://localhost:8080/frontend/" + CONTACT_US_LINK_ROUTE;
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
 
@@ -146,8 +143,7 @@ public class NotificationHandlerTest {
 
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_EMAIL_ADDRESS, PHONE_NUMBER_UPDATED, SupportedLanguage.EN);
-        var contactUsLinkUrl =
-                "https://localhost:8080/frontend/contact-us?referer=phoneNumberUpdatedEmail";
+        var contactUsLinkUrl = "https://localhost:8080/frontend/" + CONTACT_US_LINK_ROUTE;
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
 
@@ -170,8 +166,7 @@ public class NotificationHandlerTest {
 
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_EMAIL_ADDRESS, DELETE_ACCOUNT, SupportedLanguage.EN);
-        var contactUsLinkUrl =
-                "https://localhost:8080/frontend/contact-us?referer=accountDeletedEmail";
+        var contactUsLinkUrl = "https://localhost:8080/frontend/" + CONTACT_US_LINK_ROUTE;
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
 
@@ -205,8 +200,7 @@ public class NotificationHandlerTest {
 
         NotifyRequest notifyRequest =
                 new NotifyRequest(TEST_EMAIL_ADDRESS, VERIFY_EMAIL, "654321", SupportedLanguage.EN);
-        var contactUsLinkUrl =
-                "https://localhost:8080/frontend/contact-us?referer=confirmEmailAddressEmail";
+        var contactUsLinkUrl = "https://localhost:8080/frontend/" + CONTACT_US_LINK_ROUTE;
         String notifyRequestString = objectMapper.writeValueAsString(notifyRequest);
         SQSEvent sqsEvent = generateSQSEvent(notifyRequestString);
 

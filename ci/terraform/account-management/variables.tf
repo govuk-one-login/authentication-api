@@ -153,7 +153,7 @@ variable "lambda_min_concurrency" {
 
 variable "contact_us_link_route" {
   type    = string
-  default = "contact-us"
+  default = "contact-gov-uk-one-login"
 }
 
 variable "localstack_endpoint" {
