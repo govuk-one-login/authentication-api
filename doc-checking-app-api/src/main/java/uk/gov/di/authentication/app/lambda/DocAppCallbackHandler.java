@@ -54,6 +54,7 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
 public class DocAppCallbackHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -321,7 +322,12 @@ public class DocAppCallbackHandler
                             session.getEmailAddress(),
                             IpAddressHelper.extractIpAddress(input),
                             AuditService.UNKNOWN,
-                            AuditService.UNKNOWN);
+                            AuditService.UNKNOWN,
+                            pair("internalSubjectId", AuditService.UNKNOWN),
+                            pair("isNewAccount", session.isNewAccount()),
+                            pair("rpPairwiseId", AuditService.UNKNOWN),
+                            pair("nonce", authenticationRequest.getNonce()),
+                            pair("authCode", authCode));
 
                     return generateApiGatewayProxyResponse(
                             302,

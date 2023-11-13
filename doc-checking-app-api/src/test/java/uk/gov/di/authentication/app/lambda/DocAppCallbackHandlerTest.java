@@ -67,6 +67,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -106,6 +107,7 @@ class DocAppCallbackHandlerTest {
     private static final State STATE = new State();
 
     private static final State RP_STATE = new State();
+    private static final Nonce NONCE = new Nonce();
 
     private final Session session = new Session(SESSION_ID).setEmailAddress(TEST_EMAIL_ADDRESS);
 
@@ -219,7 +221,22 @@ class DocAppCallbackHandlerTest {
         verifyAuditServiceEvent(DocAppAuditableEvent.DOC_APP_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
         verifyAuditServiceEvent(
                 DocAppAuditableEvent.DOC_APP_SUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED);
-        verifyAuditServiceEvent(DocAppAuditableEvent.AUTH_CODE_ISSUED, TEST_EMAIL_ADDRESS);
+        verify(auditService)
+                .submitAuditEvent(
+                        DocAppAuditableEvent.AUTH_CODE_ISSUED,
+                        CLIENT_SESSION_ID,
+                        SESSION_ID,
+                        CLIENT_ID.getValue(),
+                        PAIRWISE_SUBJECT_ID.getValue(),
+                        TEST_EMAIL_ADDRESS,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        pair("internalSubjectId", AuditService.UNKNOWN),
+                        pair("isNewAccount", session.isNewAccount()),
+                        pair("rpPairwiseId", AuditService.UNKNOWN),
+                        pair("nonce", NONCE),
+                        pair("authCode", AUTH_CODE));
 
         verifyNoMoreInteractions(auditService);
         verify(dynamoDocAppService)
@@ -593,13 +610,12 @@ class DocAppCallbackHandlerTest {
     private static AuthenticationRequest generateAuthRequest() {
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         Scope scope = new Scope();
-        Nonce nonce = new Nonce();
         scope.add(OIDCScopeValue.OPENID);
         scope.add("phone");
         scope.add("email");
         return new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
                 .state(RP_STATE)
-                .nonce(nonce)
+                .nonce(NONCE)
                 .build();
     }
 
@@ -612,20 +628,6 @@ class DocAppCallbackHandlerTest {
                         CLIENT_ID.getValue(),
                         PAIRWISE_SUBJECT_ID.getValue(),
                         AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN);
-    }
-
-    private void verifyAuditServiceEvent(DocAppAuditableEvent docAppAuditableEvent, String email) {
-        verify(auditService)
-                .submitAuditEvent(
-                        docAppAuditableEvent,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        CLIENT_ID.getValue(),
-                        PAIRWISE_SUBJECT_ID.getValue(),
-                        email,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN);
