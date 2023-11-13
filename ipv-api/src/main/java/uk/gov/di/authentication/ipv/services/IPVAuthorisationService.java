@@ -39,6 +39,7 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -138,7 +139,8 @@ public class IPVAuthorisationService {
             Subject subject,
             String claims,
             String clientSessionId,
-            String emailAddress) {
+            String emailAddress,
+            List<String> vtr) {
         LOG.info("Generating request JWT");
         var jwsHeader = new JWSHeader(SIGNING_ALGORITHM);
         var jwtID = IdGenerator.generate();
@@ -160,7 +162,8 @@ public class IPVAuthorisationService {
                                 configurationService.getIPVAuthorisationCallbackURI().toString())
                         .claim("client_id", configurationService.getIPVAuthorisationClientId())
                         .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", scope.toString());
+                        .claim("scope", scope.toString())
+                        .claim("vtr", vtr);
         if (Objects.nonNull(claims)) {
             claimsBuilder.claim("claims", claims);
         }

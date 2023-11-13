@@ -76,6 +76,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -192,7 +193,8 @@ public class IPVAuthorisationHandlerTest {
                         any(Subject.class),
                         any(),
                         eq(CLIENT_SESSION_ID),
-                        anyString()))
+                        anyString(),
+                        any()))
                 .thenReturn(encryptedJWT);
         usingValidSession();
         usingValidClientSession();
@@ -213,6 +215,15 @@ public class IPVAuthorisationHandlerTest {
         var expectedRpPairwiseId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         SUBJECT_ID, "sector-identifier", SALT.array());
+        verify(authorisationService)
+                .constructRequestJWT(
+                        any(State.class),
+                        eq(withAuthenticationRequest().getScope()),
+                        any(Subject.class),
+                        any(),
+                        eq(CLIENT_SESSION_ID),
+                        eq(EMAIL_ADDRESS),
+                        isNull());
         verify(auditService)
                 .submitAuditEvent(
                         IPVAuditableEvent.IPV_AUTHORISATION_REQUESTED,
