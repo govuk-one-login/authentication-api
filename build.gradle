@@ -23,7 +23,7 @@ ext {
     dependencyVersions = [
         aws_sdk_v2_version: "2.21.17",
         aws_lambda_core_version: "1.2.3",
-        aws_lambda_events_version: "3.11.0",
+        aws_lambda_events_version: "3.11.3",
         gson: "2.10.1",
         jetbrains_annotations: "24.0.1",
         nimbusds_oauth_version: "10.13.2",
