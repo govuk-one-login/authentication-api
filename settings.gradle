@@ -15,4 +15,5 @@ include 'doc-checking-app-api'
 include 'utils'
 include 'test-services-api'
 include 'auth-external-api'
+include 'interventions-api-stub'
 
