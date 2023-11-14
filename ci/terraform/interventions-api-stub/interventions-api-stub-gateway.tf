@@ -68,7 +68,7 @@ resource "aws_api_gateway_stage" "interventions_api_stub_stage" {
   }
 
   depends_on = [
-    #    module.auth_userinfo_role,
+    module.hello_world_role,
     aws_api_gateway_deployment.interventions_api_stub_deployment
   ]
 
@@ -78,18 +78,18 @@ resource "aws_api_gateway_stage" "interventions_api_stub_stage" {
 resource "aws_api_gateway_deployment" "interventions_api_stub_deployment" {
   rest_api_id = aws_api_gateway_rest_api.interventions_api_stub.id
 
-  #  triggers = {
-  #    redeployment = sha1(jsonencode([
-  #      module.auth_userinfo.integration_trigger_value,
-  #      module.auth_userinfo.method_trigger_value,
-  #    ]))
-  #  }
+  triggers = {
+    redeployment = sha1(jsonencode([
+      module.hello_world_lambda.integration_trigger_value,
+      module.hello_world_lambda.method_trigger_value,
+    ]))
+  }
   lifecycle {
     create_before_destroy = true
   }
-  #  depends_on = [
-  #    module.auth_userinfo,
-  #  ]
+  depends_on = [
+    module.hello_world_lambda,
+  ]
 }
 
 resource "aws_api_gateway_method_settings" "interventions_api_stub_logging_settings" {

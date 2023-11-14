@@ -33,3 +33,37 @@ variable "logging_endpoint_arns" {
   default     = []
   description = "Amazon Resource Name (ARN) for the CSLS endpoints to ship logs to"
 }
+
+variable "lambda_max_concurrency" {
+  default = 0
+}
+
+variable "scaling_trigger" {
+  default = 0.7
+}
+
+variable "lambda_min_concurrency" {
+  default     = 0
+  type        = number
+  description = "The number of lambda instance to keep 'warm'"
+}
+
+variable "endpoint_memory_size" {
+  default = 1536
+  type    = number
+}
+
+variable "interventions_api_stub_release_zip_file" {
+  default     = "../../../interventions-api-stub/build/distributions/interventions-api-stub.zip"
+  description = "Location of the Lambda ZIP file - defaults to build output folder when built locally"
+  type        = string
+}
+
+locals {
+  default_performance_parameters = {
+    memory          = var.endpoint_memory_size
+    concurrency     = var.lambda_min_concurrency
+    max_concurrency = var.lambda_max_concurrency
+    scaling_trigger = var.scaling_trigger
+  }
+}
