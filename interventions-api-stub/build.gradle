@@ -1,0 +1,35 @@
+plugins {
+    id 'java'
+    id "jacoco"
+}
+
+group = 'uk.gov.di.authentication.interventions-api-stub'
+version = 'unspecified'
+
+dependencies {
+    compileOnly configurations.lambda
+
+    implementation project(":shared")
+
+    testImplementation configurations.tests,
+            configurations.lambda
+
+    testRuntimeOnly configurations.test_runtime
+}
+
+test {
+    useJUnitPlatform()
+    environment "TRACING_ENABLED", "false"
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+jacocoTestReport {
+    reports {
+        xml.enabled true
+    }
+    dependsOn "test"
+}
