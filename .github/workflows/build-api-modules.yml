@@ -25,6 +25,7 @@ jobs:
         - test-services-api
         - utils
         - auth-external-api
+        - interventions-api-stub
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
@@ -49,10 +50,10 @@ jobs:
 
     - name: Set up Gradle
       uses: gradle/gradle-build-action@v2
-    
+
     - name: Build ${{ matrix.module }}
       run: ./gradlew --no-daemon :${{ matrix.module }}:buildZip
-    
+
     - name: Upload ${{ matrix.module }} to source bucket
       working-directory: ${{ matrix.module }}/build/distributions
       run: |
@@ -62,7 +63,7 @@ jobs:
           --body ${{ matrix.module }}.zip`
         VERSION=`echo $S3_RESPONSE | jq .VersionId -r`
         echo "VERSION=$VERSION" >> $GITHUB_ENV
-    
+
     - name: Start signing job for ${{ matrix.module }}
       run: |
         SIGNER_RESPONSE=`aws signer start-signing-job \
