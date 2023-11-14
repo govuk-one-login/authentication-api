@@ -12,6 +12,7 @@ import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.oidc.entity.BackChannelLogoutMessage;
 import uk.gov.di.authentication.oidc.services.HttpRequestService;
 import uk.gov.di.authentication.shared.helpers.LogLineHelper;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper.NowClock;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -41,7 +42,9 @@ public class BackChannelLogoutRequestHandler implements RequestHandler<SQSEvent,
     public BackChannelLogoutRequestHandler() {
         this.instance = ConfigurationService.getInstance();
         this.httpRequestService = new HttpRequestService();
-        this.tokenService = new TokenService(instance, null, new KmsConnectionService(instance));
+        this.tokenService =
+                new TokenService(
+                        instance, null, new KmsConnectionService(instance), NowHelper.utcClock());
         this.clock = new NowClock(Clock.systemUTC());
     }
 

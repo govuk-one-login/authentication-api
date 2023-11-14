@@ -9,6 +9,7 @@ import com.nimbusds.jose.crypto.impl.ECDSA;
 import com.nimbusds.jose.jwk.Curve;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
+import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ErrorObject;
@@ -16,6 +17,7 @@ import com.nimbusds.oauth2.sdk.GrantType;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.RefreshToken;
 import com.nimbusds.oauth2.sdk.util.JSONArrayUtils;
 import com.nimbusds.oauth2.sdk.util.URLUtils;
@@ -43,12 +45,14 @@ import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
+import uk.gov.di.authentication.shared.helpers.NowHelper.NowClock;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.helper.SubjectHelper;
 import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.text.ParseException;
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
@@ -83,8 +87,16 @@ public class TokenServiceTest {
     private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
     private final RedisConnectionService redisConnectionService =
             mock(RedisConnectionService.class);
+    private final NowClock clock =
+            new NowClock(Clock.fixed(new Date(0).toInstant(), ZoneId.systemDefault()));
     private final TokenService tokenService =
-            new TokenService(configurationService, redisConnectionService, kmsConnectionService);
+            new TokenService(
+                    configurationService, redisConnectionService, kmsConnectionService, clock) {
+                @Override
+                protected String newJwtId() {
+                    return "jwt-id";
+                }
+            };
     private static final Subject PUBLIC_SUBJECT = SubjectHelper.govUkSignInSubject();
     private static final Subject INTERNAL_SUBJECT = SubjectHelper.govUkSignInSubject();
     private static final Scope SCOPES =
@@ -461,47 +473,60 @@ public class TokenServiceTest {
 
     private void assertSuccessfulTokenResponse(OIDCTokenResponse tokenResponse)
             throws ParseException, Json.JsonException {
-        String accessTokenKey = ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT;
-        assertNotNull(tokenResponse.getOIDCTokens().getAccessToken());
-        AccessTokenStore accessTokenStore =
-                new AccessTokenStore(
-                        tokenResponse.getOIDCTokens().getAccessToken().getValue(),
-                        INTERNAL_SUBJECT.getValue());
-        verify(redisConnectionService)
-                .saveWithExpiry(
-                        accessTokenKey, objectMapper.writeValueAsString(accessTokenStore), 300L);
 
-        var header = (JWSHeader) tokenResponse.getOIDCTokens().getIDToken().getHeader();
+        AccessToken responseAccessToken = tokenResponse.getOIDCTokens().getAccessToken();
+        assertAccessTokenIsValid(responseAccessToken);
 
-        assertThat(tokenResponse.getOIDCTokens().getAccessToken().getLifetime(), is(300L));
+        JWT responseIdToken = tokenResponse.getOIDCTokens().getIDToken();
+        assertIdTokenIsValid(responseAccessToken, responseIdToken);
+    }
+
+    private void assertIdTokenIsValid(AccessToken responseAccessToken, JWT responseIdToken)
+            throws ParseException {
+        var header = (JWSHeader) responseIdToken.getHeader();
+
+        assertThat(responseAccessToken.getLifetime(), is(300L));
 
         assertThat(
                 header.getKeyID(),
                 is("1d504aece298a14d74ee0a02b6740b4372a1fab4206778e486ba72770ff4beb8"));
 
         assertThat(
-                tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaim("sub"),
+                responseIdToken.getJWTClaimsSet().getClaim("sub"),
                 equalTo(PUBLIC_SUBJECT.getValue()));
+        assertThat(responseIdToken.getJWTClaimsSet().getClaim("nonce"), equalTo(nonce.getValue()));
         assertThat(
-                tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaim("nonce"),
-                equalTo(nonce.getValue()));
-        assertThat(
-                tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaim("vtm"),
+                responseIdToken.getJWTClaimsSet().getClaim("vtm"),
                 equalTo(buildURI(BASE_URL, "/trustmark").toString()));
+        assertThat(responseIdToken.getJWTClaimsSet().getIssuer(), equalTo(BASE_URL));
         assertThat(
-                tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getIssuer(),
-                equalTo(BASE_URL));
-        assertThat(
-                tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getClaim("at_hash"),
+                responseIdToken.getJWTClaimsSet().getClaim("at_hash"),
                 equalTo(
-                        AccessTokenHash.compute(
-                                        tokenResponse.getOIDCTokens().getAccessToken(),
-                                        JWSAlgorithm.ES256,
-                                        null)
+                        AccessTokenHash.compute(responseAccessToken, JWSAlgorithm.ES256, null)
                                 .toString()));
 
+        assertThat(responseIdToken.getJWTClaimsSet().getJWTID(), is("jwt-id"));
         assertThat(
-                tokenResponse.getOIDCTokens().getIDToken().getJWTClaimsSet().getStringClaim("sid"),
-                is("client-session-id"));
+                responseIdToken.getJWTClaimsSet().getStringClaim("sid"), is("client-session-id"));
+        assertThat(responseIdToken.getJWTClaimsSet().getIssueTime().getTime(), is(0L));
+        assertThat(
+                responseIdToken.getJWTClaimsSet().getExpirationTime().getTime(), is(120 * 1000L));
+    }
+
+    private void assertAccessTokenIsValid(AccessToken responseAccessToken)
+            throws Json.JsonException, ParseException {
+        String accessTokenKey = ACCESS_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT;
+        assertNotNull(responseAccessToken);
+        AccessTokenStore accessTokenStore =
+                new AccessTokenStore(responseAccessToken.getValue(), INTERNAL_SUBJECT.getValue());
+        verify(redisConnectionService)
+                .saveWithExpiry(
+                        accessTokenKey, objectMapper.writeValueAsString(accessTokenStore), 300L);
+
+        var accessToken = SignedJWT.parse(responseAccessToken.getValue());
+
+        assertThat(accessToken.getJWTClaimsSet().getJWTID(), is("jwt-id"));
+        assertThat(accessToken.getJWTClaimsSet().getIssueTime().getTime(), is(0L));
+        assertThat(accessToken.getJWTClaimsSet().getExpirationTime().getTime(), is(300 * 1000L));
     }
 }
