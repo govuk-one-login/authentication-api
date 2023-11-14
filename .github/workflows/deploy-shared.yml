@@ -1,8 +1,10 @@
 name: Deploy Shared
 
 env:
-  GHA_ROLE: arn:aws:iam::761723964695:role/build-auth-deploy-pipeline-GitHubActionsRole-160U5ADTRKQ2O
-  ARTIFACT_BUCKET: build-auth-deploy-pipeli-githubartifactsourcebuck-1o4hcrnik6ayv
+  AWS_REGION: eu-west-2
+
+#gha role is build Auth github actions role in Gds dev Account
+#Artifact bucket is Build Auth deploy github artifcat Source bucket
 
 on:
   workflow_run:
@@ -25,15 +27,15 @@ jobs:
       - name: Set up AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: ${{ env.GHA_ROLE }}
-          aws-region: eu-west-2
+          role-to-assume: ${{ secrets.GHA_ROLE }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Upload Shared Terraform files
         working-directory: ci/terraform
         run: |
           zip -r shared.zip .
           S3_RESPONSE=`aws s3api put-object \
-            --bucket $ARTIFACT_BUCKET \
+            --bucket ${{ secrets.ARTIFACT_BUCKET }} \
             --key shared.zip \
             --body shared.zip \
             --metadata "repository=$GITHUB_REPOSITORY,commitsha=$GITHUB_SHA,committag=$GIT_TAG,commitmessage=$COMMIT_MSG"`
