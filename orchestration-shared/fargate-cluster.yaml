@@ -1,0 +1,29 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Fargate Cluster for running ECS tasks
+Parameters:
+  Environment:
+    Type: String
+    Default: sandpit
+    AllowedValues:
+      - dev
+      - sandpit
+      - build
+      - integration
+      - staging
+      - production
+    Description: The logical name for this deployment environment
+Outputs:
+  FargateCluster:
+    Value: !Ref FargateCluster
+    Export:
+      Name: FargateCluster
+Resources:
+  FargateCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      CapacityProviders:
+        - FARGATE
+      ClusterName: !Sub "${Environment}-fargate-cluster"
+      ClusterSettings:
+        - Name: containerInsights
+          Value: enabled

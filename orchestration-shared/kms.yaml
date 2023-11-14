@@ -1,0 +1,225 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: KMS keys
+Parameters:
+  Environment:
+    Type: String
+    Default: sandpit
+    AllowedValues:
+      - dev
+      - sandpit
+      - build
+      - integration
+      - staging
+      - production
+    Description: The logical name for this deployment environment
+Outputs:
+  IdTokenSigningKey:
+    Value: !Ref IdTokenSigningKey
+    Export:
+      Name: IdTokenSigningKey
+  IdTokenSigningKeyAlias:
+    Value: !Ref IdTokenSigningKeyAlias
+    Export:
+      Name: IdTokenSigningKeyAlias
+  IpvAuthSigningKey:
+    Value: !Ref IpvAuthSigningKey
+    Export:
+      Name: IpvAuthSigningKey
+  IpvAuthSigningKeyAlias:
+    Value: !Ref IpvAuthSigningKeyAlias
+    Export:
+      Name: IpvAuthSigningKeyAlias
+  DocAppAuthSigningKey:
+    Value: !Ref DocAppAuthSigningKey
+    Export:
+      Name: DocAppAuthSigningKey
+  DocAppAuthSigningKeyAlias:
+    Value: !Ref DocAppAuthSigningKeyAlias
+    Export:
+      Name: DocAppAuthSigningKeyAlias
+  CloudWatchLogEncryptionKey:
+    Value: !Ref CloudWatchLogEncryptionKey
+    Export:
+      Name: CloudWatchLogEncryptionKey
+  LambdaEnvironmentVariableEncryptionKey:
+    Value: !Ref LambdaEnvironmentVariableEncryptionKey
+    Export:
+      Name: LambdaEnvironmentVariableEncryptionKey
+  LambdaEnvironmentVariableEncryptionKeyAlias:
+    Value: !Ref LambdaEnvironmentVariableEncryptionKeyAlias
+    Export:
+      Name: LambdaEnvironmentVariableEncryptionKeyAlias
+Resources:
+  IdTokenSigningKey:
+    Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Description: KMS signing key for ID tokens
+      Enabled: true
+      KeySpec: ECC_NIST_P256
+      KeyPolicy:
+        Version: 2012-10-17
+        Id: key-default-1
+        Statement:
+          - Sid: Enable IAM User Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: 'kms:*'
+            Resource: '*'
+      KeyUsage: SIGN_VERIFY
+      PendingWindowInDays: 30
+      Tags:
+        - Key: environment
+          Value: !Ref Environment
+        - Key: application
+          Value: shared
+
+  IdTokenSigningKeyAlias:
+    Type: AWS::KMS::Alias
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      AliasName: !Sub "alias/${Environment}-id-token-signing-key-alias"
+      TargetKeyId: !Ref IdTokenSigningKey
+
+  IpvAuthSigningKey:
+    Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Description: KMS signing key for authentication to the IPV token endpoint
+      Enabled: true
+      KeySpec: ECC_NIST_P256
+      KeyPolicy:
+        Version: 2012-10-17
+        Id: key-default-1
+        Statement:
+          - Sid: Enable IAM User Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: 'kms:*'
+            Resource: '*'
+      KeyUsage: SIGN_VERIFY
+      PendingWindowInDays: 30
+      Tags:
+        - Key: environment
+          Value: !Ref Environment
+        - Key: application
+          Value: shared
+
+  IpvAuthSigningKeyAlias:
+    Type: AWS::KMS::Alias
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      AliasName: !Sub "alias/${Environment}-ipv-token-auth-kms-key-alias"
+      TargetKeyId: !Ref IpvAuthSigningKey
+
+  DocAppAuthSigningKey:
+    Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Description: KMS signing key for authentication to the Doc Checking App
+      Enabled: true
+      KeySpec: ECC_NIST_P256
+      KeyPolicy:
+        Version: 2012-10-17
+        Id: key-default-1
+        Statement:
+          - Sid: Enable IAM User Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: 'kms:*'
+            Resource: '*'
+      KeyUsage: SIGN_VERIFY
+      PendingWindowInDays: 30
+      Tags:
+        - Key: environment
+          Value: !Ref Environment
+        - Key: application
+          Value: shared
+
+  DocAppAuthSigningKeyAlias:
+    Type: AWS::KMS::Alias
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      AliasName: !Sub "alias/${Environment}-doc-app-auth-kms-key-alias"
+      TargetKeyId: !Ref DocAppAuthSigningKey
+
+  CloudWatchLogEncryptionKey:
+    Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Description: KMS key for Cloudwatch logs
+      Enabled: true
+      KeySpec: SYMMETRIC_DEFAULT
+      KeyPolicy:
+        Version: 2012-10-17
+        Id: key-policy-cloudwatch
+        Statement:
+          - Sid: Enable IAM User Permissions for root user
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: 'kms:*'
+            Resource: '*'
+          - Sid: AllowCloudWatchLogs
+            Effect: Allow
+            Principal:
+              Service: !Sub "logs.${AWS::Region}.amazonaws.com"
+            Action:
+              - "kms:Encrypt*"
+              - "kms:Decrypt*"
+              - "kms:Describe*"
+              - "kms:ReEncrypt*"
+              - "kms:GenerateDataKey*"
+            Resource: '*'
+      KeyUsage: ENCRYPT_DECRYPT
+      PendingWindowInDays: 30
+      EnableKeyRotation: true
+      Tags:
+        - Key: environment
+          Value: !Ref Environment
+        - Key: application
+          Value: shared
+
+  LambdaEnvironmentVariableEncryptionKey:
+    Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Description: KMS encryption key for lambda environment variables
+      Enabled: true
+      KeySpec: SYMMETRIC_DEFAULT
+      KeyPolicy:
+        Version: 2012-10-17
+        Id: key-default-1
+        Statement:
+          - Sid: Enable IAM User Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: 'kms:*'
+            Resource: '*'
+      KeyUsage: ENCRYPT_DECRYPT
+      PendingWindowInDays: 30
+      Tags:
+        - Key: environment
+          Value: !Ref Environment
+        - Key: application
+          Value: shared
+
+  LambdaEnvironmentVariableEncryptionKeyAlias:
+    Type: AWS::KMS::Alias
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      AliasName: !Sub "alias/${Environment}-lambda-env-vars-encryption-key-alias"
+      TargetKeyId: !Ref LambdaEnvironmentVariableEncryptionKey

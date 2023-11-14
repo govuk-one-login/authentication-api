@@ -1,0 +1,50 @@
+plugins {
+    id "java-library"
+    id "jacoco"
+}
+
+group "uk.gov.di"
+version "unspecified"
+
+dependencies {
+
+    implementation configurations.lambda,
+            configurations.nimbus,
+            configurations.bouncycastle,
+            configurations.govuk_notify,
+            configurations.dynamodb,
+            configurations.jetbrains_annotations,
+            configurations.kms,
+            configurations.lettuce,
+            configurations.libphonenumber,
+            configurations.hamcrest,
+            configurations.sns,
+            configurations.s3,
+            configurations.sqs,
+            configurations.ssm,
+            configurations.xray,
+            configurations.cloudwatch,
+            configurations.gson
+
+    testImplementation configurations.tests,
+            configurations.lambda_tests,
+            project(":orchestration-shared-test")
+    testRuntimeOnly configurations.test_runtime
+}
+
+test {
+    useJUnitPlatform()
+    environment "TRACING_ENABLED", "false"
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+jacocoTestReport {
+    reports {
+        xml.enabled true
+    }
+    dependsOn "test"
+}
