@@ -160,4 +160,13 @@ public class CookieHelper {
                 "%s=%s; Max-Age=%d; Domain=%s; %s",
                 cookieName, cookieValue, maxAge, domain, attributes);
     }
+
+    public static String appendTimestampToCookieValue(String cookieValue) {
+        return cookieValue + "--" + NowHelper.now().getTime();
+    }
+
+    public static boolean isValidCookieWithDoubleDashedTimestamp(String cookieValue) {
+        String sessionIdPattern = ".*--\\d+";
+        return cookieValue.matches(sessionIdPattern);
+    }
 }

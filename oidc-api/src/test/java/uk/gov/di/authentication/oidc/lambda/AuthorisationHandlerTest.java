@@ -61,6 +61,7 @@ import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
+import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.helpers.DocAppSubjectIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -85,6 +86,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
@@ -142,6 +144,7 @@ class AuthorisationHandlerTest {
             "gs=a-session-id.client-session-id; Max-Age=3600; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;";
     private static final String EXPECTED_PERSISTENT_COOKIE_STRING =
             "di-persistent-session-id=a-persistent-session-id; Max-Age=34190000; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;";
+    private static final String EXPECTED_PERSISTENT_COOKIE_VALUE = "a-persistent-session-id";
     private static final String EXPECTED_LANGUAGE_COOKIE_STRING =
             "lng=en; Max-Age=31536000; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;";
     private static final URI LOGIN_URL = URI.create("https://example.com");
@@ -240,10 +243,11 @@ class AuthorisationHandlerTest {
                     response.getMultiValueHeaders()
                             .get(ResponseHeaders.SET_COOKIE)
                             .contains(EXPECTED_SESSION_COOKIE_STRING));
-            assertTrue(
-                    response.getMultiValueHeaders()
-                            .get(ResponseHeaders.SET_COOKIE)
-                            .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
+            var diPersistentCookieString =
+                    response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).get(1);
+            var sessionId =
+                    extractSessionId(diPersistentCookieString, EXPECTED_PERSISTENT_COOKIE_VALUE);
+            assertTrue(CookieHelper.isValidCookieWithDoubleDashedTimestamp(sessionId));
             verify(sessionService).save(eq(session));
             verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
 
@@ -329,10 +333,11 @@ class AuthorisationHandlerTest {
                     response.getMultiValueHeaders()
                             .get(ResponseHeaders.SET_COOKIE)
                             .contains(EXPECTED_SESSION_COOKIE_STRING));
-            assertTrue(
-                    response.getMultiValueHeaders()
-                            .get(ResponseHeaders.SET_COOKIE)
-                            .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
+            var diPersistentCookieString =
+                    response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).get(1);
+            var sessionId =
+                    extractSessionId(diPersistentCookieString, EXPECTED_PERSISTENT_COOKIE_VALUE);
+            assertTrue(CookieHelper.isValidCookieWithDoubleDashedTimestamp(sessionId));
             if (uiLocales.contains("en")) {
                 assertTrue(
                         response.getMultiValueHeaders()
@@ -383,10 +388,11 @@ class AuthorisationHandlerTest {
                     response.getMultiValueHeaders()
                             .get(ResponseHeaders.SET_COOKIE)
                             .contains(EXPECTED_SESSION_COOKIE_STRING));
-            assertTrue(
-                    response.getMultiValueHeaders()
-                            .get(ResponseHeaders.SET_COOKIE)
-                            .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
+            var diPersistentCookieString =
+                    response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).get(1);
+            var sessionId =
+                    extractSessionId(diPersistentCookieString, EXPECTED_PERSISTENT_COOKIE_VALUE);
+            assertTrue(CookieHelper.isValidCookieWithDoubleDashedTimestamp(sessionId));
 
             verify(sessionService).save(eq(session));
             verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
@@ -457,10 +463,12 @@ class AuthorisationHandlerTest {
                     response.getMultiValueHeaders()
                             .get(ResponseHeaders.SET_COOKIE)
                             .contains(EXPECTED_SESSION_COOKIE_STRING));
-            assertTrue(
-                    response.getMultiValueHeaders()
-                            .get(ResponseHeaders.SET_COOKIE)
-                            .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
+
+            var diPersistentCookieString =
+                    response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).get(1);
+            var sessionId =
+                    extractSessionId(diPersistentCookieString, EXPECTED_PERSISTENT_COOKIE_VALUE);
+            assertTrue(CookieHelper.isValidCookieWithDoubleDashedTimestamp(sessionId));
 
             verify(sessionService).save(eq(session));
             verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
@@ -501,10 +509,12 @@ class AuthorisationHandlerTest {
                     response.getMultiValueHeaders()
                             .get(ResponseHeaders.SET_COOKIE)
                             .contains(EXPECTED_SESSION_COOKIE_STRING));
-            assertTrue(
-                    response.getMultiValueHeaders()
-                            .get(ResponseHeaders.SET_COOKIE)
-                            .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
+
+            var diPersistentCookieString =
+                    response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).get(1);
+            var sessionId =
+                    extractSessionId(diPersistentCookieString, EXPECTED_PERSISTENT_COOKIE_VALUE);
+            assertTrue(CookieHelper.isValidCookieWithDoubleDashedTimestamp(sessionId));
 
             verify(sessionService).save(eq(session));
             verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
@@ -849,10 +859,11 @@ class AuthorisationHandlerTest {
                     response.getMultiValueHeaders()
                             .get(ResponseHeaders.SET_COOKIE)
                             .contains(EXPECTED_SESSION_COOKIE_STRING));
-            assertTrue(
-                    response.getMultiValueHeaders()
-                            .get(ResponseHeaders.SET_COOKIE)
-                            .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
+            var diPersistentCookieString =
+                    response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).get(1);
+            var sessionId =
+                    extractSessionId(diPersistentCookieString, EXPECTED_PERSISTENT_COOKIE_VALUE);
+            assertTrue(CookieHelper.isValidCookieWithDoubleDashedTimestamp(sessionId));
             verify(sessionService).save(session);
 
             verify(requestObjectAuthorizeValidator).validate(any());
@@ -901,10 +912,11 @@ class AuthorisationHandlerTest {
                     response.getMultiValueHeaders()
                             .get(ResponseHeaders.SET_COOKIE)
                             .contains(EXPECTED_SESSION_COOKIE_STRING));
-            assertTrue(
-                    response.getMultiValueHeaders()
-                            .get(ResponseHeaders.SET_COOKIE)
-                            .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
+            var diPersistentCookieString =
+                    response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).get(1);
+            var sessionId =
+                    extractSessionId(diPersistentCookieString, EXPECTED_PERSISTENT_COOKIE_VALUE);
+            assertTrue(CookieHelper.isValidCookieWithDoubleDashedTimestamp(sessionId));
             verify(sessionService).save(session);
 
             inOrder.verify(auditService)
@@ -984,7 +996,8 @@ class AuthorisationHandlerTest {
             assertTrue(
                     response.getMultiValueHeaders()
                             .get(ResponseHeaders.SET_COOKIE)
-                            .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
+                            .get(1)
+                            .contains("a-persistent-session-id--"));
         }
 
         @Test
@@ -1281,6 +1294,18 @@ class AuthorisationHandlerTest {
                             any(),
                             any(),
                             any());
+        }
+    }
+
+    public static String extractSessionId(String input, String sessionIdPrefix) {
+        String sessionIdPattern = sessionIdPrefix + "--[0-9]+";
+        var pattern = Pattern.compile(sessionIdPattern);
+        var matcher = pattern.matcher(input);
+
+        if (matcher.find()) {
+            return matcher.group();
+        } else {
+            return "";
         }
     }
 

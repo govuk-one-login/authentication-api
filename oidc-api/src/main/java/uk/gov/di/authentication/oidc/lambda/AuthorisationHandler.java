@@ -643,7 +643,7 @@ public class AuthorisationHandler
         cookies.add(
                 CookieHelper.buildCookieString(
                         CookieHelper.PERSISTENT_COOKIE_NAME,
-                        persistentSessionId,
+                        CookieHelper.appendTimestampToCookieValue(persistentSessionId),
                         configurationService.getPersistentCookieMaxAge(),
                         configurationService.getSessionCookieAttributes(),
                         configurationService.getDomainName()));
