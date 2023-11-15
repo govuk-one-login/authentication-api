@@ -10,7 +10,7 @@ repos:
     rev: v0.72.2
     hooks:
       - id: cfn-python-lint
-        exclude: ^(ci|.github)/.*|docker-compose.*|.pre-commit-config.yaml$
+        exclude: ^(ci|.github)/.*|docker-compose.*|.pre-commit-config.yaml|.*.approved.json$
         files: ^.*\.(json|yml|yaml)$
 
   - repo: https://github.com/govuk-one-login/pre-commit-hooks.git

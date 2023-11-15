@@ -418,6 +418,11 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         }
 
         @Override
+        public URI getIPVAuthorisationURI() {
+            return URI.create("https://ipv.gov.uk/authorize");
+        }
+
+        @Override
         public String getIPVAuthorisationClientId() {
             return IPV_CLIENT_ID;
         }
