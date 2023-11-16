@@ -10,6 +10,7 @@ import java.util.Map;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PersistentIdHelperTest {
 
@@ -67,8 +68,7 @@ class PersistentIdHelperTest {
         Map<String, String> inputHeaders = Map.of(CookieHelper.REQUEST_COOKIE_HEADER, cookieString);
         String persistentId =
                 PersistentIdHelper.getExistingOrCreateNewPersistentSessionId(inputHeaders);
-
-        assertThat(persistentId, equalTo("a-persistent-id"));
+        assertTrue(CookieHelper.isValidCookieWithDoubleDashedTimestamp(persistentId));
     }
 
     @Test
@@ -80,6 +80,6 @@ class PersistentIdHelperTest {
                 PersistentIdHelper.getExistingOrCreateNewPersistentSessionId(inputHeaders);
 
         assertThat(persistentId, not(equalTo("a-persistent-id")));
-        assertThat(Base64.getUrlDecoder().decode(persistentId).length, equalTo(20));
+        assertThat(Base64.getUrlDecoder().decode(persistentId.split("--")[0]).length, equalTo(20));
     }
 }
