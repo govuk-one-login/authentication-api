@@ -14,38 +14,38 @@ data "aws_vpc_endpoint" "auth_api_vpc_endpoint" {
   }
 }
 
+
 resource "aws_api_gateway_rest_api" "interventions_api_stub" {
   name = "${var.environment}-di-interventions-api-stub"
-
-  tags   = local.default_tags
-  policy = <<EOF
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Principal": "*",
-            "Action": "execute-api:Invoke",
-            "Resource": [
-                "execute-api:/*"
-            ]
-        },
-        {
-            "Effect": "Deny",
-            "Principal": "*",
-            "Action": "execute-api:Invoke",
-            "Resource": [
-                "execute-api:/*"
-            ],
-            "Condition" : {
-                "StringNotEquals": {
-                    "aws:SourceVpce": "${data.aws_vpc_endpoint.auth_api_vpc_endpoint.id}"
-                }
+  body = jsonencode({
+    openapi = "3.0.1"
+    info = {
+      title = "${var.environment}-di-interventions-api-stub"
+    }
+    paths = {
+      "/v1/ais/{internalPairwiseId}" = {
+        get = {
+          parameters = [{
+            name     = "internalPairwiseId",
+            in       = "path",
+            required = true,
+            type     = "string"
+          }],
+          x-amazon-apigateway-integration = {
+            type       = "aws_proxy"
+            httpMethod = "POST"
+            uri        = module.account_interventions_stub_lambda.integration_uri
+            requestParameters = {
+              "integration.request.path.internalPairwiseId" = "method.request.path.internalPairwiseId"
             }
+            timeoutInMillis = 29000
+          }
         }
-    ]
-}
-EOF
+      }
+    }
+  })
+
+  tags = local.default_tags
   endpoint_configuration {
     types            = ["PRIVATE"]
     vpc_endpoint_ids = [data.aws_vpc_endpoint.auth_api_vpc_endpoint.id]
@@ -54,6 +54,61 @@ EOF
     create_before_destroy = true
   }
 }
+
+data "aws_iam_policy_document" "interventions_api_stub_policy" {
+  statement {
+    effect = "Allow"
+    principals {
+      type        = "*"
+      identifiers = ["*"]
+    }
+    actions = [
+      "execute-api:Invoke"
+    ]
+    resources = [
+      "${aws_api_gateway_rest_api.interventions_api_stub.execution_arn}/*"
+    ]
+  }
+
+  statement {
+    effect = "Deny"
+    principals {
+      type        = "*"
+      identifiers = ["*"]
+    }
+    actions = [
+      "execute-api:Invoke"
+    ]
+    resources = [
+      "${aws_api_gateway_rest_api.interventions_api_stub.execution_arn}/*"
+    ]
+    condition {
+      test     = "StringNotEquals"
+      variable = "aws:SourceVpce"
+      values = [
+        data.aws_vpc_endpoint.auth_api_vpc_endpoint.id
+      ]
+    }
+  }
+}
+
+resource "aws_api_gateway_rest_api_policy" "interventions_api_stub_policy" {
+  rest_api_id = aws_api_gateway_rest_api.interventions_api_stub.id
+  policy      = data.aws_iam_policy_document.interventions_api_stub_policy.json
+}
+
+resource "aws_lambda_permission" "endpoint_execution_permission" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = module.account_interventions_stub_lambda.endpoint_lambda_function.function_name
+  principal     = "apigateway.amazonaws.com"
+  qualifier     = module.account_interventions_stub_lambda.endpoint_lambda_alias.name
+
+  # The "/*/*" portion grants access from any method on any resource
+  # within the API Gateway REST API.
+  source_arn = "${aws_api_gateway_rest_api.interventions_api_stub.execution_arn}/*/*"
+}
+
 
 resource "aws_api_gateway_stage" "interventions_api_stub_stage" {
   deployment_id         = aws_api_gateway_deployment.interventions_api_stub_deployment.id
@@ -79,10 +134,7 @@ resource "aws_api_gateway_deployment" "interventions_api_stub_deployment" {
   rest_api_id = aws_api_gateway_rest_api.interventions_api_stub.id
 
   triggers = {
-    redeployment = sha1(jsonencode([
-      module.account_interventions_stub_lambda.integration_trigger_value,
-      module.account_interventions_stub_lambda.method_trigger_value,
-    ]))
+    redeployment = sha1(jsonencode(aws_api_gateway_rest_api.interventions_api_stub.body))
   }
   lifecycle {
     create_before_destroy = true

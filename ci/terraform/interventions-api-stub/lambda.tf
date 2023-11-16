@@ -1,27 +1,23 @@
 module "account_interventions_stub_role" {
-  source      = "../modules/lambda-role"
-  environment = var.environment
-  role_name   = "account_interventions_stub-role"
-  vpc_arn     = local.authentication_vpc_arn
+  source             = "../modules/lambda-role"
+  environment        = var.environment
+  role_name          = "account_interventions_stub-role"
+  vpc_arn            = local.authentication_vpc_arn
+  policies_to_attach = [aws_iam_policy.stub_interventions_dynamo_read_access.arn]
 }
 
 module "account_interventions_stub_lambda" {
-  source = "../modules/endpoint-module"
+  source = "../modules/stub-endpoint-module"
 
-  endpoint_name   = "account-interventions-stub"
-  path_part       = "account-interventions-stub"
-  endpoint_method = ["GET"]
-  environment     = var.environment
+  endpoint_name = "account-interventions-stub"
+
+  environment = var.environment
 
   handler_environment_variables = {
     ENVIRONMENT = var.environment
   }
   handler_function_name = "uk.gov.di.authentication.interventions.api.stub.lambda.AccountInterventionsApiStubHandler::handleRequest"
   handler_runtime       = "java17"
-
-  rest_api_id      = aws_api_gateway_rest_api.interventions_api_stub.id
-  root_resource_id = aws_api_gateway_rest_api.interventions_api_stub.root_resource_id
-  execution_arn    = aws_api_gateway_rest_api.interventions_api_stub.execution_arn
 
   memory_size                 = local.default_performance_parameters.memory
   provisioned_concurrency     = local.default_performance_parameters.concurrency
@@ -46,8 +42,4 @@ module "account_interventions_stub_lambda" {
   default_tags                           = local.default_tags
 
   use_localstack = false
-
-  depends_on = [
-    aws_api_gateway_rest_api.interventions_api_stub,
-  ]
 }

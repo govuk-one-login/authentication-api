@@ -10,7 +10,8 @@ dependencies {
     compileOnly configurations.lambda,
             configurations.dynamodb
 
-    implementation project(":shared")
+    implementation project(":shared"),
+            configurations.gson
 
     testImplementation configurations.tests,
             configurations.lambda
