@@ -1,0 +1,21 @@
+{
+  "sub": "pairwise-identifier",
+  "iss": "ipv-client-id",
+  "response_type": "code",
+  "client_id": "ipv-client-id",
+  "govuk_signin_journey_id": "journey-id",
+  "aud": "http://ipv/",
+  "nbf": 1196676930,
+  "email_address": "test@test.com",
+  "vtr": [
+    "Cl.Cm.P2",
+    "Cl.Cm.PCL200"
+  ],
+  "scope": "openid",
+  "claims": "{\"name\":{\"essential\":true}}",
+  "state": "test-state",
+  "redirect_uri": "http://localhost/oidc/ipv/callback",
+  "exp": 1196677110,
+  "iat": 1196676930,
+  "jti": "test-jti"
+}

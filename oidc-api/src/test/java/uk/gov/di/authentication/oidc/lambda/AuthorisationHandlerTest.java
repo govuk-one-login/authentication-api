@@ -51,7 +51,8 @@ import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.oidc.exceptions.InvalidHttpMethodException;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
-import uk.gov.di.authentication.oidc.services.RequestObjectService;
+import uk.gov.di.authentication.oidc.validators.QueryParamsAuthorizeValidator;
+import uk.gov.di.authentication.oidc.validators.RequestObjectAuthorizeValidator;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
@@ -60,6 +61,7 @@ import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
+import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.helpers.DocAppSubjectIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ClientService;
@@ -84,6 +86,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
@@ -131,13 +134,17 @@ class AuthorisationHandlerTest {
 
     private final NoSessionOrchestrationService noSessionOrchestrationService =
             mock(NoSessionOrchestrationService.class);
-    private final RequestObjectService requestObjectService = mock(RequestObjectService.class);
+    private final RequestObjectAuthorizeValidator requestObjectAuthorizeValidator =
+            mock(RequestObjectAuthorizeValidator.class);
+    private final QueryParamsAuthorizeValidator queryParamsAuthorizeValidator =
+            mock(QueryParamsAuthorizeValidator.class);
     private final ClientService clientService = mock(ClientService.class);
     private final InOrder inOrder = inOrder(auditService);
     private static final String EXPECTED_SESSION_COOKIE_STRING =
             "gs=a-session-id.client-session-id; Max-Age=3600; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;";
     private static final String EXPECTED_PERSISTENT_COOKIE_STRING =
             "di-persistent-session-id=a-persistent-session-id; Max-Age=34190000; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;";
+    private static final String EXPECTED_PERSISTENT_COOKIE_VALUE = "a-persistent-session-id";
     private static final String EXPECTED_LANGUAGE_COOKIE_STRING =
             "lng=en; Max-Age=31536000; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;";
     private static final URI LOGIN_URL = URI.create("https://example.com");
@@ -185,8 +192,7 @@ class AuthorisationHandlerTest {
         when(configService.getSessionCookieAttributes()).thenReturn("Secure; HttpOnly;");
         when(configService.getSessionCookieMaxAge()).thenReturn(3600);
         when(configService.getPersistentCookieMaxAge()).thenReturn(34190000);
-        when(orchestrationAuthorizationService.validateAuthRequest(
-                        any(AuthenticationRequest.class), anyBoolean()))
+        when(queryParamsAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                 .thenReturn(Optional.empty());
         when(orchestrationAuthorizationService.getExistingOrCreateNewPersistentSessionId(any()))
                 .thenReturn(PERSISTENT_SESSION_ID);
@@ -201,7 +207,8 @@ class AuthorisationHandlerTest {
                         clientSessionService,
                         orchestrationAuthorizationService,
                         auditService,
-                        requestObjectService,
+                        queryParamsAuthorizeValidator,
+                        requestObjectAuthorizeValidator,
                         clientService,
                         docAppAuthorisationService,
                         cloudwatchMetricsService,
@@ -236,10 +243,11 @@ class AuthorisationHandlerTest {
                     response.getMultiValueHeaders()
                             .get(ResponseHeaders.SET_COOKIE)
                             .contains(EXPECTED_SESSION_COOKIE_STRING));
-            assertTrue(
-                    response.getMultiValueHeaders()
-                            .get(ResponseHeaders.SET_COOKIE)
-                            .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
+            var diPersistentCookieString =
+                    response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).get(1);
+            var sessionId =
+                    extractSessionId(diPersistentCookieString, EXPECTED_PERSISTENT_COOKIE_VALUE);
+            assertTrue(CookieHelper.isValidCookieWithDoubleDashedTimestamp(sessionId));
             verify(sessionService).save(eq(session));
             verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
 
@@ -325,10 +333,11 @@ class AuthorisationHandlerTest {
                     response.getMultiValueHeaders()
                             .get(ResponseHeaders.SET_COOKIE)
                             .contains(EXPECTED_SESSION_COOKIE_STRING));
-            assertTrue(
-                    response.getMultiValueHeaders()
-                            .get(ResponseHeaders.SET_COOKIE)
-                            .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
+            var diPersistentCookieString =
+                    response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).get(1);
+            var sessionId =
+                    extractSessionId(diPersistentCookieString, EXPECTED_PERSISTENT_COOKIE_VALUE);
+            assertTrue(CookieHelper.isValidCookieWithDoubleDashedTimestamp(sessionId));
             if (uiLocales.contains("en")) {
                 assertTrue(
                         response.getMultiValueHeaders()
@@ -379,10 +388,11 @@ class AuthorisationHandlerTest {
                     response.getMultiValueHeaders()
                             .get(ResponseHeaders.SET_COOKIE)
                             .contains(EXPECTED_SESSION_COOKIE_STRING));
-            assertTrue(
-                    response.getMultiValueHeaders()
-                            .get(ResponseHeaders.SET_COOKIE)
-                            .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
+            var diPersistentCookieString =
+                    response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).get(1);
+            var sessionId =
+                    extractSessionId(diPersistentCookieString, EXPECTED_PERSISTENT_COOKIE_VALUE);
+            assertTrue(CookieHelper.isValidCookieWithDoubleDashedTimestamp(sessionId));
 
             verify(sessionService).save(eq(session));
             verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
@@ -453,10 +463,12 @@ class AuthorisationHandlerTest {
                     response.getMultiValueHeaders()
                             .get(ResponseHeaders.SET_COOKIE)
                             .contains(EXPECTED_SESSION_COOKIE_STRING));
-            assertTrue(
-                    response.getMultiValueHeaders()
-                            .get(ResponseHeaders.SET_COOKIE)
-                            .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
+
+            var diPersistentCookieString =
+                    response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).get(1);
+            var sessionId =
+                    extractSessionId(diPersistentCookieString, EXPECTED_PERSISTENT_COOKIE_VALUE);
+            assertTrue(CookieHelper.isValidCookieWithDoubleDashedTimestamp(sessionId));
 
             verify(sessionService).save(eq(session));
             verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
@@ -497,10 +509,12 @@ class AuthorisationHandlerTest {
                     response.getMultiValueHeaders()
                             .get(ResponseHeaders.SET_COOKIE)
                             .contains(EXPECTED_SESSION_COOKIE_STRING));
-            assertTrue(
-                    response.getMultiValueHeaders()
-                            .get(ResponseHeaders.SET_COOKIE)
-                            .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
+
+            var diPersistentCookieString =
+                    response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).get(1);
+            var sessionId =
+                    extractSessionId(diPersistentCookieString, EXPECTED_PERSISTENT_COOKIE_VALUE);
+            assertTrue(CookieHelper.isValidCookieWithDoubleDashedTimestamp(sessionId));
 
             verify(sessionService).save(eq(session));
             verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
@@ -528,7 +542,7 @@ class AuthorisationHandlerTest {
                     () -> makeDocAppHandlerRequest(),
                     format("No Client found for ClientID: %s", CLIENT_ID.getValue()));
             verifyNoInteractions(configService);
-            verifyNoInteractions(requestObjectService);
+            verifyNoInteractions(requestObjectAuthorizeValidator);
         }
 
         @Test
@@ -577,8 +591,7 @@ class AuthorisationHandlerTest {
 
         @Test
         void shouldReturn400WhenAuthorisationRequestContainsInvalidScope() {
-            when(orchestrationAuthorizationService.validateAuthRequest(
-                            any(AuthenticationRequest.class), anyBoolean()))
+            when(queryParamsAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                     .thenReturn(
                             Optional.of(
                                     new AuthRequestError(
@@ -620,8 +633,7 @@ class AuthorisationHandlerTest {
 
         @Test
         void shouldReturn400WhenAuthorisationRequestBodyContainsInvalidScope() {
-            when(orchestrationAuthorizationService.validateAuthRequest(
-                            any(AuthenticationRequest.class), anyBoolean()))
+            when(queryParamsAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                     .thenReturn(
                             Optional.of(
                                     new AuthRequestError(
@@ -756,7 +768,7 @@ class AuthorisationHandlerTest {
             event.setHttpMethod("GET");
 
             makeHandlerRequest(event);
-            verify(requestObjectService).validateRequestObject(any());
+            verify(requestObjectAuthorizeValidator).validate(any());
         }
 
         @Test
@@ -782,7 +794,7 @@ class AuthorisationHandlerTest {
             event.setHttpMethod("GET");
 
             makeHandlerRequest(event);
-            verify(requestObjectService).validateRequestObject(any());
+            verify(requestObjectAuthorizeValidator).validate(any());
         }
 
         @Test
@@ -818,8 +830,7 @@ class AuthorisationHandlerTest {
         @Test
         void shouldRedirectToLoginWhenRequestObjectIsValid() throws JOSEException {
             var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
-            when(configService.isDocAppApiEnabled()).thenReturn(true);
-            when(requestObjectService.validateRequestObject(any(AuthenticationRequest.class)))
+            when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                     .thenReturn(Optional.empty());
             var event = new APIGatewayProxyRequestEvent();
             var jwtClaimsSet = buildjwtClaimsSet();
@@ -848,13 +859,14 @@ class AuthorisationHandlerTest {
                     response.getMultiValueHeaders()
                             .get(ResponseHeaders.SET_COOKIE)
                             .contains(EXPECTED_SESSION_COOKIE_STRING));
-            assertTrue(
-                    response.getMultiValueHeaders()
-                            .get(ResponseHeaders.SET_COOKIE)
-                            .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
+            var diPersistentCookieString =
+                    response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).get(1);
+            var sessionId =
+                    extractSessionId(diPersistentCookieString, EXPECTED_PERSISTENT_COOKIE_VALUE);
+            assertTrue(CookieHelper.isValidCookieWithDoubleDashedTimestamp(sessionId));
             verify(sessionService).save(session);
 
-            verify(requestObjectService).validateRequestObject(any());
+            verify(requestObjectAuthorizeValidator).validate(any());
 
             inOrder.verify(auditService)
                     .submitAuditEvent(
@@ -873,8 +885,7 @@ class AuthorisationHandlerTest {
         @Test
         void shouldRedirectToLoginWhenPostRequestObjectIsValid() throws JOSEException {
             var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
-            when(configService.isDocAppApiEnabled()).thenReturn(true);
-            when(requestObjectService.validateRequestObject(any(AuthenticationRequest.class)))
+            when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                     .thenReturn(Optional.empty());
             var event = new APIGatewayProxyRequestEvent();
             event.setHttpMethod("POST");
@@ -901,10 +912,11 @@ class AuthorisationHandlerTest {
                     response.getMultiValueHeaders()
                             .get(ResponseHeaders.SET_COOKIE)
                             .contains(EXPECTED_SESSION_COOKIE_STRING));
-            assertTrue(
-                    response.getMultiValueHeaders()
-                            .get(ResponseHeaders.SET_COOKIE)
-                            .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
+            var diPersistentCookieString =
+                    response.getMultiValueHeaders().get(ResponseHeaders.SET_COOKIE).get(1);
+            var sessionId =
+                    extractSessionId(diPersistentCookieString, EXPECTED_PERSISTENT_COOKIE_VALUE);
+            assertTrue(CookieHelper.isValidCookieWithDoubleDashedTimestamp(sessionId));
             verify(sessionService).save(session);
 
             inOrder.verify(auditService)
@@ -984,7 +996,8 @@ class AuthorisationHandlerTest {
             assertTrue(
                     response.getMultiValueHeaders()
                             .get(ResponseHeaders.SET_COOKIE)
-                            .contains(EXPECTED_PERSISTENT_COOKIE_STRING));
+                            .get(1)
+                            .contains("a-persistent-session-id--"));
         }
 
         @Test
@@ -1041,7 +1054,7 @@ class AuthorisationHandlerTest {
     @MethodSource("expectedErrorObjects")
     void shouldReturnErrorWhenRequestObjectIsInvalid(ErrorObject errorObject) {
         when(orchestrationAuthorizationService.isJarValidationRequired(any())).thenReturn(true);
-        when(requestObjectService.validateRequestObject(any(AuthenticationRequest.class)))
+        when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                 .thenReturn(
                         Optional.of(
                                 new AuthRequestError(
@@ -1281,6 +1294,18 @@ class AuthorisationHandlerTest {
                             any(),
                             any(),
                             any());
+        }
+    }
+
+    public static String extractSessionId(String input, String sessionIdPrefix) {
+        String sessionIdPattern = sessionIdPrefix + "--[0-9]+";
+        var pattern = Pattern.compile(sessionIdPattern);
+        var matcher = pattern.matcher(input);
+
+        if (matcher.find()) {
+            return matcher.group();
+        } else {
+            return "";
         }
     }
 

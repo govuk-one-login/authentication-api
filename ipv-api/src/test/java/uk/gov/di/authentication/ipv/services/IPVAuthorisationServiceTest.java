@@ -18,17 +18,20 @@ import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
+import org.approvaltests.JsonApprovals;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
+import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.KmsConnectionService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.authentication.sharedtest.helper.TestClockHelper;
 
 import java.net.URI;
 import java.security.KeyPair;
@@ -39,6 +42,7 @@ import java.text.ParseException;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -46,9 +50,7 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static uk.gov.di.authentication.ipv.services.IPVAuthorisationService.STATE_STORAGE_PREFIX;
 
 class IPVAuthorisationServiceTest {
@@ -70,7 +72,10 @@ class IPVAuthorisationServiceTest {
     private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
     private final IPVAuthorisationService authorisationService =
             new IPVAuthorisationService(
-                    configurationService, redisConnectionService, kmsConnectionService);
+                    configurationService,
+                    redisConnectionService,
+                    kmsConnectionService,
+                    TestClockHelper.getInstance());
     private PrivateKey privateKey;
 
     @BeforeEach
@@ -207,16 +212,28 @@ class IPVAuthorisationServiceTest {
                         .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
                         .build();
         when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(signResult);
-        var state = new State();
+        var state = new State("test-state");
         var scope = new Scope(OIDCScopeValue.OPENID);
         var pairwise = new Subject("pairwise-identifier");
         var claims = "{\"name\":{\"essential\":true}}";
 
-        var encryptedJWT =
-                authorisationService.constructRequestJWT(
-                        state, scope, pairwise, claims, "journey-id", "test@test.com");
+        EncryptedJWT encryptedJWT;
+        try (var mockIdGenerator = mockStatic(IdGenerator.class)) {
+            mockIdGenerator.when(IdGenerator::generate).thenReturn("test-jti");
+            encryptedJWT =
+                    authorisationService.constructRequestJWT(
+                            state,
+                            scope,
+                            pairwise,
+                            claims,
+                            "journey-id",
+                            "test@test.com",
+                            List.of("Cl.Cm.P2", "Cl.Cm.PCL200"));
+        }
 
         var signedJWTResponse = decryptJWT(encryptedJWT);
+
+        JsonApprovals.verifyAsJson(signedJWTResponse.getJWTClaimsSet().toJSONObject());
 
         assertThat(
                 signedJWTResponse.getJWTClaimsSet().getClaim("client_id"), equalTo(IPV_CLIENT_ID));
@@ -237,6 +254,9 @@ class IPVAuthorisationServiceTest {
         assertThat(
                 signedJWTResponse.getJWTClaimsSet().getClaim("govuk_signin_journey_id"),
                 equalTo("journey-id"));
+        assertThat(
+                signedJWTResponse.getJWTClaimsSet().getClaim("vtr"),
+                equalTo(List.of("Cl.Cm.P2", "Cl.Cm.PCL200")));
     }
 
     private SignedJWT decryptJWT(EncryptedJWT encryptedJWT) throws JOSEException {

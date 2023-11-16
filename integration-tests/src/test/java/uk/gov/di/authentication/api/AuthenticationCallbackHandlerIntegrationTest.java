@@ -18,9 +18,9 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent;
-import uk.gov.di.authentication.oidc.entity.AuthenticationUserInfo;
 import uk.gov.di.authentication.oidc.lambda.AuthenticationCallbackHandler;
 import uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService;
+import uk.gov.di.authentication.shared.entity.AuthenticationUserInfo;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
@@ -415,6 +415,11 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         @Override
         public boolean isIdentityEnabled() {
             return true;
+        }
+
+        @Override
+        public URI getIPVAuthorisationURI() {
+            return URI.create("https://ipv.gov.uk/authorize");
         }
 
         @Override

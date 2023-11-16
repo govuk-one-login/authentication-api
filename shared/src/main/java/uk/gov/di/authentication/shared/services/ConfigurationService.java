@@ -21,7 +21,6 @@ import java.time.Clock;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -201,10 +200,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return URI.create(System.getenv().getOrDefault("DOC_APP_AUTHORISATION_URI", ""));
     }
 
-    public boolean isDocAppApiEnabled() {
-        return System.getenv().getOrDefault("DOC_APP_API_ENABLED", "false").equals("true");
-    }
-
     public URI getDocAppBackendURI() {
         return URI.create(System.getenv().getOrDefault("DOC_APP_BACKEND_URI", ""));
     }
@@ -341,10 +336,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         } else {
             return false;
         }
-    }
-
-    public boolean isNonceRequired() {
-        return !Objects.equals("staging", getEnvironment());
     }
 
     public boolean isNotifyTemplatePerLanguage() {
@@ -507,7 +498,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public int getPersistentCookieMaxAge() {
         return Integer.parseInt(
-                System.getenv().getOrDefault("PERSISTENT_COOKIE_MAX_AGE", "34190000"));
+                System.getenv().getOrDefault("PERSISTENT_COOKIE_MAX_AGE", "47340000"));
     }
 
     public int getLanguageCookieMaxAge() {

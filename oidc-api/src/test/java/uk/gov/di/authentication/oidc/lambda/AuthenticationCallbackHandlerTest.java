@@ -27,7 +27,6 @@ import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent;
 import uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService;
 import uk.gov.di.authentication.oidc.services.AuthenticationTokenService;
-import uk.gov.di.authentication.oidc.services.AuthenticationUserInfoStorageService;
 import uk.gov.di.authentication.oidc.services.InitiateIPVAuthorisationService;
 import uk.gov.di.authentication.shared.conditions.IdentityHelper;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
@@ -41,6 +40,7 @@ import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthenticationUserInfoStorageService;
 import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -205,7 +205,8 @@ class AuthenticationCallbackHandlerTest {
                         eq(pair("internalSubjectId", AuditService.UNKNOWN)),
                         eq(pair("isNewAccount", "true")),
                         eq(pair("rpPairwiseId", PAIRWISE_SUBJECT_ID.getValue())),
-                        eq(pair("nonce", RP_NONCE)));
+                        eq(pair("nonce", RP_NONCE)),
+                        eq(pair("authCode", AUTH_CODE_RP_TO_ORCH.getValue())));
     }
 
     @Test

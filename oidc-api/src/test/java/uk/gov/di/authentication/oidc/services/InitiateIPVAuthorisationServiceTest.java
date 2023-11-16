@@ -56,6 +56,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -159,7 +160,8 @@ public class InitiateIPVAuthorisationServiceTest {
                         any(Subject.class),
                         any(),
                         eq(CLIENT_SESSION_ID),
-                        anyString()))
+                        anyString(),
+                        any()))
                 .thenReturn(encryptedJWT);
 
         var response =
@@ -180,6 +182,15 @@ public class InitiateIPVAuthorisationServiceTest {
         assertThat(splitQuery(redirectLocation).get("request"), equalTo(encryptedJWT.serialize()));
         verify(authorisationService).storeState(eq(session.getSessionId()), any(State.class));
 
+        verify(authorisationService)
+                .constructRequestJWT(
+                        any(State.class),
+                        eq(createAuthenticationRequest().getScope()),
+                        any(Subject.class),
+                        any(),
+                        eq(CLIENT_SESSION_ID),
+                        eq(EMAIL_ADDRESS),
+                        isNull());
         verify(auditService)
                 .submitAuditEvent(
                         IPVAuditableEvent.IPV_AUTHORISATION_REQUESTED,
@@ -230,18 +241,21 @@ public class InitiateIPVAuthorisationServiceTest {
     private UserInfo generateUserInfo() throws com.nimbusds.oauth2.sdk.ParseException {
         String jsonString =
                 String.format(
-                        "{\n"
-                                + "                \"sub\": \"urn:fdc:gov.uk:2022:jdgfhgfsdret\",\n"
-                                + "                \"legacy_subject_id\": \"odkjfshsdkjhdkjfshsdkjhdkjfshsdkjh\",\n"
-                                + "                \"public_subject_id\": \"pdkjfshsdkjhdkjfshsdkjhdkjfshsdkjh\",\n"
-                                + "                \"local_account_id\": \"dkjfshsdkjhdkjfshsdkjhdkjfshsdkjh\",\n"
-                                + "                \"rp_pairwise_id\": \"%s\",\n"
-                                + "                \"email\": \"%s\",\n"
-                                + "                \"email_verified\": true,\n"
-                                + "                \"phone_number\": \"007492837401\",\n"
-                                + "                \"phone_number_verified\": true,\n"
-                                + "                \"new_account\": \"true\",\n"
-                                + "                \"salt\": \"\" }",
+                        """
+                        {
+                            "sub": "urn:fdc:gov.uk:2022:jdgfhgfsdret",
+                            "legacy_subject_id": "odkjfshsdkjhdkjfshsdkjhdkjfshsdkjh",
+                            "public_subject_id": "pdkjfshsdkjhdkjfshsdkjhdkjfshsdkjh",
+                            "local_account_id": "dkjfshsdkjhdkjfshsdkjhdkjfshsdkjh",
+                            "rp_pairwise_id": "%s",
+                            "email": "%s",
+                            "email_verified": true,
+                            "phone_number": "007492837401",
+                            "phone_number_verified": true,
+                            "new_account": "true",
+                            "salt": ""
+                        }
+                        """,
                         RP_PAIRWISE_ID, EMAIL_ADDRESS);
         return UserInfo.parse(jsonString);
     }

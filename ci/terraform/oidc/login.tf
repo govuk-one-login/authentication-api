@@ -16,6 +16,7 @@ module "frontend_api_login_role" {
     module.oidc_txma_audit.access_policy_arn,
     local.account_modifiers_encryption_policy_arn,
     local.common_passwords_encryption_policy_arn
+    local.client_registry_encryption_policy_arn
   ]
 }
 

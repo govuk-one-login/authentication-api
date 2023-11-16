@@ -13,7 +13,8 @@ module "oidc_userinfo_role" {
     aws_iam_policy.dynamo_client_registry_read_access_policy.arn,
     aws_iam_policy.redis_parameter_policy.arn,
     aws_iam_policy.dynamo_authentication_callback_userinfo_read_policy.arn,
-    module.oidc_txma_audit.access_policy_arn
+    module.oidc_txma_audit.access_policy_arn,
+    local.client_registry_encryption_policy_arn
   ]
 }
 
@@ -35,6 +36,7 @@ module "userinfo" {
     TOKEN_SIGNING_KEY_RSA_ALIAS = aws_kms_alias.id_token_signing_key_alias.name
     IDENTITY_ENABLED            = var.ipv_api_enabled
     INTERNAl_SECTOR_URI         = var.internal_sector_uri
+    SUPPORT_AUTH_ORCH_SPLIT     = var.support_auth_orch_split
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.UserInfoHandler::handleRequest"
 

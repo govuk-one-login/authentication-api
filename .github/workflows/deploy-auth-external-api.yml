@@ -1,9 +1,12 @@
 name: Deploy Auth External API
 
 env:
-  GHA_ROLE: arn:aws:iam::761723964695:role/build-auth-deploy-pipeline-GitHubActionsRole-160U5ADTRKQ2O
-  DESTINATION_BUCKET: di-auth-lambda-signed-20220215170204376200000002
-  ARTIFACT_BUCKET: build-auth-deploy-pipeli-githubartifactsourcebuck-1o4hcrnik6ayv
+  AWS_REGION: eu-west-2
+
+#gha role is build Auth github actions role in Gds dev Account
+#Artifact bucket is Build Auth deploy github artifcat Source bucket
+#Destination Bucket is auth-lambda-signed bucket from prod tooling account
+
 
 on:
   workflow_run:
@@ -26,13 +29,13 @@ jobs:
       - name: Set up AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: ${{ env.GHA_ROLE }}
-          aws-region: eu-west-2
+          role-to-assume: ${{ secrets.GHA_ROLE }}
+          aws-region: ${{ env.AWS_REGION }}
       
       - name: Download and copy Auth External API signed lambda zip
         working-directory: ci/terraform/auth-external-api
         run: |
-          aws s3 cp s3://di-auth-lambda-signed-20220215170204376200000002 ./artifacts \
+          aws s3 cp s3://${{ secrets.DESTINATION_BUCKET }} ./artifacts \
             --recursive --exclude "*" \
             --include "signed-auth-external-api-${{ github.sha }}-*"
           mv artifacts/signed-auth-external-api-*.zip artifacts/auth-external-api.zip
@@ -42,7 +45,7 @@ jobs:
         run: |
           zip -r auth-external-api.zip .
           S3_RESPONSE=`aws s3api put-object \
-            --bucket $ARTIFACT_BUCKET \
+            --bucket ${{ secrets.ARTIFACT_BUCKET }} \
             --key auth-external-api.zip \
             --body auth-external-api.zip \
             --metadata "repository=$GITHUB_REPOSITORY,commitsha=$GITHUB_SHA,committag=$GIT_TAG,commitmessage=$COMMIT_MSG"`

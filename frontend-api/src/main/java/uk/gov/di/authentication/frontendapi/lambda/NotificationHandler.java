@@ -96,8 +96,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                     Map<String, Object> notifyPersonalisation = new HashMap<>();
                     switch (notifyRequest.getNotificationType()) {
                         case ACCOUNT_CREATED_CONFIRMATION:
-                            notifyPersonalisation.put(
-                                    "contact-us-link", buildContactUsUrl("accountCreatedEmail"));
+                            notifyPersonalisation.put("contact-us-link", buildContactUsUrl());
                             notifyPersonalisation.put(
                                     "gov-uk-accounts-url",
                                     configurationService.getGovUKAccountsURL().toString());
@@ -111,9 +110,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             notifyPersonalisation.put("validation-code", notifyRequest.getCode());
                             notifyPersonalisation.put(
                                     "email-address", notifyRequest.getDestination());
-                            notifyPersonalisation.put(
-                                    "contact-us-link",
-                                    buildContactUsUrl("confirmEmailAddressEmail"));
+                            notifyPersonalisation.put("contact-us-link", buildContactUsUrl());
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     notifyPersonalisation,
@@ -140,8 +137,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             Map<String, Object> passwordResetConfirmationPersonalisation =
                                     new HashMap<>();
                             passwordResetConfirmationPersonalisation.put(
-                                    "contact-us-link",
-                                    buildContactUsUrl("passwordResetConfirmationEmail"));
+                                    "contact-us-link", buildContactUsUrl());
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     passwordResetConfirmationPersonalisation,
@@ -150,9 +146,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             break;
                         case PASSWORD_RESET_CONFIRMATION_SMS:
                             Map<String, Object> passwordResetConfirmationSmsPersonalisation =
-                                    Map.of(
-                                            "contact-us-link",
-                                            buildContactUsUrl("passwordResetConfirmationSms"));
+                                    Map.of("contact-us-link", buildContactUsUrl());
                             notificationService.sendText(
                                     notifyRequest.getDestination(),
                                     passwordResetConfirmationSmsPersonalisation,
@@ -163,9 +157,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                             notifyPersonalisation.put("validation-code", notifyRequest.getCode());
                             notifyPersonalisation.put(
                                     "email-address", notifyRequest.getDestination());
-                            notifyPersonalisation.put(
-                                    "contact-us-link",
-                                    buildContactUsUrl("passwordResetRequestEmail"));
+                            notifyPersonalisation.put("contact-us-link", buildContactUsUrl());
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     notifyPersonalisation,
@@ -187,8 +179,7 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
                                     changeHowGetSecurityCodesConfirmationPersonalisation =
                                             new HashMap<>();
                             changeHowGetSecurityCodesConfirmationPersonalisation.put(
-                                    "contact-us-link",
-                                    buildContactUsUrl("changeCodesConfirmEmail"));
+                                    "contact-us-link", buildContactUsUrl());
                             notificationService.sendEmail(
                                     notifyRequest.getDestination(),
                                     changeHowGetSecurityCodesConfirmationPersonalisation,
@@ -242,12 +233,10 @@ public class NotificationHandler implements RequestHandler<SQSEvent, Void> {
         }
     }
 
-    private String buildContactUsUrl(String referer) {
-        var queryParam = Map.of("referer", referer);
+    private String buildContactUsUrl() {
         return buildURI(
                         configurationService.getFrontendBaseUrl(),
-                        configurationService.getContactUsLinkRoute(),
-                        queryParam)
+                        configurationService.getContactUsLinkRoute())
                 .toString();
     }
 

@@ -28,7 +28,7 @@ import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
-import uk.gov.di.authentication.shared.helpers.NowHelper;
+import uk.gov.di.authentication.shared.helpers.NowHelper.NowClock;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
@@ -38,7 +38,9 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
+import java.time.Clock;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -49,6 +51,7 @@ public class IPVAuthorisationService {
     private final ConfigurationService configurationService;
     private final RedisConnectionService redisConnectionService;
     private final KmsConnectionService kmsConnectionService;
+    private final NowClock nowClock;
     public static final String STATE_STORAGE_PREFIX = "state:";
     private static final JWSAlgorithm SIGNING_ALGORITHM = JWSAlgorithm.ES256;
     private static final Json objectMapper = SerializationService.getInstance();
@@ -57,9 +60,22 @@ public class IPVAuthorisationService {
             ConfigurationService configurationService,
             RedisConnectionService redisConnectionService,
             KmsConnectionService kmsConnectionService) {
+        this(
+                configurationService,
+                redisConnectionService,
+                kmsConnectionService,
+                new NowClock(Clock.systemUTC()));
+    }
+
+    public IPVAuthorisationService(
+            ConfigurationService configurationService,
+            RedisConnectionService redisConnectionService,
+            KmsConnectionService kmsConnectionService,
+            NowClock nowClock) {
         this.configurationService = configurationService;
         this.redisConnectionService = redisConnectionService;
         this.kmsConnectionService = kmsConnectionService;
+        this.nowClock = nowClock;
     }
 
     public Optional<ErrorObject> validateResponse(Map<String, String> headers, String sessionId) {
@@ -138,20 +154,21 @@ public class IPVAuthorisationService {
             Subject subject,
             String claims,
             String clientSessionId,
-            String emailAddress) {
+            String emailAddress,
+            List<String> vtr) {
         LOG.info("Generating request JWT");
         var jwsHeader = new JWSHeader(SIGNING_ALGORITHM);
         var jwtID = IdGenerator.generate();
-        var expiryDate = NowHelper.nowPlus(3, ChronoUnit.MINUTES);
+        var expiryDate = nowClock.nowPlus(3, ChronoUnit.MINUTES);
         var claimsBuilder =
                 new JWTClaimsSet.Builder()
                         .issuer(configurationService.getIPVAuthorisationClientId())
                         .audience(configurationService.getIPVAudience())
                         .expirationTime(expiryDate)
                         .subject(subject.getValue())
-                        .issueTime(NowHelper.now())
+                        .issueTime(nowClock.now())
                         .jwtID(jwtID)
-                        .notBeforeTime(NowHelper.now())
+                        .notBeforeTime(nowClock.now())
                         .claim("state", state.getValue())
                         .claim("govuk_signin_journey_id", clientSessionId)
                         .claim("email_address", emailAddress)
@@ -160,7 +177,8 @@ public class IPVAuthorisationService {
                                 configurationService.getIPVAuthorisationCallbackURI().toString())
                         .claim("client_id", configurationService.getIPVAuthorisationClientId())
                         .claim("response_type", ResponseType.CODE.toString())
-                        .claim("scope", scope.toString());
+                        .claim("scope", scope.toString())
+                        .claim("vtr", vtr);
         if (Objects.nonNull(claims)) {
             claimsBuilder.claim("claims", claims);
         }

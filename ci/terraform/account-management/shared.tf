@@ -18,4 +18,5 @@ locals {
   lambda_code_signing_configuration_arn   = data.terraform_remote_state.shared.outputs.lambda_code_signing_configuration_arn
   account_modifiers_encryption_policy_arn = data.terraform_remote_state.shared.outputs.account_modifiers_encryption_policy_arn
   common_passwords_encryption_policy_arn  = data.terraform_remote_state.shared.outputs.common_passwords_encryption_policy_arn
+  client_registry_encryption_policy_arn   = data.terraform_remote_state.shared.outputs.client_registry_encryption_policy_arn
 }

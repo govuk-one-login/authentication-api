@@ -23,7 +23,6 @@ import uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent;
 import uk.gov.di.authentication.oidc.exceptions.AuthenticationCallbackException;
 import uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService;
 import uk.gov.di.authentication.oidc.services.AuthenticationTokenService;
-import uk.gov.di.authentication.oidc.services.AuthenticationUserInfoStorageService;
 import uk.gov.di.authentication.oidc.services.InitiateIPVAuthorisationService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
@@ -35,6 +34,7 @@ import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.services.AuditService;
+import uk.gov.di.authentication.shared.services.AuthenticationUserInfoStorageService;
 import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -360,7 +360,8 @@ public class AuthenticationCallbackHandler
                         pair("internalSubjectId", AuditService.UNKNOWN),
                         pair("isNewAccount", userInfo.getClaim("new_account")),
                         pair("rpPairwiseId", userInfo.getClaim("rp_client_id")),
-                        pair("nonce", authenticationRequest.getNonce()));
+                        pair("nonce", authenticationRequest.getNonce()),
+                        pair("authCode", authCode.getValue()));
 
                 return generateApiGatewayProxyResponse(
                         302,

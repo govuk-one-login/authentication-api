@@ -11,7 +11,7 @@ buildscript {
 plugins {
     id "com.diffplug.spotless" version "6.22.0"
     id "com.avast.gradle.docker-compose" version "0.17.5"
-    id "org.sonarqube" version "4.0.0.2929"
+    id "org.sonarqube" version "4.4.1.3373"
     id "jacoco"
 }
 
@@ -21,10 +21,11 @@ apply plugin: "idea"
 
 ext {
     dependencyVersions = [
-        aws_sdk_v2_version: "2.21.14",
-        aws_lambda_core_version: "1.2.2",
-        aws_lambda_events_version: "3.11.0",
+        aws_sdk_v2_version: "2.21.17",
+        aws_lambda_core_version: "1.2.3",
+        aws_lambda_events_version: "3.11.3",
         gson: "2.10.1",
+        jetbrains_annotations: "24.1.0",
         nimbusds_oauth_version: "10.13.2",
         nimbusds_jwt_version: "9.29",
         junit: "5.10.1",
@@ -71,6 +72,7 @@ subprojects {
         govuk_notify
         gson
         hamcrest
+        jetbrains_annotations
         kms
         lambda
         lambda_tests
@@ -118,20 +120,22 @@ subprojects {
 
         hamcrest "org.hamcrest:hamcrest:2.2"
 
+        jetbrains_annotations "org.jetbrains:annotations:${dependencyVersions.jetbrains_annotations}"
+
         kms "software.amazon.awssdk:kms:${dependencyVersions.aws_sdk_v2_version}"
 
         lambda "com.amazonaws:aws-lambda-java-core:${dependencyVersions.aws_lambda_core_version}",
                 "com.amazonaws:aws-lambda-java-events:${dependencyVersions.aws_lambda_events_version}",
-                "com.amazonaws:aws-lambda-java-log4j2:1.5.1"
+                "com.amazonaws:aws-lambda-java-log4j2:1.6.0"
 
         lambda_tests "com.amazonaws:aws-lambda-java-tests:1.1.1"
 
         lettuce "org.apache.commons:commons-pool2:2.12.0",
-                "io.lettuce:lettuce-core:6.2.3.RELEASE"
+                "io.lettuce:lettuce-core:6.2.6.RELEASE"
 
         libphonenumber "com.googlecode.libphonenumber:libphonenumber:8.13.24"
 
-        logging_runtime "com.amazonaws:aws-lambda-java-log4j2:1.5.1",
+        logging_runtime "com.amazonaws:aws-lambda-java-log4j2:1.6.0",
                 "org.slf4j:slf4j-nop:2.0.9"
 
         nimbus "com.nimbusds:oauth2-oidc-sdk:${dependencyVersions.nimbusds_oauth_version}",
@@ -151,7 +155,7 @@ subprojects {
                 "org.junit.jupiter:junit-jupiter-params:${dependencyVersions.junit}",
                 "org.mockito:mockito-core:5.7.0",
                 "org.awaitility:awaitility:4.2.0",
-                "com.approvaltests:approvaltests:22.2.0",
+                "com.approvaltests:approvaltests:22.2.1",
                 configurations.hamcrest
 
         test_runtime "org.junit.jupiter:junit-jupiter-engine:${dependencyVersions.junit}"

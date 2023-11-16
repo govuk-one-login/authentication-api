@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.oidc.services;
+package uk.gov.di.authentication.oidc.validators;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSVerifier;
@@ -11,9 +11,8 @@ import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
+import uk.gov.di.authentication.oidc.services.IPVCapacityService;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
@@ -42,43 +41,29 @@ import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildUR
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 
-public class RequestObjectService {
+public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
 
-    private static final Logger LOG = LogManager.getLogger(RequestObjectService.class);
-
-    public static final String VTR_PARAM = "vtr";
-    private final DynamoClientService dynamoClientService;
-    private final ConfigurationService configurationService;
-    private final IPVCapacityService ipvCapacityService;
-
-    public RequestObjectService(
+    public RequestObjectAuthorizeValidator(
             DynamoClientService dynamoClientService,
             ConfigurationService configurationService,
             IPVCapacityService ipvCapacityService) {
-        this.dynamoClientService = dynamoClientService;
-        this.configurationService = configurationService;
-        this.ipvCapacityService = ipvCapacityService;
+        super(configurationService, dynamoClientService, ipvCapacityService);
     }
 
-    public RequestObjectService(ConfigurationService configurationService) {
-        this(
-                new DynamoClientService(configurationService),
+    public RequestObjectAuthorizeValidator(ConfigurationService configurationService) {
+        super(
                 configurationService,
+                new DynamoClientService(configurationService),
                 new IPVCapacityService(configurationService));
     }
 
-    public Optional<AuthRequestError> validateRequestObject(AuthenticationRequest authRequest) {
+    @Override
+    public Optional<AuthRequestError> validate(AuthenticationRequest authRequest) {
+
         var clientId = authRequest.getClientID().toString();
-
         attachLogFieldToLogs(CLIENT_ID, clientId);
+        ClientRegistry client = getClientFromDynamo(clientId);
 
-        var client = dynamoClientService.getClient(clientId).orElse(null);
-
-        if (Objects.isNull(client)) {
-            var errorMsg = "No Client found with given ClientID";
-            LOG.warn(errorMsg);
-            throw new RuntimeException(errorMsg);
-        }
         var signedJWT = (SignedJWT) authRequest.getRequestObject();
         var signatureValid = isSignatureValid(signedJWT, client.getPublicKey());
         if (!signatureValid) {

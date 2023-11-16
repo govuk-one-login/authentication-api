@@ -242,7 +242,8 @@ class AuthCodeHandlerTest {
                         pair("internalSubjectId", SUBJECT.getValue()),
                         pair("isNewAccount", AccountState.NEW),
                         pair("rpPairwiseId", expectedRpPairwiseId),
-                        pair("nonce", NONCE));
+                        pair("nonce", NONCE),
+                        pair("authCode", authorizationCode));
 
         var dimensions =
                 Map.of(
@@ -324,7 +325,8 @@ class AuthCodeHandlerTest {
                         pair("internalSubjectId", AuditService.UNKNOWN),
                         pair("isNewAccount", AccountState.UNKNOWN),
                         pair("rpPairwiseId", AuditService.UNKNOWN),
-                        pair("nonce", NONCE));
+                        pair("nonce", NONCE),
+                        pair("authCode", authorizationCode));
 
         var expectedDimensions =
                 Map.of(
