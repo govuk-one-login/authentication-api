@@ -6,7 +6,6 @@ module "doc_app_authorize_role" {
 
   policies_to_attach = [
     aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
-    aws_iam_policy.lambda_sns_policy.arn,
     aws_iam_policy.redis_parameter_policy.arn,
     aws_iam_policy.doc_app_auth_kms_policy.arn,
     aws_iam_policy.dynamo_client_registry_read_access_policy.arn,

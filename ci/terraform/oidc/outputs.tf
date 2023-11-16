@@ -35,10 +35,6 @@ output "analytics_cookie_domain" {
   value = local.service_domain
 }
 
-output "events_sns_topic_arn" {
-  value = aws_sns_topic.events.arn
-}
-
 output "txma_audit_queue_arn" {
   value = module.oidc_txma_audit.queue_arn
 }
