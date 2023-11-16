@@ -1,6 +1,5 @@
 rootProject.name = 'di-authentication-api'
 include 'account-management-api'
-include 'audit-processors'
 include 'client-registry-api'
 include 'frontend-api'
 include 'integration-tests'
@@ -16,4 +15,3 @@ include 'utils'
 include 'test-services-api'
 include 'auth-external-api'
 include 'interventions-api-stub'
-

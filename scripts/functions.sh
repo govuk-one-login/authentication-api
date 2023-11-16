@@ -27,7 +27,7 @@ function funky_started() {
 startup() {
   printf "\nStarting di-authentication-api...\n"
 
-  ./gradlew clean build auditTerraform -x test
+  ./gradlew clean build -x test
   if [[ -z ${IN_GITHUB_ACTIONS+x} || ${IN_GITHUB_ACTIONS} -eq 0 ]]; then
     funky_started
   else
