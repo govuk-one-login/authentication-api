@@ -26,6 +26,7 @@ dependencies {
     implementation project(":frontend-api")
     implementation project(":doc-checking-app-api")
     implementation project(":oidc-api")
+    implementation project(":interventions-api-stub")
 }
 
 test {

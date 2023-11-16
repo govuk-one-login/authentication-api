@@ -7,7 +7,8 @@ group = 'uk.gov.di.authentication.interventions-api-stub'
 version = 'unspecified'
 
 dependencies {
-    compileOnly configurations.lambda
+    compileOnly configurations.lambda,
+            configurations.dynamodb
 
     implementation project(":shared")
 
