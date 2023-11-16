@@ -68,7 +68,7 @@ resource "aws_api_gateway_stage" "interventions_api_stub_stage" {
   }
 
   depends_on = [
-    module.hello_world_role,
+    module.account_interventions_stub_role,
     aws_api_gateway_deployment.interventions_api_stub_deployment
   ]
 
@@ -80,15 +80,15 @@ resource "aws_api_gateway_deployment" "interventions_api_stub_deployment" {
 
   triggers = {
     redeployment = sha1(jsonencode([
-      module.hello_world_lambda.integration_trigger_value,
-      module.hello_world_lambda.method_trigger_value,
+      module.account_interventions_stub_lambda.integration_trigger_value,
+      module.account_interventions_stub_lambda.method_trigger_value,
     ]))
   }
   lifecycle {
     create_before_destroy = true
   }
   depends_on = [
-    module.hello_world_lambda,
+    module.account_interventions_stub_lambda,
   ]
 }
 

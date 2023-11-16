@@ -7,11 +7,11 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 
-class HelloWorldHandlerTest {
+class AccountInterventionsApiStubHandlerTest {
 
     @Test
     void shouldReturn200ForSuccessfulRequest() {
-        var handler = new HelloWorldHandler();
+        var handler = new AccountInterventionsApiStubHandler();
         var context = mock(Context.class);
         var event = new APIGatewayProxyRequestEvent();
 

@@ -1,22 +1,22 @@
-module "hello_world_role" {
+module "account_interventions_stub_role" {
   source      = "../modules/lambda-role"
   environment = var.environment
-  role_name   = "hello-world-role"
+  role_name   = "account_interventions_stub-role"
   vpc_arn     = local.authentication_vpc_arn
 }
 
-module "hello_world_lambda" {
+module "account_interventions_stub_lambda" {
   source = "../modules/endpoint-module"
 
-  endpoint_name   = "hello-world"
-  path_part       = "hello-world"
+  endpoint_name   = "account-interventions-stub"
+  path_part       = "account-interventions-stub"
   endpoint_method = ["GET"]
   environment     = var.environment
 
   handler_environment_variables = {
     ENVIRONMENT = var.environment
   }
-  handler_function_name = "uk.gov.di.authentication.interventions.api.stub.lambda.HelloWorldHandler::handleRequest"
+  handler_function_name = "uk.gov.di.authentication.interventions.api.stub.lambda.AccountInterventionsApiStubHandler::handleRequest"
   handler_runtime       = "java17"
 
   rest_api_id      = aws_api_gateway_rest_api.interventions_api_stub.id
@@ -38,7 +38,7 @@ module "hello_world_lambda" {
     local.authentication_security_group_id,
   ]
   subnet_id                              = local.authentication_subnet_ids
-  lambda_role_arn                        = module.hello_world_role.arn
+  lambda_role_arn                        = module.account_interventions_stub_role.arn
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention

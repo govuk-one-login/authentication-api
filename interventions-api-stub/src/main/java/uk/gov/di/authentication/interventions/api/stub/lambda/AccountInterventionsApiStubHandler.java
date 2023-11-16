@@ -7,7 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 
-public class HelloWorldHandler
+public class AccountInterventionsApiStubHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
     @Override
     public APIGatewayProxyResponseEvent handleRequest(
