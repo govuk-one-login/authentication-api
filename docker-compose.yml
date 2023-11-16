@@ -4,7 +4,7 @@ services:
   aws:
     image: localstack/localstack:2.3.2@sha256:78c4d09852a90b158a95ac5108439a1f43e09f862739045be91cc5f431076f86
     environment:
-      SERVICES: iam, ec2, sqs, s3, sts, kms, sns, ssm, cloudwatch
+      SERVICES: iam, ec2, sqs, s3, sts, kms, ssm, cloudwatch
       GATEWAY_LISTEN: 0.0.0.0:45678
       LOCALSTACK_HOST: localhost:45678
       DEFAULT_REGION: eu-west-2

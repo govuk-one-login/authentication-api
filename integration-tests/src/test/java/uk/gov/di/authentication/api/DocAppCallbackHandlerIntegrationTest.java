@@ -34,7 +34,6 @@ import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegration
 import uk.gov.di.authentication.sharedtest.extensions.CriStubExtension;
 import uk.gov.di.authentication.sharedtest.extensions.DocumentAppCredentialStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
-import uk.gov.di.authentication.sharedtest.extensions.SnsTopicExtension;
 import uk.gov.di.authentication.sharedtest.extensions.SqsQueueExtension;
 import uk.gov.di.authentication.sharedtest.extensions.TokenSigningExtension;
 
@@ -90,7 +89,6 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
     protected final ConfigurationService configurationService =
             new DocAppCallbackHandlerIntegrationTest.TestConfigurationService(
                     criStub,
-                    auditTopic,
                     notificationsQueue,
                     auditSigningKey,
                     tokenSigner,
@@ -165,7 +163,6 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
         var configurationService =
                 new DocAppCallbackHandlerIntegrationTest.TestConfigurationService(
                         criStub,
-                        auditTopic,
                         notificationsQueue,
                         auditSigningKey,
                         tokenSigner,
@@ -266,7 +263,6 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
         var configurationService =
                 new DocAppCallbackHandlerIntegrationTest.TestConfigurationService(
                         criStub,
-                        auditTopic,
                         notificationsQueue,
                         auditSigningKey,
                         tokenSigner,
@@ -399,7 +395,6 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
 
         public TestConfigurationService(
                 CriStubExtension criStubExtension,
-                SnsTopicExtension auditEventTopic,
                 SqsQueueExtension notificationQueue,
                 KmsKeyExtension auditSigningKey,
                 TokenSigningExtension tokenSigningKey,
@@ -408,7 +403,6 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                 TokenSigningExtension docAppPrivateKeyJwtSigner,
                 boolean userInfoV2Enabled) {
             super(
-                    auditEventTopic,
                     notificationQueue,
                     auditSigningKey,
                     tokenSigningKey,

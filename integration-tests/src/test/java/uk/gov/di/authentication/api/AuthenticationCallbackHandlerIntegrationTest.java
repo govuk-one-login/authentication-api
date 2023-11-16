@@ -34,7 +34,6 @@ import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegration
 import uk.gov.di.authentication.sharedtest.extensions.AuthExternalApiStubExtension;
 import uk.gov.di.authentication.sharedtest.extensions.AuthenticationCallbackUserInfoStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
-import uk.gov.di.authentication.sharedtest.extensions.SnsTopicExtension;
 import uk.gov.di.authentication.sharedtest.extensions.SqsQueueExtension;
 import uk.gov.di.authentication.sharedtest.extensions.TokenSigningExtension;
 
@@ -82,7 +81,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     protected final ConfigurationService configurationService =
             new AuthenticationCallbackHandlerIntegrationTest.TestConfigurationService(
                     authExternalApiStub,
-                    auditTopic,
                     notificationsQueue,
                     auditSigningKey,
                     tokenSigner,
@@ -360,7 +358,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         public TestConfigurationService(
                 AuthExternalApiStubExtension authExternalApiStub,
-                SnsTopicExtension auditEventTopic,
                 SqsQueueExtension notificationQueue,
                 KmsKeyExtension auditSigningKey,
                 TokenSigningExtension tokenSigningKey,
@@ -368,7 +365,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                 SqsQueueExtension spotQueue,
                 TokenSigningExtension docAppPrivateKeyJwtSigner) {
             super(
-                    auditEventTopic,
                     notificationQueue,
                     auditSigningKey,
                     tokenSigningKey,

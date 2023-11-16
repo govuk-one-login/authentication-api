@@ -82,7 +82,6 @@ subprojects {
         nimbus
         secretsmanager
         s3
-        sns
         sqs
         ssm
         tests
@@ -142,8 +141,6 @@ subprojects {
                 "com.nimbusds:nimbus-jose-jwt:${dependencyVersions.nimbusds_jwt_version}"
 
         secretsmanager "software.amazon.awssdk:secretsmanager:${dependencyVersions.aws_sdk_v2_version}"
-
-        sns "software.amazon.awssdk:sns:${dependencyVersions.aws_sdk_v2_version}"
 
         sqs "software.amazon.awssdk:sqs:${dependencyVersions.aws_sdk_v2_version}"
 
@@ -299,11 +296,7 @@ task oidcTerraform (type: Terraform) {
             environment "API_KEY", json.frontend_api_key.value
             environment "FRONTEND_API_GATEWAY_ID", json.frontend_api_gateway_root_id.value
             environment "FRONTEND_API_KEY", json.frontend_api_key.value
-            environment "EVENTS_SNS_TOPIC_ARN", json.events_sns_topic_arn.value
             environment "EMAIL_QUEUE_URL", json.email_queue.value
-        }
-        allprojects.findAll {it.name == "account-management-integration-tests"}.first().tasks.getByName("test") {
-            environment "EVENTS_SNS_TOPIC_ARN", json.events_sns_topic_arn.value
         }
     }
     dependsOn ":client-registry-api:buildZip"

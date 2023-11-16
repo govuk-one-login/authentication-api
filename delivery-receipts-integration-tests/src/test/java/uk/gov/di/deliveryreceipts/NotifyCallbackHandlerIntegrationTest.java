@@ -42,7 +42,6 @@ class NotifyCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
 
     private static final IntegrationTestConfigurationService CONFIGURATION_SERVICE =
             new IntegrationTestConfigurationService(
-                    auditTopic,
                     notificationsQueue,
                     auditSigningKey,
                     tokenSigner,

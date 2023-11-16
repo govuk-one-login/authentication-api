@@ -13,7 +13,6 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SystemService;
 import uk.gov.di.authentication.sharedtest.extensions.AccountModifiersStoreExtension;
-import uk.gov.di.authentication.sharedtest.extensions.AuditSnsTopicExtension;
 import uk.gov.di.authentication.sharedtest.extensions.ClientStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.CommonPasswordsExtension;
 import uk.gov.di.authentication.sharedtest.extensions.DocumentAppCredentialStoreExtension;
@@ -21,7 +20,6 @@ import uk.gov.di.authentication.sharedtest.extensions.IdentityStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
 import uk.gov.di.authentication.sharedtest.extensions.ParameterStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.RedisExtension;
-import uk.gov.di.authentication.sharedtest.extensions.SnsTopicExtension;
 import uk.gov.di.authentication.sharedtest.extensions.SqsQueueExtension;
 import uk.gov.di.authentication.sharedtest.extensions.TokenSigningExtension;
 import uk.gov.di.authentication.sharedtest.extensions.UserStoreExtension;
@@ -87,10 +85,6 @@ public abstract class HandlerIntegrationTest<Q, S> {
             new SqsQueueExtension("txma-audit-queue");
 
     @RegisterExtension
-    protected static final AuditSnsTopicExtension auditTopic =
-            new AuditSnsTopicExtension("local-events");
-
-    @RegisterExtension
     protected static final KmsKeyExtension auditSigningKey =
             new KmsKeyExtension("audit-signing-key");
 
@@ -143,7 +137,6 @@ public abstract class HandlerIntegrationTest<Q, S> {
 
     protected static final ConfigurationService TEST_CONFIGURATION_SERVICE =
             new IntegrationTestConfigurationService(
-                    auditTopic,
                     notificationsQueue,
                     auditSigningKey,
                     tokenSigner,
@@ -154,7 +147,6 @@ public abstract class HandlerIntegrationTest<Q, S> {
 
     protected static final ConfigurationService TXMA_ENABLED_CONFIGURATION_SERVICE =
             new IntegrationTestConfigurationService(
-                    auditTopic,
                     notificationsQueue,
                     auditSigningKey,
                     tokenSigner,
@@ -171,7 +163,6 @@ public abstract class HandlerIntegrationTest<Q, S> {
 
     protected static final ConfigurationService AUTH_CODE_HANDLER_ENABLED_CONFIGURATION_SERVICE =
             new IntegrationTestConfigurationService(
-                    auditTopic,
                     notificationsQueue,
                     auditSigningKey,
                     tokenSigner,
@@ -257,13 +248,11 @@ public abstract class HandlerIntegrationTest<Q, S> {
         private final SqsQueueExtension notificationQueue;
         private final KmsKeyExtension auditSigningKey;
         private final TokenSigningExtension tokenSigningKey;
-        private final SnsTopicExtension auditEventTopic;
         private final TokenSigningExtension ipvPrivateKeyJwtSigner;
         private final SqsQueueExtension spotQueue;
         private final TokenSigningExtension docAppPrivateKeyJwtSigner;
 
         public IntegrationTestConfigurationService(
-                SnsTopicExtension auditEventTopic,
                 SqsQueueExtension notificationQueue,
                 KmsKeyExtension auditSigningKey,
                 TokenSigningExtension tokenSigningKey,
@@ -272,7 +261,6 @@ public abstract class HandlerIntegrationTest<Q, S> {
                 TokenSigningExtension docAppPrivateKeyJwtSigner,
                 ParameterStoreExtension parameterStoreExtension) {
             super(parameterStoreExtension.getClient());
-            this.auditEventTopic = auditEventTopic;
             this.notificationQueue = notificationQueue;
             this.tokenSigningKey = tokenSigningKey;
             this.auditSigningKey = auditSigningKey;
@@ -282,7 +270,6 @@ public abstract class HandlerIntegrationTest<Q, S> {
         }
 
         public IntegrationTestConfigurationService(
-                SnsTopicExtension auditEventTopic,
                 SqsQueueExtension notificationQueue,
                 KmsKeyExtension auditSigningKey,
                 TokenSigningExtension tokenSigningKey,
@@ -292,7 +279,6 @@ public abstract class HandlerIntegrationTest<Q, S> {
                 ParameterStoreExtension parameterStoreExtension,
                 SystemService systemService) {
             super(parameterStoreExtension.getClient());
-            this.auditEventTopic = auditEventTopic;
             this.notificationQueue = notificationQueue;
             this.tokenSigningKey = tokenSigningKey;
             this.auditSigningKey = auditSigningKey;

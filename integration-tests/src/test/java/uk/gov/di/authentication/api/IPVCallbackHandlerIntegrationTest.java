@@ -31,7 +31,6 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.IPVStubExtension;
 import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
-import uk.gov.di.authentication.sharedtest.extensions.SnsTopicExtension;
 import uk.gov.di.authentication.sharedtest.extensions.SqsQueueExtension;
 import uk.gov.di.authentication.sharedtest.extensions.TokenSigningExtension;
 import uk.gov.di.authentication.testsupport.helpers.SpotQueueAssertionHelper;
@@ -68,7 +67,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
     protected final ConfigurationService configurationService =
             new IPVCallbackHandlerIntegrationTest.TestConfigurationService(
                     ipvStub,
-                    auditTopic,
                     notificationsQueue,
                     auditSigningKey,
                     tokenSigner,
@@ -323,14 +321,12 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
 
         public TestConfigurationService(
                 IPVStubExtension ipvStub,
-                SnsTopicExtension auditEventTopic,
                 SqsQueueExtension notificationQueue,
                 KmsKeyExtension auditSigningKey,
                 TokenSigningExtension tokenSigningKey,
                 TokenSigningExtension ipvPrivateKeyJwtSigner,
                 SqsQueueExtension spotQueue) {
             super(
-                    auditEventTopic,
                     notificationQueue,
                     auditSigningKey,
                     tokenSigningKey,

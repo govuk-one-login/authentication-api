@@ -13,7 +13,6 @@ dependencies {
     compileOnly             configurations.kms,
             configurations.lambda,
             configurations.sqs,
-            configurations.sns,
             configurations.dynamodb
 
     implementation configurations.govuk_notify,

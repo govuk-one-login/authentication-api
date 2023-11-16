@@ -42,7 +42,6 @@ class IPVCapacityHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
 
     public ConfigurationService capacityAwareConfiguration(String value) {
         return new IntegrationTestConfigurationService(
-                auditTopic,
                 notificationsQueue,
                 auditSigningKey,
                 tokenSigner,

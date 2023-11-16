@@ -795,7 +795,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static IntegrationTestConfigurationService configWithDocAppDecouple(
             boolean isDocAppDecoupleEnabled) {
         return new IntegrationTestConfigurationService(
-                auditTopic,
                 notificationsQueue,
                 auditSigningKey,
                 tokenSigner,

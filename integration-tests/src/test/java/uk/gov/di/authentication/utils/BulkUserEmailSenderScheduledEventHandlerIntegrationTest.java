@@ -276,7 +276,6 @@ public class BulkUserEmailSenderScheduledEventHandlerIntegrationTest
 
     private static IntegrationTestConfigurationService configWithSendMode(String sendMode) {
         return new IntegrationTestConfigurationService(
-                auditTopic,
                 notificationsQueue,
                 auditSigningKey,
                 tokenSigner,

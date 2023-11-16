@@ -18,7 +18,6 @@ dependencies {
             configurations.lettuce,
             configurations.libphonenumber,
             configurations.hamcrest,
-            configurations.sns,
             configurations.s3,
             configurations.sqs,
             configurations.ssm,

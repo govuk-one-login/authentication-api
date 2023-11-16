@@ -10,7 +10,6 @@ dependencies {
 
     compileOnly configurations.lambda,
             configurations.ssm,
-            configurations.sns,
             configurations.dynamodb
 
     implementation configurations.nimbus,

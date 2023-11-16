@@ -9,7 +9,6 @@ version "unspecified"
 dependencies {
     compileOnly configurations.lambda,
             configurations.dynamodb,
-            configurations.sns,
             configurations.kms
 
     implementation configurations.gson,
