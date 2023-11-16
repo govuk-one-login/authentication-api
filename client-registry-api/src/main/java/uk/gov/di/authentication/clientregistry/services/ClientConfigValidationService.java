@@ -4,10 +4,10 @@ import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.client.RegistrationError;
 import com.nimbusds.openid.connect.sdk.SubjectType;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
-import uk.gov.di.authentication.shared.entity.ClientType;
-import uk.gov.di.authentication.shared.entity.UpdateClientConfigRequest;
-import uk.gov.di.authentication.shared.entity.ValidClaims;
-import uk.gov.di.authentication.shared.entity.ValidScopes;
+import uk.gov.di.orchestration.shared.entity.ClientType;
+import uk.gov.di.orchestration.shared.entity.UpdateClientConfigRequest;
+import uk.gov.di.orchestration.shared.entity.ValidClaims;
+import uk.gov.di.orchestration.shared.entity.ValidScopes;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -19,8 +19,8 @@ import java.util.List;
 import java.util.Optional;
 
 import static java.util.Collections.singletonList;
-import static uk.gov.di.authentication.shared.entity.ServiceType.MANDATORY;
-import static uk.gov.di.authentication.shared.entity.ServiceType.OPTIONAL;
+import static uk.gov.di.orchestration.shared.entity.ServiceType.MANDATORY;
+import static uk.gov.di.orchestration.shared.entity.ServiceType.OPTIONAL;
 
 public class ClientConfigValidationService {
 

@@ -16,14 +16,14 @@ dependencies {
             configurations.nimbus,
             configurations.bouncycastle
 
-    implementation project(":shared")
+    implementation project(":orchestration-shared")
 
     runtimeOnly configurations.logging_runtime
 
     testImplementation configurations.tests,
             configurations.apache,
             configurations.lambda_tests,
-            project(":shared-test"),
+            project(":orchestration-shared-test"),
             configurations.lambda,
             configurations.sqs,
             configurations.kms,

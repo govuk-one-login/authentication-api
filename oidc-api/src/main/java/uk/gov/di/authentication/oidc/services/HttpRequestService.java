@@ -3,7 +3,7 @@ package uk.gov.di.authentication.oidc.services;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.message.ObjectMessage;
-import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
+import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 
 import java.io.IOException;
 import java.net.URI;

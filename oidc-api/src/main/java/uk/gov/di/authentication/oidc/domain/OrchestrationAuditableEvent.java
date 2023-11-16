@@ -1,6 +1,6 @@
 package uk.gov.di.authentication.oidc.domain;
 
-import uk.gov.di.authentication.shared.domain.AuditableEvent;
+import uk.gov.di.orchestration.shared.domain.AuditableEvent;
 
 public enum OrchestrationAuditableEvent implements AuditableEvent {
     AUTH_CALLBACK_RESPONSE_RECEIVED,

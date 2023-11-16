@@ -3,7 +3,7 @@ package uk.gov.di.authentication.ipv.entity;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import com.nimbusds.oauth2.sdk.id.State;
-import uk.gov.di.authentication.shared.validation.Required;
+import uk.gov.di.orchestration.shared.validation.Required;
 
 import java.net.URI;
 

@@ -10,17 +10,24 @@ import java.util.Map;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.orchestration.shared.helpers.PersistentIdHelper.isValidPersistentSessionCookieWithDoubleDashedTimestamp;
 
 class PersistentIdHelperTest {
+    private static final String ARBITRARY_UNIX_TIMESTAMP = "1700558480962";
+    private static final String PERSISTENT_SESSION_ID_COOKIE_VALUE =
+            IdGenerator.generate() + "--" + ARBITRARY_UNIX_TIMESTAMP;
 
     @Test
     void shouldReturnPersistentIdWhenExistsInHeader() {
-        String persistentIdInputHeader = "some-persistent-id-value";
         Map<String, String> inputHeaders =
-                Map.of(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentIdInputHeader);
+                Map.of(
+                        PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
+                        PERSISTENT_SESSION_ID_COOKIE_VALUE);
         String persistentId = PersistentIdHelper.extractPersistentIdFromHeaders(inputHeaders);
 
-        assertThat(persistentId, equalTo(persistentIdInputHeader));
+        assertThat(persistentId, equalTo(PERSISTENT_SESSION_ID_COOKIE_VALUE));
     }
 
     @Test
@@ -43,11 +50,13 @@ class PersistentIdHelperTest {
     @Test
     void shouldReturnPersistentIdFromCookieHeaderWhenExists() {
         String cookieString =
-                "Version=1; di-persistent-session-id=a-persistent-id;gs=session-id.456;cookies_preferences_set={\"analytics\":true};name=ts";
+                String.format(
+                        "Version=1; di-persistent-session-id=%s;gs=session-id.456;cookies_preferences_set={\"analytics\":true};name=ts",
+                        PERSISTENT_SESSION_ID_COOKIE_VALUE);
         Map<String, String> inputHeaders = Map.of(CookieHelper.REQUEST_COOKIE_HEADER, cookieString);
         String persistentId = PersistentIdHelper.extractPersistentIdFromCookieHeader(inputHeaders);
 
-        assertThat(persistentId, equalTo("a-persistent-id"));
+        assertThat(persistentId, equalTo(PERSISTENT_SESSION_ID_COOKIE_VALUE));
     }
 
     @Test
@@ -61,14 +70,63 @@ class PersistentIdHelperTest {
     }
 
     @Test
-    void shouldReturnExistingPersistentIdFromGetExistingOrCreateWhenExists() {
+    void
+            shouldReturnExistingPersistentIdButAppendTimestampInGetExistingOrCreateWhenOldFormatExists() {
         String cookieString =
-                "Version=1; di-persistent-session-id=a-persistent-id;gs=session-id.456;cookies_preferences_set={\"analytics\":true};name=ts";
+                String.format(
+                        "Version=1; di-persistent-session-id=%s;gs=session-id.456;cookies_preferences_set={\"analytics\":true};name=ts",
+                        PERSISTENT_SESSION_ID_COOKIE_VALUE);
         Map<String, String> inputHeaders = Map.of(CookieHelper.REQUEST_COOKIE_HEADER, cookieString);
         String persistentId =
                 PersistentIdHelper.getExistingOrCreateNewPersistentSessionId(inputHeaders);
+        assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(persistentId));
+    }
 
-        assertThat(persistentId, equalTo("a-persistent-id"));
+    @Test
+    void
+            shouldReturnExistingPersistentIdAndNotAppendNewTimestampInGetExistingOrCreateWhenNewFormatExists() {
+        String cookieString =
+                String.format(
+                        "Version=1; di-persistent-session-id=%s;gs=session-id.456;cookies_preferences_set={\"analytics\":true};name=ts",
+                        PERSISTENT_SESSION_ID_COOKIE_VALUE);
+        Map<String, String> inputHeaders = Map.of(CookieHelper.REQUEST_COOKIE_HEADER, cookieString);
+        String persistentId =
+                PersistentIdHelper.getExistingOrCreateNewPersistentSessionId(inputHeaders);
+        assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(persistentId));
+        assertTrue(persistentId.contains(PERSISTENT_SESSION_ID_COOKIE_VALUE));
+    }
+
+    // This relates to a short period where it was possible to have a format like
+    // --1700558480962--1700558480963--1700558480964; see commit
+    // 75a10df4376397d5a454b87b5cee689e13a71e20; will not be needed from 26/05/2025
+    @Test
+    void shouldReturnNewPersistentIdWithATimestampWhenCorruptedFormatExists() {
+        String corruptedPersistentId = "--1700558480962--1700558480963";
+
+        String cookieString =
+                String.format(
+                        "Version=1; di-persistent-session-id=%s;gs=session-id.456;cookies_preferences_set={\"analytics\":true};name=ts",
+                        corruptedPersistentId);
+        Map<String, String> inputHeaders = Map.of(CookieHelper.REQUEST_COOKIE_HEADER, cookieString);
+        String persistentId =
+                PersistentIdHelper.getExistingOrCreateNewPersistentSessionId(inputHeaders);
+        assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(persistentId));
+        assertFalse(persistentId.contains(corruptedPersistentId));
+    }
+
+    @Test
+    void shouldAppendTimestampToPersistentIdWhenMissing() {
+        String oldPersistentId = IdGenerator.generate();
+
+        String cookieString =
+                String.format(
+                        "Version=1; di-persistent-session-id=%s;gs=session-id.456;cookies_preferences_set={\"analytics\":true};name=ts",
+                        oldPersistentId);
+        Map<String, String> inputHeaders = Map.of(CookieHelper.REQUEST_COOKIE_HEADER, cookieString);
+        String persistentId =
+                PersistentIdHelper.getExistingOrCreateNewPersistentSessionId(inputHeaders);
+        assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(persistentId));
+        assertTrue(persistentId.startsWith(oldPersistentId));
     }
 
     @Test
@@ -80,6 +138,6 @@ class PersistentIdHelperTest {
                 PersistentIdHelper.getExistingOrCreateNewPersistentSessionId(inputHeaders);
 
         assertThat(persistentId, not(equalTo("a-persistent-id")));
-        assertThat(Base64.getUrlDecoder().decode(persistentId).length, equalTo(20));
+        assertThat(Base64.getUrlDecoder().decode(persistentId.split("--")[0]).length, equalTo(20));
     }
 }

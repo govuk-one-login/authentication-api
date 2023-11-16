@@ -5,9 +5,9 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.entity.AccountInterventionResponse;
 import uk.gov.di.authentication.oidc.entity.AccountInterventionStatus;
 import uk.gov.di.authentication.oidc.exceptions.AccountInterventionException;
-import uk.gov.di.authentication.shared.serialization.Json;
-import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.SerializationService;
 
 import java.io.IOException;
 import java.net.URI;

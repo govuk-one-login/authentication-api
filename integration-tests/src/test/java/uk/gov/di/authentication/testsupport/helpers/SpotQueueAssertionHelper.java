@@ -1,7 +1,7 @@
 package uk.gov.di.authentication.testsupport.helpers;
 
 import uk.gov.di.authentication.ipv.entity.SPOTRequest;
-import uk.gov.di.authentication.sharedtest.extensions.SqsQueueExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.SqsQueueExtension;
 
 import java.util.Arrays;
 import java.util.Collection;

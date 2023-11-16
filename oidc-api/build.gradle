@@ -21,15 +21,13 @@ dependencies {
             configurations.nimbus,
             configurations.bouncycastle,
             configurations.cloudwatch,
-            project(":shared"),
             project(":orchestration-shared"),
             project(":client-registry-api"),
-            project(":doc-checking-app-api"),
-            project(":auth-external-api")
+            project(":doc-checking-app-api")
 
     testImplementation configurations.tests,
             configurations.lambda_tests,
-            project(":shared-test"),
+            project(":orchestration-shared-test"),
             configurations.lambda,
             configurations.sqs,
             configurations.kms,

@@ -9,10 +9,10 @@ import org.hamcrest.TypeSafeMatcher;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.oidc.entity.BackChannelLogoutMessage;
 import uk.gov.di.authentication.oidc.services.HttpRequestService;
-import uk.gov.di.authentication.shared.helpers.NowHelper.NowClock;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.SerializationService;
-import uk.gov.di.authentication.shared.services.TokenService;
+import uk.gov.di.orchestration.shared.helpers.NowHelper.NowClock;
+import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.SerializationService;
+import uk.gov.di.orchestration.shared.services.TokenService;
 
 import java.net.URI;
 import java.sql.Date;
@@ -36,7 +36,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.sharedtest.exceptions.Unchecked.unchecked;
+import static uk.gov.di.orchestration.sharedtest.exceptions.Unchecked.unchecked;
 
 class BackChannelLogoutRequestHandlerTest {
 

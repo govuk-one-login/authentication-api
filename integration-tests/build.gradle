@@ -22,7 +22,9 @@ dependencies {
             configurations.lambda
 
     implementation project(":shared"), noXray
+    implementation project(":orchestration-shared"), noXray
     implementation project(":shared-test"), noXray
+    implementation project(":orchestration-shared-test"), noXray
     implementation project(":oidc-api"), noXray
     implementation project(":frontend-api"), noXray
     implementation project(":auth-external-api"), noXray

@@ -25,10 +25,10 @@ import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.GetPublicKeyRequest;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
-import uk.gov.di.authentication.shared.exceptions.UnsuccessfulCredentialResponseException;
-import uk.gov.di.authentication.shared.helpers.NowHelper;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.KmsConnectionService;
+import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
+import uk.gov.di.orchestration.shared.helpers.NowHelper;
+import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -41,9 +41,9 @@ import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
-import static uk.gov.di.authentication.shared.entity.IdentityClaims.CREDENTIAL_JWT;
-import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
-import static uk.gov.di.authentication.shared.helpers.HashHelper.hashSha256String;
+import static uk.gov.di.orchestration.shared.entity.IdentityClaims.CREDENTIAL_JWT;
+import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
+import static uk.gov.di.orchestration.shared.helpers.HashHelper.hashSha256String;
 
 public class DocAppCriService {
 

@@ -1,7 +1,7 @@
 package uk.gov.di.authentication.ipv.services;
 
 import org.junit.jupiter.api.Test;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.ConfigurationService;
 
 import java.util.Optional;
 

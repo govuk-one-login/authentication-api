@@ -11,13 +11,13 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.oidc.entity.BackChannelLogoutMessage;
 import uk.gov.di.authentication.oidc.services.HttpRequestService;
-import uk.gov.di.authentication.shared.helpers.LogLineHelper;
-import uk.gov.di.authentication.shared.helpers.NowHelper.NowClock;
-import uk.gov.di.authentication.shared.serialization.Json.JsonException;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.KmsConnectionService;
-import uk.gov.di.authentication.shared.services.SerializationService;
-import uk.gov.di.authentication.shared.services.TokenService;
+import uk.gov.di.orchestration.shared.helpers.LogLineHelper;
+import uk.gov.di.orchestration.shared.helpers.NowHelper.NowClock;
+import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
+import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.KmsConnectionService;
+import uk.gov.di.orchestration.shared.services.SerializationService;
+import uk.gov.di.orchestration.shared.services.TokenService;
 
 import java.net.URI;
 import java.time.Clock;
@@ -27,8 +27,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static java.util.Collections.emptyMap;
-import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
+import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 
 public class BackChannelLogoutRequestHandler implements RequestHandler<SQSEvent, Object> {
 

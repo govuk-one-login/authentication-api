@@ -1,6 +1,6 @@
 package uk.gov.di.authentication.oidc.entity;
 
-import uk.gov.di.authentication.shared.entity.AccessTokenStore;
+import uk.gov.di.orchestration.shared.entity.AccessTokenStore;
 
 import java.util.List;
 

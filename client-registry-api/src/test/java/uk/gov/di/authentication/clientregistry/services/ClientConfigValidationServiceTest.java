@@ -7,9 +7,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
-import uk.gov.di.authentication.shared.entity.ClientType;
-import uk.gov.di.authentication.shared.entity.UpdateClientConfigRequest;
-import uk.gov.di.authentication.shared.entity.ValidClaims;
+import uk.gov.di.orchestration.shared.entity.ClientType;
+import uk.gov.di.orchestration.shared.entity.UpdateClientConfigRequest;
+import uk.gov.di.orchestration.shared.entity.ValidClaims;
 
 import java.util.List;
 import java.util.Optional;
@@ -25,8 +25,8 @@ import static uk.gov.di.authentication.clientregistry.services.ClientConfigValid
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_PUBLIC_KEY;
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_SCOPE;
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_SUBJECT_TYPE;
-import static uk.gov.di.authentication.shared.entity.ServiceType.MANDATORY;
-import static uk.gov.di.authentication.shared.entity.ServiceType.OPTIONAL;
+import static uk.gov.di.orchestration.shared.entity.ServiceType.MANDATORY;
+import static uk.gov.di.orchestration.shared.entity.ServiceType.OPTIONAL;
 
 class ClientConfigValidationServiceTest {
 

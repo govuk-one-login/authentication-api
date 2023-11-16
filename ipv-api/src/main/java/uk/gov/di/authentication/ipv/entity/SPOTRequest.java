@@ -3,7 +3,7 @@ package uk.gov.di.authentication.ipv.entity;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.JsonAdapter;
 import com.google.gson.annotations.SerializedName;
-import uk.gov.di.authentication.shared.serialization.Base64ByteArrayAdapter;
+import uk.gov.di.orchestration.shared.serialization.Base64ByteArrayAdapter;
 
 import java.util.Map;
 

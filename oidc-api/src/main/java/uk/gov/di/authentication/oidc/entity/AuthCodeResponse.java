@@ -1,7 +1,7 @@
 package uk.gov.di.authentication.oidc.entity;
 
 import com.google.gson.annotations.Expose;
-import uk.gov.di.authentication.shared.validation.Required;
+import uk.gov.di.orchestration.shared.validation.Required;
 
 public class AuthCodeResponse {
 

@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.sharedtest.extensions;
+package uk.gov.di.orchestration.sharedtest.extensions;
 
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -10,8 +10,8 @@ import software.amazon.awssdk.services.dynamodb.model.KeyType;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import uk.gov.di.authentication.app.entity.DocAppCredential;
 import uk.gov.di.authentication.app.services.DynamoDocAppService;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.sharedtest.basetest.DynamoTestConfiguration;
+import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.sharedtest.basetest.DynamoTestConfiguration;
 
 import java.util.List;
 import java.util.Optional;
@@ -28,7 +28,10 @@ public class DocumentAppCredentialStoreExtension extends DynamoExtension
     public DocumentAppCredentialStoreExtension(long ttl) {
         createInstance();
         this.configuration =
-                new DynamoTestConfiguration(REGION, ENVIRONMENT, DYNAMO_ENDPOINT) {
+                new DynamoTestConfiguration(
+                        BaseAwsResourceExtension.REGION,
+                        DynamoExtension.ENVIRONMENT,
+                        DynamoExtension.DYNAMO_ENDPOINT) {
                     @Override
                     public long getAccessTokenExpiry() {
                         return ttl;

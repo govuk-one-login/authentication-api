@@ -2,7 +2,7 @@ package uk.gov.di.authentication.oidc.entity;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import uk.gov.di.authentication.shared.validation.Required;
+import uk.gov.di.orchestration.shared.validation.Required;
 
 import java.util.List;
 

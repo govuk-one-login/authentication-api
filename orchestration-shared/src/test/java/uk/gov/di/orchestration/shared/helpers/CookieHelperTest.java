@@ -1,5 +1,6 @@
 package uk.gov.di.orchestration.shared.helpers;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -13,6 +14,7 @@ import java.util.stream.Stream;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.orchestration.shared.helpers.CookieHelper.PERSISTENT_COOKIE_NAME;
 import static uk.gov.di.orchestration.shared.helpers.CookieHelper.REQUEST_COOKIE_HEADER;
 import static uk.gov.di.orchestration.shared.helpers.CookieHelper.RESPONSE_COOKIE_HEADER;
@@ -84,6 +86,33 @@ public class CookieHelperTest {
         String id = parsePersistentCookie(headers).orElseThrow();
 
         assertEquals(PERSISTENT_SESSION_ID_COOKIE_VALUE, id);
+    }
+
+    @Test
+    void shouldNotReturnIdFromInvalidPersistentCookie() {
+        String existingPersistentSessionId = "--1700558480962--1700558480963";
+        HttpCookie cookie = new HttpCookie("di-persistent-session-id", existingPersistentSessionId);
+        Map<String, String> headers =
+                Map.ofEntries(Map.entry(REQUEST_COOKIE_HEADER, cookie.toString()));
+
+        Optional<String> id = parsePersistentCookie(headers);
+
+        assertEmpty(id);
+    }
+
+    @Test
+    void shouldAppendTimestampToPersistentCookieWhenMissing() {
+        String existingPersistentSessionId = IdGenerator.generate();
+        HttpCookie cookie = new HttpCookie("di-persistent-session-id", existingPersistentSessionId);
+        Map<String, String> headers =
+                Map.ofEntries(Map.entry(REQUEST_COOKIE_HEADER, cookie.toString()));
+
+        Optional<String> id = parsePersistentCookie(headers);
+
+        assertTrue(id.get().startsWith(existingPersistentSessionId));
+        assertTrue(
+                PersistentIdHelper.isValidPersistentSessionCookieWithDoubleDashedTimestamp(
+                        id.get()));
     }
 
     @ParameterizedTest(name = "with header {0}")
