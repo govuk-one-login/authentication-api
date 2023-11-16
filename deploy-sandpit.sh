@@ -18,13 +18,14 @@ function usage() {
   Requires a GDS CLI, AWS CLI and jq installed and configured.
 
   Usage:
-    $0 [-b|--build] [-c|--clean] [-s|--shared] [-o|--oidc] [-a|--account-management] [-t|--test-services] [--audit] [--destroy] [-p|--prompt] [-x|--auth-external]
+    $0 [-b|--build] [-c|--clean] [-s|--shared] [-i|--interventions] [-o|--oidc] [-a|--account-management] [-t|--test-services] [--audit] [--destroy] [-p|--prompt] [-x|--auth-external]
 
   Options:
     -b, --build               run gradle build and buildZip tasks (default)
     -c, --clean               run gradle clean before build
     -s, --shared              run the shared terraform (default)
     -o, --oidc                run the oidc terraform (default)
+    -i, --interventions       run the account interventions API stub terraform (default)
     -a, --account-management  run the account management terraform (default)
     --audit                   run the audit terraform
     -d, --delivery-receipts   run the delivery receipts terraform
@@ -43,6 +44,7 @@ AUDIT=0
 AUTH_EXTERNAL_API=0
 BUILD=0
 OIDC=0
+INTERVENTIONS=0
 RECEIPTS=0
 SHARED=0
 UTILS=0
@@ -54,6 +56,7 @@ if [[ $# == 0 ]]; then
   AUTH_EXTERNAL_API=1
   BUILD=1
   OIDC=1
+  INTERVENTIONS=1
   SHARED=1
 fi
 while [[ $# -gt 0 ]]; do
@@ -75,6 +78,9 @@ while [[ $# -gt 0 ]]; do
     ;;
   -o | --oidc)
     OIDC=1
+    ;;
+  -i | --interventions)
+    INTERVENTIONS=1
     ;;
   -s | --shared)
     SHARED=1
@@ -127,8 +133,13 @@ echo "done!"
 if [[ $SHARED == "1" ]]; then
   runTerraform "shared" "${TERRAFORM_OPTS}"
 fi
+
 if [[ $OIDC == "1" ]]; then
   runTerraform "oidc" "${TERRAFORM_OPTS}"
+fi
+
+if [[ $INTERVENTIONS == "1" ]]; then
+  runTerraform "interventions-api-stub" "${TERRAFORM_OPTS}"
 fi
 
 if [[ $AM == "1" ]]; then
