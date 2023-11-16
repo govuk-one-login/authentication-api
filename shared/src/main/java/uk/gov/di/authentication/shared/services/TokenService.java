@@ -86,14 +86,14 @@ public class TokenService {
             Subject internalSubject,
             Scope authRequestScopes,
             Map<String, Object> additionalTokenClaims,
-            Subject subject,
-            String vot,
+            Subject rpPairwiseSubject,
             List<ClientConsent> clientConsents,
             boolean isConsentRequired,
             OIDCClaimsRequest claimsRequest,
             boolean isDocAppJourney,
             JWSAlgorithm signingAlgorithm,
-            String journeyId) {
+            String journeyId,
+            String vot) {
         List<String> scopesForToken;
         if (isConsentRequired) {
             scopesForToken = calculateScopesForToken(clientConsents, clientID, authRequestScopes);
@@ -108,7 +108,7 @@ public class TokenService {
                                         clientID,
                                         internalSubject,
                                         scopesForToken,
-                                        subject,
+                                        rpPairwiseSubject,
                                         claimsRequest,
                                         signingAlgorithm));
         AccessTokenHash accessTokenHash =
@@ -122,7 +122,7 @@ public class TokenService {
                         () ->
                                 generateIDToken(
                                         clientID,
-                                        subject,
+                                        rpPairwiseSubject,
                                         additionalTokenClaims,
                                         accessTokenHash,
                                         vot,
@@ -138,7 +138,7 @@ public class TokenService {
                                             clientID,
                                             internalSubject,
                                             scopesForToken,
-                                            subject,
+                                            rpPairwiseSubject,
                                             signingAlgorithm));
             return new OIDCTokenResponse(new OIDCTokens(idToken, accessToken, refreshToken));
         } else {

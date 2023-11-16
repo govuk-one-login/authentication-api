@@ -251,17 +251,17 @@ public class TokenHandler
                                             authRequest.getScope(),
                                             additionalTokenClaims,
                                             clientSession.getDocAppSubjectId(),
-                                            vot,
                                             null,
                                             false,
                                             finalClaimsRequest,
                                             true,
                                             signingAlgorithm,
-                                            authCodeExchangeData.getClientSessionId()));
+                                            authCodeExchangeData.getClientSessionId(),
+                                            vot));
         } else {
             UserProfile userProfile =
                     dynamoService.getUserProfileByEmail(authCodeExchangeData.getEmail());
-            Subject subject =
+            Subject rpPairwiseSubject =
                     ClientSubjectHelper.getSubject(
                             userProfile,
                             clientRegistry,
@@ -276,14 +276,14 @@ public class TokenHandler
                                             new Subject(userProfile.getSubjectID()),
                                             authRequest.getScope(),
                                             additionalTokenClaims,
-                                            subject,
-                                            vot,
+                                            rpPairwiseSubject,
                                             userProfile.getClientConsent(),
                                             isConsentRequired,
                                             finalClaimsRequest,
                                             false,
                                             signingAlgorithm,
-                                            authCodeExchangeData.getClientSessionId()));
+                                            authCodeExchangeData.getClientSessionId(),
+                                            vot));
         }
 
         clientSessionService.saveClientSession(

@@ -146,7 +146,6 @@ public class TokenServiceTest {
                         SCOPES_OFFLINE_ACCESS,
                         additionalTokenClaims,
                         PUBLIC_SUBJECT,
-                        VOT,
                         Collections.singletonList(
                                 new ClientConsent(
                                         CLIENT_ID,
@@ -156,7 +155,8 @@ public class TokenServiceTest {
                         null,
                         false,
                         JWSAlgorithm.ES256,
-                        "client-session-id");
+                        "client-session-id",
+                        VOT);
 
         assertSuccessfulTokenResponse(tokenResponse);
 
@@ -203,7 +203,6 @@ public class TokenServiceTest {
                         SCOPES_OFFLINE_ACCESS,
                         additionalTokenClaims,
                         PUBLIC_SUBJECT,
-                        VOT,
                         Collections.singletonList(
                                 new ClientConsent(
                                         CLIENT_ID,
@@ -213,7 +212,8 @@ public class TokenServiceTest {
                         oidcClaimsRequest,
                         false,
                         JWSAlgorithm.ES256,
-                        "client-session-id");
+                        "client-session-id",
+                        VOT);
 
         assertSuccessfulTokenResponse(tokenResponse);
 
@@ -274,7 +274,6 @@ public class TokenServiceTest {
                         SCOPES,
                         additionalTokenClaims,
                         PUBLIC_SUBJECT,
-                        VOT,
                         Collections.singletonList(
                                 new ClientConsent(
                                         CLIENT_ID,
@@ -284,7 +283,8 @@ public class TokenServiceTest {
                         null,
                         false,
                         JWSAlgorithm.ES256,
-                        "client-session-id");
+                        "client-session-id",
+                        VOT);
 
         assertSuccessfulTokenResponse(tokenResponse);
 
