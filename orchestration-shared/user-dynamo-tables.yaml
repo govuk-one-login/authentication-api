@@ -1,0 +1,217 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Authentication DynamoDB tables for User Data Storage
+
+Parameters:
+  Environment:
+    Type: String
+    Default: sandpit
+    AllowedValues:
+      - sandpit
+      - build
+      - integration
+      - staging
+      - production
+    Description: The logical name for this deployment environment
+
+Resources:
+  UserCredentials:
+    # checkov:skip=CKV_AWS_119: "Ensure DynamoDB Tables are encrypted using a KMS Customer Managed CMK"
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Type: "AWS::DynamoDB::Table"
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: Email
+          AttributeType: S
+        - AttributeName: SubjectID
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      GlobalSecondaryIndexes:
+        - IndexName: SubjectIDIndex
+          KeySchema:
+            - AttributeName: SubjectID
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      KeySchema:
+        - AttributeName: Email
+          KeyType: HASH
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+      TableName: !Sub "${Environment}-user-credentials"
+      Tags:
+        - Key: environment
+          Value: !Ref Environment
+        - Key: application
+          Value: shared
+
+  UserProfile:
+    # checkov:skip=CKV_AWS_119: "Ensure DynamoDB Tables are encrypted using a KMS Customer Managed CMK"
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Type: "AWS::DynamoDB::Table"
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: Email
+          AttributeType: S
+        - AttributeName: SubjectID
+          AttributeType: S
+        - AttributeName: PublicSubjectID
+          AttributeType: S
+        - AttributeName: accountVerified
+          AttributeType: N
+        - AttributeName: testUser
+          AttributeType: N
+      BillingMode: PAY_PER_REQUEST
+      GlobalSecondaryIndexes:
+        - IndexName: SubjectIDIndex
+          KeySchema:
+            - AttributeName: SubjectID
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: PublicSubjectIDIndex
+          KeySchema:
+            - AttributeName: PublicSubjectID
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: VerifiedAccountIndex
+          KeySchema:
+            - AttributeName: SubjectID
+              KeyType: HASH
+            - AttributeName: accountVerified
+              KeyType: RANGE
+          Projection:
+            ProjectionType: KEYS_ONLY
+        - IndexName: TestUserIndex
+          KeySchema:
+            - AttributeName: PublicSubjectID
+              KeyType: HASH
+            - AttributeName: testUser
+              KeyType: RANGE
+          Projection:
+            ProjectionType: KEYS_ONLY
+      KeySchema:
+        - AttributeName: Email
+          KeyType: HASH
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+      TableName: !Sub "${Environment}-user-profile"
+      Tags:
+        - Key: environment
+          Value: !Ref Environment
+        - Key: application
+          Value: shared
+
+  IdentityCredentials:
+    # checkov:skip=CKV_AWS_119: "Ensure DynamoDB Tables are encrypted using a KMS Customer Managed CMK"
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Type: "AWS::DynamoDB::Table"
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: SubjectID
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: SubjectID
+          KeyType: HASH
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+      TableName: !Sub "${Environment}-identity-credentials"
+      TimeToLiveSpecification:
+        AttributeName: TimeToExist
+        Enabled: true
+      Tags:
+        - Key: environment
+          Value: !Ref Environment
+        - Key: application
+          Value: shared
+
+  DocAppCredentials:
+    # checkov:skip=CKV_AWS_119: "Ensure DynamoDB Tables are encrypted using a KMS Customer Managed CMK"
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Type: "AWS::DynamoDB::Table"
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: SubjectID
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: SubjectID
+          KeyType: HASH
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+      TableName: !Sub "${Environment}-doc-app-credential"
+      TimeToLiveSpecification:
+        AttributeName: TimeToExist
+        Enabled: true
+      Tags:
+        - Key: environment
+          Value: !Ref Environment
+        - Key: application
+          Value: shared
+
+  AuthCodeStore:
+    # checkov:skip=CKV_AWS_119: "Ensure DynamoDB Tables are encrypted using a KMS Customer Managed CMK"
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Type: "AWS::DynamoDB::Table"
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: SubjectID
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: SubjectID
+          KeyType: HASH
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+      TableName: !Sub "${Environment}-auth-code-store"
+      TimeToLiveSpecification:
+        AttributeName: TimeToExist
+        Enabled: true
+      Tags:
+        - Key: environment
+          Value: !Ref Environment
+        - Key: application
+          Value: shared
+
+  AccessTokenStore:
+    # checkov:skip=CKV_AWS_119: "Ensure DynamoDB Tables are encrypted using a KMS Customer Managed CMK"
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Type: "AWS::DynamoDB::Table"
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: AccessToken
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: AccessToken
+          KeyType: HASH
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+      TableName: !Sub "${Environment}-access-token-store"
+      TimeToLiveSpecification:
+        AttributeName: TimeToExist
+        Enabled: true
+      Tags:
+        - Key: environment
+          Value: !Ref Environment
+        - Key: application
+          Value: shared
