@@ -464,6 +464,21 @@ variable "orch_client_id" {
   default = ""
 }
 
+variable "account_intervention_service_audit_enabled" {
+  default = false
+  type    = bool
+}
+
+variable "account_intervention_service_enabled" {
+  default = false
+  type    = bool
+}
+
+variable "account_intervention_service_uri" {
+  default = "undefined"
+  type    = string
+}
+
 locals {
   default_performance_parameters = {
     memory          = var.endpoint_memory_size
