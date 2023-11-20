@@ -251,6 +251,7 @@ public class TokenHandler
                                             authRequest.getScope(),
                                             additionalTokenClaims,
                                             clientSession.getDocAppSubjectId(),
+                                            clientSession.getDocAppSubjectId(),
                                             null,
                                             false,
                                             finalClaimsRequest,
@@ -267,6 +268,11 @@ public class TokenHandler
                             clientRegistry,
                             dynamoService,
                             configurationService.getInternalSectorUri());
+            Subject internalPairwiseSubject =
+                    ClientSubjectHelper.getSubjectWithSectorIdentifier(
+                            userProfile,
+                            configurationService.getInternalSectorUri(),
+                            dynamoService);
             tokenResponse =
                     segmentedFunctionCall(
                             "generateTokenResponse",
@@ -277,6 +283,7 @@ public class TokenHandler
                                             authRequest.getScope(),
                                             additionalTokenClaims,
                                             rpPairwiseSubject,
+                                            internalPairwiseSubject,
                                             userProfile.getClientConsent(),
                                             isConsentRequired,
                                             finalClaimsRequest,
@@ -305,12 +312,12 @@ public class TokenHandler
             return generateApiGatewayProxyResponse(
                     400, OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
         }
-        Subject subject;
+        Subject rpPairwiseSubject;
         List<String> scopes;
         String jti;
         try {
             SignedJWT signedJwt = SignedJWT.parse(currentRefreshToken.getValue());
-            subject = new Subject(signedJwt.getJWTClaimsSet().getSubject());
+            rpPairwiseSubject = new Subject(signedJwt.getJWTClaimsSet().getSubject());
             scopes = (List<String>) signedJwt.getJWTClaimsSet().getClaim("scope");
             jti = signedJwt.getJWTClaimsSet().getJWTID();
         } catch (java.text.ParseException e) {
@@ -356,7 +363,8 @@ public class TokenHandler
                         clientId,
                         new Subject(tokenStore.getInternalSubjectId()),
                         scopes,
-                        subject,
+                        rpPairwiseSubject,
+                        new Subject(tokenStore.getInternalPairwiseSubjectId()),
                         signingAlgorithm);
         LOG.info("Generating successful RefreshToken response");
         return generateApiGatewayProxyResponse(200, tokenResponse.toJSONObject().toJSONString());

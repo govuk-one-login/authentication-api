@@ -87,6 +87,7 @@ public class TokenService {
             Scope authRequestScopes,
             Map<String, Object> additionalTokenClaims,
             Subject rpPairwiseSubject,
+            Subject internalPairwiseSubject,
             List<ClientConsent> clientConsents,
             boolean isConsentRequired,
             OIDCClaimsRequest claimsRequest,
@@ -109,6 +110,7 @@ public class TokenService {
                                         internalSubject,
                                         scopesForToken,
                                         rpPairwiseSubject,
+                                        internalPairwiseSubject,
                                         claimsRequest,
                                         signingAlgorithm));
         AccessTokenHash accessTokenHash =
@@ -139,6 +141,7 @@ public class TokenService {
                                             internalSubject,
                                             scopesForToken,
                                             rpPairwiseSubject,
+                                            internalPairwiseSubject,
                                             signingAlgorithm));
             return new OIDCTokenResponse(new OIDCTokens(idToken, accessToken, refreshToken));
         } else {
@@ -150,14 +153,26 @@ public class TokenService {
             String clientID,
             Subject internalSubject,
             List<String> scopes,
-            Subject subject,
+            Subject rpPaiwiseSubject,
+            Subject internalPairwiseSubject,
             JWSAlgorithm signingAlgorithm) {
         AccessToken accessToken =
                 generateAndStoreAccessToken(
-                        clientID, internalSubject, scopes, subject, null, signingAlgorithm);
+                        clientID,
+                        internalSubject,
+                        scopes,
+                        rpPaiwiseSubject,
+                        internalPairwiseSubject,
+                        null,
+                        signingAlgorithm);
         RefreshToken refreshToken =
                 generateAndStoreRefreshToken(
-                        clientID, internalSubject, scopes, subject, signingAlgorithm);
+                        clientID,
+                        internalSubject,
+                        scopes,
+                        rpPaiwiseSubject,
+                        internalPairwiseSubject,
+                        signingAlgorithm);
         return new OIDCTokenResponse(new OIDCTokens(accessToken, refreshToken));
     }
 
@@ -274,7 +289,8 @@ public class TokenService {
             String clientId,
             Subject internalSubject,
             List<String> scopes,
-            Subject subject,
+            Subject rpPairwiseSubject,
+            Subject internalPairwiseSubject,
             OIDCClaimsRequest claimsRequest,
             JWSAlgorithm signingAlgorithm) {
 
@@ -292,7 +308,7 @@ public class TokenService {
                         .expirationTime(expiryDate)
                         .issueTime(NowHelper.now())
                         .claim("client_id", clientId)
-                        .subject(subject.getValue())
+                        .subject(rpPairwiseSubject.getValue())
                         .jwtID(jwtID);
 
         if (Objects.nonNull(claimsRequest)) {
@@ -314,10 +330,12 @@ public class TokenService {
 
         try {
             redisConnectionService.saveWithExpiry(
-                    ACCESS_TOKEN_PREFIX + clientId + "." + subject.getValue(),
+                    ACCESS_TOKEN_PREFIX + clientId + "." + rpPairwiseSubject.getValue(),
                     objectMapper.writeValueAsString(
                             new AccessTokenStore(
-                                    accessToken.getValue(), internalSubject.getValue())),
+                                    accessToken.getValue(),
+                                    internalSubject.getValue(),
+                                    internalPairwiseSubject.getValue())),
                     configService.getAccessTokenExpiry());
         } catch (JsonException e) {
             LOG.error("Unable to save access token to Redis");
@@ -330,7 +348,8 @@ public class TokenService {
             String clientId,
             Subject internalSubject,
             List<String> scopes,
-            Subject subject,
+            Subject rpPairwiseSubject,
+            Subject internalPairwiseSubject,
             JWSAlgorithm signingAlgorithm) {
         LOG.info("Generating RefreshToken");
         Date expiryDate = NowHelper.nowPlus(configService.getSessionExpiry(), ChronoUnit.SECONDS);
@@ -342,14 +361,18 @@ public class TokenService {
                         .expirationTime(expiryDate)
                         .issueTime(NowHelper.now())
                         .claim("client_id", clientId)
-                        .subject(subject.getValue())
+                        .subject(rpPairwiseSubject.getValue())
                         .jwtID(jwtId)
                         .build();
         SignedJWT signedJWT = generateSignedJWT(claimsSet, Optional.empty(), signingAlgorithm);
         RefreshToken refreshToken = new RefreshToken(signedJWT.serialize());
 
         String redisKey = REFRESH_TOKEN_PREFIX + jwtId;
-        var store = new RefreshTokenStore(refreshToken.getValue(), internalSubject.toString());
+        var store =
+                new RefreshTokenStore(
+                        refreshToken.getValue(),
+                        internalSubject.toString(),
+                        internalPairwiseSubject.toString());
         try {
             redisConnectionService.saveWithExpiry(
                     redisKey,

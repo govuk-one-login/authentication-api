@@ -110,12 +110,18 @@ public class TokenHandlerTest {
             ByteBuffer.wrap("a-test-salt".getBytes(StandardCharsets.UTF_8));
     private static final String RP_SECTOR_URI = "https://test.com";
     private static final String RP_SECTOR_HOST = "test.com";
+
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
+    private static final String INTERNAL_SECTOR_HOST = "test.account.gov.uk";
     private static final Subject INTERNAL_SUBJECT = new Subject();
     private static final Subject RP_PAIRWISE_SUBJECT =
             new Subject(
                     ClientSubjectHelper.calculatePairwiseIdentifier(
                             INTERNAL_SUBJECT.getValue(), RP_SECTOR_HOST, SALT.array()));
+    private static final Subject INTERNAL_PAIRWISE_SUBJECT =
+            new Subject(
+                    ClientSubjectHelper.calculatePairwiseIdentifier(
+                            INTERNAL_SUBJECT.getValue(), INTERNAL_SECTOR_HOST, SALT.array()));
     private static final Subject DOC_APP_USER_PUBLIC_SUBJECT = new Subject();
     private static final String AUDIENCE = "oidc-audience";
     private static final State STATE = new State();
@@ -238,6 +244,7 @@ public class TokenHandlerTest {
                         SCOPES,
                         Map.of("nonce", NONCE),
                         RP_PAIRWISE_SUBJECT,
+                        INTERNAL_PAIRWISE_SUBJECT,
                         userProfile.getClientConsent(),
                         expectedConsentRequired,
                         null,
@@ -310,6 +317,7 @@ public class TokenHandlerTest {
                         SCOPES,
                         Map.of("nonce", NONCE),
                         RP_PAIRWISE_SUBJECT,
+                        INTERNAL_PAIRWISE_SUBJECT,
                         userProfile.getClientConsent(),
                         expectedConsentRequired,
                         null,
@@ -352,7 +360,10 @@ public class TokenHandlerTest {
                         SCOPES.toStringList(), SCOPES.toStringList()))
                 .thenReturn(true);
         RefreshTokenStore tokenStore =
-                new RefreshTokenStore(refreshToken.getValue(), INTERNAL_SUBJECT.getValue());
+                new RefreshTokenStore(
+                        refreshToken.getValue(),
+                        INTERNAL_SUBJECT.getValue(),
+                        INTERNAL_PAIRWISE_SUBJECT.getValue());
         String tokenStoreString = objectMapper.writeValueAsString(tokenStore);
         when(redisConnectionService.popValue(
                         REFRESH_TOKEN_PREFIX + CLIENT_ID + "." + RP_PAIRWISE_SUBJECT.getValue()))
@@ -364,6 +375,7 @@ public class TokenHandlerTest {
                         eq(INTERNAL_SUBJECT),
                         eq(SCOPES.toStringList()),
                         eq(RP_PAIRWISE_SUBJECT),
+                        eq(INTERNAL_PAIRWISE_SUBJECT),
                         eq(JWSAlgorithm.ES256)))
                 .thenReturn(tokenResponse);
 
@@ -404,7 +416,10 @@ public class TokenHandlerTest {
                         SCOPES.toStringList(), SCOPES.toStringList()))
                 .thenReturn(true);
         RefreshTokenStore tokenStore =
-                new RefreshTokenStore(refreshToken.getValue(), INTERNAL_SUBJECT.getValue());
+                new RefreshTokenStore(
+                        refreshToken.getValue(),
+                        INTERNAL_SUBJECT.getValue(),
+                        INTERNAL_PAIRWISE_SUBJECT.getValue());
         String tokenStoreString = objectMapper.writeValueAsString(tokenStore);
         when(redisConnectionService.popValue(
                         REFRESH_TOKEN_PREFIX + CLIENT_ID + "." + RP_PAIRWISE_SUBJECT.getValue()))
@@ -416,6 +431,7 @@ public class TokenHandlerTest {
                         eq(INTERNAL_SUBJECT),
                         eq(SCOPES.toStringList()),
                         eq(RP_PAIRWISE_SUBJECT),
+                        eq(INTERNAL_PAIRWISE_SUBJECT),
                         eq(JWSAlgorithm.RS256)))
                 .thenReturn(tokenResponse);
 
@@ -600,6 +616,7 @@ public class TokenHandlerTest {
                         DOC_APP_USER_PUBLIC_SUBJECT,
                         new Scope(DOC_CHECKING_APP, OIDCScopeValue.OPENID),
                         Map.of("nonce", NONCE),
+                        DOC_APP_USER_PUBLIC_SUBJECT,
                         DOC_APP_USER_PUBLIC_SUBJECT,
                         null,
                         false,
