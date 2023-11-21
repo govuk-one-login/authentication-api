@@ -2,21 +2,257 @@ package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import com.nimbusds.oauth2.sdk.id.Subject;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsInboundResponse;
+import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsResponse;
+import uk.gov.di.authentication.frontendapi.entity.Intervention;
+import uk.gov.di.authentication.frontendapi.entity.State;
+import uk.gov.di.authentication.frontendapi.services.AccountInterventionsService;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountInterventionsResponseException;
+import uk.gov.di.authentication.shared.helpers.IdGenerator;
+import uk.gov.di.authentication.shared.helpers.SaltHelper;
+import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.AuthenticationService;
+import uk.gov.di.authentication.shared.services.ClientService;
+import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.authentication.shared.services.SessionService;
 
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+
+import static java.lang.String.format;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class AccountInterventionsHandlerTest {
 
+    private static final String TEST_EMAIL_ADDRESS = "test@test.com";
+    private static final String TEST_SUBJECT_ID = "subject-id";
+    private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
+    private static final byte[] SALT = SaltHelper.generateNewSalt();
+
+    private AccountInterventionsHandler handler;
+    private final Context context = mock(Context.class);
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final SessionService sessionService = mock(SessionService.class);
+    private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
+    private final AuthenticationService authenticationService = mock(AuthenticationService.class);
+    private final AccountInterventionsService accountInterventionsService =
+            mock(AccountInterventionsService.class);
+    private final ClientService clientService = mock(ClientService.class);
+    private final Session session =
+            new Session(IdGenerator.generate()).setEmailAddress(TEST_EMAIL_ADDRESS);
+    private static final Json objectMapper = SerializationService.getInstance();
+
+    @BeforeEach
+    void setUp() throws Json.JsonException, URISyntaxException {
+        when(context.getAwsRequestId()).thenReturn("aws-session-id");
+        when(sessionService.getSessionFromRequestHeaders(anyMap()))
+                .thenReturn(Optional.of(session));
+        UserProfile userProfile = generateUserProfile();
+        when(authenticationService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
+                .thenReturn(Optional.of(userProfile));
+        when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
+        when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
+        when(configurationService.getAccountInterventionServiceURI())
+                .thenReturn(new URI("https://account-interventions.gov.uk/v1"));
+        handler =
+                new AccountInterventionsHandler(
+                        configurationService,
+                        sessionService,
+                        clientSessionService,
+                        clientService,
+                        authenticationService,
+                        accountInterventionsService);
+    }
+
     @Test
-    void shouldReturn200ForSuccessfulRequest() {
-        var handler = new AccountInterventionsHandler();
+    void shouldReturnError400ResponseWhenAccountInterventionsRequestHasNoValidSessionId()
+            throws Json.JsonException {
         var context = mock(Context.class);
         var event = new APIGatewayProxyRequestEvent();
-
         var result = handler.handleRequest(event, context);
-        assertEquals(200, result.getStatusCode());
-        assertEquals("Hello world", result.getBody());
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1000)));
+    }
+
+    @Test
+    void shouldReturnError400ResponseWhenAccountInterventionsRequestHasNoEmail()
+            throws Json.JsonException {
+        var context = mock(Context.class);
+        var event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(getHeaders());
+        var result = handler.handleRequest(event, context);
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1001)));
+    }
+
+    @Test
+    void shouldReturnErrorResponseWhenUserDoesNotExists() throws Json.JsonException {
+        var context = mock(Context.class);
+        var event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(getHeaders());
+        event.setBody(format("{ \"email\": \"%s\" }", TEST_EMAIL_ADDRESS));
+        when(authenticationService.getUserProfileByEmailMaybe(anyString()))
+                .thenReturn(Optional.empty());
+        var result = handler.handleRequest(event, context);
+        assertThat(result, hasStatus(400));
+        assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1049)));
+    }
+
+    @Test
+    void shouldReturnErrorResponseWhenAccountInterventionsAPIReturns429HttpStatusCode()
+            throws Json.JsonException, UnsuccessfulAccountInterventionsResponseException {
+        var context = mock(Context.class);
+        var event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(getHeaders());
+        event.setBody(format("{ \"email\": \"%s\" }", TEST_EMAIL_ADDRESS));
+        when(authenticationService.getUserProfileByEmailMaybe(anyString()))
+                .thenReturn(Optional.of(generateUserProfile()));
+        when(accountInterventionsService.sendAccountInterventionsOutboundRequest(any()))
+                .thenThrow(
+                        new UnsuccessfulAccountInterventionsResponseException(
+                                "Throttled error", 429));
+        var result = handler.handleRequest(event, context);
+        assertThat(result, hasStatus(429));
+        assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1051)));
+    }
+
+    @Test
+    void shouldReturnErrorResponseWhenAccountInterventionsAPIReturns500HttpStatusCode()
+            throws Json.JsonException, UnsuccessfulAccountInterventionsResponseException {
+        var context = mock(Context.class);
+        var event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(getHeaders());
+        event.setBody(format("{ \"email\": \"%s\" }", TEST_EMAIL_ADDRESS));
+        when(authenticationService.getUserProfileByEmailMaybe(anyString()))
+                .thenReturn(Optional.of(generateUserProfile()));
+        when(accountInterventionsService.sendAccountInterventionsOutboundRequest(any()))
+                .thenThrow(
+                        new UnsuccessfulAccountInterventionsResponseException("Server error", 500));
+        var result = handler.handleRequest(event, context);
+        assertThat(result, hasStatus(500));
+        assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1052)));
+    }
+
+    @Test
+    void shouldReturnErrorResponseWhenAccountInterventionsAPIReturns502HttpStatusCode()
+            throws Json.JsonException, UnsuccessfulAccountInterventionsResponseException {
+        var context = mock(Context.class);
+        var event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(getHeaders());
+        event.setBody(format("{ \"email\": \"%s\" }", TEST_EMAIL_ADDRESS));
+        when(authenticationService.getUserProfileByEmailMaybe(anyString()))
+                .thenReturn(Optional.of(generateUserProfile()));
+        when(accountInterventionsService.sendAccountInterventionsOutboundRequest(any()))
+                .thenThrow(
+                        new UnsuccessfulAccountInterventionsResponseException(
+                                "Bad Gateway error", 502));
+        var result = handler.handleRequest(event, context);
+        assertThat(result, hasStatus(502));
+        assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1053)));
+    }
+
+    @Test
+    void shouldReturnErrorResponseWhenAccountInterventionsAPIReturns504HttpStatusCode()
+            throws Json.JsonException, UnsuccessfulAccountInterventionsResponseException {
+        var context = mock(Context.class);
+        var event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(getHeaders());
+        event.setBody(format("{ \"email\": \"%s\" }", TEST_EMAIL_ADDRESS));
+        when(authenticationService.getUserProfileByEmailMaybe(anyString()))
+                .thenReturn(Optional.of(generateUserProfile()));
+        when(accountInterventionsService.sendAccountInterventionsOutboundRequest(any()))
+                .thenThrow(
+                        new UnsuccessfulAccountInterventionsResponseException(
+                                "Gateway timeout error", 504));
+        var result = handler.handleRequest(event, context);
+        assertThat(result, hasStatus(504));
+        assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1054)));
+    }
+
+    @Test
+    void shouldReturnErrorResponseWhenAccountInterventionsAPIReturnsAnyOtherHttpStatusCode()
+            throws Json.JsonException, UnsuccessfulAccountInterventionsResponseException {
+        var context = mock(Context.class);
+        var event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(getHeaders());
+        event.setBody(format("{ \"email\": \"%s\" }", TEST_EMAIL_ADDRESS));
+        when(authenticationService.getUserProfileByEmailMaybe(anyString()))
+                .thenReturn(Optional.of(generateUserProfile()));
+        when(accountInterventionsService.sendAccountInterventionsOutboundRequest(any()))
+                .thenThrow(
+                        new UnsuccessfulAccountInterventionsResponseException(
+                                "Unexpected error", 404));
+        var result = handler.handleRequest(event, context);
+        assertThat(result, hasStatus(404));
+        assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1055)));
+    }
+
+    @Test
+    void shouldReturn200ForSuccessfulRequest()
+            throws UnsuccessfulAccountInterventionsResponseException, Json.JsonException {
+        var context = mock(Context.class);
+        var event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(getHeaders());
+        event.setBody(format("{ \"email\": \"%s\" }", TEST_EMAIL_ADDRESS));
+        when(authenticationService.getUserProfileByEmailMaybe(anyString()))
+                .thenReturn(Optional.of(generateUserProfile()));
+        when(accountInterventionsService.sendAccountInterventionsOutboundRequest(any()))
+                .thenReturn(generateAccountInterventionResponse());
+        var result = handler.handleRequest(event, context);
+        assertThat(result, hasStatus(200));
+
+        var accountInterventionsResponse = new AccountInterventionsResponse(false, true, false);
+        assertThat(
+                result,
+                hasBody(objectMapper.writeValueAsStringCamelCase(accountInterventionsResponse)));
+        assertEquals(
+                result.getBody(),
+                "{\"passwordResetRequired\":false,\"blocked\":true,\"temporarilySuspended\":false}");
+    }
+
+    private UserProfile generateUserProfile() {
+        return new UserProfile()
+                .withEmail(TEST_EMAIL_ADDRESS)
+                .withEmailVerified(true)
+                .withPhoneNumberVerified(true)
+                .withPublicSubjectID(new Subject().getValue())
+                .withSubjectID(TEST_SUBJECT_ID);
+    }
+
+    private AccountInterventionsInboundResponse generateAccountInterventionResponse() {
+        return new AccountInterventionsInboundResponse(
+                new Intervention(
+                        "1696969322935",
+                        "1696869005821",
+                        "1696869003456",
+                        "AIS_USER_PASSWORD_RESET_AND_IDENTITY_VERIFIED",
+                        "1696969322935",
+                        "1696875903456"),
+                new State(true, false, false, false));
+    }
+
+    private Map<String, String> getHeaders() {
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Session-Id", session.getSessionId());
+        return headers;
     }
 }

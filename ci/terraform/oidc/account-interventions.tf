@@ -24,12 +24,13 @@ module "account_interventions" {
   environment     = var.environment
 
   handler_environment_variables = {
-    DYNAMO_ENDPOINT      = var.use_localstack ? var.lambda_dynamo_endpoint : null
-    LOCALSTACK_ENDPOINT  = var.use_localstack ? var.localstack_endpoint : null
-    ENVIRONMENT          = var.environment
-    TXMA_AUDIT_QUEUE_URL = module.oidc_txma_audit.queue_url
-    INTERNAl_SECTOR_URI  = var.internal_sector_uri
-    REDIS_KEY            = local.redis_key
+    DYNAMO_ENDPOINT                  = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    LOCALSTACK_ENDPOINT              = var.use_localstack ? var.localstack_endpoint : null
+    ENVIRONMENT                      = var.environment
+    TXMA_AUDIT_QUEUE_URL             = module.oidc_txma_audit.queue_url
+    INTERNAl_SECTOR_URI              = var.internal_sector_uri
+    REDIS_KEY                        = local.redis_key
+    ACCOUNT_INTERVENTION_SERVICE_URI = var.account_intervention_service_uri
   }
 
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.AccountInterventionsHandler::handleRequest"

@@ -61,7 +61,12 @@ public enum ErrorResponse {
             1048,
             "User entered invalid email verification code for changing how to receive security codes too many times"),
     ERROR_1049(1049, "Email from session does not have a user profile"),
-    ERROR_1050(1050, "Authorization Auth Code not enabled");
+    ERROR_1050(1050, "Authorization Auth Code not enabled"),
+    ERROR_1051(1051, "Account Interventions API throttled"),
+    ERROR_1052(1052, "Account Interventions API response Server Error"),
+    ERROR_1053(1053, "Account Interventions API Bad Gateway"),
+    ERROR_1054(1054, "Account Interventions API Gateway Timeout"),
+    ERROR_1055(1055, "Account Interventions API Unexpected Error");
 
     private int code;
 
