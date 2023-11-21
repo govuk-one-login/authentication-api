@@ -95,13 +95,13 @@ class AccountInterventionServiceTest {
     void shouldReturnAccountStatus() throws URISyntaxException, IOException, InterruptedException {
 
         var internalSubjectId = "some-internal-subject-id";
-        var ais = new AccountInterventionService(config, audit, httpClient);
+        var accountInterventionService = new AccountInterventionService(config, audit, httpClient);
         var httpResponse = mock(HttpResponse.class);
 
         when(httpClient.send(any(), any())).thenReturn(httpResponse);
         when(httpResponse.body()).thenReturn(ACCOUNT_INTERVENTION_SERVICE_RESPONSE_SUSPEND_REPROVE);
 
-        var status = ais.getAccountStatus(internalSubjectId);
+        var status = accountInterventionService.getAccountStatus(internalSubjectId);
 
         assertEquals(false, status.blocked());
         assertEquals(true, status.suspended());

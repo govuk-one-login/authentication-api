@@ -49,7 +49,8 @@ public class AccountInterventionService {
             return new AccountInterventionStatus(false, false, false, false);
 
         } catch (IOException | URISyntaxException | InterruptedException e) {
-            throw new AccountInterventionException(e);
+            throw new AccountInterventionException(
+                    "Unable to connect to Account Intervention Service", e);
         }
     }
 
