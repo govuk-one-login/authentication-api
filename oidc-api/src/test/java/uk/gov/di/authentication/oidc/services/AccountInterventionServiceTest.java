@@ -1,0 +1,129 @@
+package uk.gov.di.authentication.oidc.services;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import uk.gov.di.authentication.oidc.entity.AccountInterventionStatus;
+import uk.gov.di.orchestration.shared.services.AuditService;
+import uk.gov.di.orchestration.shared.services.ConfigurationService;
+
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
+class AccountInterventionServiceTest {
+
+    private final ConfigurationService config = mock(ConfigurationService.class);
+    private final AuditService audit = mock(AuditService.class);
+    private final HttpClient httpClient = mock(HttpClient.class);
+
+    private static String ACCOUNT_INTERVENTION_SERVICE_RESPONSE_SUSPEND_REPROVE =
+            """
+            {
+                "intervention": {
+                    "updatedAt": 1696969322935,
+                    "appliedAt": 1696869005821,
+                    "sentAt": 1696869003456,
+                    "description": "AIS_USER_PASSWORD_RESET_AND_IDENTITY_REVERIFIED",
+                    "reprovedIdentityAt": 1696969322935
+                },
+                "state": {
+                    "blocked": false,
+                    "suspended": true,
+                    "reproveIdentity": true,
+                    "resetPassword": false\s
+                },
+                "auditLevel": "standard",
+                "history": []
+            }
+            """;
+
+    private static String ACCOUNT_INTERVENTION_SERVICE_RESPONSE_ALL_CLEAR =
+            """
+            {
+                "state": {
+                    "blocked": false,
+                    "suspended": false,
+                    "reproveIdentity": false,
+                    "resetPassword": false\s
+                }
+            }
+            """;
+
+    private static AccountInterventionStatus accountStatusClear =
+            new AccountInterventionStatus(false, false, false, false);
+    private static String BASE_AIS_URL = "http://example.com/somepath/";
+
+    @BeforeEach
+    void setup() throws URISyntaxException {
+        when(config.getAccountInterventionServiceURI()).thenReturn(new URI(BASE_AIS_URL));
+        when(config.isAccountInterventionServiceEnabled()).thenReturn(true);
+        when(config.isAccountInterventionServiceAuditEnabled()).thenReturn(true);
+    }
+
+    @Test
+    void shouldConstructWellFormedRequestToAccountInterventionService()
+            throws URISyntaxException, IOException, InterruptedException {
+
+        var internalSubjectId = "some-internal-subject-id";
+        var ais = new AccountInterventionService(config, audit, httpClient);
+        var httpResponse = mock(HttpResponse.class);
+        var httpRequestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
+
+        when(httpClient.send(any(), any())).thenReturn(httpResponse);
+        when(httpResponse.body()).thenReturn("{\"foo\": \"bar\"}");
+
+        ais.getAccountStatus(internalSubjectId);
+
+        verify(httpClient).send(httpRequestCaptor.capture(), any());
+        var requestUri = httpRequestCaptor.getValue();
+
+        assertEquals(BASE_AIS_URL + internalSubjectId, requestUri.uri().toString());
+    }
+
+    @Test
+    void shouldReturnAccountStatus() throws URISyntaxException, IOException, InterruptedException {
+
+        var internalSubjectId = "some-internal-subject-id";
+        var ais = new AccountInterventionService(config, audit, httpClient);
+        var httpResponse = mock(HttpResponse.class);
+
+        when(httpClient.send(any(), any())).thenReturn(httpResponse);
+        when(httpResponse.body()).thenReturn(ACCOUNT_INTERVENTION_SERVICE_RESPONSE_SUSPEND_REPROVE);
+
+        var status = ais.getAccountStatus(internalSubjectId);
+
+        assertEquals(false, status.blocked());
+        assertEquals(true, status.suspended());
+        assertEquals(true, status.reproveIdentity());
+        assertEquals(false, status.resetPassword());
+    }
+
+    @Test
+    void shouldReturnAccountStatusAllClearWhenDisabled()
+            throws URISyntaxException, IOException, InterruptedException {
+
+        when(config.isAccountInterventionServiceEnabled()).thenReturn(false);
+
+        var internalSubjectId = "some-internal-subject-id";
+        var ais = new AccountInterventionService(config, audit, httpClient);
+        var status = ais.getAccountStatus(internalSubjectId);
+
+        verifyNoInteractions(httpClient);
+
+        assertEquals(false, status.blocked());
+        assertEquals(false, status.suspended());
+        assertEquals(false, status.reproveIdentity());
+        assertEquals(false, status.resetPassword());
+    }
+}

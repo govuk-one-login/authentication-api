@@ -9,6 +9,7 @@ version "unspecified"
 dependencies {
 
     implementation project(path: ':ipv-api')
+    implementation project(path: ':orchestration-shared')
     testImplementation project(path: ':ipv-api')
     compileOnly             configurations.kms,
             configurations.lambda,
