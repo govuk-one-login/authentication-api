@@ -32,6 +32,7 @@ import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
+import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.extensions.DocAppJwksExtension;
@@ -85,6 +86,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String TEST_PASSWORD = "password";
     private static final KeyPair KEY_PAIR = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
     public static final String DUMMY_CLIENT_SESSION_ID = "456";
+    private static final String ARBITRARY_UNIX_TIMESTAMP = "1700558480962";
+    private static final String PERSISTENT_SESSION_ID =
+            IdGenerator.generate() + "--" + ARBITRARY_UNIX_TIMESTAMP;
 
     @RegisterExtension
     public static final DocAppJwksExtension jwksExtension = new DocAppJwksExtension();
@@ -154,7 +158,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 Optional.of(
                                         new HttpCookie(
                                                 "di-persistent-session-id",
-                                                "persistent-id-value"))),
+                                                PERSISTENT_SESSION_ID))),
                         constructQueryStringParameters(CLIENT_ID, null, "openid", "Cl.Cm"),
                         Optional.of("GET"));
 
@@ -172,9 +176,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 getHttpCookieFromMultiValueResponseHeaders(
                         response.getMultiValueHeaders(), "di-persistent-session-id");
         assertThat(persistentCookie.isPresent(), equalTo(true));
-        assertThat(persistentCookie.get().getValue(), containsString("persistent-id-value--"));
+        assertThat(persistentCookie.get().getValue(), containsString(PERSISTENT_SESSION_ID));
         assertTrue(
-                CookieHelper.isValidCookieWithDoubleDashedTimestamp(
+                CookieHelper.isValidPersistentSessionCookieWithDoubleDashedTimestamp(
                         persistentCookie.get().getValue()));
 
         assertTxmaAuditEventsReceived(
@@ -191,7 +195,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 Optional.of(
                                         new HttpCookie(
                                                 "di-persistent-session-id",
-                                                "persistent-id-value"))),
+                                                PERSISTENT_SESSION_ID))),
                         constructQueryStringParameters(CLIENT_ID, null, "openid", "Cl.Cm", "en"),
                         Optional.of("GET"));
 
@@ -209,9 +213,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 getHttpCookieFromMultiValueResponseHeaders(
                         response.getMultiValueHeaders(), "di-persistent-session-id");
         assertThat(persistentCookie.isPresent(), equalTo(true));
-        assertThat(persistentCookie.get().getValue(), containsString("persistent-id-value--"));
+        assertThat(persistentCookie.get().getValue(), containsString(PERSISTENT_SESSION_ID));
         assertTrue(
-                CookieHelper.isValidCookieWithDoubleDashedTimestamp(
+                CookieHelper.isValidPersistentSessionCookieWithDoubleDashedTimestamp(
                         persistentCookie.get().getValue()));
         var languageCookie =
                 getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "lng");

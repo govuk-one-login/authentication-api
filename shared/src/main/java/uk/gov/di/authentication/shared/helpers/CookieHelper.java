@@ -118,6 +118,16 @@ public class CookieHelper {
         }
         final String persistentId = cookieValues[0];
 
+        // Temporary measure, as commit 75a10df4376397d5a454b87b5cee689e13a71e20 introduced a bug
+        // whereby persistent session ID could end up as --<timestamp>--<timestamp>. In these cases
+        // we should just generate a new one to get back on track. It will be possible to remove
+        // this 13 months after it is first merged(== the expiry time of that cookie at the point of
+        // issue in November 2023) i.e. 26/11/2024
+        String VALID_PERSISTENT_SESSION_ID_FORMAT_REGEX = "[A-Za-z0-9-_]{27}--\\d{13}";
+        if (!persistentId.matches(VALID_PERSISTENT_SESSION_ID_FORMAT_REGEX)) {
+            return Optional.empty();
+        }
+
         return Optional.of(persistentId);
     }
 
@@ -165,8 +175,9 @@ public class CookieHelper {
         return cookieValue + "--" + NowHelper.now().getTime();
     }
 
-    public static boolean isValidCookieWithDoubleDashedTimestamp(String cookieValue) {
-        String sessionIdPattern = ".*--\\d+";
-        return cookieValue.matches(sessionIdPattern);
+    public static boolean isValidPersistentSessionCookieWithDoubleDashedTimestamp(
+            String cookieValue) {
+        String persistentSessionIdPattern = "[A-Za-z0-9-_]{27}--\\d{13}";
+        return cookieValue.matches(persistentSessionIdPattern);
     }
 }

@@ -50,6 +50,7 @@ import uk.gov.di.authentication.shared.exceptions.NoSessionException;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.CookieHelper;
+import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -117,7 +118,9 @@ class IPVCallbackHandlerTest {
     private static final String SESSION_ID = "a-session-id";
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final String REQUEST_ID = "a-request-id";
-    private static final String PERSISTENT_SESSION_ID = "a-persistent-id";
+    private static final String ARBITRARY_UNIX_TIMESTAMP = "1700558480962";
+    private static final String PERSISTENT_SESSION_ID =
+            IdGenerator.generate() + "--" + ARBITRARY_UNIX_TIMESTAMP;
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
     private static final URI REDIRECT_URI = URI.create("test-uri");
     private static final State RP_STATE = new State();
