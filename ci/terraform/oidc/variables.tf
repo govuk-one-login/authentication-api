@@ -464,6 +464,12 @@ variable "orch_client_id" {
   default = ""
 }
 
+variable "orch_frontend_api_gateway_integration_enabled" {
+  description = "Flag to enable API Gateway integration with the Orchestration frontend"
+  type        = bool
+  default     = false
+}
+
 variable "deploy_account_interventions_count" {
   type = string
 }
