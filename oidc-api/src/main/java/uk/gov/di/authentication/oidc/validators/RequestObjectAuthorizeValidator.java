@@ -214,10 +214,18 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
     private Optional<AuthRequestError> validateVtr(JWTClaimsSet jwtClaimsSet, URI redirectURI) {
         List<String> authRequestVtr = new ArrayList<>();
         try {
-            authRequestVtr =
-                    Objects.isNull(jwtClaimsSet.getClaim(VTR_PARAM))
-                            ? emptyList()
-                            : List.of(jwtClaimsSet.getClaim(VTR_PARAM).toString());
+            if (Objects.nonNull(jwtClaimsSet.getClaim("vtr"))) {
+                if (jwtClaimsSet.getClaim("vtr") instanceof String vtr) {
+                    authRequestVtr = List.of(vtr);
+                } else if (jwtClaimsSet.getClaim("vtr") instanceof List<?> vtrList && vtrList.stream().allMatch(vtr -> vtr instanceof String)) {
+                    authRequestVtr = List.of(String.format("[\"%s\"]", String.join("\",\"", jwtClaimsSet.getStringArrayClaim("vtr"))));
+                } else {
+                    LOG.error("vtr in AuthRequest is not valid. Could not be parsed");
+                    return errorResponse(redirectURI, new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid"));
+                }
+            } else {
+                authRequestVtr = emptyList();
+            }
             var vectorOfTrust = VectorOfTrust.parseFromAuthRequestAttribute(authRequestVtr);
             if (vectorOfTrust.containsLevelOfConfidence()
                     && !ipvCapacityService.isIPVCapacityAvailable()) {
@@ -228,6 +236,11 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
                     "vtr in AuthRequest is not valid. vtr in request: {}. IllegalArgumentException: {}",
                     authRequestVtr,
                     e);
+            return errorResponse(
+                    redirectURI,
+                    new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid"));
+        } catch (ParseException e) {
+            LOG.error("Parse exception thrown when validating vtr", e);
             return errorResponse(
                     redirectURI,
                     new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid"));
