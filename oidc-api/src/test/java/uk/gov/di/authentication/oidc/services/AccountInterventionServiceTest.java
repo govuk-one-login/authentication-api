@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import uk.gov.di.authentication.oidc.entity.AccountInterventionStatus;
+import uk.gov.di.authentication.oidc.exceptions.AccountInterventionException;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 
@@ -15,6 +16,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -125,5 +127,22 @@ class AccountInterventionServiceTest {
         assertEquals(false, status.suspended());
         assertEquals(false, status.reproveIdentity());
         assertEquals(false, status.resetPassword());
+    }
+
+    @Test
+    void shouldThrowAccountInterventionExceptionWhenExceptionThrownByHttpClient()
+            throws URISyntaxException, IOException, InterruptedException {
+
+        var internalSubjectId = "some-internal-subject-id";
+        var accountInterventionService = new AccountInterventionService(config, audit, httpClient);
+        var httpResponse = mock(HttpResponse.class);
+
+        when(httpClient.send(any(), any())).thenThrow(new IOException("Test IO Exception"));
+
+        assertThrows(
+                AccountInterventionException.class,
+                () -> {
+                    accountInterventionService.getAccountStatus(internalSubjectId);
+                });
     }
 }
