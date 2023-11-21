@@ -464,6 +464,11 @@ variable "orch_client_id" {
   default = ""
 }
 
+variable "deploy_account_interventions_count" {
+  type = string
+}
+
+
 variable "account_intervention_service_audit_enabled" {
   default = false
   type    = bool

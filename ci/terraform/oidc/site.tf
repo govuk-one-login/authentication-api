@@ -57,7 +57,8 @@ locals {
     application = "oidc-api"
   }
 
-  request_tracing_allowed = contains(["build", "sandpit"], var.environment)
+  request_tracing_allowed            = contains(["build", "sandpit"], var.environment)
+  deploy_account_interventions_count = contains(["build", "sandpit"], var.environment) ? 1 : 0
 
   access_logging_template = jsonencode({
     requestId            = "$context.requestId"
@@ -78,3 +79,5 @@ locals {
 data "aws_caller_identity" "current" {}
 
 data "aws_partition" "current" {}
+
+
