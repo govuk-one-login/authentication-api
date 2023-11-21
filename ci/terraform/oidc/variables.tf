@@ -470,11 +470,6 @@ variable "orch_frontend_api_gateway_integration_enabled" {
   default     = false
 }
 
-variable "deploy_account_interventions_count" {
-  type = string
-}
-
-
 variable "account_intervention_service_audit_enabled" {
   default = false
   type    = bool

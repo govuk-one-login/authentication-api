@@ -3,7 +3,7 @@ module "frontend_api_account_interventions_role" {
   environment = var.environment
   role_name   = "frontend-api-account-interventions-role"
   vpc_arn     = local.authentication_vpc_arn
-  count       = var.deploy_account_interventions_count
+  count       = local.deploy_account_interventions_count
 
   policies_to_attach = [
     aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
@@ -63,7 +63,7 @@ module "account_interventions" {
   api_key_required                       = true
 
   use_localstack = var.use_localstack
-  count          = var.deploy_account_interventions_count
+  count          = local.deploy_account_interventions_count
 
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_frontend_api,
