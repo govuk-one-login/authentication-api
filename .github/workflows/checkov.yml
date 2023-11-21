@@ -16,7 +16,6 @@ jobs:
       matrix:
         module:
         - account-management
-        - audit-processors
         - delivery-receipts
         - oidc
         - shared
@@ -37,7 +36,7 @@ jobs:
           soft_fail: true
           output_format: cli,sarif
           output_file_path: console,results.sarif
-        
+
       - name: Upload SARIF file
         uses: github/codeql-action/upload-sarif@v2
         with:
