@@ -9,7 +9,6 @@ version "unspecified"
 dependencies {
 
     implementation project(path: ':ipv-api')
-    implementation project(path: ':orchestration-shared')
     testImplementation project(path: ':ipv-api')
     compileOnly             configurations.kms,
             configurations.lambda,
@@ -23,6 +22,7 @@ dependencies {
             configurations.bouncycastle,
             configurations.cloudwatch,
             project(":shared"),
+            project(":orchestration-shared"),
             project(":client-registry-api"),
             project(":doc-checking-app-api"),
             project(":auth-external-api")
