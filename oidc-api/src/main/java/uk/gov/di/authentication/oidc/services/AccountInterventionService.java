@@ -6,7 +6,6 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.entity.AccountInterventionResponse;
 import uk.gov.di.authentication.oidc.entity.AccountInterventionStatus;
 import uk.gov.di.authentication.oidc.exceptions.AccountInterventionException;
-import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 
 import java.io.IOException;
@@ -19,19 +18,13 @@ import java.net.http.HttpResponse;
 public class AccountInterventionService {
 
     private static final Logger LOGGER = LogManager.getLogger(AccountInterventionService.class);
-    private final boolean accountInterventionsAuditEnabled;
     private final boolean accountInterventionsEnabled;
     private final HttpClient httpClient;
     private final URI accountInterventionServiceURI;
-    private final AuditService auditService;
 
-    public AccountInterventionService(
-            ConfigurationService configService, AuditService auditService, HttpClient httpClient) {
-        this.accountInterventionsAuditEnabled =
-                configService.isAccountInterventionServiceAuditEnabled();
+    public AccountInterventionService(ConfigurationService configService, HttpClient httpClient) {
         this.accountInterventionsEnabled = configService.isAccountInterventionServiceEnabled();
         this.accountInterventionServiceURI = configService.getAccountInterventionServiceURI();
-        this.auditService = auditService;
         this.httpClient = httpClient;
     }
 
@@ -40,10 +33,6 @@ public class AccountInterventionService {
         try {
             if (accountInterventionsEnabled) {
                 return retrieveAccountStatus(internalSubjectId);
-            }
-
-            if (accountInterventionsAuditEnabled) {
-                sendAuditEvent();
             }
 
             return new AccountInterventionStatus(false, false, false, false);
@@ -72,6 +61,4 @@ public class AccountInterventionService {
 
         return response.state();
     }
-
-    private void sendAuditEvent() {}
 }

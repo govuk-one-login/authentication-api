@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import uk.gov.di.authentication.oidc.entity.AccountInterventionStatus;
 import uk.gov.di.authentication.oidc.exceptions.AccountInterventionException;
-import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 
 import java.io.IOException;
@@ -26,7 +25,6 @@ import static org.mockito.Mockito.when;
 class AccountInterventionServiceTest {
 
     private final ConfigurationService config = mock(ConfigurationService.class);
-    private final AuditService audit = mock(AuditService.class);
     private final HttpClient httpClient = mock(HttpClient.class);
 
     private static String ACCOUNT_INTERVENTION_SERVICE_RESPONSE_SUSPEND_REPROVE =
@@ -70,7 +68,6 @@ class AccountInterventionServiceTest {
     void setup() throws URISyntaxException {
         when(config.getAccountInterventionServiceURI()).thenReturn(new URI(BASE_AIS_URL));
         when(config.isAccountInterventionServiceEnabled()).thenReturn(true);
-        when(config.isAccountInterventionServiceAuditEnabled()).thenReturn(true);
     }
 
     @Test
@@ -78,7 +75,7 @@ class AccountInterventionServiceTest {
             throws URISyntaxException, IOException, InterruptedException {
 
         var internalSubjectId = "some-internal-subject-id";
-        var ais = new AccountInterventionService(config, audit, httpClient);
+        var ais = new AccountInterventionService(config, httpClient);
         var httpResponse = mock(HttpResponse.class);
         var httpRequestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
 
@@ -97,7 +94,7 @@ class AccountInterventionServiceTest {
     void shouldReturnAccountStatus() throws URISyntaxException, IOException, InterruptedException {
 
         var internalSubjectId = "some-internal-subject-id";
-        var accountInterventionService = new AccountInterventionService(config, audit, httpClient);
+        var accountInterventionService = new AccountInterventionService(config, httpClient);
         var httpResponse = mock(HttpResponse.class);
 
         when(httpClient.send(any(), any())).thenReturn(httpResponse);
@@ -118,7 +115,7 @@ class AccountInterventionServiceTest {
         when(config.isAccountInterventionServiceEnabled()).thenReturn(false);
 
         var internalSubjectId = "some-internal-subject-id";
-        var ais = new AccountInterventionService(config, audit, httpClient);
+        var ais = new AccountInterventionService(config, httpClient);
         var status = ais.getAccountStatus(internalSubjectId);
 
         verifyNoInteractions(httpClient);
@@ -134,7 +131,7 @@ class AccountInterventionServiceTest {
             throws URISyntaxException, IOException, InterruptedException {
 
         var internalSubjectId = "some-internal-subject-id";
-        var accountInterventionService = new AccountInterventionService(config, audit, httpClient);
+        var accountInterventionService = new AccountInterventionService(config, httpClient);
         var httpResponse = mock(HttpResponse.class);
 
         when(httpClient.send(any(), any())).thenThrow(new IOException("Test IO Exception"));
