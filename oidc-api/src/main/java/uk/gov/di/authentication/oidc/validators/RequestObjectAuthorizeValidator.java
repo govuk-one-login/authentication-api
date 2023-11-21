@@ -217,11 +217,21 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
             if (Objects.nonNull(jwtClaimsSet.getClaim("vtr"))) {
                 if (jwtClaimsSet.getClaim("vtr") instanceof String vtr) {
                     authRequestVtr = List.of(vtr);
-                } else if (jwtClaimsSet.getClaim("vtr") instanceof List<?> vtrList && vtrList.stream().allMatch(vtr -> vtr instanceof String)) {
-                    authRequestVtr = List.of(String.format("[\"%s\"]", String.join("\",\"", jwtClaimsSet.getStringArrayClaim("vtr"))));
+                } else if (jwtClaimsSet.getClaim("vtr") instanceof List<?> vtrList
+                        && vtrList.stream().allMatch(vtr -> vtr instanceof String)) {
+                    authRequestVtr =
+                            List.of(
+                                    String.format(
+                                            "[\"%s\"]",
+                                            String.join(
+                                                    "\",\"",
+                                                    jwtClaimsSet.getStringArrayClaim("vtr"))));
                 } else {
                     LOG.error("vtr in AuthRequest is not valid. Could not be parsed");
-                    return errorResponse(redirectURI, new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid"));
+                    return errorResponse(
+                            redirectURI,
+                            new ErrorObject(
+                                    OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid"));
                 }
             } else {
                 authRequestVtr = emptyList();

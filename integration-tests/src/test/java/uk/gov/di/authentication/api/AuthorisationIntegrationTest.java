@@ -642,7 +642,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var clientSession = redis.getClientSession(clientSessionID);
         var authRequest = AuthenticationRequest.parse(clientSession.getAuthRequestParams());
         assertTrue(authRequest.getScope().contains(CustomScopeValue.DOC_CHECKING_APP));
-        assertThat(authRequest.getCustomParameter("vtr"), equalTo("[\"P2.Cl.Cm\",\"Cl.Cm\""));
+        assertThat(
+                authRequest.getCustomParameter("vtr"),
+                equalTo(List.of("[\"P2.Cl.Cm\",\"Cl.Cm\"]")));
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
     }

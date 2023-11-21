@@ -44,13 +44,18 @@ public class RequestObjectToAuthRequestHelper {
             if (Objects.nonNull(jwtClaimsSet.getClaim("vtr"))) {
                 if (jwtClaimsSet.getClaim("vtr") instanceof String vtr) {
                     builder.customParameter("vtr", vtr);
-                } else if (jwtClaimsSet.getClaim("vtr") instanceof List<?> vtrList && vtrList.stream().allMatch(vtr -> vtr instanceof String)) {
-                    builder.customParameter("vtr", String.format("[\"%s\"]", String.join("\",\"", jwtClaimsSet.getStringArrayClaim("vtr"))));
+                } else if (jwtClaimsSet.getClaim("vtr") instanceof List<?> vtrList
+                        && vtrList.stream().allMatch(vtr -> vtr instanceof String)) {
+                    builder.customParameter(
+                            "vtr",
+                            String.format(
+                                    "[\"%s\"]",
+                                    String.join("\",\"", jwtClaimsSet.getStringArrayClaim("vtr"))));
                 } else {
                     LOG.warn("Cannot parse Vectors of Trust");
                     throw new RuntimeException("Cannot parse Vectors of Trust");
                 }
-             }
+            }
             if (Objects.nonNull(jwtClaimsSet.getClaim("ui_locales"))) {
                 try {
                     String uiLocales = (String) jwtClaimsSet.getClaim("ui_locales");
