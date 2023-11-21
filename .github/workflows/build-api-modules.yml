@@ -15,7 +15,6 @@ jobs:
       matrix:
         module:
         - account-management-api
-        - audit-processors
         - client-registry-api
         - delivery-receipts-api
         - doc-checking-app-api
