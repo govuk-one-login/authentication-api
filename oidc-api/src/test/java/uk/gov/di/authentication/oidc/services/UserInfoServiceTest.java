@@ -74,6 +74,7 @@ class UserInfoServiceTest {
             mock(CloudwatchMetricsService.class);
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final Subject INTERNAL_SUBJECT = new Subject("internal-subject");
+    private static final Subject INTERNAL_PAIRWISE_SUBJECT = new Subject();
     private static final Subject SUBJECT = new Subject("some-subject");
     private static final Subject DOC_APP_SUBJECT = new Subject("some-subject");
     private static final List<String> SCOPES =
@@ -134,7 +135,10 @@ class UserInfoServiceTest {
                 .thenReturn(generateUserprofile());
 
         var accessTokenStore =
-                new AccessTokenStore(accessToken.getValue(), INTERNAL_SUBJECT.getValue());
+                new AccessTokenStore(
+                        accessToken.getValue(),
+                        INTERNAL_SUBJECT.getValue(),
+                        INTERNAL_PAIRWISE_SUBJECT.getValue());
         var accessTokenInfo =
                 new AccessTokenInfo(accessTokenStore, SUBJECT.getValue(), SCOPES, null, CLIENT_ID);
 
@@ -156,18 +160,15 @@ class UserInfoServiceTest {
             throws JOSEException, AccessTokenException {
         when(configurationService.isIdentityEnabled()).thenReturn(false);
         when(configurationService.isAuthOrchSplitEnabled()).thenReturn(true);
-
         accessToken = createSignedAccessToken(null);
         var accessTokenStore =
-                new AccessTokenStore(accessToken.getValue(), INTERNAL_SUBJECT.getValue());
+                new AccessTokenStore(
+                        accessToken.getValue(),
+                        INTERNAL_SUBJECT.getValue(),
+                        INTERNAL_PAIRWISE_SUBJECT.getValue());
         var accessTokenInfo =
                 new AccessTokenInfo(accessTokenStore, SUBJECT.getValue(), SCOPES, null, CLIENT_ID);
-        var testUserInfo =
-                new AuthenticationUserInfo().withUserInfo(generateUserInfo().toJSONString());
-
-        when(userInfoStorageService.getAuthenticationUserInfoData(
-                        accessTokenInfo.getAccessTokenStore().getInternalSubjectId()))
-                .thenReturn(Optional.of(testUserInfo));
+        givenThereIsUserInfo();
 
         var userInfo = userInfoService.populateUserInfo(accessTokenInfo);
 
@@ -193,7 +194,10 @@ class UserInfoServiceTest {
                     .thenReturn(generateUserprofile());
 
             var accessTokenStore =
-                    new AccessTokenStore(accessToken.getValue(), INTERNAL_SUBJECT.getValue());
+                    new AccessTokenStore(
+                            accessToken.getValue(),
+                            INTERNAL_SUBJECT.getValue(),
+                            INTERNAL_PAIRWISE_SUBJECT.getValue());
             var accessTokenInfo =
                     new AccessTokenInfo(
                             accessTokenStore, SUBJECT.getValue(), SCOPES, null, CLIENT_ID);
@@ -217,19 +221,16 @@ class UserInfoServiceTest {
                         throws JOSEException, AccessTokenException {
             when(configurationService.isIdentityEnabled()).thenReturn(true);
             when(configurationService.isAuthOrchSplitEnabled()).thenReturn(true);
-
             accessToken = createSignedAccessToken(null);
             var accessTokenStore =
-                    new AccessTokenStore(accessToken.getValue(), INTERNAL_SUBJECT.getValue());
+                    new AccessTokenStore(
+                            accessToken.getValue(),
+                            INTERNAL_SUBJECT.getValue(),
+                            INTERNAL_PAIRWISE_SUBJECT.getValue());
             var accessTokenInfo =
                     new AccessTokenInfo(
                             accessTokenStore, SUBJECT.getValue(), SCOPES, null, CLIENT_ID);
-            var testUserInfo =
-                    new AuthenticationUserInfo().withUserInfo(generateUserInfo().toJSONString());
-
-            when(userInfoStorageService.getAuthenticationUserInfoData(
-                            accessTokenInfo.getAccessTokenStore().getInternalSubjectId()))
-                    .thenReturn(Optional.of(testUserInfo));
+            givenThereIsUserInfo();
 
             var userInfo = userInfoService.populateUserInfo(accessTokenInfo);
 
@@ -269,7 +270,10 @@ class UserInfoServiceTest {
                     .thenReturn(Optional.of(identityCredentials));
 
             var accessTokenStore =
-                    new AccessTokenStore(accessToken.getValue(), INTERNAL_SUBJECT.getValue());
+                    new AccessTokenStore(
+                            accessToken.getValue(),
+                            INTERNAL_SUBJECT.getValue(),
+                            INTERNAL_PAIRWISE_SUBJECT.getValue());
             var accessTokenInfo =
                     new AccessTokenInfo(
                             accessTokenStore,
@@ -332,7 +336,10 @@ class UserInfoServiceTest {
                     .thenReturn(Optional.of(identityCredentials));
 
             var accessTokenStore =
-                    new AccessTokenStore(accessToken.getValue(), INTERNAL_SUBJECT.getValue());
+                    new AccessTokenStore(
+                            accessToken.getValue(),
+                            INTERNAL_SUBJECT.getValue(),
+                            INTERNAL_PAIRWISE_SUBJECT.getValue());
             var accessTokenInfo =
                     new AccessTokenInfo(
                             accessTokenStore,
@@ -342,12 +349,7 @@ class UserInfoServiceTest {
                                     .map(ClaimsSetRequest.Entry::getClaimName)
                                     .collect(Collectors.toList()),
                             CLIENT_ID);
-            var testUserInfo =
-                    new AuthenticationUserInfo().withUserInfo(generateUserInfo().toJSONString());
-
-            when(userInfoStorageService.getAuthenticationUserInfoData(
-                            accessTokenInfo.getAccessTokenStore().getInternalSubjectId()))
-                    .thenReturn(Optional.of(testUserInfo));
+            givenThereIsUserInfo();
 
             var userInfo = userInfoService.populateUserInfo(accessTokenInfo);
 
@@ -386,7 +388,10 @@ class UserInfoServiceTest {
                     .thenReturn(generateUserprofile());
 
             var accessTokenStore =
-                    new AccessTokenStore(accessToken.getValue(), INTERNAL_SUBJECT.getValue());
+                    new AccessTokenStore(
+                            accessToken.getValue(),
+                            INTERNAL_SUBJECT.getValue(),
+                            INTERNAL_PAIRWISE_SUBJECT.getValue());
             var accessTokenInfo =
                     new AccessTokenInfo(
                             accessTokenStore, SUBJECT.getValue(), scopes, null, CLIENT_ID);
@@ -414,16 +419,14 @@ class UserInfoServiceTest {
             var scopes = List.of(OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.EMAIL.getValue());
 
             var accessTokenStore =
-                    new AccessTokenStore(accessToken.getValue(), INTERNAL_SUBJECT.getValue());
+                    new AccessTokenStore(
+                            accessToken.getValue(),
+                            INTERNAL_SUBJECT.getValue(),
+                            INTERNAL_PAIRWISE_SUBJECT.getValue());
             var accessTokenInfo =
                     new AccessTokenInfo(
                             accessTokenStore, SUBJECT.getValue(), scopes, null, CLIENT_ID);
-            var testUserInfo =
-                    new AuthenticationUserInfo().withUserInfo(generateUserInfo().toJSONString());
-
-            when(userInfoStorageService.getAuthenticationUserInfoData(
-                            accessTokenInfo.getAccessTokenStore().getInternalSubjectId()))
-                    .thenReturn(Optional.of(testUserInfo));
+            givenThereIsUserInfo();
 
             var userInfo = userInfoService.populateUserInfo(accessTokenInfo);
 
@@ -453,7 +456,10 @@ class UserInfoServiceTest {
                     .thenReturn(Optional.of(identityCredentials));
 
             var accessTokenStore =
-                    new AccessTokenStore(accessToken.getValue(), INTERNAL_SUBJECT.getValue());
+                    new AccessTokenStore(
+                            accessToken.getValue(),
+                            INTERNAL_SUBJECT.getValue(),
+                            INTERNAL_PAIRWISE_SUBJECT.getValue());
             var accessTokenInfo =
                     new AccessTokenInfo(
                             accessTokenStore,
@@ -496,7 +502,10 @@ class UserInfoServiceTest {
                     .thenReturn(Optional.of(identityCredentials));
 
             var accessTokenStore =
-                    new AccessTokenStore(accessToken.getValue(), INTERNAL_SUBJECT.getValue());
+                    new AccessTokenStore(
+                            accessToken.getValue(),
+                            INTERNAL_SUBJECT.getValue(),
+                            INTERNAL_PAIRWISE_SUBJECT.getValue());
             var accessTokenInfo =
                     new AccessTokenInfo(
                             accessTokenStore,
@@ -506,12 +515,7 @@ class UserInfoServiceTest {
                                     .map(ClaimsSetRequest.Entry::getClaimName)
                                     .collect(Collectors.toList()),
                             CLIENT_ID);
-            var testUserInfo =
-                    new AuthenticationUserInfo().withUserInfo(generateUserInfo().toJSONString());
-
-            when(userInfoStorageService.getAuthenticationUserInfoData(
-                            accessTokenInfo.getAccessTokenStore().getInternalSubjectId()))
-                    .thenReturn(Optional.of(testUserInfo));
+            givenThereIsUserInfo();
 
             var userInfo = userInfoService.populateUserInfo(accessTokenInfo);
 
@@ -549,7 +553,10 @@ class UserInfoServiceTest {
                     .thenReturn(Optional.of(docAppCredential));
 
             var accessTokenStore =
-                    new AccessTokenStore(accessToken.getValue(), INTERNAL_SUBJECT.getValue());
+                    new AccessTokenStore(
+                            accessToken.getValue(),
+                            INTERNAL_SUBJECT.getValue(),
+                            INTERNAL_PAIRWISE_SUBJECT.getValue());
             var accessTokenInfo =
                     new AccessTokenInfo(
                             accessTokenStore, SUBJECT.getValue(), docAppScope, null, CLIENT_ID);
@@ -578,7 +585,10 @@ class UserInfoServiceTest {
                     .thenReturn(Optional.of(docAppCredential));
 
             var accessTokenStore =
-                    new AccessTokenStore(accessToken.getValue(), INTERNAL_SUBJECT.getValue());
+                    new AccessTokenStore(
+                            accessToken.getValue(),
+                            INTERNAL_SUBJECT.getValue(),
+                            INTERNAL_PAIRWISE_SUBJECT.getValue());
             var accessTokenInfo =
                     new AccessTokenInfo(
                             accessTokenStore, SUBJECT.getValue(), docAppScope, null, CLIENT_ID);
@@ -598,7 +608,10 @@ class UserInfoServiceTest {
                             OIDCScopeValue.OPENID.getValue(),
                             CustomScopeValue.DOC_CHECKING_APP.getValue());
             var accessTokenStore =
-                    new AccessTokenStore(accessToken.getValue(), DOC_APP_SUBJECT.getValue());
+                    new AccessTokenStore(
+                            accessToken.getValue(),
+                            DOC_APP_SUBJECT.getValue(),
+                            DOC_APP_SUBJECT.getValue());
             var accessTokenInfo =
                     new AccessTokenInfo(
                             accessTokenStore,
@@ -622,7 +635,10 @@ class UserInfoServiceTest {
                             OIDCScopeValue.OPENID.getValue(),
                             CustomScopeValue.DOC_CHECKING_APP.getValue());
             var accessTokenStore =
-                    new AccessTokenStore(accessToken.getValue(), DOC_APP_SUBJECT.getValue());
+                    new AccessTokenStore(
+                            accessToken.getValue(),
+                            DOC_APP_SUBJECT.getValue(),
+                            DOC_APP_SUBJECT.getValue());
             var accessTokenInfo =
                     new AccessTokenInfo(
                             accessTokenStore,
@@ -649,7 +665,10 @@ class UserInfoServiceTest {
                     .thenReturn(userProfile);
             when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(salt);
             var accessTokenStore =
-                    new AccessTokenStore(accessToken.getValue(), INTERNAL_SUBJECT.getValue());
+                    new AccessTokenStore(
+                            accessToken.getValue(),
+                            INTERNAL_SUBJECT.getValue(),
+                            INTERNAL_PAIRWISE_SUBJECT.getValue());
             var accessTokenInfo =
                     new AccessTokenInfo(
                             accessTokenStore, SUBJECT.getValue(), SCOPES, null, CLIENT_ID);
@@ -674,7 +693,10 @@ class UserInfoServiceTest {
                     .thenReturn(userProfile);
             when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(salt);
             var accessTokenStore =
-                    new AccessTokenStore(accessToken.getValue(), INTERNAL_SUBJECT.getValue());
+                    new AccessTokenStore(
+                            accessToken.getValue(),
+                            INTERNAL_SUBJECT.getValue(),
+                            INTERNAL_PAIRWISE_SUBJECT.getValue());
             var accessTokenInfo =
                     new AccessTokenInfo(
                             accessTokenStore, SUBJECT.getValue(), SCOPES, null, CLIENT_ID);
@@ -737,5 +759,14 @@ class UserInfoServiceTest {
                 .incrementCounter(
                         "ClaimIssued",
                         Map.of("Environment", "test", "Client", CLIENT_ID, "Claim", v3));
+    }
+
+    private void givenThereIsUserInfo() {
+        var testUserInfo =
+                new AuthenticationUserInfo().withUserInfo(generateUserInfo().toJSONString());
+
+        when(userInfoStorageService.getAuthenticationUserInfoData(
+                        INTERNAL_PAIRWISE_SUBJECT.getValue()))
+                .thenReturn(Optional.of(testUserInfo));
     }
 }

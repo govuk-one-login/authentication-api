@@ -56,6 +56,7 @@ class AccessTokenServiceTest {
             mock(TokenValidationService.class);
     private final DynamoClientService clientService = mock(DynamoClientService.class);
     private static final Subject INTERNAL_SUBJECT = new Subject("internal-subject");
+    private static final Subject INTERNAL_PAIRWISE_SUBJECT = new Subject();
     private static final Subject SUBJECT = new Subject("some-subject");
     private static final List<String> SCOPES =
             List.of(
@@ -119,7 +120,9 @@ class AccessTokenServiceTest {
                 .thenReturn(
                         objectMapper.writeValueAsString(
                                 new AccessTokenStore(
-                                        accessToken.getValue(), INTERNAL_SUBJECT.getValue())));
+                                        accessToken.getValue(),
+                                        INTERNAL_SUBJECT.getValue(),
+                                        INTERNAL_PAIRWISE_SUBJECT.getValue())));
 
         var accessTokenInfo =
                 validationService.parse(accessToken.toAuthorizationHeader(), identityEnabled);
@@ -145,7 +148,9 @@ class AccessTokenServiceTest {
                 .thenReturn(
                         objectMapper.writeValueAsString(
                                 new AccessTokenStore(
-                                        accessToken.getValue(), INTERNAL_SUBJECT.getValue())));
+                                        accessToken.getValue(),
+                                        INTERNAL_SUBJECT.getValue(),
+                                        INTERNAL_PAIRWISE_SUBJECT.getValue())));
 
         var accessTokenInfo = validationService.parse(accessToken.toAuthorizationHeader(), true);
 
@@ -247,7 +252,9 @@ class AccessTokenServiceTest {
                 .thenReturn(
                         objectMapper.writeValueAsString(
                                 new AccessTokenStore(
-                                        accessToken.getValue(), INTERNAL_SUBJECT.getValue())));
+                                        accessToken.getValue(),
+                                        INTERNAL_SUBJECT.getValue(),
+                                        INTERNAL_PAIRWISE_SUBJECT.getValue())));
 
         var accessTokenException =
                 assertThrows(
@@ -298,7 +305,8 @@ class AccessTokenServiceTest {
                         objectMapper.writeValueAsString(
                                 new AccessTokenStore(
                                         createSignedAccessToken(null, false).getValue(),
-                                        INTERNAL_SUBJECT.getValue())));
+                                        INTERNAL_SUBJECT.getValue(),
+                                        INTERNAL_PAIRWISE_SUBJECT.getValue())));
 
         var accessTokenException =
                 assertThrows(

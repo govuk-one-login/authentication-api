@@ -98,7 +98,7 @@ public class UserInfoService {
         try {
             var authUserInfo =
                     userInfoStorageService.getAuthenticationUserInfoData(
-                            accessTokenInfo.getAccessTokenStore().getInternalSubjectId());
+                            accessTokenInfo.getAccessTokenStore().getInternalPairwiseSubjectId());
 
             if (authUserInfo.isPresent()) {
                 tmpUserInfo = new UserInfo(JSONObjectUtils.parse(authUserInfo.get().getUserInfo()));

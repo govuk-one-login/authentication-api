@@ -51,6 +51,7 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.TokenAuthInvalidException;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuthorisationCodeService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
@@ -67,6 +68,8 @@ import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 import uk.gov.di.authentication.sharedtest.helper.TokenGeneratorHelper;
 
 import java.net.URI;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
@@ -103,8 +106,22 @@ public class TokenHandlerTest {
     private static final String TEST_EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String PHONE_NUMBER = "01234567890";
     private static final String REDIRECT_URI = "http://localhost/redirect";
+    private static final ByteBuffer SALT =
+            ByteBuffer.wrap("a-test-salt".getBytes(StandardCharsets.UTF_8));
+    private static final String RP_SECTOR_URI = "https://test.com";
+    private static final String RP_SECTOR_HOST = "test.com";
+
+    private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
+    private static final String INTERNAL_SECTOR_HOST = "test.account.gov.uk";
     private static final Subject INTERNAL_SUBJECT = new Subject();
-    private static final Subject PUBLIC_SUBJECT = new Subject();
+    private static final Subject RP_PAIRWISE_SUBJECT =
+            new Subject(
+                    ClientSubjectHelper.calculatePairwiseIdentifier(
+                            INTERNAL_SUBJECT.getValue(), RP_SECTOR_HOST, SALT.array()));
+    private static final Subject INTERNAL_PAIRWISE_SUBJECT =
+            new Subject(
+                    ClientSubjectHelper.calculatePairwiseIdentifier(
+                            INTERNAL_SUBJECT.getValue(), INTERNAL_SECTOR_HOST, SALT.array()));
     private static final Subject DOC_APP_USER_PUBLIC_SUBJECT = new Subject();
     private static final String AUDIENCE = "oidc-audience";
     private static final State STATE = new State();
@@ -143,7 +160,9 @@ public class TokenHandlerTest {
     @BeforeEach
     void setUp() {
         when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of(BASE_URI));
+        when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         when(configurationService.getSessionExpiry()).thenReturn(1234L);
+        when(dynamoService.getOrGenerateSalt(any())).thenCallRealMethod();
         handler =
                 new TokenHandler(
                         tokenService,
@@ -185,7 +204,7 @@ public class TokenHandlerTest {
         SignedJWT signedJWT =
                 generateIDToken(
                         CLIENT_ID,
-                        PUBLIC_SUBJECT,
+                        RP_PAIRWISE_SUBJECT,
                         "issuer-url",
                         new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate());
         OIDCTokenResponse tokenResponse =
@@ -224,14 +243,15 @@ public class TokenHandlerTest {
                         INTERNAL_SUBJECT,
                         SCOPES,
                         Map.of("nonce", NONCE),
-                        PUBLIC_SUBJECT,
-                        vtr.retrieveVectorOfTrustForToken(),
+                        RP_PAIRWISE_SUBJECT,
+                        INTERNAL_PAIRWISE_SUBJECT,
                         userProfile.getClientConsent(),
                         expectedConsentRequired,
                         null,
                         false,
                         JWSAlgorithm.ES256,
-                        CLIENT_SESSION_ID))
+                        CLIENT_SESSION_ID,
+                        vtr.retrieveVectorOfTrustForToken()))
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result =
@@ -256,7 +276,7 @@ public class TokenHandlerTest {
         SignedJWT signedJWT =
                 generateIDToken(
                         CLIENT_ID,
-                        PUBLIC_SUBJECT,
+                        RP_PAIRWISE_SUBJECT,
                         "issuer-url",
                         new RSAKeyGenerator(2048).algorithm(JWSAlgorithm.RS256).generate());
         OIDCTokenResponse tokenResponse =
@@ -296,14 +316,15 @@ public class TokenHandlerTest {
                         INTERNAL_SUBJECT,
                         SCOPES,
                         Map.of("nonce", NONCE),
-                        PUBLIC_SUBJECT,
-                        vtr.retrieveVectorOfTrustForToken(),
+                        RP_PAIRWISE_SUBJECT,
+                        INTERNAL_PAIRWISE_SUBJECT,
                         userProfile.getClientConsent(),
                         expectedConsentRequired,
                         null,
                         false,
                         JWSAlgorithm.RS256,
-                        CLIENT_SESSION_ID))
+                        CLIENT_SESSION_ID,
+                        vtr.retrieveVectorOfTrustForToken()))
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result =
@@ -339,10 +360,13 @@ public class TokenHandlerTest {
                         SCOPES.toStringList(), SCOPES.toStringList()))
                 .thenReturn(true);
         RefreshTokenStore tokenStore =
-                new RefreshTokenStore(refreshToken.getValue(), INTERNAL_SUBJECT.getValue());
+                new RefreshTokenStore(
+                        refreshToken.getValue(),
+                        INTERNAL_SUBJECT.getValue(),
+                        INTERNAL_PAIRWISE_SUBJECT.getValue());
         String tokenStoreString = objectMapper.writeValueAsString(tokenStore);
         when(redisConnectionService.popValue(
-                        REFRESH_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT.getValue()))
+                        REFRESH_TOKEN_PREFIX + CLIENT_ID + "." + RP_PAIRWISE_SUBJECT.getValue()))
                 .thenReturn(null);
         String redisKey = REFRESH_TOKEN_PREFIX + signedRefreshToken.getJWTClaimsSet().getJWTID();
         when(redisConnectionService.popValue(redisKey)).thenReturn(tokenStoreString);
@@ -350,7 +374,8 @@ public class TokenHandlerTest {
                         eq(CLIENT_ID),
                         eq(INTERNAL_SUBJECT),
                         eq(SCOPES.toStringList()),
-                        eq(PUBLIC_SUBJECT),
+                        eq(RP_PAIRWISE_SUBJECT),
+                        eq(INTERNAL_PAIRWISE_SUBJECT),
                         eq(JWSAlgorithm.ES256)))
                 .thenReturn(tokenResponse);
 
@@ -391,10 +416,13 @@ public class TokenHandlerTest {
                         SCOPES.toStringList(), SCOPES.toStringList()))
                 .thenReturn(true);
         RefreshTokenStore tokenStore =
-                new RefreshTokenStore(refreshToken.getValue(), INTERNAL_SUBJECT.getValue());
+                new RefreshTokenStore(
+                        refreshToken.getValue(),
+                        INTERNAL_SUBJECT.getValue(),
+                        INTERNAL_PAIRWISE_SUBJECT.getValue());
         String tokenStoreString = objectMapper.writeValueAsString(tokenStore);
         when(redisConnectionService.popValue(
-                        REFRESH_TOKEN_PREFIX + CLIENT_ID + "." + PUBLIC_SUBJECT.getValue()))
+                        REFRESH_TOKEN_PREFIX + CLIENT_ID + "." + RP_PAIRWISE_SUBJECT.getValue()))
                 .thenReturn(null);
         String redisKey = REFRESH_TOKEN_PREFIX + signedRefreshToken.getJWTClaimsSet().getJWTID();
         when(redisConnectionService.popValue(redisKey)).thenReturn(tokenStoreString);
@@ -402,7 +430,8 @@ public class TokenHandlerTest {
                         eq(CLIENT_ID),
                         eq(INTERNAL_SUBJECT),
                         eq(SCOPES.toStringList()),
-                        eq(PUBLIC_SUBJECT),
+                        eq(RP_PAIRWISE_SUBJECT),
+                        eq(INTERNAL_PAIRWISE_SUBJECT),
                         eq(JWSAlgorithm.RS256)))
                 .thenReturn(tokenResponse);
 
@@ -547,7 +576,7 @@ public class TokenHandlerTest {
         SignedJWT signedJWT =
                 generateIDToken(
                         DOC_APP_CLIENT_ID.getValue(),
-                        PUBLIC_SUBJECT,
+                        RP_PAIRWISE_SUBJECT,
                         "issuer-url",
                         new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate());
         OIDCTokenResponse tokenResponse =
@@ -588,13 +617,14 @@ public class TokenHandlerTest {
                         new Scope(DOC_CHECKING_APP, OIDCScopeValue.OPENID),
                         Map.of("nonce", NONCE),
                         DOC_APP_USER_PUBLIC_SUBJECT,
-                        vtr.retrieveVectorOfTrustForToken(),
+                        DOC_APP_USER_PUBLIC_SUBJECT,
                         null,
                         false,
                         null,
                         true,
                         JWSAlgorithm.ES256,
-                        CLIENT_SESSION_ID))
+                        CLIENT_SESSION_ID,
+                        vtr.retrieveVectorOfTrustForToken()))
                 .thenReturn(tokenResponse);
 
         var result =
@@ -616,7 +646,8 @@ public class TokenHandlerTest {
                 .withSubjectID(INTERNAL_SUBJECT.getValue())
                 .withCreated(LocalDateTime.now().toString())
                 .withUpdated(LocalDateTime.now().toString())
-                .withPublicSubjectID(PUBLIC_SUBJECT.getValue())
+                .withPublicSubjectID(new Subject().getValue())
+                .withSalt(SALT)
                 .withClientConsent(
                         new ClientConsent(
                                 CLIENT_ID, claims, LocalDateTime.now(ZoneId.of("UTC")).toString()));
@@ -630,7 +661,7 @@ public class TokenHandlerTest {
                         .generate();
         ECDSASigner signer = new ECDSASigner(ecSigningKey);
         return TokenGeneratorHelper.generateSignedToken(
-                CLIENT_ID, BASE_URI, SCOPES.toStringList(), signer, PUBLIC_SUBJECT, "KEY_ID");
+                CLIENT_ID, BASE_URI, SCOPES.toStringList(), signer, RP_PAIRWISE_SUBJECT, "KEY_ID");
     }
 
     private SignedJWT createSignedRsaRefreshToken() throws JOSEException {
@@ -638,7 +669,7 @@ public class TokenHandlerTest {
                 new RSASSASigner(
                         new RSAKeyGenerator(2048).algorithm(JWSAlgorithm.RS256).generate());
         return TokenGeneratorHelper.generateSignedToken(
-                CLIENT_ID, BASE_URI, SCOPES.toStringList(), signer, PUBLIC_SUBJECT, "KEY_ID");
+                CLIENT_ID, BASE_URI, SCOPES.toStringList(), signer, RP_PAIRWISE_SUBJECT, "KEY_ID");
     }
 
     private PrivateKeyJWT generatePrivateKeyJWT(PrivateKey privateKey) throws JOSEException {
@@ -662,8 +693,8 @@ public class TokenHandlerTest {
                 .withContacts(singletonList(TEST_EMAIL))
                 .withPublicKey(
                         Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()))
-                .withSectorIdentifierUri("https://test.com")
-                .withSubjectType("public");
+                .withSectorIdentifierUri(RP_SECTOR_URI)
+                .withSubjectType("pairwise");
     }
 
     private APIGatewayProxyResponseEvent generateApiGatewayRequest(

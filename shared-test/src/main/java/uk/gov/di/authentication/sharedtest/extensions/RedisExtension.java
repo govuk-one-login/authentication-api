@@ -265,6 +265,10 @@ public class RedisExtension
         redis.saveWithExpiry(key, value, expiry);
     }
 
+    public String getFromRedis(String key) {
+        return redis.getValue(key);
+    }
+
     public void flushData() {
         try (StatefulRedisConnection<String, String> connection = client.connect()) {
             connection.sync().flushall();

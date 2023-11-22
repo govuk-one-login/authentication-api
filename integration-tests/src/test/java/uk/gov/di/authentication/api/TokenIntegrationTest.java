@@ -25,6 +25,7 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.oauth2.sdk.token.RefreshToken;
+import com.nimbusds.oauth2.sdk.token.Tokens;
 import com.nimbusds.oauth2.sdk.util.JSONArrayUtils;
 import com.nimbusds.oauth2.sdk.util.JSONObjectUtils;
 import com.nimbusds.oauth2.sdk.util.URLUtils;
@@ -78,6 +79,7 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -418,6 +420,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
         Subject publicSubject = new Subject();
         Subject internalSubject = new Subject();
+        Subject internalPairwiseSubject = new Subject();
         KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         registerUser(scope, internalSubject);
         registerClientWithPrivateKeyJwtAuthentication(
@@ -425,11 +428,72 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         SignedJWT signedJWT = generateSignedRefreshToken(scope, publicSubject);
         RefreshToken refreshToken = new RefreshToken(signedJWT.serialize());
         RefreshTokenStore tokenStore =
-                new RefreshTokenStore(refreshToken.getValue(), internalSubject.getValue());
+                new RefreshTokenStore(
+                        refreshToken.getValue(),
+                        internalSubject.getValue(),
+                        internalPairwiseSubject.getValue());
         redis.addToRedis(
                 REFRESH_TOKEN_PREFIX + signedJWT.getJWTClaimsSet().getJWTID(),
                 objectMapper.writeValueAsString(tokenStore),
                 900L);
+        PrivateKey privateKey = keyPair.getPrivate();
+        JWTAuthenticationClaimsSet claimsSet =
+                new JWTAuthenticationClaimsSet(
+                        new ClientID(CLIENT_ID), new Audience(ROOT_RESOURCE_URL + TOKEN_ENDPOINT));
+        var expiryDate = NowHelper.nowPlus(5, ChronoUnit.MINUTES);
+        claimsSet.getExpirationTime().setTime(expiryDate.getTime());
+        var privateKeyJWT =
+                new PrivateKeyJWT(claimsSet, JWSAlgorithm.RS256, privateKey, null, null);
+        Map<String, List<String>> customParams = new HashMap<>();
+        customParams.put(
+                "grant_type", Collections.singletonList(GrantType.REFRESH_TOKEN.getValue()));
+        customParams.put("client_id", Collections.singletonList(CLIENT_ID));
+        customParams.put("refresh_token", Collections.singletonList(refreshToken.getValue()));
+        Map<String, List<String>> privateKeyParams = privateKeyJWT.toParameters();
+        privateKeyParams.putAll(customParams);
+        String requestParams = URLUtils.serializeParameters(privateKeyParams);
+        var response = makeRequest(Optional.of(requestParams), Map.of(), Map.of());
+
+        assertThat(response, hasStatus(200));
+        JSONObject jsonResponse = JSONObjectUtils.parse(response.getBody());
+
+        Tokens tokens = TokenResponse.parse(jsonResponse).toSuccessResponse().getTokens();
+        assertNotNull(tokens.getRefreshToken());
+        assertNotNull(tokens.getBearerAccessToken());
+        String jwtId =
+                SignedJWT.parse(tokens.getRefreshToken().getValue()).getJWTClaimsSet().getJWTID();
+        String redisResponse = redis.getFromRedis(REFRESH_TOKEN_PREFIX + jwtId);
+        RefreshTokenStore refreshTokenStore =
+                objectMapper.readValue(redisResponse, RefreshTokenStore.class);
+        assertEquals(refreshTokenStore.getInternalSubjectId(), internalSubject.getValue());
+        assertEquals(
+                refreshTokenStore.getInternalPairwiseSubjectId(),
+                internalPairwiseSubject.getValue());
+        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
+    }
+
+    @Test
+    void shouldCallTokenResourceWithRefreshTokenGrantAndMissingInternalPairwiseIdAndReturn200()
+            throws Exception {
+        Scope scope =
+                new Scope(
+                        OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
+        Subject publicSubject = new Subject();
+        Subject internalSubject = new Subject();
+        KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        registerUser(scope, internalSubject);
+        registerClientWithPrivateKeyJwtAuthentication(
+                keyPair.getPublic(), scope, SubjectType.PAIRWISE);
+        SignedJWT signedJWT = generateSignedRefreshToken(scope, publicSubject);
+        RefreshToken refreshToken = new RefreshToken(signedJWT.serialize());
+        String tokenStore =
+                "{\"refresh_token\":\""
+                        + refreshToken.getValue()
+                        + "\",\"internal_subject_id\":\""
+                        + internalSubject.getValue()
+                        + "\"}";
+        redis.addToRedis(
+                REFRESH_TOKEN_PREFIX + signedJWT.getJWTClaimsSet().getJWTID(), tokenStore, 900L);
         PrivateKey privateKey = keyPair.getPrivate();
         JWTAuthenticationClaimsSet claimsSet =
                 new JWTAuthenticationClaimsSet(
