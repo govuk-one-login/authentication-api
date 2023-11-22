@@ -121,8 +121,8 @@ public class CookieHelper {
         // Temporary measure, as commit 75a10df4376397d5a454b87b5cee689e13a71e20 introduced a bug
         // whereby persistent session ID could end up as --<timestamp>--<timestamp>. In these cases
         // we should just generate a new one to get back on track. It will be possible to remove
-        // this 13 months after it is first merged(== the expiry time of that cookie at the point of
-        // issue in November 2023) i.e. 26/11/2024
+        // this 18 months after it is first merged(== the expiry time of that cookie at the point of
+        // issue in November 2023) i.e. 26/05/2025
         if (isValidPersistentSessionCookieWithDoubleDashedTimestamp(persistentId)) {
             return Optional.of(persistentId);
         }

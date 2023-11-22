@@ -98,7 +98,7 @@ class PersistentIdHelperTest {
 
     // This relates to a short period where it was possible to have a format like
     // --1700558480962--1700558480963--1700558480964; see commit
-    // 75a10df4376397d5a454b87b5cee689e13a71e20; will not be needed from 26/11/2024
+    // 75a10df4376397d5a454b87b5cee689e13a71e20; will not be needed from 26/05/2025
     @Test
     void shouldReturnNewPersistentIdWithATimestampWhenCorruptedFormatExists() {
         String corruptedPersistentId = "--1700558480962--1700558480963";
