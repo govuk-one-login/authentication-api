@@ -3,7 +3,6 @@ package uk.gov.di.authentication.oidc.services;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import uk.gov.di.authentication.oidc.entity.AccountInterventionStatus;
 import uk.gov.di.authentication.oidc.exceptions.AccountInterventionException;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 
@@ -48,20 +47,6 @@ class AccountInterventionServiceTest {
             }
             """;
 
-    private static String ACCOUNT_INTERVENTION_SERVICE_RESPONSE_ALL_CLEAR =
-            """
-            {
-                "state": {
-                    "blocked": false,
-                    "suspended": false,
-                    "reproveIdentity": false,
-                    "resetPassword": false
-                }
-            }
-            """;
-
-    private static AccountInterventionStatus accountStatusClear =
-            new AccountInterventionStatus(false, false, false, false);
     private static String BASE_AIS_URL = "http://example.com/somepath/";
 
     @BeforeEach
@@ -72,7 +57,7 @@ class AccountInterventionServiceTest {
 
     @Test
     void shouldConstructWellFormedRequestToAccountInterventionService()
-            throws URISyntaxException, IOException, InterruptedException {
+            throws IOException, InterruptedException {
 
         var internalPairwiseSubjectId = "some-internal-subject-id";
         var ais = new AccountInterventionService(config, httpClient);
@@ -91,7 +76,7 @@ class AccountInterventionServiceTest {
     }
 
     @Test
-    void shouldReturnAccountStatus() throws URISyntaxException, IOException, InterruptedException {
+    void shouldReturnAccountStatus() throws IOException, InterruptedException {
 
         var internalPairwiseSubjectId = "some-internal-subject-id";
         var accountInterventionService = new AccountInterventionService(config, httpClient);
@@ -109,8 +94,7 @@ class AccountInterventionServiceTest {
     }
 
     @Test
-    void shouldReturnAccountStatusAllClearWhenDisabled()
-            throws URISyntaxException, IOException, InterruptedException {
+    void shouldReturnAccountStatusAllClearWhenDisabled() {
 
         when(config.isAccountInterventionServiceEnabled()).thenReturn(false);
 
@@ -128,7 +112,7 @@ class AccountInterventionServiceTest {
 
     @Test
     void shouldThrowAccountInterventionExceptionWhenExceptionThrownByHttpClient()
-            throws URISyntaxException, IOException, InterruptedException {
+            throws IOException, InterruptedException {
 
         var internalPairwiseSubjectId = "some-internal-subject-id";
         var accountInterventionService = new AccountInterventionService(config, httpClient);

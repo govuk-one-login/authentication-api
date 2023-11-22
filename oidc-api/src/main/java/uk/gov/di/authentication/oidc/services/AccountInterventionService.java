@@ -1,11 +1,12 @@
 package uk.gov.di.authentication.oidc.services;
 
-import com.google.gson.Gson;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.entity.AccountInterventionResponse;
 import uk.gov.di.authentication.oidc.entity.AccountInterventionStatus;
 import uk.gov.di.authentication.oidc.exceptions.AccountInterventionException;
+import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 
 import java.io.IOException;
@@ -37,14 +38,14 @@ public class AccountInterventionService {
 
             return new AccountInterventionStatus(false, false, false, false);
 
-        } catch (IOException | URISyntaxException | InterruptedException e) {
+        } catch (IOException | URISyntaxException | InterruptedException | Json.JsonException e) {
             throw new AccountInterventionException(
-                    "Unable to connect to Account Intervention Service", e);
+                    "Problem communicating with Account Intervention Service", e);
         }
     }
 
     private AccountInterventionStatus retrieveAccountStatus(String internalPairwiseSubjectId)
-            throws IOException, InterruptedException, URISyntaxException {
+            throws IOException, InterruptedException, URISyntaxException, Json.JsonException {
 
         HttpRequest request =
                 HttpRequest.newBuilder()
@@ -57,7 +58,9 @@ public class AccountInterventionService {
 
         String body = httpResponse.body();
 
-        var response = new Gson().fromJson(body, AccountInterventionResponse.class);
+        var response =
+                SerializationService.getInstance()
+                        .readValue(body, AccountInterventionResponse.class);
 
         return response.state();
     }

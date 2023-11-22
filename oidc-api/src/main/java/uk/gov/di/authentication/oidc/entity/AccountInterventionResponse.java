@@ -1,3 +1,6 @@
 package uk.gov.di.authentication.oidc.entity;
 
-public record AccountInterventionResponse(AccountInterventionStatus state, String auditLevel) {}
+import com.google.gson.annotations.Expose;
+
+public record AccountInterventionResponse(
+        @Expose AccountInterventionStatus state, @Expose String auditLevel) {}
