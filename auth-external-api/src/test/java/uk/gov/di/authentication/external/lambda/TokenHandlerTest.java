@@ -11,17 +11,18 @@ import com.nimbusds.oauth2.sdk.token.Tokens;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.core.SdkBytes;
 import uk.gov.di.authentication.external.domain.AuthExternalApiAuditableEvent;
 import uk.gov.di.authentication.external.services.TokenService;
 import uk.gov.di.authentication.external.validators.TokenRequestValidator;
 import uk.gov.di.authentication.shared.entity.AuthCodeStore;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.TokenAuthInvalidException;
-import uk.gov.di.authentication.shared.services.AccessTokenService;
-import uk.gov.di.authentication.shared.services.AuditService;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoAuthCodeService;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.authentication.shared.services.*;
 
 import java.net.URI;
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Optional;
 
@@ -35,11 +36,13 @@ import static org.mockito.Mockito.when;
 
 class TokenHandlerTest {
     private TokenHandler tokenHandler;
-    private ConfigurationService configurationService;
+    private static ConfigurationService configurationService;
     private AccessTokenService accessTokenService;
     private TokenRequestValidator tokenRequestValidator;
+    private static final ClientSubjectHelper clientSubjectHelper = mock(ClientSubjectHelper.class);
     private static final TokenService tokenUtilityService = mock(TokenService.class);
     private static final AuditService auditService = mock(AuditService.class);
+    private static final DynamoService dynamoService = mock(DynamoService.class);
     private static final BearerAccessToken SUCCESS_TOKEN_RESPONSE_ACCESS_TOKEN =
             new BearerAccessToken();
     private static final AccessTokenResponse SUCCESS_TOKEN_RESPONSE =
@@ -47,7 +50,10 @@ class TokenHandlerTest {
     private static final DynamoAuthCodeService authCodeService = mock(DynamoAuthCodeService.class);
     private static final long UNIX_TIME_16_08_2099 = 4090554490L;
     private static final String VALID_AUTH_CODE = "valid-auth-code";
+    private static final String SUBJECT_ID = "any";
     private static final String CLIENT_ID = "test-client-id";
+    private static final UserProfile USER_PROFILE =
+            new UserProfile().withSubjectID("any").withSalt(ByteBuffer.allocateDirect(12345));
     private static final AuthCodeStore VALID_AUTH_CODE_STORE =
             new AuthCodeStore()
                     .withAuthCode(VALID_AUTH_CODE)
@@ -90,6 +96,8 @@ class TokenHandlerTest {
         when(tokenUtilityService.generateNewBearerTokenAndTokenResponse())
                 .thenReturn(SUCCESS_TOKEN_RESPONSE);
         when(tokenUtilityService.generateTokenErrorResponse(any())).thenCallRealMethod();
+
+        when(dynamoService.getUserProfileFromSubject(any())).thenReturn(USER_PROFILE);
     }
 
     @BeforeEach
@@ -99,6 +107,7 @@ class TokenHandlerTest {
                 .thenReturn(URI.create("https://test-callback.com"));
         when(configurationService.getAuthenticationBackendURI())
                 .thenReturn(URI.create("https://test-backend.com"));
+        when(configurationService.getInternalSectorUri()).thenReturn("https://test-backend.com");
 
         accessTokenService = mock(AccessTokenService.class);
         tokenRequestValidator = mock(TokenRequestValidator.class);
@@ -110,7 +119,8 @@ class TokenHandlerTest {
                         accessTokenService,
                         tokenUtilityService,
                         tokenRequestValidator,
-                        auditService);
+                        auditService,
+                        dynamoService);
     }
 
     @Test
@@ -193,6 +203,11 @@ class TokenHandlerTest {
 
     @Test
     void shouldReturn200WithAccessTokenWhenAuthCodeStoreIsValidAndMarkAuthCodeStoreAsUsed() {
+        String internalPairwiseId =
+                ClientSubjectHelper.calculatePairwiseIdentifier(
+                        SUBJECT_ID,
+                        "https://test-backend.com",
+                        SdkBytes.fromByteBuffer(ByteBuffer.allocateDirect(12345)).asByteArray());
         APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
         String formData = "code=" + VALID_AUTH_CODE + "&client_id=" + CLIENT_ID;
         request.setBody(formData);
@@ -217,7 +232,7 @@ class TokenHandlerTest {
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         CLIENT_ID,
-                        VALID_AUTH_CODE_STORE.getSubjectID(),
+                        internalPairwiseId,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,

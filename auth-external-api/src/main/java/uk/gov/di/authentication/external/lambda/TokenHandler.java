@@ -9,18 +9,22 @@ import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import software.amazon.awssdk.core.SdkBytes;
 import uk.gov.di.authentication.external.domain.AuthExternalApiAuditableEvent;
 import uk.gov.di.authentication.external.exceptions.AuthCodeStoreRetreivalException;
 import uk.gov.di.authentication.external.services.TokenService;
 import uk.gov.di.authentication.external.validators.TokenRequestValidator;
 import uk.gov.di.authentication.shared.entity.AuthCodeStore;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.TokenAuthInvalidException;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.RequestBodyHelper;
 import uk.gov.di.authentication.shared.services.AccessTokenService;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAuthCodeService;
+import uk.gov.di.authentication.shared.services.DynamoService;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -40,6 +44,7 @@ public class TokenHandler
     private final TokenService tokenUtilityService;
     private final TokenRequestValidator tokenRequestValidator;
     private final AuditService auditService;
+    private final DynamoService dynamoService;
 
     public TokenHandler(
             ConfigurationService configurationService,
@@ -47,13 +52,15 @@ public class TokenHandler
             AccessTokenService accessTokenService,
             TokenService tokenUtilityService,
             TokenRequestValidator tokenRequestValidator,
-            AuditService auditService) {
+            AuditService auditService,
+            DynamoService dynamoService) {
         this.configurationService = configurationService;
         this.authorisationCodeService = authorisationCodeService;
         this.accessTokenStoreService = accessTokenService;
         this.tokenUtilityService = tokenUtilityService;
         this.tokenRequestValidator = tokenRequestValidator;
         this.auditService = auditService;
+        this.dynamoService = dynamoService;
     }
 
     public TokenHandler() {
@@ -72,6 +79,7 @@ public class TokenHandler
         this.tokenRequestValidator =
                 new TokenRequestValidator(orchestratorCallbackRedirectUri, orchestratorClientId);
         this.auditService = new AuditService(configurationService);
+        this.dynamoService = new DynamoService(configurationService);
     }
 
     @Override
@@ -150,12 +158,22 @@ public class TokenHandler
 
             authorisationCodeService.updateHasBeenUsed(authCodeStore.getAuthCode(), true);
 
+            String subjectID = authCodeStore.getSubjectID();
+            UserProfile userProfile = dynamoService.getUserProfileFromSubject(subjectID);
+            String internalPairwiseId =
+                    userProfile.getSalt() == null
+                            ? AuditService.UNKNOWN
+                            : ClientSubjectHelper.calculatePairwiseIdentifier(
+                                    subjectID,
+                                    configurationService.getInternalSectorUri(),
+                                    SdkBytes.fromByteBuffer(userProfile.getSalt()).asByteArray());
+
             auditService.submitAuditEvent(
                     AuthExternalApiAuditableEvent.TOKEN_SENT_TO_ORCHESTRATION,
                     AuditService.UNKNOWN,
                     AuditService.UNKNOWN,
                     Optional.ofNullable(requestBody.get("client_id")).orElse(AuditService.UNKNOWN),
-                    Optional.ofNullable(authCodeStore.getSubjectID()).orElse(AuditService.UNKNOWN),
+                    Optional.ofNullable(internalPairwiseId).orElse(AuditService.UNKNOWN),
                     AuditService.UNKNOWN,
                     AuditService.UNKNOWN,
                     AuditService.UNKNOWN,
