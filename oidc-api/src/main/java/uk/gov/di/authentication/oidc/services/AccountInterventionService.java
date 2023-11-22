@@ -28,11 +28,11 @@ public class AccountInterventionService {
         this.httpClient = httpClient;
     }
 
-    public AccountInterventionStatus getAccountStatus(String internalSubjectId)
+    public AccountInterventionStatus getAccountStatus(String internalPairwiseSubjectId)
             throws AccountInterventionException {
         try {
             if (accountInterventionsEnabled) {
-                return retrieveAccountStatus(internalSubjectId);
+                return retrieveAccountStatus(internalPairwiseSubjectId);
             }
 
             return new AccountInterventionStatus(false, false, false, false);
@@ -43,12 +43,12 @@ public class AccountInterventionService {
         }
     }
 
-    private AccountInterventionStatus retrieveAccountStatus(String internalSubjectId)
+    private AccountInterventionStatus retrieveAccountStatus(String internalPairwiseSubjectId)
             throws IOException, InterruptedException, URISyntaxException {
 
         HttpRequest request =
                 HttpRequest.newBuilder()
-                        .uri(accountInterventionServiceURI.resolve(internalSubjectId))
+                        .uri(accountInterventionServiceURI.resolve(internalPairwiseSubjectId))
                         .GET()
                         .build();
 

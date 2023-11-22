@@ -41,7 +41,7 @@ class AccountInterventionServiceTest {
                     "blocked": false,
                     "suspended": true,
                     "reproveIdentity": true,
-                    "resetPassword": false\s
+                    "resetPassword": false
                 },
                 "auditLevel": "standard",
                 "history": []
@@ -55,7 +55,7 @@ class AccountInterventionServiceTest {
                     "blocked": false,
                     "suspended": false,
                     "reproveIdentity": false,
-                    "resetPassword": false\s
+                    "resetPassword": false
                 }
             }
             """;
@@ -74,7 +74,7 @@ class AccountInterventionServiceTest {
     void shouldConstructWellFormedRequestToAccountInterventionService()
             throws URISyntaxException, IOException, InterruptedException {
 
-        var internalSubjectId = "some-internal-subject-id";
+        var internalPairwiseSubjectId = "some-internal-subject-id";
         var ais = new AccountInterventionService(config, httpClient);
         var httpResponse = mock(HttpResponse.class);
         var httpRequestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
@@ -82,25 +82,25 @@ class AccountInterventionServiceTest {
         when(httpClient.send(any(), any())).thenReturn(httpResponse);
         when(httpResponse.body()).thenReturn("{\"foo\": \"bar\"}");
 
-        ais.getAccountStatus(internalSubjectId);
+        ais.getAccountStatus(internalPairwiseSubjectId);
 
         verify(httpClient).send(httpRequestCaptor.capture(), any());
         var requestUri = httpRequestCaptor.getValue();
 
-        assertEquals(BASE_AIS_URL + internalSubjectId, requestUri.uri().toString());
+        assertEquals(BASE_AIS_URL + internalPairwiseSubjectId, requestUri.uri().toString());
     }
 
     @Test
     void shouldReturnAccountStatus() throws URISyntaxException, IOException, InterruptedException {
 
-        var internalSubjectId = "some-internal-subject-id";
+        var internalPairwiseSubjectId = "some-internal-subject-id";
         var accountInterventionService = new AccountInterventionService(config, httpClient);
         var httpResponse = mock(HttpResponse.class);
 
         when(httpClient.send(any(), any())).thenReturn(httpResponse);
         when(httpResponse.body()).thenReturn(ACCOUNT_INTERVENTION_SERVICE_RESPONSE_SUSPEND_REPROVE);
 
-        var status = accountInterventionService.getAccountStatus(internalSubjectId);
+        var status = accountInterventionService.getAccountStatus(internalPairwiseSubjectId);
 
         assertEquals(false, status.blocked());
         assertEquals(true, status.suspended());
@@ -114,9 +114,9 @@ class AccountInterventionServiceTest {
 
         when(config.isAccountInterventionServiceEnabled()).thenReturn(false);
 
-        var internalSubjectId = "some-internal-subject-id";
+        var internalPairwiseSubjectId = "some-internal-subject-id";
         var ais = new AccountInterventionService(config, httpClient);
-        var status = ais.getAccountStatus(internalSubjectId);
+        var status = ais.getAccountStatus(internalPairwiseSubjectId);
 
         verifyNoInteractions(httpClient);
 
@@ -130,7 +130,7 @@ class AccountInterventionServiceTest {
     void shouldThrowAccountInterventionExceptionWhenExceptionThrownByHttpClient()
             throws URISyntaxException, IOException, InterruptedException {
 
-        var internalSubjectId = "some-internal-subject-id";
+        var internalPairwiseSubjectId = "some-internal-subject-id";
         var accountInterventionService = new AccountInterventionService(config, httpClient);
         var httpResponse = mock(HttpResponse.class);
 
@@ -139,7 +139,7 @@ class AccountInterventionServiceTest {
         assertThrows(
                 AccountInterventionException.class,
                 () -> {
-                    accountInterventionService.getAccountStatus(internalSubjectId);
+                    accountInterventionService.getAccountStatus(internalPairwiseSubjectId);
                 });
     }
 }
