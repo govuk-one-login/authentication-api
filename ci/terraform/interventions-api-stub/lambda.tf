@@ -1,27 +1,23 @@
-module "hello_world_role" {
-  source      = "../modules/lambda-role"
-  environment = var.environment
-  role_name   = "hello-world-role"
-  vpc_arn     = local.authentication_vpc_arn
+module "account_interventions_stub_role" {
+  source             = "../modules/lambda-role"
+  environment        = var.environment
+  role_name          = "account_interventions_stub-role"
+  vpc_arn            = local.authentication_vpc_arn
+  policies_to_attach = [aws_iam_policy.stub_interventions_dynamo_read_access.arn]
 }
 
-module "hello_world_lambda" {
-  source = "../modules/endpoint-module"
+module "account_interventions_stub_lambda" {
+  source = "../modules/stub-endpoint-module"
 
-  endpoint_name   = "hello-world"
-  path_part       = "hello-world"
-  endpoint_method = ["GET"]
-  environment     = var.environment
+  endpoint_name = "account-interventions-stub"
+
+  environment = var.environment
 
   handler_environment_variables = {
     ENVIRONMENT = var.environment
   }
-  handler_function_name = "uk.gov.di.authentication.interventions.api.stub.lambda.HelloWorldHandler::handleRequest"
+  handler_function_name = "uk.gov.di.authentication.interventions.api.stub.lambda.AccountInterventionsApiStubHandler::handleRequest"
   handler_runtime       = "java17"
-
-  rest_api_id      = aws_api_gateway_rest_api.interventions_api_stub.id
-  root_resource_id = aws_api_gateway_rest_api.interventions_api_stub.root_resource_id
-  execution_arn    = aws_api_gateway_rest_api.interventions_api_stub.execution_arn
 
   memory_size                 = local.default_performance_parameters.memory
   provisioned_concurrency     = local.default_performance_parameters.concurrency
@@ -38,7 +34,7 @@ module "hello_world_lambda" {
     local.authentication_security_group_id,
   ]
   subnet_id                              = local.authentication_subnet_ids
-  lambda_role_arn                        = module.hello_world_role.arn
+  lambda_role_arn                        = module.account_interventions_stub_role.arn
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
@@ -46,8 +42,4 @@ module "hello_world_lambda" {
   default_tags                           = local.default_tags
 
   use_localstack = false
-
-  depends_on = [
-    aws_api_gateway_rest_api.interventions_api_stub,
-  ]
 }

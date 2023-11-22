@@ -8,7 +8,11 @@ function runTerraform() {
   pushd "${DIR}/ci/terraform/${1}" >/dev/null
   rm -rf .terraform/
   terraform init -backend-config=sandpit.hcl
-  terraform apply -var-file sandpit.tfvars "${2}"
+  if [ "${RUN_SHELL}" == "1" ]; then
+    ${SHELL} -i
+  else
+    terraform apply -var-file sandpit.tfvars "${2}"
+  fi
   popd >/dev/null
 }
 
@@ -34,6 +38,7 @@ function usage() {
     --destroy                 run all terraform with the -destroy flag (destroys all managed resources)
     -p, --prompt              will prompt for plan review before applying any terraform
     -x, --auth-external       run the auth external api terraform
+    --shell                   spawn an interactive shell inside the module directory after terraform init (does not apply)
 
     If no options specified the default actions above will be carried out without prompting.
 USAGE
@@ -50,6 +55,7 @@ SHARED=0
 UTILS=0
 TEST_SERVICES=0
 CLEAN=""
+RUN_SHELL=0
 TERRAFORM_OPTS="-auto-approve"
 if [[ $# == 0 ]]; then
   AM=1
@@ -103,6 +109,9 @@ while [[ $# -gt 0 ]]; do
     ;;
   -x | --auth-external)
     AUTH_EXTERNAL_API=1
+    ;;
+  --shell)
+    RUN_SHELL=1
     ;;
   *)
     usage

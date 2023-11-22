@@ -28,6 +28,7 @@ dependencies {
     implementation project(":auth-external-api"), noXray
     implementation project(":client-registry-api"), noXray
     implementation project(":ipv-api"), noXray
+    implementation project(":interventions-api-stub"), noXray
     implementation project(":doc-checking-app-api"), noXray
     implementation project(":utils"), noXray
 
