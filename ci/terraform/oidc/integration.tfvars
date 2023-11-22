@@ -30,3 +30,4 @@ EOT
 
 orch_client_id          = "orchestrationAuth"
 support_auth_orch_split = false
+orch_redirect_uri       = "https://oidc.integration.account.gov.uk/orchestration-redirect"

@@ -485,6 +485,11 @@ variable "account_intervention_service_uri" {
   type    = string
 }
 
+variable "orch_redirect_uri" {
+  type        = string
+  description = "The redirect URI set by Orchestration in the OAuth2 authorize request to Authentication"
+}
+
 locals {
   default_performance_parameters = {
     memory          = var.endpoint_memory_size
