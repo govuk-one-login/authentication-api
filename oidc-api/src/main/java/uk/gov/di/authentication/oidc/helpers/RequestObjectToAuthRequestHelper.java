@@ -79,9 +79,9 @@ public class RequestObjectToAuthRequestHelper {
             builder.customParameter(
                     "vtr",
                     objectMapper.writeValueAsString(jwtClaimsSet.getStringArrayClaim("vtr")));
+        } else {
+            LOG.warn("Cannot parse Vectors of Trust");
+            throw new RuntimeException("Cannot parse Vectors of Trust");
         }
-
-        LOG.warn("Cannot parse Vectors of Trust");
-        throw new RuntimeException("Cannot parse Vectors of Trust");
     }
 }
