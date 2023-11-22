@@ -11,6 +11,7 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
+import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.isOldPersistentSessionCookieWithoutTimestamp;
 import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.isValidPersistentSessionCookieWithDoubleDashedTimestamp;
 
 public class CookieHelper {
@@ -125,6 +126,10 @@ public class CookieHelper {
         // issue in November 2023) i.e. 26/05/2025
         if (isValidPersistentSessionCookieWithDoubleDashedTimestamp(persistentId)) {
             return Optional.of(persistentId);
+        }
+
+        if (isOldPersistentSessionCookieWithoutTimestamp(persistentId)) {
+            return Optional.of(appendTimestampToCookieValue(persistentId));
         }
 
         return Optional.empty();

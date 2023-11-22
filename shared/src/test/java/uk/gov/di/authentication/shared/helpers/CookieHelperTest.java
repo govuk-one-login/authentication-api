@@ -14,6 +14,7 @@ import java.util.stream.Stream;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.shared.helpers.CookieHelper.PERSISTENT_COOKIE_NAME;
 import static uk.gov.di.authentication.shared.helpers.CookieHelper.REQUEST_COOKIE_HEADER;
 import static uk.gov.di.authentication.shared.helpers.CookieHelper.RESPONSE_COOKIE_HEADER;
@@ -97,6 +98,21 @@ public class CookieHelperTest {
         Optional<String> id = parsePersistentCookie(headers);
 
         assertEmpty(id);
+    }
+
+    @Test
+    void shouldAppendTimestampToPersistentCookieWhenMissing() {
+        String existingPersistentSessionId = IdGenerator.generate();
+        HttpCookie cookie = new HttpCookie("di-persistent-session-id", existingPersistentSessionId);
+        Map<String, String> headers =
+                Map.ofEntries(Map.entry(REQUEST_COOKIE_HEADER, cookie.toString()));
+
+        Optional<String> id = parsePersistentCookie(headers);
+
+        assertTrue(id.get().startsWith(existingPersistentSessionId));
+        assertTrue(
+                PersistentIdHelper.isValidPersistentSessionCookieWithDoubleDashedTimestamp(
+                        id.get()));
     }
 
     @ParameterizedTest(name = "with header {0}")

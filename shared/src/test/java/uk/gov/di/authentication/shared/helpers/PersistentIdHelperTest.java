@@ -115,6 +115,21 @@ class PersistentIdHelperTest {
     }
 
     @Test
+    void shouldAppendTimestampToPersistentIdWhenMissing() {
+        String oldPersistentId = IdGenerator.generate();
+
+        String cookieString =
+                String.format(
+                        "Version=1; di-persistent-session-id=%s;gs=session-id.456;cookies_preferences_set={\"analytics\":true};name=ts",
+                        oldPersistentId);
+        Map<String, String> inputHeaders = Map.of(CookieHelper.REQUEST_COOKIE_HEADER, cookieString);
+        String persistentId =
+                PersistentIdHelper.getExistingOrCreateNewPersistentSessionId(inputHeaders);
+        assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(persistentId));
+        assertTrue(persistentId.startsWith(oldPersistentId));
+    }
+
+    @Test
     void shouldGenerateNewPersistentIdFromGetExistingOrCreateWhenMissing() {
         String cookieString =
                 "Version=1; gs=session-id.456;cookies_preferences_set={\"analytics\":true};name=ts";
