@@ -31,7 +31,6 @@ import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
-import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
@@ -73,6 +72,7 @@ import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISAT
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.authentication.shared.helpers.CookieHelper.getHttpCookieFromMultiValueResponseHeaders;
+import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.isValidPersistentSessionCookieWithDoubleDashedTimestamp;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -178,7 +178,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(persistentCookie.isPresent(), equalTo(true));
         assertThat(persistentCookie.get().getValue(), containsString(PERSISTENT_SESSION_ID));
         assertTrue(
-                CookieHelper.isValidPersistentSessionCookieWithDoubleDashedTimestamp(
+                isValidPersistentSessionCookieWithDoubleDashedTimestamp(
                         persistentCookie.get().getValue()));
 
         assertTxmaAuditEventsReceived(
@@ -215,7 +215,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(persistentCookie.isPresent(), equalTo(true));
         assertThat(persistentCookie.get().getValue(), containsString(PERSISTENT_SESSION_ID));
         assertTrue(
-                CookieHelper.isValidPersistentSessionCookieWithDoubleDashedTimestamp(
+                isValidPersistentSessionCookieWithDoubleDashedTimestamp(
                         persistentCookie.get().getValue()));
         var languageCookie =
                 getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "lng");

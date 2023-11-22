@@ -11,11 +11,11 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
+import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.isValidPersistentSessionCookieWithDoubleDashedTimestamp;
 
 public class CookieHelper {
 
     private static final Logger LOG = LogManager.getLogger(CookieHelper.class);
-
     public static final String REQUEST_COOKIE_HEADER = "Cookie";
     public static final String RESPONSE_COOKIE_HEADER = "Set-Cookie";
     public static final String PERSISTENT_COOKIE_NAME = "di-persistent-session-id";
@@ -123,12 +123,11 @@ public class CookieHelper {
         // we should just generate a new one to get back on track. It will be possible to remove
         // this 13 months after it is first merged(== the expiry time of that cookie at the point of
         // issue in November 2023) i.e. 26/11/2024
-        String VALID_PERSISTENT_SESSION_ID_FORMAT_REGEX = "[A-Za-z0-9-_]{27}--\\d{13}";
-        if (!persistentId.matches(VALID_PERSISTENT_SESSION_ID_FORMAT_REGEX)) {
-            return Optional.empty();
+        if (isValidPersistentSessionCookieWithDoubleDashedTimestamp(persistentId)) {
+            return Optional.of(persistentId);
         }
 
-        return Optional.of(persistentId);
+        return Optional.empty();
     }
 
     private static Optional<HttpCookie> parseStringToHttpCookie(String cookie) {
@@ -173,11 +172,5 @@ public class CookieHelper {
 
     public static String appendTimestampToCookieValue(String cookieValue) {
         return cookieValue + "--" + NowHelper.now().getTime();
-    }
-
-    public static boolean isValidPersistentSessionCookieWithDoubleDashedTimestamp(
-            String cookieValue) {
-        String persistentSessionIdPattern = "[A-Za-z0-9-_]{27}--\\d{13}";
-        return cookieValue.matches(persistentSessionIdPattern);
     }
 }

@@ -14,7 +14,6 @@ import java.util.stream.Stream;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.shared.helpers.CookieHelper.PERSISTENT_COOKIE_NAME;
 import static uk.gov.di.authentication.shared.helpers.CookieHelper.REQUEST_COOKIE_HEADER;
 import static uk.gov.di.authentication.shared.helpers.CookieHelper.RESPONSE_COOKIE_HEADER;
@@ -97,7 +96,7 @@ public class CookieHelperTest {
 
         Optional<String> id = parsePersistentCookie(headers);
 
-        assertTrue(id.isEmpty());
+        assertEmpty(id);
     }
 
     @ParameterizedTest(name = "with header {0}")

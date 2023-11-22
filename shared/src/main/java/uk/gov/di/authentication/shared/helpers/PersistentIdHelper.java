@@ -8,6 +8,7 @@ import static uk.gov.di.authentication.shared.helpers.CookieHelper.appendTimesta
 public class PersistentIdHelper {
     public static final String PERSISTENT_ID_HEADER_NAME = "di-persistent-session-id";
     public static final String PERSISTENT_ID_UNKNOWN_VALUE = "unknown";
+    public static final String PERSISTENT_SESSION_ID_PATTERN = "[A-Za-z0-9-_]{27}--\\d{13}";
 
     public static String extractPersistentIdFromHeaders(Map<String, String> headers) {
         if (Objects.isNull(headers)
@@ -33,8 +34,7 @@ public class PersistentIdHelper {
                 CookieHelper.parsePersistentCookie(headers)
                         .orElse(appendTimestampToCookieValue(IdGenerator.generate()));
 
-        String VALID_PERSISTENT_SESSION_ID_FORMAT_REGEX = "[A-Za-z0-9-_]{27}--\\d{13}";
-        if (parsedOrGeneratedCookie.matches(VALID_PERSISTENT_SESSION_ID_FORMAT_REGEX)) {
+        if (isValidPersistentSessionCookieWithDoubleDashedTimestamp(parsedOrGeneratedCookie)) {
             return parsedOrGeneratedCookie;
         }
 
@@ -47,5 +47,10 @@ public class PersistentIdHelper {
                                                         + parsedOrGeneratedCookie));
 
         return appendTimestampToCookieValue(sanitisedCookie);
+    }
+
+    public static boolean isValidPersistentSessionCookieWithDoubleDashedTimestamp(
+            String cookieValue) {
+        return cookieValue.matches(PERSISTENT_SESSION_ID_PATTERN);
     }
 }

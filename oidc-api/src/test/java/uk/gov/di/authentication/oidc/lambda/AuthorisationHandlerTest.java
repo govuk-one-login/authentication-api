@@ -61,7 +61,6 @@ import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
-import uk.gov.di.authentication.shared.helpers.CookieHelper;
 import uk.gov.di.authentication.shared.helpers.DocAppSubjectIdHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -112,6 +111,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR;
 import static uk.gov.di.authentication.oidc.helper.RequestObjectTestHelper.generateSignedJWT;
+import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.isValidPersistentSessionCookieWithDoubleDashedTimestamp;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.hasContextData;
@@ -249,9 +249,7 @@ class AuthorisationHandlerTest {
             var sessionId =
                     extractSessionId(
                             diPersistentCookieString, EXPECTED_BASE_PERSISTENT_COOKIE_VALUE);
-            assertTrue(
-                    CookieHelper.isValidPersistentSessionCookieWithDoubleDashedTimestamp(
-                            sessionId));
+            assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(sessionId));
             verify(sessionService).save(eq(session));
             verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
 
@@ -342,9 +340,7 @@ class AuthorisationHandlerTest {
             var sessionId =
                     extractSessionId(
                             diPersistentCookieString, EXPECTED_BASE_PERSISTENT_COOKIE_VALUE);
-            assertTrue(
-                    CookieHelper.isValidPersistentSessionCookieWithDoubleDashedTimestamp(
-                            sessionId));
+            assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(sessionId));
             if (uiLocales.contains("en")) {
                 assertTrue(
                         response.getMultiValueHeaders()
@@ -400,9 +396,7 @@ class AuthorisationHandlerTest {
             var sessionId =
                     extractSessionId(
                             diPersistentCookieString, EXPECTED_BASE_PERSISTENT_COOKIE_VALUE);
-            assertTrue(
-                    CookieHelper.isValidPersistentSessionCookieWithDoubleDashedTimestamp(
-                            sessionId));
+            assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(sessionId));
 
             verify(sessionService).save(eq(session));
             verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
@@ -479,9 +473,7 @@ class AuthorisationHandlerTest {
             var sessionId =
                     extractSessionId(
                             diPersistentCookieString, EXPECTED_BASE_PERSISTENT_COOKIE_VALUE);
-            assertTrue(
-                    CookieHelper.isValidPersistentSessionCookieWithDoubleDashedTimestamp(
-                            sessionId));
+            assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(sessionId));
 
             verify(sessionService).save(eq(session));
             verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
@@ -528,9 +520,7 @@ class AuthorisationHandlerTest {
             var sessionId =
                     extractSessionId(
                             diPersistentCookieString, EXPECTED_BASE_PERSISTENT_COOKIE_VALUE);
-            assertTrue(
-                    CookieHelper.isValidPersistentSessionCookieWithDoubleDashedTimestamp(
-                            sessionId));
+            assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(sessionId));
 
             verify(sessionService).save(eq(session));
             verify(clientSessionService).storeClientSession(CLIENT_SESSION_ID, clientSession);
@@ -880,9 +870,7 @@ class AuthorisationHandlerTest {
             var sessionId =
                     extractSessionId(
                             diPersistentCookieString, EXPECTED_BASE_PERSISTENT_COOKIE_VALUE);
-            assertTrue(
-                    CookieHelper.isValidPersistentSessionCookieWithDoubleDashedTimestamp(
-                            sessionId));
+            assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(sessionId));
             verify(sessionService).save(session);
 
             verify(requestObjectAuthorizeValidator).validate(any());
@@ -936,9 +924,7 @@ class AuthorisationHandlerTest {
             var sessionId =
                     extractSessionId(
                             diPersistentCookieString, EXPECTED_BASE_PERSISTENT_COOKIE_VALUE);
-            assertTrue(
-                    CookieHelper.isValidPersistentSessionCookieWithDoubleDashedTimestamp(
-                            sessionId));
+            assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(sessionId));
             verify(sessionService).save(session);
 
             inOrder.verify(auditService)

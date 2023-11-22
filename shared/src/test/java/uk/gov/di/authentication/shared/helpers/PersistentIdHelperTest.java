@@ -12,6 +12,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.isValidPersistentSessionCookieWithDoubleDashedTimestamp;
 
 class PersistentIdHelperTest {
     private static final String ARBITRARY_UNIX_TIMESTAMP = "1700558480962";
@@ -78,8 +79,7 @@ class PersistentIdHelperTest {
         Map<String, String> inputHeaders = Map.of(CookieHelper.REQUEST_COOKIE_HEADER, cookieString);
         String persistentId =
                 PersistentIdHelper.getExistingOrCreateNewPersistentSessionId(inputHeaders);
-        assertTrue(
-                CookieHelper.isValidPersistentSessionCookieWithDoubleDashedTimestamp(persistentId));
+        assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(persistentId));
     }
 
     @Test
@@ -92,8 +92,7 @@ class PersistentIdHelperTest {
         Map<String, String> inputHeaders = Map.of(CookieHelper.REQUEST_COOKIE_HEADER, cookieString);
         String persistentId =
                 PersistentIdHelper.getExistingOrCreateNewPersistentSessionId(inputHeaders);
-        assertTrue(
-                CookieHelper.isValidPersistentSessionCookieWithDoubleDashedTimestamp(persistentId));
+        assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(persistentId));
         assertTrue(persistentId.contains(PERSISTENT_SESSION_ID_COOKIE_VALUE));
     }
 
@@ -111,8 +110,7 @@ class PersistentIdHelperTest {
         Map<String, String> inputHeaders = Map.of(CookieHelper.REQUEST_COOKIE_HEADER, cookieString);
         String persistentId =
                 PersistentIdHelper.getExistingOrCreateNewPersistentSessionId(inputHeaders);
-        assertTrue(
-                CookieHelper.isValidPersistentSessionCookieWithDoubleDashedTimestamp(persistentId));
+        assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(persistentId));
         assertFalse(persistentId.contains(corruptedPersistentId));
     }
 
