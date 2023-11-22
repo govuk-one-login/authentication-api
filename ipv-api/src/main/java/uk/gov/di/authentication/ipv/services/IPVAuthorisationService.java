@@ -22,6 +22,8 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
+import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.SdkBytes;
@@ -152,7 +154,7 @@ public class IPVAuthorisationService {
             State state,
             Scope scope,
             Subject subject,
-            String claims,
+            ClaimsSetRequest claims,
             String clientSessionId,
             String emailAddress,
             List<String> vtr) {
@@ -160,6 +162,7 @@ public class IPVAuthorisationService {
         var jwsHeader = new JWSHeader(SIGNING_ALGORITHM);
         var jwtID = IdGenerator.generate();
         var expiryDate = nowClock.nowPlus(3, ChronoUnit.MINUTES);
+        var claimsRequest = new OIDCClaimsRequest().withUserInfoClaimsRequest(claims);
         var claimsBuilder =
                 new JWTClaimsSet.Builder()
                         .issuer(configurationService.getIPVAuthorisationClientId())
@@ -180,7 +183,7 @@ public class IPVAuthorisationService {
                         .claim("scope", scope.toString())
                         .claim("vtr", vtr);
         if (Objects.nonNull(claims)) {
-            claimsBuilder.claim("claims", claims);
+            claimsBuilder.claim("claims", claimsRequest.toJSONObject());
         }
         var encodedHeader = jwsHeader.toBase64URL();
         var encodedClaims = Base64URL.encode(claimsBuilder.build().toString());

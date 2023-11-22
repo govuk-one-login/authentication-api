@@ -132,10 +132,7 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
                             configurationService.getInternalSectorUri(),
                             authenticationService);
             var state = new State();
-            var claimsSetRequest =
-                    buildIpvClaimsRequest(authRequest)
-                            .map(ClaimsSetRequest::toJSONString)
-                            .orElse(null);
+            var claimsSetRequest = buildIpvClaimsRequest(authRequest).orElse(null);
 
             var clientSessionId =
                     getHeaderValueFromHeaders(

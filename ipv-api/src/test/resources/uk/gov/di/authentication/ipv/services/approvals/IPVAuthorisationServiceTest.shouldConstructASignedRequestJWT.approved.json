@@ -12,7 +12,14 @@
     "Cl.Cm.PCL200"
   ],
   "scope": "openid",
-  "claims": "{\"name\":{\"essential\":true}}",
+  "claims": {
+    "userinfo": {
+      "https://vocab.account.gov.uk/v1/coreIdentityJWT": {
+        "essential": true
+      },
+      "https://vocab.account.gov.uk/v1/address": null
+    }
+  },
   "state": "test-state",
   "redirect_uri": "http://localhost/oidc/ipv/callback",
   "exp": 1196677110,

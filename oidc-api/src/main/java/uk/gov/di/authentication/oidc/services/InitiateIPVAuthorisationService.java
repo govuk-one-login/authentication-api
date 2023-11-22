@@ -69,8 +69,7 @@ public class InitiateIPVAuthorisationService {
         var pairwiseSubject = userInfo.getSubject();
 
         var state = new State();
-        var claimsSetRequest =
-                buildIpvClaimsRequest(authRequest).map(ClaimsSetRequest::toJSONString).orElse(null);
+        var claimsSetRequest = buildIpvClaimsRequest(authRequest).orElse(null);
 
         var encryptedJWT =
                 authorisationService.constructRequestJWT(

@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.ipv.services;
 
+import com.google.gson.GsonBuilder;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -17,7 +18,10 @@ import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
+import com.nimbusds.openid.connect.sdk.claims.ClaimRequirement;
+import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import org.approvaltests.JsonApprovals;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -215,7 +219,13 @@ class IPVAuthorisationServiceTest {
         var state = new State("test-state");
         var scope = new Scope(OIDCScopeValue.OPENID);
         var pairwise = new Subject("pairwise-identifier");
-        var claims = "{\"name\":{\"essential\":true}}";
+        var claims =
+                new ClaimsSetRequest()
+                        .add(
+                                new ClaimsSetRequest.Entry(
+                                                "https://vocab.account.gov.uk/v1/coreIdentityJWT")
+                                        .withClaimRequirement(ClaimRequirement.ESSENTIAL))
+                        .add(new ClaimsSetRequest.Entry("https://vocab.account.gov.uk/v1/address"));
 
         EncryptedJWT encryptedJWT;
         try (var mockIdGenerator = mockStatic(IdGenerator.class)) {
@@ -233,7 +243,8 @@ class IPVAuthorisationServiceTest {
 
         var signedJWTResponse = decryptJWT(encryptedJWT);
 
-        JsonApprovals.verifyAsJson(signedJWTResponse.getJWTClaimsSet().toJSONObject());
+        JsonApprovals.verifyAsJson(
+                signedJWTResponse.getJWTClaimsSet().toJSONObject(), GsonBuilder::serializeNulls);
 
         assertThat(
                 signedJWTResponse.getJWTClaimsSet().getClaim("client_id"), equalTo(IPV_CLIENT_ID));
@@ -247,7 +258,11 @@ class IPVAuthorisationServiceTest {
                 signedJWTResponse.getJWTClaimsSet().getAudience(),
                 equalTo(singletonList(IPV_URI.toString())));
         assertThat(signedJWTResponse.getJWTClaimsSet().getClaim("response_type"), equalTo("code"));
-        assertThat(signedJWTResponse.getJWTClaimsSet().getClaim("claims"), equalTo(claims));
+        var expectedClaimsRequest =
+                new OIDCClaimsRequest().withUserInfoClaimsRequest(claims).toJSONObject();
+        assertThat(
+                signedJWTResponse.getJWTClaimsSet().getClaim("claims"),
+                equalTo(expectedClaimsRequest));
         assertThat(
                 signedJWTResponse.getJWTClaimsSet().getClaim("email_address"),
                 equalTo("test@test.com"));
