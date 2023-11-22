@@ -6,7 +6,6 @@ import java.util.Objects;
 import static uk.gov.di.authentication.shared.helpers.CookieHelper.appendTimestampToCookieValue;
 
 public class PersistentIdHelper {
-
     public static final String PERSISTENT_ID_HEADER_NAME = "di-persistent-session-id";
     public static final String PERSISTENT_ID_UNKNOWN_VALUE = "unknown";
 
@@ -27,18 +26,16 @@ public class PersistentIdHelper {
     }
 
     public static String getExistingOrCreateNewPersistentSessionId(Map<String, String> headers) {
-        var parsedCookie = CookieHelper.parsePersistentCookie(headers);
-        if (parsedCookie.isPresent()) {
-            String existingCookieValue =
-                    InputSanitiser.sanitiseBase64(parsedCookie.get()).orElse("");
+        return CookieHelper.parsePersistentCookie(headers)
+                .orElse(appendTimestampToCookieValue(IdGenerator.generate()));
+    }
 
-            if (existingCookieValue.contains("--")) {
-                return existingCookieValue;
-            } else {
-                return appendTimestampToCookieValue(existingCookieValue);
-            }
-        } else {
-            return appendTimestampToCookieValue(IdGenerator.generate());
-        }
+    public static boolean isValidPersistentSessionCookieWithDoubleDashedTimestamp(
+            String cookieValue) {
+        return cookieValue.matches("[A-Za-z0-9-_]{27}--\\d{13}");
+    }
+
+    public static boolean isOldPersistentSessionCookieWithoutTimestamp(String cookieValue) {
+        return cookieValue.matches("[A-Za-z0-9-_]{27}");
     }
 }

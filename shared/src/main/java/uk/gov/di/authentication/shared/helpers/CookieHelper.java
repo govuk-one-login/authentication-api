@@ -11,11 +11,12 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
+import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.isOldPersistentSessionCookieWithoutTimestamp;
+import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.isValidPersistentSessionCookieWithDoubleDashedTimestamp;
 
 public class CookieHelper {
 
     private static final Logger LOG = LogManager.getLogger(CookieHelper.class);
-
     public static final String REQUEST_COOKIE_HEADER = "Cookie";
     public static final String RESPONSE_COOKIE_HEADER = "Set-Cookie";
     public static final String PERSISTENT_COOKIE_NAME = "di-persistent-session-id";
@@ -118,7 +119,20 @@ public class CookieHelper {
         }
         final String persistentId = cookieValues[0];
 
-        return Optional.of(persistentId);
+        // Temporary measure, as commit 75a10df4376397d5a454b87b5cee689e13a71e20 introduced a bug
+        // whereby persistent session ID could end up as --<timestamp>--<timestamp>. In these cases
+        // we should just generate a new one to get back on track. It will be possible to remove
+        // this 18 months after it is first merged(== the expiry time of that cookie at the point of
+        // issue in November 2023) i.e. 26/05/2025
+        if (isValidPersistentSessionCookieWithDoubleDashedTimestamp(persistentId)) {
+            return Optional.of(persistentId);
+        }
+
+        if (isOldPersistentSessionCookieWithoutTimestamp(persistentId)) {
+            return Optional.of(appendTimestampToCookieValue(persistentId));
+        }
+
+        return Optional.empty();
     }
 
     private static Optional<HttpCookie> parseStringToHttpCookie(String cookie) {
@@ -163,10 +177,5 @@ public class CookieHelper {
 
     public static String appendTimestampToCookieValue(String cookieValue) {
         return cookieValue + "--" + NowHelper.now().getTime();
-    }
-
-    public static boolean isValidCookieWithDoubleDashedTimestamp(String cookieValue) {
-        String sessionIdPattern = ".*--\\d+";
-        return cookieValue.matches(sessionIdPattern);
     }
 }

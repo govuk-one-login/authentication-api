@@ -26,6 +26,7 @@ import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.ResponseHeaders;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.entity.ValidClaims;
+import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
@@ -62,6 +63,9 @@ import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.a
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
+    private static final String ARBITRARY_UNIX_TIMESTAMP = "1700558480962";
+    private static final String PERSISTENT_SESSION_ID =
+            IdGenerator.generate() + "--" + ARBITRARY_UNIX_TIMESTAMP;
 
     @RegisterExtension public static final IPVStubExtension ipvStub = new IPVStubExtension();
 
@@ -95,7 +99,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
     @Test
     void shouldRedirectToLoginWhenSuccessfullyProcessedIpvResponse() throws Json.JsonException {
         var sessionId = "some-session-id";
-        var persistentSessionId = "persistent-id-value";
         var sectorId = "test.com";
         var scope = new Scope(OIDCScopeValue.OPENID);
         var authRequestBuilder =
@@ -121,7 +124,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 "Cookie",
                                 format(
                                         "gs=%s.%s;di-persistent-session-id=%s",
-                                        sessionId, CLIENT_SESSION_ID, persistentSessionId)),
+                                        sessionId, CLIENT_SESSION_ID, PERSISTENT_SESSION_ID)),
                         new HashMap<>(
                                 Map.of(
                                         "state",
@@ -158,7 +161,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 pairwiseIdentifier,
                                 new LogIds(
                                         sessionId,
-                                        persistentSessionId,
+                                        PERSISTENT_SESSION_ID,
                                         "request-i",
                                         CLIENT_ID,
                                         CLIENT_SESSION_ID),

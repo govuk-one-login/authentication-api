@@ -86,7 +86,9 @@ class LogoutHandlerTest {
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final String SESSION_ID = IdGenerator.generate();
     private static final String CLIENT_SESSION_ID = IdGenerator.generate();
-    private static final String PERSISTENT_SESSION_ID = IdGenerator.generate();
+    private static final String ARBITRARY_UNIX_TIMESTAMP = "1700558480962";
+    private static final String PERSISTENT_SESSION_ID =
+            IdGenerator.generate() + "--" + ARBITRARY_UNIX_TIMESTAMP;
     private static final URI DEFAULT_LOGOUT_URI =
             URI.create("https://di-authentication-frontend.london.cloudapps.digital/signed-out");
     private static final URI CLIENT_LOGOUT_URI = URI.create("http://localhost/logout");

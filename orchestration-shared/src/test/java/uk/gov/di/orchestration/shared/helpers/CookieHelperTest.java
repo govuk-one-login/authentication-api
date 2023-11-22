@@ -31,6 +31,10 @@ public class CookieHelperTest {
         return Stream.of(RESPONSE_COOKIE_HEADER, RESPONSE_COOKIE_HEADER.toLowerCase());
     }
 
+    private static final String ARBITRARY_UNIX_TIMESTAMP = "1700558480962";
+    private static final String PERSISTENT_SESSION_ID_COOKIE_VALUE =
+            IdGenerator.generate() + "--" + ARBITRARY_UNIX_TIMESTAMP;
+
     @ParameterizedTest(name = "with header {0}")
     @MethodSource("inputs")
     void shouldReturnIdsFromValidSessionCookieStringWithMultipleCookies(String header) {
@@ -48,12 +52,14 @@ public class CookieHelperTest {
     @MethodSource("inputs")
     void shouldReturnIdsFromValidPersistentCookieStringWithMultipleCookies(String header) {
         String cookieString =
-                "Version=1; di-persistent-session-id=a-persistent-id;gs=session-id.456;cookies_preferences_set={\"analytics\":true};name=ts";
+                String.format(
+                        "Version=1; di-persistent-session-id=%s;gs=session-id.456;cookies_preferences_set={\"analytics\":true};name=ts",
+                        PERSISTENT_SESSION_ID_COOKIE_VALUE);
         Map<String, String> headers = Map.ofEntries(Map.entry(header, cookieString));
 
         String id = parsePersistentCookie(headers).orElseThrow();
 
-        assertEquals("a-persistent-id", id);
+        assertEquals(PERSISTENT_SESSION_ID_COOKIE_VALUE, id);
     }
 
     @ParameterizedTest(name = "with header {0}")
@@ -71,12 +77,13 @@ public class CookieHelperTest {
     @ParameterizedTest(name = "with header {0}")
     @MethodSource("inputs")
     void shouldReturnIdsFromValidPersistentCookie(String header) {
-        HttpCookie cookie = new HttpCookie("di-persistent-session-id", "a-persistent-id");
+        HttpCookie cookie =
+                new HttpCookie("di-persistent-session-id", PERSISTENT_SESSION_ID_COOKIE_VALUE);
         Map<String, String> headers = Map.ofEntries(Map.entry(header, cookie.toString()));
 
         String id = parsePersistentCookie(headers).orElseThrow();
 
-        assertEquals("a-persistent-id", id);
+        assertEquals(PERSISTENT_SESSION_ID_COOKIE_VALUE, id);
     }
 
     @ParameterizedTest(name = "with header {0}")
@@ -146,7 +153,7 @@ public class CookieHelperTest {
     @MethodSource("responseInputs")
     void shouldReturnIdsFromPersistentCookieStringWithMultipleValuesMap(String header) {
         Map<String, List<String>> cookieMap = new HashMap<>();
-        String persistentCookie = "di-persistent-session-id=a-persistent-id";
+        String persistentCookie = "di-persistent-session-id=" + PERSISTENT_SESSION_ID_COOKIE_VALUE;
         String sessionCookie = "gs=session-id.456";
         cookieMap.put(header, List.of(persistentCookie, sessionCookie));
 
@@ -154,7 +161,7 @@ public class CookieHelperTest {
                 getHttpCookieFromMultiValueResponseHeaders(cookieMap, PERSISTENT_COOKIE_NAME)
                         .orElseThrow();
 
-        assertEquals("a-persistent-id", httpCookie.getValue());
+        assertEquals(PERSISTENT_SESSION_ID_COOKIE_VALUE, httpCookie.getValue());
     }
 
     @ParameterizedTest(name = "with header {0}")

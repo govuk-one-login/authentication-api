@@ -1,8 +1,5 @@
 package uk.gov.di.orchestration.shared.helpers;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import java.net.HttpCookie;
 import java.util.Arrays;
 import java.util.List;
@@ -14,14 +11,10 @@ import static java.lang.String.format;
 
 public class CookieHelper {
 
-    private static final Logger LOG = LogManager.getLogger(CookieHelper.class);
-
     public static final String REQUEST_COOKIE_HEADER = "Cookie";
     public static final String RESPONSE_COOKIE_HEADER = "Set-Cookie";
     public static final String PERSISTENT_COOKIE_NAME = "di-persistent-session-id";
     public static final String SESSION_COOKIE_NAME = "gs";
-
-    public static final String LANGUAGE_COOKIE_NAME = "lng";
 
     public static Optional<HttpCookie> getHttpCookieFromRequestHeaders(
             Map<String, String> headers, String cookieName) {

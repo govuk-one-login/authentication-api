@@ -64,6 +64,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.isValidPersistentSessionCookieWithDoubleDashedTimestamp;
 import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
@@ -180,7 +181,7 @@ class OrchestrationAuthorizationServiceTest {
                 orchestrationAuthorizationService.getExistingOrCreateNewPersistentSessionId(
                         requestCookieHeader);
 
-        assertTrue(CookieHelper.isValidCookieWithDoubleDashedTimestamp(persistentSessionId));
+        assertTrue(isValidPersistentSessionCookieWithDoubleDashedTimestamp(persistentSessionId));
     }
 
     @ParameterizedTest
