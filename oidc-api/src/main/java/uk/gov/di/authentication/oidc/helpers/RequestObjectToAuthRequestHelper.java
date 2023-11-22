@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.oidc.helpers;
 
+import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.langtag.LangTagUtils;
 import com.nimbusds.oauth2.sdk.ResponseType;
@@ -10,6 +11,8 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.net.URI;
 import java.text.ParseException;
@@ -17,6 +20,7 @@ import java.util.List;
 import java.util.Objects;
 
 public class RequestObjectToAuthRequestHelper {
+    private static final Json objectMapper = SerializationService.getInstance();
 
     private static final Logger LOG = LogManager.getLogger(RequestObjectToAuthRequestHelper.class);
 
@@ -42,19 +46,7 @@ public class RequestObjectToAuthRequestHelper {
                             .requestObject(authRequest.getRequestObject());
 
             if (Objects.nonNull(jwtClaimsSet.getClaim("vtr"))) {
-                if (jwtClaimsSet.getClaim("vtr") instanceof String vtr) {
-                    builder.customParameter("vtr", vtr);
-                } else if (jwtClaimsSet.getClaim("vtr") instanceof List<?> vtrList
-                        && vtrList.stream().allMatch(vtr -> vtr instanceof String)) {
-                    builder.customParameter(
-                            "vtr",
-                            String.format(
-                                    "[\"%s\"]",
-                                    String.join("\",\"", jwtClaimsSet.getStringArrayClaim("vtr"))));
-                } else {
-                    LOG.warn("Cannot parse Vectors of Trust");
-                    throw new RuntimeException("Cannot parse Vectors of Trust");
-                }
+                transformVtr(builder, jwtClaimsSet);
             }
             if (Objects.nonNull(jwtClaimsSet.getClaim("ui_locales"))) {
                 try {
@@ -67,12 +59,29 @@ public class RequestObjectToAuthRequestHelper {
                 }
             }
             return builder.build();
-        } catch (ParseException | com.nimbusds.oauth2.sdk.ParseException e) {
+        } catch (ParseException | com.nimbusds.oauth2.sdk.ParseException | Json.JsonException e) {
             LOG.error("Parse exception thrown whilst converting RequestObject to Auth Request", e);
             throw new RuntimeException(e);
         } catch (Exception e) {
             LOG.error("Unexpected exception thrown", e);
             throw new RuntimeException(e);
         }
+    }
+
+    private static void transformVtr(
+            AuthenticationRequest.Builder builder, JWTClaimsSet jwtClaimsSet)
+            throws Json.JsonException, ParseException {
+        var vtrClaim = jwtClaimsSet.getClaim("vtr");
+        if (vtrClaim instanceof String vtr) {
+            builder.customParameter("vtr", vtr);
+        } else if (vtrClaim instanceof List<?> vtrList
+                && vtrList.stream().allMatch(vtr -> vtr instanceof String)) {
+            builder.customParameter(
+                    "vtr",
+                    objectMapper.writeValueAsString(jwtClaimsSet.getStringArrayClaim("vtr")));
+        }
+
+        LOG.warn("Cannot parse Vectors of Trust");
+        throw new RuntimeException("Cannot parse Vectors of Trust");
     }
 }
