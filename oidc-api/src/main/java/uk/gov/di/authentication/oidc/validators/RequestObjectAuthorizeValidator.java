@@ -17,8 +17,10 @@ import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.net.URI;
 import java.security.KeyFactory;
@@ -42,6 +44,7 @@ import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 
 public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
+    private static final Json objectMapper = SerializationService.getInstance();
 
     public RequestObjectAuthorizeValidator(
             DynamoClientService dynamoClientService,
@@ -214,10 +217,7 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
     private Optional<AuthRequestError> validateVtr(JWTClaimsSet jwtClaimsSet, URI redirectURI) {
         List<String> authRequestVtr = new ArrayList<>();
         try {
-            authRequestVtr =
-                    Objects.isNull(jwtClaimsSet.getClaim(VTR_PARAM))
-                            ? emptyList()
-                            : List.of(jwtClaimsSet.getClaim(VTR_PARAM).toString());
+            authRequestVtr = getRequestObjectVtrAsList(jwtClaimsSet);
             var vectorOfTrust = VectorOfTrust.parseFromAuthRequestAttribute(authRequestVtr);
             if (vectorOfTrust.containsLevelOfConfidence()
                     && !ipvCapacityService.isIPVCapacityAvailable()) {
@@ -231,8 +231,29 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
             return errorResponse(
                     redirectURI,
                     new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid"));
+        } catch (ParseException | Json.JsonException e) {
+            LOG.error("Parse exception thrown when validating vtr", e);
+            return errorResponse(
+                    redirectURI,
+                    new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "Request vtr not valid"));
         }
         return Optional.empty();
+    }
+
+    private List<String> getRequestObjectVtrAsList(JWTClaimsSet jwtClaimsSet)
+            throws ParseException, Json.JsonException {
+        var vtrClaim = jwtClaimsSet.getClaim("vtr");
+        if (vtrClaim == null) {
+            return emptyList();
+        } else if (vtrClaim instanceof String vtr) {
+            return List.of(vtr);
+        } else if (vtrClaim instanceof List<?> vtrList
+                && vtrList.stream().allMatch(vtr -> vtr instanceof String)) {
+            return List.of(
+                    objectMapper.writeValueAsString(jwtClaimsSet.getStringArrayClaim("vtr")));
+        }
+
+        throw new ParseException("vtr is in an invalid format. Could not be parsed.", 0);
     }
 
     private static Optional<AuthRequestError> errorResponse(URI uri, ErrorObject error) {

@@ -15,10 +15,10 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
-import uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 
 import java.net.URI;
+import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -65,9 +65,7 @@ class RequestObjectToAuthRequestHelperTest {
         var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);
         var jwtClaimsSet =
-                getClaimsSetBuilder(scope)
-                        .claim("vtr", JsonArrayHelper.jsonArrayOf("P2.Cl.Cm"))
-                        .build();
+                getClaimsSetBuilder(scope).claim("vtr", List.of("P2.Cl.Cm", "Cl.Cm")).build();
         var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
         var authRequest =
                 new AuthenticationRequest.Builder(
@@ -92,6 +90,9 @@ class RequestObjectToAuthRequestHelperTest {
         assertThat(transformedAuthRequest.getClientID(), equalTo(CLIENT_ID));
         assertThat(transformedAuthRequest.getResponseType(), equalTo(ResponseType.CODE));
         assertThat(transformedAuthRequest.getRequestObject(), equalTo(signedJWT));
+        assertThat(
+                transformedAuthRequest.getCustomParameter("vtr"),
+                equalTo(List.of("[\"P2.Cl.Cm\",\"Cl.Cm\"]")));
     }
 
     @Test

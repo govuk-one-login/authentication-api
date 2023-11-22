@@ -19,7 +19,6 @@ import uk.gov.di.authentication.shared.entity.ClientType;
 import uk.gov.di.authentication.shared.entity.CustomScopeValue;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoClientService;
-import uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper;
 import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
 
 import java.net.URI;
@@ -112,7 +111,7 @@ class RequestObjectAuthorizeValidatorTest {
                         .claim("nonce", NONCE.getValue())
                         .claim("state", STATE.toString())
                         .claim("client_id", CLIENT_ID.getValue())
-                        .claim("vtr", JsonArrayHelper.jsonArrayOf("P2.Cl.Cm"))
+                        .claim("vtr", List.of("P2.Cl.Cm"))
                         .issuer(CLIENT_ID.getValue())
                         .build();
         var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);

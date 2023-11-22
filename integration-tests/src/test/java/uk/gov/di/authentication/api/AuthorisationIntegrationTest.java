@@ -642,6 +642,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var clientSession = redis.getClientSession(clientSessionID);
         var authRequest = AuthenticationRequest.parse(clientSession.getAuthRequestParams());
         assertTrue(authRequest.getScope().contains(CustomScopeValue.DOC_CHECKING_APP));
+        assertThat(
+                authRequest.getCustomParameter("vtr"),
+                equalTo(List.of("[\"P2.Cl.Cm\",\"Cl.Cm\"]")));
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
     }
@@ -788,6 +791,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .claim("nonce", new Nonce().getValue())
                         .claim("client_id", CLIENT_ID)
                         .claim("state", new State().getValue())
+                        .claim("vtr", List.of("P2.Cl.Cm", "Cl.Cm"))
                         .issuer(CLIENT_ID);
         if (uiLocales != null && !uiLocales.isBlank()) {
             jwtClaimsSetBuilder.claim("ui_locales", uiLocales);
