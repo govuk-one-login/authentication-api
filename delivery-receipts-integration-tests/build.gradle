@@ -8,7 +8,6 @@ version "unspecified"
 
 dependencies {
     testImplementation configurations.nimbus,
-            configurations.glassfish,
             configurations.tests,
             configurations.lambda,
             configurations.lettuce

@@ -29,7 +29,6 @@ ext {
         nimbusds_oauth_version: "10.13.2",
         nimbusds_jwt_version: "9.29",
         junit: "5.10.1",
-        glassfish_version: "3.0.8",
         xray: "2.14.0"
     ]
 
@@ -68,7 +67,6 @@ subprojects {
         bouncycastle
         cloudwatch
         dynamodb
-        glassfish
         govuk_notify
         gson
         hamcrest
@@ -108,11 +106,6 @@ subprojects {
                 "software.amazon.awssdk:dynamodb-enhanced:${dependencyVersions.aws_sdk_v2_version}"
 
         lambda "software.amazon.awssdk:lambda:${dependencyVersions.aws_sdk_v2_version}"
-
-        glassfish "org.glassfish.jersey.core:jersey-client:${dependencyVersions.glassfish_version}",
-                "org.glassfish.jersey.inject:jersey-hk2:${dependencyVersions.glassfish_version}",
-                "org.glassfish.jersey.media:jersey-media-json-jackson:${dependencyVersions.glassfish_version}",
-                "jakarta.activation:jakarta.activation-api:2.1.1"
 
         govuk_notify "uk.gov.service.notify:notifications-java-client:3.19.1-RELEASE"
 

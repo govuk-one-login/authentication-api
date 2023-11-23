@@ -10,7 +10,6 @@ dependencies {
     testImplementation configurations.bouncycastle,
             configurations.apache,
             configurations.nimbus,
-            configurations.glassfish,
             configurations.gson,
             configurations.tests,
             configurations.sqs,
