@@ -104,14 +104,12 @@ jobs:
       - build
     services:
       localstack:
-        image: localstack/localstack:2.3.2
+        image: localstack/localstack:3.0.0
         env:
-          SERVICES: "lambda, apigateway, iam, ec2, sqs, s3, sts, kms, sns, ssm"
-          DEFAULT_REGION: eu-west-2
+          SERVICES: "lambda, apigateway, iam, ec2, sqs, s3, sts, kms, sns, ssm, events"
           GATEWAY_LISTEN: 0.0.0.0:45678
           LOCALSTACK_HOST: localhost:45678
           TEST_AWS_ACCOUNT_ID: 123456789012
-          KMS_PROVIDER: local-kms
         options: >-
           --add-host "notify.internal:host-gateway"
           --add-host "subscriber.internal:host-gateway"
@@ -177,9 +175,9 @@ jobs:
       - build
     services:
       localstack:
-        image: localstack/localstack:2.3.2
+        image: localstack/localstack:3.0.0
         env:
-          SERVICES: "lambda, apigateway, iam, ec2, sqs, s3, sts, kms, sns, ssm"
+          SERVICES: "lambda, apigateway, iam, ec2, sqs, s3, sts, kms, sns, ssm, events"
           DEFAULT_REGION: eu-west-2
           GATEWAY_LISTEN: 0.0.0.0:45678
           LOCALSTACK_HOST: localhost:45678
