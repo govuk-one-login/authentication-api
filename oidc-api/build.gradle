@@ -22,6 +22,7 @@ dependencies {
             configurations.bouncycastle,
             configurations.cloudwatch,
             project(":shared"),
+            project(":orchestration-shared"),
             project(":client-registry-api"),
             project(":doc-checking-app-api"),
             project(":auth-external-api")
