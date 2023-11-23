@@ -6,8 +6,8 @@ import com.nimbusds.oauth2.sdk.id.ClientID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
-import uk.gov.di.authentication.shared.services.AuditService;
-import uk.gov.di.authentication.shared.services.DynamoIdentityService;
+import uk.gov.di.orchestration.shared.services.AuditService;
+import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
 
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;

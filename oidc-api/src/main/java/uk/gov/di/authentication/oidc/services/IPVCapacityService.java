@@ -1,6 +1,6 @@
 package uk.gov.di.authentication.oidc.services;
 
-import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.ConfigurationService;
 
 public class IPVCapacityService {
 

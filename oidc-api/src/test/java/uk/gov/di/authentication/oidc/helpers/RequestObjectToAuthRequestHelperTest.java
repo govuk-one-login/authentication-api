@@ -12,10 +12,10 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
-import uk.gov.di.authentication.shared.entity.LevelOfConfidence;
-import uk.gov.di.authentication.shared.entity.VectorOfTrust;
-import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
+import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
+import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
+import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
 
 import java.net.URI;
 import java.util.List;

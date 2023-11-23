@@ -18,14 +18,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.oidc.entity.AuthCodeResponse;
 import uk.gov.di.authentication.oidc.lambda.AuthCodeHandler;
-import uk.gov.di.authentication.shared.entity.ClientSession;
-import uk.gov.di.authentication.shared.entity.CustomScopeValue;
-import uk.gov.di.authentication.shared.entity.MFAMethodType;
-import uk.gov.di.authentication.shared.entity.ServiceType;
-import uk.gov.di.authentication.shared.entity.VectorOfTrust;
-import uk.gov.di.authentication.shared.serialization.Json;
-import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
-import uk.gov.di.authentication.sharedtest.helper.KeyPairHelper;
+import uk.gov.di.orchestration.shared.entity.ClientSession;
+import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
+import uk.gov.di.orchestration.shared.entity.MFAMethodType;
+import uk.gov.di.orchestration.shared.entity.ServiceType;
+import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.serialization.Json;
+import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
 
 import java.net.URI;
 import java.security.KeyPair;
@@ -43,8 +43,8 @@ import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTH_CODE_ISSUED;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
-import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
+import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";

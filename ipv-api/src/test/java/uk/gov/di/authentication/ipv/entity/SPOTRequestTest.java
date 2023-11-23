@@ -1,9 +1,9 @@
 package uk.gov.di.authentication.ipv.entity;
 
 import org.junit.jupiter.api.Test;
-import uk.gov.di.authentication.shared.entity.IdentityClaims;
-import uk.gov.di.authentication.shared.serialization.Json;
-import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.orchestration.shared.entity.IdentityClaims;
+import uk.gov.di.orchestration.shared.serialization.Json;
+import uk.gov.di.orchestration.shared.services.SerializationService;
 
 import java.util.Base64;
 import java.util.List;

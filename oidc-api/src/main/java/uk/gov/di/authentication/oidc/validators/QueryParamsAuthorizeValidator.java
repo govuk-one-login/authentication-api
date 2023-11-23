@@ -8,21 +8,21 @@ import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
 import uk.gov.di.authentication.oidc.services.IPVCapacityService;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
-import uk.gov.di.authentication.shared.entity.ValidClaims;
-import uk.gov.di.authentication.shared.entity.ValidScopes;
-import uk.gov.di.authentication.shared.entity.VectorOfTrust;
-import uk.gov.di.authentication.shared.exceptions.ClientRegistryValidationException;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoClientService;
+import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.orchestration.shared.entity.ValidClaims;
+import uk.gov.di.orchestration.shared.entity.ValidScopes;
+import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.exceptions.ClientRegistryValidationException;
+import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.DynamoClientService;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 
 public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
 

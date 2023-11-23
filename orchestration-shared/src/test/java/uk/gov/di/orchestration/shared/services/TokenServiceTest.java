@@ -66,6 +66,7 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.startsWith;
 import static org.hamcrest.core.Is.is;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -87,6 +88,7 @@ public class TokenServiceTest {
             new TokenService(configurationService, redisConnectionService, kmsConnectionService);
     private static final Subject PUBLIC_SUBJECT = SubjectHelper.govUkSignInSubject();
     private static final Subject INTERNAL_SUBJECT = SubjectHelper.govUkSignInSubject();
+    private static final Subject INTERNAL_PAIRWISE_SUBJECT = SubjectHelper.govUkSignInSubject();
     private static final Scope SCOPES =
             new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.PHONE);
     private static final String VOT = CredentialTrustLevel.MEDIUM_LEVEL.getValue();
@@ -146,7 +148,7 @@ public class TokenServiceTest {
                         SCOPES_OFFLINE_ACCESS,
                         additionalTokenClaims,
                         PUBLIC_SUBJECT,
-                        VOT,
+                        INTERNAL_PAIRWISE_SUBJECT,
                         Collections.singletonList(
                                 new ClientConsent(
                                         CLIENT_ID,
@@ -156,7 +158,8 @@ public class TokenServiceTest {
                         null,
                         false,
                         JWSAlgorithm.ES256,
-                        "client-session-id");
+                        "client-session-id",
+                        VOT);
 
         assertSuccessfulTokenResponse(tokenResponse);
 
@@ -164,7 +167,8 @@ public class TokenServiceTest {
         RefreshTokenStore refreshTokenStore =
                 new RefreshTokenStore(
                         tokenResponse.getOIDCTokens().getRefreshToken().getValue(),
-                        INTERNAL_SUBJECT.getValue());
+                        INTERNAL_SUBJECT.getValue(),
+                        INTERNAL_PAIRWISE_SUBJECT.getValue());
         ArgumentCaptor<String> redisKey = ArgumentCaptor.forClass(String.class);
         verify(redisConnectionService)
                 .saveWithExpiry(
@@ -203,7 +207,7 @@ public class TokenServiceTest {
                         SCOPES_OFFLINE_ACCESS,
                         additionalTokenClaims,
                         PUBLIC_SUBJECT,
-                        VOT,
+                        INTERNAL_PAIRWISE_SUBJECT,
                         Collections.singletonList(
                                 new ClientConsent(
                                         CLIENT_ID,
@@ -213,7 +217,8 @@ public class TokenServiceTest {
                         oidcClaimsRequest,
                         false,
                         JWSAlgorithm.ES256,
-                        "client-session-id");
+                        "client-session-id",
+                        VOT);
 
         assertSuccessfulTokenResponse(tokenResponse);
 
@@ -240,7 +245,8 @@ public class TokenServiceTest {
         RefreshTokenStore refreshTokenStore =
                 new RefreshTokenStore(
                         tokenResponse.getOIDCTokens().getRefreshToken().getValue(),
-                        INTERNAL_SUBJECT.getValue());
+                        INTERNAL_SUBJECT.getValue(),
+                        INTERNAL_PAIRWISE_SUBJECT.getValue());
 
         ArgumentCaptor<String> redisKey = ArgumentCaptor.forClass(String.class);
         verify(redisConnectionService)
@@ -274,7 +280,7 @@ public class TokenServiceTest {
                         SCOPES,
                         additionalTokenClaims,
                         PUBLIC_SUBJECT,
-                        VOT,
+                        INTERNAL_PAIRWISE_SUBJECT,
                         Collections.singletonList(
                                 new ClientConsent(
                                         CLIENT_ID,
@@ -284,11 +290,56 @@ public class TokenServiceTest {
                         null,
                         false,
                         JWSAlgorithm.ES256,
-                        "client-session-id");
+                        "client-session-id",
+                        VOT);
 
         assertSuccessfulTokenResponse(tokenResponse);
 
         assertNull(tokenResponse.getOIDCTokens().getRefreshToken());
+    }
+
+    @Test
+    void shouldNotIncludeInternalIdentifiersInTokens() throws ParseException, JOSEException {
+        when(configurationService.getTokenSigningKeyAlias()).thenReturn(KEY_ID);
+        when(configurationService.getAccessTokenExpiry()).thenReturn(300L);
+        createSignedIdToken();
+        createSignedAccessToken();
+        Map<String, Object> additionalTokenClaims = new HashMap<>();
+        additionalTokenClaims.put("nonce", nonce);
+        Set<String> claimsForListOfScopes =
+                ValidScopes.getClaimsForListOfScopes(SCOPES_OFFLINE_ACCESS.toStringList());
+        OIDCTokenResponse tokenResponse =
+                tokenService.generateTokenResponse(
+                        CLIENT_ID,
+                        INTERNAL_SUBJECT,
+                        SCOPES_OFFLINE_ACCESS,
+                        additionalTokenClaims,
+                        PUBLIC_SUBJECT,
+                        INTERNAL_PAIRWISE_SUBJECT,
+                        Collections.singletonList(
+                                new ClientConsent(
+                                        CLIENT_ID,
+                                        claimsForListOfScopes,
+                                        LocalDateTime.now(ZoneId.of("UTC")).toString())),
+                        false,
+                        null,
+                        false,
+                        JWSAlgorithm.ES256,
+                        "client-session-id",
+                        VOT);
+
+        var parsedAccessToken =
+                SignedJWT.parse(tokenResponse.getOIDCTokens().getAccessToken().getValue())
+                        .getPayload()
+                        .toString();
+        assertFalse(parsedAccessToken.contains(INTERNAL_SUBJECT.getValue()));
+        assertFalse(parsedAccessToken.contains(INTERNAL_PAIRWISE_SUBJECT.getValue()));
+        var parsedRefreshToken =
+                SignedJWT.parse(tokenResponse.getOIDCTokens().getRefreshToken().getValue())
+                        .getPayload()
+                        .toString();
+        assertFalse(parsedRefreshToken.contains(INTERNAL_SUBJECT.getValue()));
+        assertFalse(parsedRefreshToken.contains(INTERNAL_PAIRWISE_SUBJECT.getValue()));
     }
 
     @Test
@@ -466,7 +517,8 @@ public class TokenServiceTest {
         AccessTokenStore accessTokenStore =
                 new AccessTokenStore(
                         tokenResponse.getOIDCTokens().getAccessToken().getValue(),
-                        INTERNAL_SUBJECT.getValue());
+                        INTERNAL_SUBJECT.getValue(),
+                        INTERNAL_PAIRWISE_SUBJECT.getValue());
         verify(redisConnectionService)
                 .saveWithExpiry(
                         accessTokenKey, objectMapper.writeValueAsString(accessTokenStore), 300L);

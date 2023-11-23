@@ -3,10 +3,10 @@ package uk.gov.di.authentication.oidc.services;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import uk.gov.di.authentication.oidc.entity.BackChannelLogoutMessage;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
-import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.AwsSqsClient;
+import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.orchestration.shared.entity.UserProfile;
+import uk.gov.di.orchestration.shared.services.AuthenticationService;
+import uk.gov.di.orchestration.shared.services.AwsSqsClient;
 
 import java.util.Optional;
 import java.util.stream.Stream;

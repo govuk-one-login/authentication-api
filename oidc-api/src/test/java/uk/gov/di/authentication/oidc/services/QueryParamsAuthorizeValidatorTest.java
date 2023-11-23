@@ -20,12 +20,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.oidc.validators.QueryParamsAuthorizeValidator;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
-import uk.gov.di.authentication.shared.entity.CustomScopeValue;
-import uk.gov.di.authentication.shared.entity.ValidClaims;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoClientService;
-import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
+import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
+import uk.gov.di.orchestration.shared.entity.ValidClaims;
+import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.DynamoClientService;
+import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.security.KeyPair;
@@ -46,8 +46,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
-import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
+import static uk.gov.di.orchestration.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
+import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 class QueryParamsAuthorizeValidatorTest {
 

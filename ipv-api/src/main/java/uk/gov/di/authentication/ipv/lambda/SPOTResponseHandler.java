@@ -11,22 +11,22 @@ import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.entity.LogIds;
 import uk.gov.di.authentication.ipv.entity.SPOTResponse;
 import uk.gov.di.authentication.ipv.entity.SPOTStatus;
-import uk.gov.di.authentication.shared.domain.AuditableEvent;
-import uk.gov.di.authentication.shared.serialization.Json;
-import uk.gov.di.authentication.shared.serialization.Json.JsonException;
-import uk.gov.di.authentication.shared.services.AuditService;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoIdentityService;
-import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.orchestration.shared.domain.AuditableEvent;
+import uk.gov.di.orchestration.shared.serialization.Json;
+import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
+import uk.gov.di.orchestration.shared.services.AuditService;
+import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
+import uk.gov.di.orchestration.shared.services.SerializationService;
 
 import java.util.NoSuchElementException;
 
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 
 public class SPOTResponseHandler implements RequestHandler<SQSEvent, Object> {
 

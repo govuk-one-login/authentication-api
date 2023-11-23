@@ -3,7 +3,7 @@ package uk.gov.di.authentication.oidc.services;
 import com.nimbusds.oauth2.sdk.id.State;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.authentication.shared.services.RedisConnectionService;
+import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 
 import java.util.HashMap;
 import java.util.Map;

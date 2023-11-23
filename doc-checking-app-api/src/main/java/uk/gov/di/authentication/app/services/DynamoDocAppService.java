@@ -1,9 +1,9 @@
 package uk.gov.di.authentication.app.services;
 
 import uk.gov.di.authentication.app.entity.DocAppCredential;
-import uk.gov.di.authentication.shared.helpers.NowHelper;
-import uk.gov.di.authentication.shared.services.BaseDynamoService;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.helpers.NowHelper;
+import uk.gov.di.orchestration.shared.services.BaseDynamoService;
+import uk.gov.di.orchestration.shared.services.ConfigurationService;
 
 import java.time.temporal.ChronoUnit;
 import java.util.List;

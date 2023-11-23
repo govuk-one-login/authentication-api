@@ -3,8 +3,9 @@ package uk.gov.di.orchestration.shared.helpers;
 import java.util.Map;
 import java.util.Objects;
 
-public class PersistentIdHelper {
+import static uk.gov.di.orchestration.shared.helpers.CookieHelper.appendTimestampToCookieValue;
 
+public class PersistentIdHelper {
     public static final String PERSISTENT_ID_HEADER_NAME = "di-persistent-session-id";
     public static final String PERSISTENT_ID_UNKNOWN_VALUE = "unknown";
 
@@ -26,7 +27,15 @@ public class PersistentIdHelper {
 
     public static String getExistingOrCreateNewPersistentSessionId(Map<String, String> headers) {
         return CookieHelper.parsePersistentCookie(headers)
-                .flatMap(InputSanitiser::sanitiseBase64)
-                .orElse(IdGenerator.generate());
+                .orElse(appendTimestampToCookieValue(IdGenerator.generate()));
+    }
+
+    public static boolean isValidPersistentSessionCookieWithDoubleDashedTimestamp(
+            String cookieValue) {
+        return cookieValue.matches("[A-Za-z0-9-_]{27}--\\d{13}");
+    }
+
+    public static boolean isOldPersistentSessionCookieWithoutTimestamp(String cookieValue) {
+        return cookieValue.matches("[A-Za-z0-9-_]{27}");
     }
 }

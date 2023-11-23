@@ -4,9 +4,9 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import static uk.gov.di.authentication.shared.entity.IdentityClaims.SUB;
-import static uk.gov.di.authentication.shared.entity.IdentityClaims.VOT;
-import static uk.gov.di.authentication.shared.entity.IdentityClaims.VTM;
+import static uk.gov.di.orchestration.shared.entity.IdentityClaims.SUB;
+import static uk.gov.di.orchestration.shared.entity.IdentityClaims.VOT;
+import static uk.gov.di.orchestration.shared.entity.IdentityClaims.VTM;
 
 public class SPOTClaims {
 

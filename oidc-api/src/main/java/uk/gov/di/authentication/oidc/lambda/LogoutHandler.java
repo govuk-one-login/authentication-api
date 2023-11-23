@@ -13,21 +13,21 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.services.BackChannelLogoutService;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
-import uk.gov.di.authentication.shared.entity.ResponseHeaders;
-import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.helpers.CookieHelper;
-import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
-import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
-import uk.gov.di.authentication.shared.services.AuditService;
-import uk.gov.di.authentication.shared.services.ClientSessionService;
-import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoClientService;
-import uk.gov.di.authentication.shared.services.JwksService;
-import uk.gov.di.authentication.shared.services.KmsConnectionService;
-import uk.gov.di.authentication.shared.services.SessionService;
-import uk.gov.di.authentication.shared.services.TokenValidationService;
+import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
+import uk.gov.di.orchestration.shared.entity.Session;
+import uk.gov.di.orchestration.shared.helpers.CookieHelper;
+import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
+import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
+import uk.gov.di.orchestration.shared.services.AuditService;
+import uk.gov.di.orchestration.shared.services.ClientSessionService;
+import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
+import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.DynamoClientService;
+import uk.gov.di.orchestration.shared.services.JwksService;
+import uk.gov.di.orchestration.shared.services.KmsConnectionService;
+import uk.gov.di.orchestration.shared.services.SessionService;
+import uk.gov.di.orchestration.shared.services.TokenValidationService;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -35,13 +35,13 @@ import java.text.ParseException;
 import java.util.Map;
 import java.util.Optional;
 
-import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 
 public class LogoutHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {

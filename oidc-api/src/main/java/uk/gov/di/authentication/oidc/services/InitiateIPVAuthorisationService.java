@@ -14,21 +14,21 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
-import uk.gov.di.authentication.shared.entity.ResponseHeaders;
-import uk.gov.di.authentication.shared.entity.Session;
-import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
-import uk.gov.di.authentication.shared.services.AuditService;
-import uk.gov.di.authentication.shared.services.CloudwatchMetricsService;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
+import uk.gov.di.orchestration.shared.entity.Session;
+import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
+import uk.gov.di.orchestration.shared.services.AuditService;
+import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
+import uk.gov.di.orchestration.shared.services.ConfigurationService;
 
 import java.util.Map;
 import java.util.Optional;
 
-import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
-import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
-import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
+import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
+import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
 
 public class InitiateIPVAuthorisationService {
 

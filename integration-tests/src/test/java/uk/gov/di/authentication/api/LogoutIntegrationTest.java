@@ -16,10 +16,10 @@ import com.nimbusds.openid.connect.sdk.claims.IDTokenClaimsSet;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.oidc.lambda.LogoutHandler;
-import uk.gov.di.authentication.shared.entity.ServiceType;
-import uk.gov.di.authentication.shared.helpers.NowHelper;
-import uk.gov.di.authentication.shared.serialization.Json;
-import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.orchestration.shared.entity.ServiceType;
+import uk.gov.di.orchestration.shared.helpers.NowHelper;
+import uk.gov.di.orchestration.shared.serialization.Json;
+import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
 import java.net.URI;
 import java.time.temporal.ChronoUnit;
@@ -33,11 +33,11 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.hasEntry;
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.LOG_OUT_SUCCESS;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
-import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.isRedirect;
-import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.isRedirectTo;
-import static uk.gov.di.authentication.sharedtest.matchers.UriMatcher.baseUri;
-import static uk.gov.di.authentication.sharedtest.matchers.UriMatcher.redirectQueryParameters;
+import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
+import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.isRedirect;
+import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.isRedirectTo;
+import static uk.gov.di.orchestration.sharedtest.matchers.UriMatcher.baseUri;
+import static uk.gov.di.orchestration.sharedtest.matchers.UriMatcher.redirectQueryParameters;
 
 public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 

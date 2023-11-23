@@ -15,13 +15,13 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationResponse;
 import uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService;
-import uk.gov.di.authentication.shared.entity.ClientType;
-import uk.gov.di.authentication.shared.helpers.IdGenerator;
-import uk.gov.di.authentication.shared.serialization.Json;
-import uk.gov.di.authentication.shared.services.AuditService;
-import uk.gov.di.authentication.shared.services.ClientService;
-import uk.gov.di.authentication.shared.services.SerializationService;
-import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
+import uk.gov.di.orchestration.shared.entity.ClientType;
+import uk.gov.di.orchestration.shared.helpers.IdGenerator;
+import uk.gov.di.orchestration.shared.serialization.Json;
+import uk.gov.di.orchestration.shared.services.AuditService;
+import uk.gov.di.orchestration.shared.services.ClientService;
+import uk.gov.di.orchestration.shared.services.SerializationService;
+import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.util.List;
 import java.util.Optional;
@@ -43,10 +43,10 @@ import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAudit
 import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAuditableEvent.REGISTER_CLIENT_REQUEST_RECEIVED;
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_PUBLIC_KEY;
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_SCOPE;
-import static uk.gov.di.authentication.shared.entity.ServiceType.MANDATORY;
-import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
-import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
-import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.orchestration.shared.entity.ServiceType.MANDATORY;
+import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
+import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
+import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class ClientRegistrationHandlerTest {
 

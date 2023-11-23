@@ -16,7 +16,6 @@ import uk.gov.di.authentication.sharedtest.extensions.AccountModifiersStoreExten
 import uk.gov.di.authentication.sharedtest.extensions.AuditSnsTopicExtension;
 import uk.gov.di.authentication.sharedtest.extensions.ClientStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.CommonPasswordsExtension;
-import uk.gov.di.authentication.sharedtest.extensions.DocumentAppCredentialStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.IdentityStoreExtension;
 import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
 import uk.gov.di.authentication.sharedtest.extensions.ParameterStoreExtension;
@@ -206,10 +205,6 @@ public abstract class HandlerIntegrationTest<Q, S> {
     @RegisterExtension
     protected static final AccountModifiersStoreExtension accountModifiersStore =
             new AccountModifiersStoreExtension();
-
-    @RegisterExtension
-    protected static final DocumentAppCredentialStoreExtension documentAppCredentialStore =
-            new DocumentAppCredentialStoreExtension(180);
 
     @RegisterExtension
     protected static final CommonPasswordsExtension commonPasswords =

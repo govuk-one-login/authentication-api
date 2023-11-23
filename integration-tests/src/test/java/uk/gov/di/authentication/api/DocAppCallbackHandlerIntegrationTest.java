@@ -21,22 +21,22 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.authentication.app.lambda.DocAppCallbackHandler;
-import uk.gov.di.authentication.shared.entity.ClientSession;
-import uk.gov.di.authentication.shared.entity.ClientType;
-import uk.gov.di.authentication.shared.entity.ResponseHeaders;
-import uk.gov.di.authentication.shared.entity.ServiceType;
-import uk.gov.di.authentication.shared.entity.VectorOfTrust;
-import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.authentication.shared.helpers.SaltHelper;
-import uk.gov.di.authentication.shared.serialization.Json;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
-import uk.gov.di.authentication.sharedtest.extensions.CriStubExtension;
-import uk.gov.di.authentication.sharedtest.extensions.DocumentAppCredentialStoreExtension;
-import uk.gov.di.authentication.sharedtest.extensions.KmsKeyExtension;
-import uk.gov.di.authentication.sharedtest.extensions.SnsTopicExtension;
-import uk.gov.di.authentication.sharedtest.extensions.SqsQueueExtension;
-import uk.gov.di.authentication.sharedtest.extensions.TokenSigningExtension;
+import uk.gov.di.orchestration.shared.entity.ClientSession;
+import uk.gov.di.orchestration.shared.entity.ClientType;
+import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
+import uk.gov.di.orchestration.shared.entity.ServiceType;
+import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
+import uk.gov.di.orchestration.shared.helpers.SaltHelper;
+import uk.gov.di.orchestration.shared.serialization.Json;
+import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.orchestration.sharedtest.extensions.CriStubExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.DocumentAppCredentialStoreExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.KmsKeyExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.SnsTopicExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.SqsQueueExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.TokenSigningExtension;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -59,8 +59,8 @@ import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.DOC_APP_S
 import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.DOC_APP_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED;
 import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED;
 import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.DOC_APP_UNSUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED;
-import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
-import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
+import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 

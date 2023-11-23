@@ -24,11 +24,11 @@ import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
-import uk.gov.di.authentication.shared.exceptions.UnsuccessfulCredentialResponseException;
-import uk.gov.di.authentication.shared.helpers.ConstructUriHelper;
-import uk.gov.di.authentication.shared.helpers.NowHelper;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.KmsConnectionService;
+import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
+import uk.gov.di.orchestration.shared.helpers.ConstructUriHelper;
+import uk.gov.di.orchestration.shared.helpers.NowHelper;
+import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 
 import java.io.IOException;
 import java.time.temporal.ChronoUnit;

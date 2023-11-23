@@ -3,10 +3,10 @@ package uk.gov.di.authentication.oidc.services;
 import com.nimbusds.oauth2.sdk.id.State;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.authentication.shared.serialization.Json;
-import uk.gov.di.authentication.shared.serialization.Json.JsonException;
-import uk.gov.di.authentication.shared.services.RedisConnectionService;
-import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.orchestration.shared.serialization.Json;
+import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
+import uk.gov.di.orchestration.shared.services.RedisConnectionService;
+import uk.gov.di.orchestration.shared.services.SerializationService;
 
 import java.util.Map;
 import java.util.Optional;

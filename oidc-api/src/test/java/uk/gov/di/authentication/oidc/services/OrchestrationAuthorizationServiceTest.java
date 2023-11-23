@@ -32,14 +32,14 @@ import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
-import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
-import uk.gov.di.authentication.shared.helpers.CookieHelper;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoClientService;
-import uk.gov.di.authentication.shared.services.KmsConnectionService;
-import uk.gov.di.authentication.shared.services.RedisConnectionService;
-import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
+import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
+import uk.gov.di.orchestration.shared.helpers.CookieHelper;
+import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.DynamoClientService;
+import uk.gov.di.orchestration.shared.services.KmsConnectionService;
+import uk.gov.di.orchestration.shared.services.RedisConnectionService;
+import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.security.KeyPair;
@@ -64,9 +64,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.isValidPersistentSessionCookieWithDoubleDashedTimestamp;
-import static uk.gov.di.authentication.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
-import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
+import static uk.gov.di.orchestration.shared.helpers.PersistentIdHelper.isValidPersistentSessionCookieWithDoubleDashedTimestamp;
+import static uk.gov.di.orchestration.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
+import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 class OrchestrationAuthorizationServiceTest {
 
