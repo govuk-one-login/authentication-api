@@ -71,7 +71,7 @@ module "ipv-callback" {
     local.authentication_egress_security_group_id,
     local.authentication_oidc_redis_security_group_id,
   ]
-  subnet_id                              = local.authentication_subnet_ids
+  subnet_id                              = local.authentication_private_subnet_ids
   lambda_role_arn                        = module.ipv_callback_role.arn
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
