@@ -230,15 +230,8 @@ public class AuthorisationHandler
                         "Redirect URI or ClientID is missing from auth request", e);
             }
             LOG.warn("Authentication request could not be parsed", e);
-            return generateErrorResponse(
-                    e.getRedirectionURI(),
-                    e.getState(),
-                    e.getResponseMode(),
-                    e.getErrorObject(),
-                    ipAddress,
-                    persistentSessionId,
-                    AuditService.UNKNOWN,
-                    clientSessionId);
+            throwError(e.getErrorObject(), ipAddress, persistentSessionId, clientSessionId);
+            throw new AssertionError("Not reached");
         } catch (NullPointerException e) {
             LOG.warn(
                     "No parameters are present in the Authentication request query string or body",
@@ -575,6 +568,29 @@ public class AuthorisationHandler
 
         return generateApiGatewayProxyResponse(
                 302, "", Map.of(ResponseHeaders.LOCATION, error.toURI().toString()), null);
+    }
+
+    private void throwError(
+            ErrorObject errorObject,
+            String ipAddress,
+            String persistentSessionId,
+            String clientSessionId) {
+
+        auditService.submitAuditEvent(
+                OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR,
+                clientSessionId,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                ipAddress,
+                AuditService.UNKNOWN,
+                persistentSessionId,
+                pair("description", errorObject.getDescription()));
+
+        LOG.warn("Throwing auth error: {} {}", errorObject.getCode(), errorObject.getDescription());
+
+        throw new RuntimeException(errorObject.getDescription());
     }
 
     private Optional<OIDCClaimsRequest> constructAdditionalAuthenticationClaims(
