@@ -552,7 +552,7 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldReturn400WhenAuthorisationRequestCannotBeParsed() {
+        void shouldThrowErrorWhenAuthorisationRequestCannotBeParsed() {
             APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
             event.setHttpMethod("GET");
             event.setQueryStringParameters(
@@ -571,13 +571,10 @@ class AuthorisationHandlerTest {
                     new ProxyRequestContext()
                             .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
 
-            APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
-
-            assertThat(response, hasStatus(302));
-            assertEquals(
-                    "https://localhost:8080?error=invalid_request&error_description=Invalid+request%3A+Missing+response_type+parameter&state="
-                            + STATE.getValue(),
-                    response.getHeaders().get(ResponseHeaders.LOCATION));
+            assertThrows(
+                    RuntimeException.class,
+                    () -> makeHandlerRequest(event),
+                    "Invalid request: Missing response_type parameter");
 
             verify(auditService)
                     .submitAuditEvent(
@@ -725,16 +722,16 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldReturnErrorWhenUnrecognisedPromptValue() {
+        void shouldThrowErrorWhenUnrecognisedPromptValue() {
             Map<String, String> requestParams =
                     buildRequestParams(Map.of("prompt", "unrecognised"));
-            APIGatewayProxyResponseEvent response =
-                    makeHandlerRequest(withRequestEvent(requestParams));
-            assertThat(response, hasStatus(302));
-            assertEquals(
-                    "https://localhost:8080?error=invalid_request&error_description=Invalid+request%3A+Invalid+prompt+parameter%3A+Unknown+prompt+type%3A+unrecognised&state="
-                            + STATE.getValue(),
-                    response.getHeaders().get(ResponseHeaders.LOCATION));
+
+            assertThrows(
+                    RuntimeException.class,
+                    () -> {
+                        makeHandlerRequest(withRequestEvent(requestParams));
+                    },
+                    "Invalid request: Invalid prompt parameter: Unknown prompt type: unrecognised");
 
             verify(auditService)
                     .submitAuditEvent(
@@ -1048,6 +1045,22 @@ class AuthorisationHandlerTest {
                             .toList()
                             .contains("Doc app request received"));
         }
+    }
+
+    @Test
+    void shouldNotActAsAnOpenRedirector() {
+        assertThrows(
+                RuntimeException.class,
+                () -> {
+                    handler.handleRequest(
+                            withRequestEvent(
+                                    Map.of(
+                                            "redirect_uri",
+                                            "https://www.example.com",
+                                            "client_id",
+                                            "invalid-client")),
+                            context);
+                });
     }
 
     private static Stream<ErrorObject> expectedErrorObjects() {
