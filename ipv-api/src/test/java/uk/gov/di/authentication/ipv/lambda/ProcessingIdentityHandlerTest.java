@@ -12,6 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityResponse;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityStatus;
+import uk.gov.di.orchestration.entity.AccountInterventionStatus;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
@@ -21,6 +22,7 @@ import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
+import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
@@ -80,6 +82,8 @@ class ProcessingIdentityHandlerTest {
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final DynamoIdentityService dynamoIdentityService = mock(DynamoIdentityService.class);
+    private final AccountInterventionService accountInterventionService =
+            mock(AccountInterventionService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
     private final AuditService auditService = mock(AuditService.class);
@@ -109,6 +113,7 @@ class ProcessingIdentityHandlerTest {
         handler =
                 new ProcessingIdentityHandler(
                         dynamoIdentityService,
+                        accountInterventionService,
                         sessionService,
                         clientSessionService,
                         dynamoClientService,
@@ -157,6 +162,50 @@ class ProcessingIdentityHandlerTest {
                                 ENVIRONMENT,
                                 "Status",
                                 ProcessingIdentityStatus.COMPLETED.toString()));
+    }
+
+    @Test
+    void shouldMakeAndAuditAISCallIfFlagIsTurnedOnAndProcessingStatusIsCOMPLETED()
+            throws Json.JsonException {
+        usingValidSession();
+        var identityCredentials =
+                new IdentityCredentials()
+                        .withSubjectID(PAIRWISE_SUBJECT.getValue())
+                        .withAdditionalClaims(Collections.emptyMap())
+                        .withCoreIdentityJWT("a-core-identity");
+        when(dynamoIdentityService.getIdentityCredentials(anyString()))
+                .thenReturn(Optional.of(identityCredentials));
+        when(clientSessionService.getClientSessionFromRequestHeaders(any()))
+                .thenReturn(Optional.of(getClientSession()));
+        when(configurationService.isAccountInterventionServiceAuditEnabled()).thenReturn(true);
+        when(accountInterventionService.getAccountStatus(anyString()))
+                .thenReturn(new AccountInterventionStatus(false, false, false, false));
+
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+        assertThat(
+                result,
+                hasBody(
+                        objectMapper.writeValueAsString(
+                                new ProcessingIdentityResponse(
+                                        ProcessingIdentityStatus.COMPLETED))));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "ProcessingIdentity",
+                        Map.of(
+                                "Environment",
+                                ENVIRONMENT,
+                                "Status",
+                                ProcessingIdentityStatus.COMPLETED.toString()));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "AISResult",
+                        Map.of(
+                                "blocked", "false",
+                                "suspended", "false",
+                                "resetPassword", "false",
+                                "reproveIdentity", "false"));
     }
 
     @Test

@@ -15,6 +15,7 @@ import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.orchestration.shared.serialization.Json;
+import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
@@ -29,11 +30,14 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 
+import static java.net.http.HttpClient.newHttpClient;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
 public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIdentityRequest> {
 
     private final DynamoIdentityService dynamoIdentityService;
+    private final AccountInterventionService accountInterventionService;
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
 
@@ -42,6 +46,8 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
     public ProcessingIdentityHandler(ConfigurationService configurationService) {
         super(ProcessingIdentityRequest.class, configurationService);
         this.dynamoIdentityService = new DynamoIdentityService(configurationService);
+        this.accountInterventionService =
+                new AccountInterventionService(configurationService, newHttpClient());
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
     }
@@ -52,6 +58,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
 
     public ProcessingIdentityHandler(
             DynamoIdentityService dynamoIdentityService,
+            AccountInterventionService accountInterventionService,
             SessionService sessionService,
             ClientSessionService clientSessionService,
             DynamoClientService dynamoClientService,
@@ -67,14 +74,9 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                 dynamoClientService,
                 dynamoService);
         this.dynamoIdentityService = dynamoIdentityService;
+        this.accountInterventionService = accountInterventionService;
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
-    }
-
-    @Override
-    public APIGatewayProxyResponseEvent handleRequest(
-            APIGatewayProxyRequestEvent input, Context context) {
-        return super.handleRequest(input, context);
     }
 
     @Override
@@ -132,6 +134,10 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
             LOG.info(
                     "Generating ProcessingIdentityResponse with ProcessingIdentityStatus: {}",
                     processingStatus);
+            if (processingStatus == ProcessingIdentityStatus.COMPLETED
+                    && configurationService.isAccountInterventionServiceAuditEnabled()) {
+                checkAccountInterventionService(pairwiseSubject.getValue());
+            }
             return generateApiGatewayProxyResponse(
                     200, new ProcessingIdentityResponse(processingStatus));
         } catch (Json.JsonException e) {
@@ -143,6 +149,32 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                     userContext.getUserProfile().isPresent(),
                     userContext.getClient().isPresent());
             throw new RuntimeException();
+        }
+    }
+
+    private void checkAccountInterventionService(String internalPairwiseSubjectId) {
+
+        var aisResult =
+                segmentedFunctionCall(
+                        "ipv-api::" + getClass().getSimpleName(),
+                        () ->
+                                accountInterventionService.getAccountStatus(
+                                        internalPairwiseSubjectId));
+
+        cloudwatchMetricsService.incrementCounter(
+                "AISResult",
+                Map.of(
+                        "blocked", String.valueOf(aisResult.blocked()),
+                        "suspended", String.valueOf(aisResult.suspended()),
+                        "resetPassword", String.valueOf(aisResult.resetPassword()),
+                        "reproveIdentity", String.valueOf(aisResult.reproveIdentity())));
+
+        if (configurationService.isAccountInterventionServiceEnabled()) {
+            if (aisResult.blocked()) {
+                // TODO: back channel logout + redirect to blocked page
+            } else if (aisResult.suspended()) {
+                // TODO back channel logout + redirect to suspended page
+            }
         }
     }
 }

@@ -2,8 +2,8 @@ package uk.gov.di.orchestration.shared.services;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.orchestration.shared.entity.AccountInterventionResponse;
-import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
+import uk.gov.di.orchestration.entity.AccountInterventionResponse;
+import uk.gov.di.orchestration.entity.AccountInterventionStatus;
 import uk.gov.di.orchestration.shared.exceptions.AccountInterventionException;
 import uk.gov.di.orchestration.shared.serialization.Json;
 
@@ -17,12 +17,10 @@ import java.net.http.HttpResponse;
 public class AccountInterventionService {
 
     private static final Logger LOGGER = LogManager.getLogger(AccountInterventionService.class);
-    private final boolean accountInterventionsEnabled;
     private final HttpClient httpClient;
     private final URI accountInterventionServiceURI;
 
     public AccountInterventionService(ConfigurationService configService, HttpClient httpClient) {
-        this.accountInterventionsEnabled = configService.isAccountInterventionServiceEnabled();
         this.accountInterventionServiceURI = configService.getAccountInterventionServiceURI();
         this.httpClient = httpClient;
     }
@@ -30,13 +28,9 @@ public class AccountInterventionService {
     public AccountInterventionStatus getAccountStatus(String internalPairwiseSubjectId)
             throws AccountInterventionException {
         try {
-            if (accountInterventionsEnabled) {
-                return retrieveAccountStatus(internalPairwiseSubjectId);
-            }
-
-            return new AccountInterventionStatus(false, false, false, false);
-
+            return retrieveAccountStatus(internalPairwiseSubjectId);
         } catch (IOException | URISyntaxException | InterruptedException | Json.JsonException e) {
+            Thread.currentThread().interrupt();
             throw new AccountInterventionException(
                     "Problem communicating with Account Intervention Service", e);
         }
