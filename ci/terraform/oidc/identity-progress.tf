@@ -29,7 +29,7 @@ module "identity_progress" {
     LOCALSTACK_ENDPOINT      = var.use_localstack ? var.localstack_endpoint : null
     REDIS_KEY                = local.redis_key
   }
-  handler_function_name = "uk.gov.di.authentication.ipv.lambda.IdentityProgressHandler::handleRequest"
+  handler_function_name = "uk.gov.di.authentication.ipv.lambda.IdentityProgressFrontendHandler::handleRequest"
 
   rest_api_id      = aws_api_gateway_rest_api.di_authentication_frontend_api.id
   root_resource_id = aws_api_gateway_rest_api.di_authentication_frontend_api.root_resource_id
