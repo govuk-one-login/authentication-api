@@ -1,12 +1,13 @@
 package uk.gov.di.authentication.sharedtest.httpstub;
 
-import jakarta.ws.rs.core.UriBuilder;
+import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -94,7 +95,11 @@ public class HttpStubExtension implements AfterAllCallback {
     }
 
     public URI uri(String path) {
-        return baseUri().path(path).build();
+        try {
+            return baseUri().setPath(path).build();
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public List<RecordedRequest> getRecordedRequests() {
@@ -115,8 +120,8 @@ public class HttpStubExtension implements AfterAllCallback {
                 .collect(Collectors.toList());
     }
 
-    private UriBuilder baseUri() {
-        return UriBuilder.fromUri("http://localhost").port(getHttpPort());
+    private URIBuilder baseUri() {
+        return new URIBuilder().setHost("localhost").setScheme("http").setPort(getHttpPort());
     }
 
     @Override

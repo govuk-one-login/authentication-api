@@ -9,7 +9,6 @@ dependencies {
     implementation configurations.tests,
             configurations.lambda,
             configurations.apache,
-            configurations.glassfish,
             configurations.nimbus,
             configurations.lettuce,
             configurations.dynamodb,
