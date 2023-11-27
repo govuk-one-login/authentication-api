@@ -90,7 +90,7 @@ public class SendOtpNotificationHandler
                         configurationService.getSqsEndpointUri());
         this.codeGeneratorService = new CodeGeneratorService();
         this.codeStorageService =
-                new CodeStorageService(new RedisConnectionService(configurationService));
+                new CodeStorageService(RedisConnectionService.getInstance(configurationService));
         this.dynamoService = new DynamoService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.clientService = new DynamoClientService(configurationService);

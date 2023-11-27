@@ -96,7 +96,7 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
         this.authorisationService =
                 new IPVAuthorisationService(
                         configurationService,
-                        new RedisConnectionService(configurationService),
+                        RedisConnectionService.getInstance(configurationService),
                         new KmsConnectionService(configurationService));
         this.noSessionOrchestrationService =
                 new NoSessionOrchestrationService(configurationService);

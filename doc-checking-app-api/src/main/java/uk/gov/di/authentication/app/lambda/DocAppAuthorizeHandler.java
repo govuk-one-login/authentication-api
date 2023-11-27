@@ -73,7 +73,7 @@ public class DocAppAuthorizeHandler
         this.authorisationService =
                 new DocAppAuthorisationService(
                         configurationService,
-                        new RedisConnectionService(configurationService),
+                        RedisConnectionService.getInstance(configurationService),
                         kmsConnectionService,
                         new JwksService(configurationService, kmsConnectionService));
         this.auditService = new AuditService(configurationService);
@@ -81,7 +81,7 @@ public class DocAppAuthorizeHandler
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.noSessionOrchestrationService =
                 new NoSessionOrchestrationService(
-                        new RedisConnectionService(configurationService),
+                        RedisConnectionService.getInstance(configurationService),
                         clientSessionService,
                         configurationService);
     }

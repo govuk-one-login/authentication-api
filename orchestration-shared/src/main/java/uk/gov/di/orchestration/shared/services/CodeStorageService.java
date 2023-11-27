@@ -34,7 +34,7 @@ public class CodeStorageService {
     private static final long MFA_ATTEMPTS_COUNTER_TIME_TO_LIVE_SECONDS = 900;
 
     public CodeStorageService(ConfigurationService configurationService) {
-        this(new RedisConnectionService(configurationService));
+        this(RedisConnectionService.getInstance(configurationService));
     }
 
     public CodeStorageService(RedisConnectionService redisConnectionService) {

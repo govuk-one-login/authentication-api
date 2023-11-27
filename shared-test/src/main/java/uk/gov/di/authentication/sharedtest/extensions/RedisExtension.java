@@ -335,13 +335,12 @@ public class RedisExtension
 
     @Override
     public void afterAll(ExtensionContext context) throws Exception {
-        redis.close();
         client.shutdown();
     }
 
     @Override
     public void beforeAll(ExtensionContext context) throws Exception {
-        redis = new RedisConnectionService(configurationService);
+        redis = RedisConnectionService.getInstance(configurationService);
         RedisURI.Builder builder =
                 RedisURI.builder()
                         .withHost(configurationService.getRedisHost())

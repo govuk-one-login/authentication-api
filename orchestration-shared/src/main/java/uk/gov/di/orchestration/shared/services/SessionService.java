@@ -35,13 +35,7 @@ public class SessionService {
     }
 
     public SessionService(ConfigurationService configurationService) {
-        this(
-                configurationService,
-                new RedisConnectionService(
-                        configurationService.getRedisHost(),
-                        configurationService.getRedisPort(),
-                        configurationService.getUseRedisTLS(),
-                        configurationService.getRedisPassword()));
+        this(configurationService, RedisConnectionService.getInstance(configurationService));
     }
 
     public Session createSession() {

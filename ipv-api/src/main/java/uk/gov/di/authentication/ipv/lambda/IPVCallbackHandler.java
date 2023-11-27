@@ -117,7 +117,7 @@ public class IPVCallbackHandler
         this.ipvAuthorisationService =
                 new IPVAuthorisationService(
                         configurationService,
-                        new RedisConnectionService(configurationService),
+                        RedisConnectionService.getInstance(configurationService),
                         kmsConnectionService);
         this.ipvTokenService = new IPVTokenService(configurationService, kmsConnectionService);
         this.sessionService = new SessionService(configurationService);

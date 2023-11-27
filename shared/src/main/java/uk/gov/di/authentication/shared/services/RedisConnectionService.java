@@ -14,34 +14,36 @@ import java.util.Optional;
 import static io.lettuce.core.support.ConnectionPoolSupport.createGenericObjectPool;
 import static uk.gov.di.authentication.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
-public class RedisConnectionService implements AutoCloseable {
+public class RedisConnectionService {
 
     public static final String REDIS_CONNECTION_ERROR = "Error getting Redis connection";
-    private final RedisClient client;
+    private static RedisConnectionService instance;
 
     private final GenericObjectPool<StatefulRedisConnection<String, String>> pool;
 
-    public RedisConnectionService(
-            String host, int port, boolean useSsl, Optional<String> password, boolean warmup) {
+    private RedisConnectionService(
+            String host, int port, boolean useSsl, Optional<String> password) {
         RedisURI.Builder builder = RedisURI.builder().withHost(host).withPort(port).withSsl(useSsl);
         password.ifPresent(s -> builder.withPassword(s.toCharArray()));
         RedisURI redisURI = builder.build();
-        this.client = RedisClient.create(redisURI);
+        RedisClient client = RedisClient.create(redisURI);
         this.pool = createGenericObjectPool(client::connect, new GenericObjectPoolConfig<>());
-        if (warmup) warmUp();
+        warmUp();
     }
 
-    public RedisConnectionService(
-            String host, int port, boolean useSsl, Optional<String> password) {
-        this(host, port, useSsl, password, true);
-    }
-
-    public RedisConnectionService(ConfigurationService configurationService) {
+    private RedisConnectionService(ConfigurationService configurationService) {
         this(
                 configurationService.getRedisHost(),
                 configurationService.getRedisPort(),
                 configurationService.getUseRedisTLS(),
                 configurationService.getRedisPassword());
+    }
+
+    public static RedisConnectionService getInstance(ConfigurationService configurationService) {
+        if (instance == null) {
+            instance = new RedisConnectionService(configurationService);
+        }
+        return instance;
     }
 
     @FunctionalInterface
@@ -96,12 +98,6 @@ public class RedisConnectionService implements AutoCloseable {
     private void warmUp() {
         segmentedFunctionCall(
                 "Redis: warmUp", () -> executeCommand(RedisServerCommands::clientGetname));
-    }
-
-    @Override
-    public void close() {
-        pool.close();
-        client.shutdown();
     }
 
     public static class RedisConnectionException extends RuntimeException {

@@ -29,12 +29,7 @@ public class AuthorisationCodeService {
     }
 
     public AuthorisationCodeService(ConfigurationService configurationService) {
-        this.redisConnectionService =
-                new RedisConnectionService(
-                        configurationService.getRedisHost(),
-                        configurationService.getRedisPort(),
-                        configurationService.getUseRedisTLS(),
-                        configurationService.getRedisPassword());
+        this.redisConnectionService = RedisConnectionService.getInstance(configurationService);
         this.authorisationCodeExpiry = configurationService.getAuthCodeExpiry();
         this.objectMapper = SerializationService.getInstance();
     }

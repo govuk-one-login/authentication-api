@@ -72,7 +72,7 @@ public class UserInfoHandler
                         new AuthenticationUserInfoStorageService(configurationService));
         this.accessTokenService =
                 new AccessTokenService(
-                        new RedisConnectionService(configurationService),
+                        RedisConnectionService.getInstance(configurationService),
                         new DynamoClientService(configurationService),
                         new TokenValidationService(
                                 new JwksService(

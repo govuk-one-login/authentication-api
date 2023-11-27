@@ -36,7 +36,7 @@ public class NoSessionOrchestrationService {
 
     public NoSessionOrchestrationService(ConfigurationService configurationService) {
         this(
-                new RedisConnectionService(configurationService),
+                RedisConnectionService.getInstance(configurationService),
                 new ClientSessionService(configurationService),
                 configurationService);
     }

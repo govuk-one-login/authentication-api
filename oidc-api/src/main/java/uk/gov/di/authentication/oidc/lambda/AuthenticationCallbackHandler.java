@@ -101,7 +101,7 @@ public class AuthenticationCallbackHandler
     public AuthenticationCallbackHandler(ConfigurationService configurationService) {
 
         var kmsConnectionService = new KmsConnectionService(configurationService);
-        var redisConnectionService = new RedisConnectionService(configurationService);
+        var redisConnectionService = RedisConnectionService.getInstance(configurationService);
         this.configurationService = configurationService;
         this.authorisationService = new AuthenticationAuthorizationService(redisConnectionService);
         this.tokenService =

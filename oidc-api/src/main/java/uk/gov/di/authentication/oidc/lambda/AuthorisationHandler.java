@@ -146,7 +146,7 @@ public class AuthorisationHandler
         this.docAppAuthorisationService =
                 new DocAppAuthorisationService(
                         configurationService,
-                        new RedisConnectionService(configurationService),
+                        RedisConnectionService.getInstance(configurationService),
                         kmsConnectionService,
                         new JwksService(configurationService, kmsConnectionService));
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
