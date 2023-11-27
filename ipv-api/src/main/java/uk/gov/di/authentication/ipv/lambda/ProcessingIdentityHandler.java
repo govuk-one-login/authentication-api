@@ -153,7 +153,6 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
     }
 
     private void checkAccountInterventionService(String internalPairwiseSubjectId) {
-
         var aisResult =
                 segmentedFunctionCall(
                         "ipv-api::" + getClass().getSimpleName(),
@@ -172,8 +171,13 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
         if (configurationService.isAccountInterventionServiceEnabled()) {
             if (aisResult.blocked()) {
                 // TODO: back channel logout + redirect to blocked page
-            } else if (aisResult.suspended()) {
+                LOG.info("Account is blocked");
+            } else if (aisResult.suspended()
+                    || aisResult.resetPassword()
+                    || aisResult.reproveIdentity()) {
                 // TODO back channel logout + redirect to suspended page
+                LOG.info(
+                        "Account is suspended, requires a password reset, or requires identity to be reproved");
             }
         }
     }
