@@ -32,13 +32,13 @@ public class UserInfoService {
         String internalSubjectId = accessTokenInfo.getSubjectID();
         var userProfile = authenticationService.getUserProfileFromSubject(internalSubjectId);
 
-        String internalRpPairwiseId =
-                ClientSubjectHelper.calculatePairwiseIdentifier(
-                        internalSubjectId,
+        Subject internalPairwiseId =
+                ClientSubjectHelper.getSubjectWithSectorIdentifier(
+                        userProfile,
                         configurationService.getInternalSectorUri(),
-                        SdkBytes.fromByteBuffer(userProfile.getSalt()).asByteArray());
+                        authenticationService);
 
-        var userInfo = new UserInfo(new Subject(internalRpPairwiseId));
+        var userInfo = new UserInfo(internalPairwiseId);
 
         var rpPairwiseId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(

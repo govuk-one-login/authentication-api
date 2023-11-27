@@ -12,6 +12,7 @@ import uk.gov.di.authentication.shared.entity.token.AccessTokenStore;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
+import uk.gov.di.authentication.shared.services.DynamoService;
 
 import java.nio.ByteBuffer;
 import java.util.Base64;
@@ -28,17 +29,18 @@ public class UserInfoServiceTest {
     private AuthenticationService authenticationService;
     public static final ByteBuffer TEST_SALT = ByteBuffer.allocate(10);
     private static final Subject TEST_SUBJECT = new Subject();
-    private static final String TEST_RP_SECTOR_URI = "https://test-rp-sector-uri";
+    private static final String TEST_RP_SECTOR_HOST = "test-rp-sector-uri";
     private static final String TEST_RP_PAIRWISE_ID =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     TEST_SUBJECT.getValue(),
-                    TEST_RP_SECTOR_URI,
+                    TEST_RP_SECTOR_HOST,
                     SdkBytes.fromByteBuffer(TEST_SALT).asByteArray());
     private static final String TEST_INTERNAL_SECTOR_URI = "https://test-internal-sector-uri";
+    private static final String TEST_INTERNAL_SECTOR_HOST = "test-internal-sector-uri";
     private static final String TEST_INTERNAL_PAIRWISE_ID =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     TEST_SUBJECT.getValue(),
-                    TEST_INTERNAL_SECTOR_URI,
+                    TEST_INTERNAL_SECTOR_HOST,
                     SdkBytes.fromByteBuffer(TEST_SALT).asByteArray());
     private static final String TEST_LEGACY_SUBJECT_ID = "test-legacy-subject-id";
     private static final String TEST_PUBLIC_SUBJECT_ID = "test-public-subject-id";
@@ -60,12 +62,13 @@ public class UserInfoServiceTest {
 
     @BeforeEach
     public void setUp() {
-        authenticationService = mock(AuthenticationService.class);
+        authenticationService = mock(DynamoService.class);
         configurationService = mock(ConfigurationService.class);
         userInfoService = new UserInfoService(authenticationService, configurationService);
 
         when(authenticationService.getUserProfileFromSubject(TEST_SUBJECT.getValue()))
                 .thenReturn(TEST_USER_PROFILE);
+        when(authenticationService.getOrGenerateSalt(TEST_USER_PROFILE)).thenCallRealMethod();
         when(configurationService.getInternalSectorUri()).thenReturn(TEST_INTERNAL_SECTOR_URI);
     }
 
@@ -144,7 +147,7 @@ public class UserInfoServiceTest {
     private static AccessTokenStore getMockAccessTokenStore(List<String> claims) {
         var accessTokenStore = mock(AccessTokenStore.class);
         when(accessTokenStore.getSubjectID()).thenReturn(TEST_SUBJECT.getValue());
-        when(accessTokenStore.getSectorIdentifier()).thenReturn(TEST_RP_SECTOR_URI);
+        when(accessTokenStore.getSectorIdentifier()).thenReturn(TEST_RP_SECTOR_HOST);
         when(accessTokenStore.getIsNewAccount()).thenReturn(TEST_IS_NEW_ACCOUNT);
         when(accessTokenStore.getClaims()).thenReturn(claims);
         return accessTokenStore;
