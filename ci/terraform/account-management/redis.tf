@@ -4,7 +4,7 @@ locals {
 
 resource "aws_elasticache_subnet_group" "account_management_redis_session_store" {
   name       = "${var.environment}-acct-mgmt-redis-session-store-cache-subnet"
-  subnet_ids = [local.private_subnet_ids, local.protected_subnet_ids]
+  subnet_ids = local.private_subnet_ids
 
   tags = local.default_tags
 }
