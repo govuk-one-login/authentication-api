@@ -110,9 +110,11 @@ public class IdentityProgressFrontendHandler extends BaseOrchestrationFrontendHa
                                     JSONObjectUtils.parse(
                                             authenticationUserInfo.get().getUserInfo()));
                 } else {
+                    LOG.warn("Unable to find user info for subject");
                     return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
                 }
             } catch (Exception e) {
+                LOG.warn("Error finding user info for subject");
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
             }
             var pairwiseSubjectId = (String) userInfo.getClaim("rp_pairwise_id");
