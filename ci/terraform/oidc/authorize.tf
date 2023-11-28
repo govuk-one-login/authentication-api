@@ -16,7 +16,7 @@ module "oidc_authorize_role" {
     aws_iam_policy.orch_to_auth_kms_policy.arn,
     aws_iam_policy.auth_public_encryption_key_parameter_policy.arn,
     local.client_registry_encryption_policy_arn,
-    local.doc_app_auth_signing_key_arn
+    local.doc_app_credential_encryption_policy_arn
   ]
 }
 

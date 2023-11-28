@@ -13,7 +13,7 @@ module "doc_app_callback_role" {
     aws_iam_policy.dynamo_doc_app_read_access_policy.arn,
     aws_iam_policy.doc_app_rp_client_id_parameter_policy.arn,
     module.oidc_txma_audit.access_policy_arn,
-    local.doc_app_auth_signing_key_arn
+    local.doc_app_credential_encryption_policy_arn
   ]
 }
 

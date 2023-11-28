@@ -13,7 +13,7 @@ module "doc_app_authorize_role" {
     module.oidc_txma_audit.access_policy_arn,
     local.account_modifiers_encryption_policy_arn,
     local.client_registry_encryption_policy_arn,
-    local.doc_app_auth_signing_key_arn
+    local.doc_app_credential_encryption_policy_arn
   ]
 }
 
