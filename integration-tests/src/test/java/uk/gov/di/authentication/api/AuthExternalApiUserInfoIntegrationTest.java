@@ -33,8 +33,8 @@ import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.a
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
-    private static final String RP_SECTOR_ID_URI = "https://rp-test-uri.com";
-    private static final String INTERNAL_SECTOR_ID_URI = "https://test.account.gov.uk";
+    private static final String RP_SECTOR_ID_HOST = "rp-test-uri.com";
+    private static final String INTERNAL_SECTOR_ID_HOST = "test.account.gov.uk";
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String TEST_PHONE_NUMBER = "01234567890";
     private static final String TEST_PASSWORD = "password-1";
@@ -95,12 +95,12 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
         var rpPairwiseId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         TEST_SUBJECT.getValue(),
-                        RP_SECTOR_ID_URI,
+                        RP_SECTOR_ID_HOST,
                         SdkBytes.fromByteBuffer(createdUser.getSalt()).asByteArray());
         var internalPairwiseId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         TEST_SUBJECT.getValue(),
-                        INTERNAL_SECTOR_ID_URI,
+                        INTERNAL_SECTOR_ID_HOST,
                         SdkBytes.fromByteBuffer(createdUser.getSalt()).asByteArray());
         var userInfoResponse = UserInfo.parse(response.getBody());
         assertEquals(userInfoResponse.getSubject().getValue(), internalPairwiseId);
@@ -200,7 +200,7 @@ class AuthExternalApiUserInfoIntegrationTest extends ApiGatewayHandlerIntegratio
     private UserProfile addTokenToDynamoAndCreateAssociatedUser(
             String accessToken, List<String> claims, boolean isNewAccount) {
         accessTokenStoreExtension.addAccessTokenStore(
-                accessToken, TEST_SUBJECT.getValue(), claims, isNewAccount, RP_SECTOR_ID_URI);
+                accessToken, TEST_SUBJECT.getValue(), claims, isNewAccount, RP_SECTOR_ID_HOST);
 
         userStore.signUp(TEST_EMAIL_ADDRESS, TEST_PASSWORD, TEST_SUBJECT);
         userStore.addVerifiedPhoneNumber(TEST_EMAIL_ADDRESS, TEST_PHONE_NUMBER);
