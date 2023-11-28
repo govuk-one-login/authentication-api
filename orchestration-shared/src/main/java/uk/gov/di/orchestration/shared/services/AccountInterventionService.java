@@ -2,8 +2,8 @@ package uk.gov.di.orchestration.shared.services;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.orchestration.entity.AccountInterventionResponse;
-import uk.gov.di.orchestration.entity.AccountInterventionStatus;
+import uk.gov.di.orchestration.shared.entity.AccountInterventionResponse;
+import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
 import uk.gov.di.orchestration.shared.exceptions.AccountInterventionException;
 import uk.gov.di.orchestration.shared.serialization.Json;
 

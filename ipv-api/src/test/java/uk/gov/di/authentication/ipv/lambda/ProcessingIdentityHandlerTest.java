@@ -15,7 +15,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityResponse;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityStatus;
-import uk.gov.di.orchestration.entity.AccountInterventionStatus;
+import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
