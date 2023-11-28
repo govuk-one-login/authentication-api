@@ -1,6 +1,8 @@
 package uk.gov.di.authentication.api;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -18,6 +20,7 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
+import com.nimbusds.openid.connect.sdk.claims.ClaimRequirement;
 import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -71,6 +74,7 @@ import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISAT
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED;
 import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
+import static uk.gov.di.orchestration.shared.entity.ValidClaims.CORE_IDENTITY_JWT;
 import static uk.gov.di.orchestration.shared.helpers.CookieHelper.getHttpCookieFromMultiValueResponseHeaders;
 import static uk.gov.di.orchestration.shared.helpers.PersistentIdHelper.isValidPersistentSessionCookieWithDoubleDashedTimestamp;
 import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
@@ -99,6 +103,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final URI CALLBACK_URI = URI.create("http://localhost/callback");
     private static final URI AUTHORIZE_URI = URI.create("http://doc-app/authorize");
     private static final String DOC_APP_CLIENT_ID = "doc-app-client-id";
+    private static final String CLAIMS =
+            "{\"userinfo\":{\"https://vocab.account.gov.uk/v1/coreIdentityJWT\":{\"essential\":true},\"https://vocab.account.gov.uk/v1/address\":null}}";
 
     private static IntegrationTestConfigurationService configuration =
             configWithDocAppDecouple(false);
@@ -649,6 +655,20 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(
                 authRequest.getCustomParameter("vtr"),
                 equalTo(List.of("[\"P2.Cl.Cm\",\"Cl.Cm\"]")));
+
+        JsonElement actualClaims =
+                JsonParser.parseString(String.valueOf(authRequest.getOIDCClaims()));
+        JsonElement expectedClaims = JsonParser.parseString(CLAIMS);
+        assertThat(actualClaims, equalTo(expectedClaims));
+
+        assertThat(
+                authRequest
+                        .getOIDCClaims()
+                        .getUserInfoClaimsRequest()
+                        .get(CORE_IDENTITY_JWT.getValue())
+                        .getClaimRequirement(),
+                equalTo(ClaimRequirement.ESSENTIAL));
+
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
     }
@@ -796,6 +816,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .claim("client_id", CLIENT_ID)
                         .claim("state", new State().getValue())
                         .claim("vtr", List.of("P2.Cl.Cm", "Cl.Cm"))
+                        .claim("claims", CLAIMS)
                         .issuer(CLIENT_ID);
         if (uiLocales != null && !uiLocales.isBlank()) {
             jwtClaimsSetBuilder.claim("ui_locales", uiLocales);
