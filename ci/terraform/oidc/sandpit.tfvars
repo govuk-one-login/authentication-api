@@ -50,3 +50,5 @@ support_auth_orch_split = true
 orch_frontend_api_gateway_integration_enabled = true
 
 orch_redirect_uri = "https://oidc.sandpit.account.gov.uk/orchestration-redirect"
+
+authorize_protected_subnet_enabled = true
