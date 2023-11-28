@@ -16,7 +16,8 @@ module "oidc_userinfo_role" {
     aws_iam_policy.authentication_callback_userinfo_encryption_key_kms_policy.arn,
     module.oidc_txma_audit.access_policy_arn,
     local.client_registry_encryption_policy_arn,
-    local.identity_credentials_encryption_policy_arn
+    local.identity_credentials_encryption_policy_arn,
+    local.doc_app_credential_encryption_policy_arn
   ]
 }
 
