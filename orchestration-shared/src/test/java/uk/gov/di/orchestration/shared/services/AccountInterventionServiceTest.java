@@ -1,10 +1,9 @@
-package uk.gov.di.authentication.oidc.services;
+package uk.gov.di.orchestration.shared.services;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import uk.gov.di.authentication.oidc.exceptions.AccountInterventionException;
-import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.exceptions.AccountInterventionException;
 
 import java.io.IOException;
 import java.net.URI;
