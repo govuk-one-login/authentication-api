@@ -50,3 +50,4 @@ jobs:
             --metadata "repository=$GITHUB_REPOSITORY,commitsha=$GITHUB_SHA,committag=$GIT_TAG,commitmessage=$COMMIT_MSG"`
           VERSION=`echo $S3_RESPONSE | jq .VersionId -r`
           echo "VERSION=$VERSION" >> $GITHUB_ENV
+ 
