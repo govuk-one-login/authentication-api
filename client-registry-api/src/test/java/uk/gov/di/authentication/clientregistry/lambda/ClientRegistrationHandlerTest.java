@@ -83,6 +83,14 @@ class ClientRegistrationHandlerTest {
     }
 
     @Test
+    void letsCreateSomeClientIds() {
+        for (int i = 0; i < 30; i++) {
+            String clientId = new ClientID(IdGenerator.generate()).toString();
+            System.out.println(clientId);
+        }
+    }
+
+    @Test
     void shouldReturn200IfClientRegistrationRequestIsSuccessful() throws Json.JsonException {
         when(configValidationService.validateClientRegistrationConfig(
                         any(ClientRegistrationRequest.class)))
