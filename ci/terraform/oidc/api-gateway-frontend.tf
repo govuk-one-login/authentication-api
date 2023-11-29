@@ -77,7 +77,9 @@ resource "aws_api_gateway_deployment" "frontend_deployment" {
       module.doc-app-authorize.method_trigger_value,
       module.orch_auth_code.integration_trigger_value,
       module.orch_auth_code.method_trigger_value,
-      local.account_modifiers_encryption_policy_arn
+      module.identity_progress.integration_trigger_value,
+      module.identity_progress.method_trigger_value,
+      local.account_modifiers_encryption_policy_arn,
     ]))
   }
 
