@@ -197,3 +197,7 @@ output "identity_credentials_encryption_policy_arn" {
 output "doc_app_credential_encryption_policy_arn" {
   value = aws_iam_policy.doc_app_credential_encryption_key_kms_policy.arn
 }
+
+output "user_credentials_encryption_policy_arn" {
+  value = aws_iam_policy.user_credentials_encryption_key_kms_policy.arn
+}

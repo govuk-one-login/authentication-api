@@ -17,7 +17,8 @@ module "frontend_api_reset_password_role" {
     module.oidc_txma_audit.access_policy_arn,
     local.account_modifiers_encryption_policy_arn,
     local.client_registry_encryption_policy_arn,
-    local.common_passwords_encryption_policy_arn
+    local.common_passwords_encryption_policy_arn,
+    local.user_credentials_encryption_policy_arn
   ]
 }
 

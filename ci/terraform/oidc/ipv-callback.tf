@@ -17,7 +17,8 @@ module "ipv_callback_role" {
     aws_iam_policy.spot_queue_encryption_policy.arn,
     module.oidc_txma_audit.access_policy_arn,
     local.client_registry_encryption_policy_arn,
-    local.identity_credentials_encryption_policy_arn
+    local.identity_credentials_encryption_policy_arn,
+    local.user_credentials_encryption_policy_arn
   ]
 }
 
