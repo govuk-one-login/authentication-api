@@ -1,26 +1,47 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-
+###Export The di-Auth-devlopment account profile below 
 export AWS_PROFILE=di-auth-dev
+
+envvalue=( "authdev1" "authdev2"  )
+
+select word in "${envvalue[@]}"; do
+    if [[ -z "$word" ]]; then
+        printf '"%s" is not a valid choice\n' "$REPLY" >&2
+    else
+        user_in="$(( REPLY - 1 ))"
+        break
+    fi
+done
+
+for (( i = 0; i < ${#envvalue[@]}; ++i )); do
+    if (( i == user_in )); then
+        printf 'You picked "%s"\n' "${envvalue[$i]}"
+        export env=${envvalue[$i]}
+        printf "deploying in enviorment $env\n"
+        read -p "Press enter to continue or ctr c to abort"
+    fi
+done
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
 function runTerraform() {
   echo "Running ${1} Terraform..."
   pushd "${DIR}/ci/terraform/${1}" >/dev/null
   rm -rf .terraform/
-  terraform init -backend-config=authdev1.hcl
+  terraform init -backend-config=$env.hcl
   if [ "${RUN_SHELL}" == "1" ]; then
     ${SHELL} -i
   else
-    terraform apply -var-file authdev1.tfvars "${2}"
+    terraform apply -var-file $env.tfvars "${2}"
   fi
   popd >/dev/null
 }
 
 function usage() {
   cat <<USAGE
-  A script to deploy the GOV.UK Sign in APIs to the authdev1 environment.
+  A script to deploy the GOV.UK Sign in APIs to the "'$env'" environment.
   Requires a GDS CLI, AWS CLI and jq installed and configured.
 
   Usage:
@@ -123,11 +144,6 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
-#if [[ -z "${AWS_ACCESS_KEY_ID:-}" || -z "${AWS_SECRET_ACCESS_KEY:-}" ]]; then
-  #echo "!! AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY must be set in the environment." >&2
-  #echo "!! Perhaps you meant: gds aws digital-identity-dev -- ${0}" >&2
-  #exit 1
-#fi
 
 if [[ $BUILD == "1" ]]; then
   echo "Building deployment artefacts ... "
@@ -138,7 +154,7 @@ if [[ $BUILD == "1" ]]; then
 fi
 
 echo -n "Getting Terraform variables from Secrets Manager ... "
-source "${DIR}/scripts/read_secrets__main.sh" "authdev1"
+source "${DIR}/scripts/read_secrets__main.sh" "$env"
 echo "done!"
 
 if [[ $SHARED == "1" ]]; then
