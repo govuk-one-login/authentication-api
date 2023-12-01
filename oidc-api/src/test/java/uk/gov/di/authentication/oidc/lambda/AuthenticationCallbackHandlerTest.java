@@ -362,7 +362,8 @@ class AuthenticationCallbackHandlerTest {
         verifyNoInteractions(userInfoStorageService, cloudwatchMetricsService);
     }
 
-    private static APIGatewayProxyResponseEvent createIPVApiResponse() {
+    private APIGatewayProxyResponseEvent createIPVApiResponse() {
+
         return generateApiGatewayProxyResponse(
                 302, "", Map.of(ResponseHeaders.LOCATION, IPV_REDIRECT_URI.toString()), null);
     }
