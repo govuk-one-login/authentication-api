@@ -194,6 +194,7 @@ public class IPVAuthorisationHandlerTest {
                         any(),
                         eq(CLIENT_SESSION_ID),
                         anyString(),
+                        any(),
                         any()))
                 .thenReturn(encryptedJWT);
         usingValidSession();
@@ -223,7 +224,8 @@ public class IPVAuthorisationHandlerTest {
                         any(),
                         eq(CLIENT_SESSION_ID),
                         eq(EMAIL_ADDRESS),
-                        isNull());
+                        isNull(),
+                        any());
         verify(auditService)
                 .submitAuditEvent(
                         IPVAuditableEvent.IPV_AUTHORISATION_REQUESTED,
