@@ -20,7 +20,7 @@ class ValidClaimsTest {
                 "https://vocab.account.gov.uk/v1/coreIdentityJWT",
                 "https://vocab.account.gov.uk/v1/drivingPermit",
                 "https://vocab.account.gov.uk/v1/socialSecurityRecord",
-                "https://vocab.account.gov.uk/v1/socialSecurityRecord");
+                "https://vocab.account.gov.uk/v1/returnCode");
     }
 
     static Stream<String> unsupportedClaims() {
