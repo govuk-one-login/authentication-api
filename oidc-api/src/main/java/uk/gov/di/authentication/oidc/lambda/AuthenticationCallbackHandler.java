@@ -33,17 +33,7 @@ import uk.gov.di.orchestration.shared.helpers.ConstructUriHelper;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
-import uk.gov.di.orchestration.shared.services.AuditService;
-import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
-import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
-import uk.gov.di.orchestration.shared.services.ClientService;
-import uk.gov.di.orchestration.shared.services.ClientSessionService;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
-import uk.gov.di.orchestration.shared.services.ConfigurationService;
-import uk.gov.di.orchestration.shared.services.DynamoClientService;
-import uk.gov.di.orchestration.shared.services.KmsConnectionService;
-import uk.gov.di.orchestration.shared.services.RedisConnectionService;
-import uk.gov.di.orchestration.shared.services.SessionService;
+import uk.gov.di.orchestration.shared.services.*;
 
 import java.net.URI;
 import java.util.HashMap;
@@ -51,6 +41,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.GET;
+import static java.net.http.HttpClient.newHttpClient;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static uk.gov.di.orchestration.shared.conditions.IdentityHelper.identityRequired;
@@ -79,6 +70,7 @@ public class AuthenticationCallbackHandler
     private final AuthorisationCodeService authorisationCodeService;
     private final ClientService clientService;
     private final InitiateIPVAuthorisationService initiateIPVAuthorisationService;
+    private final AccountInterventionService accountInterventionService;
     private final CookieHelper cookieHelper;
     private static final String ERROR_PAGE_REDIRECT_PATH = "error";
 
@@ -110,6 +102,8 @@ public class AuthenticationCallbackHandler
                         new IPVAuthorisationService(
                                 configurationService, redisConnectionService, kmsConnectionService),
                         cloudwatchMetricsService);
+        this.accountInterventionService =
+                new AccountInterventionService(configurationService, newHttpClient());
     }
 
     public AuthenticationCallbackHandler(
@@ -124,7 +118,8 @@ public class AuthenticationCallbackHandler
             CloudwatchMetricsService cloudwatchMetricsService,
             AuthorisationCodeService authorisationCodeService,
             ClientService clientService,
-            InitiateIPVAuthorisationService initiateIPVAuthorisationService) {
+            InitiateIPVAuthorisationService initiateIPVAuthorisationService,
+            AccountInterventionService accountInterventionService) {
         this.configurationService = configurationService;
         this.authorisationService = responseService;
         this.tokenService = tokenService;
@@ -137,6 +132,7 @@ public class AuthenticationCallbackHandler
         this.authorisationCodeService = authorisationCodeService;
         this.clientService = clientService;
         this.initiateIPVAuthorisationService = initiateIPVAuthorisationService;
+        this.accountInterventionService = accountInterventionService;
     }
 
     public APIGatewayProxyResponseEvent handleRequest(
@@ -305,6 +301,15 @@ public class AuthenticationCallbackHandler
 
                 cloudwatchMetricsService.incrementCounter("AuthenticationCallback", dimensions);
 
+                Boolean reproveIdentity = null;
+                if (configurationService.isAccountInterventionServiceEnabled()
+                        && configurationService.isAccountInterventionServiceAuditEnabled()) {
+                    var accountStatus =
+                            accountInterventionService.getAccountStatus(
+                                    userInfo.getSubject().getValue());
+                    reproveIdentity = accountStatus.reproveIdentity();
+                }
+
                 if (identityRequired) {
                     return initiateIPVAuthorisationService.sendRequestToIPV(
                             input,
@@ -314,7 +319,8 @@ public class AuthenticationCallbackHandler
                             client,
                             clientId,
                             clientSessionId,
-                            persistentSessionId);
+                            persistentSessionId,
+                            reproveIdentity);
                 }
 
                 URI clientRedirectURI = authenticationRequest.getRedirectionURI();
