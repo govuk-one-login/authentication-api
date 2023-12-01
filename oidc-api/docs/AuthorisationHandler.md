@@ -62,12 +62,9 @@ This [page](https://docs.sign-in.service.gov.uk/integrate-with-integration-envir
 
 Redirect header:
 
-```json
-{
-  "Header": {
-    "Location" : "Https://signin.account.gov.uk/authorize?<Params>",
-    "Set-Cookie": "di-persistent-session-id=bku1qcOpFmDQ3oW94eiGfVoRb8E; Max-Age=34190000; Domain=account.gov.uk; Secure; HttpOnly;",
-    "Set-Cookie": "gs=H-ECWqA-fBnM9NxCMmuAd1ceDqM.2eklz3pDfcYKqoDw2_Tb2PXsEPA; Max-Age=3600; Domain=account.gov.uk; Secure; HttpOnly""; 
-  }
-}
+```
+HTTP/2 302
+Location: https://signin.account.gov.uk/authorize?<Params>
+Set-Cookie: di-persistent-session-id=bku1qcOpFmDQ3oW94eiGfVoRb8E; Max-Age=34190000; Domain=account.gov.uk; Secure; HttpOnly;
+Set-Cookie: gs=H-ECWqA-fBnM9NxCMmuAd1ceDqM.2eklz3pDfcYKqoDw2_Tb2PXsEPA; Max-Age=3600; Domain=account.gov.uk; Secure; HttpOnly;
 ```
