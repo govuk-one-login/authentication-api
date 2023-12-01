@@ -34,7 +34,6 @@ import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
 import uk.gov.di.authentication.oidc.validators.QueryParamsAuthorizeValidator;
 import uk.gov.di.authentication.oidc.validators.RequestObjectAuthorizeValidator;
 import uk.gov.di.orchestration.shared.conditions.DocAppUserHelper;
-import uk.gov.di.orchestration.shared.conditions.IdentityHelper;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
@@ -71,6 +70,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import static uk.gov.di.orchestration.shared.conditions.IdentityHelper.identityRequired;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.orchestration.shared.helpers.LocaleHelper.getPrimaryLanguageFromUILocales;
@@ -269,6 +269,25 @@ public class AuthorisationHandler
                     clientSessionId);
         }
         authRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
+        var identityRequested =
+                identityRequired(
+                        authRequest.toParameters(),
+                        client.isIdentityVerificationSupported(),
+                        configurationService.isIdentityEnabled());
+        auditService.submitAuditEvent(
+                OidcAuditableEvent.AUTHORISATION_REQUEST_PARSED,
+                clientSessionId,
+                AuditService.UNKNOWN,
+                authRequest.getClientID().getValue(),
+                AuditService.UNKNOWN,
+                AuditService.UNKNOWN,
+                ipAddress,
+                AuditService.UNKNOWN,
+                persistentSessionId,
+                pair("rpSid", getRpSid(authRequest)),
+                pair("identityRequested", identityRequested),
+                pair("reauthRequested", false));
+
         Optional<Session> session = sessionService.getSessionFromSessionCookie(input.getHeaders());
         ClientSession clientSession =
                 clientSessionService.generateClientSession(
@@ -296,6 +315,18 @@ public class AuthorisationHandler
                 persistentSessionId,
                 client,
                 clientSessionId);
+    }
+
+    private static String getRpSid(AuthenticationRequest authRequest) {
+        try {
+            if (authRequest.getCustomParameter("rp_sid") != null) {
+                return authRequest.getCustomParameter("rp_sid").get(0);
+            }
+            return AuditService.UNKNOWN;
+        } catch (Exception e) {
+            LOG.error("Failed to retrieve rp_sid. Passing unknown");
+            return AuditService.UNKNOWN;
+        }
     }
 
     private APIGatewayProxyResponseEvent handleDocAppJourney(
@@ -597,7 +628,7 @@ public class AuthorisationHandler
             ClientRegistry clientRegistry, AuthenticationRequest authenticationRequest) {
         LOG.info("Constructing additional authentication claims");
         var identityRequired =
-                IdentityHelper.identityRequired(
+                identityRequired(
                         authenticationRequest.toParameters(),
                         clientRegistry.isIdentityVerificationSupported(),
                         configurationService.isIdentityEnabled());

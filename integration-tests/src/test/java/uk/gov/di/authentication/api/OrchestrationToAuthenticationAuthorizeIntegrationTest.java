@@ -41,6 +41,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISATION_INITIATED;
+import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISATION_REQUEST_PARSED;
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED;
 import static uk.gov.di.orchestration.shared.entity.CustomScopeValue.ACCOUNT_MANAGEMENT;
 import static uk.gov.di.orchestration.shared.entity.CustomScopeValue.GOVUK_ACCOUNT;
@@ -93,7 +94,11 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
         assertTrue(
                 Objects.nonNull(claimsRequest.getUserInfoClaimsRequest().get("local_account_id")));
         assertTxmaAuditEventsReceived(
-                txmaAuditQueue, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+                txmaAuditQueue,
+                List.of(
+                        AUTHORISATION_REQUEST_RECEIVED,
+                        AUTHORISATION_REQUEST_PARSED,
+                        AUTHORISATION_INITIATED));
     }
 
     @Test
@@ -115,7 +120,11 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
         assertTrue(
                 Objects.nonNull(claimsRequest.getUserInfoClaimsRequest().get("public_subject_id")));
         assertTxmaAuditEventsReceived(
-                txmaAuditQueue, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+                txmaAuditQueue,
+                List.of(
+                        AUTHORISATION_REQUEST_RECEIVED,
+                        AUTHORISATION_REQUEST_PARSED,
+                        AUTHORISATION_INITIATED));
     }
 
     @Test
@@ -139,7 +148,11 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
                 Objects.nonNull(
                         claimsRequest.getUserInfoClaimsRequest().get("phone_number_verified")));
         assertTxmaAuditEventsReceived(
-                txmaAuditQueue, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+                txmaAuditQueue,
+                List.of(
+                        AUTHORISATION_REQUEST_RECEIVED,
+                        AUTHORISATION_REQUEST_PARSED,
+                        AUTHORISATION_INITIATED));
     }
 
     @Test
@@ -161,7 +174,11 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
         assertTrue(Objects.nonNull(claimsRequest.getUserInfoClaimsRequest().get("email")));
         assertTrue(Objects.nonNull(claimsRequest.getUserInfoClaimsRequest().get("email_verified")));
         assertTxmaAuditEventsReceived(
-                txmaAuditQueue, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+                txmaAuditQueue,
+                List.of(
+                        AUTHORISATION_REQUEST_RECEIVED,
+                        AUTHORISATION_REQUEST_PARSED,
+                        AUTHORISATION_INITIATED));
     }
 
     @Test
@@ -184,7 +201,11 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
                 claimsRequest.getUserInfoClaimsRequest().get("legacy_subject_id");
         assertThat(Objects.nonNull(govUkAccountExpectedClaim), equalTo(true));
         assertTxmaAuditEventsReceived(
-                txmaAuditQueue, List.of(AUTHORISATION_REQUEST_RECEIVED, AUTHORISATION_INITIATED));
+                txmaAuditQueue,
+                List.of(
+                        AUTHORISATION_REQUEST_RECEIVED,
+                        AUTHORISATION_REQUEST_PARSED,
+                        AUTHORISATION_INITIATED));
     }
 
     private Map<String, String> constructQueryStringParameters(String scopes, String vtr) {
