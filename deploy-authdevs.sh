@@ -19,7 +19,7 @@ for (( i = 0; i < ${#envvalue[@]}; ++i )); do
     if (( i == user_in )); then
         printf 'You picked "%s"\n' "${envvalue[$i]}"
         export env=${envvalue[$i]}
-        printf "deploying in enviorment "$env"\n"
+        printf "deploying in enviorment %s\n" "$env"
         read -r -p "Press enter to continue or ctr c to abort"
     fi
 done
