@@ -114,21 +114,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
 
             var session = userContext.getSession();
             var notificationType = codeRequest.getNotificationType();
-            JourneyType journeyType;
-            switch (notificationType) {
-                case VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
-                    journeyType = JourneyType.ACCOUNT_RECOVERY;
-                    break;
-                case MFA_SMS:
-                    journeyType = JourneyType.SIGN_IN;
-                    break;
-                case RESET_PASSWORD_WITH_CODE:
-                    journeyType = JourneyType.PASSWORD_RESET;
-                    break;
-                default:
-                    journeyType = JourneyType.REGISTRATION;
-                    break;
-            }
+            var journeyType = getJourneyType(codeRequest, notificationType);
             var codeRequestType = CodeRequestType.getCodeRequestType(notificationType, journeyType);
             var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
 
@@ -354,5 +340,29 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     extractPersistentIdFromHeaders(input.getHeaders()),
                     pair("mfa-type", MFAMethodType.SMS.getValue()));
         }
+    }
+
+    private JourneyType getJourneyType(
+            VerifyCodeRequest codeRequest, NotificationType notificationType) {
+        JourneyType journeyType;
+        if (codeRequest.getJourneyType() != null) {
+            journeyType = codeRequest.getJourneyType();
+        } else {
+            switch (notificationType) {
+                case VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
+                    journeyType = JourneyType.ACCOUNT_RECOVERY;
+                    break;
+                case MFA_SMS:
+                    journeyType = JourneyType.SIGN_IN;
+                    break;
+                case RESET_PASSWORD_WITH_CODE:
+                    journeyType = JourneyType.PASSWORD_RESET;
+                    break;
+                default:
+                    journeyType = JourneyType.REGISTRATION;
+                    break;
+            }
+        }
+        return journeyType;
     }
 }

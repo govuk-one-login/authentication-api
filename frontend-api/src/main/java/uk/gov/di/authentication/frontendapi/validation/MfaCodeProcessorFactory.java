@@ -10,6 +10,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import java.util.List;
 import java.util.Optional;
 
 public class MfaCodeProcessorFactory {
@@ -39,7 +40,8 @@ public class MfaCodeProcessorFactory {
         switch (mfaMethodType) {
             case AUTH_APP:
                 int codeMaxRetries =
-                        codeRequest.getJourneyType().equals(JourneyType.SIGN_IN)
+                        List.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA)
+                                        .contains(codeRequest.getJourneyType())
                                 ? configurationService.getCodeMaxRetries()
                                 : configurationService.getCodeMaxRetriesRegistration();
                 return Optional.of(
