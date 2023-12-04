@@ -109,7 +109,6 @@ class AccountInterventionServiceTest {
     }
 
     @Test
-
     void shouldReturnAccountStatusAllClearWhenDisabled() {
 
         when(config.isAccountInterventionServiceEnabled()).thenReturn(false);
@@ -127,7 +126,6 @@ class AccountInterventionServiceTest {
     }
 
     @Test
-
     void shouldThrowAccountInterventionExceptionWhenExceptionThrownByHttpClient()
             throws IOException, InterruptedException {
 

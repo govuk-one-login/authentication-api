@@ -30,7 +30,6 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 
-import static java.net.http.HttpClient.newHttpClient;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 

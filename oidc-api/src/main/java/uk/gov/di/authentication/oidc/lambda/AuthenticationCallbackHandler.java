@@ -24,6 +24,7 @@ import uk.gov.di.authentication.oidc.exceptions.AuthenticationCallbackException;
 import uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService;
 import uk.gov.di.authentication.oidc.services.AuthenticationTokenService;
 import uk.gov.di.authentication.oidc.services.InitiateIPVAuthorisationService;
+import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
@@ -41,7 +42,6 @@ import java.util.Map;
 import java.util.Objects;
 
 import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.GET;
-import static java.net.http.HttpClient.newHttpClient;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static uk.gov.di.orchestration.shared.conditions.IdentityHelper.identityRequired;
@@ -301,14 +301,24 @@ public class AuthenticationCallbackHandler
 
                 cloudwatchMetricsService.incrementCounter("AuthenticationCallback", dimensions);
 
-                Boolean reproveIdentity = null;
-                if (configurationService.isAccountInterventionServiceEnabled()
-                        && configurationService.isAccountInterventionServiceAuditEnabled()) {
-                    var accountStatus =
-                            accountInterventionService.getAccountStatus(
-                                    userInfo.getSubject().getValue());
-                    reproveIdentity = accountStatus.reproveIdentity();
-                }
+                var auditContext =
+                        new AuditContext(
+                                clientSessionId,
+                                userSession.getSessionId(),
+                                clientId,
+                                userInfo.getSubject().getValue(),
+                                Objects.isNull(userSession.getEmailAddress())
+                                        ? AuditService.UNKNOWN
+                                        : userSession.getEmailAddress(),
+                                IpAddressHelper.extractIpAddress(input),
+                                Objects.isNull(userInfo.getPhoneNumber())
+                                        ? AuditService.UNKNOWN
+                                        : userInfo.getPhoneNumber(),
+                                persistentSessionId);
+
+                var accountStatus =
+                        accountInterventionService.getAccountStatus(
+                                userInfo.getSubject().getValue(), auditContext);
 
                 if (identityRequired) {
                     return initiateIPVAuthorisationService.sendRequestToIPV(
@@ -320,7 +330,7 @@ public class AuthenticationCallbackHandler
                             clientId,
                             clientSessionId,
                             persistentSessionId,
-                            reproveIdentity);
+                            accountStatus.reproveIdentity());
                 }
 
                 URI clientRedirectURI = authenticationRequest.getRedirectionURI();
@@ -349,25 +359,16 @@ public class AuthenticationCallbackHandler
 
                 LOG.info("Successfully processed request");
 
-                auditService.submitAuditEvent(
-                        OidcAuditableEvent.AUTH_CODE_ISSUED,
-                        clientSessionId,
-                        userSession.getSessionId(),
-                        clientId,
-                        userInfo.getSubject().getValue(),
-                        Objects.isNull(userSession.getEmailAddress())
-                                ? AuditService.UNKNOWN
-                                : userSession.getEmailAddress(),
-                        IpAddressHelper.extractIpAddress(input),
-                        Objects.isNull(userInfo.getPhoneNumber())
-                                ? AuditService.UNKNOWN
-                                : userInfo.getPhoneNumber(),
-                        persistentSessionId,
-                        pair("internalSubjectId", AuditService.UNKNOWN),
-                        pair("isNewAccount", userInfo.getClaim("new_account")),
-                        pair("rpPairwiseId", userInfo.getClaim("rp_client_id")),
-                        pair("nonce", authenticationRequest.getNonce()),
-                        pair("authCode", authCode.getValue()));
+                auditContext.setMetadataPairs(
+                        new AuditService.MetadataPair[] {
+                            pair("internalSubjectId", AuditService.UNKNOWN),
+                            pair("isNewAccount", userInfo.getClaim("new_account")),
+                            pair("rpPairwiseId", userInfo.getClaim("rp_client_id")),
+                            pair("nonce", authenticationRequest.getNonce()),
+                            pair("authCode", authCode.getValue())
+                        });
+
+                auditService.submitAuditEvent(OidcAuditableEvent.AUTH_CODE_ISSUED, auditContext);
 
                 return generateApiGatewayProxyResponse(
                         302,

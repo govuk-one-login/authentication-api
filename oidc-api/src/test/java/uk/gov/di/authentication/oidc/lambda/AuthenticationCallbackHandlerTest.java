@@ -21,12 +21,14 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.junit.jupiter.api.*;
+import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent;
 import uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService;
 import uk.gov.di.authentication.oidc.services.AuthenticationTokenService;
 import uk.gov.di.authentication.oidc.services.InitiateIPVAuthorisationService;
+import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.shared.conditions.IdentityHelper;
 import uk.gov.di.orchestration.shared.domain.AuditableEvent;
 import uk.gov.di.orchestration.shared.entity.*;
@@ -46,6 +48,7 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyMap;
@@ -149,7 +152,7 @@ class AuthenticationCallbackHandlerTest {
     }
 
     @Test
-    void shouldRedirectToRpRedirectUriWithCodeAndStateOnSuccessfulTokenResponse()
+    void dshouldRedirectToRpRedirectUriWithCodeAndStateOnSuccessfulTokenResponse()
             throws UnsuccessfulCredentialResponseException {
         usingValidSession();
         usingValidClientSession();
@@ -178,22 +181,29 @@ class AuthenticationCallbackHandlerTest {
                         OrchestrationAuditableEvent.AUTH_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                         OrchestrationAuditableEvent.AUTH_SUCCESSFUL_USERINFO_RESPONSE_RECEIVED),
                 auditService);
+
+        var auditContextCaptor = ArgumentCaptor.forClass(AuditContext.class);
+
         verify(auditService)
                 .submitAuditEvent(
-                        eq(OidcAuditableEvent.AUTH_CODE_ISSUED),
-                        eq(CLIENT_SESSION_ID),
-                        eq(SESSION_ID),
-                        eq(CLIENT_ID.getValue()),
-                        any(),
-                        any(),
-                        any(),
-                        any(),
-                        any(),
-                        eq(pair("internalSubjectId", AuditService.UNKNOWN)),
-                        eq(pair("isNewAccount", "true")),
-                        eq(pair("rpPairwiseId", PAIRWISE_SUBJECT_ID.getValue())),
-                        eq(pair("nonce", RP_NONCE)),
-                        eq(pair("authCode", AUTH_CODE_RP_TO_ORCH.getValue())));
+                        eq(OidcAuditableEvent.AUTH_CODE_ISSUED), auditContextCaptor.capture());
+
+        var auditContext = auditContextCaptor.getValue();
+
+        assertEquals(CLIENT_SESSION_ID, auditContext.getClientSessionId());
+        assertEquals(SESSION_ID, auditContext.getSessionId());
+        assertEquals(CLIENT_ID.getValue(), auditContext.getClientId());
+        assertEquals(
+                pair("internalSubjectId", AuditService.UNKNOWN),
+                auditContext.getMetadataPairs()[0]);
+        assertEquals(pair("isNewAccount", "true"), auditContext.getMetadataPairs()[1]);
+        assertEquals(
+                pair("rpPairwiseId", PAIRWISE_SUBJECT_ID.getValue()),
+                auditContext.getMetadataPairs()[2]);
+        assertEquals(pair("nonce", RP_NONCE), auditContext.getMetadataPairs()[3]);
+        assertEquals(
+                pair("authCode", AUTH_CODE_RP_TO_ORCH.getValue()),
+                auditContext.getMetadataPairs()[4]);
     }
 
     @Nested
@@ -244,10 +254,8 @@ class AuthenticationCallbackHandlerTest {
 
         @Test
         void shouldRedirectToIPVWithReproveIdentityWhenAccountInterventionsEnabled() {
-            when(configurationService.isAccountInterventionServiceEnabled()).thenReturn(true);
-            when(configurationService.isAccountInterventionServiceAuditEnabled()).thenReturn(true);
             boolean reproveIdentity = true;
-            when(accountInterventionService.getAccountStatus(any()))
+            when(accountInterventionService.getAccountStatus(any(), any()))
                     .thenReturn(
                             new AccountInterventionStatus(false, false, reproveIdentity, false));
 
