@@ -60,6 +60,9 @@ public class RequestObjectToAuthRequestHelper {
                     LOG.error("Unable to read ui_locales claim: {}", e.getMessage());
                 }
             }
+            if (Objects.nonNull(jwtClaimsSet.getClaim("rp_sid"))) {
+                builder.customParameter("rp_sid", jwtClaimsSet.getClaim("rp_sid").toString());
+            }
             return builder.build();
         } catch (ParseException | com.nimbusds.oauth2.sdk.ParseException | Json.JsonException e) {
             LOG.error("Parse exception thrown whilst converting RequestObject to Auth Request", e);
