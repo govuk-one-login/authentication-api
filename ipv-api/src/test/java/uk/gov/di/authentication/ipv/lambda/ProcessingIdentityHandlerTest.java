@@ -10,8 +10,12 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityResponse;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityStatus;
+import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
@@ -21,6 +25,7 @@ import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
+import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
@@ -31,6 +36,8 @@ import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -40,10 +47,12 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
@@ -80,6 +89,8 @@ class ProcessingIdentityHandlerTest {
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final DynamoIdentityService dynamoIdentityService = mock(DynamoIdentityService.class);
+    private final AccountInterventionService accountInterventionService =
+            mock(AccountInterventionService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
     private final AuditService auditService = mock(AuditService.class);
@@ -90,6 +101,32 @@ class ProcessingIdentityHandlerTest {
     private final APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
     protected final Json objectMapper = SerializationService.getInstance();
     private ProcessingIdentityHandler handler;
+
+    private static Stream<Arguments> aisResults() {
+        return Stream.of(
+                Arguments.of(new AccountInterventionStatus(false, false, false, false), ""),
+                Arguments.of(
+                        new AccountInterventionStatus(true, false, false, false),
+                        "Account is blocked"),
+                Arguments.of(
+                        new AccountInterventionStatus(false, true, false, false),
+                        "Account is suspended, requires a password reset, or requires identity to be reproved"),
+                Arguments.of(
+                        new AccountInterventionStatus(false, true, true, false),
+                        "Account is suspended, requires a password reset, or requires identity to be reproved"),
+                Arguments.of(
+                        new AccountInterventionStatus(false, true, false, true),
+                        "Account is suspended, requires a password reset, or requires identity to be reproved"),
+                Arguments.of(
+                        new AccountInterventionStatus(false, true, true, true),
+                        "Account is suspended, requires a password reset, or requires identity to be reproved"),
+                Arguments.of(
+                        new AccountInterventionStatus(false, false, true, false),
+                        "Account is suspended, requires a password reset, or requires identity to be reproved"),
+                Arguments.of(
+                        new AccountInterventionStatus(false, false, false, true),
+                        "Account is suspended, requires a password reset, or requires identity to be reproved"));
+    }
 
     @BeforeEach
     void setup() {
@@ -109,6 +146,7 @@ class ProcessingIdentityHandlerTest {
         handler =
                 new ProcessingIdentityHandler(
                         dynamoIdentityService,
+                        accountInterventionService,
                         sessionService,
                         clientSessionService,
                         dynamoClientService,
@@ -157,6 +195,103 @@ class ProcessingIdentityHandlerTest {
                                 ENVIRONMENT,
                                 "Status",
                                 ProcessingIdentityStatus.COMPLETED.toString()));
+    }
+
+    @Test
+    void
+            shouldMakeAndAuditAISCallIfAccountInterventionServiceAuditIsEnabledAndProcessingStatusIsCOMPLETED()
+                    throws Json.JsonException {
+        usingValidSession();
+        var identityCredentials =
+                new IdentityCredentials()
+                        .withSubjectID(PAIRWISE_SUBJECT.getValue())
+                        .withAdditionalClaims(Collections.emptyMap())
+                        .withCoreIdentityJWT("a-core-identity");
+        when(dynamoIdentityService.getIdentityCredentials(anyString()))
+                .thenReturn(Optional.of(identityCredentials));
+        when(clientSessionService.getClientSessionFromRequestHeaders(any()))
+                .thenReturn(Optional.of(getClientSession()));
+        when(configurationService.isAccountInterventionServiceAuditEnabled()).thenReturn(true);
+        when(accountInterventionService.getAccountStatus(anyString()))
+                .thenReturn(new AccountInterventionStatus(false, false, false, false));
+
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+        assertThat(
+                result,
+                hasBody(
+                        objectMapper.writeValueAsString(
+                                new ProcessingIdentityResponse(
+                                        ProcessingIdentityStatus.COMPLETED))));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "ProcessingIdentity",
+                        Map.of(
+                                "Environment",
+                                ENVIRONMENT,
+                                "Status",
+                                ProcessingIdentityStatus.COMPLETED.toString()));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "AISResult",
+                        Map.of(
+                                "blocked", "false",
+                                "suspended", "false",
+                                "resetPassword", "false",
+                                "reproveIdentity", "false"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("aisResults")
+    void shouldInterveneIfAccountInterventionServiceAuditIsEnabledAndProcessingStatusIsCOMPLETED(
+            AccountInterventionStatus aisResult, String expectedLogMessage)
+            throws Json.JsonException {
+        usingValidSession();
+        var outputStreamCaptor = new ByteArrayOutputStream();
+        System.setOut(new PrintStream(outputStreamCaptor));
+        var identityCredentials =
+                new IdentityCredentials()
+                        .withSubjectID(PAIRWISE_SUBJECT.getValue())
+                        .withAdditionalClaims(Collections.emptyMap())
+                        .withCoreIdentityJWT("a-core-identity");
+        when(dynamoIdentityService.getIdentityCredentials(anyString()))
+                .thenReturn(Optional.of(identityCredentials));
+        when(clientSessionService.getClientSessionFromRequestHeaders(any()))
+                .thenReturn(Optional.of(getClientSession()));
+        when(configurationService.isAccountInterventionServiceAuditEnabled()).thenReturn(true);
+        when(configurationService.isAccountInterventionServiceEnabled()).thenReturn(true);
+        when(accountInterventionService.getAccountStatus(anyString())).thenReturn(aisResult);
+
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+        assertThat(
+                result,
+                hasBody(
+                        objectMapper.writeValueAsString(
+                                new ProcessingIdentityResponse(
+                                        ProcessingIdentityStatus.COMPLETED))));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "ProcessingIdentity",
+                        Map.of(
+                                "Environment",
+                                ENVIRONMENT,
+                                "Status",
+                                ProcessingIdentityStatus.COMPLETED.toString()));
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "AISResult",
+                        Map.of(
+                                "blocked", String.valueOf(aisResult.blocked()),
+                                "suspended", String.valueOf(aisResult.suspended()),
+                                "resetPassword", String.valueOf(aisResult.resetPassword()),
+                                "reproveIdentity", String.valueOf(aisResult.reproveIdentity())));
+
+        assertThat(outputStreamCaptor.toString(), containsString(expectedLogMessage));
+
+        System.setOut(System.out);
     }
 
     @Test
