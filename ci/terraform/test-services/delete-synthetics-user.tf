@@ -41,7 +41,7 @@ module "delete-synthetics-user" {
   security_group_ids = [
     local.authentication_security_group_id,
   ]
-  subnet_id = local.authentication_private_subnet_ids
+  subnet_id = local.authentication_subnet_ids
 
   lambda_role_arn                        = module.test_services_api_delete-synthetics-user_role.arn
   logging_endpoint_arns                  = var.logging_endpoint_arns
