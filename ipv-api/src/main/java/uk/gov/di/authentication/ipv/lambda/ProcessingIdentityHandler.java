@@ -47,7 +47,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
         super(ProcessingIdentityRequest.class, configurationService);
         this.dynamoIdentityService = new DynamoIdentityService(configurationService);
         this.accountInterventionService =
-                new AccountInterventionService(configurationService, newHttpClient());
+                new AccountInterventionService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
     }

@@ -103,7 +103,7 @@ public class AuthenticationCallbackHandler
                                 configurationService, redisConnectionService, kmsConnectionService),
                         cloudwatchMetricsService);
         this.accountInterventionService =
-                new AccountInterventionService(configurationService, newHttpClient());
+                new AccountInterventionService(configurationService);
     }
 
     public AuthenticationCallbackHandler(
