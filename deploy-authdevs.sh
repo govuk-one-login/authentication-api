@@ -19,8 +19,8 @@ for (( i = 0; i < ${#envvalue[@]}; ++i )); do
     if (( i == user_in )); then
         printf 'You picked "%s"\n' "${envvalue[$i]}"
         export env=${envvalue[$i]}
-        printf "deploying in enviorment $env\n"
-        read -p "Press enter to continue or ctr c to abort"
+        printf "deploying in enviorment "$env"\n"
+        read -r -p "Press enter to continue or ctr c to abort"
     fi
 done
 
@@ -30,11 +30,11 @@ function runTerraform() {
   echo "Running ${1} Terraform..."
   pushd "${DIR}/ci/terraform/${1}" >/dev/null
   rm -rf .terraform/
-  terraform init -backend-config=$env.hcl
+  terraform init -backend-config="$env".hcl
   if [ "${RUN_SHELL}" == "1" ]; then
     ${SHELL} -i
   else
-    terraform apply -var-file $env.tfvars "${2}"
+    terraform apply -var-file "$env".tfvars "${2}"
   fi
   popd >/dev/null
 }
