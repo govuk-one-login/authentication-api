@@ -50,11 +50,8 @@ data "aws_iam_policy_document" "email_queue_policy_document" {
     effect = "Allow"
 
     principals {
-      type = "AWS"
-      identifiers = [
-        module.frontend_api_send_notification_role.arn, module.frontend_api_mfa_role.arn,
-        module.frontend_api_reset_password_request_role.arn, module.frontend_api_reset_password_role.arn
-      ]
+      type        = "AWS"
+      identifiers = [module.frontend_api_send_notification_role.arn, module.frontend_api_mfa_role.arn, module.frontend_api_reset_password_request_role.arn, module.frontend_api_reset_password_role.arn]
     }
 
     actions = [
@@ -168,7 +165,7 @@ resource "aws_lambda_function" "email_sqs_lambda" {
 
   vpc_config {
     security_group_ids = [local.authentication_egress_security_group_id]
-    subnet_ids         = local.authentication_private_subnet_ids
+    subnet_ids         = local.authentication_subnet_ids
   }
   environment {
     variables = merge(var.notify_template_map, {
