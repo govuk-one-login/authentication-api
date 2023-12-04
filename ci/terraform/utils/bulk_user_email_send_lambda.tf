@@ -1,4 +1,3 @@
-
 module "bulk_user_email_send_lambda_role" {
   count       = local.deploy_bulk_email_users_count
   source      = "../modules/lambda-role"
@@ -37,7 +36,7 @@ resource "aws_lambda_function" "bulk_user_email_send_lambda" {
 
   vpc_config {
     security_group_ids = [local.authentication_egress_security_group_id]
-    subnet_ids         = local.authentication_subnet_ids
+    subnet_ids         = local.authentication_private_subnet_ids
   }
 
   environment {

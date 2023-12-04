@@ -1,4 +1,3 @@
-
 output "redis_host" {
   value = var.use_localstack ? var.external_redis_host : aws_elasticache_replication_group.sessions_store[0].primary_endpoint_address
 }
@@ -28,8 +27,12 @@ output "authentication_oidc_redis_security_group_id" {
   value = aws_security_group.allow_access_to_oidc_redis.id
 }
 
-output "authentication_subnet_ids" {
+output "authentication_private_subnet_ids" {
   value = local.private_subnet_ids
+}
+
+output "authentication_protected_subnet_ids" {
+  value = local.protected_subnet_ids
 }
 
 output "lambda_iam_role_arn" {
@@ -125,12 +128,14 @@ output "events_topic_encryption_key_arn" {
 }
 
 output "stub_rp_client_credentials" {
-  value = [for i, rp in var.stub_rp_clients : {
-    client_name = rp.client_name
-    client_id   = random_string.stub_rp_client_id[i].result
-    private_key = tls_private_key.stub_rp_client_private_key[i].private_key_pem
-    public_key  = tls_private_key.stub_rp_client_private_key[i].public_key_pem
-  }]
+  value = [
+    for i, rp in var.stub_rp_clients : {
+      client_name = rp.client_name
+      client_id   = random_string.stub_rp_client_id[i].result
+      private_key = tls_private_key.stub_rp_client_private_key[i].private_key_pem
+      public_key  = tls_private_key.stub_rp_client_private_key[i].public_key_pem
+    }
+  ]
   sensitive = true
 }
 
