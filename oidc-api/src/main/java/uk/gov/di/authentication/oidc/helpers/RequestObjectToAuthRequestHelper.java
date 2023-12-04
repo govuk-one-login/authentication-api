@@ -44,8 +44,11 @@ public class RequestObjectToAuthRequestHelper {
                                     URI.create((String) jwtClaimsSet.getClaim("redirect_uri")))
                             .state(new State(jwtClaimsSet.getClaim("state").toString()))
                             .nonce(new Nonce(jwtClaimsSet.getClaim("nonce").toString()))
-                            .claims(parseOidcClaims(jwtClaimsSet.getClaim("claims").toString()))
                             .requestObject(authRequest.getRequestObject());
+
+            if (Objects.nonNull(jwtClaimsSet.getClaim("claims"))) {
+                builder.claims(parseOidcClaims(jwtClaimsSet.getClaim("claims").toString()));
+            }
 
             if (Objects.nonNull(jwtClaimsSet.getClaim("vtr"))) {
                 transformVtr(builder, jwtClaimsSet);
