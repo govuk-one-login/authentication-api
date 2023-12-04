@@ -9,6 +9,7 @@ import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
+import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.shared.serialization.Json;
@@ -43,6 +44,7 @@ public class RequestObjectToAuthRequestHelper {
                                     URI.create((String) jwtClaimsSet.getClaim("redirect_uri")))
                             .state(new State(jwtClaimsSet.getClaim("state").toString()))
                             .nonce(new Nonce(jwtClaimsSet.getClaim("nonce").toString()))
+                            .claims(parseOidcClaims(jwtClaimsSet.getClaim("claims").toString()))
                             .requestObject(authRequest.getRequestObject());
 
             if (Objects.nonNull(jwtClaimsSet.getClaim("vtr"))) {
@@ -82,6 +84,18 @@ public class RequestObjectToAuthRequestHelper {
         } else {
             LOG.warn("Cannot parse Vectors of Trust");
             throw new RuntimeException("Cannot parse Vectors of Trust");
+        }
+    }
+
+    private static OIDCClaimsRequest parseOidcClaims(String claims) {
+        if (claims == null || claims.isEmpty()) {
+            throw new IllegalArgumentException("Claims must not be null or empty");
+        }
+        try {
+            return OIDCClaimsRequest.parse(claims);
+        } catch (com.nimbusds.oauth2.sdk.ParseException e) {
+            LOG.warn("Failed to parse OIDC claims: " + e.getMessage(), e);
+            throw new RuntimeException("Failed to parse OIDC claims", e);
         }
     }
 }

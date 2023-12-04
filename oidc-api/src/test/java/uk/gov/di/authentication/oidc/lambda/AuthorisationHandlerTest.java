@@ -156,6 +156,8 @@ class AuthorisationHandlerTest {
     private static final String REDIRECT_URI = "https://localhost:8080";
     private static final String DOC_APP_REDIRECT_URI = "/doc-app-authorisation";
     private static final String SCOPE = "email openid profile";
+    private static final String CLAIMS =
+            "{\"userinfo\":{\"https://vocab.account.gov.uk/v1/coreIdentityJWT\":{\"essential\":true},\"https://vocab.account.gov.uk/v1/address\":null}}";
     private static final String RESPONSE_TYPE = "code";
     private static final String TEST_ORCHESTRATOR_CLIENT_ID = "test-orch-client-id";
     private static final String RP_CLIENT_NAME = "test-rp-client-name";
@@ -1187,6 +1189,7 @@ class AuthorisationHandlerTest {
                         .claim("state", STATE)
                         .claim("nonce", NONCE.getValue())
                         .claim("scope", "openid doc-checking-app")
+                        .claim("claims", CLAIMS)
                         .issuer(CLIENT_ID.getValue())
                         .build();
 
@@ -1342,6 +1345,7 @@ class AuthorisationHandlerTest {
                 .claim("state", STATE.getValue())
                 .claim("nonce", NONCE.getValue())
                 .claim("client_id", CLIENT_ID.getValue())
+                .claim("claims", CLAIMS)
                 .issuer(CLIENT_ID.getValue())
                 .build();
     }

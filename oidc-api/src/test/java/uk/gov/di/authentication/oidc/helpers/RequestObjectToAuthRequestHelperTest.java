@@ -1,5 +1,7 @@
 package uk.gov.di.authentication.oidc.helpers;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.langtag.LangTag;
@@ -33,6 +35,9 @@ class RequestObjectToAuthRequestHelperTest {
     private static final URI REDIRECT_URI = URI.create("https://localhost:8080");
     private static final State STATE = new State();
     private static final Nonce NONCE = new Nonce();
+
+    private static final String CLAIMS =
+            "{\"userinfo\":{\"https://vocab.account.gov.uk/v1/coreIdentityJWT\":{\"essential\":true},\"https://vocab.account.gov.uk/v1/address\":null}}";
 
     @Test
     void shouldConvertRequestObjectToAuthRequest() throws JOSEException {
@@ -96,6 +101,37 @@ class RequestObjectToAuthRequestHelperTest {
     }
 
     @Test
+    void shouldConvertRequestObjectToAuthRequestWhenClaimsClaimIsPresent() throws JOSEException {
+        var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);
+        var jwtClaimsSet = getClaimsSetBuilder(scope).build();
+        var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
+        var authRequest =
+                new AuthenticationRequest.Builder(
+                                ResponseType.CODE,
+                                new Scope(OIDCScopeValue.OPENID),
+                                CLIENT_ID,
+                                null)
+                        .requestObject(signedJWT)
+                        .build();
+
+        var transformedAuthRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
+
+        assertThat(transformedAuthRequest.getState(), equalTo(STATE));
+        assertThat(transformedAuthRequest.getNonce(), equalTo(NONCE));
+        assertThat(transformedAuthRequest.getRedirectionURI(), equalTo(REDIRECT_URI));
+        assertThat(transformedAuthRequest.getScope(), equalTo(scope));
+        assertThat(transformedAuthRequest.getClientID(), equalTo(CLIENT_ID));
+        assertThat(transformedAuthRequest.getResponseType(), equalTo(ResponseType.CODE));
+        assertThat(transformedAuthRequest.getRequestObject(), equalTo(signedJWT));
+
+        JsonElement actualClaims =
+                JsonParser.parseString(String.valueOf(transformedAuthRequest.getOIDCClaims()));
+        JsonElement expectedClaims = JsonParser.parseString(CLAIMS);
+        assertThat(actualClaims, equalTo(expectedClaims));
+    }
+
+    @Test
     void shouldConvertRequestObjectToAuthRequestWhenUILocalesClaimIsPresent()
             throws JOSEException, LangTagException {
         var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
@@ -156,6 +192,7 @@ class RequestObjectToAuthRequestHelperTest {
                 .claim("nonce", NONCE)
                 .claim("state", STATE)
                 .claim("client_id", CLIENT_ID.getValue())
+                .claim("claims", CLAIMS)
                 .issuer(CLIENT_ID.getValue());
     }
 }
