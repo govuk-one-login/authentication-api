@@ -19,8 +19,10 @@ public class AccountInterventionService {
     private static final Logger LOGGER = LogManager.getLogger(AccountInterventionService.class);
     private final HttpClient httpClient;
     private final URI accountInterventionServiceURI;
+    private final ConfigurationService configurationService;
 
     public AccountInterventionService(ConfigurationService configService, HttpClient httpClient) {
+        this.configurationService = configService;
         this.accountInterventionServiceURI = configService.getAccountInterventionServiceURI();
         this.httpClient = httpClient;
     }
@@ -30,8 +32,13 @@ public class AccountInterventionService {
         try {
             return retrieveAccountStatus(internalPairwiseSubjectId);
         } catch (IOException | URISyntaxException | Json.JsonException e) {
-            throw new AccountInterventionException(
-                    "Problem communicating with Account Intervention Service", e);
+            if (configurationService.isAccountInterventionServiceEnabled()) {
+                throw new AccountInterventionException(
+                        "Problem communicating with Account Intervention Service", e);
+            } else {
+                LOGGER.warn("Problem communicating with Account Intervention Service " + e);
+                return noInterventionResponse();
+            }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new AccountInterventionException(
@@ -58,5 +65,9 @@ public class AccountInterventionService {
                         .readValue(body, AccountInterventionResponse.class);
 
         return response.state();
+    }
+
+    private static AccountInterventionStatus noInterventionResponse() {
+        return new AccountInterventionStatus(false, false, false, false);
     }
 }
