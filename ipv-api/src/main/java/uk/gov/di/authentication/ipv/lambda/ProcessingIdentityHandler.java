@@ -155,7 +155,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
     private void checkAccountInterventionService(String internalPairwiseSubjectId) {
         var aisResult =
                 segmentedFunctionCall(
-                        "ipv-api::" + getClass().getSimpleName(),
+                        "AIS: getAccountStatus",
                         () ->
                                 accountInterventionService.getAccountStatus(
                                         internalPairwiseSubjectId));

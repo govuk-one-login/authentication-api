@@ -29,7 +29,10 @@ public class AccountInterventionService {
             throws AccountInterventionException {
         try {
             return retrieveAccountStatus(internalPairwiseSubjectId);
-        } catch (IOException | URISyntaxException | InterruptedException | Json.JsonException e) {
+        } catch (IOException | URISyntaxException | Json.JsonException e) {
+            throw new AccountInterventionException(
+                    "Problem communicating with Account Intervention Service", e);
+        } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new AccountInterventionException(
                     "Problem communicating with Account Intervention Service", e);
