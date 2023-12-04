@@ -2,6 +2,7 @@
   "sub": "pairwise-identifier",
   "iss": "ipv-client-id",
   "response_type": "code",
+  "reprove_identity": true,
   "client_id": "ipv-client-id",
   "govuk_signin_journey_id": "journey-id",
   "aud": "http://ipv/",

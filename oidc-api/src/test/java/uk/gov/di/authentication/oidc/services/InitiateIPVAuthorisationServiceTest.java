@@ -53,10 +53,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -80,6 +77,7 @@ public class InitiateIPVAuthorisationServiceTest {
     private static final String SUBJECT_ID = new Subject("subject-id-3").getValue();
     private static final String RP_PAIRWISE_ID = "urn:fdc:gov.uk:2022:dkjfshsdkjh";
     private static final String IP_ADDRESS = "123.123.123.123";
+    private static final Boolean REPROVE_IDENTITY = true;
 
     private final ConfigurationService configService = mock(ConfigurationService.class);
     private final AuditService auditService = mock(AuditService.class);
@@ -144,7 +142,8 @@ public class InitiateIPVAuthorisationServiceTest {
                                         client,
                                         CLIENT_ID,
                                         CLIENT_SESSION_ID,
-                                        PERSISTENT_SESSION_ID),
+                                        PERSISTENT_SESSION_ID,
+                                        REPROVE_IDENTITY),
                         "Expected to throw exception");
 
         assertThat(exception.getMessage(), equalTo("Identity is not enabled"));
@@ -161,7 +160,8 @@ public class InitiateIPVAuthorisationServiceTest {
                         any(),
                         eq(CLIENT_SESSION_ID),
                         anyString(),
-                        any()))
+                        any(),
+                        anyBoolean()))
                 .thenReturn(encryptedJWT);
 
         var response =
@@ -173,7 +173,8 @@ public class InitiateIPVAuthorisationServiceTest {
                         client,
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
-                        PERSISTENT_SESSION_ID);
+                        PERSISTENT_SESSION_ID,
+                        REPROVE_IDENTITY);
 
         assertThat(response, hasStatus(302));
         String redirectLocation = response.getHeaders().get("Location");
@@ -190,7 +191,8 @@ public class InitiateIPVAuthorisationServiceTest {
                         any(),
                         eq(CLIENT_SESSION_ID),
                         eq(EMAIL_ADDRESS),
-                        isNull());
+                        isNull(),
+                        eq(REPROVE_IDENTITY));
         verify(auditService)
                 .submitAuditEvent(
                         IPVAuditableEvent.IPV_AUTHORISATION_REQUESTED,

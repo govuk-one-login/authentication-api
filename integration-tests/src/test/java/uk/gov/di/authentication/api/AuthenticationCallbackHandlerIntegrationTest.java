@@ -431,5 +431,10 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         public String getIPVAuthEncryptionPublicKey() {
             return publicKey;
         }
+
+        @Override
+        public URI getAccountInterventionServiceURI() {
+            return URI.create("https://authorize-account-intervention");
+        }
     }
 }
