@@ -13,7 +13,8 @@ module "auth_token_role" {
     aws_iam_policy.dynamo_access_token_store_read_access_policy.arn,
     aws_iam_policy.dynamo_access_token_store_write_access_policy.arn,
     aws_iam_policy.auth_code_dynamo_encryption_key_kms_policy.arn,
-    aws_iam_policy.access_token_store_signing_key_kms_policy.arn
+    aws_iam_policy.access_token_store_signing_key_kms_policy.arn,
+    aws_iam_policy.dynamo_user_read_access_policy.arn
   ]
 }
 

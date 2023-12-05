@@ -133,9 +133,9 @@ public class UserInfoHandler
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
-                Objects.isNull(accessTokenStore.getSubjectID())
+                Objects.isNull(userInfo.getSubject())
                         ? AuditService.UNKNOWN
-                        : accessTokenStore.getSubjectID(),
+                        : userInfo.getSubject().getValue(),
                 Objects.isNull(userInfo.getEmailAddress())
                         ? AuditService.UNKNOWN
                         : userInfo.getEmailAddress(),

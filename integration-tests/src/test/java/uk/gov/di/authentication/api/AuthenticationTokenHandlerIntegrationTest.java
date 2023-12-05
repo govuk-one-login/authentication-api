@@ -51,6 +51,8 @@ class AuthenticationTokenHandlerIntegrationTest extends ApiGatewayHandlerIntegra
     private static final Subject TEST_SUBJECT = new Subject();
     private static final List<String> TEST_CLAIMS = List.of("test-claim-1");
     private static final String TEST_SECTOR_IDENTIFIER = "sectorIdentifier";
+    private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
+    private static final String TEST_PASSWORD = "password-1";
 
     @RegisterExtension
     protected static final AuthCodeExtension authCodeStoreExtension = new AuthCodeExtension(180);
@@ -72,6 +74,8 @@ class AuthenticationTokenHandlerIntegrationTest extends ApiGatewayHandlerIntegra
                         docAppPrivateKeyJwtSigner);
 
         handler = new TokenHandler(configurationService);
+
+        userStore.signUp(TEST_EMAIL_ADDRESS, TEST_PASSWORD, TEST_SUBJECT);
 
         authCodeStoreExtension.saveAuthCode(
                 TEST_SUBJECT.getValue(),

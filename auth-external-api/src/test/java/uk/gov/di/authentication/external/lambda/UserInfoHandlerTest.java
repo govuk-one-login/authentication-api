@@ -89,7 +89,7 @@ class UserInfoHandlerTest {
                         any(),
                         any(),
                         any(),
-                        eq("testSubjectId"),
+                        eq(TEST_SUBJECT.getValue()),
                         eq("test@test.com"),
                         any(),
                         eq("0123456789"),
