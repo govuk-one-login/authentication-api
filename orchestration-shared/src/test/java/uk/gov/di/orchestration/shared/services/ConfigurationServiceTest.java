@@ -9,6 +9,7 @@ import software.amazon.awssdk.services.ssm.model.GetParameterRequest;
 import software.amazon.awssdk.services.ssm.model.GetParameterResponse;
 import uk.gov.di.orchestration.shared.entity.DeliveryReceiptsNotificationType;
 
+import java.net.URI;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -138,6 +139,16 @@ class ConfigurationServiceTest {
         assertEquals(configurationService.getNotifyCallbackBearerToken(), ssmParamValue);
         assertEquals(configurationService.getNotifyCallbackBearerToken(), ssmParamValue);
         verify(mock, times(1)).getParameter(request);
+    }
+
+    @Test
+    void shouldHandleMissingAISUrl() {
+        when(systemService.getOrDefault("ACCOUNT_INTERVENTION_SERVICE_URI", "")).thenReturn("");
+
+        ConfigurationService configurationService = new ConfigurationService();
+        configurationService.setSystemService(systemService);
+
+        assertEquals(configurationService.getAccountInterventionServiceURI(), URI.create(""));
     }
 
     private GetParameterRequest parameterRequest(String name) {
