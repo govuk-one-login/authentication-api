@@ -17,12 +17,12 @@ import java.net.http.HttpResponse;
 public class AccountInterventionService {
 
     private static final Logger LOGGER = LogManager.getLogger(AccountInterventionService.class);
-    private final boolean accountInterventionsEnabled;
     private final HttpClient httpClient;
     private final URI accountInterventionServiceURI;
+    private final ConfigurationService configurationService;
 
     public AccountInterventionService(ConfigurationService configService, HttpClient httpClient) {
-        this.accountInterventionsEnabled = configService.isAccountInterventionServiceEnabled();
+        this.configurationService = configService;
         this.accountInterventionServiceURI = configService.getAccountInterventionServiceURI();
         this.httpClient = httpClient;
     }
@@ -30,13 +30,17 @@ public class AccountInterventionService {
     public AccountInterventionStatus getAccountStatus(String internalPairwiseSubjectId)
             throws AccountInterventionException {
         try {
-            if (accountInterventionsEnabled) {
-                return retrieveAccountStatus(internalPairwiseSubjectId);
+            return retrieveAccountStatus(internalPairwiseSubjectId);
+        } catch (IOException | URISyntaxException | Json.JsonException e) {
+            if (configurationService.isAccountInterventionServiceEnabled()) {
+                throw new AccountInterventionException(
+                        "Problem communicating with Account Intervention Service", e);
+            } else {
+                LOGGER.warn("Problem communicating with Account Intervention Service " + e);
+                return noInterventionResponse();
             }
-
-            return new AccountInterventionStatus(false, false, false, false);
-
-        } catch (IOException | URISyntaxException | InterruptedException | Json.JsonException e) {
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
             throw new AccountInterventionException(
                     "Problem communicating with Account Intervention Service", e);
         }
@@ -61,5 +65,9 @@ public class AccountInterventionService {
                         .readValue(body, AccountInterventionResponse.class);
 
         return response.state();
+    }
+
+    private static AccountInterventionStatus noInterventionResponse() {
+        return new AccountInterventionStatus(false, false, false, false);
     }
 }

@@ -1,11 +1,7 @@
 package uk.gov.di.authentication.api;
 
 import com.google.gson.internal.LinkedTreeMap;
-import com.nimbusds.oauth2.sdk.AuthorizationCode;
-import com.nimbusds.oauth2.sdk.ErrorObject;
-import com.nimbusds.oauth2.sdk.OAuth2Error;
-import com.nimbusds.oauth2.sdk.ResponseType;
-import com.nimbusds.oauth2.sdk.Scope;
+import com.nimbusds.oauth2.sdk.*;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
@@ -22,20 +18,12 @@ import uk.gov.di.authentication.ipv.entity.LogIds;
 import uk.gov.di.authentication.ipv.entity.SPOTRequest;
 import uk.gov.di.authentication.ipv.lambda.IPVCallbackHandler;
 import uk.gov.di.authentication.testsupport.helpers.SpotQueueAssertionHelper;
-import uk.gov.di.orchestration.shared.entity.IdentityCredentials;
-import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
-import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
-import uk.gov.di.orchestration.shared.entity.ServiceType;
-import uk.gov.di.orchestration.shared.entity.ValidClaims;
+import uk.gov.di.orchestration.shared.entity.*;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
-import uk.gov.di.orchestration.sharedtest.extensions.IPVStubExtension;
-import uk.gov.di.orchestration.sharedtest.extensions.KmsKeyExtension;
-import uk.gov.di.orchestration.sharedtest.extensions.SnsTopicExtension;
-import uk.gov.di.orchestration.sharedtest.extensions.SqsQueueExtension;
-import uk.gov.di.orchestration.sharedtest.extensions.TokenSigningExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.*;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -51,11 +39,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED;
-import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_SPOT_REQUESTED;
-import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED;
-import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED;
-import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.IPV_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED;
+import static uk.gov.di.authentication.ipv.domain.IPVAuditableEvent.*;
 import static uk.gov.di.orchestration.shared.entity.IdentityClaims.VOT;
 import static uk.gov.di.orchestration.shared.entity.IdentityClaims.VTM;
 import static uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper.calculatePairwiseIdentifier;
@@ -189,6 +173,11 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                         .map(IdentityCredentials::getAdditionalClaims)
                         .map(t -> t.get(ValidClaims.SOCIAL_SECURITY_RECORD.getValue()))
                         .isPresent());
+        assertTrue(
+                identityCredentials
+                        .map(IdentityCredentials::getAdditionalClaims)
+                        .map(t -> t.get(ValidClaims.RETURN_CODE.getValue()))
+                        .isPresent());
 
         var addressClaim =
                 objectMapper.readValue(
@@ -225,6 +214,15 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 .get(ValidClaims.SOCIAL_SECURITY_RECORD.getValue()),
                         JSONArray.class);
         assertThat(((LinkedTreeMap) socialSecurityRecord.get(0)).size(), equalTo(1));
+
+        var returnCode =
+                objectMapper.readValue(
+                        identityCredentials
+                                .get()
+                                .getAdditionalClaims()
+                                .get(ValidClaims.RETURN_CODE.getValue()),
+                        JSONArray.class);
+        assertThat(returnCode.size(), equalTo(2));
     }
 
     @Test

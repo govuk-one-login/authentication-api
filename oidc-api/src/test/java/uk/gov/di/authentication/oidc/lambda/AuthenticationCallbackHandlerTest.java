@@ -20,9 +20,8 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
+import org.mockito.MockedStatic;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent;
 import uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService;
@@ -30,23 +29,10 @@ import uk.gov.di.authentication.oidc.services.AuthenticationTokenService;
 import uk.gov.di.authentication.oidc.services.InitiateIPVAuthorisationService;
 import uk.gov.di.orchestration.shared.conditions.IdentityHelper;
 import uk.gov.di.orchestration.shared.domain.AuditableEvent;
-import uk.gov.di.orchestration.shared.entity.ClientRegistry;
-import uk.gov.di.orchestration.shared.entity.ClientSession;
-import uk.gov.di.orchestration.shared.entity.ClientType;
-import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
-import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
-import uk.gov.di.orchestration.shared.entity.Session;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.*;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
-import uk.gov.di.orchestration.shared.services.AuditService;
-import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
-import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
-import uk.gov.di.orchestration.shared.services.ClientService;
-import uk.gov.di.orchestration.shared.services.ClientSessionService;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
-import uk.gov.di.orchestration.shared.services.ConfigurationService;
-import uk.gov.di.orchestration.shared.services.SessionService;
+import uk.gov.di.orchestration.shared.services.*;
 
 import java.net.URI;
 import java.util.Collections;
@@ -63,12 +49,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyMap;
-import static org.mockito.Mockito.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -76,7 +57,7 @@ import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyRespons
 class AuthenticationCallbackHandlerTest {
     private static final ConfigurationService configurationService =
             mock(ConfigurationService.class);
-    private final AuthenticationAuthorizationService authorizationService =
+    private static final AuthenticationAuthorizationService authorizationService =
             mock(AuthenticationAuthorizationService.class);
     private final AuthenticationTokenService tokenService = mock(AuthenticationTokenService.class);
     private final SessionService sessionService = mock(SessionService.class);
@@ -90,6 +71,8 @@ class AuthenticationCallbackHandlerTest {
             mock(AuthorisationCodeService.class);
     private static final InitiateIPVAuthorisationService initiateIPVAuthorisationService =
             mock(InitiateIPVAuthorisationService.class);
+    private static final AccountInterventionService accountInterventionService =
+            mock(AccountInterventionService.class);
     private static final CookieHelper cookieHelper = mock(CookieHelper.class);
     private final ClientService clientService = mock(ClientService.class);
     private static final String TEST_FRONTEND_BASE_URL = "test.orchestration.frontend.url";
@@ -130,6 +113,8 @@ class AuthenticationCallbackHandlerTest {
         when(configurationService.getLoginURI()).thenReturn(URI.create(TEST_FRONTEND_BASE_URL));
         when(configurationService.getAuthenticationBackendURI())
                 .thenReturn(URI.create(TEST_AUTH_BACKEND_BASE_URL));
+        when(configurationService.isAccountInterventionServiceEnabled()).thenReturn(false);
+        when(configurationService.isAccountInterventionServiceAuditEnabled()).thenReturn(false);
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
                         CLIENT_SESSION_ID, TEST_EMAIL_ADDRESS, clientSession))
                 .thenReturn(AUTH_CODE_RP_TO_ORCH);
@@ -145,6 +130,7 @@ class AuthenticationCallbackHandlerTest {
 
     @BeforeEach
     void setUp() {
+        reset(initiateIPVAuthorisationService);
         handler =
                 new AuthenticationCallbackHandler(
                         configurationService,
@@ -158,7 +144,8 @@ class AuthenticationCallbackHandlerTest {
                         cloudwatchMetricsService,
                         authorisationCodeService,
                         clientService,
-                        initiateIPVAuthorisationService);
+                        initiateIPVAuthorisationService,
+                        accountInterventionService);
     }
 
     @Test
@@ -209,34 +196,78 @@ class AuthenticationCallbackHandlerTest {
                         eq(pair("authCode", AUTH_CODE_RP_TO_ORCH.getValue())));
     }
 
-    @Test
-    void shouldRedirectToIPVWhenIdentityRequired() throws UnsuccessfulCredentialResponseException {
-        mockStatic(IdentityHelper.class);
+    @Nested
+    class redirectToIPV {
+        private static MockedStatic<IdentityHelper> mockedIdentityHelper;
 
-        usingValidSession();
-        usingValidClientSession();
-        usingValidClient();
+        @BeforeAll
+        static void init() {
+            when(authorizationService.validateRequest(any(), any())).thenReturn(true);
+        }
 
-        var event = new APIGatewayProxyRequestEvent();
-        setValidHeadersAndQueryParameters(event);
+        @BeforeEach
+        void setup() throws UnsuccessfulCredentialResponseException {
+            mockedIdentityHelper = mockStatic(IdentityHelper.class);
+            when(IdentityHelper.identityRequired(anyMap(), anyBoolean(), anyBoolean()))
+                    .thenReturn(true);
+            when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+            when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
+                    .thenReturn(USER_INFO);
+            when(initiateIPVAuthorisationService.sendRequestToIPV(
+                            any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(createIPVApiResponse());
+            usingValidSession();
+            usingValidClientSession();
+            usingValidClient();
+        }
 
-        when(IdentityHelper.identityRequired(anyMap(), anyBoolean(), anyBoolean()))
-                .thenReturn(true);
-        when(initiateIPVAuthorisationService.sendRequestToIPV(
-                        any(), any(), any(), any(), any(), any(), any(), any()))
-                .thenReturn(createIPVApiResponse());
-        when(authorizationService.validateRequest(any(), any())).thenReturn(true);
-        when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
-        when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class))).thenReturn(USER_INFO);
+        @AfterEach
+        void afterEach() {
+            mockedIdentityHelper.close();
+        }
 
-        var response = handler.handleRequest(event, null);
+        @Test
+        void shouldRedirectToIPVWhenIdentityRequired() {
+            var event = new APIGatewayProxyRequestEvent();
+            setValidHeadersAndQueryParameters(event);
 
-        assertThat(response, hasStatus(302));
+            var response = handler.handleRequest(event, null);
 
-        verify(cloudwatchMetricsService).incrementCounter(eq("AuthenticationCallback"), any());
+            assertThat(response, hasStatus(302));
 
-        verify(initiateIPVAuthorisationService)
-                .sendRequestToIPV(any(), any(), any(), any(), any(), any(), any(), any());
+            verify(cloudwatchMetricsService).incrementCounter(eq("AuthenticationCallback"), any());
+
+            verify(initiateIPVAuthorisationService)
+                    .sendRequestToIPV(
+                            any(), any(), any(), any(), any(), any(), any(), any(), any());
+        }
+
+        @Test
+        void shouldRedirectToIPVWithReproveIdentityWhenAccountInterventionsEnabled() {
+            when(configurationService.isAccountInterventionServiceEnabled()).thenReturn(true);
+            when(configurationService.isAccountInterventionServiceAuditEnabled()).thenReturn(true);
+            boolean reproveIdentity = true;
+            when(accountInterventionService.getAccountStatus(any()))
+                    .thenReturn(
+                            new AccountInterventionStatus(false, false, reproveIdentity, false));
+
+            var event = new APIGatewayProxyRequestEvent();
+            setValidHeadersAndQueryParameters(event);
+
+            handler.handleRequest(event, null);
+
+            verify(initiateIPVAuthorisationService)
+                    .sendRequestToIPV(
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            eq(reproveIdentity));
+        }
     }
 
     @Test
@@ -332,6 +363,7 @@ class AuthenticationCallbackHandlerTest {
     }
 
     private APIGatewayProxyResponseEvent createIPVApiResponse() {
+
         return generateApiGatewayProxyResponse(
                 302, "", Map.of(ResponseHeaders.LOCATION, IPV_REDIRECT_URI.toString()), null);
     }

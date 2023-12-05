@@ -15,7 +15,8 @@ module "ipv_processing_identity_role" {
     module.oidc_txma_audit.access_policy_arn,
     local.account_modifiers_encryption_policy_arn,
     local.client_registry_encryption_policy_arn,
-    local.identity_credentials_encryption_policy_arn
+    local.identity_credentials_encryption_policy_arn,
+    local.user_credentials_encryption_policy_arn
   ]
 }
 
@@ -28,13 +29,16 @@ module "processing-identity" {
   environment     = var.environment
 
   handler_environment_variables = {
-    DYNAMO_ENDPOINT          = var.use_localstack ? var.lambda_dynamo_endpoint : null
-    TXMA_AUDIT_QUEUE_URL     = module.oidc_txma_audit.queue_url
-    ENVIRONMENT              = var.environment
-    HEADERS_CASE_INSENSITIVE = var.use_localstack ? "true" : "false"
-    LOCALSTACK_ENDPOINT      = var.use_localstack ? var.localstack_endpoint : null
-    REDIS_KEY                = local.redis_key
-    INTERNAl_SECTOR_URI      = var.internal_sector_uri
+    DYNAMO_ENDPOINT                            = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    TXMA_AUDIT_QUEUE_URL                       = module.oidc_txma_audit.queue_url
+    ENVIRONMENT                                = var.environment
+    HEADERS_CASE_INSENSITIVE                   = var.use_localstack ? "true" : "false"
+    LOCALSTACK_ENDPOINT                        = var.use_localstack ? var.localstack_endpoint : null
+    REDIS_KEY                                  = local.redis_key
+    INTERNAl_SECTOR_URI                        = var.internal_sector_uri
+    ACCOUNT_INTERVENTION_SERVICE_AUDIT_ENABLED = var.account_intervention_service_audit_enabled
+    ACCOUNT_INTERVENTION_SERVICE_ENABLED       = var.account_intervention_service_enabled
+    ACCOUNT_INTERVENTION_SERVICE_URI           = var.account_intervention_service_uri
   }
   handler_function_name = "uk.gov.di.authentication.ipv.lambda.ProcessingIdentityHandler::handleRequest"
 

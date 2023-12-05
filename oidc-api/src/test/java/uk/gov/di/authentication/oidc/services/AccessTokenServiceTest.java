@@ -74,7 +74,8 @@ class AccessTokenServiceTest {
                     .add(ValidClaims.PASSPORT.getValue())
                     .add(ValidClaims.DRIVING_PERMIT.getValue())
                     .add(ValidClaims.SOCIAL_SECURITY_RECORD.getValue())
-                    .add(ValidClaims.CORE_IDENTITY_JWT.getValue());
+                    .add(ValidClaims.CORE_IDENTITY_JWT.getValue())
+                    .add(ValidClaims.RETURN_CODE.getValue());
     private final OIDCClaimsRequest oidcValidClaimsRequest =
             new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
     private AccessToken accessToken = createSignedAccessToken(null, false);

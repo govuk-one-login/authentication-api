@@ -74,7 +74,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public URI getAccountInterventionServiceURI() {
-        return URI.create(System.getenv("ACCOUNT_INTERVENTION_SERVICE_URI"));
+        return URI.create(System.getenv().getOrDefault("ACCOUNT_INTERVENTION_SERVICE_URI", ""));
     }
 
     public String getAccountManagementURI() {

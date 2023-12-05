@@ -1,5 +1,7 @@
 package uk.gov.di.authentication.oidc.helpers;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.langtag.LangTag;
@@ -21,6 +23,7 @@ import java.net.URI;
 import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -33,6 +36,9 @@ class RequestObjectToAuthRequestHelperTest {
     private static final URI REDIRECT_URI = URI.create("https://localhost:8080");
     private static final State STATE = new State();
     private static final Nonce NONCE = new Nonce();
+
+    private static final String CLAIMS =
+            "{\"userinfo\":{\"https://vocab.account.gov.uk/v1/coreIdentityJWT\":{\"essential\":true},\"https://vocab.account.gov.uk/v1/address\":null}}";
 
     @Test
     void shouldConvertRequestObjectToAuthRequest() throws JOSEException {
@@ -96,6 +102,37 @@ class RequestObjectToAuthRequestHelperTest {
     }
 
     @Test
+    void shouldConvertRequestObjectToAuthRequestWhenClaimsClaimIsPresent() throws JOSEException {
+        var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);
+        var jwtClaimsSet = getClaimsSetBuilder(scope).build();
+        var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
+        var authRequest =
+                new AuthenticationRequest.Builder(
+                                ResponseType.CODE,
+                                new Scope(OIDCScopeValue.OPENID),
+                                CLIENT_ID,
+                                null)
+                        .requestObject(signedJWT)
+                        .build();
+
+        var transformedAuthRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
+
+        assertThat(transformedAuthRequest.getState(), equalTo(STATE));
+        assertThat(transformedAuthRequest.getNonce(), equalTo(NONCE));
+        assertThat(transformedAuthRequest.getRedirectionURI(), equalTo(REDIRECT_URI));
+        assertThat(transformedAuthRequest.getScope(), equalTo(scope));
+        assertThat(transformedAuthRequest.getClientID(), equalTo(CLIENT_ID));
+        assertThat(transformedAuthRequest.getResponseType(), equalTo(ResponseType.CODE));
+        assertThat(transformedAuthRequest.getRequestObject(), equalTo(signedJWT));
+
+        JsonElement actualClaims =
+                JsonParser.parseString(String.valueOf(transformedAuthRequest.getOIDCClaims()));
+        JsonElement expectedClaims = JsonParser.parseString(CLAIMS);
+        assertThat(actualClaims, equalTo(expectedClaims));
+    }
+
+    @Test
     void shouldConvertRequestObjectToAuthRequestWhenUILocalesClaimIsPresent()
             throws JOSEException, LangTagException {
         var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
@@ -147,6 +184,65 @@ class RequestObjectToAuthRequestHelperTest {
         assertThat(transformedAuthRequest.getScope(), equalTo(authRequest.getScope()));
     }
 
+    @Test
+    void shouldRetrieveRpSidFromRequestObject() throws JOSEException {
+        var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);
+        var rpSid = "test-rp-sid";
+        var jwtClaimsSet = getClaimsSetBuilder(scope).claim("rp_sid", rpSid).build();
+        var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
+        var authRequest =
+                new AuthenticationRequest.Builder(
+                                ResponseType.CODE,
+                                new Scope(OIDCScopeValue.OPENID),
+                                CLIENT_ID,
+                                null)
+                        .requestObject(signedJWT)
+                        .build();
+
+        var transformedAuthRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
+
+        assertThat(transformedAuthRequest.getCustomParameter("rp_sid"), contains(rpSid));
+
+        assertThat(transformedAuthRequest.getState(), equalTo(STATE));
+        assertThat(transformedAuthRequest.getNonce(), equalTo(NONCE));
+        assertThat(transformedAuthRequest.getRedirectionURI(), equalTo(REDIRECT_URI));
+        assertThat(transformedAuthRequest.getScope(), equalTo(scope));
+        assertThat(transformedAuthRequest.getClientID(), equalTo(CLIENT_ID));
+        assertThat(transformedAuthRequest.getResponseType(), equalTo(ResponseType.CODE));
+        assertThat(transformedAuthRequest.getRequestObject(), equalTo(signedJWT));
+    }
+
+    @Test
+    void shouldSuccessfullyParseAnAuthOnlyRequest() throws JOSEException {
+        var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);
+        var jwtClaimsSet =
+                getClaimsSetBuilder(scope)
+                        .claim("claims", null)
+                        .claim("vtr", List.of("Cl.Cm"))
+                        .build();
+        var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
+        var authRequest =
+                new AuthenticationRequest.Builder(
+                                ResponseType.CODE,
+                                new Scope(OIDCScopeValue.OPENID),
+                                CLIENT_ID,
+                                null)
+                        .requestObject(signedJWT)
+                        .build();
+
+        var transformedAuthRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
+
+        assertThat(transformedAuthRequest.getState(), equalTo(STATE));
+        assertThat(transformedAuthRequest.getNonce(), equalTo(NONCE));
+        assertThat(transformedAuthRequest.getRedirectionURI(), equalTo(REDIRECT_URI));
+        assertThat(transformedAuthRequest.getScope(), equalTo(scope));
+        assertThat(transformedAuthRequest.getClientID(), equalTo(CLIENT_ID));
+        assertThat(transformedAuthRequest.getResponseType(), equalTo(ResponseType.CODE));
+        assertThat(transformedAuthRequest.getRequestObject(), equalTo(signedJWT));
+    }
+
     private JWTClaimsSet.Builder getClaimsSetBuilder(Scope scope) {
         return new JWTClaimsSet.Builder()
                 .audience(AUDIENCE)
@@ -156,6 +252,7 @@ class RequestObjectToAuthRequestHelperTest {
                 .claim("nonce", NONCE)
                 .claim("state", STATE)
                 .claim("client_id", CLIENT_ID.getValue())
+                .claim("claims", CLAIMS)
                 .issuer(CLIENT_ID.getValue());
     }
 }

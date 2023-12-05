@@ -156,6 +156,8 @@ class AuthorisationHandlerTest {
     private static final String REDIRECT_URI = "https://localhost:8080";
     private static final String DOC_APP_REDIRECT_URI = "/doc-app-authorisation";
     private static final String SCOPE = "email openid profile";
+    private static final String CLAIMS =
+            "{\"userinfo\":{\"https://vocab.account.gov.uk/v1/coreIdentityJWT\":{\"essential\":true},\"https://vocab.account.gov.uk/v1/address\":null}}";
     private static final String RESPONSE_TYPE = "code";
     private static final String TEST_ORCHESTRATOR_CLIENT_ID = "test-orch-client-id";
     private static final String RP_CLIENT_NAME = "test-rp-client-name";
@@ -193,12 +195,13 @@ class AuthorisationHandlerTest {
         when(configService.getSessionCookieAttributes()).thenReturn("Secure; HttpOnly;");
         when(configService.getSessionCookieMaxAge()).thenReturn(3600);
         when(configService.getPersistentCookieMaxAge()).thenReturn(34190000);
+        when(configService.isIdentityEnabled()).thenReturn(true);
         when(queryParamsAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                 .thenReturn(Optional.empty());
         when(orchestrationAuthorizationService.getExistingOrCreateNewPersistentSessionId(any()))
                 .thenReturn(EXPECTED_PERSISTENT_COOKIE_VALUE_WITH_TIMESTAMP);
         when(orchestrationAuthorizationService.getEffectiveVectorOfTrust(any()))
-                .thenReturn(new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL));
+                .thenCallRealMethod();
         when(userContext.getClient()).thenReturn(Optional.of(generateClientRegistry()));
         when(context.getAwsRequestId()).thenReturn(AWS_REQUEST_ID);
         handler =
@@ -457,7 +460,8 @@ class AuthorisationHandlerTest {
                             generateAuthRequest(Optional.of(jsonArrayOf("Cl.Cm"))).toParameters());
 
             APIGatewayProxyResponseEvent response =
-                    makeHandlerRequest(withRequestEvent(buildRequestParams(Map.of("vtr", "Cl"))));
+                    makeHandlerRequest(
+                            withRequestEvent(buildRequestParams(Map.of("vtr", "[\"Cl\"]"))));
             URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
 
             assertThat(response, hasStatus(302));
@@ -504,7 +508,7 @@ class AuthorisationHandlerTest {
 
             APIGatewayProxyResponseEvent response =
                     makeHandlerRequest(
-                            withRequestEvent(buildRequestParams(Map.of("vtr", "P2.Cl.Cm"))));
+                            withRequestEvent(buildRequestParams(Map.of("vtr", "[\"P2.Cl.Cm\"]"))));
             URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
 
             assertThat(response, hasStatus(302));
@@ -937,6 +941,108 @@ class AuthorisationHandlerTest {
                             EXPECTED_PERSISTENT_COOKIE_VALUE_WITH_TIMESTAMP,
                             pair("client-name", RP_CLIENT_NAME));
         }
+
+        @Test
+        void shouldAuditRequestParsedWhenRpSidPresent() {
+            var rpSid = "test-rp-sid";
+            Map<String, String> requestParams = buildRequestParams(Map.of("rp_sid", rpSid));
+            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
+            URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
+
+            inOrder.verify(auditService)
+                    .submitAuditEvent(
+                            OidcAuditableEvent.AUTHORISATION_REQUEST_PARSED,
+                            CLIENT_SESSION_ID,
+                            AuditService.UNKNOWN,
+                            CLIENT_ID.getValue(),
+                            AuditService.UNKNOWN,
+                            AuditService.UNKNOWN,
+                            "123.123.123.123",
+                            AuditService.UNKNOWN,
+                            EXPECTED_PERSISTENT_COOKIE_VALUE_WITH_TIMESTAMP,
+                            pair("rpSid", rpSid),
+                            pair("identityRequested", false),
+                            pair("reauthRequested", false));
+        }
+
+        @Test
+        void shouldAuditRequestParsedWhenRpSidNotPresent() {
+            Map<String, String> requestParams = buildRequestParams(null);
+            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
+
+            inOrder.verify(auditService)
+                    .submitAuditEvent(
+                            OidcAuditableEvent.AUTHORISATION_REQUEST_PARSED,
+                            CLIENT_SESSION_ID,
+                            AuditService.UNKNOWN,
+                            CLIENT_ID.getValue(),
+                            AuditService.UNKNOWN,
+                            AuditService.UNKNOWN,
+                            "123.123.123.123",
+                            AuditService.UNKNOWN,
+                            EXPECTED_PERSISTENT_COOKIE_VALUE_WITH_TIMESTAMP,
+                            pair("rpSid", AuditService.UNKNOWN),
+                            pair("identityRequested", false),
+                            pair("reauthRequested", false));
+        }
+
+        @Test
+        void shouldAuditRequestParsedWhenOnAuthOnlyFlow() {
+            Map<String, String> requestParams = buildRequestParams(Map.of("vtr", "[\"Cl.Cm\"]"));
+            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
+
+            inOrder.verify(auditService)
+                    .submitAuditEvent(
+                            OidcAuditableEvent.AUTHORISATION_REQUEST_PARSED,
+                            CLIENT_SESSION_ID,
+                            AuditService.UNKNOWN,
+                            CLIENT_ID.getValue(),
+                            AuditService.UNKNOWN,
+                            AuditService.UNKNOWN,
+                            "123.123.123.123",
+                            AuditService.UNKNOWN,
+                            EXPECTED_PERSISTENT_COOKIE_VALUE_WITH_TIMESTAMP,
+                            pair("rpSid", AuditService.UNKNOWN),
+                            pair("identityRequested", false),
+                            pair("reauthRequested", false));
+        }
+
+        @Test
+        void shouldAuditRequestParsedWhenOnIdentityFlow() {
+            Map<String, String> requestParams = buildRequestParams(Map.of("vtr", "[\"P2.Cl.Cm\"]"));
+            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
+
+            inOrder.verify(auditService)
+                    .submitAuditEvent(
+                            OidcAuditableEvent.AUTHORISATION_REQUEST_PARSED,
+                            CLIENT_SESSION_ID,
+                            AuditService.UNKNOWN,
+                            CLIENT_ID.getValue(),
+                            AuditService.UNKNOWN,
+                            AuditService.UNKNOWN,
+                            "123.123.123.123",
+                            AuditService.UNKNOWN,
+                            EXPECTED_PERSISTENT_COOKIE_VALUE_WITH_TIMESTAMP,
+                            pair("rpSid", AuditService.UNKNOWN),
+                            pair("identityRequested", true),
+                            pair("reauthRequested", false));
+        }
     }
 
     @Nested
@@ -1187,6 +1293,7 @@ class AuthorisationHandlerTest {
                         .claim("state", STATE)
                         .claim("nonce", NONCE.getValue())
                         .claim("scope", "openid doc-checking-app")
+                        .claim("claims", CLAIMS)
                         .issuer(CLIENT_ID.getValue())
                         .build();
 
@@ -1254,7 +1361,8 @@ class AuthorisationHandlerTest {
                 .withOneLoginService(IS_ONE_LOGIN)
                 .withServiceType(RP_SERVICE_TYPE)
                 .withConsentRequired(IS_CONSENT_REQUIRED)
-                .withSubjectType("public");
+                .withSubjectType("public")
+                .withIdentityVerificationSupported(true);
     }
 
     private static EncryptedJWT createEncryptedJWT() throws JOSEException, ParseException {
@@ -1342,6 +1450,7 @@ class AuthorisationHandlerTest {
                 .claim("state", STATE.getValue())
                 .claim("nonce", NONCE.getValue())
                 .claim("client_id", CLIENT_ID.getValue())
+                .claim("claims", CLAIMS)
                 .issuer(CLIENT_ID.getValue())
                 .build();
     }

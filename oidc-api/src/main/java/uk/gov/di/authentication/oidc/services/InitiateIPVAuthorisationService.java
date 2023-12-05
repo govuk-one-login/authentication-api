@@ -58,7 +58,8 @@ public class InitiateIPVAuthorisationService {
             ClientRegistry client,
             String rpClientID,
             String clientSessionId,
-            String persistentSessionCookieId) {
+            String persistentSessionCookieId,
+            Boolean reproveIdentity) {
         if (!configurationService.isIdentityEnabled()) {
             LOG.error("Identity is not enabled");
             throw new RuntimeException("Identity is not enabled");
@@ -79,7 +80,9 @@ public class InitiateIPVAuthorisationService {
                         claimsSetRequest,
                         Optional.ofNullable(clientSessionId).orElse("unknown"),
                         userInfo.getEmailAddress(),
-                        authRequest.getCustomParameter("vtr"));
+                        authRequest.getCustomParameter("vtr"),
+                        reproveIdentity);
+
         var authRequestBuilder =
                 new AuthorizationRequest.Builder(
                                 new ResponseType(ResponseType.Value.CODE),

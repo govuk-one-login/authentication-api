@@ -27,6 +27,8 @@ import uk.gov.di.orchestration.sharedtest.extensions.TokenSigningExtension;
 import uk.gov.di.orchestration.sharedtest.extensions.UserStoreExtension;
 
 import java.net.HttpCookie;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.HashMap;
@@ -166,6 +168,32 @@ public abstract class HandlerIntegrationTest<Q, S> {
                 @Override
                 public String getTxmaAuditQueueUrl() {
                     return txmaAuditQueue.getQueueUrl();
+                }
+            };
+
+    protected static final ConfigurationService TXMA_AND_AIS_ENABLED_CONFIGURATION_SERVICE =
+            new IntegrationTestConfigurationService(
+                    auditTopic,
+                    notificationsQueue,
+                    auditSigningKey,
+                    tokenSigner,
+                    ipvPrivateKeyJwtSigner,
+                    spotQueue,
+                    docAppPrivateKeyJwtSigner,
+                    configurationParameters) {
+
+                @Override
+                public String getTxmaAuditQueueUrl() {
+                    return txmaAuditQueue.getQueueUrl();
+                }
+
+                @Override
+                public URI getAccountInterventionServiceURI() {
+                    try {
+                        return new URI("http://ais-uri-example.com/somepath/");
+                    } catch (URISyntaxException e) {
+                        throw new RuntimeException(e);
+                    }
                 }
             };
 

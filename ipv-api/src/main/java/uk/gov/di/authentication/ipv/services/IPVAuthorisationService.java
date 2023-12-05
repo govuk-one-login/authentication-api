@@ -157,7 +157,8 @@ public class IPVAuthorisationService {
             ClaimsSetRequest claims,
             String clientSessionId,
             String emailAddress,
-            List<String> vtr) {
+            List<String> vtr,
+            Boolean reproveIdentity) {
         LOG.info("Generating request JWT");
         var jwsHeader = new JWSHeader(SIGNING_ALGORITHM);
         var jwtID = IdGenerator.generate();
@@ -182,6 +183,9 @@ public class IPVAuthorisationService {
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", scope.toString())
                         .claim("vtr", vtr);
+        if (configurationService.isAccountInterventionServiceEnabled() && reproveIdentity != null) {
+            claimsBuilder.claim("reprove_identity", reproveIdentity);
+        }
         if (Objects.nonNull(claims)) {
             claimsBuilder.claim("claims", claimsRequest.toJSONObject());
         }

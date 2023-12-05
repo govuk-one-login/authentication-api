@@ -17,7 +17,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class AccountInterventionServiceTest {
@@ -89,23 +88,6 @@ class AccountInterventionServiceTest {
         assertEquals(false, status.blocked());
         assertEquals(true, status.suspended());
         assertEquals(true, status.reproveIdentity());
-        assertEquals(false, status.resetPassword());
-    }
-
-    @Test
-    void shouldReturnAccountStatusAllClearWhenDisabled() {
-
-        when(config.isAccountInterventionServiceEnabled()).thenReturn(false);
-
-        var internalPairwiseSubjectId = "some-internal-subject-id";
-        var ais = new AccountInterventionService(config, httpClient);
-        var status = ais.getAccountStatus(internalPairwiseSubjectId);
-
-        verifyNoInteractions(httpClient);
-
-        assertEquals(false, status.blocked());
-        assertEquals(false, status.suspended());
-        assertEquals(false, status.reproveIdentity());
         assertEquals(false, status.resetPassword());
     }
 

@@ -41,7 +41,8 @@ public class IPVStubExtension extends HttpStubExtension {
                         + "  \"https://vocab.account.gov.uk/v1/address\": [{\"addressCountry\":\"GB\",\"uprn\":null,\"buildingName\":\"\",\"streetName\":\"HADLEY ROAD\",\"postalCode\":\"BA2 5AA\",\"buildingNumber\":\"8\",\"addressLocality\":\"BATH\",\"validFrom\":\"2000-01-01\"}],"
                         + "  \"https://vocab.account.gov.uk/v1/drivingPermit\": [{\"personalNumber\":\"DOE99802085J99KV\",\"fullAddress\":\"122 BURNS CRESCENT EDINBURGH EH1 9GP\",\"issueNumber\":\"16\",\"issuedBy\":\"DVLA\",\"issueDate\":\"2019-01-23\",\"expiryDate\":\"2023-01-18\"}],"
                         + "  \"https://vocab.account.gov.uk/v1/socialSecurityRecord\": [{\"socialSecurityRecord\":[{\"personalNumber\":\"LR850265D\"}]}],"
-                        + "  \"https://vocab.account.gov.uk/v1/passport\": [{\"documentNumber\":\"1223456\",\"expiryDate\":\"2022-02-02\"}]"
+                        + "  \"https://vocab.account.gov.uk/v1/passport\": [{\"documentNumber\":\"1223456\",\"expiryDate\":\"2022-02-02\"}],"
+                        + "  \"https://vocab.account.gov.uk/v1/returnCode\": [{\"code\":\"A\"},{\"code\":\"P\"}]"
                         + "}");
     }
 }

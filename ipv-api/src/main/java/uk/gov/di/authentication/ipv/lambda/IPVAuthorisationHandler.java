@@ -148,7 +148,8 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
                             claimsSetRequest,
                             Optional.ofNullable(clientSessionId).orElse("unknown"),
                             userContext.getUserProfile().map(UserProfile::getEmail).orElseThrow(),
-                            authRequest.getCustomParameter("vtr"));
+                            authRequest.getCustomParameter("vtr"),
+                            false);
             var authRequestBuilder =
                     new AuthorizationRequest.Builder(
                                     new ResponseType(ResponseType.Value.CODE),
