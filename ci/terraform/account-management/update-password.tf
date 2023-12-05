@@ -10,7 +10,8 @@ module "account_management_api_update_password_role" {
     aws_iam_policy.audit_signing_key_lambda_kms_signing_policy.arn,
     aws_iam_policy.dynamo_common_passwords_read_access_policy.arn,
     module.account_management_txma_audit.access_policy_arn,
-    local.common_passwords_encryption_policy_arn
+    local.common_passwords_encryption_policy_arn,
+    local.user_profile_encryption_policy_arn
   ]
 }
 
