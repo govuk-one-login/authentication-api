@@ -206,7 +206,7 @@ class TokenHandlerTest {
         String internalPairwiseId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         SUBJECT_ID,
-                        "https://test-backend.com",
+                        "test-backend.com",
                         SdkBytes.fromByteBuffer(ByteBuffer.allocateDirect(12345)).asByteArray());
         APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
         String formData = "code=" + VALID_AUTH_CODE + "&client_id=" + CLIENT_ID;
