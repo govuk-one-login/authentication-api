@@ -25,55 +25,77 @@ public class SerializationService implements Json {
     private static SerializationService INSTANCE;
     private static Logger LOG = LogManager.getLogger(SerializationService.class);
 
-    private final Gson gson;
+    private final Gson gsonWithUnderscores;
+    private final Gson gsonWithCamelCase;
     private final RequiredFieldValidator defaultValidator = new RequiredFieldValidator();
 
     public SerializationService() {
-        gson =
-                new GsonBuilder()
-                        .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
-                        .serializeNulls()
-                        .excludeFieldsWithoutExposeAnnotation()
-                        .registerTypeAdapter(State.class, new StateAdapter())
-                        .registerTypeAdapter(LocalDateTime.class, new LocalDateTimeAdapter())
-                        .registerTypeAdapter(Subject.class, new SubjectAdapter())
-                        .create();
+        gsonWithUnderscores =
+                createGsonBuilder(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create();
+        gsonWithCamelCase = createGsonBuilder(FieldNamingPolicy.IDENTITY).create();
     }
 
     @Override
-    public <T> T readValue(String body, Class<T> klass) throws JsonException {
-        return readValue(body, klass, defaultValidator);
+    public <T> T readValue(String jsonString, Class<T> clazz) throws JsonException {
+        return readValue(jsonString, clazz, defaultValidator, false);
     }
 
     @Override
-    public <T> T readValue(String jsonString, Class<T> clazz, Validator validator)
+    public <T> T readValue(String body, Class<T> klass, Validator validator) throws JsonException {
+        return readValue(body, klass, validator, false);
+    }
+
+    public <T> T readValue(String body, Class<T> klass, boolean useCamelCase) throws JsonException {
+        return readValue(body, klass, defaultValidator, useCamelCase);
+    }
+
+    public <T> T readValue(
+            String jsonString, Class<T> clazz, Validator validator, boolean useCamelCase)
+            throws JsonException {
+        Gson gson = useCamelCase ? gsonWithCamelCase : gsonWithUnderscores;
+        return deserializeJson(jsonString, clazz, validator, gson);
+    }
+
+    private <T> T deserializeJson(String jsonString, Class<T> clazz, Validator validator, Gson gson)
             throws JsonException {
         try {
             T value =
                     segmentedFunctionCall(
                             "SerializationService::GSON::fromJson",
                             () -> gson.fromJson(jsonString, clazz));
-            var violations =
-                    segmentedFunctionCall(
-                            "SerializationService::validator::validate",
-                            () -> validator.validate(value));
-            if (violations.isEmpty()) {
-                return value;
-            }
+            validateJson(value, validator);
+            return value;
+        } catch (JsonSyntaxException | IllegalArgumentException e) {
+            LOG.error("Error during JSON deserialization", e);
+            throw new JsonException(e);
+        }
+    }
+
+    private <T> void validateJson(T value, Validator validator) throws JsonException {
+        var violations =
+                segmentedFunctionCall(
+                        "SerializationService::validator::validate",
+                        () -> validator.validate(value));
+        if (!violations.isEmpty()) {
+            String violationMessage =
+                    "JSON validation error, missing required field(s): "
+                            + String.join(", ", violations);
             violations.forEach(
                     v -> LOG.warn("Json validation failed due to missing required field: {}", v));
-            throw new JsonException(
-                    "JSON validation error, missing required field(s): "
-                            + String.join(", ", violations));
-        } catch (JsonSyntaxException | IllegalArgumentException e) {
-            throw new JsonException(e);
+            throw new JsonException(violationMessage);
         }
     }
 
     @Override
     public String writeValueAsString(Object object) {
         return segmentedFunctionCall(
-                "SerializationService::GSON::toJson", () -> gson.toJson(object));
+                "SerializationService::GSON::toJson", () -> gsonWithUnderscores.toJson(object));
+    }
+
+    @Override
+    public String writeValueAsStringCamelCase(Object object) {
+        return segmentedFunctionCall(
+                "SerializationService::GSON::toJson", () -> gsonWithCamelCase.toJson(object));
     }
 
     public static SerializationService getInstance() {
@@ -81,5 +103,15 @@ public class SerializationService implements Json {
             INSTANCE = new SerializationService();
         }
         return INSTANCE;
+    }
+
+    private GsonBuilder createGsonBuilder(FieldNamingPolicy namingPolicy) {
+        return new GsonBuilder()
+                .setFieldNamingPolicy(namingPolicy)
+                .serializeNulls()
+                .excludeFieldsWithoutExposeAnnotation()
+                .registerTypeAdapter(State.class, new StateAdapter())
+                .registerTypeAdapter(LocalDateTime.class, new LocalDateTimeAdapter())
+                .registerTypeAdapter(Subject.class, new SubjectAdapter());
     }
 }

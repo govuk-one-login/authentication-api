@@ -635,4 +635,8 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     public String getNotifyTemplateId(String templateName) {
         return System.getenv(templateName);
     }
+
+    public URI getAccountInterventionServiceURI() {
+        return URI.create(System.getenv("ACCOUNT_INTERVENTION_SERVICE_URI"));
+    }
 }

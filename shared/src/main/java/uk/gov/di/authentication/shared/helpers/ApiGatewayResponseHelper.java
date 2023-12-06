@@ -49,6 +49,15 @@ public class ApiGatewayResponseHelper {
         return generateApiGatewayProxyResponse(statusCode, objectMapper.writeValueAsString(body));
     }
 
+    public static <T> APIGatewayProxyResponseEvent generateApiGatewayProxyResponse(
+            int statusCode, T body, boolean camelCase) throws JsonException {
+        return generateApiGatewayProxyResponse(
+                statusCode,
+                camelCase
+                        ? objectMapper.writeValueAsStringCamelCase(body)
+                        : objectMapper.writeValueAsString(body));
+    }
+
     public static <T> APIGatewayProxyResponseEvent generateApiGatewayProxyErrorResponse(
             int statusCode, ErrorResponse errorResponse) {
 
