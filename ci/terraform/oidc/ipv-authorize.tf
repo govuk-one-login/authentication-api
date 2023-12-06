@@ -29,18 +29,18 @@ module "ipv-authorize" {
   environment     = var.environment
 
   handler_environment_variables = {
-    ENVIRONMENT                    = var.environment
-    TXMA_AUDIT_QUEUE_URL           = module.oidc_txma_audit.queue_url
-    LOCALSTACK_ENDPOINT            = var.use_localstack ? var.localstack_endpoint : null
-    REDIS_KEY                      = local.redis_key
     DYNAMO_ENDPOINT                = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    ENVIRONMENT                    = var.environment
     IDENTITY_ENABLED               = var.ipv_api_enabled
-    IPV_AUTHORISATION_URI          = var.ipv_authorisation_uri
+    INTERNAl_SECTOR_URI            = var.internal_sector_uri
+    IPV_AUDIENCE                   = var.ipv_audience
     IPV_AUTHORISATION_CALLBACK_URI = var.ipv_authorisation_callback_uri
     IPV_AUTHORISATION_CLIENT_ID    = var.ipv_authorisation_client_id
-    IPV_AUDIENCE                   = var.ipv_audience
+    IPV_AUTHORISATION_URI          = var.ipv_authorisation_uri
     IPV_TOKEN_SIGNING_KEY_ALIAS    = local.ipv_token_auth_key_alias_name
-    INTERNAl_SECTOR_URI            = var.internal_sector_uri
+    LOCALSTACK_ENDPOINT            = var.use_localstack ? var.localstack_endpoint : null
+    REDIS_KEY                      = local.redis_key
+    TXMA_AUDIT_QUEUE_URL           = module.oidc_txma_audit.queue_url
   }
   handler_function_name = "uk.gov.di.authentication.ipv.lambda.IPVAuthorisationHandler::handleRequest"
 
