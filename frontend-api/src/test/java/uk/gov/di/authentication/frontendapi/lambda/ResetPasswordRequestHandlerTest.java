@@ -87,6 +87,8 @@ class ResetPasswordRequestHandlerTest {
     private static final long BLOCKED_EMAIL_DURATION = 799;
     private static final Json objectMapper = SerializationService.getInstance();
     private static final String PHONE_NUMBER = "01234567890";
+    private static final AuditService.MetadataPair PASSWORD_RESET_COUNTER =
+            pair("passwordResetCounter", 0);
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AwsSqsClient awsSqsClient = mock(AwsSqsClient.class);
@@ -179,7 +181,6 @@ class ResetPasswordRequestHandlerTest {
                         CODE_EXPIRY_TIME,
                         RESET_PASSWORD_WITH_CODE);
         verify(sessionService).save(argThat(this::isSessionWithEmailSent));
-
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.PASSWORD_RESET_REQUESTED,
@@ -235,7 +236,8 @@ class ResetPasswordRequestHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         PHONE_NUMBER,
-                        PERSISTENT_ID);
+                        PERSISTENT_ID,
+                        PASSWORD_RESET_COUNTER);
     }
 
     @Test
