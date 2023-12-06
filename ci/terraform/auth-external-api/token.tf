@@ -36,6 +36,7 @@ module "auth_token" {
     AUTHENTICATION_BACKEND_URI                = "https://${aws_api_gateway_rest_api.di_auth_ext_api.id}-${data.aws_vpc_endpoint.auth_api_vpc_endpoint.id}.execute-api.${var.aws_region}.amazonaws.com/${var.environment}/"
     ORCH_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY     = var.orch_to_auth_public_signing_key
     SUPPORT_AUTH_ORCH_SPLIT                   = var.support_auth_orch_split
+    INTERNAl_SECTOR_URI                       = var.internal_sector_uri
   }
   handler_function_name = "uk.gov.di.authentication.external.lambda.TokenHandler::handleRequest"
   handler_runtime       = "java17"

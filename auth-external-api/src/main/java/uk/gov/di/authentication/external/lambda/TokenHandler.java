@@ -26,6 +26,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAuthCodeService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 
+import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -165,7 +166,7 @@ public class TokenHandler
                             ? AuditService.UNKNOWN
                             : ClientSubjectHelper.calculatePairwiseIdentifier(
                                     subjectID,
-                                    configurationService.getInternalSectorUri(),
+                                    URI.create(configurationService.getInternalSectorUri()),
                                     SdkBytes.fromByteBuffer(userProfile.getSalt()).asByteArray());
 
             auditService.submitAuditEvent(
