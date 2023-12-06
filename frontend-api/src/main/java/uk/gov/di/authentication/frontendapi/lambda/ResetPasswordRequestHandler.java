@@ -41,6 +41,7 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 
@@ -116,6 +117,8 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
             var isTestClient =
                     TestClientHelper.isTestClientWithAllowedEmail(
                             userContext, configurationService);
+            int passwordResetCounter = userContext.getSession().getPasswordResetCount();
+            var passwordResetCounterPair = pair("passwordResetCounter", passwordResetCounter);
             auditService.submitAuditEvent(
                     isTestClient
                             ? PASSWORD_RESET_REQUESTED_FOR_TEST_CLIENT
@@ -130,7 +133,8 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                     request.getEmail(),
                     IpAddressHelper.extractIpAddress(input),
                     authenticationService.getPhoneNumber(request.getEmail()).orElse(null),
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                    passwordResetCounterPair);
 
             return validatePasswordResetCount(request.getEmail(), userContext)
                     .map(t -> generateApiGatewayProxyErrorResponse(400, t))
