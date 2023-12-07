@@ -14,23 +14,17 @@ import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
-import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.mockito.ArgumentMatcher;
-import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
-import uk.gov.di.authentication.oidc.services.BackChannelLogoutService;
+import uk.gov.di.authentication.oidc.services.LogoutService;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
-import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
-import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
-import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -41,7 +35,7 @@ import uk.gov.di.orchestration.sharedtest.helper.TokenGeneratorHelper;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
-import java.net.URISyntaxException;
+import java.text.ParseException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -52,10 +46,8 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
-import static org.hamcrest.core.IsEqual.equalTo;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -63,7 +55,6 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
-import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class LogoutHandlerTest {
 
@@ -72,14 +63,11 @@ class LogoutHandlerTest {
     private final SessionService sessionService = mock(SessionService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
-    private final AuditService auditService = mock(AuditService.class);
-
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
     private final TokenValidationService tokenValidationService =
             mock(TokenValidationService.class);
-    private final BackChannelLogoutService backChannelLogoutService =
-            mock(BackChannelLogoutService.class);
+    private final LogoutService logoutService = mock(LogoutService.class);
 
     private static final State STATE = new State();
     private static final String COOKIE = "Cookie";
@@ -94,6 +82,7 @@ class LogoutHandlerTest {
     private static final URI CLIENT_LOGOUT_URI = URI.create("http://localhost/logout");
     private LogoutHandler handler;
     private SignedJWT signedIDToken;
+    private Optional<String> audience;
     private static final Subject SUBJECT = new Subject();
     private static final String EMAIL = "joe.bloggs@test.com";
     private Session session;
@@ -115,62 +104,61 @@ class LogoutHandlerTest {
     }
 
     @BeforeEach
-    public void setUp() throws JOSEException {
+    public void setUp() throws JOSEException, ParseException {
         handler =
                 new LogoutHandler(
-                        configurationService,
                         sessionService,
                         dynamoClientService,
                         clientSessionService,
                         tokenValidationService,
-                        auditService,
                         cloudwatchMetricsService,
-                        backChannelLogoutService);
+                        logoutService);
         when(configurationService.getDefaultLogoutURI()).thenReturn(DEFAULT_LOGOUT_URI);
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
+        when(logoutService.generateLogoutResponse(any(), any(), any(), any(), any(), any()))
+                .thenReturn(new APIGatewayProxyResponseEvent());
+        when(logoutService.generateErrorLogoutResponse(any(), any(), any(), any(), any()))
+                .thenReturn(new APIGatewayProxyResponseEvent());
+        when(context.getAwsRequestId()).thenReturn("aws-session-id");
+
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
         signedIDToken =
                 TokenGeneratorHelper.generateIDToken(
                         "client-id", SUBJECT, "http://localhost-rp", ecSigningKey);
         session = generateSession().setEmailAddress(EMAIL);
-        when(context.getAwsRequestId()).thenReturn("aws-session-id");
+        SignedJWT idToken = SignedJWT.parse(signedIDToken.serialize());
+        audience = idToken.getJWTClaimsSet().getAudience().stream().findFirst();
     }
 
     @Test
     public void shouldDeleteSessionAndRedirectToClientLogoutUriForValidLogoutRequest() {
+        var idTokenHint = signedIDToken.serialize();
+
         when(dynamoClientService.getClient("client-id"))
                 .thenReturn(Optional.of(createClientRegistry()));
-        when(tokenValidationService.isTokenSignatureValid(signedIDToken.serialize()))
-                .thenReturn(true);
+        when(tokenValidationService.isTokenSignatureValid(idTokenHint)).thenReturn(true);
+
         APIGatewayProxyRequestEvent event =
                 generateRequestEvent(
                         Map.of(
-                                "id_token_hint", signedIDToken.serialize(),
+                                "id_token_hint", idTokenHint,
                                 "post_logout_redirect_uri", CLIENT_LOGOUT_URI.toString(),
                                 "state", STATE.toString()));
         setupSessions();
 
-        APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
+        handler.handleRequest(event, context);
 
-        verifySessions();
-        assertThat(response, hasStatus(302));
-        assertThat(
-                response.getHeaders().get(ResponseHeaders.LOCATION),
-                equalTo(CLIENT_LOGOUT_URI + "?state=" + STATE));
-
+        verify(logoutService, times(1)).destroySessions(session);
+        verify(logoutService)
+                .generateLogoutResponse(
+                        CLIENT_LOGOUT_URI,
+                        Optional.of(STATE.toString()),
+                        Optional.empty(),
+                        event,
+                        audience,
+                        Optional.of(SESSION_ID));
         verify(cloudwatchMetricsService).incrementLogout(Optional.of("client-id"));
-        verify(auditService)
-                .submitAuditEvent(
-                        OidcAuditableEvent.LOG_OUT_SUCCESS,
-                        AuditService.UNKNOWN,
-                        SESSION_ID,
-                        "client-id",
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
     }
 
     @Test
@@ -188,26 +176,18 @@ class LogoutHandlerTest {
         setupSessions();
         session.getClientSessions().add("expired-client-session-id");
 
-        var response = handler.handleRequest(event, context);
+        handler.handleRequest(event, context);
 
-        verifySessions();
-        assertThat(response, hasStatus(302));
-        assertThat(
-                response.getHeaders().get(ResponseHeaders.LOCATION),
-                equalTo(CLIENT_LOGOUT_URI + "?state=" + STATE));
-
+        verify(logoutService, times(1)).destroySessions(session);
+        verify(logoutService)
+                .generateLogoutResponse(
+                        CLIENT_LOGOUT_URI,
+                        Optional.of(STATE.toString()),
+                        Optional.empty(),
+                        event,
+                        audience,
+                        Optional.of(SESSION_ID));
         verify(cloudwatchMetricsService).incrementLogout(Optional.of("client-id"));
-        verify(auditService)
-                .submitAuditEvent(
-                        OidcAuditableEvent.LOG_OUT_SUCCESS,
-                        AuditService.UNKNOWN,
-                        SESSION_ID,
-                        "client-id",
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
     }
 
     @Test
@@ -221,26 +201,12 @@ class LogoutHandlerTest {
                 generateRequestEvent(Map.of("id_token_hint", signedIDToken.serialize()));
         setupSessions();
 
-        APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
+        handler.handleRequest(event, context);
 
-        verifySessions();
-        assertThat(response, hasStatus(302));
-        assertThat(
-                response.getHeaders().get(ResponseHeaders.LOCATION),
-                equalTo(DEFAULT_LOGOUT_URI.toString()));
-
-        verify(cloudwatchMetricsService).incrementLogout(Optional.of("client-id"));
-        verify(auditService)
-                .submitAuditEvent(
-                        OidcAuditableEvent.LOG_OUT_SUCCESS,
-                        AuditService.UNKNOWN,
-                        SESSION_ID,
-                        "client-id",
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
+        verify(logoutService, times(1)).destroySessions(session);
+        verify(logoutService)
+                .generateDefaultLogoutResponse(
+                        Optional.empty(), event, audience, Optional.of(SESSION_ID));
     }
 
     @Test
@@ -255,26 +221,12 @@ class LogoutHandlerTest {
                         Map.of("post_logout_redirect_uri", CLIENT_LOGOUT_URI.toString()));
         setupSessions();
 
-        APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
+        handler.handleRequest(event, context);
 
-        verifySessions();
-        assertThat(response, hasStatus(302));
-        assertThat(
-                response.getHeaders().get(ResponseHeaders.LOCATION),
-                equalTo(DEFAULT_LOGOUT_URI.toString()));
-
-        verify(cloudwatchMetricsService).incrementLogout(Optional.empty());
-        verify(auditService)
-                .submitAuditEvent(
-                        OidcAuditableEvent.LOG_OUT_SUCCESS,
-                        AuditService.UNKNOWN,
-                        SESSION_ID,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
+        verify(logoutService, times(1)).destroySessions(session);
+        verify(logoutService)
+                .generateDefaultLogoutResponse(
+                        Optional.empty(), event, Optional.empty(), Optional.of(SESSION_ID));
     }
 
     @Test
@@ -287,62 +239,12 @@ class LogoutHandlerTest {
         APIGatewayProxyRequestEvent event = generateRequestEvent(null);
         setupSessions();
 
-        APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
+        handler.handleRequest(event, context);
 
-        verifySessions();
-        assertThat(response, hasStatus(302));
-        assertThat(
-                response.getHeaders().get(ResponseHeaders.LOCATION),
-                equalTo(DEFAULT_LOGOUT_URI.toString()));
-
-        verify(cloudwatchMetricsService).incrementLogout(Optional.empty());
-        verify(auditService)
-                .submitAuditEvent(
-                        OidcAuditableEvent.LOG_OUT_SUCCESS,
-                        AuditService.UNKNOWN,
-                        SESSION_ID,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
-    }
-
-    @Test
-    public void shouldNotReturnStateWhenStateIsNotSentInRequest() {
-        when(dynamoClientService.getClient("client-id"))
-                .thenReturn(Optional.of(createClientRegistry()));
-        when(tokenValidationService.isTokenSignatureValid(signedIDToken.serialize()))
-                .thenReturn(true);
-        APIGatewayProxyRequestEvent event =
-                generateRequestEvent(
-                        Map.of(
-                                "id_token_hint", signedIDToken.serialize(),
-                                "post_logout_redirect_uri", CLIENT_LOGOUT_URI.toString()));
-        generateSessionFromCookie(session);
-        setupClientSessionToken(signedIDToken);
-        APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
-
-        verify(cloudwatchMetricsService).incrementLogout(Optional.of("client-id"));
-        verify(sessionService, times(1)).deleteSessionFromRedis(SESSION_ID);
-        verify(clientSessionService).deleteClientSessionFromRedis(CLIENT_SESSION_ID);
-        assertThat(response, hasStatus(302));
-        assertThat(
-                response.getHeaders().get(ResponseHeaders.LOCATION),
-                equalTo(CLIENT_LOGOUT_URI.toString()));
-
-        verify(auditService)
-                .submitAuditEvent(
-                        OidcAuditableEvent.LOG_OUT_SUCCESS,
-                        AuditService.UNKNOWN,
-                        SESSION_ID,
-                        "client-id",
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
+        verify(logoutService, times(1)).destroySessions(session);
+        verify(logoutService)
+                .generateDefaultLogoutResponse(
+                        Optional.empty(), event, Optional.empty(), Optional.of(SESSION_ID));
     }
 
     @Test
@@ -355,32 +257,18 @@ class LogoutHandlerTest {
                         "state",
                         STATE.toString()));
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
-        APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
+        handler.handleRequest(event, context);
 
-        assertThat(response, hasStatus(302));
-        assertThat(
-                response.getHeaders().get(ResponseHeaders.LOCATION),
-                equalTo(DEFAULT_LOGOUT_URI + "?state=" + STATE));
-        verify(sessionService, times(0)).deleteSessionFromRedis(SESSION_ID);
-
+        verify(logoutService, times(0)).destroySessions(session);
+        verify(logoutService)
+                .generateDefaultLogoutResponse(
+                        Optional.of(STATE.getValue()), event, Optional.empty(), Optional.empty());
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(auditService)
-                .submitAuditEvent(
-                        OidcAuditableEvent.LOG_OUT_SUCCESS,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
     }
 
     @Test
     public void
-            shouldRedirectToDefaultLogoutUriWithErrorMessageWhenClientSessionIdIsNotFoundInSession()
-                    throws URISyntaxException {
+            shouldRedirectToDefaultLogoutUriWithErrorMessageWhenClientSessionIdIsNotFoundInSession() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(
                 Map.of(
@@ -392,36 +280,21 @@ class LogoutHandlerTest {
         event.setHeaders(Map.of(COOKIE, buildCookieString("invalid-client-session-id")));
         generateSessionFromCookie(session);
 
-        APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
+        handler.handleRequest(event, context);
 
-        assertThat(response, hasStatus(302));
-        ErrorObject errorObject =
-                new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "invalid session");
-        URIBuilder uriBuilder = new URIBuilder(DEFAULT_LOGOUT_URI);
-        uriBuilder.addParameter("error_code", errorObject.getCode());
-        uriBuilder.addParameter("error_description", errorObject.getDescription());
-        URI expectedUri = uriBuilder.build();
-        assertThat(
-                response.getHeaders().get(ResponseHeaders.LOCATION),
-                equalTo(expectedUri.toString()));
-
+        verify(logoutService)
+                .generateErrorLogoutResponse(
+                        Optional.empty(),
+                        new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "invalid session"),
+                        event,
+                        Optional.empty(),
+                        Optional.of(session.getSessionId()));
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(auditService)
-                .submitAuditEvent(
-                        OidcAuditableEvent.LOG_OUT_SUCCESS,
-                        AuditService.UNKNOWN,
-                        SESSION_ID,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
     }
 
     @Test
-    public void shouldRedirectToDefaultLogoutUriWithErrorMessageWhenIDTokenHintIsNotFoundInSession()
-            throws URISyntaxException {
+    public void
+            shouldRedirectToDefaultLogoutUriWithErrorMessageWhenIDTokenHintIsNotFoundInSession() {
         APIGatewayProxyRequestEvent event =
                 generateRequestEvent(
                         Map.of(
@@ -429,37 +302,21 @@ class LogoutHandlerTest {
                                 "post_logout_redirect_uri", CLIENT_LOGOUT_URI.toString()));
         generateSessionFromCookie(session);
 
-        APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
+        handler.handleRequest(event, context);
 
-        assertThat(response, hasStatus(302));
-        ErrorObject errorObject =
-                new ErrorObject(
-                        OAuth2Error.INVALID_REQUEST_CODE, "unable to validate id_token_hint");
-        URIBuilder uriBuilder = new URIBuilder(DEFAULT_LOGOUT_URI);
-        uriBuilder.addParameter("error_code", errorObject.getCode());
-        uriBuilder.addParameter("error_description", errorObject.getDescription());
-        URI expectedUri = uriBuilder.build();
-        assertThat(
-                response.getHeaders().get(ResponseHeaders.LOCATION),
-                equalTo(expectedUri.toString()));
-
+        verify(logoutService)
+                .generateErrorLogoutResponse(
+                        Optional.empty(),
+                        new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "invalid session"),
+                        event,
+                        Optional.empty(),
+                        Optional.of(session.getSessionId()));
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(auditService)
-                .submitAuditEvent(
-                        OidcAuditableEvent.LOG_OUT_SUCCESS,
-                        AuditService.UNKNOWN,
-                        SESSION_ID,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
     }
 
     @Test
-    public void shouldRedirectToDefaultLogoutUriWithErrorMessageWhenSignaturenIdTokenIsInvalid()
-            throws URISyntaxException, JOSEException {
+    public void shouldRedirectToDefaultLogoutUriWithErrorMessageWhenSignatureIdTokenIsInvalid()
+            throws JOSEException {
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
         SignedJWT signedJWT =
@@ -476,38 +333,22 @@ class LogoutHandlerTest {
         generateSessionFromCookie(session);
         setupClientSessionToken(signedJWT);
 
-        APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
+        handler.handleRequest(event, context);
 
-        assertThat(response, hasStatus(302));
-        ErrorObject errorObject =
-                new ErrorObject(
-                        OAuth2Error.INVALID_REQUEST_CODE, "unable to validate id_token_hint");
-        URIBuilder uriBuilder = new URIBuilder(DEFAULT_LOGOUT_URI);
-        uriBuilder.addParameter("error_code", errorObject.getCode());
-        uriBuilder.addParameter("error_description", errorObject.getDescription());
-        URI expectedUri = uriBuilder.build();
-        assertThat(
-                response.getHeaders().get(ResponseHeaders.LOCATION),
-                equalTo(expectedUri.toString()));
-
+        verify(logoutService)
+                .generateErrorLogoutResponse(
+                        Optional.empty(),
+                        new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "invalid session"),
+                        event,
+                        Optional.empty(),
+                        Optional.of(session.getSessionId()));
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(auditService)
-                .submitAuditEvent(
-                        OidcAuditableEvent.LOG_OUT_SUCCESS,
-                        AuditService.UNKNOWN,
-                        SESSION_ID,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
     }
 
     @Test
     public void
             shouldRedirectToDefaultLogoutUriWithErrorMessageWhenClientIsNotFoundInClientRegistry()
-                    throws JOSEException, URISyntaxException {
+                    throws JOSEException, ParseException {
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
         SignedJWT signedJWT =
@@ -524,38 +365,27 @@ class LogoutHandlerTest {
         generateSessionFromCookie(session);
         setupClientSessionToken(signedJWT);
 
-        APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
+        handler.handleRequest(event, context);
 
-        assertThat(response, hasStatus(302));
-        ErrorObject errorObject =
-                new ErrorObject(OAuth2Error.UNAUTHORIZED_CLIENT_CODE, "client not found");
-        URIBuilder uriBuilder = new URIBuilder(DEFAULT_LOGOUT_URI);
-        uriBuilder.addParameter("state", STATE.getValue());
-        uriBuilder.addParameter("error_code", errorObject.getCode());
-        uriBuilder.addParameter("error_description", errorObject.getDescription());
-        URI expectedUri = uriBuilder.build();
-        assertThat(
-                response.getHeaders().get(ResponseHeaders.LOCATION),
-                equalTo(expectedUri.toString()));
-
+        verify(logoutService)
+                .generateErrorLogoutResponse(
+                        Optional.of(STATE.getValue()),
+                        new ErrorObject(OAuth2Error.UNAUTHORIZED_CLIENT_CODE, "client not found"),
+                        event,
+                        signedJWT.getJWTClaimsSet().getAudience().stream().findFirst(),
+                        Optional.of(session.getSessionId()));
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(auditService)
-                .submitAuditEvent(
-                        OidcAuditableEvent.LOG_OUT_SUCCESS,
-                        AuditService.UNKNOWN,
-                        SESSION_ID,
-                        "invalid-client-id",
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
     }
 
     @Test
     public void
             shouldRedirectToDefaultLogoutUriWithErrorMessageWhenLogoutUriInRequestDoesNotMatchClientRegistry()
-                    throws URISyntaxException {
+                    throws JOSEException, ParseException {
+        ECKey ecSigningKey =
+                new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
+        SignedJWT signedJWT =
+                TokenGeneratorHelper.generateIDToken(
+                        "client-id", SUBJECT, "http://localhost-rp", ecSigningKey);
         when(tokenValidationService.isTokenSignatureValid(signedIDToken.serialize()))
                 .thenReturn(true);
         when(dynamoClientService.getClient("client-id"))
@@ -569,35 +399,17 @@ class LogoutHandlerTest {
         session.getClientSessions().add(CLIENT_SESSION_ID);
         setupClientSessionToken(signedIDToken);
         generateSessionFromCookie(session);
-        APIGatewayProxyResponseEvent response = handler.handleRequest(event, context);
+        handler.handleRequest(event, context);
 
-        assertThat(response, hasStatus(302));
-        ErrorObject errorObject =
-                new ErrorObject(
-                        OAuth2Error.INVALID_REQUEST_CODE,
-                        "client registry does not contain post_logout_redirect_uri");
-        URIBuilder uriBuilder = new URIBuilder(DEFAULT_LOGOUT_URI);
-        uriBuilder.addParameter("state", STATE.getValue());
-        uriBuilder.addParameter("error_code", errorObject.getCode());
-        uriBuilder.addParameter("error_description", errorObject.getDescription());
-        URI expectedUri = uriBuilder.build();
-        assertThat(
-                response.getHeaders().get(ResponseHeaders.LOCATION),
-                equalTo(expectedUri.toString()));
-        verify(sessionService, times(1)).deleteSessionFromRedis(SESSION_ID);
-
+        verify(logoutService, times(1)).destroySessions(session);
+        verify(logoutService)
+                .generateErrorLogoutResponse(
+                        Optional.of(STATE.getValue()),
+                        new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "client not found"),
+                        event,
+                        signedJWT.getJWTClaimsSet().getAudience().stream().findFirst(),
+                        Optional.of(session.getSessionId()));
         verifyNoInteractions(cloudwatchMetricsService);
-        verify(auditService)
-                .submitAuditEvent(
-                        OidcAuditableEvent.LOG_OUT_SUCCESS,
-                        AuditService.UNKNOWN,
-                        SESSION_ID,
-                        "client-id",
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
     }
 
     private void setupClientSessionToken(JWT idToken) {
@@ -682,37 +494,5 @@ class LogoutHandlerTest {
                                         "client_name")));
         when(dynamoClientService.getClient(clientId))
                 .thenReturn(Optional.of(new ClientRegistry().withClientID(clientId)));
-    }
-
-    private void verifySessions() {
-        verify(sessionService).deleteSessionFromRedis(SESSION_ID);
-
-        verify(backChannelLogoutService)
-                .sendLogoutMessage(
-                        argThat(withClientId("client-id")), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
-        verify(backChannelLogoutService)
-                .sendLogoutMessage(
-                        argThat(withClientId("client-id-2")), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
-        verify(backChannelLogoutService)
-                .sendLogoutMessage(
-                        argThat(withClientId("client-id-3")), eq(EMAIL), eq(INTERNAL_SECTOR_URI));
-
-        verify(clientSessionService).deleteClientSessionFromRedis(CLIENT_SESSION_ID);
-        verify(clientSessionService).deleteClientSessionFromRedis("client-session-id-2");
-        verify(clientSessionService).deleteClientSessionFromRedis("client-session-id-3");
-    }
-
-    public static ArgumentMatcher<ClientRegistry> withClientId(String clientId) {
-        return new ArgumentMatcher<>() {
-            @Override
-            public boolean matches(ClientRegistry argument) {
-                return clientId.equals(argument.getClientID());
-            }
-
-            @Override
-            public String toString() {
-                return "a ClientRegistry with client_id " + clientId;
-            }
-        };
     }
 }
