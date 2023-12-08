@@ -51,7 +51,7 @@ module "update" {
     local.authentication_security_group_id,
     local.authentication_oidc_redis_security_group_id,
   ]
-  subnet_id                              = local.authentication_subnet_ids
+  subnet_id                              = local.authentication_private_subnet_ids
   lambda_role_arn                        = module.client_update_role.arn
   environment                            = var.environment
   logging_endpoint_arns                  = var.logging_endpoint_arns
