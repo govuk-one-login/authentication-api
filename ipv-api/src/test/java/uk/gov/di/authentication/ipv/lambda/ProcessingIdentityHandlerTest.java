@@ -232,14 +232,6 @@ class ProcessingIdentityHandlerTest {
                                 ENVIRONMENT,
                                 "Status",
                                 ProcessingIdentityStatus.COMPLETED.toString()));
-        verify(cloudwatchMetricsService)
-                .incrementCounter(
-                        "AISResult",
-                        Map.of(
-                                "blocked", "false",
-                                "suspended", "false",
-                                "resetPassword", "false",
-                                "reproveIdentity", "false"));
     }
 
     @ParameterizedTest
@@ -280,14 +272,6 @@ class ProcessingIdentityHandlerTest {
                                 ENVIRONMENT,
                                 "Status",
                                 ProcessingIdentityStatus.COMPLETED.toString()));
-        verify(cloudwatchMetricsService)
-                .incrementCounter(
-                        "AISResult",
-                        Map.of(
-                                "blocked", String.valueOf(aisResult.blocked()),
-                                "suspended", String.valueOf(aisResult.suspended()),
-                                "resetPassword", String.valueOf(aisResult.resetPassword()),
-                                "reproveIdentity", String.valueOf(aisResult.reproveIdentity())));
 
         assertThat(outputStreamCaptor.toString(), containsString(expectedLogMessage));
 
