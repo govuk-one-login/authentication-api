@@ -177,6 +177,8 @@ class ProcessingIdentityHandlerTest {
                 .thenReturn(Optional.of(identityCredentials));
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(getClientSession()));
+        when(accountInterventionService.getAccountStatus(anyString()))
+                .thenReturn(new AccountInterventionStatus(false, false, false, false));
 
         var result = handler.handleRequest(event, context);
 
@@ -199,7 +201,7 @@ class ProcessingIdentityHandlerTest {
 
     @Test
     void
-            shouldMakeAndAuditAISCallIfAccountInterventionServiceAuditIsEnabledAndProcessingStatusIsCOMPLETED()
+            shouldActionAISResultIfAccountInterventionServiceActionIsEnabledAndProcessingStatusIsCOMPLETED()
                     throws Json.JsonException {
         usingValidSession();
         var identityCredentials =

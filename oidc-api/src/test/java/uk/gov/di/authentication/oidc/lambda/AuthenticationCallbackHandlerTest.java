@@ -152,7 +152,7 @@ class AuthenticationCallbackHandlerTest {
     }
 
     @Test
-    void dshouldRedirectToRpRedirectUriWithCodeAndStateOnSuccessfulTokenResponse()
+    void shouldRedirectToRpRedirectUriWithCodeAndStateOnSuccessfulTokenResponse()
             throws UnsuccessfulCredentialResponseException {
         usingValidSession();
         usingValidClientSession();
@@ -255,6 +255,7 @@ class AuthenticationCallbackHandlerTest {
         @Test
         void shouldRedirectToIPVWithReproveIdentityWhenAccountInterventionsEnabled() {
             boolean reproveIdentity = true;
+            when(configurationService.isAccountInterventionServiceActionEnabled()).thenReturn(true);
             when(accountInterventionService.getAccountStatus(any(), any()))
                     .thenReturn(
                             new AccountInterventionStatus(false, false, reproveIdentity, false));
