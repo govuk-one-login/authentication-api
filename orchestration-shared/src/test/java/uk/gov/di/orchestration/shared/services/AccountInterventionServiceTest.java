@@ -65,8 +65,8 @@ class AccountInterventionServiceTest {
     @BeforeEach
     void setup() throws URISyntaxException {
         when(config.getAccountInterventionServiceURI()).thenReturn(new URI(BASE_AIS_URL));
-        when(config.isAccountInterventionServiceEnabled()).thenReturn(true);
-        when(config.isAccountInterventionServiceAuditEnabled()).thenReturn(false);
+        when(config.isAccountInterventionServiceCallEnabled()).thenReturn(true);
+        when(config.isAccountInterventionServiceActionEnabled()).thenReturn(false);
     }
 
     @Test
@@ -111,7 +111,7 @@ class AccountInterventionServiceTest {
     @Test
     void shouldReturnAccountStatusAllClearWhenDisabled() {
 
-        when(config.isAccountInterventionServiceEnabled()).thenReturn(false);
+        when(config.isAccountInterventionServiceCallEnabled()).thenReturn(false);
 
         var internalPairwiseSubjectId = "some-internal-subject-id";
         var ais = new AccountInterventionService(config, httpClient, auditService);
@@ -145,7 +145,7 @@ class AccountInterventionServiceTest {
     @Test
     void shouldSendAuditEventWhenServiceAndAuditEnabled() throws IOException, InterruptedException {
 
-        when(config.isAccountInterventionServiceAuditEnabled()).thenReturn(true);
+        when(config.isAccountInterventionServiceActionEnabled()).thenReturn(true);
 
         var internalPairwiseSubjectId = "some-internal-subject-id";
         var accountInterventionService =
@@ -186,7 +186,7 @@ class AccountInterventionServiceTest {
     void shouldThrowExceptionWhenNullAuditContextSuppliedAndAuditEnabled()
             throws IOException, InterruptedException {
 
-        when(config.isAccountInterventionServiceAuditEnabled()).thenReturn(true);
+        when(config.isAccountInterventionServiceActionEnabled()).thenReturn(true);
 
         var internalPairwiseSubjectId = "some-internal-subject-id";
         var accountInterventionService =

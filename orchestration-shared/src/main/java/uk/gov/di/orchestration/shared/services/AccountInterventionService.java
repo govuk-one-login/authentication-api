@@ -21,26 +21,28 @@ public class AccountInterventionService {
 
     private static final Logger LOGGER = LogManager.getLogger(AccountInterventionService.class);
 
-    private final boolean accountInterventionsEnabled;
-    private final boolean accountInterventionsAuditEnabled;
+    private final boolean accountInterventionsCallEnabled;
+    private final boolean accountInterventionsActionEnabled;
     private final HttpClient httpClient;
     private final URI accountInterventionServiceURI;
     private final AuditService auditService;
 
     public AccountInterventionService(
             ConfigurationService configService, HttpClient httpClient, AuditService auditService) {
-        this.accountInterventionsEnabled = configService.isAccountInterventionServiceEnabled();
-        this.accountInterventionsAuditEnabled =
-                configService.isAccountInterventionServiceAuditEnabled();
+        this.accountInterventionsCallEnabled =
+                configService.isAccountInterventionServiceCallEnabled();
+        this.accountInterventionsActionEnabled =
+                configService.isAccountInterventionServiceActionEnabled();
         this.accountInterventionServiceURI = configService.getAccountInterventionServiceURI();
         this.httpClient = httpClient;
         this.auditService = auditService;
     }
 
     public AccountInterventionService(ConfigurationService configService) {
-        this.accountInterventionsEnabled = configService.isAccountInterventionServiceEnabled();
-        this.accountInterventionsAuditEnabled =
-                configService.isAccountInterventionServiceAuditEnabled();
+        this.accountInterventionsCallEnabled =
+                configService.isAccountInterventionServiceCallEnabled();
+        this.accountInterventionsActionEnabled =
+                configService.isAccountInterventionServiceActionEnabled();
         this.accountInterventionServiceURI = configService.getAccountInterventionServiceURI();
         this.httpClient = HttpClient.newHttpClient();
         this.auditService = new AuditService(configService);
@@ -55,13 +57,13 @@ public class AccountInterventionService {
             String internalPairwiseSubjectId, AuditContext auditContext)
             throws AccountInterventionException {
 
-        if (accountInterventionsEnabled) {
+        if (accountInterventionsCallEnabled) {
             try {
                 var status = retrieveAccountStatus(internalPairwiseSubjectId);
-                if (accountInterventionsAuditEnabled) {
+                if (accountInterventionsActionEnabled) {
                     if (auditContext == null) {
                         throw new AccountInterventionException(
-                                "Account intervention Audit enabled, but no AuditContext provided");
+                                "Account intervention action enabled, but no AuditContext provided");
                     }
                     auditService.submitAuditEvent(AIS_RESPONSE_RECEIVED, auditContext);
                 }

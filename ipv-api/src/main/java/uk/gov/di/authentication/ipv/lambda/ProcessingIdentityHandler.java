@@ -171,7 +171,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                         "resetPassword", String.valueOf(aisResult.resetPassword()),
                         "reproveIdentity", String.valueOf(aisResult.reproveIdentity())));
 
-        if (configurationService.isAccountInterventionServiceAuditEnabled()) {
+        if (configurationService.isAccountInterventionServiceActionEnabled()) {
             if (aisResult.blocked()) {
                 // TODO: back channel logout + redirect to blocked page
                 LOG.info("Account is blocked");

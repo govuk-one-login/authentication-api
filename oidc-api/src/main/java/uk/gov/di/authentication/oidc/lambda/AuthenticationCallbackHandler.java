@@ -320,7 +320,7 @@ public class AuthenticationCallbackHandler
                                 userInfo.getSubject().getValue(), auditContext);
 
                 Boolean reproveIdentity =
-                        configurationService.isAccountInterventionServiceAuditEnabled()
+                        configurationService.isAccountInterventionServiceActionEnabled()
                                 ? accountStatus.reproveIdentity()
                                 : null;
 
