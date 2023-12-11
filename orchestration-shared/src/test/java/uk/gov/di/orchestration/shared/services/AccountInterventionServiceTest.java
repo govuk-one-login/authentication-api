@@ -44,7 +44,7 @@ class AccountInterventionServiceTest {
             }
             """;
 
-    private static String BASE_AIS_URL = "http://example.com/somepath/";
+    private static String BASE_AIS_URL = "http://example.com/v1/ais/";
 
     @BeforeEach
     void setup() throws URISyntaxException {

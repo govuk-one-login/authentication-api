@@ -48,7 +48,7 @@ public class AccountInterventionsHandlerIntegrationTest extends ApiGatewayHandle
         handler =
                 new AccountInterventionsHandler(
                         ACCOUNT_INTERVENTIONS_HANDLER_CONFIGURATION_SERVICE);
-        accountInterventionsStubExtension.init(setupUserAndRetrieveUserId());
+        accountInterventionsStubExtension.init(setupUserAndRetrieveUserId(), false, false);
         txmaAuditQueue.clear();
     }
 
