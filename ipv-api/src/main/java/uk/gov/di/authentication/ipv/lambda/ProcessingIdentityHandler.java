@@ -45,8 +45,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
     public ProcessingIdentityHandler(ConfigurationService configurationService) {
         super(ProcessingIdentityRequest.class, configurationService);
         this.dynamoIdentityService = new DynamoIdentityService(configurationService);
-        this.accountInterventionService =
-                new AccountInterventionService(configurationService);
+        this.accountInterventionService = new AccountInterventionService(configurationService);
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
     }
@@ -139,8 +138,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
             LOG.info(
                     "Generating ProcessingIdentityResponse with ProcessingIdentityStatus: {}",
                     processingStatus);
-            if (processingStatus == ProcessingIdentityStatus.COMPLETED
-                    && configurationService.isAccountInterventionServiceAuditEnabled()) {
+            if (processingStatus == ProcessingIdentityStatus.COMPLETED) {
                 checkAccountInterventionService(pairwiseSubject.getValue());
             }
             return generateApiGatewayProxyResponse(
@@ -173,7 +171,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                         "resetPassword", String.valueOf(aisResult.resetPassword()),
                         "reproveIdentity", String.valueOf(aisResult.reproveIdentity())));
 
-        if (configurationService.isAccountInterventionServiceEnabled()) {
+        if (configurationService.isAccountInterventionServiceAuditEnabled()) {
             if (aisResult.blocked()) {
                 // TODO: back channel logout + redirect to blocked page
                 LOG.info("Account is blocked");

@@ -102,8 +102,7 @@ public class AuthenticationCallbackHandler
                         new IPVAuthorisationService(
                                 configurationService, redisConnectionService, kmsConnectionService),
                         cloudwatchMetricsService);
-        this.accountInterventionService =
-                new AccountInterventionService(configurationService);
+        this.accountInterventionService = new AccountInterventionService(configurationService);
     }
 
     public AuthenticationCallbackHandler(

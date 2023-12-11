@@ -69,7 +69,7 @@ public class AccountInterventionService {
 
             } catch (IOException | URISyntaxException | Json.JsonException e) {
                 throw new AccountInterventionException(
-                            "Problem communicating with Account Intervention Service", e);
+                        "Problem communicating with Account Intervention Service", e);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 throw new AccountInterventionException(
