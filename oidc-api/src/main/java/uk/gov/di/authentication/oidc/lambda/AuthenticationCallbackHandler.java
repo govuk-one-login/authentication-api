@@ -319,6 +319,11 @@ public class AuthenticationCallbackHandler
                         accountInterventionService.getAccountStatus(
                                 userInfo.getSubject().getValue(), auditContext);
 
+                Boolean reproveIdentity =
+                        configurationService.isAccountInterventionServiceAuditEnabled()
+                                ? accountStatus.reproveIdentity()
+                                : null;
+
                 if (identityRequired) {
                     return initiateIPVAuthorisationService.sendRequestToIPV(
                             input,
@@ -329,7 +334,7 @@ public class AuthenticationCallbackHandler
                             clientId,
                             clientSessionId,
                             persistentSessionId,
-                            accountStatus.reproveIdentity());
+                            reproveIdentity);
                 }
 
                 URI clientRedirectURI = authenticationRequest.getRedirectionURI();
