@@ -9,9 +9,12 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
+import uk.gov.di.authentication.shared.conditions.MfaHelper;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.MFAMethod;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -29,6 +32,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Optional;
 
+import static uk.gov.di.authentication.shared.conditions.MfaHelper.getPrimaryMFAMethod;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
@@ -136,6 +140,8 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             AuditableEvent auditableEvent;
             var rpPairwiseId = AuditService.UNKNOWN;
             var internalPairwiseId = AuditService.UNKNOWN;
+            var mfaMethodVerified = false;
+            MFAMethodType mfaMethodType = null;
             if (userExists) {
                 auditableEvent = FrontendAuditableEvent.CHECK_USER_KNOWN_EMAIL;
                 rpPairwiseId =
@@ -151,6 +157,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                                         configurationService.getInternalSectorUri(),
                                         authenticationService)
                                 .getValue();
+                mfaMethodType = MfaHelper.getPrimaryMFAMethodType(userProfile.get(), authenticationService.getUserCredentialsFromEmail(emailAddress));
             } else {
                 auditableEvent = FrontendAuditableEvent.CHECK_USER_NO_ACCOUNT_WITH_EMAIL;
             }

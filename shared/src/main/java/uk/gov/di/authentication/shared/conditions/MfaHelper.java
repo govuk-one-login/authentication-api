@@ -3,7 +3,9 @@ package uk.gov.di.authentication.shared.conditions;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 
 import java.util.List;
@@ -33,5 +35,17 @@ public class MfaHelper {
         return Optional.ofNullable(userCredentials.getMfaMethods())
                 .flatMap(
                         mfaMethods -> mfaMethods.stream().filter(MFAMethod::isEnabled).findFirst());
+    }
+
+    public static MFAMethodType getPrimaryMFAMethodType(UserProfile userProfile, UserCredentials userCredentials) {
+        var isPhoneNumberVerified = userProfile.isPhoneNumberVerified();
+        var mfaMethod = getPrimaryMFAMethod(userCredentials);
+        if (mfaMethod.filter(MFAMethod::isMethodVerified).isPresent()) {
+            return MFAMethodType.valueOf(mfaMethod.get().getMfaMethodType());
+        } else if (!isPhoneNumberVerified && mfaMethod.isPresent()) {
+            return MFAMethodType.valueOf(mfaMethod.get().getMfaMethodType());
+        } else {
+            return MFAMethodType.SMS;
+        }
     }
 }
