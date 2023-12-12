@@ -15,7 +15,7 @@ dependencies {
 
     implementation configurations.nimbus,
             configurations.gson,
-            'commons-validator:commons-validator:1.7'
+            'commons-validator:commons-validator:1.8.0'
 
     implementation project(":orchestration-shared")
 
