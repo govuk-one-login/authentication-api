@@ -6,7 +6,7 @@ resource "aws_elasticache_subnet_group" "sessions_store" {
   count = var.use_localstack ? 0 : 1
 
   name       = "${var.environment}-session-store-cache-subnet"
-  subnet_ids = local.private_subnet_ids
+  subnet_ids = [local.private_subnet_ids, local.protected_subnet_ids]
 }
 
 resource "random_password" "redis_password" {

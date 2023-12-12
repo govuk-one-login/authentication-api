@@ -140,6 +140,7 @@ variable "localstack_endpoint" {
   default = "http://localhost:45678/"
 }
 
+
 variable "redis_use_tls" {
   type    = string
   default = "true"
@@ -487,12 +488,6 @@ variable "account_intervention_service_uri" {
 variable "orch_redirect_uri" {
   type        = string
   description = "The redirect URI set by Orchestration in the OAuth2 authorize request to Authentication"
-}
-
-variable "authorize_protected_subnet_enabled" {
-  description = "Flag to move authorize lambda to protected subnet"
-  type        = bool
-  default     = false
 }
 
 locals {
