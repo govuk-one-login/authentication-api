@@ -1,3 +1,4 @@
+
 module "bulk_user_email_send_lambda_role" {
   count       = local.deploy_bulk_email_users_count
   source      = "../modules/lambda-role"
