@@ -222,7 +222,8 @@ class IPVAuthorisationServiceTest {
                             .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
                             .build();
             when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(signResult);
-            when(configurationService.isAccountInterventionServiceEnabled()).thenReturn(true);
+            when(configurationService.isAccountInterventionServiceCallEnabled()).thenReturn(true);
+            when(configurationService.isAccountInterventionServiceActionEnabled()).thenReturn(true);
         }
 
         @Test
@@ -323,9 +324,10 @@ class IPVAuthorisationServiceTest {
         }
 
         @Test
-        void shouldNotConstructJWTWithReproveIdentityClaimIfAccountInterventionsFlagDisabled()
+        void shouldNotConstructJWTWithReproveIdentityClaimIfAccountInterventionsActionFlagDisabled()
                 throws JOSEException, ParseException {
-            when(configurationService.isAccountInterventionServiceEnabled()).thenReturn(false);
+            when(configurationService.isAccountInterventionServiceActionEnabled())
+                    .thenReturn(false);
             EncryptedJWT encryptedJWT;
 
             try (var mockIdGenerator = mockStatic(IdGenerator.class)) {

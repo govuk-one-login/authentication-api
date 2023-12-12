@@ -141,8 +141,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
             LOG.info(
                     "Generating ProcessingIdentityResponse with ProcessingIdentityStatus: {}",
                     processingStatus);
-            if (processingStatus == ProcessingIdentityStatus.COMPLETED
-                    && configurationService.isAccountInterventionServiceAuditEnabled()) {
+            if (processingStatus == ProcessingIdentityStatus.COMPLETED) {
                 checkAccountInterventionService(pairwiseSubject.getValue());
             }
             return generateApiGatewayProxyResponse(
@@ -167,7 +166,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                                 accountInterventionService.getAccountStatus(
                                         internalPairwiseSubjectId));
 
-        if (configurationService.isAccountInterventionServiceEnabled()) {
+        if (configurationService.isAccountInterventionServiceActionEnabled()) {
             if (aisResult.blocked()) {
                 // TODO: back channel logout + redirect to blocked page
                 LOG.info("Account is blocked");
