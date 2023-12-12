@@ -113,8 +113,8 @@ class AuthenticationCallbackHandlerTest {
         when(configurationService.getLoginURI()).thenReturn(URI.create(TEST_FRONTEND_BASE_URL));
         when(configurationService.getAuthenticationBackendURI())
                 .thenReturn(URI.create(TEST_AUTH_BACKEND_BASE_URL));
-        when(configurationService.isAccountInterventionServiceEnabled()).thenReturn(false);
-        when(configurationService.isAccountInterventionServiceAuditEnabled()).thenReturn(false);
+        when(configurationService.isAccountInterventionServiceCallEnabled()).thenReturn(false);
+        when(configurationService.isAccountInterventionServiceActionEnabled()).thenReturn(false);
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
                         CLIENT_SESSION_ID, TEST_EMAIL_ADDRESS, clientSession))
                 .thenReturn(AUTH_CODE_RP_TO_ORCH);
@@ -244,8 +244,8 @@ class AuthenticationCallbackHandlerTest {
 
         @Test
         void shouldRedirectToIPVWithReproveIdentityWhenAccountInterventionsEnabled() {
-            when(configurationService.isAccountInterventionServiceEnabled()).thenReturn(true);
-            when(configurationService.isAccountInterventionServiceAuditEnabled()).thenReturn(true);
+            when(configurationService.isAccountInterventionServiceCallEnabled()).thenReturn(true);
+            when(configurationService.isAccountInterventionServiceActionEnabled()).thenReturn(true);
             boolean reproveIdentity = true;
             when(accountInterventionService.getAccountStatus(anyString()))
                     .thenReturn(
