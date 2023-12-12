@@ -9,7 +9,6 @@ resource "aws_security_group" "am_redis_security_group" {
 }
 
 resource "aws_security_group_rule" "allow_incoming_am_redis_from_private_subnet" {
-  description       = "Allow ingress to AM session Redis from private subnet"
   security_group_id = aws_security_group.am_redis_security_group.id
 
   from_port   = local.redis_port_number
@@ -20,7 +19,6 @@ resource "aws_security_group_rule" "allow_incoming_am_redis_from_private_subnet"
 }
 
 resource "aws_security_group_rule" "allow_incoming_am_redis_from_protected_subnet" {
-  description       = "Allow ingress to AM session Redis from protected subnet"
   security_group_id = aws_security_group.am_redis_security_group.id
 
   from_port   = local.redis_port_number
