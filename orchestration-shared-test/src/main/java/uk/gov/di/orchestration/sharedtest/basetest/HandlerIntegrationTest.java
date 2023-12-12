@@ -12,19 +12,7 @@ import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SystemService;
-import uk.gov.di.orchestration.sharedtest.extensions.AccountModifiersStoreExtension;
-import uk.gov.di.orchestration.sharedtest.extensions.AuditSnsTopicExtension;
-import uk.gov.di.orchestration.sharedtest.extensions.ClientStoreExtension;
-import uk.gov.di.orchestration.sharedtest.extensions.CommonPasswordsExtension;
-import uk.gov.di.orchestration.sharedtest.extensions.DocumentAppCredentialStoreExtension;
-import uk.gov.di.orchestration.sharedtest.extensions.IdentityStoreExtension;
-import uk.gov.di.orchestration.sharedtest.extensions.KmsKeyExtension;
-import uk.gov.di.orchestration.sharedtest.extensions.ParameterStoreExtension;
-import uk.gov.di.orchestration.sharedtest.extensions.RedisExtension;
-import uk.gov.di.orchestration.sharedtest.extensions.SnsTopicExtension;
-import uk.gov.di.orchestration.sharedtest.extensions.SqsQueueExtension;
-import uk.gov.di.orchestration.sharedtest.extensions.TokenSigningExtension;
-import uk.gov.di.orchestration.sharedtest.extensions.UserStoreExtension;
+import uk.gov.di.orchestration.sharedtest.extensions.*;
 
 import java.net.HttpCookie;
 import java.net.URI;
@@ -145,9 +133,6 @@ public abstract class HandlerIntegrationTest<Q, S> {
 
     protected static final ConfigurationService TEST_CONFIGURATION_SERVICE =
             new IntegrationTestConfigurationService(
-                    auditTopic,
-                    notificationsQueue,
-                    auditSigningKey,
                     tokenSigner,
                     ipvPrivateKeyJwtSigner,
                     spotQueue,
@@ -156,9 +141,6 @@ public abstract class HandlerIntegrationTest<Q, S> {
 
     protected static final ConfigurationService TXMA_ENABLED_CONFIGURATION_SERVICE =
             new IntegrationTestConfigurationService(
-                    auditTopic,
-                    notificationsQueue,
-                    auditSigningKey,
                     tokenSigner,
                     ipvPrivateKeyJwtSigner,
                     spotQueue,
@@ -173,9 +155,6 @@ public abstract class HandlerIntegrationTest<Q, S> {
 
     protected static final ConfigurationService TXMA_AND_AIS_ENABLED_CONFIGURATION_SERVICE =
             new IntegrationTestConfigurationService(
-                    auditTopic,
-                    notificationsQueue,
-                    auditSigningKey,
                     tokenSigner,
                     ipvPrivateKeyJwtSigner,
                     spotQueue,
@@ -197,23 +176,6 @@ public abstract class HandlerIntegrationTest<Q, S> {
                 }
             };
 
-    protected static final ConfigurationService AUTH_CODE_HANDLER_ENABLED_CONFIGURATION_SERVICE =
-            new IntegrationTestConfigurationService(
-                    auditTopic,
-                    notificationsQueue,
-                    auditSigningKey,
-                    tokenSigner,
-                    ipvPrivateKeyJwtSigner,
-                    spotQueue,
-                    docAppPrivateKeyJwtSigner,
-                    configurationParameters) {
-
-                @Override
-                public boolean isAuthOrchSplitEnabled() {
-                    return true;
-                }
-            };
-
     protected RequestHandler<Q, S> handler;
     protected final Json objectMapper = SerializationService.getInstance();
     protected final Context context = mock(Context.class);
@@ -232,16 +194,8 @@ public abstract class HandlerIntegrationTest<Q, S> {
     protected static final IdentityStoreExtension identityStore = new IdentityStoreExtension(180);
 
     @RegisterExtension
-    protected static final AccountModifiersStoreExtension accountModifiersStore =
-            new AccountModifiersStoreExtension();
-
-    @RegisterExtension
     protected static final DocumentAppCredentialStoreExtension documentAppCredentialStore =
             new DocumentAppCredentialStoreExtension(180);
-
-    @RegisterExtension
-    protected static final CommonPasswordsExtension commonPasswords =
-            new CommonPasswordsExtension();
 
     protected Map<String, String> constructHeaders(Optional<HttpCookie> cookie) {
         final Map<String, String> headers = new HashMap<>();
@@ -282,37 +236,25 @@ public abstract class HandlerIntegrationTest<Q, S> {
 
     public static class IntegrationTestConfigurationService extends ConfigurationService {
 
-        private final SqsQueueExtension notificationQueue;
-        private final KmsKeyExtension auditSigningKey;
         private final TokenSigningExtension tokenSigningKey;
-        private final SnsTopicExtension auditEventTopic;
         private final TokenSigningExtension ipvPrivateKeyJwtSigner;
         private final SqsQueueExtension spotQueue;
         private final TokenSigningExtension docAppPrivateKeyJwtSigner;
 
         public IntegrationTestConfigurationService(
-                SnsTopicExtension auditEventTopic,
-                SqsQueueExtension notificationQueue,
-                KmsKeyExtension auditSigningKey,
                 TokenSigningExtension tokenSigningKey,
                 TokenSigningExtension ipvPrivateKeyJwtSigner,
                 SqsQueueExtension spotQueue,
                 TokenSigningExtension docAppPrivateKeyJwtSigner,
                 ParameterStoreExtension parameterStoreExtension) {
             super(parameterStoreExtension.getClient());
-            this.auditEventTopic = auditEventTopic;
-            this.notificationQueue = notificationQueue;
             this.tokenSigningKey = tokenSigningKey;
-            this.auditSigningKey = auditSigningKey;
             this.ipvPrivateKeyJwtSigner = ipvPrivateKeyJwtSigner;
             this.spotQueue = spotQueue;
             this.docAppPrivateKeyJwtSigner = docAppPrivateKeyJwtSigner;
         }
 
         public IntegrationTestConfigurationService(
-                SnsTopicExtension auditEventTopic,
-                SqsQueueExtension notificationQueue,
-                KmsKeyExtension auditSigningKey,
                 TokenSigningExtension tokenSigningKey,
                 TokenSigningExtension ipvPrivateKeyJwtSigner,
                 SqsQueueExtension spotQueue,
@@ -320,19 +262,11 @@ public abstract class HandlerIntegrationTest<Q, S> {
                 ParameterStoreExtension parameterStoreExtension,
                 SystemService systemService) {
             super(parameterStoreExtension.getClient());
-            this.auditEventTopic = auditEventTopic;
-            this.notificationQueue = notificationQueue;
             this.tokenSigningKey = tokenSigningKey;
-            this.auditSigningKey = auditSigningKey;
             this.ipvPrivateKeyJwtSigner = ipvPrivateKeyJwtSigner;
             this.spotQueue = spotQueue;
             this.docAppPrivateKeyJwtSigner = docAppPrivateKeyJwtSigner;
             super.systemService = systemService;
-        }
-
-        @Override
-        public String getEmailQueueUri() {
-            return notificationQueue.getQueueUrl();
         }
 
         @Override

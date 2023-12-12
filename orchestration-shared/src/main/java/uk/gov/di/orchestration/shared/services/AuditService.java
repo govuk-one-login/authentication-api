@@ -10,7 +10,6 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Consumer;
 
 import static java.util.function.Predicate.not;
 import static uk.gov.di.orchestration.audit.TxmaAuditEvent.auditEventWithTime;
@@ -149,9 +148,5 @@ public class AuditService {
         public int hashCode() {
             return Objects.hash(key, value);
         }
-    }
-
-    static void addField(String value, Consumer<String> setter) {
-        Optional.ofNullable(value).ifPresent(setter);
     }
 }

@@ -61,10 +61,6 @@ public class SnsTopicExtension extends HttpStubExtension implements BeforeEachCa
         clearRequests();
     }
 
-    public String getTopicArn() {
-        return topicArn;
-    }
-
     private String createTopic(String topicName) {
         var result = snsClient.createTopic(CreateTopicRequest.builder().name(topicName).build());
         return result.topicArn();

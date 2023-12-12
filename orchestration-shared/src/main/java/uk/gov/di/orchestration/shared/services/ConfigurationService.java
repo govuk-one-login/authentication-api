@@ -25,7 +25,6 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static java.text.MessageFormat.format;
-import static java.util.Objects.isNull;
 
 public class ConfigurationService implements BaseLambdaConfiguration, AuditPublisherConfiguration {
 
@@ -41,7 +40,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     private SsmClient ssmClient;
     private Map<String, String> ssmRedisParameters;
-    private Optional<String> passwordPepper;
 
     private String notifyCallbackBearerToken;
     protected SystemService systemService;
@@ -78,20 +76,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return URI.create(System.getenv().getOrDefault("ACCOUNT_INTERVENTION_SERVICE_URI", ""));
     }
 
-    public String getAccountManagementURI() {
-        return System.getenv("ACCOUNT_MANAGEMENT_URI");
-    }
-
-    public Long getAccountRecoveryBlockTTL() {
-        return Long.parseLong(System.getenv().getOrDefault("ACCOUNT_RECOVERY_BLOCK_TTL", "172800"));
-    }
-
-    public boolean isAccountRecoveryBlockEnabled() {
-        return System.getenv()
-                .getOrDefault("ACCOUNT_RECOVERY_BLOCK_ENABLED", "false")
-                .equals("true");
-    }
-
     public String getAccountStatusBlockedURI() {
         return "/orch-frontend/not-available";
     }
@@ -104,36 +88,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Long.parseLong(System.getenv().getOrDefault("AUTH_CODE_EXPIRY", "300"));
     }
 
-    public long getBlockedEmailDuration() {
-        return Long.parseLong(System.getenv().getOrDefault("BLOCKED_EMAIL_DURATION", "900"));
-    }
-
-    public int getBulkUserEmailBatchQueryLimit() {
-        return Integer.parseInt(
-                System.getenv().getOrDefault("BULK_USER_EMAIL_BATCH_QUERY_LIMIT", "25"));
-    }
-
-    public int getBulkUserEmailMaxBatchCount() {
-        return Integer.parseInt(
-                System.getenv().getOrDefault("BULK_USER_EMAIL_MAX_BATCH_COUNT", "20"));
-    }
-
-    public long getBulkUserEmailMaxAudienceLoadUserCount() {
-        return Long.parseLong(
-                System.getenv().getOrDefault("BULK_USER_EMAIL_MAX_AUDIENCE_LOAD_USER_COUNT", "0"));
-    }
-
-    public long getBulkUserEmailAudienceLoadUserBatchSize() {
-        return Long.parseLong(
-                System.getenv()
-                        .getOrDefault("BULK_USER_EMAIL_MAX_AUDIENCE_LOAD_USER_BATCH_SIZE", "0"));
-    }
-
-    public long getBulkUserEmailBatchPauseDuration() {
-        return Long.parseLong(
-                System.getenv().getOrDefault("BULK_USER_EMAIL_BATCH_PAUSE_DURATION", "0"));
-    }
-
     public List<String> getBulkUserEmailIncludedTermsAndConditions() {
         String configurationValue =
                 systemService.getOrDefault("BULK_USER_EMAIL_INCLUDED_TERMS_AND_CONDITIONS", "");
@@ -144,52 +98,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         }
     }
 
-    public String getBulkEmailUserSendMode() {
-        return systemService.getOrDefault("BULK_USER_EMAIL_SEND_MODE", "PENDING");
-    }
-
-    public boolean isBulkUserEmailEnabled() {
-        return System.getenv().getOrDefault("BULK_USER_EMAIL_ENABLED", "0").equals("1");
-    }
-
-    public long getDefaultOtpCodeExpiry() {
-        return Long.parseLong(System.getenv().getOrDefault("DEFAULT_OTP_CODE_EXPIRY", "900"));
-    }
-
     public Clock getClock() {
         return Clock.systemDefaultZone();
     }
 
-    public long getEmailAccountCreationOtpCodeExpiry() {
-        return Long.parseLong(
-                System.getenv().getOrDefault("EMAIL_OTP_ACCOUNT_CREATION_CODE_EXPIRY", "3600"));
-    }
-
-    public int getCodeMaxRetries() {
-        return Integer.parseInt(System.getenv().getOrDefault("CODE_MAX_RETRIES", "5"));
-    }
-
-    public int getCodeMaxRetriesRegistration() {
-        return Integer.parseInt(
-                System.getenv().getOrDefault("CODE_MAX_RETRIES_REGISTRATION", "999999"));
-    }
-
-    public int getAuthAppCodeWindowLength() {
-        return Integer.parseInt(System.getenv().getOrDefault("CODE_AUTH_APP_WINDOW_LENGTH", "30"));
-    }
-
-    public int getAuthAppCodeAllowedWindows() {
-        return Integer.parseInt(System.getenv().getOrDefault("CODE_AUTH_APP_ALLOWED_WINDOWS", "9"));
-    }
-
     public boolean isAuthOrchSplitEnabled() {
         return System.getenv().getOrDefault("SUPPORT_AUTH_ORCH_SPLIT", "false").equals("true");
-    }
-
-    public boolean isBulkUserEmailEmailSendingEnabled() {
-        return System.getenv()
-                .getOrDefault("BULK_USER_EMAIL_EMAIL_SENDING_ENABLED", "false")
-                .equals("true");
     }
 
     public String getBulkEmailLoaderLambdaName() {
@@ -203,14 +117,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public URI getAuthenticationBackendURI() {
         return URI.create(System.getenv().getOrDefault("AUTHENTICATION_BACKEND_URI", ""));
-    }
-
-    public String getContactUsLinkRoute() {
-        return System.getenv().getOrDefault("CONTACT_US_LINK_ROUTE", "");
-    }
-
-    public int getMaxPasswordRetries() {
-        return Integer.parseInt(System.getenv().getOrDefault("PASSWORD_MAX_RETRIES", "5"));
     }
 
     public boolean isCustomDocAppClaimEnabled() {
@@ -279,10 +185,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Optional.ofNullable(System.getenv("DYNAMO_ENDPOINT"));
     }
 
-    public String getEmailQueueUri() {
-        return System.getenv("EMAIL_QUEUE_URL");
-    }
-
     public String getSpotQueueUri() {
         return System.getenv("SPOT_QUEUE_URL");
     }
@@ -293,10 +195,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public String getOrchestrationToAuthenticationTokenSigningKeyAlias() {
         return System.getenv("ORCH_TO_AUTH_TOKEN_SIGNING_KEY_ALIAS");
-    }
-
-    public String getOrchestrationToAuthenticationSigningPublicKey() {
-        return System.getenv("ORCH_TO_AUTH_TOKEN_SIGNING_PUBLIC_KEY");
     }
 
     public String getOrchestrationToAuthenticationEncryptionPublicKey() {
@@ -320,10 +218,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("ORCH_CLIENT_ID", "UNKNOWN");
     }
 
-    public URI getGovUKAccountsURL() {
-        return URI.create(System.getenv().getOrDefault("GOV_UK_ACCOUNTS_URL", ""));
-    }
-
     public boolean getHeadersCaseInsensitive() {
         return false;
     }
@@ -339,17 +233,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     public boolean isIPVNoSessionResponseEnabled() {
         return System.getenv()
                 .getOrDefault("IPV_NO_SESSION_RESPONSE_ENABLED", "false")
-                .equals("true");
-    }
-
-    public boolean isResetPasswordConfirmationSmsEnabled() {
-        return List.of("build", "staging", "integration", "local", "production")
-                .contains(getEnvironment());
-    }
-
-    public boolean isExtendedFeatureFlagsEnabled() {
-        return System.getenv()
-                .getOrDefault("EXTENDED_FEATURE_FLAGS_ENABLED", "false")
                 .equals("true");
     }
 
@@ -415,14 +298,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return URI.create(System.getenv("LOGIN_URI"));
     }
 
-    public String getNotifyApiKey() {
-        return System.getenv("NOTIFY_API_KEY");
-    }
-
-    public Optional<String> getNotifyApiUrl() {
-        return Optional.ofNullable(System.getenv("NOTIFY_URL"));
-    }
-
     public String getNotifyCallbackBearerToken() {
         if (notifyCallbackBearerToken == null) {
 
@@ -436,13 +311,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         }
 
         return notifyCallbackBearerToken;
-    }
-
-    public List<String> getNotifyTestDestinations() {
-        var destinations = System.getenv("NOTIFY_TEST_DESTINATIONS");
-        return isNull(destinations) || destinations.isBlank()
-                ? List.of()
-                : Arrays.stream(destinations.split(",")).collect(Collectors.toList());
     }
 
     public Optional<DeliveryReceiptsNotificationType> getNotificationTypeFromTemplateId(
@@ -468,23 +336,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Optional.ofNullable(System.getenv("OIDC_API_BASE_URL"));
     }
 
-    public Optional<String> getPasswordPepper() {
-        if (passwordPepper == null) {
-            try {
-                var request =
-                        GetParameterRequest.builder()
-                                .withDecryption(true)
-                                .name(format("{0}-password-pepper", getEnvironment()))
-                                .build();
-                passwordPepper =
-                        Optional.of(getSsmClient().getParameter(request).parameter().value());
-            } catch (ParameterNotFoundException e) {
-                passwordPepper = Optional.empty();
-            }
-        }
-        return passwordPepper;
-    }
-
     public String getRedisHost() {
         return getSsmRedisParameters()
                 .get(format("{0}-{1}-redis-master-host", getEnvironment(), getRedisKey()));
@@ -506,10 +357,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Boolean.parseBoolean(
                 getSsmRedisParameters()
                         .get(format("{0}-{1}-redis-tls", getEnvironment(), getRedisKey())));
-    }
-
-    public String getResetPasswordRoute() {
-        return System.getenv().getOrDefault("RESET_PASSWORD_ROUTE", "");
     }
 
     public String getSessionCookieAttributes() {
@@ -535,36 +382,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Long.parseLong(System.getenv().getOrDefault("SESSION_EXPIRY", "3600"));
     }
 
-    public String getSmoketestBucketName() {
-        return System.getenv("SMOKETEST_SMS_BUCKET_NAME");
-    }
-
-    public URI getSkipLoginURI() {
-        return URI.create(System.getenv().getOrDefault("SKIP_LOGIN_URI", "http://skip-login"));
-    }
-
     public Optional<String> getSqsEndpointUri() {
         return Optional.ofNullable(System.getenv("SQS_ENDPOINT"));
     }
 
-    public String getTermsAndConditionsVersion() {
-        return System.getenv("TERMS_CONDITIONS_VERSION");
-    }
-
-    public Optional<String> getTestClientVerifyEmailOTP() {
-        return Optional.ofNullable(System.getenv("TEST_CLIENT_VERIFY_EMAIL_OTP"));
-    }
-
-    public Optional<String> getTestClientVerifyPhoneNumberOTP() {
-        return Optional.ofNullable(System.getenv("TEST_CLIENT_VERIFY_PHONE_NUMBER_OTP"));
-    }
-
     public boolean isTestClientsEnabled() {
         return System.getenv().getOrDefault("TEST_CLIENTS_ENABLED", "false").equals("true");
-    }
-
-    public String getSyntheticsUsers() {
-        return System.getenv().getOrDefault("SYNTHETICS_USERS", "");
     }
 
     public String getTokenSigningKeyAlias() {
@@ -577,14 +400,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public boolean isRsaSigningAvailable() {
         return List.of("build", "staging", "integration", "production").contains(getEnvironment());
-    }
-
-    public String getAuditStorageS3Bucket() {
-        return System.getenv("AUDIT_STORAGE_S3_BUCKET");
-    }
-
-    public String getAuditHmacSecret() {
-        return System.getenv("AUDIT_HMAC_SECRET");
     }
 
     public Optional<String> getIPVCapacity() {
