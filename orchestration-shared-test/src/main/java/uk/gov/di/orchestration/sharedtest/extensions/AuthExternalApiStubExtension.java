@@ -31,7 +31,7 @@ public class AuthExternalApiStubExtension extends HttpStubExtension {
 
         String userInfoContent =
                 String.format(
-                        "{" + "\"sub\": \"%s\"," + "\"new_account\": \"true\"" + "}",
+                        "{" + "\"sub\": \"%s\"," + "\"new_account\": true" + "}",
                         subjectId.getValue());
 
         register("/userinfo", 200, "application/json", userInfoContent);

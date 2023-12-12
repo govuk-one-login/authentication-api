@@ -26,15 +26,30 @@ import uk.gov.di.authentication.oidc.services.AuthenticationTokenService;
 import uk.gov.di.authentication.oidc.services.InitiateIPVAuthorisationService;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.orchestration.shared.entity.ClientSession;
+import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
+import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
+import uk.gov.di.orchestration.shared.entity.Session.AccountState;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.helpers.ConstructUriHelper;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
-import uk.gov.di.orchestration.shared.services.*;
+import uk.gov.di.orchestration.shared.services.AccountInterventionService;
+import uk.gov.di.orchestration.shared.services.AuditService;
+import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
+import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
+import uk.gov.di.orchestration.shared.services.ClientService;
+import uk.gov.di.orchestration.shared.services.ClientSessionService;
+import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
+import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.DynamoClientService;
+import uk.gov.di.orchestration.shared.services.KmsConnectionService;
+import uk.gov.di.orchestration.shared.services.RedisConnectionService;
+import uk.gov.di.orchestration.shared.services.SessionService;
 
 import java.net.URI;
 import java.util.HashMap;
@@ -44,6 +59,7 @@ import java.util.Objects;
 import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.GET;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
+import static uk.gov.di.orchestration.shared.conditions.DocAppUserHelper.isDocCheckingAppUserWithSubjectId;
 import static uk.gov.di.orchestration.shared.conditions.IdentityHelper.identityRequired;
 import static uk.gov.di.orchestration.shared.entity.Session.AccountState.EXISTING;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -280,26 +296,17 @@ public class AuthenticationCallbackHandler
                             clientService.isTestJourney(clientId, userInfo.getEmailAddress());
                 }
 
+                Boolean newAccount = userInfo.getBooleanClaim("new_account");
+                AccountState accountState = newAccount ? AccountState.NEW : AccountState.EXISTING;
+                var docAppJourney = isDocCheckingAppUserWithSubjectId(clientSession);
                 Map<String, String> dimensions =
-                        new HashMap<>(
-                                Map.of(
-                                        "IsNewAccount",
-                                        userInfo.getClaim("new_account").toString(),
-                                        "Environment",
-                                        configurationService.getEnvironment(),
-                                        "Client",
-                                        clientId,
-                                        "IsTest",
-                                        Boolean.toString(isTestJourney),
-                                        "ClientName",
-                                        clientSession.getClientName()));
-
-                if (Objects.nonNull(userSession.getVerifiedMfaMethodType())) {
-                    dimensions.put("MfaMethod", userSession.getVerifiedMfaMethodType().getValue());
-                } else {
-                    LOG.info(
-                            "No mfa method to set. User is either authenticated or signing in from a low level service");
-                }
+                        buildDimensions(
+                                accountState,
+                                clientId,
+                                isTestJourney,
+                                docAppJourney,
+                                clientSession,
+                                userSession);
 
                 cloudwatchMetricsService.incrementCounter("AuthenticationCallback", dimensions);
 
@@ -366,6 +373,10 @@ public class AuthenticationCallbackHandler
 
                 sessionService.save(userSession.setAuthenticated(true).setNewAccount(EXISTING));
 
+                cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
+                cloudwatchMetricsService.incrementSignInByClient(
+                        accountState, clientId, clientSession.getClientName(), isTestJourney);
+
                 LOG.info("Successfully processed request");
 
                 auditService.submitAuditEvent(
@@ -383,7 +394,7 @@ public class AuthenticationCallbackHandler
                                 : userInfo.getPhoneNumber(),
                         persistentSessionId,
                         pair("internalSubjectId", AuditService.UNKNOWN),
-                        pair("isNewAccount", userInfo.getClaim("new_account")),
+                        pair("isNewAccount", newAccount),
                         pair("rpPairwiseId", userInfo.getClaim("rp_client_id")),
                         pair("nonce", authenticationRequest.getNonce()),
                         pair("authCode", authCode.getValue()));
@@ -417,6 +428,50 @@ public class AuthenticationCallbackHandler
             LOG.info("Cannot retrieve auth request params from client session id");
             return redirectToFrontendErrorPage();
         }
+    }
+
+    private Map<String, String> buildDimensions(
+            AccountState accountState,
+            String clientId,
+            boolean isTestJourney,
+            boolean docAppJourney,
+            ClientSession clientSession,
+            Session userSession) {
+        Map<String, String> dimensions =
+                new HashMap<>(
+                        Map.of(
+                                "Account",
+                                accountState.name(),
+                                "Environment",
+                                configurationService.getEnvironment(),
+                                "Client",
+                                clientId,
+                                "IsTest",
+                                Boolean.toString(isTestJourney),
+                                "IsDocApp",
+                                Boolean.toString(docAppJourney),
+                                "ClientName",
+                                clientSession.getClientName()));
+
+        if (Objects.nonNull(userSession.getVerifiedMfaMethodType())) {
+            dimensions.put("MfaMethod", userSession.getVerifiedMfaMethodType().getValue());
+        } else {
+            LOG.info(
+                    "No mfa method to set. User is either authenticated or signing in from a low level service");
+        }
+        var mfaRequired =
+                !clientSession
+                        .getEffectiveVectorOfTrust()
+                        .getCredentialTrustLevel()
+                        .equals(CredentialTrustLevel.LOW_LEVEL);
+        var levelOfConfidence = LevelOfConfidence.NONE.getValue();
+        if (clientSession.getEffectiveVectorOfTrust().containsLevelOfConfidence()) {
+            levelOfConfidence =
+                    clientSession.getEffectiveVectorOfTrust().getLevelOfConfidence().getValue();
+        }
+        dimensions.put("MfaRequired", mfaRequired ? "Yes" : "No");
+        dimensions.put("RequestedLevelOfConfidence", levelOfConfidence);
+        return dimensions;
     }
 
     private APIGatewayProxyResponseEvent generateAuthenticationErrorResponse(
