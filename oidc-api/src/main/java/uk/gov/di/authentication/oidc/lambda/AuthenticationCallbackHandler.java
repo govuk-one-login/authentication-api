@@ -45,6 +45,7 @@ import static java.net.http.HttpClient.newHttpClient;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static uk.gov.di.orchestration.shared.conditions.IdentityHelper.identityRequired;
+import static uk.gov.di.orchestration.shared.entity.Session.AccountState.EXISTING;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
@@ -346,6 +347,8 @@ public class AuthenticationCallbackHandler
                 var authenticationResponse =
                         new AuthenticationSuccessResponse(
                                 clientRedirectURI, authCode, null, null, state, null, responseMode);
+
+                sessionService.save(userSession.setAuthenticated(true).setNewAccount(EXISTING));
 
                 LOG.info("Successfully processed request");
 
