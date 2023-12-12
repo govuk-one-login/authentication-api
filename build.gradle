@@ -348,7 +348,7 @@ sonarqube {
         property "sonar.projectKey", "govuk-one-login_authentication-api"
         property "sonar.organization", "govuk-one-login"
         property "sonar.host.url", "https://sonarcloud.io"
-        property "sonar.coverage.exclusions", "**/shared-test/**"
+        property "sonar.coverage.exclusions", "**/shared-test/**,**/orchestration-shared-test/**"
     }
 }
 
