@@ -21,4 +21,6 @@ locals {
   allow_egress_security_group_id             = data.terraform_remote_state.core.outputs.allow_egress_security_group_id
   private_subnet_ids                         = data.terraform_remote_state.core.outputs.private_subnet_ids
   private_subnet_cidr_blocks                 = data.terraform_remote_state.core.outputs.private_subnet_cidr_blocks
+  protected_subnet_ids                       = data.terraform_remote_state.core.outputs.protected_subnet_ids
+  protected_subnet_cidr_blocks               = data.terraform_remote_state.core.outputs.protected_subnet_cidr_blocks
 }
