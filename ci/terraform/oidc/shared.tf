@@ -38,8 +38,7 @@ locals {
   authentication_security_group_id                    = data.terraform_remote_state.shared.outputs.authentication_security_group_id
   authentication_egress_security_group_id             = data.terraform_remote_state.shared.outputs.authentication_egress_security_group_id
   authentication_oidc_redis_security_group_id         = data.terraform_remote_state.shared.outputs.authentication_oidc_redis_security_group_id
-  authentication_private_subnet_ids                   = data.terraform_remote_state.shared.outputs.authentication_private_subnet_ids
-  authentication_protected_subnet_ids                 = data.terraform_remote_state.shared.outputs.authentication_protected_subnet_ids
+  authentication_subnet_ids                           = data.terraform_remote_state.shared.outputs.authentication_subnet_ids
   id_token_signing_key_alias_name                     = data.terraform_remote_state.shared.outputs.id_token_signing_key_alias_name
   id_token_signing_key_arn                            = data.terraform_remote_state.shared.outputs.id_token_signing_key_arn
   ipv_token_auth_key_alias_name                       = data.terraform_remote_state.shared.outputs.ipv_token_auth_signing_key_alias_name

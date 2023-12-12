@@ -33,7 +33,7 @@ module "account_interventions_stub_lambda" {
   security_group_ids = [
     local.authentication_security_group_id,
   ]
-  subnet_id                              = local.authentication_private_subnet_ids
+  subnet_id                              = local.authentication_subnet_ids
   lambda_role_arn                        = module.account_interventions_stub_role.arn
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn

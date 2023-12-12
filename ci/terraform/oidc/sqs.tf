@@ -165,7 +165,7 @@ resource "aws_lambda_function" "email_sqs_lambda" {
 
   vpc_config {
     security_group_ids = [local.authentication_egress_security_group_id]
-    subnet_ids         = local.authentication_private_subnet_ids
+    subnet_ids         = local.authentication_subnet_ids
   }
   environment {
     variables = merge(var.notify_template_map, {

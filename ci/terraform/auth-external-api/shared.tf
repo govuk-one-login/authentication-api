@@ -19,7 +19,7 @@ data "terraform_remote_state" "shared" {
 locals {
   authentication_vpc_arn                    = data.terraform_remote_state.shared.outputs.authentication_vpc_arn
   authentication_security_group_id          = data.terraform_remote_state.shared.outputs.authentication_security_group_id
-  authentication_private_subnet_ids         = data.terraform_remote_state.shared.outputs.authentication_private_subnet_ids
+  authentication_subnet_ids                 = data.terraform_remote_state.shared.outputs.authentication_subnet_ids
   audit_signing_key_arn                     = data.terraform_remote_state.shared.outputs.audit_signing_key_arn
   events_topic_encryption_key_arn           = data.terraform_remote_state.shared.outputs.events_topic_encryption_key_arn
   lambda_code_signing_configuration_arn     = data.terraform_remote_state.shared.outputs.lambda_code_signing_configuration_arn

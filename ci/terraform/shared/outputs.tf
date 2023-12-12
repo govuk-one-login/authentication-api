@@ -32,14 +32,6 @@ output "authentication_subnet_ids" {
   value = local.private_subnet_ids
 }
 
-output "authentication_private_subnet_ids" {
-  value = local.private_subnet_ids
-}
-
-output "authentication_protected_subnet_ids" {
-  value = local.protected_subnet_ids
-}
-
 output "lambda_iam_role_arn" {
   value = aws_iam_role.lambda_iam_role.arn
 }

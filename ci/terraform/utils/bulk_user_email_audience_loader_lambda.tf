@@ -62,7 +62,7 @@ resource "aws_lambda_function" "bulk_user_email_audience_loader_lambda" {
 
   vpc_config {
     security_group_ids = [local.authentication_security_group_id]
-    subnet_ids         = local.authentication_private_subnet_ids
+    subnet_ids         = local.authentication_subnet_ids
   }
 
   environment {
