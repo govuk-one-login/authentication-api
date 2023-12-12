@@ -9,10 +9,10 @@ import uk.gov.di.orchestration.shared.serialization.Json;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.Map;
 
 public class AccountInterventionService {
 
@@ -20,18 +20,23 @@ public class AccountInterventionService {
     private final HttpClient httpClient;
     private final URI accountInterventionServiceURI;
     private final ConfigurationService configurationService;
+    private final CloudwatchMetricsService cloudwatchMetricsService;
 
-    public AccountInterventionService(ConfigurationService configService, HttpClient httpClient) {
+    public AccountInterventionService(
+            ConfigurationService configService,
+            HttpClient httpClient,
+            CloudwatchMetricsService cloudwatchMetricsService) {
         this.configurationService = configService;
         this.accountInterventionServiceURI = configService.getAccountInterventionServiceURI();
         this.httpClient = httpClient;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
     }
 
     public AccountInterventionStatus getAccountStatus(String internalPairwiseSubjectId)
             throws AccountInterventionException {
         try {
             return retrieveAccountStatus(internalPairwiseSubjectId);
-        } catch (IOException | URISyntaxException | Json.JsonException e) {
+        } catch (IOException | Json.JsonException e) {
             if (configurationService.isAccountInterventionServiceEnabled()) {
                 throw new AccountInterventionException(
                         "Problem communicating with Account Intervention Service", e);
@@ -47,7 +52,7 @@ public class AccountInterventionService {
     }
 
     private AccountInterventionStatus retrieveAccountStatus(String internalPairwiseSubjectId)
-            throws IOException, InterruptedException, URISyntaxException, Json.JsonException {
+            throws IOException, InterruptedException, Json.JsonException {
 
         HttpRequest request =
                 HttpRequest.newBuilder()
@@ -64,7 +69,21 @@ public class AccountInterventionService {
                 SerializationService.getInstance()
                         .readValue(body, AccountInterventionResponse.class);
 
-        return response.state();
+        var accountInterventionStatus = response.state();
+        incrementCloudwatchMetrics(accountInterventionStatus);
+
+        return accountInterventionStatus;
+    }
+
+    private void incrementCloudwatchMetrics(AccountInterventionStatus accountInterventionStatus) {
+        cloudwatchMetricsService.incrementCounter(
+                "AISResult",
+                Map.of(
+                        "blocked", String.valueOf(accountInterventionStatus.blocked()),
+                        "suspended", String.valueOf(accountInterventionStatus.suspended()),
+                        "resetPassword", String.valueOf(accountInterventionStatus.resetPassword()),
+                        "reproveIdentity",
+                                String.valueOf(accountInterventionStatus.reproveIdentity())));
     }
 
     private static AccountInterventionStatus noInterventionResponse() {

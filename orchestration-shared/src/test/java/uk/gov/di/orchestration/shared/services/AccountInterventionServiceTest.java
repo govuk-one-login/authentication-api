@@ -11,18 +11,17 @@ import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 class AccountInterventionServiceTest {
-
     private final ConfigurationService config = mock(ConfigurationService.class);
     private final HttpClient httpClient = mock(HttpClient.class);
+    private final CloudwatchMetricsService cloudwatchMetricsService =
+            mock(CloudwatchMetricsService.class);
 
     private static String ACCOUNT_INTERVENTION_SERVICE_RESPONSE_SUSPEND_REPROVE =
             """
@@ -58,12 +57,12 @@ class AccountInterventionServiceTest {
             throws IOException, InterruptedException {
 
         var internalPairwiseSubjectId = "some-internal-subject-id";
-        var ais = new AccountInterventionService(config, httpClient);
+        var ais = new AccountInterventionService(config, httpClient, cloudwatchMetricsService);
         var httpResponse = mock(HttpResponse.class);
         var httpRequestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
 
         when(httpClient.send(any(), any())).thenReturn(httpResponse);
-        when(httpResponse.body()).thenReturn("{\"foo\": \"bar\"}");
+        when(httpResponse.body()).thenReturn(ACCOUNT_INTERVENTION_SERVICE_RESPONSE_SUSPEND_REPROVE);
 
         ais.getAccountStatus(internalPairwiseSubjectId);
 
@@ -77,7 +76,8 @@ class AccountInterventionServiceTest {
     void shouldReturnAccountStatus() throws IOException, InterruptedException {
 
         var internalPairwiseSubjectId = "some-internal-subject-id";
-        var accountInterventionService = new AccountInterventionService(config, httpClient);
+        var accountInterventionService =
+                new AccountInterventionService(config, httpClient, cloudwatchMetricsService);
         var httpResponse = mock(HttpResponse.class);
 
         when(httpClient.send(any(), any())).thenReturn(httpResponse);
@@ -85,10 +85,19 @@ class AccountInterventionServiceTest {
 
         var status = accountInterventionService.getAccountStatus(internalPairwiseSubjectId);
 
-        assertEquals(false, status.blocked());
-        assertEquals(true, status.suspended());
-        assertEquals(true, status.reproveIdentity());
-        assertEquals(false, status.resetPassword());
+        assertFalse(status.blocked());
+        assertTrue(status.suspended());
+        assertTrue(status.reproveIdentity());
+        assertFalse(status.resetPassword());
+
+        verify(cloudwatchMetricsService)
+                .incrementCounter(
+                        "AISResult",
+                        Map.of(
+                                "blocked", "false",
+                                "suspended", "true",
+                                "resetPassword", "false",
+                                "reproveIdentity", "true"));
     }
 
     @Test
@@ -96,8 +105,8 @@ class AccountInterventionServiceTest {
             throws IOException, InterruptedException {
 
         var internalPairwiseSubjectId = "some-internal-subject-id";
-        var accountInterventionService = new AccountInterventionService(config, httpClient);
-        var httpResponse = mock(HttpResponse.class);
+        var accountInterventionService =
+                new AccountInterventionService(config, httpClient, cloudwatchMetricsService);
 
         when(httpClient.send(any(), any())).thenThrow(new IOException("Test IO Exception"));
 

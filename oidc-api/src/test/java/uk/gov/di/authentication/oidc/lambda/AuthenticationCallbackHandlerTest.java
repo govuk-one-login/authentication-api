@@ -247,7 +247,7 @@ class AuthenticationCallbackHandlerTest {
             when(configurationService.isAccountInterventionServiceEnabled()).thenReturn(true);
             when(configurationService.isAccountInterventionServiceAuditEnabled()).thenReturn(true);
             boolean reproveIdentity = true;
-            when(accountInterventionService.getAccountStatus(any()))
+            when(accountInterventionService.getAccountStatus(anyString()))
                     .thenReturn(
                             new AccountInterventionStatus(false, false, reproveIdentity, false));
 

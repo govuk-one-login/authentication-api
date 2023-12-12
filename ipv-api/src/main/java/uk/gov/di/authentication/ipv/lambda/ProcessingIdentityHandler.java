@@ -46,10 +46,11 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
     public ProcessingIdentityHandler(ConfigurationService configurationService) {
         super(ProcessingIdentityRequest.class, configurationService);
         this.dynamoIdentityService = new DynamoIdentityService(configurationService);
-        this.accountInterventionService =
-                new AccountInterventionService(configurationService, newHttpClient());
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
+        this.accountInterventionService =
+                new AccountInterventionService(
+                        configurationService, newHttpClient(), cloudwatchMetricsService);
     }
 
     public ProcessingIdentityHandler() {
@@ -165,14 +166,6 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                         () ->
                                 accountInterventionService.getAccountStatus(
                                         internalPairwiseSubjectId));
-
-        cloudwatchMetricsService.incrementCounter(
-                "AISResult",
-                Map.of(
-                        "blocked", String.valueOf(aisResult.blocked()),
-                        "suspended", String.valueOf(aisResult.suspended()),
-                        "resetPassword", String.valueOf(aisResult.resetPassword()),
-                        "reproveIdentity", String.valueOf(aisResult.reproveIdentity())));
 
         if (configurationService.isAccountInterventionServiceEnabled()) {
             if (aisResult.blocked()) {
