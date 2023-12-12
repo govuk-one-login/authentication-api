@@ -678,7 +678,8 @@ class LoginHandlerTest {
                         "",
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
-                        incorrectPasswordCountPair);
+                        incorrectPasswordCountPair,
+                        pair("attemptNoFailedAt",5));
 
         assertThat(result, hasStatus(401));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1008));
