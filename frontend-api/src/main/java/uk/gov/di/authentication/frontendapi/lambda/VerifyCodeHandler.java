@@ -202,6 +202,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         var notificationType = codeRequest.getNotificationType();
         var accountRecoveryJourney =
                 codeRequest.getNotificationType().equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES);
+        int loginFailureCount = 0;
         var metadataPairs =
                 new AuditService.MetadataPair[] {
                     pair("notification-type", notificationType.name()),
@@ -224,7 +225,9 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     new AuditService.MetadataPair[] {
                         pair("notification-type", notificationType.name()),
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
-                        pair("account-recovery", accountRecoveryJourney)
+                        pair("account-recovery", accountRecoveryJourney),
+                        pair("loginFailureCount", loginFailureCount),
+                        pair("MFACodeEntered", MFACode(input))
                     };
             clearAccountRecoveryBlockIfPresent(userContext, input);
             cloudwatchMetricsService.incrementAuthenticationSuccess(
@@ -266,14 +269,18 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         var metadataPairs =
                 new AuditService.MetadataPair[] {
                     pair("notification-type", notificationType.name()),
-                    pair("account-recovery", accountRecoveryJourney)
+                    pair("account-recovery", accountRecoveryJourney),
                 };
+        int loginFailureCount = 0;
         if (notificationType.equals(MFA_SMS)) {
             metadataPairs =
                     new AuditService.MetadataPair[] {
                         pair("notification-type", notificationType.name()),
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
-                        pair("account-recovery", accountRecoveryJourney)
+                        pair("account-recovery", accountRecoveryJourney),
+                        pair("loginFailureCount", loginFailureCount),
+                        pair("MFACodeEntered", MFACode(input)),
+                        pair("MaxSmsCount", configurationService.getCodeMaxRetries())
                     };
         }
         AuditableEvent auditableEvent;
@@ -373,5 +380,18 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             }
         }
         return journeyType;
+    }
+
+    private String MFACode(APIGatewayProxyRequestEvent input) {
+        String code = "";
+        String body = input.getBody();
+        String[] parts = body.split(",");
+        for (String part : parts) {
+            if (part.contains("\"code\"")) {
+                code = part.split(":")[1].replaceAll("\"", "").trim();
+                break;
+            }
+        }
+        return code;
     }
 }

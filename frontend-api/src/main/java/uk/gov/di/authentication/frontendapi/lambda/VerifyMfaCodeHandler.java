@@ -11,7 +11,6 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.helpers.SessionHelper;
 import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessor;
 import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessorFactory;
-import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
@@ -197,11 +196,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         entry(ErrorResponse.ERROR_1034, CODE_MAX_RETRIES_REACHED),
                         entry(ErrorResponse.ERROR_1037, INVALID_CODE_SENT));
 
-        if (map.containsKey(errorResponse)) {
-            return map.get(errorResponse);
-        }
-
-        return INVALID_CODE_SENT;
+        return map.getOrDefault(errorResponse, FrontendAuditableEvent.INVALID_CODE_SENT);
     }
 
     private void processCodeSession(
@@ -261,26 +256,103 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
     }
 
     private void submitAuditEvent(
-            AuditableEvent auditableEvent,
+            FrontendAuditableEvent auditableEvent,
             Session session,
             UserContext userContext,
             APIGatewayProxyRequestEvent input,
             MFAMethodType mfaMethodType,
             boolean isAccountRecovery) {
-        auditService.submitAuditEvent(
-                auditableEvent,
-                userContext.getClientSessionId(),
-                session.getSessionId(),
-                userContext
-                        .getClient()
-                        .map(ClientRegistry::getClientID)
-                        .orElse(AuditService.UNKNOWN),
-                session.getInternalCommonSubjectIdentifier(),
-                session.getEmailAddress(),
-                IpAddressHelper.extractIpAddress(input),
-                AuditService.UNKNOWN,
-                extractPersistentIdFromHeaders(input.getHeaders()),
-                pair("mfa-type", mfaMethodType.getValue()),
-                pair("account-recovery", isAccountRecovery));
+        int loginFailureCount = 0;
+
+        switch (auditableEvent) {
+            case CODE_MAX_RETRIES_REACHED:
+                auditService.submitAuditEvent(
+                        auditableEvent,
+                        userContext.getClientSessionId(),
+                        session.getSessionId(),
+                        userContext
+                                .getClient()
+                                .map(ClientRegistry::getClientID)
+                                .orElse(AuditService.UNKNOWN),
+                        session.getInternalCommonSubjectIdentifier(),
+                        session.getEmailAddress(),
+                        IpAddressHelper.extractIpAddress(input),
+                        AuditService.UNKNOWN,
+                        extractPersistentIdFromHeaders(input.getHeaders()),
+                        pair("mfa-type", mfaMethodType.getValue()),
+                        pair("account-recovery", isAccountRecovery),
+                        pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()));
+                break;
+            case INVALID_CODE_SENT:
+                auditService.submitAuditEvent(
+                        auditableEvent,
+                        userContext.getClientSessionId(),
+                        session.getSessionId(),
+                        userContext
+                                .getClient()
+                                .map(ClientRegistry::getClientID)
+                                .orElse(AuditService.UNKNOWN),
+                        session.getInternalCommonSubjectIdentifier(),
+                        session.getEmailAddress(),
+                        IpAddressHelper.extractIpAddress(input),
+                        AuditService.UNKNOWN,
+                        extractPersistentIdFromHeaders(input.getHeaders()),
+                        pair("mfa-type", mfaMethodType.getValue()),
+                        pair("account-recovery", isAccountRecovery),
+                        pair("loginFailureCount", 0),
+                        pair("MFACodeEntered", MFACode(input)));
+                break;
+            case CODE_VERIFIED:
+                auditService.submitAuditEvent(
+                        auditableEvent,
+                        userContext.getClientSessionId(),
+                        session.getSessionId(),
+                        userContext
+                                .getClient()
+                                .map(ClientRegistry::getClientID)
+                                .orElse(AuditService.UNKNOWN),
+                        session.getInternalCommonSubjectIdentifier(),
+                        session.getEmailAddress(),
+                        IpAddressHelper.extractIpAddress(input),
+                        AuditService.UNKNOWN,
+                        extractPersistentIdFromHeaders(input.getHeaders()),
+                        pair("mfa-type", mfaMethodType.getValue()),
+                        pair("account-recovery", isAccountRecovery),
+                        pair("MFACodeEntered", MFACode(input)));
+                break;
+            default:
+                auditService.submitAuditEvent(
+                        auditableEvent,
+                        userContext.getClientSessionId(),
+                        session.getSessionId(),
+                        userContext
+                                .getClient()
+                                .map(ClientRegistry::getClientID)
+                                .orElse(AuditService.UNKNOWN),
+                        session.getInternalCommonSubjectIdentifier(),
+                        session.getEmailAddress(),
+                        IpAddressHelper.extractIpAddress(input),
+                        AuditService.UNKNOWN,
+                        extractPersistentIdFromHeaders(input.getHeaders()),
+                        pair("mfa-type", mfaMethodType.getValue()),
+                        pair("account-recovery", isAccountRecovery));
+        }
+    }
+
+    private String MFACode(APIGatewayProxyRequestEvent input) {
+        String body = input.getBody();
+        int startIndex = body.indexOf("{\"mfaMethodType\"");
+        int endIndex = body.lastIndexOf("}") + 1;
+        String jsonPart = body.substring(startIndex, endIndex);
+
+        String code = null;
+        String[] parts = jsonPart.split(",");
+        for (String part : parts) {
+            if (part.contains("\"code\"")) {
+                code = part.split(":")[1].replaceAll("\"", "").trim();
+                break;
+            }
+        }
+        return code;
     }
 }

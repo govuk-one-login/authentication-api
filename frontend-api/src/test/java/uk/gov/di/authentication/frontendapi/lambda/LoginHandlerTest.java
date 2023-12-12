@@ -107,6 +107,8 @@ class LoginHandlerTest {
                     .withMfaMethodType(MFAMethodType.AUTH_APP.getValue())
                     .withMethodVerified(true)
                     .withEnabled(true);
+    private static final AuditService.MetadataPair incorrectPasswordCountPair =
+            pair("incorrectPasswordCount", 0);
     private static final Json objectMapper = SerializationService.getInstance();
     private LoginHandler handler;
     private final Context context = mock(Context.class);
@@ -123,7 +125,6 @@ class LoginHandlerTest {
             mock(CloudwatchMetricsService.class);
     private final CommonPasswordsService commonPasswordsService =
             mock(CommonPasswordsService.class);
-
     private final Session session = new Session(IdGenerator.generate()).setEmailAddress(EMAIL);
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
@@ -595,7 +596,8 @@ class LoginHandlerTest {
                         "123.123.123.123",
                         userProfile.getPhoneNumber(),
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
+                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
+                        pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()));
         verifyNoInteractions(cloudwatchMetricsService);
         verify(sessionService, never())
                 .save(
@@ -675,7 +677,8 @@ class LoginHandlerTest {
                         "123.123.123.123",
                         "",
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
+                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
+                        incorrectPasswordCountPair);
 
         assertThat(result, hasStatus(401));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1008));
