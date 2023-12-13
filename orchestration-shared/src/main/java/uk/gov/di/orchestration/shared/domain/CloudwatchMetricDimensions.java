@@ -7,7 +7,8 @@ public enum CloudwatchMetricDimensions {
     IS_TEST("IsTest"),
     REQUESTED_LEVEL_OF_CONFIDENCE("RequestedLevelOfConfidence"),
     MFA_REQUIRED("MfaRequired"),
-    CLIENT_NAME("ClientName");
+    CLIENT_NAME("ClientName"),
+    ACCOUNT_INTERVENTION_STATUS("AccountInterventionStatus");
 
     private String value;
 
