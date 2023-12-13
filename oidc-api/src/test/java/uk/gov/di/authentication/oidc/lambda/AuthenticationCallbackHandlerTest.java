@@ -287,7 +287,7 @@ class AuthenticationCallbackHandlerTest {
     }
 
     @Nested
-    class redirectToIPV {
+    class identityJourney {
         private static MockedStatic<IdentityHelper> mockedIdentityHelper;
 
         @BeforeAll
@@ -303,6 +303,8 @@ class AuthenticationCallbackHandlerTest {
             when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
             when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
                     .thenReturn(USER_INFO);
+            when(configurationService.isAccountInterventionServiceEnabled()).thenReturn(true);
+            when(configurationService.isAccountInterventionServiceAuditEnabled()).thenReturn(true);
             when(initiateIPVAuthorisationService.sendRequestToIPV(
                             any(), any(), any(), any(), any(), any(), any(), any(), any()))
                     .thenReturn(createIPVApiResponse());
@@ -317,7 +319,9 @@ class AuthenticationCallbackHandlerTest {
         }
 
         @Test
-        void shouldRedirectToIPVWhenIdentityRequired() {
+        void shouldRedirectToIPVWhenAccountInterventionsDisabled() {
+            when(configurationService.isAccountInterventionServiceEnabled()).thenReturn(false);
+            when(configurationService.isAccountInterventionServiceAuditEnabled()).thenReturn(false);
             var event = new APIGatewayProxyRequestEvent();
             setValidHeadersAndQueryParameters(event);
 
@@ -333,9 +337,7 @@ class AuthenticationCallbackHandlerTest {
         }
 
         @Test
-        void shouldRedirectToIPVWithReproveIdentityWhenAccountInterventionsEnabled() {
-            when(configurationService.isAccountInterventionServiceEnabled()).thenReturn(true);
-            when(configurationService.isAccountInterventionServiceAuditEnabled()).thenReturn(true);
+        void shouldRedirectToIPVWhenAccountInterventionsEnabledAndAccountStatusIsClear() {
             boolean reproveIdentity = true;
             when(accountInterventionService.getAccountStatus(anyString()))
                     .thenReturn(
@@ -358,10 +360,62 @@ class AuthenticationCallbackHandlerTest {
                             any(),
                             eq(reproveIdentity));
         }
+
+        @Test
+        void shouldRedirectToIPVWhenAccountStatusIsSuspended() {
+            boolean reproveIdentity = true;
+            when(accountInterventionService.getAccountStatus(anyString()))
+                    .thenReturn(new AccountInterventionStatus(false, true, reproveIdentity, false));
+
+            var event = new APIGatewayProxyRequestEvent();
+            setValidHeadersAndQueryParameters(event);
+
+            handler.handleRequest(event, null);
+
+            verify(initiateIPVAuthorisationService)
+                    .sendRequestToIPV(
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            eq(reproveIdentity));
+        }
+
+        @Test
+        void shouldNotRedirectToIPVWhenAccountStatusIsBlocked() {
+            AccountInterventionStatus accountStatus =
+                    new AccountInterventionStatus(true, false, false, false);
+            when(accountInterventionService.getAccountStatus(any())).thenReturn(accountStatus);
+
+            var event = new APIGatewayProxyRequestEvent();
+            setValidHeadersAndQueryParameters(event);
+
+            handler.handleRequest(event, null);
+
+            verifyNoInteractions(initiateIPVAuthorisationService);
+        }
+
+        @Test
+        void shouldNotRedirectToIPVWhenResetPasswordIsRequired() {
+            AccountInterventionStatus accountStatus =
+                    new AccountInterventionStatus(false, true, false, true);
+            when(accountInterventionService.getAccountStatus(any())).thenReturn(accountStatus);
+
+            var event = new APIGatewayProxyRequestEvent();
+            setValidHeadersAndQueryParameters(event);
+
+            handler.handleRequest(event, null);
+
+            verifyNoInteractions(initiateIPVAuthorisationService);
+        }
     }
 
     @Nested
-    class accountInterventions {
+    class nonIdentityJourney {
         private static MockedStatic<IdentityHelper> mockedIdentityHelper;
 
         @BeforeAll
@@ -377,6 +431,8 @@ class AuthenticationCallbackHandlerTest {
             when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
             when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
                     .thenReturn(USER_INFO);
+            when(configurationService.isAccountInterventionServiceEnabled()).thenReturn(true);
+            when(configurationService.isAccountInterventionServiceAuditEnabled()).thenReturn(true);
             usingValidSession();
             usingValidClientSession();
             usingValidClient();
@@ -432,7 +488,7 @@ class AuthenticationCallbackHandlerTest {
         }
 
         @Test
-        void shouldPerformBackChannelLogoutWhenNotOnIdentityJourneyAndAccountStatusIsSuspended() {
+        void shouldPerformBackChannelLogoutWhenAccountStatusIsSuspended() {
             AccountInterventionStatus accountStatus =
                     new AccountInterventionStatus(false, true, false, false);
             when(configurationService.isAccountInterventionServiceEnabled()).thenReturn(true);
