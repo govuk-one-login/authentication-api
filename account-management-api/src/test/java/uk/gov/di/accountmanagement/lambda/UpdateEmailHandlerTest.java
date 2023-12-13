@@ -109,7 +109,8 @@ class UpdateEmailHandlerTest {
                         NEW_EMAIL_ADDRESS,
                         "123.123.123.123",
                         userProfile.getPhoneNumber(),
-                        PERSISTENT_ID);
+                        PERSISTENT_ID,
+                        AuditService.MetadataPair.pair("ReplacedEmail", EXISTING_EMAIL_ADDRESS));
     }
 
     @Test
