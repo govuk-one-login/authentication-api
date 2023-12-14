@@ -172,7 +172,9 @@ public class UpdateEmailHandler
                     updateInfoRequest.getReplacementEmailAddress(),
                     IpAddressHelper.extractIpAddress(input),
                     userProfile.getPhoneNumber(),
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                    AuditService.MetadataPair.pair(
+                            "ReplacedEmail", updateInfoRequest.getExistingEmailAddress()));
 
             LOG.info("Message successfully added to queue. Generating successful gateway response");
             return generateEmptySuccessApiGatewayResponse();
