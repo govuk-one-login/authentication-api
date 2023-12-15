@@ -164,7 +164,8 @@ class AccountInterventionServiceTest {
     }
 
     @Test
-    void shouldSendAuditEventWhenServiceCallAndActionEnabled() throws IOException, InterruptedException {
+    void shouldSendAuditEventWhenServiceCallAndActionEnabled()
+            throws IOException, InterruptedException {
 
         when(config.isAccountInterventionServiceActionEnabled()).thenReturn(true);
 
