@@ -247,9 +247,8 @@ class AuthenticationCallbackHandlerTest {
             when(configurationService.isAccountInterventionServiceCallEnabled()).thenReturn(true);
             when(configurationService.isAccountInterventionServiceActionEnabled()).thenReturn(true);
             boolean reproveIdentity = true;
-            when(accountInterventionService.getAccountStatus(anyString()))
-                    .thenReturn(
-                            new AccountInterventionStatus(false, false, reproveIdentity, false));
+            when(accountInterventionService.getAccountStatus(anyString(), any()))
+                    .thenReturn(new AccountInterventionStatus(false, true, reproveIdentity, false));
 
             var event = new APIGatewayProxyRequestEvent();
             setValidHeadersAndQueryParameters(event);

@@ -24,6 +24,7 @@ import uk.gov.di.authentication.oidc.exceptions.AuthenticationCallbackException;
 import uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService;
 import uk.gov.di.authentication.oidc.services.AuthenticationTokenService;
 import uk.gov.di.authentication.oidc.services.InitiateIPVAuthorisationService;
+import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
@@ -301,9 +302,24 @@ public class AuthenticationCallbackHandler
 
                 cloudwatchMetricsService.incrementCounter("AuthenticationCallback", dimensions);
 
+                var auditContext =
+                        new AuditContext(
+                                clientSessionId,
+                                userSession.getSessionId(),
+                                clientId,
+                                userInfo.getSubject().getValue(),
+                                Objects.isNull(userSession.getEmailAddress())
+                                        ? AuditService.UNKNOWN
+                                        : userSession.getEmailAddress(),
+                                IpAddressHelper.extractIpAddress(input),
+                                Objects.isNull(userInfo.getPhoneNumber())
+                                        ? AuditService.UNKNOWN
+                                        : userInfo.getPhoneNumber(),
+                                persistentSessionId);
+
                 var accountStatus =
                         accountInterventionService.getAccountStatus(
-                                userInfo.getSubject().getValue());
+                                userInfo.getSubject().getValue(), auditContext);
 
                 Boolean reproveIdentity =
                         configurationService.isAccountInterventionServiceActionEnabled()
