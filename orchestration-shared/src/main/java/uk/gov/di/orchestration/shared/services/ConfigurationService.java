@@ -62,9 +62,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public boolean isAccountInterventionServiceActionEnabled() {
-        return System.getenv()
-                .getOrDefault("ACCOUNT_INTERVENTION_SERVICE_ACTION_ENABLED", "false")
-                .equals("true");
+        return isAccountInterventionServiceCallEnabled()
+                && System.getenv()
+                        .getOrDefault("ACCOUNT_INTERVENTION_SERVICE_ACTION_ENABLED", "false")
+                        .equals("true");
     }
 
     public boolean isAccountInterventionServiceCallEnabled() {
