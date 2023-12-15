@@ -5,6 +5,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.entity.MfaRequest;
 import uk.gov.di.authentication.frontendapi.lambda.MfaHandler;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
@@ -65,6 +66,24 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var response =
                 makeRequest(
                         Optional.of(new MfaRequest(USER_EMAIL, false)),
+                        constructFrontendHeaders(SESSION_ID),
+                        Map.of());
+
+        assertThat(response, hasStatus(204));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(MFA_CODE_SENT));
+
+        List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
+        assertThat(requests, hasSize(1));
+        assertThat(requests.get(0).getDestination(), equalTo(USER_PHONE_NUMBER));
+        assertThat(requests.get(0).getNotificationType(), equalTo(MFA_SMS));
+    }
+
+    @Test
+    void shouldReturn204AndTriggerMfaSmsNotificationTypeWhenResettingPassword() {
+        var response =
+                makeRequest(
+                        Optional.of(
+                                new MfaRequest(USER_EMAIL, false, JourneyType.PASSWORD_RESET_MFA)),
                         constructFrontendHeaders(SESSION_ID),
                         Map.of());
 

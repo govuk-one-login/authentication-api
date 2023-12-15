@@ -529,6 +529,7 @@ class VerifyMfaCodeHandlerTest {
     private static Stream<Arguments> blockedCodeForInvalidPhoneNumberTooManyTimes() {
         return Stream.of(
                 Arguments.of(JourneyType.ACCOUNT_RECOVERY, CodeRequestType.SMS_ACCOUNT_RECOVERY),
+                Arguments.of(JourneyType.PASSWORD_RESET_MFA, CodeRequestType.PW_RESET_MFA_SMS),
                 Arguments.of(JourneyType.REGISTRATION, CodeRequestType.SMS_REGISTRATION));
     }
 

@@ -125,8 +125,12 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             LOG.info("MfaHandler received request");
 
             String email = request.getEmail().toLowerCase(Locale.ROOT);
+            JourneyType journeyType =
+                    request.getJourneyType() != null
+                            ? request.getJourneyType()
+                            : JourneyType.SIGN_IN;
             Optional<ErrorResponse> codeRequestValid =
-                    validateCodeRequestAttempts(email, userContext);
+                    validateCodeRequestAttempts(email, journeyType, userContext);
             if (codeRequestValid.isPresent()) {
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST,
@@ -204,8 +208,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             sessionService.save(
                     userContext
                             .getSession()
-                            .incrementCodeRequestCount(
-                                    NotificationType.MFA_SMS, JourneyType.SIGN_IN));
+                            .incrementCodeRequestCount(NotificationType.MFA_SMS, journeyType));
             AuditableEvent auditableEvent;
             if (TestClientHelper.isTestClientWithAllowedEmail(userContext, configurationService)) {
                 LOG.info(
@@ -245,11 +248,11 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
     }
 
     private Optional<ErrorResponse> validateCodeRequestAttempts(
-            String email, UserContext userContext) {
+            String email, JourneyType journeyType, UserContext userContext) {
         Session session = userContext.getSession();
-        var codeRequestCount = session.getCodeRequestCount(MFA_SMS, JourneyType.SIGN_IN);
+        var codeRequestCount = session.getCodeRequestCount(MFA_SMS, journeyType);
         LOG.info("CodeRequestCount is: {}", codeRequestCount);
-        var codeRequestType = CodeRequestType.getCodeRequestType(MFA_SMS, JourneyType.SIGN_IN);
+        var codeRequestType = CodeRequestType.getCodeRequestType(MFA_SMS, journeyType);
         var newCodeRequestBlockPrefix = CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType;
         var newCodeBlockPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
 
@@ -263,7 +266,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                     configurationService.getBlockedEmailDuration());
             LOG.info("Resetting code request count");
             sessionService.save(
-                    session.resetCodeRequestCount(NotificationType.MFA_SMS, JourneyType.SIGN_IN));
+                    session.resetCodeRequestCount(NotificationType.MFA_SMS, journeyType));
             return Optional.of(ErrorResponse.ERROR_1025);
         }
         if (codeStorageService.isBlockedForEmail(email, newCodeRequestBlockPrefix)) {

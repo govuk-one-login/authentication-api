@@ -15,12 +15,16 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -46,6 +50,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -401,15 +406,16 @@ public class MfaHandlerTest {
         assertEquals(204, result.getStatusCode());
     }
 
-    @Test
-    void shouldReturn400IfUserHasReachedTheSmsSignInCodeRequestLimit() {
+    @ParameterizedTest
+    @MethodSource("smsJourneyTypes")
+    void shouldReturn400IfUserHasReachedTheSmsSignInCodeRequestLimit(JourneyType journeyType) {
         usingValidSession();
         when(configurationService.getBlockedEmailDuration()).thenReturn(BLOCKED_EMAIL_DURATION);
-        session.incrementCodeRequestCount(NotificationType.MFA_SMS, JourneyType.SIGN_IN);
-        session.incrementCodeRequestCount(NotificationType.MFA_SMS, JourneyType.SIGN_IN);
-        session.incrementCodeRequestCount(NotificationType.MFA_SMS, JourneyType.SIGN_IN);
-        session.incrementCodeRequestCount(NotificationType.MFA_SMS, JourneyType.SIGN_IN);
-        session.incrementCodeRequestCount(NotificationType.MFA_SMS, JourneyType.SIGN_IN);
+        session.incrementCodeRequestCount(MFA_SMS, journeyType);
+        session.incrementCodeRequestCount(MFA_SMS, journeyType);
+        session.incrementCodeRequestCount(MFA_SMS, journeyType);
+        session.incrementCodeRequestCount(MFA_SMS, journeyType);
+        session.incrementCodeRequestCount(MFA_SMS, journeyType);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(
@@ -418,7 +424,10 @@ public class MfaHandlerTest {
                         session.getSessionId(),
                         CLIENT_SESSION_ID_HEADER,
                         CLIENT_SESSION_ID));
-        event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
+        event.setBody(
+                format(
+                        "{ \"email\": \"%s\", \"journeyType\": \"%s\"}",
+                        TEST_EMAIL_ADDRESS, journeyType));
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -426,10 +435,11 @@ public class MfaHandlerTest {
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1025));
 
+        var codeRequestType = CodeRequestType.getCodeRequestType(MFAMethodType.SMS, journeyType);
         verify(codeStorageService)
                 .saveBlockedForEmail(
                         TEST_EMAIL_ADDRESS,
-                        CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.SMS_SIGN_IN,
+                        CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType,
                         BLOCKED_EMAIL_DURATION);
 
         verify(auditService)
@@ -445,12 +455,13 @@ public class MfaHandlerTest {
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
     }
 
-    @Test
-    void shouldReturn400IfUserIsBlockedFromRequestingAnyMoreMfaCodes() {
+    @ParameterizedTest
+    @MethodSource("smsJourneyTypes")
+    void shouldReturn400IfUserIsBlockedFromRequestingAnyMoreMfaCodes(JourneyType journeyType) {
         usingValidSession();
+        var codeRequestType = CodeRequestType.getCodeRequestType(MFAMethodType.SMS, journeyType);
         when(codeStorageService.isBlockedForEmail(
-                        TEST_EMAIL_ADDRESS,
-                        CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.SMS_SIGN_IN))
+                        TEST_EMAIL_ADDRESS, CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType))
                 .thenReturn(true);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
@@ -460,7 +471,10 @@ public class MfaHandlerTest {
                         session.getSessionId(),
                         CLIENT_SESSION_ID_HEADER,
                         CLIENT_SESSION_ID));
-        event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
+        event.setBody(
+                format(
+                        "{ \"email\": \"%s\", \"journeyType\": \"%s\"}",
+                        TEST_EMAIL_ADDRESS, journeyType));
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -481,13 +495,15 @@ public class MfaHandlerTest {
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
     }
 
-    @Test
-    void shouldReturn400IfUserIsBlockedFromAttemptingMfaCodes() {
+    @ParameterizedTest
+    @MethodSource("smsJourneyTypes")
+    void shouldReturn400IfUserIsBlockedFromAttemptingMfaCodes(JourneyType journeyType) {
         usingValidSession();
         when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(PHONE_NUMBER));
+        var codeRequestType = CodeRequestType.getCodeRequestType(MFAMethodType.SMS, journeyType);
         when(codeStorageService.isBlockedForEmail(
-                        TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX + CodeRequestType.SMS_SIGN_IN))
+                        TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX + codeRequestType))
                 .thenReturn(true);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(
@@ -496,7 +512,10 @@ public class MfaHandlerTest {
                         session.getSessionId(),
                         CLIENT_SESSION_ID_HEADER,
                         CLIENT_SESSION_ID));
-        event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
+        event.setBody(
+                format(
+                        "{ \"email\": \"%s\", \"journeyType\": \"%s\"}",
+                        TEST_EMAIL_ADDRESS, journeyType));
         event.setRequestContext(contextWithSourceIp("123.123.123.123"));
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -646,5 +665,10 @@ public class MfaHandlerTest {
                 .state(new State())
                 .nonce(new Nonce())
                 .build();
+    }
+
+    private static Stream<Arguments> smsJourneyTypes() {
+        return Stream.of(
+                Arguments.of(JourneyType.PASSWORD_RESET_MFA), Arguments.of(JourneyType.SIGN_IN));
     }
 }

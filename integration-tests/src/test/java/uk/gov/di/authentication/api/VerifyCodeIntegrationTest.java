@@ -248,32 +248,6 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     }
 
     @Test
-    void shouldReturnMaxReachedAndSetBlockWhenSignInSmsCodeAttemptsExceedMaxRetryCount()
-            throws Json.JsonException {
-        String sessionId = redis.createSession();
-        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
-        for (int i = 0; i < 5; i++) {
-            redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS);
-        }
-        var codeRequest = new VerifyCodeRequest(MFA_SMS, "123456");
-
-        var response =
-                makeRequest(
-                        Optional.of(codeRequest), constructFrontendHeaders(sessionId), Map.of());
-        var codeRequestType =
-                CodeRequestType.getCodeRequestType(
-                        codeRequest.getNotificationType(), JourneyType.SIGN_IN);
-        var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
-
-        assertThat(response, hasStatus(400));
-        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1027));
-        assertThat(
-                redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix),
-                equalTo(true));
-        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_MAX_RETRIES_REACHED));
-    }
-
-    @Test
     void shouldReturnMaxReachedAndSetBlockWhenPasswordResetEmailCodeAttemptsExceedMaxRetryCount()
             throws Json.JsonException {
         String sessionId = redis.createSession();
@@ -299,8 +273,39 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_MAX_RETRIES_REACHED));
     }
 
-    @Test
-    void shouldReturn204WhenUserEntersValidMfaSmsCode() throws Exception {
+    private static Stream<JourneyType> journeyTypes() {
+        return Stream.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA);
+    }
+
+    @ParameterizedTest
+    @MethodSource("journeyTypes")
+    void shouldReturnMaxReachedAndSetBlockWhenSignInSmsCodeAttemptsExceedMaxRetryCount(
+            JourneyType journeyType) throws Json.JsonException {
+        String sessionId = redis.createSession();
+        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+        for (int i = 0; i < 5; i++) {
+            redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS);
+        }
+        var codeRequest = new VerifyCodeRequest(MFA_SMS, "123456", journeyType);
+
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest), constructFrontendHeaders(sessionId), Map.of());
+        var codeRequestType =
+                CodeRequestType.getCodeRequestType(codeRequest.getNotificationType(), journeyType);
+        var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
+
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1027));
+        assertThat(
+                redis.isBlockedMfaCodesForEmail(EMAIL_ADDRESS, codeBlockedKeyPrefix),
+                equalTo(true));
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_MAX_RETRIES_REACHED));
+    }
+
+    @ParameterizedTest
+    @MethodSource("journeyTypes")
+    void shouldReturn204WhenUserEntersValidMfaSmsCode(JourneyType journeyType) throws Exception {
         var internalCommonSubjectId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         SUBJECT.getValue(), INTERNAl_SECTOR_HOST, SaltHelper.generateNewSalt());
@@ -317,7 +322,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         userStore.updateConsent(EMAIL_ADDRESS, clientConsent);
 
         var code = redis.generateAndSaveMfaCode(EMAIL_ADDRESS, 900);
-        var codeRequest = new VerifyCodeRequest(NotificationType.MFA_SMS, code);
+        var codeRequest = new VerifyCodeRequest(NotificationType.MFA_SMS, code, journeyType);
 
         var response =
                 makeRequest(
@@ -331,9 +336,10 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_VERIFIED));
     }
 
-    @Test
-    void shouldReturn204WhenUserEntersValidMfaSmsCodeAndClearAccountRecoveryBlockWhenPresent()
-            throws Exception {
+    @ParameterizedTest
+    @MethodSource("journeyTypes")
+    void shouldReturn204WhenUserEntersValidMfaSmsCodeAndClearAccountRecoveryBlockWhenPresent(
+            JourneyType journeyType) throws Exception {
         var internalCommonSubjectId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         SUBJECT.getValue(), INTERNAl_SECTOR_HOST, SaltHelper.generateNewSalt());
@@ -351,7 +357,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         userStore.updateConsent(EMAIL_ADDRESS, clientConsent);
 
         var code = redis.generateAndSaveMfaCode(EMAIL_ADDRESS, 900);
-        var codeRequest = new VerifyCodeRequest(NotificationType.MFA_SMS, code);
+        var codeRequest = new VerifyCodeRequest(NotificationType.MFA_SMS, code, journeyType);
 
         var response =
                 makeRequest(
@@ -365,9 +371,10 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
                 txmaAuditQueue, List.of(CODE_VERIFIED, ACCOUNT_RECOVERY_BLOCK_REMOVED));
     }
 
-    @Test
-    void shouldReturn400WhenInvalidMfaSmsCodeIsEnteredAndNotClearAccountRecoveryBlockWhenPresent()
-            throws Json.JsonException {
+    @ParameterizedTest
+    @MethodSource("journeyTypes")
+    void shouldReturn400WhenInvalidMfaSmsCodeIsEnteredAndNotClearAccountRecoveryBlockWhenPresent(
+            JourneyType journeyType) throws Json.JsonException {
         var internalCommonSubjectId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         SUBJECT.getValue(), INTERNAl_SECTOR_HOST, SaltHelper.generateNewSalt());
@@ -385,7 +392,7 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         userStore.updateConsent(EMAIL_ADDRESS, clientConsent);
 
         redis.generateAndSaveMfaCode(EMAIL_ADDRESS, 900);
-        var codeRequest = new VerifyCodeRequest(NotificationType.MFA_SMS, "123456");
+        var codeRequest = new VerifyCodeRequest(NotificationType.MFA_SMS, "123456", journeyType);
 
         var response =
                 makeRequest(
