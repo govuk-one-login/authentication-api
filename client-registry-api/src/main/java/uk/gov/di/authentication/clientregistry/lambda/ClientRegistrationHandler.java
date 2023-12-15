@@ -120,7 +120,7 @@ public class ClientRegistrationHandler
                     clientRegistrationRequest.getServiceType(),
                     sanitiseUrl(clientRegistrationRequest.getSectorIdentifierUri()),
                     clientRegistrationRequest.getSubjectType(),
-                    !clientRegistrationRequest.isIdentityVerificationRequired(),
+                    false,
                     clientRegistrationRequest.getClaims(),
                     clientRegistrationRequest.getClientType(),
                     clientRegistrationRequest.isIdentityVerificationRequired(),
