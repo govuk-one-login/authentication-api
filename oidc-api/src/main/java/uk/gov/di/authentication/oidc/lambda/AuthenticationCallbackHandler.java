@@ -24,6 +24,7 @@ import uk.gov.di.authentication.oidc.exceptions.AuthenticationCallbackException;
 import uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService;
 import uk.gov.di.authentication.oidc.services.AuthenticationTokenService;
 import uk.gov.di.authentication.oidc.services.InitiateIPVAuthorisationService;
+import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
@@ -41,7 +42,6 @@ import java.util.Map;
 import java.util.Objects;
 
 import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.GET;
-import static java.net.http.HttpClient.newHttpClient;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static uk.gov.di.orchestration.shared.conditions.IdentityHelper.identityRequired;
@@ -105,7 +105,7 @@ public class AuthenticationCallbackHandler
                         cloudwatchMetricsService);
         this.accountInterventionService =
                 new AccountInterventionService(
-                        configurationService, newHttpClient(), cloudwatchMetricsService);
+                        configurationService, cloudwatchMetricsService, auditService);
     }
 
     public AuthenticationCallbackHandler(
@@ -303,14 +303,29 @@ public class AuthenticationCallbackHandler
 
                 cloudwatchMetricsService.incrementCounter("AuthenticationCallback", dimensions);
 
-                Boolean reproveIdentity = null;
-                if (configurationService.isAccountInterventionServiceEnabled()
-                        && configurationService.isAccountInterventionServiceAuditEnabled()) {
-                    var accountStatus =
-                            accountInterventionService.getAccountStatus(
-                                    userInfo.getSubject().getValue());
-                    reproveIdentity = accountStatus.reproveIdentity();
-                }
+                var auditContext =
+                        new AuditContext(
+                                clientSessionId,
+                                userSession.getSessionId(),
+                                clientId,
+                                userInfo.getSubject().getValue(),
+                                Objects.isNull(userSession.getEmailAddress())
+                                        ? AuditService.UNKNOWN
+                                        : userSession.getEmailAddress(),
+                                IpAddressHelper.extractIpAddress(input),
+                                Objects.isNull(userInfo.getPhoneNumber())
+                                        ? AuditService.UNKNOWN
+                                        : userInfo.getPhoneNumber(),
+                                persistentSessionId);
+
+                var accountStatus =
+                        accountInterventionService.getAccountStatus(
+                                userInfo.getSubject().getValue(), auditContext);
+
+                Boolean reproveIdentity =
+                        configurationService.isAccountInterventionServiceActionEnabled()
+                                ? accountStatus.reproveIdentity()
+                                : null;
 
                 if (identityRequired) {
                     return initiateIPVAuthorisationService.sendRequestToIPV(

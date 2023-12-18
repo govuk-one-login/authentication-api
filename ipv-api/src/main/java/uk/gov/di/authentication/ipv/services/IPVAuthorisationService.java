@@ -183,7 +183,7 @@ public class IPVAuthorisationService {
                         .claim("response_type", ResponseType.CODE.toString())
                         .claim("scope", scope.toString())
                         .claim("vtr", vtr);
-        if (configurationService.isAccountInterventionServiceEnabled() && reproveIdentity != null) {
+        if (reproveIdentity != null) {
             claimsBuilder.claim("reprove_identity", reproveIdentity);
         }
         if (Objects.nonNull(claims)) {
