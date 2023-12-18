@@ -41,6 +41,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.GET;
+import static java.net.http.HttpClient.newHttpClient;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static uk.gov.di.orchestration.shared.conditions.IdentityHelper.identityRequired;
@@ -104,7 +105,7 @@ public class AuthenticationCallbackHandler
                         cloudwatchMetricsService);
         this.accountInterventionService =
                 new AccountInterventionService(
-                        configurationService, cloudwatchMetricsService, auditService);
+                        configurationService, newHttpClient(), cloudwatchMetricsService);
     }
 
     public AuthenticationCallbackHandler(

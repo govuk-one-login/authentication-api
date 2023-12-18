@@ -2,7 +2,6 @@ package uk.gov.di.orchestration.shared.services;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionResponse;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
 import uk.gov.di.orchestration.shared.exceptions.AccountInterventionException;
@@ -15,39 +14,20 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.Map;
 
-import static uk.gov.di.orchestration.shared.domain.AccountInterventionsAuditableEvent.AIS_RESPONSE_RECEIVED;
-
 public class AccountInterventionService {
 
     private static final Logger LOGGER = LogManager.getLogger(AccountInterventionService.class);
     private final HttpClient httpClient;
     private final URI accountInterventionServiceURI;
-    private final AuditService auditService;
     private final boolean accountInterventionsCallEnabled;
     private final boolean accountInterventionsActionEnabled;
     private final ConfigurationService configurationService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
 
-    public AccountInterventionService(ConfigurationService configService) {
-        this(
-                configService,
-                HttpClient.newHttpClient(),
-                new CloudwatchMetricsService(),
-                new AuditService(configService));
-    }
-
-    public AccountInterventionService(
-            ConfigurationService configService,
-            CloudwatchMetricsService cloudwatchMetricsService,
-            AuditService auditService) {
-        this(configService, HttpClient.newHttpClient(), cloudwatchMetricsService, auditService);
-    }
-
     public AccountInterventionService(
             ConfigurationService configService,
             HttpClient httpClient,
-            CloudwatchMetricsService cloudwatchMetricsService,
-            AuditService auditService) {
+            CloudwatchMetricsService cloudwatchMetricsService) {
         this.configurationService = configService;
         this.accountInterventionServiceURI = configService.getAccountInterventionServiceURI();
         this.accountInterventionsCallEnabled =
@@ -56,30 +36,15 @@ public class AccountInterventionService {
                 configurationService.isAccountInterventionServiceActionEnabled();
         this.httpClient = httpClient;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
-        this.auditService = auditService;
     }
 
     public AccountInterventionStatus getAccountStatus(String internalPairwiseSubjectId)
             throws AccountInterventionException {
-        return getAccountStatus(internalPairwiseSubjectId, null);
-    }
-
-    public AccountInterventionStatus getAccountStatus(
-            String internalPairwiseSubjectId, AuditContext auditContext)
-            throws AccountInterventionException {
 
         if (accountInterventionsCallEnabled) {
             try {
-                var status = retrieveAccountStatus(internalPairwiseSubjectId);
-                if (accountInterventionsActionEnabled) {
-                    if (auditContext == null) {
-                        throw new AccountInterventionException(
-                                "Account intervention Audit enabled, but no AuditContext provided");
-                    }
-                    auditService.submitAuditEvent(AIS_RESPONSE_RECEIVED, auditContext);
-                }
 
-                return status;
+                return retrieveAccountStatus(internalPairwiseSubjectId);
 
             } catch (IOException | Json.JsonException e) {
                 return handleException(e);
