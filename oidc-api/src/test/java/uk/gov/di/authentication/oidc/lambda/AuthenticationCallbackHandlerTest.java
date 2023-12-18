@@ -104,8 +104,8 @@ class AuthenticationCallbackHandlerTest {
         when(configurationService.getLoginURI()).thenReturn(URI.create(TEST_FRONTEND_BASE_URL));
         when(configurationService.getAuthenticationBackendURI())
                 .thenReturn(URI.create(TEST_AUTH_BACKEND_BASE_URL));
-        when(configurationService.isAccountInterventionServiceCallEnabled()).thenReturn(false);
-        when(configurationService.isAccountInterventionServiceActionEnabled()).thenReturn(false);
+        when(configurationService.isAccountInterventionServiceEnabled()).thenReturn(false);
+        when(configurationService.isAccountInterventionServiceAuditEnabled()).thenReturn(false);
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
                         CLIENT_SESSION_ID, TEST_EMAIL_ADDRESS, clientSession))
                 .thenReturn(AUTH_CODE_RP_TO_ORCH);
@@ -239,11 +239,12 @@ class AuthenticationCallbackHandlerTest {
 
         @Test
         void shouldRedirectToIPVWithReproveIdentityWhenAccountInterventionsEnabled() {
-            when(configurationService.isAccountInterventionServiceCallEnabled()).thenReturn(true);
-            when(configurationService.isAccountInterventionServiceActionEnabled()).thenReturn(true);
+            when(configurationService.isAccountInterventionServiceEnabled()).thenReturn(true);
+            when(configurationService.isAccountInterventionServiceAuditEnabled()).thenReturn(true);
             boolean reproveIdentity = true;
-            when(accountInterventionService.getAccountStatus(anyString(), any()))
-                    .thenReturn(new AccountInterventionStatus(false, true, reproveIdentity, false));
+            when(accountInterventionService.getAccountStatus(anyString()))
+                    .thenReturn(
+                            new AccountInterventionStatus(false, false, reproveIdentity, false));
 
             var event = new APIGatewayProxyRequestEvent();
             setValidHeadersAndQueryParameters(event);

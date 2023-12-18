@@ -199,7 +199,7 @@ class ProcessingIdentityHandlerTest {
 
     @Test
     void
-            shouldActionAISCallIfAccountInterventionServiceActionIsEnabledAndProcessingStatusIsCOMPLETED()
+            shouldMakeAndAuditAISCallIfAccountInterventionServiceAuditIsEnabledAndProcessingStatusIsCOMPLETED()
                     throws Json.JsonException {
         usingValidSession();
         var identityCredentials =
@@ -211,8 +211,8 @@ class ProcessingIdentityHandlerTest {
                 .thenReturn(Optional.of(identityCredentials));
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(getClientSession()));
-        when(configurationService.isAccountInterventionServiceActionEnabled()).thenReturn(true);
-        when(accountInterventionService.getAccountStatus(anyString(), any()))
+        when(configurationService.isAccountInterventionServiceAuditEnabled()).thenReturn(true);
+        when(accountInterventionService.getAccountStatus(anyString()))
                 .thenReturn(new AccountInterventionStatus(false, false, false, false));
 
         var result = handler.handleRequest(event, context);
@@ -251,9 +251,9 @@ class ProcessingIdentityHandlerTest {
                 .thenReturn(Optional.of(identityCredentials));
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(getClientSession()));
-        when(configurationService.isAccountInterventionServiceActionEnabled()).thenReturn(true);
-        when(configurationService.isAccountInterventionServiceCallEnabled()).thenReturn(true);
-        when(accountInterventionService.getAccountStatus(anyString(), any())).thenReturn(aisResult);
+        when(configurationService.isAccountInterventionServiceAuditEnabled()).thenReturn(true);
+        when(configurationService.isAccountInterventionServiceEnabled()).thenReturn(true);
+        when(accountInterventionService.getAccountStatus(anyString())).thenReturn(aisResult);
 
         var result = handler.handleRequest(event, context);
 

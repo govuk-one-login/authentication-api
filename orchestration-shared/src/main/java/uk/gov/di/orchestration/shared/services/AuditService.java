@@ -1,6 +1,5 @@
 package uk.gov.di.orchestration.shared.services;
 
-import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.domain.AuditableEvent;
 import uk.gov.di.orchestration.shared.helpers.PhoneNumberHelper;
@@ -38,36 +37,6 @@ public class AuditService {
                         configurationService.getAwsRegion(),
                         configurationService.getTxmaAuditQueueUrl(),
                         configurationService.getLocalstackEndpointUri());
-    }
-
-    public void submitAuditEvent(AuditableEvent event, AuditContext auditContext) {
-        var user =
-                TxmaAuditUser.user()
-                        .withUserId(auditContext.getSubjectId())
-                        .withPhone(auditContext.getPhoneNumber())
-                        .withEmail(auditContext.getEmail())
-                        .withIpAddress(auditContext.getIpAddress())
-                        .withSessionId(auditContext.getSessionId())
-                        .withPersistentSessionId(auditContext.getPersistentSessionId())
-                        .withGovukSigninJourneyId(auditContext.getClientSessionId());
-
-        var txmaAuditEvent =
-                auditEventWithTime(event, () -> Date.from(clock.instant()))
-                        .withClientId(auditContext.getClientId())
-                        .withComponentId(configurationService.getOidcApiBaseURL().orElse("UNKNOWN"))
-                        .withUser(user);
-
-        Arrays.stream(auditContext.getMetadataPairs())
-                .forEach(pair -> txmaAuditEvent.addExtension(pair.getKey(), pair.getValue()));
-
-        Optional.ofNullable(auditContext.getPhoneNumber())
-                .filter(not(String::isBlank))
-                .flatMap(PhoneNumberHelper::maybeGetCountry)
-                .ifPresent(
-                        country ->
-                                txmaAuditEvent.addExtension("phone_number_country_code", country));
-
-        txmaQueueClient.send(txmaAuditEvent.serialize());
     }
 
     public void submitAuditEvent(

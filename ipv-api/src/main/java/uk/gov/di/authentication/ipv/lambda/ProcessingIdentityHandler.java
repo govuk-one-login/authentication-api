@@ -9,7 +9,6 @@ import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityRequest;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityResponse;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityStatus;
-import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
@@ -31,6 +30,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 
+import static java.net.http.HttpClient.newHttpClient;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 
@@ -50,7 +50,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
         this.cloudwatchMetricsService = new CloudwatchMetricsService();
         this.accountInterventionService =
                 new AccountInterventionService(
-                        configurationService, cloudwatchMetricsService, auditService);
+                        configurationService, newHttpClient(), cloudwatchMetricsService);
     }
 
     public ProcessingIdentityHandler() {
@@ -124,29 +124,26 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                             configurationService.getEnvironment(),
                             "Status",
                             processingStatus.toString()));
-
-            var auditContext =
-                    new AuditContext(
-                            userContext.getClientSessionId(),
-                            userContext.getSession().getSessionId(),
-                            userContext.getClient().get().getClientID(),
-                            AuditService.UNKNOWN,
-                            userContext
-                                    .getUserProfile()
-                                    .map(UserProfile::getEmail)
-                                    .orElse(AuditService.UNKNOWN),
-                            IpAddressHelper.extractIpAddress(input),
-                            AuditService.UNKNOWN,
-                            PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
-
             auditService.submitAuditEvent(
-                    IPVAuditableEvent.PROCESSING_IDENTITY_REQUEST, auditContext);
+                    IPVAuditableEvent.PROCESSING_IDENTITY_REQUEST,
+                    userContext.getClientSessionId(),
+                    userContext.getSession().getSessionId(),
+                    userContext.getClient().get().getClientID(),
+                    AuditService.UNKNOWN,
+                    userContext
+                            .getUserProfile()
+                            .map(UserProfile::getEmail)
+                            .orElse(AuditService.UNKNOWN),
+                    IpAddressHelper.extractIpAddress(input),
+                    AuditService.UNKNOWN,
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
             sessionService.save(userContext.getSession());
             LOG.info(
                     "Generating ProcessingIdentityResponse with ProcessingIdentityStatus: {}",
                     processingStatus);
-            if (processingStatus == ProcessingIdentityStatus.COMPLETED) {
-                checkAccountInterventionService(pairwiseSubject.getValue(), auditContext);
+            if (processingStatus == ProcessingIdentityStatus.COMPLETED
+                    && configurationService.isAccountInterventionServiceAuditEnabled()) {
+                checkAccountInterventionService(pairwiseSubject.getValue());
             }
             return generateApiGatewayProxyResponse(
                     200, new ProcessingIdentityResponse(processingStatus));
@@ -162,16 +159,15 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
         }
     }
 
-    private void checkAccountInterventionService(
-            String internalPairwiseSubjectId, AuditContext auditContext) {
+    private void checkAccountInterventionService(String internalPairwiseSubjectId) {
         var aisResult =
                 segmentedFunctionCall(
                         "AIS: getAccountStatus",
                         () ->
                                 accountInterventionService.getAccountStatus(
-                                        internalPairwiseSubjectId, auditContext));
+                                        internalPairwiseSubjectId));
 
-        if (configurationService.isAccountInterventionServiceActionEnabled()) {
+        if (configurationService.isAccountInterventionServiceEnabled()) {
             if (aisResult.blocked()) {
                 // TODO: back channel logout + redirect to blocked page
                 LOG.info("Account is blocked");

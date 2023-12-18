@@ -27,26 +27,26 @@ module "authentication_callback" {
   environment     = var.environment
 
   handler_environment_variables = {
-    ACCOUNT_INTERVENTION_SERVICE_ACTION_ENABLED = var.account_intervention_service_action_enabled
-    ACCOUNT_INTERVENTION_SERVICE_CALL_ENABLED   = var.account_intervention_service_call_enabled
-    ACCOUNT_INTERVENTION_SERVICE_URI            = var.account_intervention_service_uri
-    AUTHENTICATION_BACKEND_URI                  = "https://${local.di_auth_ext_api_id}-${local.vpce_id}.execute-api.${var.aws_region}.amazonaws.com/${var.environment}/"
-    DYNAMO_ENDPOINT                             = var.use_localstack ? var.lambda_dynamo_endpoint : null
-    ENVIRONMENT                                 = var.environment
-    IDENTITY_ENABLED                            = var.ipv_api_enabled
-    INTERNAl_SECTOR_URI                         = var.internal_sector_uri
-    IPV_AUDIENCE                                = var.ipv_audience
-    IPV_AUTHORISATION_CALLBACK_URI              = var.ipv_authorisation_callback_uri
-    IPV_AUTHORISATION_CLIENT_ID                 = var.ipv_authorisation_client_id
-    IPV_AUTHORISATION_URI                       = var.ipv_authorisation_uri
-    IPV_TOKEN_SIGNING_KEY_ALIAS                 = local.ipv_token_auth_key_alias_name
-    LOCALSTACK_ENDPOINT                         = var.use_localstack ? var.localstack_endpoint : null
-    LOGIN_URI                                   = "https://${local.frontend_fqdn}/"
-    ORCH_CLIENT_ID                              = var.orch_client_id
-    ORCH_TO_AUTH_TOKEN_SIGNING_KEY_ALIAS        = local.orch_to_auth_signing_key_alias_name
-    REDIS_KEY                                   = local.redis_key
-    SUPPORT_AUTH_ORCH_SPLIT                     = var.support_auth_orch_split
-    TXMA_AUDIT_QUEUE_URL                        = module.oidc_txma_audit.queue_url
+    ACCOUNT_INTERVENTION_SERVICE_AUDIT_ENABLED = var.account_intervention_service_audit_enabled
+    ACCOUNT_INTERVENTION_SERVICE_ENABLED       = var.account_intervention_service_enabled
+    ACCOUNT_INTERVENTION_SERVICE_URI           = var.account_intervention_service_uri
+    AUTHENTICATION_BACKEND_URI                 = "https://${local.di_auth_ext_api_id}-${local.vpce_id}.execute-api.${var.aws_region}.amazonaws.com/${var.environment}/"
+    DYNAMO_ENDPOINT                            = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    ENVIRONMENT                                = var.environment
+    IDENTITY_ENABLED                           = var.ipv_api_enabled
+    INTERNAl_SECTOR_URI                        = var.internal_sector_uri
+    IPV_AUDIENCE                               = var.ipv_audience
+    IPV_AUTHORISATION_CALLBACK_URI             = var.ipv_authorisation_callback_uri
+    IPV_AUTHORISATION_CLIENT_ID                = var.ipv_authorisation_client_id
+    IPV_AUTHORISATION_URI                      = var.ipv_authorisation_uri
+    IPV_TOKEN_SIGNING_KEY_ALIAS                = local.ipv_token_auth_key_alias_name
+    LOCALSTACK_ENDPOINT                        = var.use_localstack ? var.localstack_endpoint : null
+    LOGIN_URI                                  = "https://${local.frontend_fqdn}/"
+    ORCH_CLIENT_ID                             = var.orch_client_id
+    ORCH_TO_AUTH_TOKEN_SIGNING_KEY_ALIAS       = local.orch_to_auth_signing_key_alias_name
+    REDIS_KEY                                  = local.redis_key
+    SUPPORT_AUTH_ORCH_SPLIT                    = var.support_auth_orch_split
+    TXMA_AUDIT_QUEUE_URL                       = module.oidc_txma_audit.queue_url
   }
 
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.AuthenticationCallbackHandler::handleRequest"

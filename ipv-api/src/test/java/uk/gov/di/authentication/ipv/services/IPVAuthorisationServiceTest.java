@@ -222,7 +222,7 @@ class IPVAuthorisationServiceTest {
                             .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
                             .build();
             when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(signResult);
-            when(configurationService.isAccountInterventionServiceCallEnabled()).thenReturn(true);
+            when(configurationService.isAccountInterventionServiceEnabled()).thenReturn(true);
         }
 
         @Test
@@ -320,6 +320,34 @@ class IPVAuthorisationServiceTest {
             assertThat(
                     signedJWTResponse.getJWTClaimsSet().getClaim("reprove_identity"),
                     equalTo(false));
+        }
+
+        @Test
+        void shouldNotConstructJWTWithReproveIdentityClaimIfAccountInterventionsFlagDisabled()
+                throws JOSEException, ParseException {
+            when(configurationService.isAccountInterventionServiceEnabled()).thenReturn(false);
+            EncryptedJWT encryptedJWT;
+
+            try (var mockIdGenerator = mockStatic(IdGenerator.class)) {
+                mockIdGenerator.when(IdGenerator::generate).thenReturn("test-jti");
+                encryptedJWT =
+                        authorisationService.constructRequestJWT(
+                                new State("state"),
+                                new Scope(OIDCScopeValue.OPENID),
+                                new Subject("subject"),
+                                new ClaimsSetRequest(),
+                                "",
+                                "",
+                                emptyList(),
+                                false);
+            }
+            var signedJWTResponse = decryptJWT(encryptedJWT);
+
+            assertFalse(
+                    signedJWTResponse
+                            .getJWTClaimsSet()
+                            .getClaims()
+                            .containsKey("reprove_identity"));
         }
 
         @Test

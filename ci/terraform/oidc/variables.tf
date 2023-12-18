@@ -469,12 +469,12 @@ variable "orch_frontend_api_gateway_integration_enabled" {
   default     = false
 }
 
-variable "account_intervention_service_action_enabled" {
+variable "account_intervention_service_audit_enabled" {
   default = false
   type    = bool
 }
 
-variable "account_intervention_service_call_enabled" {
+variable "account_intervention_service_enabled" {
   default = false
   type    = bool
 }
