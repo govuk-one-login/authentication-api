@@ -1,4 +1,5 @@
 module "frontend_api_check_reauth_user_role" {
+  count       = local.deploy_reauth_user_count
   source      = "../modules/lambda-role"
   environment = var.environment
   role_name   = "frontend-api-check-reauth-user-role"
@@ -13,6 +14,7 @@ module "frontend_api_check_reauth_user_role" {
 }
 
 module "check_reauth_user" {
+  count  = local.deploy_reauth_user_count
   source = "../modules/endpoint-module"
 
   endpoint_name   = "check-reauth-user"

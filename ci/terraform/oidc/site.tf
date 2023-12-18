@@ -59,6 +59,7 @@ locals {
 
   request_tracing_allowed            = contains(["build", "sandpit"], var.environment)
   deploy_account_interventions_count = contains(["build", "sandpit"], var.environment) ? 1 : 0
+  deploy_reauth_user_count           = contains(["build", "sandpit"], var.environment) ? 1 : 0
 
   access_logging_template = jsonencode({
     requestId            = "$context.requestId"
