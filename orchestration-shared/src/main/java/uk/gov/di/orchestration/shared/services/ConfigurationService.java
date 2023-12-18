@@ -61,15 +61,15 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Long.parseLong(System.getenv().getOrDefault("ACCESS_TOKEN_EXPIRY", "180"));
     }
 
-    public boolean isAccountInterventionServiceActionEnabled() {
+    public boolean isAccountInterventionServiceAuditEnabled() {
         return System.getenv()
-                .getOrDefault("ACCOUNT_INTERVENTION_SERVICE_ACTION_ENABLED", "false")
+                .getOrDefault("ACCOUNT_INTERVENTION_SERVICE_AUDIT_ENABLED", "false")
                 .equals("true");
     }
 
-    public boolean isAccountInterventionServiceCallEnabled() {
+    public boolean isAccountInterventionServiceEnabled() {
         return System.getenv()
-                .getOrDefault("ACCOUNT_INTERVENTION_SERVICE_CALL_ENABLED", "false")
+                .getOrDefault("ACCOUNT_INTERVENTION_SERVICE_ENABLED", "false")
                 .equals("true");
     }
 

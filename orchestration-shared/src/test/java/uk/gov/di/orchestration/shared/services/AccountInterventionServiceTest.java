@@ -49,7 +49,7 @@ class AccountInterventionServiceTest {
     @BeforeEach
     void setup() throws URISyntaxException {
         when(config.getAccountInterventionServiceURI()).thenReturn(new URI(BASE_AIS_URL));
-        when(config.isAccountInterventionServiceCallEnabled()).thenReturn(true);
+        when(config.isAccountInterventionServiceEnabled()).thenReturn(true);
     }
 
     @Test

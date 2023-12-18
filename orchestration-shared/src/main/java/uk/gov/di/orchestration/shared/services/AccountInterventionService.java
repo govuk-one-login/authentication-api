@@ -19,8 +19,6 @@ public class AccountInterventionService {
     private static final Logger LOGGER = LogManager.getLogger(AccountInterventionService.class);
     private final HttpClient httpClient;
     private final URI accountInterventionServiceURI;
-    private final boolean accountInterventionsCallEnabled;
-    private final boolean accountInterventionsActionEnabled;
     private final ConfigurationService configurationService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
 
@@ -30,40 +28,27 @@ public class AccountInterventionService {
             CloudwatchMetricsService cloudwatchMetricsService) {
         this.configurationService = configService;
         this.accountInterventionServiceURI = configService.getAccountInterventionServiceURI();
-        this.accountInterventionsCallEnabled =
-                configurationService.isAccountInterventionServiceCallEnabled();
-        this.accountInterventionsActionEnabled =
-                configurationService.isAccountInterventionServiceActionEnabled();
         this.httpClient = httpClient;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
     }
 
     public AccountInterventionStatus getAccountStatus(String internalPairwiseSubjectId)
             throws AccountInterventionException {
-
-        if (accountInterventionsCallEnabled) {
-            try {
-
-                return retrieveAccountStatus(internalPairwiseSubjectId);
-
-            } catch (IOException | Json.JsonException e) {
-                return handleException(e);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                return handleException(e);
+        try {
+            return retrieveAccountStatus(internalPairwiseSubjectId);
+        } catch (IOException | Json.JsonException e) {
+            if (configurationService.isAccountInterventionServiceEnabled()) {
+                throw new AccountInterventionException(
+                        "Problem communicating with Account Intervention Service", e);
+            } else {
+                LOGGER.warn("Problem communicating with Account Intervention Service " + e);
+                return noInterventionResponse();
             }
-        }
-
-        return noInterventionResponse();
-    }
-
-    private AccountInterventionStatus handleException(Exception e) {
-        if (accountInterventionsActionEnabled) {
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
             throw new AccountInterventionException(
                     "Problem communicating with Account Intervention Service", e);
         }
-        LOGGER.warn("Problem communicating with Account Intervention Service " + e);
-        return noInterventionResponse();
     }
 
     private AccountInterventionStatus retrieveAccountStatus(String internalPairwiseSubjectId)

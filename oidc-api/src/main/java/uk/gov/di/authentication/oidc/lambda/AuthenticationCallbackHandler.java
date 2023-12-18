@@ -303,14 +303,14 @@ public class AuthenticationCallbackHandler
 
                 cloudwatchMetricsService.incrementCounter("AuthenticationCallback", dimensions);
 
-                var accountStatus =
-                        accountInterventionService.getAccountStatus(
-                                userInfo.getSubject().getValue());
-
-                Boolean reproveIdentity =
-                        configurationService.isAccountInterventionServiceActionEnabled()
-                                ? accountStatus.reproveIdentity()
-                                : null;
+                Boolean reproveIdentity = null;
+                if (configurationService.isAccountInterventionServiceEnabled()
+                        && configurationService.isAccountInterventionServiceAuditEnabled()) {
+                    var accountStatus =
+                            accountInterventionService.getAccountStatus(
+                                    userInfo.getSubject().getValue());
+                    reproveIdentity = accountStatus.reproveIdentity();
+                }
 
                 if (identityRequired) {
                     return initiateIPVAuthorisationService.sendRequestToIPV(
