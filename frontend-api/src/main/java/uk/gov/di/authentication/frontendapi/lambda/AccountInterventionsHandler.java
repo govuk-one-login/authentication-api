@@ -49,6 +49,10 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
         this.accountInterventionsService = accountInterventionsService;
     }
 
+    public AccountInterventionsHandler() {
+        this(ConfigurationService.getInstance());
+    }
+
     public AccountInterventionsHandler(ConfigurationService configurationService) {
         super(AccountInterventionsRequest.class, configurationService);
         accountInterventionsService = new AccountInterventionsService();
