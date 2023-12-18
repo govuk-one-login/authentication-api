@@ -10,9 +10,4 @@ endpoint_memory_size   = 1536
 scaling_trigger        = 0.6
 
 orch_client_id                  = "orchestrationAuth"
-orch_to_auth_public_signing_key = <<-EOT
------BEGIN PUBLIC KEY-----
-MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE5PP1PZmhiuHR57ZEfZXARt9/uiG+
-KKF+S7us4zEEEmEXZFR1H+kWP5RrLHQy9esxsul9X7V4pygDTY1I6QbMGg==
------END PUBLIC KEY-----
-EOT
+orch_to_auth_public_signing_key = "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE5PP1PZmhiuHR57ZEfZXARt9/uiG+KKF+S7us4zEEEmEXZFR1H+kWP5RrLHQy9esxsul9X7V4pygDTY1I6QbMGg=="
