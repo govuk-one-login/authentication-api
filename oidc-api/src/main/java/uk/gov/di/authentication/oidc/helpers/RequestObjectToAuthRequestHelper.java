@@ -20,6 +20,8 @@ import java.text.ParseException;
 import java.util.List;
 import java.util.Objects;
 
+import static com.nimbusds.openid.connect.sdk.Prompt.Type.parse;
+
 public class RequestObjectToAuthRequestHelper {
     private static final Json objectMapper = SerializationService.getInstance();
 
@@ -65,6 +67,13 @@ public class RequestObjectToAuthRequestHelper {
             }
             if (Objects.nonNull(jwtClaimsSet.getClaim("rp_sid"))) {
                 builder.customParameter("rp_sid", jwtClaimsSet.getClaim("rp_sid").toString());
+            }
+            if (Objects.nonNull(jwtClaimsSet.getClaim("prompt"))) {
+                builder.prompt(parse(jwtClaimsSet.getStringClaim("prompt")));
+            }
+            if (Objects.nonNull(jwtClaimsSet.getClaim("id_token_hint"))) {
+                builder.customParameter(
+                        "id_token_hint", jwtClaimsSet.getStringClaim("id_token_hint"));
             }
             return builder.build();
         } catch (ParseException | com.nimbusds.oauth2.sdk.ParseException | Json.JsonException e) {
