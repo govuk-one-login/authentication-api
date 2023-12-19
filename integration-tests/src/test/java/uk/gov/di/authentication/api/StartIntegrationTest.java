@@ -129,6 +129,43 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(START_INFO_FOUND));
     }
 
+    @Test
+    void shouldReturn200AndStartResponseWithAuthenticatedFalseWhenReauthenticationIsRequested()
+            throws Json.JsonException {
+        String sessionId = redis.createSession(true);
+        userStore.signUp(EMAIL, "password");
+        redis.addEmailToSession(sessionId, EMAIL);
+        var state = new State();
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        var builder =
+                new AuthenticationRequest.Builder(
+                                ResponseType.CODE, scope, new ClientID(CLIENT_ID), REDIRECT_URI)
+                        .nonce(new Nonce())
+                        .state(state);
+        var authRequest = builder.build();
+
+        redis.createClientSession(CLIENT_SESSION_ID, TEST_CLIENT_NAME, authRequest.toParameters());
+
+        registerClient(KeyPairHelper.GENERATE_RSA_KEY_PAIR(), ClientType.WEB, true);
+
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Session-Id", sessionId);
+        headers.put("Client-Session-Id", CLIENT_SESSION_ID);
+        headers.put("X-API-Key", FRONTEND_API_KEY);
+        headers.put("Reauthenticate", "true");
+
+        var response = makeRequest(Optional.empty(), headers, Map.of());
+        assertThat(response, hasStatus(200));
+
+        StartResponse startResponse =
+                objectMapper.readValue(response.getBody(), StartResponse.class);
+
+        assertThat(startResponse.getUser().isAuthenticated(), equalTo(false));
+
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(START_INFO_FOUND));
+    }
+
     private static Stream<MFAMethodType> mfaMethodTypes() {
         return Stream.of(MFAMethodType.AUTH_APP, MFAMethodType.SMS, null);
     }
