@@ -37,7 +37,6 @@ import java.util.Optional;
 import static java.util.function.Predicate.not;
 import static uk.gov.di.authentication.frontendapi.entity.RequestParameters.COOKIE_CONSENT;
 import static uk.gov.di.authentication.frontendapi.entity.RequestParameters.GA;
-import static uk.gov.di.authentication.frontendapi.features.FeatureStrategies.fiftyFiftyStrategy;
 
 public class StartService {
 
@@ -246,7 +245,6 @@ public class StartService {
 
     public Features getSessionFeatures() {
         Features features = new Features();
-        features.setUpdatePasswordHintTextVersion(fiftyFiftyStrategy() ? "1" : "2");
         return features;
     }
 }

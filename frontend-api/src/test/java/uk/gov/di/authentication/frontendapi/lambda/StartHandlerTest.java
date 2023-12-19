@@ -146,7 +146,6 @@ class StartHandlerTest {
         when(startService.buildUserStartInfo(userContext, cookieConsentValue, gaTrackingId, true))
                 .thenReturn(userStartInfo);
         Features features = new Features();
-        features.setUpdatePasswordHintTextVersion("1");
         when(startService.getSessionFeatures()).thenReturn(features);
         when(configurationService.isExtendedFeatureFlagsEnabled()).thenReturn(isFeaturesEnabled);
         usingValidClientSession();
@@ -188,7 +187,6 @@ class StartHandlerTest {
         assertThat(response.getUser().getGaCrossDomainTrackingId(), equalTo(gaTrackingId));
         if (isFeaturesEnabled) {
             assertThat(response.getFeatures(), not(equalTo(null)));
-            assertThat(response.getFeatures().getUpdatePasswordHintTextVersion(), equalTo("1"));
         } else {
             assertThat(response.getFeatures(), equalTo(null));
         }
