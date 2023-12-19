@@ -5,8 +5,10 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ErrorObject;
+import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseMode;
 import com.nimbusds.oauth2.sdk.ResponseType;
@@ -58,6 +60,7 @@ import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
+import uk.gov.di.orchestration.shared.services.TokenValidationService;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -104,6 +107,7 @@ public class AuthorisationHandler
     private final DocAppAuthorisationService docAppAuthorisationService;
 
     private final NoSessionOrchestrationService noSessionOrchestrationService;
+    private final TokenValidationService tokenValidationService;
 
     public AuthorisationHandler(
             ConfigurationService configurationService,
@@ -116,7 +120,8 @@ public class AuthorisationHandler
             ClientService clientService,
             DocAppAuthorisationService docAppAuthorisationService,
             CloudwatchMetricsService cloudwatchMetricsService,
-            NoSessionOrchestrationService noSessionOrchestrationService) {
+            NoSessionOrchestrationService noSessionOrchestrationService,
+            TokenValidationService tokenValidationService) {
         this.configurationService = configurationService;
         this.sessionService = sessionService;
         this.clientSessionService = clientSessionService;
@@ -128,6 +133,7 @@ public class AuthorisationHandler
         this.docAppAuthorisationService = docAppAuthorisationService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.noSessionOrchestrationService = noSessionOrchestrationService;
+        this.tokenValidationService = tokenValidationService;
     }
 
     public AuthorisationHandler(ConfigurationService configurationService) {
@@ -143,15 +149,17 @@ public class AuthorisationHandler
                 new RequestObjectAuthorizeValidator(configurationService);
         this.clientService = new DynamoClientService(configurationService);
         var kmsConnectionService = new KmsConnectionService(configurationService);
+        var jwksService = new JwksService(configurationService, kmsConnectionService);
         this.docAppAuthorisationService =
                 new DocAppAuthorisationService(
                         configurationService,
                         new RedisConnectionService(configurationService),
                         kmsConnectionService,
-                        new JwksService(configurationService, kmsConnectionService));
+                        jwksService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
         this.noSessionOrchestrationService =
                 new NoSessionOrchestrationService(configurationService);
+        this.tokenValidationService = new TokenValidationService(jwksService, configurationService);
     }
 
     public AuthorisationHandler() {
@@ -215,6 +223,7 @@ public class AuthorisationHandler
                                     Collectors.toMap(
                                             Map.Entry::getKey, entry -> List.of(entry.getValue())));
             authRequest = AuthenticationRequest.parse(requestParameters);
+            authRequest = stripOutReauthenticateQueryParams(authRequest);
 
             String clientId = authRequest.getClientID().getValue();
             client =
@@ -269,6 +278,11 @@ public class AuthorisationHandler
                     clientSessionId);
         }
         authRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
+        boolean reauthRequested =
+                authRequest.getCustomParameter("id_token_hint") != null
+                        && !authRequest.getCustomParameter("id_token_hint").isEmpty()
+                        && authRequest.getPrompt() != null
+                        && authRequest.getPrompt().contains(Prompt.Type.LOGIN);
         var identityRequested =
                 identityRequired(
                         authRequest.toParameters(),
@@ -286,7 +300,7 @@ public class AuthorisationHandler
                 persistentSessionId,
                 pair("rpSid", getRpSid(authRequest)),
                 pair("identityRequested", identityRequested),
-                pair("reauthRequested", false));
+                pair("reauthRequested", reauthRequested));
 
         Optional<Session> session = sessionService.getSessionFromSessionCookie(input.getHeaders());
         ClientSession clientSession =
@@ -314,7 +328,8 @@ public class AuthorisationHandler
                 ipAddress,
                 persistentSessionId,
                 client,
-                clientSessionId);
+                clientSessionId,
+                reauthRequested);
     }
 
     private static String getRpSid(AuthenticationRequest authRequest) {
@@ -420,7 +435,8 @@ public class AuthorisationHandler
             String ipAddress,
             String persistentSessionId,
             ClientRegistry client,
-            String clientSessionId) {
+            String clientSessionId,
+            boolean reauthRequested) {
         if (Objects.nonNull(authenticationRequest.getPrompt())
                 && (authenticationRequest.getPrompt().contains(Prompt.Type.CONSENT)
                         || authenticationRequest
@@ -469,15 +485,23 @@ public class AuthorisationHandler
         sessionService.save(session);
         LOG.info("Session saved successfully");
         return generateAuthRedirect(
-                session, clientSessionId, authenticationRequest, persistentSessionId, client);
+                session,
+                clientSessionId,
+                authenticationRequest,
+                ipAddress,
+                persistentSessionId,
+                client,
+                reauthRequested);
     }
 
     private APIGatewayProxyResponseEvent generateAuthRedirect(
             Session session,
             String clientSessionId,
             AuthenticationRequest authenticationRequest,
+            String ipAddress,
             String persistentSessionId,
-            ClientRegistry client) {
+            ClientRegistry client,
+            boolean reauthRequested) {
         LOG.info("Redirecting");
         String redirectURI;
         try {
@@ -490,6 +514,27 @@ public class AuthorisationHandler
             if (Objects.nonNull(authenticationRequest.getPrompt())
                     && authenticationRequest.getPrompt().contains(Prompt.Type.LOGIN)) {
                 redirectUriBuilder.addParameter("prompt", String.valueOf(Prompt.Type.LOGIN));
+            }
+
+            if (!configurationService.isAuthOrchSplitEnabled()) {
+                String reauthenticateClaim;
+                try {
+                    reauthenticateClaim =
+                            reauthRequested ? getReauthenticateClaim(authenticationRequest) : null;
+                } catch (RuntimeException e) {
+                    return generateErrorResponse(
+                            authenticationRequest.getRedirectionURI(),
+                            authenticationRequest.getState(),
+                            authenticationRequest.getResponseMode(),
+                            new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, e.getMessage()),
+                            ipAddress,
+                            persistentSessionId,
+                            authenticationRequest.getClientID().getValue(),
+                            clientSessionId);
+                }
+                if (reauthenticateClaim != null) {
+                    redirectUriBuilder.addParameter("reauthenticate", reauthenticateClaim);
+                }
             }
 
             List<String> optionalGaTrackingParameter =
@@ -516,6 +561,23 @@ public class AuthorisationHandler
                             client, configurationService.getInternalSectorUri());
             var state = new State();
             orchestrationAuthorizationService.storeState(session.getSessionId(), state);
+            String reauthenticateClaim;
+
+            try {
+                reauthenticateClaim =
+                        reauthRequested ? getReauthenticateClaim(authenticationRequest) : null;
+            } catch (RuntimeException e) {
+                return generateErrorResponse(
+                        authenticationRequest.getRedirectionURI(),
+                        authenticationRequest.getState(),
+                        authenticationRequest.getResponseMode(),
+                        new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, e.getMessage()),
+                        ipAddress,
+                        persistentSessionId,
+                        authenticationRequest.getClientID().getValue(),
+                        clientSessionId);
+            }
+
             var claimsBuilder =
                     new JWTClaimsSet.Builder()
                             .issuer(configurationService.getOrchestrationClientId())
@@ -542,7 +604,8 @@ public class AuthorisationHandler
                             .claim("client_id", configurationService.getOrchestrationClientId())
                             .claim(
                                     "redirect_uri",
-                                    configurationService.getOrchestrationRedirectUri());
+                                    configurationService.getOrchestrationRedirectUri())
+                            .claim("reauthenticate", reauthenticateClaim);
 
             var claimsSetRequest =
                     constructAdditionalAuthenticationClaims(client, authenticationRequest);
@@ -709,5 +772,45 @@ public class AuthorisationHandler
                         });
 
         return cookies;
+    }
+
+    private AuthenticationRequest stripOutReauthenticateQueryParams(
+            AuthenticationRequest authRequest) {
+        return new AuthenticationRequest.Builder(authRequest)
+                .customParameter("id_token_hint")
+                .build();
+    }
+
+    private String getReauthenticateClaim(AuthenticationRequest authenticationRequest) {
+        var isTokenSignatureValid =
+                segmentedFunctionCall(
+                        "isTokenSignatureValid",
+                        () ->
+                                tokenValidationService.isTokenSignatureValid(
+                                        authenticationRequest
+                                                .getCustomParameter("id_token_hint")
+                                                .get(0)));
+        if (!isTokenSignatureValid) {
+            LOG.warn("Unable to validate ID token signature");
+            throw new RuntimeException("Unable to validate id_token_hint");
+        }
+
+        String audience;
+        try {
+            SignedJWT idToken =
+                    SignedJWT.parse(
+                            authenticationRequest.getCustomParameter("id_token_hint").get(0));
+            audience = idToken.getJWTClaimsSet().getAudience().stream().findFirst().orElse(null);
+        } catch (java.text.ParseException e) {
+            LOG.warn("Unable to parse id_token_hint into SignedJWT");
+            throw new RuntimeException("Invalid id_token_hint");
+        }
+
+        if (audience == null || !audience.equals(authenticationRequest.getClientID().getValue())) {
+            LOG.warn("Audience on id_token_hint does not match client ID");
+            throw new RuntimeException("Invalid id_token_hint for client");
+        }
+
+        return audience;
     }
 }
