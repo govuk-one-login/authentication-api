@@ -143,7 +143,8 @@ class StartHandlerTest {
         when(startService.getGATrackingId(anyMap())).thenReturn(gaTrackingId);
         when(startService.getCookieConsentValue(anyMap(), anyString()))
                 .thenReturn(cookieConsentValue);
-        when(startService.buildUserStartInfo(userContext, cookieConsentValue, gaTrackingId, true))
+        when(startService.buildUserStartInfo(
+                        userContext, cookieConsentValue, gaTrackingId, true, false))
                 .thenReturn(userStartInfo);
         Features features = new Features();
         when(startService.getSessionFeatures()).thenReturn(features);
@@ -225,7 +226,7 @@ class StartHandlerTest {
                                 false));
         when(startService.getGATrackingId(anyMap())).thenReturn(null);
         when(startService.getCookieConsentValue(anyMap(), anyString())).thenReturn(null);
-        when(startService.buildUserStartInfo(userContext, null, null, true))
+        when(startService.buildUserStartInfo(userContext, null, null, true, false))
                 .thenReturn(userStartInfo);
         usingValidDocAppClientSession();
         usingValidSession();

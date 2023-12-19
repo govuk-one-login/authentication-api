@@ -192,7 +192,8 @@ class StartServiceTest {
                         Optional.empty(),
                         false);
         var userStartInfo =
-                startService.buildUserStartInfo(userContext, cookieConsent, gaTrackingId, true);
+                startService.buildUserStartInfo(
+                        userContext, cookieConsent, gaTrackingId, true, false);
 
         assertThat(userStartInfo.isUpliftRequired(), equalTo(false));
         assertThat(userStartInfo.isIdentityRequired(), equalTo(false));
@@ -234,7 +235,11 @@ class StartServiceTest {
                         false);
         var userStartInfo =
                 startService.buildUserStartInfo(
-                        userContext, "some-cookie-consent", "some-ga-tracking-id", identityEnabled);
+                        userContext,
+                        "some-cookie-consent",
+                        "some-ga-tracking-id",
+                        identityEnabled,
+                        false);
 
         assertThat(userStartInfo.isUpliftRequired(), equalTo(false));
         assertThat(userStartInfo.isIdentityRequired(), equalTo(expectedIdentityRequiredValue));
@@ -252,12 +257,13 @@ class StartServiceTest {
     @MethodSource("userStartDocAppInfo")
     void shouldCreateUserStartInfoWithCorrectDocCheckingAppUserValue(boolean isAuthenticated)
             throws NoSuchAlgorithmException, JOSEException {
+        var clientType = ClientType.APP;
         var userContext =
                 buildUserContext(
                         null,
                         false,
                         false,
-                        ClientType.APP,
+                        clientType,
                         generateSignedJWT(),
                         true,
                         isAuthenticated,
@@ -266,7 +272,7 @@ class StartServiceTest {
                         false);
         var userStartInfo =
                 startService.buildUserStartInfo(
-                        userContext, "some-cookie-consent", "some-ga-tracking-id", true);
+                        userContext, "some-cookie-consent", "some-ga-tracking-id", true, false);
 
         assertThat(userStartInfo.isUpliftRequired(), equalTo(false));
         assertThat(userStartInfo.isIdentityRequired(), equalTo(false));
@@ -393,6 +399,36 @@ class StartServiceTest {
                         MFAMethodType.AUTH_APP));
     }
 
+    @Test
+    void shouldCreateUserStartInfoWithAuthenticatedFalseWhenReauthenticationIsTrue()
+            throws NoSuchAlgorithmException, JOSEException {
+        when(dynamoService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(
+                        Optional.of(
+                                new UserProfile()
+                                        .withEmail(EMAIL)
+                                        .withSubjectID(new Subject().getValue())));
+
+        SESSION.setAuthenticated(true);
+        var userContext =
+                buildUserContext(
+                        null,
+                        false,
+                        false,
+                        ClientType.WEB,
+                        generateSignedJWT(),
+                        true,
+                        true,
+                        Optional.empty(),
+                        Optional.empty(),
+                        false);
+        var userStartInfo =
+                startService.buildUserStartInfo(
+                        userContext, "some-cookie-consent", "some-ga-tracking-id", true, true);
+
+        assertThat(userStartInfo.isAuthenticated(), equalTo(false));
+    }
+
     @ParameterizedTest
     @MethodSource("userStartUpliftInfo")
     void shouldCreateUserStartInfoWithCorrectUpliftRequiredValue(
@@ -421,7 +457,7 @@ class StartServiceTest {
                 .setEmailAddress(EMAIL);
         var userStartInfo =
                 startService.buildUserStartInfo(
-                        userContext, "some-cookie-consent", "some-ga-tracking-id", true);
+                        userContext, "some-cookie-consent", "some-ga-tracking-id", true, false);
 
         assertThat(userStartInfo.isUpliftRequired(), equalTo(expectedUpliftRequiredValue));
         assertThat(userStartInfo.isIdentityRequired(), equalTo(expectedIdentityRequiredValue));
