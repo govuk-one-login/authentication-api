@@ -75,11 +75,7 @@ module "authorize" {
   code_signing_config_arn = local.lambda_code_signing_configuration_arn
 
   authentication_vpc_arn = local.authentication_vpc_arn
-  security_group_ids = var.authorize_protected_subnet_enabled ? [
-    local.authentication_security_group_id,
-    local.authentication_oidc_redis_security_group_id,
-    local.authentication_egress_security_group_id,
-    ] : [
+  security_group_ids = [
     local.authentication_security_group_id,
     local.authentication_oidc_redis_security_group_id,
   ]
