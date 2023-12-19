@@ -29,5 +29,6 @@ AZUx4RCDu+VWAZpPi1NaF5XWvkFNFwH+MyLkATh90UEJDe+ayKW6AXFcRQ==
 -----END PUBLIC KEY-----
 EOT
 
-orch_client_id    = "orchestrationAuth"
-orch_redirect_uri = "https://oidc.build.account.gov.uk/orchestration-redirect"
+orch_client_id          = "orchestrationAuth"
+orch_redirect_uri       = "https://oidc.build.account.gov.uk/orchestration-redirect"
+support_auth_orch_split = true
