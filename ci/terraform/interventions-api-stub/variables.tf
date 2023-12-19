@@ -53,6 +53,11 @@ variable "endpoint_memory_size" {
   type    = number
 }
 
+variable "account_intervention_service_uri" {
+  default = "undefined"
+  type    = string
+}
+
 variable "interventions_api_stub_release_zip_file" {
   default     = "../../../interventions-api-stub/build/distributions/interventions-api-stub.zip"
   description = "Location of the Lambda ZIP file - defaults to build output folder when built locally"
