@@ -2,33 +2,48 @@ package uk.gov.di.authentication.frontendapi.lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import com.nimbusds.oauth2.sdk.ResponseType;
+import com.nimbusds.oauth2.sdk.Scope;
+import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsInboundResponse;
+import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsRequest;
 import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsResponse;
 import uk.gov.di.authentication.frontendapi.entity.Intervention;
 import uk.gov.di.authentication.frontendapi.entity.State;
 import uk.gov.di.authentication.frontendapi.services.AccountInterventionsService;
+import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountInterventionsResponseException;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -37,12 +52,19 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class AccountInterventionsHandlerTest {
-
+    private static final String TEST_CLIENT_ID = "test_client_id";
+    private static final String TEST_CLIENT_NAME = "test_client_name";
+    private static final String TEST_SESSION_ID = "test-session-id";
+    private static final String TEST_CLIENT_SESSION_ID = "test-client-session-id";
+    private static final String TEST_PERSISTENT_SESSION_ID = "test-persistent-session-id";
+    private static final String TEST_INTERNAL_SUBJECT_ID = "test-internal-subject-id";
+    private static final String TEST_IP_ADDRESS = "123.123.123.123";
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
     private static final String TEST_SUBJECT_ID = "subject-id";
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
@@ -54,15 +76,21 @@ public class AccountInterventionsHandlerTest {
     private final SessionService sessionService = mock(SessionService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
+    private final AuditService auditService = mock(AuditService.class);
+    private final UserContext userContext = mock(UserContext.class);
     private final AccountInterventionsService accountInterventionsService =
             mock(AccountInterventionsService.class);
     private final ClientService clientService = mock(ClientService.class);
+    private static final ClientSession clientSession = getClientSession();
     private final Session session =
-            new Session(IdGenerator.generate()).setEmailAddress(TEST_EMAIL_ADDRESS);
+            new Session(IdGenerator.generate())
+                    .setEmailAddress(TEST_EMAIL_ADDRESS)
+                    .setSessionId(TEST_SESSION_ID)
+                    .setInternalCommonSubjectIdentifier(TEST_INTERNAL_SUBJECT_ID);
     private static final Json objectMapper = SerializationService.getInstance();
 
     @BeforeEach
-    void setUp() throws Json.JsonException, URISyntaxException {
+    void setUp() throws URISyntaxException {
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(sessionService.getSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(session));
@@ -73,6 +101,10 @@ public class AccountInterventionsHandlerTest {
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
         when(configurationService.getAccountInterventionServiceURI())
                 .thenReturn(new URI("https://account-interventions.gov.uk/v1"));
+        when(userContext.getSession()).thenReturn(session);
+        when(userContext.getClientSession()).thenReturn(clientSession);
+        when(userContext.getClientId()).thenReturn(TEST_CLIENT_ID);
+        when(userContext.getClientSessionId()).thenReturn(TEST_CLIENT_SESSION_ID);
         handler =
                 new AccountInterventionsHandler(
                         configurationService,
@@ -80,7 +112,8 @@ public class AccountInterventionsHandlerTest {
                         clientSessionService,
                         clientService,
                         authenticationService,
-                        accountInterventionsService);
+                        accountInterventionsService,
+                        auditService);
     }
 
     @Test
@@ -206,8 +239,44 @@ public class AccountInterventionsHandlerTest {
         assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1055)));
     }
 
-    @Test
-    void shouldReturn200ForSuccessfulRequest()
+    static Stream<Arguments> accountInterventionResponseParameters() {
+        return Stream.of(
+                Arguments.of(false, false, false, false, FrontendAuditableEvent.NO_INTERVENTION),
+                Arguments.of(false, true, true, false, FrontendAuditableEvent.NO_INTERVENTION),
+                Arguments.of(
+                        true,
+                        false,
+                        false,
+                        false,
+                        FrontendAuditableEvent.PERMANENTLY_BLOCKED_INTERVENTION),
+                Arguments.of(
+                        false,
+                        true,
+                        false,
+                        false,
+                        FrontendAuditableEvent.TEMP_SUSPENDED_INTERVENTION),
+                Arguments.of(
+                        false,
+                        true,
+                        false,
+                        true,
+                        FrontendAuditableEvent.PASSWORD_RESET_INTERVENTION),
+                Arguments.of(
+                        false,
+                        true,
+                        true,
+                        true,
+                        FrontendAuditableEvent.PASSWORD_RESET_INTERVENTION));
+    }
+
+    @ParameterizedTest
+    @MethodSource("accountInterventionResponseParameters")
+    void shouldReturn200ForSuccessfulRequestAndSubmitAppropriateAuditEvents(
+            boolean blocked,
+            boolean suspended,
+            boolean reproveIdentity,
+            boolean resetPassword,
+            FrontendAuditableEvent expectedEvent)
             throws UnsuccessfulAccountInterventionsResponseException, Json.JsonException {
         var context = mock(Context.class);
         var event = new APIGatewayProxyRequestEvent();
@@ -216,17 +285,35 @@ public class AccountInterventionsHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(anyString()))
                 .thenReturn(Optional.of(generateUserProfile()));
         when(accountInterventionsService.sendAccountInterventionsOutboundRequest(any()))
-                .thenReturn(generateAccountInterventionResponse());
-        var result = handler.handleRequest(event, context);
+                .thenReturn(
+                        generateAccountInterventionResponse(
+                                blocked, suspended, reproveIdentity, resetPassword));
+        var result =
+                handler.handleRequestWithUserContext(
+                        event, context, new AccountInterventionsRequest("test"), userContext);
         assertThat(result, hasStatus(200));
 
-        var accountInterventionsResponse = new AccountInterventionsResponse(false, true, false);
+        var accountInterventionsResponse =
+                new AccountInterventionsResponse(resetPassword, blocked, suspended);
         assertThat(
                 result,
                 hasBody(objectMapper.writeValueAsStringCamelCase(accountInterventionsResponse)));
         assertEquals(
                 result.getBody(),
-                "{\"passwordResetRequired\":false,\"blocked\":true,\"temporarilySuspended\":false}");
+                String.format(
+                        "{\"passwordResetRequired\":%b,\"blocked\":%b,\"temporarilySuspended\":%b}",
+                        resetPassword, blocked, suspended));
+        verify(auditService)
+                .submitAuditEvent(
+                        expectedEvent,
+                        TEST_CLIENT_SESSION_ID,
+                        TEST_SESSION_ID,
+                        TEST_CLIENT_ID,
+                        TEST_INTERNAL_SUBJECT_ID,
+                        TEST_EMAIL_ADDRESS,
+                        TEST_IP_ADDRESS,
+                        AuditService.UNKNOWN,
+                        TEST_PERSISTENT_SESSION_ID);
     }
 
     private UserProfile generateUserProfile() {
@@ -238,7 +325,8 @@ public class AccountInterventionsHandlerTest {
                 .withSubjectID(TEST_SUBJECT_ID);
     }
 
-    private AccountInterventionsInboundResponse generateAccountInterventionResponse() {
+    private AccountInterventionsInboundResponse generateAccountInterventionResponse(
+            boolean blocked, boolean suspended, boolean reproveIdentity, boolean resetPassword) {
         return new AccountInterventionsInboundResponse(
                 new Intervention(
                         "1696969322935",
@@ -247,12 +335,29 @@ public class AccountInterventionsHandlerTest {
                         "AIS_USER_PASSWORD_RESET_AND_IDENTITY_VERIFIED",
                         "1696969322935",
                         "1696875903456"),
-                new State(true, false, false, false));
+                new State(blocked, suspended, reproveIdentity, resetPassword));
     }
 
     private Map<String, String> getHeaders() {
         Map<String, String> headers = new HashMap<>();
         headers.put("Session-Id", session.getSessionId());
+        headers.put("di-persistent-session-id", TEST_PERSISTENT_SESSION_ID);
+        headers.put("X-Forwarded-For", TEST_IP_ADDRESS);
         return headers;
+    }
+
+    private static ClientSession getClientSession() {
+        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+        Scope scope = new Scope();
+        scope.add(OIDCScopeValue.OPENID);
+        AuthenticationRequest authRequest =
+                new AuthenticationRequest.Builder(
+                                responseType,
+                                scope,
+                                new ClientID(TEST_CLIENT_ID),
+                                URI.create("http://localhost/redirect"))
+                        .build();
+        return new ClientSession(
+                authRequest.toParameters(), null, mock(VectorOfTrust.class), TEST_CLIENT_NAME);
     }
 }

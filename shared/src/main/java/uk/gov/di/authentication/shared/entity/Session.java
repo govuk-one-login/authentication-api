@@ -57,8 +57,9 @@ public class Session {
         return sessionId;
     }
 
-    public void setSessionId(String sessionId) {
+    public Session setSessionId(String sessionId) {
         this.sessionId = sessionId;
+        return this;
     }
 
     public List<String> getClientSessions() {

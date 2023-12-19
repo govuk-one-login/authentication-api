@@ -4,8 +4,11 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsRequest;
 import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsResponse;
 import uk.gov.di.authentication.frontendapi.lambda.AccountInterventionsHandler;
@@ -18,11 +21,15 @@ import uk.gov.di.authentication.sharedtest.extensions.AccountInterventionsStubEx
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PERMANENTLY_BLOCKED_INTERVENTION;
+import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
@@ -30,6 +37,8 @@ public class AccountInterventionsHandlerIntegrationTest extends ApiGatewayHandle
 
     public static final String CLIENT_SESSION_ID = "some-client-session-id";
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
+    private static final String TEST_EMAIL_ADDRESS_PERMANENTLY_BLOCKED_USER =
+            "blocked.user@blocked.com";
     private static final String TEST_PASSWORD = "password-1";
     private static final String INTERNAl_SECTOR_HOST = "test.account.gov.uk";
     private static final Subject SUBJECT = new Subject();
@@ -48,25 +57,43 @@ public class AccountInterventionsHandlerIntegrationTest extends ApiGatewayHandle
         handler =
                 new AccountInterventionsHandler(
                         ACCOUNT_INTERVENTIONS_HANDLER_CONFIGURATION_SERVICE);
-        accountInterventionsStubExtension.init(setupUserAndRetrieveUserId());
+        accountInterventionsStubExtension.init(
+                setupUserAndRetrieveUserId(TEST_EMAIL_ADDRESS),
+                setupUserAndRetrieveUserId(TEST_EMAIL_ADDRESS_PERMANENTLY_BLOCKED_USER));
         txmaAuditQueue.clear();
     }
 
-    @Test
-    void shouldReturnSuccessful200Response() throws Json.JsonException {
+    static Stream<Arguments> accountInterventionResponseParameters() {
+        return Stream.of(
+                Arguments.of(TEST_EMAIL_ADDRESS, false, FrontendAuditableEvent.NO_INTERVENTION),
+                Arguments.of(
+                        TEST_EMAIL_ADDRESS_PERMANENTLY_BLOCKED_USER,
+                        true,
+                        PERMANENTLY_BLOCKED_INTERVENTION));
+    }
+
+    @ParameterizedTest
+    @MethodSource("accountInterventionResponseParameters")
+    void shouldReturnSuccessful200Response(
+            String emailAddress, boolean isUserBlocked, FrontendAuditableEvent expectedAuditEvent)
+            throws Json.JsonException {
         var response =
                 makeRequest(
-                        Optional.of(new AccountInterventionsRequest(TEST_EMAIL_ADDRESS)),
+                        Optional.of(new AccountInterventionsRequest(emailAddress)),
                         getHeaders(),
                         Map.of());
         assertThat(response, hasStatus(200));
-        var accountInterventionsResponse = new AccountInterventionsResponse(false, false, false);
+        var accountInterventionsResponse =
+                new AccountInterventionsResponse(false, isUserBlocked, false);
         assertThat(
                 response,
                 hasBody(objectMapper.writeValueAsStringCamelCase(accountInterventionsResponse)));
         assertEquals(
-                response.getBody(),
-                "{\"passwordResetRequired\":false,\"blocked\":false,\"temporarilySuspended\":false}");
+                String.format(
+                        "{\"passwordResetRequired\":false,\"blocked\":%b,\"temporarilySuspended\":false}",
+                        isUserBlocked),
+                response.getBody());
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(expectedAuditEvent));
     }
 
     private Map<String, String> getHeaders() throws Json.JsonException {
@@ -108,11 +135,16 @@ public class AccountInterventionsHandlerIntegrationTest extends ApiGatewayHandle
                 throw new RuntimeException(e);
             }
         }
+
+        @Override
+        public String getTxmaAuditQueueUrl() {
+            return txmaAuditQueue.getQueueUrl();
+        }
     }
 
-    private String setupUserAndRetrieveUserId() {
-        userStore.signUp(TEST_EMAIL_ADDRESS, TEST_PASSWORD, SUBJECT);
-        byte[] salt = userStore.addSalt(TEST_EMAIL_ADDRESS);
+    private String setupUserAndRetrieveUserId(String emailAddress) {
+        userStore.signUp(emailAddress, TEST_PASSWORD, SUBJECT);
+        byte[] salt = userStore.addSalt(emailAddress);
         return ClientSubjectHelper.calculatePairwiseIdentifier(
                 SUBJECT.getValue(), INTERNAl_SECTOR_HOST, salt);
     }
