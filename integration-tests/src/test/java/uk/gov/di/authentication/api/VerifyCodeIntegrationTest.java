@@ -20,6 +20,7 @@ import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.ServiceType;
+import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
@@ -38,6 +39,7 @@ import java.util.stream.Stream;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.notNullValue;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_REMOVED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_VERIFIED;
@@ -312,7 +314,8 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         var sessionId = redis.createSession();
         redis.addInternalCommonSubjectIdToSession(sessionId, internalCommonSubjectId);
         var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.PHONE);
-        setUpTestWithoutClientConsent(sessionId, withScope());
+        setUpTestWithoutSignUp(sessionId, withScope());
+        userStore.signUp(EMAIL_ADDRESS, "password", SUBJECT);
         userStore.updateTermsAndConditions(EMAIL_ADDRESS, "1.0");
         var clientConsent =
                 new ClientConsent(
@@ -347,7 +350,8 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         var sessionId = redis.createSession();
         redis.addInternalCommonSubjectIdToSession(sessionId, internalCommonSubjectId);
         var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.PHONE);
-        setUpTestWithoutClientConsent(sessionId, withScope());
+        setUpTestWithoutSignUp(sessionId, withScope());
+        userStore.signUp(EMAIL_ADDRESS, "password", SUBJECT);
         userStore.updateTermsAndConditions(EMAIL_ADDRESS, "1.0");
         var clientConsent =
                 new ClientConsent(
@@ -369,6 +373,38 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
         assertThat(accountModifiersStore.isBlockPresent(internalCommonSubjectId), equalTo(false));
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue, List.of(CODE_VERIFIED, ACCOUNT_RECOVERY_BLOCK_REMOVED));
+    }
+
+    @Test
+    void shouldReturn204WhenUserEntersValidMfaSmsCodeAndSessionCommonSubjectIdNotPresent()
+            throws Exception {
+        var sessionId = redis.createSession();
+        var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.PHONE);
+        setUpTestWithoutSignUp(sessionId, withScope());
+        userStore.signUp(EMAIL_ADDRESS, "password", SUBJECT);
+        userStore.updateTermsAndConditions(EMAIL_ADDRESS, "1.0");
+        var clientConsent =
+                new ClientConsent(
+                        CLIENT_ID,
+                        ValidScopes.getClaimsForListOfScopes(scope.toStringList()),
+                        LocalDateTime.now().toString());
+        userStore.updateConsent(EMAIL_ADDRESS, clientConsent);
+
+        var code = redis.generateAndSaveMfaCode(EMAIL_ADDRESS, 900);
+        var codeRequest =
+                new VerifyCodeRequest(
+                        NotificationType.MFA_SMS, code, JourneyType.PASSWORD_RESET_MFA);
+
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
+
+        assertThat(response, hasStatus(204));
+        Session session = redis.getSession(sessionId);
+        assertThat(session.getInternalCommonSubjectIdentifier(), notNullValue());
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CODE_VERIFIED));
     }
 
     @ParameterizedTest

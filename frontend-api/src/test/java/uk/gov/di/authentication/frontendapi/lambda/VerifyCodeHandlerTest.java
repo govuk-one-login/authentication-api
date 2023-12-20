@@ -7,7 +7,6 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
-import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
@@ -85,6 +84,9 @@ class VerifyCodeHandlerTest {
     private static final String TEST_CLIENT_CODE = "654321";
     private static final String TEST_CLIENT_EMAIL =
             "testclient.user1@digital.cabinet-office.gov.uk";
+    private static final String SECTOR_HOST = "test.account.gov.uk";
+    private static final byte[] SALT = SaltHelper.generateNewSalt();
+    private static final String TEST_SUBJECT_ID = "test-subject-id";
     private static final long CODE_EXPIRY_TIME = 900;
     private static final long BLOCKED_EMAIL_DURATION = 799;
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
@@ -94,8 +96,7 @@ class VerifyCodeHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final UserProfile userProfile = mock(UserProfile.class);
     private final String expectedCommonSubject =
-            ClientSubjectHelper.calculatePairwiseIdentifier(
-                    new Subject().getValue(), "test.account.gov.uk", SaltHelper.generateNewSalt());
+            ClientSubjectHelper.calculatePairwiseIdentifier(TEST_SUBJECT_ID, SECTOR_HOST, SALT);
     private final Session session =
             new Session("session-id")
                     .setEmailAddress(TEST_EMAIL_ADDRESS)
@@ -168,7 +169,7 @@ class VerifyCodeHandlerTest {
 
         when(configurationService.getDefaultOtpCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
 
-        when(userProfile.getSubjectID()).thenReturn("test-subject-id");
+        when(userProfile.getSubjectID()).thenReturn(TEST_SUBJECT_ID);
 
         when(configurationService.getEnvironment()).thenReturn("unit-test");
     }
@@ -415,14 +416,14 @@ class VerifyCodeHandlerTest {
     }
 
     @ParameterizedTest
-    @MethodSource("codRequestTypes")
+    @MethodSource("codeRequestTypes")
     void shouldReturnMaxReachedAndNotSetBlockWhenSignInCodeIsBlocked(
             CodeRequestType codeRequestType, JourneyType journeyType) {
         var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
         when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, codeBlockedKeyPrefix))
                 .thenReturn(true);
 
-        var result = makeCallWithCode(CODE, MFA_SMS.name(), journeyType.getValue());
+        var result = makeCallWithCode(CODE, MFA_SMS.name(), journeyType);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1027));
@@ -465,22 +466,27 @@ class VerifyCodeHandlerTest {
                         pair("account-recovery", true));
     }
 
-    @Test
-    void shouldReturn204ForValidMfaSmsRequestAndRemoveAccountRecoveryBlockWhenPresent() {
+    @ParameterizedTest
+    @MethodSource("codeRequestTypes")
+    void shouldReturn204ForValidMfaSmsRequestAndRemoveAccountRecoveryBlockWhenPresent(
+            CodeRequestType codeRequestType, JourneyType journeyType) {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS))
                 .thenReturn(Optional.of(CODE));
-        when(accountModifiersService.isAccountRecoveryBlockPresent(expectedCommonSubject))
-                .thenReturn(true);
+        when(accountModifiersService.isAccountRecoveryBlockPresent(anyString())).thenReturn(true);
         session.setNewAccount(Session.AccountState.EXISTING);
 
-        var result = makeCallWithCode(CODE, MFA_SMS.toString());
+        when(configurationService.getInternalSectorUri()).thenReturn("http://" + SECTOR_HOST);
+        when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
+
+        var result = makeCallWithCode(CODE, MFA_SMS.toString(), journeyType);
 
         assertThat(result, hasStatus(204));
         assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
         verify(codeStorageService).deleteOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS);
         verify(accountModifiersService).removeAccountRecoveryBlockIfPresent(expectedCommonSubject);
-        verify(sessionService, times(2)).save(session);
+        var saveSessionCount = journeyType == JourneyType.PASSWORD_RESET_MFA ? 3 : 2;
+        verify(sessionService, times(saveSessionCount)).save(session);
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.CODE_VERIFIED,
@@ -575,7 +581,7 @@ class VerifyCodeHandlerTest {
     }
 
     @ParameterizedTest
-    @MethodSource("codRequestTypes")
+    @MethodSource("codeRequestTypes")
     void shouldReturnMaxReachedAndSetBlockedMfaCodeAttemptsWhenSignInExceedMaxRetryCount(
             CodeRequestType codeRequestType, JourneyType journeyType) {
         when(configurationService.getCodeMaxRetries()).thenReturn(0);
@@ -584,7 +590,7 @@ class VerifyCodeHandlerTest {
                 .thenReturn(Optional.of(CODE));
         when(codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS)).thenReturn(1);
 
-        var result = makeCallWithCode(INVALID_CODE, MFA_SMS.toString(), journeyType.getValue());
+        var result = makeCallWithCode(INVALID_CODE, MFA_SMS.toString(), journeyType);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1027));
@@ -676,11 +682,14 @@ class VerifyCodeHandlerTest {
     }
 
     private APIGatewayProxyResponseEvent makeCallWithCode(
-            String code, String notificationType, String journeyType) {
+            String code, String notificationType, JourneyType journeyType) {
+        if (journeyType == null) {
+            return makeCallWithCode(code, notificationType);
+        }
         String body =
                 format(
                         "{ \"code\": \"%s\", \"notificationType\": \"%s\", \"journeyType\":\"%s\" }",
-                        code, notificationType, journeyType);
+                        code, notificationType, journeyType.getValue());
         return makeCallWithCode(body, Optional.of(session), CLIENT_ID);
     }
 
@@ -724,9 +733,10 @@ class VerifyCodeHandlerTest {
                 .build();
     }
 
-    private static Stream<Arguments> codRequestTypes() {
+    private static Stream<Arguments> codeRequestTypes() {
         return Stream.of(
                 Arguments.of(CodeRequestType.PW_RESET_MFA_SMS, JourneyType.PASSWORD_RESET_MFA),
-                Arguments.of(CodeRequestType.SMS_SIGN_IN, JourneyType.SIGN_IN));
+                Arguments.of(CodeRequestType.SMS_SIGN_IN, JourneyType.SIGN_IN),
+                Arguments.of(CodeRequestType.SMS_SIGN_IN, null));
     }
 }
