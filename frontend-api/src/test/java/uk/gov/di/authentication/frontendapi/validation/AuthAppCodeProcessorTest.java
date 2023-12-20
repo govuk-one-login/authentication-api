@@ -78,6 +78,10 @@ class AuthAppCodeProcessorTest {
         return Stream.of(
                 Arguments.of(JourneyType.SIGN_IN, null, CodeRequestType.AUTH_APP_SIGN_IN),
                 Arguments.of(
+                        JourneyType.PASSWORD_RESET_MFA,
+                        null,
+                        CodeRequestType.PW_RESET_MFA_AUTH_APP),
+                Arguments.of(
                         JourneyType.REGISTRATION,
                         AUTH_APP_SECRET,
                         CodeRequestType.AUTH_APP_REGISTRATION));

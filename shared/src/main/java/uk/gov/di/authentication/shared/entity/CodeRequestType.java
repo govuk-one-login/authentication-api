@@ -13,6 +13,7 @@ public enum CodeRequestType {
     SMS_SIGN_IN(MFAMethodType.SMS, JourneyType.SIGN_IN),
     AUTH_APP_ACCOUNT_RECOVERY(MFAMethodType.AUTH_APP, JourneyType.ACCOUNT_RECOVERY),
     AUTH_APP_SIGN_IN(MFAMethodType.AUTH_APP, JourneyType.SIGN_IN),
+    PW_RESET_MFA_AUTH_APP(MFAMethodType.AUTH_APP, JourneyType.PASSWORD_RESET_MFA),
     AUTH_APP_REGISTRATION(MFAMethodType.AUTH_APP, JourneyType.REGISTRATION);
 
     private static final Map<CodeRequestTypeKey, CodeRequestType> codeRequestTypeMap =

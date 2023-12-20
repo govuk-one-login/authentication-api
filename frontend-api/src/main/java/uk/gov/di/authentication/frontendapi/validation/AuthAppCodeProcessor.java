@@ -22,6 +22,7 @@ import javax.crypto.spec.SecretKeySpec;
 
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -76,7 +77,8 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
         }
 
         var authAppSecret =
-                codeRequest.getJourneyType().equals(JourneyType.SIGN_IN)
+                List.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA)
+                                .contains(codeRequest.getJourneyType())
                         ? getMfaCredentialValue().orElse(null)
                         : codeRequest.getProfileInformation();
 
@@ -85,7 +87,8 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
             return Optional.of(ErrorResponse.ERROR_1043);
         }
 
-        if (!codeRequest.getJourneyType().equals(JourneyType.SIGN_IN)
+        if (!List.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA)
+                        .contains(codeRequest.getJourneyType())
                 && !base32.isInAlphabet(codeRequest.getProfileInformation())) {
             return Optional.of(ErrorResponse.ERROR_1041);
         }
@@ -126,6 +129,7 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
                         true);
                 break;
             case SIGN_IN:
+            case PASSWORD_RESET_MFA:
                 clearAccountRecoveryBlockIfPresent(AUTH_APP, ipAddress, persistentSessionId);
         }
     }
