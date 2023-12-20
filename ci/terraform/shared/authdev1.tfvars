@@ -17,7 +17,7 @@ stub_rp_clients = [
     ]
     test_client                     = "0"
     consent_required                = "0"
-    client_type                     = "WEB"
+    client_type                     = "web"
     identity_verification_supported = "0"
     scopes = [
       "openid",
