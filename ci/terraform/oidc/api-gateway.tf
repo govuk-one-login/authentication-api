@@ -373,6 +373,13 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_oidc_api" {
           }
         }
 
+        rule_action_override {
+          name = "SizeRestrictions_QUERYSTRING"
+          action_to_use {
+            count {}
+          }
+        }
+
         dynamic "rule_action_override" {
           for_each = var.environment != "production" || var.environment != "sandpit" ? ["1"] : []
           content {
@@ -459,7 +466,85 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_oidc_api" {
     }
   }
 
+  rule {
+    name     = "default_query_param_limit"
+    priority = 5
 
+    action {
+      block {}
+    }
+
+    statement {
+      and_statement {
+        statement {
+          size_constraint_statement {
+            comparison_operator = "GT"
+            size                = 2048
+            field_to_match {
+              query_string {}
+            }
+            text_transformation {
+              priority = 0
+              type     = "NONE"
+            }
+          }
+        }
+
+        statement {
+          not_statement {
+            statement {
+              byte_match_statement {
+                positional_constraint = "EXACTLY"
+                search_string         = "/authorize"
+                field_to_match {
+                  uri_path {}
+                }
+                text_transformation {
+                  priority = 0
+                  type     = "LOWERCASE"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${replace(var.environment, "-", "")}OidcWafQueryParamSet"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  rule {
+    name     = "extended_query_param_limit"
+    priority = 6
+
+    action {
+      block {}
+    }
+
+    statement {
+      size_constraint_statement {
+        comparison_operator = "GT"
+        size                = 4096
+        field_to_match {
+          query_string {}
+        }
+        text_transformation {
+          priority = 0
+          type     = "NONE"
+        }
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${replace(var.environment, "-", "")}OidcWafAuthorizeQueryParamSet"
+      sampled_requests_enabled   = true
+    }
+  }
   visibility_config {
     cloudwatch_metrics_enabled = true
     metric_name                = "${replace(var.environment, "-", "")}OidcWafRules"
