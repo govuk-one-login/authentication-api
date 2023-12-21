@@ -16,7 +16,9 @@ import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
@@ -149,6 +151,28 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                 processBlockedCodeSession(
                         errorResponse.get(), session, codeRequest, input, userContext, journeyType);
                 return generateApiGatewayProxyErrorResponse(400, errorResponse.get());
+            }
+            if (codeRequestType.equals(CodeRequestType.PW_RESET_MFA_SMS)) {
+                LOG.info("Calculating internal common subject identifier");
+                UserProfile userProfile =
+                        userContext.getUserProfile().isPresent()
+                                ? userContext.getUserProfile().get()
+                                : authenticationService.getUserProfileByEmail(
+                                        session.getEmailAddress());
+                var internalCommonSubjectIdentifier =
+                        session.getInternalCommonSubjectIdentifier() != null
+                                ? session.getInternalCommonSubjectIdentifier()
+                                : ClientSubjectHelper.getSubjectWithSectorIdentifier(
+                                                userProfile,
+                                                configurationService.getInternalSectorUri(),
+                                                authenticationService)
+                                        .getValue();
+                LOG.info("Setting internal common subject identifier in user session");
+                sessionService.save(
+                        userContext
+                                .getSession()
+                                .setInternalCommonSubjectIdentifier(
+                                        internalCommonSubjectIdentifier));
             }
             processSuccessfulCodeRequest(session, codeRequest, input, userContext);
 
