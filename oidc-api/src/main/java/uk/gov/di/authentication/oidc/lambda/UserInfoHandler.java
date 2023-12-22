@@ -14,6 +14,7 @@ import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
 import uk.gov.di.authentication.oidc.services.AccessTokenService;
 import uk.gov.di.authentication.oidc.services.UserInfoService;
+import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.exceptions.AccessTokenException;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
@@ -33,6 +34,7 @@ import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.ge
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
 import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.headersContainValidHeader;
+import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
 
 public class UserInfoHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -124,6 +126,16 @@ public class UserInfoHandler
 
         LOG.info("Successfully processed UserInfo request. Sending back UserInfo response");
 
+        var returnCodeClaim = userInfo.getJSONArrayClaim(ValidClaims.RETURN_CODE.getValue());
+        var metadataPairs = new AuditService.MetadataPair[] {};
+
+        if (returnCodeClaim != null && !returnCodeClaim.isEmpty()) {
+            metadataPairs =
+                    new AuditService.MetadataPair[] {
+                        pair("return-code", returnCodeClaim.toJSONString())
+                    };
+        }
+
         auditService.submitAuditEvent(
                 OidcAuditableEvent.USER_INFO_RETURNED,
                 AuditService.UNKNOWN,
@@ -133,7 +145,8 @@ public class UserInfoHandler
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
                 AuditService.UNKNOWN,
-                AuditService.UNKNOWN);
+                AuditService.UNKNOWN,
+                metadataPairs);
 
         return generateApiGatewayProxyResponse(200, userInfo.toJSONString());
     }
