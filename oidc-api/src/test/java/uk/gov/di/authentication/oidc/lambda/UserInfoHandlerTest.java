@@ -15,6 +15,7 @@ import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
 import uk.gov.di.authentication.oidc.services.AccessTokenService;
 import uk.gov.di.authentication.oidc.services.UserInfoService;
+import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.exceptions.AccessTokenException;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -31,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.orchestration.sharedtest.helper.IdentityTestData.RETURN_CODE;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class UserInfoHandlerTest {
@@ -98,6 +100,35 @@ public class UserInfoHandlerTest {
                         "",
                         "",
                         "");
+    }
+
+    @Test
+    void shouldAuditReturnCodeWhenReturnCodeClaimIsPresent() throws AccessTokenException {
+        AccessToken accessToken = new BearerAccessToken();
+        UserInfo userInfo = new UserInfo(SUBJECT);
+        userInfo.setClaim(ValidClaims.RETURN_CODE.getValue(), RETURN_CODE);
+        when(accessTokenService.parse(accessToken.toAuthorizationHeader(), false))
+                .thenReturn(accessTokenInfo);
+        when(userInfoService.populateUserInfo(accessTokenInfo)).thenReturn(userInfo);
+        when(userInfoService.calculateSubjectForAudit(accessTokenInfo))
+                .thenReturn(AUDIT_SUBJECT_ID.getValue());
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Authorization", accessToken.toAuthorizationHeader()));
+        handler.handleRequest(event, context);
+
+        verify(auditService)
+                .submitAuditEvent(
+                        OidcAuditableEvent.USER_INFO_RETURNED,
+                        AuditService.UNKNOWN,
+                        "",
+                        "client-id",
+                        AUDIT_SUBJECT_ID.getValue(),
+                        "",
+                        "",
+                        "",
+                        "",
+                        AuditService.MetadataPair.pair("return-code", RETURN_CODE));
     }
 
     @Test

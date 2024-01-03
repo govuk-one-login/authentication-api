@@ -126,14 +126,11 @@ public class UserInfoHandler
 
         LOG.info("Successfully processed UserInfo request. Sending back UserInfo response");
 
-        var returnCodeClaim = userInfo.getJSONArrayClaim(ValidClaims.RETURN_CODE.getValue());
+        var returnCodeClaim = userInfo.getClaim(ValidClaims.RETURN_CODE.getValue());
         var metadataPairs = new AuditService.MetadataPair[] {};
 
-        if (returnCodeClaim != null && !returnCodeClaim.isEmpty()) {
-            metadataPairs =
-                    new AuditService.MetadataPair[] {
-                        pair("return-code", returnCodeClaim.toJSONString())
-                    };
+        if (returnCodeClaim != null) {
+            metadataPairs = new AuditService.MetadataPair[] {pair("return-code", returnCodeClaim)};
         }
 
         auditService.submitAuditEvent(
