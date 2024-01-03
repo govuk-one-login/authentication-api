@@ -18,8 +18,11 @@ import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.MFAMethod;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
+import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -40,6 +43,8 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -128,6 +133,22 @@ class CheckUserExistsHandlerTest {
         when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.of(generateClientRegistry()));
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(getClientSession()));
+        MFAMethod mfaMethod1 =
+                new MFAMethod(
+                        MFAMethodType.AUTH_APP.getValue(),
+                        "first-value",
+                        true,
+                        false,
+                        NowHelper.nowMinus(50, ChronoUnit.DAYS).toString());
+        MFAMethod mfaMethod2 =
+                new MFAMethod(
+                        MFAMethodType.SMS.getValue(),
+                        "second-value",
+                        true,
+                        true,
+                        NowHelper.nowMinus(50, ChronoUnit.DAYS).toString());
+        when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
+                .thenReturn(new UserCredentials().withMfaMethods(List.of(mfaMethod1, mfaMethod2)));
 
         var event =
                 new APIGatewayProxyRequestEvent()
@@ -147,6 +168,7 @@ class CheckUserExistsHandlerTest {
         var checkUserExistsResponse =
                 objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
         assertEquals(EMAIL_ADDRESS, checkUserExistsResponse.getEmail());
+        assertEquals(MFAMethodType.SMS, checkUserExistsResponse.getMfaMethodType());
         assertTrue(checkUserExistsResponse.doesUserExist());
         var expectedRpPairwiseId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(

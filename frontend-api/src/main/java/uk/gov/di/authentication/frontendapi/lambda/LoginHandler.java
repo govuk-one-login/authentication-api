@@ -12,12 +12,9 @@ import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
 import uk.gov.di.authentication.frontendapi.helpers.RedactPhoneNumberHelper;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
 import uk.gov.di.authentication.shared.conditions.ConsentHelper;
-import uk.gov.di.authentication.shared.conditions.MfaHelper;
 import uk.gov.di.authentication.shared.conditions.TermsAndConditionsHelper;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.MFAMethod;
-import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -42,7 +39,7 @@ import java.util.Optional;
 
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.LOG_IN_SUCCESS;
 import static uk.gov.di.authentication.frontendapi.services.UserMigrationService.userHasBeenPartlyMigrated;
-import static uk.gov.di.authentication.shared.conditions.MfaHelper.getPrimaryMFAMethod;
+import static uk.gov.di.authentication.shared.conditions.MfaHelper.getUserMFADetail;
 import static uk.gov.di.authentication.shared.entity.Session.AccountState.EXISTING;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
@@ -215,26 +212,17 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                                 isSmokeTestClient);
             }
             sessionService.save(userContext.getSession().setNewAccount(EXISTING));
-            var isMfaRequired =
-                    MfaHelper.mfaRequired(userContext.getClientSession().getAuthRequestParams());
             var consentRequired = ConsentHelper.userHasNotGivenConsent(userContext);
 
-            var mfaMethodVerified = isPhoneNumberVerified;
-            var mfaMethodType = MFAMethodType.SMS;
-            var mfaMethod = getPrimaryMFAMethod(userCredentials);
-            if (mfaMethod.filter(MFAMethod::isMethodVerified).isPresent()) {
-                mfaMethodVerified = true;
-                mfaMethodType = MFAMethodType.valueOf(mfaMethod.get().getMfaMethodType());
-            } else if (!isPhoneNumberVerified && mfaMethod.isPresent()) {
-                mfaMethodType = MFAMethodType.valueOf(mfaMethod.get().getMfaMethodType());
-            }
+            var userMfaDetail =
+                    getUserMFADetail(userContext, userCredentials, isPhoneNumberVerified);
 
             boolean isPasswordChangeRequired = isPasswordResetRequired(request.getPassword());
 
             LOG.info(
                     "User has successfully logged in with MFAType: {}. MFAVerified: {}",
-                    mfaMethodType.getValue(),
-                    mfaMethodVerified);
+                    userMfaDetail.getMfaMethodType().getValue(),
+                    userMfaDetail.isMfaMethodVerified());
 
             auditService.submitAuditEvent(
                     LOG_IN_SUCCESS,
@@ -248,7 +236,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     persistentSessionId,
                     pair("internalSubjectId", userProfile.getSubjectID()));
 
-            if (!isMfaRequired) {
+            if (!userMfaDetail.isMfaRequired()) {
                 cloudwatchMetricsService.incrementAuthenticationSuccess(
                         EXISTING,
                         clientId,
@@ -261,11 +249,11 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                     200,
                     new LoginResponse(
                             redactedPhoneNumber,
-                            isMfaRequired,
+                            userMfaDetail.isMfaRequired(),
                             termsAndConditionsAccepted,
                             consentRequired,
-                            mfaMethodType,
-                            mfaMethodVerified,
+                            userMfaDetail.getMfaMethodType(),
+                            userMfaDetail.isMfaMethodVerified(),
                             isPasswordChangeRequired));
         } catch (JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);

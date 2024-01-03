@@ -8,11 +8,14 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
 import uk.gov.di.authentication.frontendapi.lambda.CheckUserExistsHandler;
 import uk.gov.di.authentication.shared.entity.BaseFrontendRequest;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
@@ -51,13 +54,22 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         txmaAuditQueue.clear();
     }
 
-    @Test
-    void shouldCallUserExistsEndpointAndReturnAuthenticationRequestStateWhenUserExists()
-            throws JsonException {
+    @ParameterizedTest
+    @EnumSource(
+            value = MFAMethodType.class,
+            names = {"SMS", "AUTH_APP"})
+    void shouldCallUserExistsEndpointAndReturnAuthenticationRequestStateWhenUserExists(
+            MFAMethodType mfaMethodType) throws JsonException {
         var emailAddress = "joe.bloggs+1@digital.cabinet-office.gov.uk";
         var sessionId = redis.createSession();
         var clientSessionId = IdGenerator.generate();
         userStore.signUp(emailAddress, "password-1");
+        if (MFAMethodType.SMS == mfaMethodType) {
+            userStore.addMfaMethod(emailAddress, mfaMethodType, false, true, "credential");
+            userStore.addVerifiedPhoneNumber(emailAddress, "0987654321");
+        } else {
+            userStore.addMfaMethod(emailAddress, mfaMethodType, true, true, "credential");
+        }
         setUpClientSession("joe.bloggs+1@digital.cabinet-office.gov.uk", clientSessionId);
 
         var request = new CheckUserExistsRequest(emailAddress);
@@ -71,6 +83,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         CheckUserExistsResponse checkUserExistsResponse =
                 objectMapper.readValue(response.getBody(), CheckUserExistsResponse.class);
         assertThat(checkUserExistsResponse.getEmail(), equalTo(emailAddress));
+        assertThat(checkUserExistsResponse.getMfaMethodType(), equalTo(mfaMethodType));
         assertTrue(checkUserExistsResponse.doesUserExist());
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CHECK_USER_KNOWN_EMAIL));
     }
@@ -95,6 +108,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         CheckUserExistsResponse checkUserExistsResponse =
                 objectMapper.readValue(response.getBody(), CheckUserExistsResponse.class);
         assertThat(checkUserExistsResponse.getEmail(), equalTo(emailAddress));
+        assertThat(checkUserExistsResponse.getMfaMethodType(), equalTo(MFAMethodType.NONE));
         assertFalse(checkUserExistsResponse.doesUserExist());
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CHECK_USER_NO_ACCOUNT_WITH_EMAIL));
     }

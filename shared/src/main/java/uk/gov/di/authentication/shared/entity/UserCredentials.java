@@ -125,8 +125,9 @@ public class UserCredentials {
         return mfaMethods;
     }
 
-    public void withMfaMethods(List<MFAMethod> mfaMethods) {
+    public UserCredentials withMfaMethods(List<MFAMethod> mfaMethods) {
         this.mfaMethods = mfaMethods;
+        return this;
     }
 
     public UserCredentials setMfaMethod(MFAMethod mfaMethod) {

@@ -6,6 +6,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.entity.UserMfaDetail;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
@@ -29,6 +30,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Optional;
 
+import static uk.gov.di.authentication.shared.conditions.MfaHelper.getUserMFADetail;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
@@ -136,6 +138,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             AuditableEvent auditableEvent;
             var rpPairwiseId = AuditService.UNKNOWN;
             var internalPairwiseId = AuditService.UNKNOWN;
+            var userMfaDetail = new UserMfaDetail();
             if (userExists) {
                 auditableEvent = FrontendAuditableEvent.CHECK_USER_KNOWN_EMAIL;
                 rpPairwiseId =
@@ -151,6 +154,11 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                                         configurationService.getInternalSectorUri(),
                                         authenticationService)
                                 .getValue();
+                var isPhoneNumberVerified = userProfile.get().isPhoneNumberVerified();
+                var userCredentials =
+                        authenticationService.getUserCredentialsFromEmail(emailAddress);
+                userMfaDetail =
+                        getUserMFADetail(userContext, userCredentials, isPhoneNumberVerified);
             } else {
                 auditableEvent = FrontendAuditableEvent.CHECK_USER_NO_ACCOUNT_WITH_EMAIL;
             }
@@ -169,7 +177,8 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                     persistentSessionId,
                     pair("rpPairwiseId", rpPairwiseId));
             CheckUserExistsResponse checkUserExistsResponse =
-                    new CheckUserExistsResponse(emailAddress, userExists);
+                    new CheckUserExistsResponse(
+                            emailAddress, userExists, userMfaDetail.getMfaMethodType());
             sessionService.save(userContext.getSession());
 
             LOG.info("Successfully processed request");
