@@ -12,9 +12,9 @@ public class AccountInterventionsStubExtension extends HttpStubExtension {
         super();
     }
 
-    public void init(String userId) {
+    public void init(String nonBlockedUserId, String blockedUserId) {
         register(
-                "/v1/ais/" + userId,
+                "/v1/ais/" + nonBlockedUserId,
                 200,
                 "application/json",
                 "{"
@@ -28,6 +28,27 @@ public class AccountInterventionsStubExtension extends HttpStubExtension {
                         + "  },"
                         + "  \"state\": {"
                         + "    \"blocked\": false,"
+                        + "    \"suspended\": false,"
+                        + "    \"reproveIdentity\": false,"
+                        + "    \"resetPassword\": false"
+                        + "  }"
+                        + "}");
+
+        register(
+                "/v1/ais/" + blockedUserId,
+                200,
+                "application/json",
+                "{"
+                        + "  \"intervention\": {"
+                        + "    \"updatedAt\": 1696969322935,"
+                        + "    \"appliedAt\": 1696869005821,"
+                        + "    \"sentAt\": 1696869003456,"
+                        + "    \"description\": \"AIS_USER_PASSWORD_RESET_AND_IDENTITY_VERIFIED\","
+                        + "    \"reprovedIdentityAt\": 1696969322935,"
+                        + "    \"resetPasswordAt\": 1696875903456"
+                        + "  },"
+                        + "  \"state\": {"
+                        + "    \"blocked\": true,"
                         + "    \"suspended\": false,"
                         + "    \"reproveIdentity\": false,"
                         + "    \"resetPassword\": false"
