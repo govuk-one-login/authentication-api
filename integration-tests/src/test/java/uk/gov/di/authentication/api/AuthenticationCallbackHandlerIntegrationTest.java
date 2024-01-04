@@ -21,6 +21,7 @@ import uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent;
 import uk.gov.di.authentication.oidc.lambda.AuthenticationCallbackHandler;
 import uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService;
 import uk.gov.di.authentication.sharedtest.extensions.AccountInterventionsStubExtension;
+import uk.gov.di.orchestration.shared.domain.AccountInterventionsAuditableEvent;
 import uk.gov.di.orchestration.shared.entity.AuthenticationUserInfo;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ClientType;
@@ -151,6 +152,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                             OrchestrationAuditableEvent.AUTH_CALLBACK_RESPONSE_RECEIVED,
                             OrchestrationAuditableEvent.AUTH_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                             OrchestrationAuditableEvent.AUTH_SUCCESSFUL_USERINFO_RESPONSE_RECEIVED,
+                            AccountInterventionsAuditableEvent.AIS_RESPONSE_RECEIVED,
                             OidcAuditableEvent.AUTH_CODE_ISSUED));
 
             Optional<AuthenticationUserInfo> userInfoDbEntry =
@@ -282,6 +284,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                     txmaAuditQueue,
                     List.of(
                             OrchestrationAuditableEvent.AUTH_CALLBACK_RESPONSE_RECEIVED,
+                            AccountInterventionsAuditableEvent.AIS_RESPONSE_RECEIVED,
                             OrchestrationAuditableEvent.AUTH_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                             OrchestrationAuditableEvent.AUTH_SUCCESSFUL_USERINFO_RESPONSE_RECEIVED,
                             IPVAuditableEvent.IPV_AUTHORISATION_REQUESTED));
@@ -333,6 +336,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                     txmaAuditQueue,
                     List.of(
                             OrchestrationAuditableEvent.AUTH_CALLBACK_RESPONSE_RECEIVED,
+                            AccountInterventionsAuditableEvent.AIS_RESPONSE_RECEIVED,
                             OrchestrationAuditableEvent.AUTH_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                             OrchestrationAuditableEvent.AUTH_SUCCESSFUL_USERINFO_RESPONSE_RECEIVED,
                             OidcAuditableEvent.LOG_OUT_SUCCESS));
@@ -370,6 +374,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                     txmaAuditQueue,
                     List.of(
                             OrchestrationAuditableEvent.AUTH_CALLBACK_RESPONSE_RECEIVED,
+                            AccountInterventionsAuditableEvent.AIS_RESPONSE_RECEIVED,
                             OrchestrationAuditableEvent.AUTH_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                             OrchestrationAuditableEvent.AUTH_SUCCESSFUL_USERINFO_RESPONSE_RECEIVED,
                             OidcAuditableEvent.LOG_OUT_SUCCESS));
