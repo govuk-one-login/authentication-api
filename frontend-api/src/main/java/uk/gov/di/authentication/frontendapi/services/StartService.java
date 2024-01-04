@@ -148,7 +148,8 @@ public class StartService {
             UserContext userContext,
             String cookieConsent,
             String gaTrackingId,
-            boolean identityEnabled) {
+            boolean identityEnabled,
+            boolean reauthenticate) {
         var uplift = false;
         var identityRequired = false;
         var consentRequired = false;
@@ -170,7 +171,10 @@ public class StartService {
             mfaMethodType = MFAMethodType.AUTH_APP;
         }
 
-        var userIsAuthenticated = !docCheckingAppUser && userContext.getSession().isAuthenticated();
+        var userIsAuthenticated =
+                !docCheckingAppUser
+                        && userContext.getSession().isAuthenticated()
+                        && !reauthenticate;
 
         LOG.info(
                 "Found UserStartInfo for Authenticated: {} ConsentRequired: {} UpliftRequired: {} IdentityRequired: {}. CookieConsent: {}. GATrackingId: {}. DocCheckingAppUser: {}",

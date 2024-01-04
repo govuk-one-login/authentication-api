@@ -65,6 +65,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.lambda.StartHandler.REAUTHENTICATE_HEADER;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
@@ -143,7 +144,8 @@ class StartHandlerTest {
         when(startService.getGATrackingId(anyMap())).thenReturn(gaTrackingId);
         when(startService.getCookieConsentValue(anyMap(), anyString()))
                 .thenReturn(cookieConsentValue);
-        when(startService.buildUserStartInfo(userContext, cookieConsentValue, gaTrackingId, true))
+        when(startService.buildUserStartInfo(
+                        userContext, cookieConsentValue, gaTrackingId, true, false))
                 .thenReturn(userStartInfo);
         Features features = new Features();
         when(startService.getSessionFeatures()).thenReturn(features);
@@ -225,7 +227,7 @@ class StartHandlerTest {
                                 false));
         when(startService.getGATrackingId(anyMap())).thenReturn(null);
         when(startService.getCookieConsentValue(anyMap(), anyString())).thenReturn(null);
-        when(startService.buildUserStartInfo(userContext, null, null, true))
+        when(startService.buildUserStartInfo(userContext, null, null, true, false))
                 .thenReturn(userStartInfo);
         usingValidDocAppClientSession();
         usingValidSession();
@@ -270,6 +272,81 @@ class StartHandlerTest {
                         AuditService.UNKNOWN,
                         PERSISTENT_ID,
                         pair("internalSubjectId", AuditService.UNKNOWN));
+    }
+
+    @Test
+    void shouldReturn200WithAuthenticatedFalseWhenAReauthenticationJourney()
+            throws ParseException, Json.JsonException {
+        when(userContext.getClientSession()).thenReturn(clientSession);
+        when(startService.validateSession(session, CLIENT_SESSION_ID)).thenReturn(session);
+        when(startService.buildUserContext(session, clientSession)).thenReturn(userContext);
+        when(startService.buildClientStartInfo(userContext)).thenReturn(getClientStartInfo());
+        when(startService.getGATrackingId(anyMap())).thenReturn(null);
+        when(startService.getCookieConsentValue(anyMap(), anyString())).thenReturn(null);
+        when(startService.buildUserStartInfo(userContext, null, null, true, true))
+                .thenReturn(new UserStartInfo(false, false, false, false, null, null, false, null));
+        usingValidSession();
+        usingValidClientSession();
+
+        Map<String, String> headers = new HashMap<>();
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
+        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
+        headers.put(SESSION_ID_HEADER, SESSION_ID);
+        headers.put(REAUTHENTICATE_HEADER, "true");
+        var event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(headers);
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+
+        var response = objectMapper.readValue(result.getBody(), StartResponse.class);
+
+        assertFalse(response.getUser().isAuthenticated());
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.START_INFO_FOUND,
+                        CLIENT_SESSION_ID,
+                        SESSION_ID,
+                        TEST_CLIENT_ID,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_ID,
+                        pair("internalSubjectId", AuditService.UNKNOWN));
+    }
+
+    @Test
+    void shouldReturn200WithAuthenticatedTrueWhenReauthenticateHeaderNotSetToTrue()
+            throws ParseException, Json.JsonException {
+        when(userContext.getClientSession()).thenReturn(clientSession);
+        when(startService.validateSession(session, CLIENT_SESSION_ID)).thenReturn(session);
+        when(startService.buildUserContext(session, clientSession)).thenReturn(userContext);
+        when(startService.buildClientStartInfo(userContext)).thenReturn(getClientStartInfo());
+        when(startService.getGATrackingId(anyMap())).thenReturn(null);
+        when(startService.getCookieConsentValue(anyMap(), anyString())).thenReturn(null);
+        when(startService.buildUserStartInfo(userContext, null, null, true, false))
+                .thenReturn(new UserStartInfo(false, false, false, true, null, null, false, null));
+        usingValidSession();
+        usingValidClientSession();
+
+        Map<String, String> headers = new HashMap<>();
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
+        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
+        headers.put(SESSION_ID_HEADER, SESSION_ID);
+        headers.put(REAUTHENTICATE_HEADER, "false");
+        var event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(headers);
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+
+        var response = objectMapper.readValue(result.getBody(), StartResponse.class);
+
+        assertTrue(response.getUser().isAuthenticated());
     }
 
     @Test

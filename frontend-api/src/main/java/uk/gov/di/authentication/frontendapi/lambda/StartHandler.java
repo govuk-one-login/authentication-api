@@ -46,6 +46,8 @@ public class StartHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOG = LogManager.getLogger(StartHandler.class);
+
+    protected static final String REAUTHENTICATE_HEADER = "Reauthenticate";
     private final ClientSessionService clientSessionService;
     private final SessionService sessionService;
     private final AuditService auditService;
@@ -124,12 +126,20 @@ public class StartHandler
             var gaTrackingId =
                     startService.getGATrackingId(
                             userContext.getClientSession().getAuthRequestParams());
+            var reauthenticateHeader =
+                    getHeaderValueFromHeaders(
+                            input.getHeaders(),
+                            REAUTHENTICATE_HEADER,
+                            configurationService.getHeadersCaseInsensitive());
+            var reauthenticate =
+                    reauthenticateHeader != null && reauthenticateHeader.equals("true");
             var userStartInfo =
                     startService.buildUserStartInfo(
                             userContext,
                             cookieConsent,
                             gaTrackingId,
-                            configurationService.isIdentityEnabled());
+                            configurationService.isIdentityEnabled(),
+                            reauthenticate);
             var clientSessionId =
                     getHeaderValueFromHeaders(
                             input.getHeaders(),
