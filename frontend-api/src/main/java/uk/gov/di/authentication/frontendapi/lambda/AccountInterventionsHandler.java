@@ -101,7 +101,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
                             accountInterventionsInboundResponse.state().suspended());
             return generateApiGatewayProxyResponse(200, accountInterventionsResponse, true);
         } catch (UnsuccessfulAccountInterventionsResponseException e) {
-            LOG.debug(
+            LOG.error(
                     "Error in Account Interventions response HttpCode: {}, ErrorMessage: {}.",
                     e.getHttpCode(),
                     e.getMessage());
