@@ -36,6 +36,9 @@ class TxmaAuditEventTest {
         assertThat(
                 payload,
                 hasNumericFieldWithValue("timestamp", is(now.toInstant().getEpochSecond())));
+        assertThat(
+                payload,
+                hasNumericFieldWithValue("event_timestamp_ms", is(now.toInstant().toEpochMilli())));
     }
 
     @Test
