@@ -239,7 +239,11 @@ class IPVAuthorisationServiceTest {
                                             .withClaimRequirement(ClaimRequirement.ESSENTIAL))
                             .add(
                                     new ClaimsSetRequest.Entry(
-                                            "https://vocab.account.gov.uk/v1/address"));
+                                            "https://vocab.account.gov.uk/v1/address"))
+                            .add(
+                                    new ClaimsSetRequest.Entry(
+                                                    "https://vocab.account.gov.uk/v1/inheritedIdentityJWT")
+                                            .withValues(List.of("jwt")));
 
             EncryptedJWT encryptedJWT;
             try (var mockIdGenerator = mockStatic(IdGenerator.class)) {

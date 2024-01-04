@@ -19,6 +19,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.oidc.validators.QueryParamsAuthorizeValidator;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
@@ -35,6 +37,7 @@ import java.security.PrivateKey;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
@@ -153,24 +156,23 @@ class QueryParamsAuthorizeValidatorTest {
         assertTrue(errorObject.isEmpty());
     }
 
-    @Test
-    void shouldSuccessfullyValidateAuthRequestWhenValidClaimsArePresent() {
+    private static Stream<String> validClaims() {
+        return ValidClaims.getAllValidClaims().stream();
+    }
+
+    @ParameterizedTest
+    @MethodSource("validClaims")
+    void shouldSuccessfullyValidateAuthRequestWhenValidClaimsArePresent(String validClaim) {
         var scope = new Scope(OIDCScopeValue.OPENID);
         var clientRegistry =
                 new ClientRegistry()
                         .withRedirectUrls(singletonList(REDIRECT_URI.toString()))
                         .withClientID(CLIENT_ID.toString())
                         .withScopes(scope.toStringList())
-                        .withClaims(
-                                List.of(
-                                        ValidClaims.ADDRESS.getValue(),
-                                        ValidClaims.CORE_IDENTITY_JWT.getValue()));
+                        .withClaims(List.of(validClaim));
         when(dynamoClientService.getClient(CLIENT_ID.toString()))
                 .thenReturn(Optional.of(clientRegistry));
-        var claimsSetRequest =
-                new ClaimsSetRequest()
-                        .add(ValidClaims.ADDRESS.getValue())
-                        .add(ValidClaims.CORE_IDENTITY_JWT.getValue());
+        var claimsSetRequest = new ClaimsSetRequest().add(validClaim);
         var oidcClaimsRequest = new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
         var authRequest =
                 generateAuthRequest(
