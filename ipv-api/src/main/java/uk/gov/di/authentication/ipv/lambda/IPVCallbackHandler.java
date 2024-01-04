@@ -10,6 +10,7 @@ import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import com.nimbusds.openid.connect.sdk.UserInfoRequest;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
@@ -23,6 +24,9 @@ import uk.gov.di.authentication.ipv.entity.SPOTClaims;
 import uk.gov.di.authentication.ipv.entity.SPOTRequest;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.ipv.services.IPVTokenService;
+import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
+import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.IdentityClaims;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
@@ -36,9 +40,12 @@ import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
+import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
+import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
 import uk.gov.di.orchestration.shared.services.AwsSqsClient;
 import uk.gov.di.orchestration.shared.services.ClientSessionService;
+import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
@@ -50,13 +57,16 @@ import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
 import static com.nimbusds.oauth2.sdk.OAuth2Error.ACCESS_DENIED_CODE;
+import static java.net.http.HttpClient.newHttpClient;
 import static uk.gov.di.orchestration.shared.entity.IdentityClaims.VOT;
 import static uk.gov.di.orchestration.shared.entity.IdentityClaims.VTM;
+import static uk.gov.di.orchestration.shared.entity.ValidClaims.RETURN_CODE;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper.getSectorIdentifierForClient;
 import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
@@ -72,6 +82,8 @@ public class IPVCallbackHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOG = LogManager.getLogger(IPVCallbackHandler.class);
+    private final AccountInterventionService accountInterventionService;
+    private final CloudwatchMetricsService cloudwatchMetricsService;
     private final ConfigurationService configurationService;
     private final IPVAuthorisationService ipvAuthorisationService;
     private final IPVTokenService ipvTokenService;
@@ -95,6 +107,8 @@ public class IPVCallbackHandler
     }
 
     public IPVCallbackHandler(
+            AccountInterventionService accountInterventionService,
+            CloudwatchMetricsService cloudwatchMetricsService,
             ConfigurationService configurationService,
             IPVAuthorisationService responseService,
             IPVTokenService ipvTokenService,
@@ -107,6 +121,8 @@ public class IPVCallbackHandler
             DynamoIdentityService dynamoIdentityService,
             CookieHelper cookieHelper,
             NoSessionOrchestrationService noSessionOrchestrationService) {
+        this.accountInterventionService = accountInterventionService;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.configurationService = configurationService;
         this.ipvAuthorisationService = responseService;
         this.ipvTokenService = ipvTokenService;
@@ -123,6 +139,10 @@ public class IPVCallbackHandler
 
     public IPVCallbackHandler(ConfigurationService configurationService) {
         var kmsConnectionService = new KmsConnectionService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.accountInterventionService =
+                new AccountInterventionService(
+                        configurationService, newHttpClient(), cloudwatchMetricsService);
         this.configurationService = configurationService;
         this.ipvAuthorisationService =
                 new IPVAuthorisationService(
@@ -212,14 +232,6 @@ public class IPVCallbackHandler
                                     ipvAuthorisationService.validateResponse(
                                             input.getQueryStringParameters(),
                                             session.getSessionId()));
-            if (errorObject.isPresent()) {
-                return generateAuthenticationErrorResponse(
-                        authRequest,
-                        new ErrorObject(ACCESS_DENIED_CODE, errorObject.get().getDescription()),
-                        false,
-                        clientSessionId,
-                        session.getSessionId());
-            }
             var userProfile =
                     dynamoService
                             .getUserProfileFromEmail(session.getEmailAddress())
@@ -227,6 +239,45 @@ public class IPVCallbackHandler
                                     () ->
                                             new IpvCallbackException(
                                                     "Email from session does not have a user profile"));
+            var rpPairwiseSubject =
+                    segmentedFunctionCall(
+                            "calculatePairwiseSubject",
+                            () ->
+                                    ClientSubjectHelper.getSubject(
+                                            userProfile,
+                                            clientRegistry,
+                                            dynamoService,
+                                            configurationService.getInternalSectorUri()));
+
+            var internalPairwiseSubjectId =
+                    ClientSubjectHelper.getSubjectWithSectorIdentifier(
+                                    userProfile,
+                                    configurationService.getInternalSectorUri(),
+                                    dynamoService)
+                            .getValue();
+
+            if (errorObject.isPresent()) {
+                var accountInterventionStatus =
+                        getAccountInterventionStatus(internalPairwiseSubjectId);
+                if (configurationService.isAccountInterventionServiceEnabled()) {
+                    if (accountInterventionStatus.blocked()) {
+                        // TODO: back channel logout + redirect to blocked page
+                        LOG.info("Account is blocked");
+                    } else if (accountInterventionStatus.suspended()
+                            || accountInterventionStatus.resetPassword()
+                            || accountInterventionStatus.reproveIdentity()) {
+                        // TODO: back channel logout + redirect to suspended page
+                        LOG.info(
+                                "Account is suspended, requires a password reset, or requires identity to be reproved");
+                    }
+                    return generateAuthenticationErrorResponse(
+                            authRequest,
+                            new ErrorObject(ACCESS_DENIED_CODE, errorObject.get().getDescription()),
+                            false,
+                            clientSessionId,
+                            session.getSessionId());
+                }
+            }
 
             auditService.submitAuditEvent(
                     IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED,
@@ -275,15 +326,6 @@ public class IPVCallbackHandler
                     AuditService.UNKNOWN,
                     userProfile.getPhoneNumber(),
                     persistentId);
-            var pairwiseSubject =
-                    segmentedFunctionCall(
-                            "calculatePairwiseSubject",
-                            () ->
-                                    ClientSubjectHelper.getSubject(
-                                            userProfile,
-                                            clientRegistry,
-                                            dynamoService,
-                                            configurationService.getInternalSectorUri()));
 
             var userIdentityUserInfo =
                     ipvTokenService.sendIpvUserIdentityRequest(
@@ -306,9 +348,36 @@ public class IPVCallbackHandler
                     AuditService.UNKNOWN,
                     userProfile.getPhoneNumber(),
                     persistentId);
-
             var userIdentityError = validateUserIdentityResponse(userIdentityUserInfo);
             if (userIdentityError.isPresent()) {
+                var accountInterventionStatus =
+                        getAccountInterventionStatus(internalPairwiseSubjectId);
+                if (configurationService.isAccountInterventionServiceEnabled()) {
+                    if (accountInterventionStatus.blocked()) {
+                        // TODO: back channel logout + redirect to blocked page
+                        LOG.info("Account is blocked");
+                    } else if (accountInterventionStatus.suspended()
+                            || accountInterventionStatus.resetPassword()
+                            || accountInterventionStatus.reproveIdentity()) {
+                        // TODO: back channel logout + redirect to suspended page
+                        LOG.info(
+                                "Account is suspended, requires a password reset, or requires identity to be reproved");
+                    }
+                }
+
+                var returnCode = userIdentityUserInfo.getClaim(RETURN_CODE.getValue());
+                if (returnCode instanceof List<?> && !((List<?>) returnCode).isEmpty()) {
+                    LOG.warn("SPOT will not be invoked. Returning authCode to RP");
+                    return processReturnCode(
+                            clientRegistry,
+                            authRequest,
+                            clientSessionId,
+                            userProfile,
+                            clientSession,
+                            rpPairwiseSubject,
+                            userIdentityUserInfo);
+                }
+
                 LOG.warn("SPOT will not be invoked. Returning Error to RP");
                 var errorResponse =
                         new AuthenticationErrorResponse(
@@ -336,7 +405,7 @@ public class IPVCallbackHandler
                     getSectorIdentifierForClient(
                             clientRegistry, configurationService.getInternalSectorUri()),
                     userProfile,
-                    pairwiseSubject,
+                    rpPairwiseSubject,
                     userIdentityUserInfo,
                     clientId);
 
@@ -352,7 +421,7 @@ public class IPVCallbackHandler
                     persistentId);
             segmentedFunctionCall(
                     "saveIdentityClaims",
-                    () -> saveIdentityClaimsToDynamo(pairwiseSubject, userIdentityUserInfo));
+                    () -> saveIdentityClaimsToDynamo(rpPairwiseSubject, userIdentityUserInfo));
             var redirectURI =
                     ConstructUriHelper.buildURI(
                             configurationService.getLoginURI().toString(), REDIRECT_PATH);
@@ -375,7 +444,7 @@ public class IPVCallbackHandler
     }
 
     private void saveIdentityClaimsToDynamo(
-            Subject pairwiseIdentifier, UserInfo userIdentityUserInfo) {
+            Subject rpPairwiseSubject, UserInfo userIdentityUserInfo) {
         LOG.info("Checking for additional identity claims to save to dynamo");
         var additionalClaims = new HashMap<String, String>();
         ValidClaims.getAllValidClaims().stream()
@@ -392,7 +461,7 @@ public class IPVCallbackHandler
         LOG.info("Additional identity claims present: {}", !additionalClaims.isEmpty());
 
         dynamoIdentityService.saveIdentityClaims(
-                pairwiseIdentifier.getValue(),
+                rpPairwiseSubject.getValue(),
                 additionalClaims,
                 (String) userIdentityUserInfo.getClaim(VOT.getValue()),
                 userIdentityUserInfo.getClaim(IdentityClaims.CORE_IDENTITY.getValue()).toString());
@@ -509,5 +578,81 @@ public class IPVCallbackHandler
                         authenticationRequest.getResponseMode());
         return generateApiGatewayProxyResponse(
                 302, "", Map.of(ResponseHeaders.LOCATION, errorResponse.toURI().toString()), null);
+    }
+
+    private APIGatewayProxyResponseEvent processReturnCode(
+            ClientRegistry clientRegistry,
+            AuthenticationRequest authRequest,
+            String clientSessionId,
+            UserProfile userProfile,
+            ClientSession clientSession,
+            Subject pairwiseSubject,
+            UserInfo userIdentityUserInfo) {
+        if (!clientRegistry.getClaims().contains(RETURN_CODE.getValue())
+                || authRequest
+                                .getOIDCClaims()
+                                .getUserInfoClaimsRequest()
+                                .get(RETURN_CODE.getValue())
+                        == null) {
+            LOG.warn("SPOT will not be invoked. Returning Error to RP");
+            var errorResponse =
+                    new AuthenticationErrorResponse(
+                            authRequest.getRedirectionURI(),
+                            OAuth2Error.ACCESS_DENIED,
+                            authRequest.getState(),
+                            authRequest.getResponseMode());
+            return generateApiGatewayProxyResponse(
+                    302,
+                    "",
+                    Map.of(ResponseHeaders.LOCATION, errorResponse.toURI().toString()),
+                    null);
+        }
+
+        LOG.warn("SPOT will not be invoked due to returnCode. Returning authCode to RP");
+        segmentedFunctionCall(
+                "saveIdentityClaims",
+                () -> saveIdentityClaimsToDynamo(pairwiseSubject, userIdentityUserInfo));
+        var authCode =
+                new AuthorisationCodeService(configurationService)
+                        .generateAndSaveAuthorisationCode(
+                                clientSessionId, userProfile.getEmail(), clientSession);
+
+        var authenticationResponse =
+                new AuthenticationSuccessResponse(
+                        authRequest.getRedirectionURI(),
+                        authCode,
+                        null,
+                        null,
+                        authRequest.getState(),
+                        null,
+                        authRequest.getResponseMode());
+
+        return generateApiGatewayProxyResponse(
+                302,
+                "",
+                Map.of(ResponseHeaders.LOCATION, authenticationResponse.toURI().toString()),
+                null);
+    }
+
+    private AccountInterventionStatus getAccountInterventionStatus(
+            String internalPairwiseSubjectId) {
+        var accountInterventionStatus =
+                segmentedFunctionCall(
+                        "AIS: getAccountStatus",
+                        () ->
+                                accountInterventionService.getAccountStatus(
+                                        internalPairwiseSubjectId));
+        cloudwatchMetricsService.incrementCounter(
+                "AISResult",
+                Map.of(
+                        "blocked",
+                        String.valueOf(accountInterventionStatus.blocked()),
+                        "suspended",
+                        String.valueOf(accountInterventionStatus.suspended()),
+                        "resetPassword",
+                        String.valueOf(accountInterventionStatus.resetPassword()),
+                        "reproveIdentity",
+                        String.valueOf(accountInterventionStatus.reproveIdentity())));
+        return accountInterventionStatus;
     }
 }
