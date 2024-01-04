@@ -13,7 +13,6 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -51,6 +50,7 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -338,14 +338,19 @@ class VerifyMfaCodeHandlerTest {
                         Session.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false, true);
     }
 
-    @Test
-    void shouldReturn204WhenSuccessfulAuthAppCodeSignInRequest() throws Json.JsonException {
+    private static Stream<JourneyType> existingUserAuthAppJourneyTypes() {
+        return Stream.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA);
+    }
+
+    @ParameterizedTest
+    @MethodSource("existingUserAuthAppJourneyTypes")
+    void shouldReturn204WhenExistingUserSuccessfulAuthAppCodeRequest(JourneyType journeyType)
+            throws Json.JsonException {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(authAppCodeProcessor));
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
         session.setNewAccount(Session.AccountState.EXISTING);
-        var codeRequest =
-                new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, JourneyType.SIGN_IN);
+        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, journeyType);
         var result = makeCallWithCode(codeRequest);
 
         assertThat(result, hasStatus(204));
@@ -377,7 +382,10 @@ class VerifyMfaCodeHandlerTest {
             throws Json.JsonException {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.empty());
-        var authAppSecret = journeyType.equals(JourneyType.SIGN_IN) ? null : AUTH_APP_SECRET;
+        var authAppSecret =
+                List.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA).contains(journeyType)
+                        ? null
+                        : AUTH_APP_SECRET;
         var codeRequest =
                 new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, journeyType, authAppSecret);
         var result = makeCallWithCode(codeRequest);
@@ -397,7 +405,10 @@ class VerifyMfaCodeHandlerTest {
             throws Json.JsonException {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.empty());
-        var phoneNumber = journeyType.equals(JourneyType.SIGN_IN) ? null : PHONE_NUMBER;
+        var phoneNumber =
+                List.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA).contains(journeyType)
+                        ? null
+                        : PHONE_NUMBER;
         var codeRequest =
                 new VerifyMfaCodeRequest(MFAMethodType.SMS, CODE, journeyType, phoneNumber);
         var result = makeCallWithCode(codeRequest);
@@ -416,7 +427,9 @@ class VerifyMfaCodeHandlerTest {
                 Arguments.of(
                         JourneyType.ACCOUNT_RECOVERY, CodeRequestType.AUTH_APP_ACCOUNT_RECOVERY),
                 Arguments.of(JourneyType.REGISTRATION, CodeRequestType.AUTH_APP_REGISTRATION),
-                Arguments.of(JourneyType.SIGN_IN, CodeRequestType.AUTH_APP_SIGN_IN));
+                Arguments.of(JourneyType.SIGN_IN, CodeRequestType.AUTH_APP_SIGN_IN),
+                Arguments.of(
+                        JourneyType.PASSWORD_RESET_MFA, CodeRequestType.PW_RESET_MFA_AUTH_APP));
     }
 
     @ParameterizedTest
@@ -426,7 +439,10 @@ class VerifyMfaCodeHandlerTest {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(authAppCodeProcessor));
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.of(ErrorResponse.ERROR_1042));
-        var authAppSecret = journeyType.equals(JourneyType.SIGN_IN) ? null : AUTH_APP_SECRET;
+        var authAppSecret =
+                List.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA).contains(journeyType)
+                        ? null
+                        : AUTH_APP_SECRET;
         var codeRequest =
                 new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, journeyType, authAppSecret);
         var result = makeCallWithCode(codeRequest);
@@ -464,7 +480,10 @@ class VerifyMfaCodeHandlerTest {
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.of(ErrorResponse.ERROR_1042));
         when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
-        var authAppSecret = journeyType.equals(JourneyType.SIGN_IN) ? null : AUTH_APP_SECRET;
+        var authAppSecret =
+                List.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA).contains(journeyType)
+                        ? null
+                        : AUTH_APP_SECRET;
         var codeRequest =
                 new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, journeyType, authAppSecret);
         var result = makeCallWithCode(codeRequest);
@@ -497,7 +516,10 @@ class VerifyMfaCodeHandlerTest {
             throws Json.JsonException {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(authAppCodeProcessor));
-        var profileInformation = journeyType.equals(JourneyType.SIGN_IN) ? null : AUTH_APP_SECRET;
+        var profileInformation =
+                List.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA).contains(journeyType)
+                        ? null
+                        : AUTH_APP_SECRET;
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.of(ErrorResponse.ERROR_1043));
         var codeRequest =
                 new VerifyMfaCodeRequest(
