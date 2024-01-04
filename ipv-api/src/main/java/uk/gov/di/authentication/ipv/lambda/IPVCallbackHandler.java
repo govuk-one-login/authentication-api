@@ -270,6 +270,7 @@ public class IPVCallbackHandler
                         LOG.info(
                                 "Account is suspended, requires a password reset, or requires identity to be reproved");
                     }
+
                     return generateAuthenticationErrorResponse(
                             authRequest,
                             new ErrorObject(ACCESS_DENIED_CODE, errorObject.get().getDescription()),

@@ -4,30 +4,30 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
-import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AuthCodeResponse;
+import uk.gov.di.authentication.oidc.exceptions.ProcessAuthRequestException;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
-import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
-import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
-import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.AuditService;
+import uk.gov.di.orchestration.shared.services.AuthCodeResponseGenerationService;
 import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
 import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
@@ -37,15 +37,11 @@ import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 
 import java.net.URI;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
 
 import static java.util.Objects.isNull;
 import static uk.gov.di.orchestration.shared.conditions.DocAppUserHelper.isDocCheckingAppUserWithSubjectId;
 import static uk.gov.di.orchestration.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
-import static uk.gov.di.orchestration.shared.entity.Session.AccountState.EXISTING;
-import static uk.gov.di.orchestration.shared.entity.Session.AccountState.EXISTING_DOC_APP_JOURNEY;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.addAnnotation;
@@ -57,7 +53,6 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
-import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
 
 public class AuthCodeHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -123,209 +118,119 @@ public class AuthCodeHandler
 
     public APIGatewayProxyResponseEvent authCodeRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
-        Session session =
-                sessionService.getSessionFromRequestHeaders(input.getHeaders()).orElse(null);
-        if (Objects.isNull(session)) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1000);
+        Session session;
+        String clientSessionId;
+        try {
+            session = sessionService.getSessionFromRequestHeaders(input.getHeaders()).orElse(null);
+            clientSessionId =
+                    getHeaderValueFromHeaders(
+                            input.getHeaders(),
+                            CLIENT_SESSION_ID_HEADER,
+                            configurationService.getHeadersCaseInsensitive());
+            validateSessions(session, clientSessionId);
+        } catch (ProcessAuthRequestException e) {
+            return generateApiGatewayProxyErrorResponse(e.getStatusCode(), e.getErrorResponse());
         }
-        String clientSessionId =
-                getHeaderValueFromHeaders(
-                        input.getHeaders(),
-                        CLIENT_SESSION_ID_HEADER,
-                        configurationService.getHeadersCaseInsensitive());
 
-        if (Objects.isNull(clientSessionId)) {
-            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1018);
-        }
         attachSessionIdToLogs(session);
         attachLogFieldToLogs(CLIENT_SESSION_ID, clientSessionId);
         attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, clientSessionId);
 
         LOG.info("Processing request");
 
-        AuthenticationRequest authenticationRequest;
+        AuthenticationRequest authenticationRequest = null;
         ClientSession clientSession;
+        ClientID clientID;
+        AuthorizationCode authCode;
+        AuthenticationSuccessResponse authenticationResponse;
         try {
-            clientSession =
-                    clientSessionService
-                            .getClientSessionFromRequestHeaders(input.getHeaders())
-                            .orElse(null);
-            if (Objects.isNull(clientSession)) {
-                LOG.info("ClientSession not found");
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1018);
-            }
+            clientSession = getClientSession(input);
             authenticationRequest =
                     AuthenticationRequest.parse(clientSession.getAuthRequestParams());
-        } catch (ParseException e) {
-            if (e.getRedirectionURI() == null) {
-                LOG.warn(
-                        "Authentication request could not be parsed: redirect URI or Client ID is missing from auth request",
-                        e);
-                throw new RuntimeException(
-                        "Redirect URI or Client ID is missing from auth request", e);
-            }
-            AuthenticationErrorResponse errorResponse =
-                    orchestrationAuthorizationService.generateAuthenticationErrorResponse(
-                            e.getRedirectionURI(),
-                            e.getState(),
-                            e.getResponseMode(),
-                            e.getErrorObject());
-            LOG.warn("Authentication request could not be parsed", e);
-            return generateResponse(400, new AuthCodeResponse(errorResponse.toURI().toString()));
-        }
 
-        var clientID = authenticationRequest.getClientID();
-        attachLogFieldToLogs(CLIENT_ID, clientID.getValue());
-        attachLogFieldToLogs(
-                PERSISTENT_SESSION_ID,
-                PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
-        addAnnotation(
-                "client_id", String.valueOf(clientSession.getAuthRequestParams().get("client_id")));
+            clientID = authenticationRequest.getClientID();
+            attachLogFieldToLogs(CLIENT_ID, clientID.getValue());
+            attachLogFieldToLogs(
+                    PERSISTENT_SESSION_ID,
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+            addAnnotation(
+                    "client_id",
+                    String.valueOf(clientSession.getAuthRequestParams().get("client_id")));
 
-        URI redirectUri = authenticationRequest.getRedirectionURI();
-        State state = authenticationRequest.getState();
-        try {
-            if (!orchestrationAuthorizationService.isClientRedirectUriValid(
-                    clientID, redirectUri)) {
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1016);
-            }
-            VectorOfTrust requestedVectorOfTrust = clientSession.getEffectiveVectorOfTrust();
-            if (isNull(session.getCurrentCredentialStrength())
-                    || requestedVectorOfTrust
-                                    .getCredentialTrustLevel()
-                                    .compareTo(session.getCurrentCredentialStrength())
-                            > 0) {
-                session.setCurrentCredentialStrength(
-                        requestedVectorOfTrust.getCredentialTrustLevel());
-            }
-            var authCode =
-                    authorisationCodeService.generateAndSaveAuthorisationCode(
-                            clientSessionId, session.getEmailAddress(), clientSession);
-
-            var authenticationResponse =
+            var redirectUri = authenticationRequest.getRedirectionURI();
+            var state = authenticationRequest.getState();
+            authCode =
+                    generateAuthCode(
+                            clientID, redirectUri, clientSession, clientSessionId, session);
+            authenticationResponse =
                     orchestrationAuthorizationService.generateSuccessfulAuthResponse(
                             authenticationRequest, authCode, redirectUri, state);
+        } catch (ProcessAuthRequestException e) {
+            return generateApiGatewayProxyErrorResponse(e.getStatusCode(), e.getErrorResponse());
+        } catch (ClientNotFoundException e) {
+            return processClientNotFoundException(authenticationRequest);
+        } catch (ParseException e) {
+            return processParseException(e);
+        }
 
-            LOG.info("Successfully processed request");
+        LOG.info("Successfully processed request");
 
+        try {
             var isTestJourney =
                     orchestrationAuthorizationService.isTestJourney(
-                            authenticationRequest.getClientID(), session.getEmailAddress());
+                            clientID, session.getEmailAddress());
             var docAppJourney = isDocCheckingAppUserWithSubjectId(clientSession);
 
-            Map<String, String> dimensions =
-                    new HashMap<>(
-                            Map.of(
-                                    "Account",
-                                    session.isNewAccount().name(),
-                                    "Environment",
-                                    configurationService.getEnvironment(),
-                                    "Client",
-                                    clientID.getValue(),
-                                    "IsTest",
-                                    Boolean.toString(isTestJourney),
-                                    "IsDocApp",
-                                    Boolean.toString(docAppJourney),
-                                    "ClientName",
-                                    clientSession.getClientName()));
-
-            if (Objects.nonNull(session.getVerifiedMfaMethodType())) {
-                dimensions.put("MfaMethod", session.getVerifiedMfaMethodType().getValue());
-            } else {
-                LOG.info(
-                        "No mfa method to set. User is either authenticated or signing in from a low level service");
-            }
-
-            var internalSubjectId = AuditService.UNKNOWN;
-            var rpPairwiseId = AuditService.UNKNOWN;
-            String internalCommonPairwiseSubjectId;
-            if (docAppJourney) {
-                LOG.info("Session not saved for DocCheckingAppUser");
-                internalCommonPairwiseSubjectId = clientSession.getDocAppSubjectId().getValue();
-            } else {
-                var mfaNotRequired =
-                        clientSession
-                                .getEffectiveVectorOfTrust()
-                                .getCredentialTrustLevel()
-                                .equals(CredentialTrustLevel.LOW_LEVEL);
-                var levelOfConfidence = LevelOfConfidence.NONE.getValue();
-                if (clientSession.getEffectiveVectorOfTrust().containsLevelOfConfidence()) {
-                    levelOfConfidence =
-                            clientSession
-                                    .getEffectiveVectorOfTrust()
-                                    .getLevelOfConfidence()
-                                    .getValue();
-                }
-                dimensions.put("MfaRequired", mfaNotRequired ? "No" : "Yes");
-                dimensions.put("RequestedLevelOfConfidence", levelOfConfidence);
-                internalCommonPairwiseSubjectId = session.getInternalCommonSubjectIdentifier();
-                var userProfile =
-                        dynamoService
-                                .getUserProfileByEmailMaybe(session.getEmailAddress())
-                                .orElseThrow(
-                                        () ->
-                                                new UserNotFoundException(
-                                                        "Unable to find user with given email address"));
-                var client =
-                        dynamoClientService
-                                .getClient(clientID.getValue())
-                                .orElseThrow(
-                                        () -> new ClientNotFoundException(clientID.getValue()));
-                internalSubjectId =
-                        Objects.isNull(session.getEmailAddress())
-                                ? AuditService.UNKNOWN
-                                : userProfile.getSubjectID();
-                rpPairwiseId =
-                        ClientSubjectHelper.getSubject(
-                                        userProfile,
-                                        client,
-                                        dynamoService,
-                                        configurationService.getInternalSectorUri())
-                                .getValue();
-            }
-
-            auditService.submitAuditEvent(
-                    OidcAuditableEvent.AUTH_CODE_ISSUED,
-                    clientSessionId,
-                    session.getSessionId(),
-                    clientID.getValue(),
-                    internalCommonPairwiseSubjectId,
-                    Objects.isNull(session.getEmailAddress())
-                            ? AuditService.UNKNOWN
-                            : session.getEmailAddress(),
-                    IpAddressHelper.extractIpAddress(input),
-                    AuditService.UNKNOWN,
-                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
-                    pair("internalSubjectId", internalSubjectId),
-                    pair("isNewAccount", session.isNewAccount()),
-                    pair("rpPairwiseId", rpPairwiseId),
-                    pair("nonce", authenticationRequest.getNonce()),
-                    pair("authCode", authCode));
-
-            cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
-            cloudwatchMetricsService.incrementSignInByClient(
-                    session.isNewAccount(),
-                    clientID.getValue(),
-                    clientSession.getClientName(),
-                    isTestJourney);
-
-            if (docAppJourney) {
-                sessionService.save(session.setNewAccount(EXISTING_DOC_APP_JOURNEY));
-            } else {
-                sessionService.save(session.setAuthenticated(true).setNewAccount(EXISTING));
-            }
-
-            return generateResponse(
-                    200, new AuthCodeResponse(authenticationResponse.toURI().toString()));
+            return new AuthCodeResponseGenerationService(
+                            auditService,
+                            cloudwatchMetricsService,
+                            configurationService,
+                            dynamoService,
+                            dynamoClientService)
+                    .generateAuthCodeResponse(
+                            input,
+                            isTestJourney,
+                            docAppJourney,
+                            authenticationRequest,
+                            authCode,
+                            session,
+                            clientSessionId,
+                            clientSession,
+                            sessionService,
+                            clientID,
+                            authenticationResponse,
+                            OidcAuditableEvent.AUTH_CODE_ISSUED);
         } catch (ClientNotFoundException e) {
-            var errorResponse =
-                    orchestrationAuthorizationService.generateAuthenticationErrorResponse(
-                            authenticationRequest, OAuth2Error.INVALID_CLIENT, redirectUri, state);
-            return generateResponse(500, new AuthCodeResponse(errorResponse.toURI().toString()));
+            return processClientNotFoundException(authenticationRequest);
         } catch (UserNotFoundException e) {
             LOG.error(e);
             throw new RuntimeException(e);
+        } catch (JsonException e) {
+            throw new RuntimeException(e);
         }
+    }
+
+    private void validateSessions(Session session, String clientSessionId)
+            throws ProcessAuthRequestException {
+        if (Objects.isNull(session)) {
+            throw new ProcessAuthRequestException(400, ErrorResponse.ERROR_1000);
+        }
+        if (Objects.isNull(clientSessionId)) {
+            throw new ProcessAuthRequestException(400, ErrorResponse.ERROR_1018);
+        }
+    }
+
+    private ClientSession getClientSession(APIGatewayProxyRequestEvent input)
+            throws ProcessAuthRequestException {
+        var clientSession =
+                clientSessionService
+                        .getClientSessionFromRequestHeaders(input.getHeaders())
+                        .orElse(null);
+        if (Objects.isNull(clientSession)) {
+            LOG.info("ClientSession not found");
+            throw new ProcessAuthRequestException(400, ErrorResponse.ERROR_1018);
+        }
+        return clientSession;
     }
 
     private APIGatewayProxyResponseEvent generateResponse(
@@ -336,5 +241,55 @@ public class AuthCodeHandler
         } catch (JsonException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private APIGatewayProxyResponseEvent processParseException(ParseException e) {
+        if (e.getRedirectionURI() == null) {
+            LOG.warn(
+                    "Authentication request could not be parsed: redirect URI or Client ID is missing from auth request",
+                    e);
+            throw new RuntimeException("Redirect URI or Client ID is missing from auth request", e);
+        }
+        AuthenticationErrorResponse errorResponse =
+                orchestrationAuthorizationService.generateAuthenticationErrorResponse(
+                        e.getRedirectionURI(),
+                        e.getState(),
+                        e.getResponseMode(),
+                        e.getErrorObject());
+        LOG.warn("Authentication request could not be parsed", e);
+        return generateResponse(400, new AuthCodeResponse(errorResponse.toURI().toString()));
+    }
+
+    private APIGatewayProxyResponseEvent processClientNotFoundException(
+            AuthenticationRequest authenticationRequest) {
+        var errorResponse =
+                orchestrationAuthorizationService.generateAuthenticationErrorResponse(
+                        authenticationRequest,
+                        OAuth2Error.INVALID_CLIENT,
+                        authenticationRequest.getRedirectionURI(),
+                        authenticationRequest.getState());
+        return generateResponse(500, new AuthCodeResponse(errorResponse.toURI().toString()));
+    }
+
+    private AuthorizationCode generateAuthCode(
+            ClientID clientID,
+            URI redirectUri,
+            ClientSession clientSession,
+            String clientSessionId,
+            Session session)
+            throws ClientNotFoundException, ProcessAuthRequestException {
+        if (!orchestrationAuthorizationService.isClientRedirectUriValid(clientID, redirectUri)) {
+            throw new ProcessAuthRequestException(400, ErrorResponse.ERROR_1016);
+        }
+        VectorOfTrust requestedVectorOfTrust = clientSession.getEffectiveVectorOfTrust();
+        if (isNull(session.getCurrentCredentialStrength())
+                || requestedVectorOfTrust
+                                .getCredentialTrustLevel()
+                                .compareTo(session.getCurrentCredentialStrength())
+                        > 0) {
+            session.setCurrentCredentialStrength(requestedVectorOfTrust.getCredentialTrustLevel());
+        }
+        return authorisationCodeService.generateAndSaveAuthorisationCode(
+                clientSessionId, session.getEmailAddress(), clientSession);
     }
 }
