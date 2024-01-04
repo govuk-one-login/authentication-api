@@ -76,6 +76,7 @@ class AuthenticationCallbackHandlerTest {
             new Session(SESSION_ID).setEmailAddress(TEST_EMAIL_ADDRESS);
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final ClientID CLIENT_ID = new ClientID();
+    private static final String CLIENT_NAME = "client-name";
     private static final Subject PAIRWISE_SUBJECT_ID = new Subject();
     private static final URI REDIRECT_URI = URI.create("https://test.rp.redirect.uri");
     private static final URI IPV_REDIRECT_URI = URI.create("https://test.ipv.redirect.uri");
@@ -86,7 +87,7 @@ class AuthenticationCallbackHandlerTest {
                     generateRPAuthRequestForClientSession().toParameters(),
                     null,
                     new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL),
-                    "test-name");
+                    CLIENT_NAME);
     private static final String COOKIE_HEADER_NAME = "Cookie";
     private static final AuthorizationCode AUTH_CODE_ORCH_TO_AUTH = new AuthorizationCode();
     private static final AuthorizationCode AUTH_CODE_RP_TO_ORCH = new AuthorizationCode();
@@ -115,7 +116,7 @@ class AuthenticationCallbackHandlerTest {
                 .thenReturn(new TokenErrorResponse(new ErrorObject("1", TEST_ERROR_MESSAGE)));
         when(USER_INFO.getEmailAddress()).thenReturn(TEST_EMAIL_ADDRESS);
         when(USER_INFO.getSubject()).thenReturn(PAIRWISE_SUBJECT_ID);
-        when(USER_INFO.getClaim("new_account")).thenReturn("true");
+        when(USER_INFO.getBooleanClaim("new_account")).thenReturn(true);
         when(USER_INFO.getClaim("rp_client_id")).thenReturn(PAIRWISE_SUBJECT_ID.getValue());
     }
 
@@ -166,6 +167,13 @@ class AuthenticationCallbackHandlerTest {
         assertEquals(savedSession.getValue().isNewAccount(), Session.AccountState.EXISTING);
 
         verify(cloudwatchMetricsService).incrementCounter(eq("AuthenticationCallback"), any());
+        verify(cloudwatchMetricsService).incrementCounter(eq("SignIn"), any());
+        verify(cloudwatchMetricsService)
+                .incrementSignInByClient(
+                        eq(Session.AccountState.NEW),
+                        eq(CLIENT_ID.getValue()),
+                        eq(CLIENT_NAME),
+                        eq(false));
 
         verifyAuditEvents(
                 List.of(
@@ -185,7 +193,7 @@ class AuthenticationCallbackHandlerTest {
                         any(),
                         any(),
                         eq(pair("internalSubjectId", AuditService.UNKNOWN)),
-                        eq(pair("isNewAccount", "true")),
+                        eq(pair("isNewAccount", true)),
                         eq(pair("rpPairwiseId", PAIRWISE_SUBJECT_ID.getValue())),
                         eq(pair("nonce", RP_NONCE)),
                         eq(pair("authCode", AUTH_CODE_RP_TO_ORCH.getValue())));
@@ -386,7 +394,7 @@ class AuthenticationCallbackHandlerTest {
 
     private ClientRegistry createClientRegistry() {
         return new ClientRegistry()
-                .withClientName("client-name")
+                .withClientName(CLIENT_NAME)
                 .withClientID(CLIENT_ID.toString())
                 .withPublicKey("public-key")
                 .withSubjectType("Public")
