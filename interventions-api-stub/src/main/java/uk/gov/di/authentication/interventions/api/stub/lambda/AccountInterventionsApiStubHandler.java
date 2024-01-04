@@ -4,6 +4,9 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.interventions.api.stub.entity.AccountInterventionsStore;
 import uk.gov.di.authentication.interventions.api.stub.entity.InterventionsApiStubResponse;
 import uk.gov.di.authentication.interventions.api.stub.services.AccountInterventionsDbService;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -15,6 +18,8 @@ public class AccountInterventionsApiStubHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private final AccountInterventionsDbService db;
+    private static final Logger LOG =
+            LogManager.getLogger(AccountInterventionsApiStubHandler.class);
     private static final String PATH_PARAM_NAME_IN_API_GW = "internalPairwiseId";
 
     public AccountInterventionsApiStubHandler() {
@@ -39,11 +44,25 @@ public class AccountInterventionsApiStubHandler
 
         try {
             if (maybeAccountInterventionsStore.isPresent()) {
+                LOG.info("Account Interventions response being generated");
                 return generateApiGatewayProxyResponse(
                         200,
                         new InterventionsApiStubResponse(maybeAccountInterventionsStore.get()));
             } else {
-                return generateApiGatewayProxyResponse(404, "Account not found");
+                LOG.info("No matching account found. Default response sent instead.");
+                AccountInterventionsStore noAccountInterventionStore =
+                        new AccountInterventionsStore();
+                noAccountInterventionStore
+                        .withBlocked(false)
+                        .withSuspended(false)
+                        .withReproveIdentity(false)
+                        .withResetPassword(false);
+
+                InterventionsApiStubResponse noAccountInterventionStoreResponse =
+                        new InterventionsApiStubResponse(noAccountInterventionStore);
+
+                return generateApiGatewayProxyResponse(
+                        200, new InterventionsApiStubResponse(noAccountInterventionStore));
             }
         } catch (Json.JsonException e) {
             return generateApiGatewayProxyResponse(

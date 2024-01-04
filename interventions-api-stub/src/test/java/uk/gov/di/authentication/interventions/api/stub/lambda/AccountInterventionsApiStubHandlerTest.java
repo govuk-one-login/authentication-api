@@ -53,7 +53,7 @@ class AccountInterventionsApiStubHandlerTest {
     }
 
     @Test
-    void shouldReturn404WhenThePairwiseIdDoesNotExistInTheDatabase() {
+    void shouldReturn200WhenThePairwiseIdDoesNotExistInTheDatabase() {
         var handler = new AccountInterventionsApiStubHandler(accountInterventionsDbService);
         when(accountInterventionsDbService.getAccountInterventions(PAIRWISE_ID))
                 .thenReturn(Optional.empty());
@@ -62,6 +62,6 @@ class AccountInterventionsApiStubHandlerTest {
         event.setPathParameters(Map.of(PATH_PARAM_NAME_IN_API_GW, PAIRWISE_ID));
 
         var result = handler.handleRequest(event, context);
-        assertEquals(404, result.getStatusCode());
+        assertEquals(200, result.getStatusCode());
     }
 }
