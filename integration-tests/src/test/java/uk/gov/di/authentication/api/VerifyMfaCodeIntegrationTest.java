@@ -918,9 +918,14 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         INVALID_CODE_SENT,
                         INVALID_CODE_SENT,
                         CODE_MAX_RETRIES_REACHED));
-        var isAccountVerified = journeyType.equals(JourneyType.ACCOUNT_RECOVERY);
+        var isAccountVerified =
+                List.of(JourneyType.ACCOUNT_RECOVERY, JourneyType.REAUTHENTICATE_MFA)
+                        .contains(journeyType);
         var expectedPhoneNumber =
-                journeyType.equals(JourneyType.ACCOUNT_RECOVERY) ? PHONE_NUMBER : null;
+                List.of(JourneyType.ACCOUNT_RECOVERY, JourneyType.REAUTHENTICATE_MFA)
+                                .contains(journeyType)
+                        ? PHONE_NUMBER
+                        : null;
         assertThat(
                 userStore.getPhoneNumberForUser(EMAIL_ADDRESS).orElse(null),
                 equalTo(expectedPhoneNumber));
