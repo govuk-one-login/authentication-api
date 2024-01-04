@@ -85,6 +85,10 @@ public class RedisExtension
         return createSession(IdGenerator.generate(), false, Optional.of(email));
     }
 
+    public String createAuthenticatedSessionWithEmail(String email) throws Json.JsonException {
+        return createSession(IdGenerator.generate(), true, Optional.of(email));
+    }
+
     public void addDocAppSubjectIdToClientSession(Subject subject, String clientSessionId)
             throws Json.JsonException {
         var clientSession =

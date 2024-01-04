@@ -566,7 +566,11 @@ class VerifyMfaCodeHandlerTest {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(authAppCodeProcessor));
         var profileInformation =
-                List.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA).contains(journeyType)
+                List.of(
+                                        JourneyType.SIGN_IN,
+                                        JourneyType.PASSWORD_RESET_MFA,
+                                        JourneyType.REAUTHENTICATE_MFA)
+                                .contains(journeyType)
                         ? null
                         : AUTH_APP_SECRET;
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.of(ErrorResponse.ERROR_1043));
@@ -601,7 +605,8 @@ class VerifyMfaCodeHandlerTest {
         return Stream.of(
                 Arguments.of(JourneyType.ACCOUNT_RECOVERY, CodeRequestType.SMS_ACCOUNT_RECOVERY),
                 Arguments.of(JourneyType.PASSWORD_RESET_MFA, CodeRequestType.PW_RESET_MFA_SMS),
-                Arguments.of(JourneyType.REGISTRATION, CodeRequestType.SMS_REGISTRATION));
+                Arguments.of(JourneyType.REGISTRATION, CodeRequestType.SMS_REGISTRATION),
+                Arguments.of(JourneyType.REAUTHENTICATE_MFA, CodeRequestType.SMS_REAUTHENTICATION));
     }
 
     @ParameterizedTest
