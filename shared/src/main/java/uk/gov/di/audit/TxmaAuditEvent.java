@@ -14,6 +14,8 @@ public class TxmaAuditEvent {
 
     @Expose private final long timestamp;
 
+    @Expose private final long eventTimestampMs;
+
     @Expose private final String eventName;
 
     @Expose private String clientId;
@@ -26,15 +28,18 @@ public class TxmaAuditEvent {
     @Expose private Map<String, Object> restricted;
     @Expose private Map<String, Object> extensions;
 
-    public TxmaAuditEvent(String eventName, long timestamp) {
+    public TxmaAuditEvent(String eventName, long timestamp, long eventTimestampMs) {
         this.eventName = eventName;
         this.timestamp = timestamp;
+        this.eventTimestampMs = eventTimestampMs;
     }
 
     public static TxmaAuditEvent auditEventWithTime(
             AuditableEvent eventName, Supplier<Date> dateSupplier) {
         return new TxmaAuditEvent(
-                "AUTH_" + eventName.toString(), dateSupplier.get().toInstant().getEpochSecond());
+                "AUTH_" + eventName.toString(),
+                dateSupplier.get().toInstant().getEpochSecond(),
+                dateSupplier.get().toInstant().toEpochMilli());
     }
 
     public static TxmaAuditEvent auditEvent(AuditableEvent event) {
