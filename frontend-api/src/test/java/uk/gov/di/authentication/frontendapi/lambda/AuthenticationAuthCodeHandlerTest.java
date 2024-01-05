@@ -80,20 +80,7 @@ class AuthenticationAuthCodeHandlerTest {
     }
 
     @Test
-    void shouldReturn500ErrorWhenAuthenticationAuthCodeHandlerIsDisabled()
-            throws Json.JsonException {
-        when(configurationService.isAuthOrchSplitEnabled()).thenReturn(false);
-        var event = validAuthCodeRequest();
-        event.setHeaders(getHeaders());
-
-        var result = handler.handleRequest(event, context);
-        assertThat(result, hasStatus(500));
-        assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1050)));
-    }
-
-    @Test
     void shouldReturn400ErrorWhenRedirectUriIsInvalid() throws Json.JsonException {
-        when(configurationService.isAuthOrchSplitEnabled()).thenReturn(true);
         var event = new APIGatewayProxyRequestEvent();
         event.setHeaders(getHeaders());
         event.setBody(
@@ -106,7 +93,6 @@ class AuthenticationAuthCodeHandlerTest {
 
     @Test
     void shouldReturn400ErrorWhenStateIsInvalid() throws Json.JsonException {
-        when(configurationService.isAuthOrchSplitEnabled()).thenReturn(true);
         var event = new APIGatewayProxyRequestEvent();
         event.setHeaders(getHeaders());
         event.setBody(
@@ -121,7 +107,6 @@ class AuthenticationAuthCodeHandlerTest {
 
     @Test
     void shouldReturn400ErrorClaimsListIsEmpty() throws Json.JsonException {
-        when(configurationService.isAuthOrchSplitEnabled()).thenReturn(true);
         var event = new APIGatewayProxyRequestEvent();
         event.setHeaders(getHeaders());
         event.setBody(
@@ -136,7 +121,6 @@ class AuthenticationAuthCodeHandlerTest {
 
     @Test
     void shouldReturn400ErrorWhenRPSectorUriIsInvalid() throws Json.JsonException {
-        when(configurationService.isAuthOrchSplitEnabled()).thenReturn(true);
         var event = new APIGatewayProxyRequestEvent();
         event.setHeaders(getHeaders());
         event.setBody(
@@ -155,7 +139,6 @@ class AuthenticationAuthCodeHandlerTest {
 
     @Test
     void shouldReturn400ErrorWhenUnableToFetchEmailFromUserProfile() throws Json.JsonException {
-        when(configurationService.isAuthOrchSplitEnabled()).thenReturn(true);
         when(authenticationService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
                 .thenReturn(Optional.empty());
         var event = validAuthCodeRequest();
@@ -167,7 +150,6 @@ class AuthenticationAuthCodeHandlerTest {
 
     @Test
     void shouldReturn200AndSaveNewAuthCodeRequest() throws URISyntaxException {
-        when(configurationService.isAuthOrchSplitEnabled()).thenReturn(true);
         when(configurationService.getAuthCodeExpiry()).thenReturn(Long.valueOf(12));
         var userProfile = new UserProfile();
         userProfile.setSubjectID(TEST_SUBJECT_ID);

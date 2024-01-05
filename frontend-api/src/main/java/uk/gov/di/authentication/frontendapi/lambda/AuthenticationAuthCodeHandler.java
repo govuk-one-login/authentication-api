@@ -73,36 +73,33 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
             AuthCodeRequest authCodeRequest,
             UserContext userContext) {
         attachLogFieldToLogs(AWS_REQUEST_ID, context.getAwsRequestId());
-        if (configurationService.isAuthOrchSplitEnabled()) {
-            try {
-                var userProfile = userContext.getUserProfile();
-                if (userProfile.isEmpty()) {
-                    LOG.info(
-                            "Error message: Email from session does not have a user profile required to extract Subject ID");
-                    return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1049);
-                }
-
-                var authorisationCode = new AuthorizationCode();
-                dynamoAuthCodeService.saveAuthCode(
-                        userProfile.get().getSubjectID(),
-                        authorisationCode.getValue(),
-                        authCodeRequest.getClaims(),
-                        false,
-                        authCodeRequest.getSectorIdentifier(),
-                        authCodeRequest.isNewAccount());
-
-                var state = State.parse(authCodeRequest.getState());
-                var redirectUri = URI.create(authCodeRequest.getRedirectUri());
-                var authorizationResponse =
-                        new AuthorizationSuccessResponse(
-                                redirectUri, authorisationCode, null, state, null);
-
-                return generateApiGatewayProxyResponse(
-                        200, new AuthCodeResponse(authorizationResponse.toURI().toString()));
-            } catch (JsonException ex) {
-                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+        try {
+            var userProfile = userContext.getUserProfile();
+            if (userProfile.isEmpty()) {
+                LOG.info(
+                        "Error message: Email from session does not have a user profile required to extract Subject ID");
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1049);
             }
+
+            var authorisationCode = new AuthorizationCode();
+            dynamoAuthCodeService.saveAuthCode(
+                    userProfile.get().getSubjectID(),
+                    authorisationCode.getValue(),
+                    authCodeRequest.getClaims(),
+                    false,
+                    authCodeRequest.getSectorIdentifier(),
+                    authCodeRequest.isNewAccount());
+
+            var state = State.parse(authCodeRequest.getState());
+            var redirectUri = URI.create(authCodeRequest.getRedirectUri());
+            var authorizationResponse =
+                    new AuthorizationSuccessResponse(
+                            redirectUri, authorisationCode, null, state, null);
+
+            return generateApiGatewayProxyResponse(
+                    200, new AuthCodeResponse(authorizationResponse.toURI().toString()));
+        } catch (JsonException ex) {
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
-        return generateApiGatewayProxyErrorResponse(500, ErrorResponse.ERROR_1050);
     }
 }
