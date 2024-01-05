@@ -60,6 +60,10 @@ public class VectorOfTrust {
         JSONParser parser = new JSONParser(DEFAULT_PERMISSIVE_MODE);
         JSONArray vtrJsonArray;
         try {
+            // The nimbus package parses the vtr from the auth request as a list with one element
+            // which is a json list
+            // The .get(0) below returns the json list - it doesn't just get the first element of
+            // the Vector of Trust
             vtrJsonArray = (JSONArray) parser.parse(vtr.get(0));
         } catch (net.minidev.json.parser.ParseException | ClassCastException e) {
             LOG.warn("Error when parsing vtr attribute", e);
