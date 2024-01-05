@@ -24,6 +24,7 @@ import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
+import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.AuditService;
@@ -53,6 +54,7 @@ import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
+import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
 
 public class AuthCodeHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -60,6 +62,7 @@ public class AuthCodeHandler
     private static final Logger LOG = LogManager.getLogger(AuthCodeHandler.class);
 
     private final SessionService sessionService;
+    private final AuthCodeResponseGenerationService authCodeResponseService;
     private final AuthorisationCodeService authorisationCodeService;
     private final OrchestrationAuthorizationService orchestrationAuthorizationService;
     private final ClientSessionService clientSessionService;
@@ -71,6 +74,7 @@ public class AuthCodeHandler
 
     public AuthCodeHandler(
             SessionService sessionService,
+            AuthCodeResponseGenerationService authCodeResponseService,
             AuthorisationCodeService authorisationCodeService,
             OrchestrationAuthorizationService orchestrationAuthorizationService,
             ClientSessionService clientSessionService,
@@ -80,6 +84,7 @@ public class AuthCodeHandler
             DynamoService dynamoService,
             DynamoClientService dynamoClientService) {
         this.sessionService = sessionService;
+        this.authCodeResponseService = authCodeResponseService;
         this.authorisationCodeService = authorisationCodeService;
         this.orchestrationAuthorizationService = orchestrationAuthorizationService;
         this.clientSessionService = clientSessionService;
@@ -101,6 +106,8 @@ public class AuthCodeHandler
         this.configurationService = configurationService;
         dynamoService = new DynamoService(configurationService);
         dynamoClientService = new DynamoClientService(configurationService);
+        authCodeResponseService =
+                new AuthCodeResponseGenerationService(configurationService, dynamoService);
     }
 
     public AuthCodeHandler() {
@@ -180,26 +187,61 @@ public class AuthCodeHandler
                     orchestrationAuthorizationService.isTestJourney(
                             clientID, session.getEmailAddress());
             var docAppJourney = isDocCheckingAppUserWithSubjectId(clientSession);
-
-            return new AuthCodeResponseGenerationService(
-                            auditService,
-                            cloudwatchMetricsService,
-                            configurationService,
-                            dynamoService,
-                            dynamoClientService)
-                    .generateAuthCodeResponse(
-                            input,
-                            isTestJourney,
-                            docAppJourney,
-                            authenticationRequest,
-                            authCode,
+            var dimensions =
+                    authCodeResponseService.getDimensions(
                             session,
-                            clientSessionId,
                             clientSession,
-                            sessionService,
-                            clientID,
-                            authenticationResponse,
-                            OidcAuditableEvent.AUTH_CODE_ISSUED);
+                            clientID.getValue(),
+                            isTestJourney,
+                            docAppJourney);
+
+            var subjectId = AuditService.UNKNOWN;
+            var rpPairwiseId = AuditService.UNKNOWN;
+            String internalCommonPairwiseSubjectId;
+            if (docAppJourney) {
+                LOG.info("Session not saved for DocCheckingAppUser");
+                internalCommonPairwiseSubjectId = clientSession.getDocAppSubjectId().getValue();
+            } else {
+                authCodeResponseService.processVectorOfTrust(clientSession, dimensions);
+                internalCommonPairwiseSubjectId = session.getInternalCommonSubjectIdentifier();
+                subjectId = authCodeResponseService.getSubjectId(session);
+                rpPairwiseId =
+                        authCodeResponseService.getRpPairwiseId(
+                                session, clientID, dynamoClientService);
+            }
+
+            auditService.submitAuditEvent(
+                    OidcAuditableEvent.AUTH_CODE_ISSUED,
+                    clientSessionId,
+                    session.getSessionId(),
+                    clientID.getValue(),
+                    internalCommonPairwiseSubjectId,
+                    Objects.isNull(session.getEmailAddress())
+                            ? AuditService.UNKNOWN
+                            : session.getEmailAddress(),
+                    IpAddressHelper.extractIpAddress(input),
+                    AuditService.UNKNOWN,
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()),
+                    pair("internalSubjectId", subjectId),
+                    pair("isNewAccount", session.isNewAccount()),
+                    pair("rpPairwiseId", rpPairwiseId),
+                    pair("nonce", authenticationRequest.getNonce()),
+                    pair("authCode", authCode));
+
+            cloudwatchMetricsService.incrementCounter("SignIn", dimensions);
+            cloudwatchMetricsService.incrementSignInByClient(
+                    session.isNewAccount(),
+                    clientID.getValue(),
+                    clientSession.getClientName(),
+                    isTestJourney);
+
+            authCodeResponseService.saveSession(docAppJourney, sessionService, session);
+
+            LOG.info("Generating successful auth code response");
+            return generateApiGatewayProxyResponse(
+                    200,
+                    new uk.gov.di.orchestration.entity.AuthCodeResponse(
+                            authenticationResponse.toURI().toString()));
         } catch (ClientNotFoundException e) {
             return processClientNotFoundException(authenticationRequest);
         } catch (UserNotFoundException e) {

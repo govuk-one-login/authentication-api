@@ -13,7 +13,8 @@ public enum IPVAuditableEvent implements AuditableEvent {
     IPV_SPOT_REQUESTED,
     PROCESSING_IDENTITY_REQUEST,
     IPV_SUCCESSFUL_SPOT_RESPONSE_RECEIVED,
-    IPV_UNSUCCESSFUL_SPOT_RESPONSE_RECEIVED;
+    IPV_UNSUCCESSFUL_SPOT_RESPONSE_RECEIVED,
+    AUTH_CODE_ISSUED;
 
     public AuditableEvent parseFromName(String name) {
         return valueOf(name);
