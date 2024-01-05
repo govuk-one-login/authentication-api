@@ -782,7 +782,7 @@ public class AuthorisationHandler
     }
 
     private String getReauthenticateClaim(AuthenticationRequest authenticationRequest) {
-        var isTokenSignatureValid =
+        boolean isTokenSignatureValid =
                 segmentedFunctionCall(
                         "isTokenSignatureValid",
                         () ->
