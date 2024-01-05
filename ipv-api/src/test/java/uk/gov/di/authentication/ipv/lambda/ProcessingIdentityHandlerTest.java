@@ -236,7 +236,6 @@ class ProcessingIdentityHandlerTest {
                                 ENVIRONMENT,
                                 "Status",
                                 ProcessingIdentityStatus.COMPLETED.toString()));
-        verify(accountInterventionService).doAccountIntervention(aisResult);
     }
 
     @Test

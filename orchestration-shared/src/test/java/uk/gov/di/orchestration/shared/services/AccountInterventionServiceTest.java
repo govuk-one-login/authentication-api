@@ -2,16 +2,10 @@ package uk.gov.di.orchestration.shared.services;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.shared.domain.AuditableEvent;
-import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
 import uk.gov.di.orchestration.shared.exceptions.AccountInterventionException;
-import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.io.IOException;
 import java.net.URI;
@@ -20,11 +14,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.Map;
-import java.util.stream.Stream;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.hasItem;
-import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -35,7 +25,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.domain.AccountInterventionsAuditableEvent.AIS_RESPONSE_RECEIVED;
-import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 class AccountInterventionServiceTest {
     private final ConfigurationService config = mock(ConfigurationService.class);
@@ -44,7 +33,7 @@ class AccountInterventionServiceTest {
             mock(CloudwatchMetricsService.class);
     private final AuditService auditService = mock(AuditService.class);
 
-    private static String ACCOUNT_INTERVENTION_SERVICE_RESPONSE_SUSPEND_REPROVE =
+    private static final String ACCOUNT_INTERVENTION_SERVICE_RESPONSE_SUSPEND_REPROVE =
             """
             {
                 "intervention": {
@@ -65,8 +54,8 @@ class AccountInterventionServiceTest {
             }
             """;
 
-    private static String BASE_AIS_URL = "http://example.com/somepath/";
-    private static AuditContext someAuditContext =
+    private static final String BASE_AIS_URL = "http://example.com/somepath/";
+    private static final AuditContext someAuditContext =
             new AuditContext(
                     "some-client-session-id",
                     "some-session-id",
@@ -76,35 +65,6 @@ class AccountInterventionServiceTest {
                     "some-ip-address",
                     "some-phone-number",
                     "some-persistent-session-id");
-
-    @RegisterExtension
-    private final CaptureLoggingExtension logging =
-            new CaptureLoggingExtension(AccountInterventionService.class);
-
-    private static Stream<Arguments> accountInterventionStatuses() {
-        return Stream.of(
-                Arguments.of(
-                        new AccountInterventionStatus(true, false, false, false),
-                        "Account is blocked"),
-                Arguments.of(
-                        new AccountInterventionStatus(false, true, false, false),
-                        "Account is suspended, requires a password reset, or requires identity to be reproved"),
-                Arguments.of(
-                        new AccountInterventionStatus(false, true, true, false),
-                        "Account is suspended, requires a password reset, or requires identity to be reproved"),
-                Arguments.of(
-                        new AccountInterventionStatus(false, true, false, true),
-                        "Account is suspended, requires a password reset, or requires identity to be reproved"),
-                Arguments.of(
-                        new AccountInterventionStatus(false, true, true, true),
-                        "Account is suspended, requires a password reset, or requires identity to be reproved"),
-                Arguments.of(
-                        new AccountInterventionStatus(false, false, true, false),
-                        "Account is suspended, requires a password reset, or requires identity to be reproved"),
-                Arguments.of(
-                        new AccountInterventionStatus(false, false, false, true),
-                        "Account is suspended, requires a password reset, or requires identity to be reproved"));
-    }
 
     @BeforeEach
     void setup() throws URISyntaxException {
@@ -177,10 +137,10 @@ class AccountInterventionServiceTest {
 
         verifyNoInteractions(httpClient);
 
-        assertEquals(false, status.blocked());
-        assertEquals(false, status.suspended());
-        assertEquals(false, status.reproveIdentity());
-        assertEquals(false, status.resetPassword());
+        assertFalse(status.blocked());
+        assertFalse(status.suspended());
+        assertFalse(status.reproveIdentity());
+        assertFalse(status.resetPassword());
     }
 
     @Test
@@ -198,9 +158,7 @@ class AccountInterventionServiceTest {
 
         assertThrows(
                 AccountInterventionException.class,
-                () -> {
-                    accountInterventionService.getAccountStatus(internalPairwiseSubjectId);
-                });
+                () -> accountInterventionService.getAccountStatus(internalPairwiseSubjectId));
     }
 
     @Test
@@ -263,33 +221,6 @@ class AccountInterventionServiceTest {
 
         assertThrows(
                 AccountInterventionException.class,
-                () -> {
-                    accountInterventionService.getAccountStatus(internalPairwiseSubjectId, null);
-                });
-    }
-
-    @Test
-    void shouldNotPerformInterventionIfAccountInterventionStatusIndicatesNoInterventionRequired() {
-        var accountInterventionStatus = new AccountInterventionStatus(false, false, false, false);
-        var accountInterventionService =
-                new AccountInterventionService(
-                        config, httpClient, cloudwatchMetricsService, auditService);
-
-        accountInterventionService.doAccountIntervention(accountInterventionStatus);
-
-        assertThat(logging.events(), hasSize(0));
-    }
-
-    @ParameterizedTest
-    @MethodSource("accountInterventionStatuses")
-    void shouldPerformInterventionIfAccountInterventionStatusIndicatesToDoSo(
-            AccountInterventionStatus accountInterventionStatus, String expectedLogMessage) {
-        var accountInterventionService =
-                new AccountInterventionService(
-                        config, httpClient, cloudwatchMetricsService, auditService);
-
-        accountInterventionService.doAccountIntervention(accountInterventionStatus);
-
-        assertThat(logging.events(), hasItem(withMessageContaining(expectedLogMessage)));
+                () -> accountInterventionService.getAccountStatus(internalPairwiseSubjectId, null));
     }
 }

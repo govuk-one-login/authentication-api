@@ -55,7 +55,6 @@ import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
-import uk.gov.di.orchestration.shared.helpers.SaltHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AwsSqsClient;
@@ -154,7 +153,7 @@ class IPVCallbackHandlerTest {
     private final UserProfile userProfile = generateUserProfile();
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
-                    SUBJECT.getValue(), "test.account.gov.uk", SaltHelper.generateNewSalt());
+                    SUBJECT.getValue(), "test.account.gov.uk", salt);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging =
@@ -251,6 +250,7 @@ class IPVCallbackHandlerTest {
         when(configService.isAccountInterventionServiceActionEnabled()).thenReturn(true);
         when(context.getAwsRequestId()).thenReturn(REQUEST_ID);
         when(cookieHelper.parseSessionCookie(anyMap())).thenCallRealMethod();
+        when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(salt);
         when(ipvCallbackHelper.getAccountInterventionStatus(any(), any()))
                 .thenReturn(new AccountInterventionStatus(false, false, false, false));
         when(ipvCallbackHelper.generateAuthenticationErrorResponse(

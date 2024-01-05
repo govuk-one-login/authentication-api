@@ -67,10 +67,6 @@ public class IPVCallbackHelper {
     private final SessionService sessionService;
     private final AwsSqsClient sqsClient;
 
-    private IPVCallbackHelper() {
-        this(ConfigurationService.getInstance());
-    }
-
     public IPVCallbackHelper(ConfigurationService configurationService) {
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
@@ -174,11 +170,17 @@ public class IPVCallbackHelper {
     }
 
     public void doAccountIntervention(AccountInterventionStatus accountInterventionStatus) {
-        segmentedFunctionCall(
-                "AIS: getAccountStatus",
-                () ->
-                        this.accountInterventionService.doAccountIntervention(
-                                accountInterventionStatus));
+        if (accountInterventionStatus.blocked()) {
+            LOG.info("Account is blocked");
+            // TODO: (ATO-171) back channel logout + (ATO-170) redirect to blocked page
+        } else if (accountInterventionStatus.suspended()
+                || accountInterventionStatus.resetPassword()
+                || accountInterventionStatus.reproveIdentity()) {
+            LOG.info(
+                    "Account is suspended, requires a password reset, or requires identity to be reproved");
+            // TODO: (ATO-171) back channel logout + (ATO-170) redirect to suspended
+            // page
+        }
     }
 
     public Optional<ErrorObject> validateUserIdentityResponse(UserInfo userIdentityUserInfo)

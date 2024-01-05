@@ -172,7 +172,17 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                                         internalPairwiseSubjectId, auditContext));
 
         if (configurationService.isAccountInterventionServiceActionEnabled()) {
-            accountInterventionService.doAccountIntervention(aisResult);
+            if (aisResult.blocked()) {
+                LOG.info("Account is blocked");
+                // TODO: (ATO-171) back channel logout + (ATO-170) redirect to blocked page
+            } else if (aisResult.suspended()
+                    || aisResult.resetPassword()
+                    || aisResult.reproveIdentity()) {
+                LOG.info(
+                        "Account is suspended, requires a password reset, or requires identity to be reproved");
+                // TODO: (ATO-171) back channel logout + (ATO-170) redirect to suspended
+                // page
+            }
         }
     }
 }

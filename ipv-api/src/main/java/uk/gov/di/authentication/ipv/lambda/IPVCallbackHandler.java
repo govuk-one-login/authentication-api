@@ -205,14 +205,11 @@ public class IPVCallbackHandler
                                             new IpvCallbackException(
                                                     "Email from session does not have a user profile"));
             var rpPairwiseSubject =
-                    segmentedFunctionCall(
-                            "calculatePairwiseSubject",
-                            () ->
-                                    ClientSubjectHelper.getSubject(
-                                            userProfile,
-                                            clientRegistry,
-                                            dynamoService,
-                                            configurationService.getInternalSectorUri()));
+                    ClientSubjectHelper.getSubject(
+                            userProfile,
+                            clientRegistry,
+                            dynamoService,
+                            configurationService.getInternalSectorUri());
 
             var internalPairwiseSubjectId =
                     ClientSubjectHelper.calculatePairwiseIdentifier(
@@ -226,7 +223,7 @@ public class IPVCallbackHandler
                             clientSessionId,
                             session.getSessionId(),
                             clientId,
-                            session.getInternalCommonSubjectIdentifier(),
+                            internalPairwiseSubjectId,
                             session.getEmailAddress(),
                             ipAddress,
                             Objects.isNull(userProfile.getPhoneNumber())
@@ -255,7 +252,7 @@ public class IPVCallbackHandler
                     clientSessionId,
                     session.getSessionId(),
                     clientId,
-                    session.getInternalCommonSubjectIdentifier(),
+                    internalPairwiseSubjectId,
                     userProfile.getEmail(),
                     AuditService.UNKNOWN,
                     userProfile.getPhoneNumber(),
@@ -280,7 +277,7 @@ public class IPVCallbackHandler
                         clientSessionId,
                         session.getSessionId(),
                         clientId,
-                        session.getInternalCommonSubjectIdentifier(),
+                        internalPairwiseSubjectId,
                         userProfile.getEmail(),
                         AuditService.UNKNOWN,
                         userProfile.getPhoneNumber(),
@@ -292,7 +289,7 @@ public class IPVCallbackHandler
                     clientSessionId,
                     session.getSessionId(),
                     clientId,
-                    session.getInternalCommonSubjectIdentifier(),
+                    internalPairwiseSubjectId,
                     userProfile.getEmail(),
                     AuditService.UNKNOWN,
                     userProfile.getPhoneNumber(),
@@ -314,7 +311,7 @@ public class IPVCallbackHandler
                     clientSessionId,
                     session.getSessionId(),
                     clientId,
-                    session.getInternalCommonSubjectIdentifier(),
+                    internalPairwiseSubjectId,
                     userProfile.getEmail(),
                     AuditService.UNKNOWN,
                     userProfile.getPhoneNumber(),
@@ -330,22 +327,9 @@ public class IPVCallbackHandler
                 }
 
                 var returnCode = userIdentityUserInfo.getClaim(RETURN_CODE.getValue());
-                if (returnCode instanceof List<?> returnCodeList && !returnCodeList.isEmpty()) {
-                    if (!isReturnCodePresentAndRequested(clientRegistry, authRequest)) {
-                        LOG.warn("SPOT will not be invoked. Returning Error to RP");
-                        var errorResponse =
-                                new AuthenticationErrorResponse(
-                                        authRequest.getRedirectionURI(),
-                                        OAuth2Error.ACCESS_DENIED,
-                                        authRequest.getState(),
-                                        authRequest.getResponseMode());
-                        return generateApiGatewayProxyResponse(
-                                302,
-                                "",
-                                Map.of(ResponseHeaders.LOCATION, errorResponse.toURI().toString()),
-                                null);
-                    } else {
-                        LOG.info("Generating auth code response");
+                if (returnCodePresentInIPVResponse(returnCode)) {
+                    if (rpRequestedReturnCode(clientRegistry, authRequest)) {
+                        LOG.info("Generating auth code response for return code(s)");
                         var authenticationResponse =
                                 ipvCallbackHelper.generateReturnCodeAuthenticationResponse(
                                         authRequest,
@@ -364,6 +348,19 @@ public class IPVCallbackHandler
                                 Map.of(
                                         ResponseHeaders.LOCATION,
                                         authenticationResponse.toURI().toString()),
+                                null);
+                    } else {
+                        LOG.warn("SPOT will not be invoked. Returning Error to RP");
+                        var errorResponse =
+                                new AuthenticationErrorResponse(
+                                        authRequest.getRedirectionURI(),
+                                        OAuth2Error.ACCESS_DENIED,
+                                        authRequest.getState(),
+                                        authRequest.getResponseMode());
+                        return generateApiGatewayProxyResponse(
+                                302,
+                                "",
+                                Map.of(ResponseHeaders.LOCATION, errorResponse.toURI().toString()),
                                 null);
                     }
                 }
@@ -404,7 +401,7 @@ public class IPVCallbackHandler
                     clientSessionId,
                     session.getSessionId(),
                     clientId,
-                    session.getInternalCommonSubjectIdentifier(),
+                    internalPairwiseSubjectId,
                     userProfile.getEmail(),
                     AuditService.UNKNOWN,
                     userProfile.getPhoneNumber(),
@@ -433,8 +430,13 @@ public class IPVCallbackHandler
             LOG.error("Unable to serialize SPOTRequest when placing on queue");
             return redirectToFrontendErrorPage();
         } catch (UserNotFoundException e) {
+            LOG.error(e.getMessage());
             throw new RuntimeException(e);
         }
+    }
+
+    private static boolean returnCodePresentInIPVResponse(Object returnCode) {
+        return returnCode instanceof List<?> returnCodeList && !returnCodeList.isEmpty();
     }
 
     private APIGatewayProxyResponseEvent redirectToFrontendErrorPage() {
@@ -455,7 +457,7 @@ public class IPVCallbackHandler
                 null);
     }
 
-    private boolean isReturnCodePresentAndRequested(
+    private boolean rpRequestedReturnCode(
             ClientRegistry clientRegistry, AuthenticationRequest authRequest) {
         return clientRegistry.getClaims().contains(RETURN_CODE.getValue())
                 && authRequest
