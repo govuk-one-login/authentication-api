@@ -18,6 +18,7 @@ import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.oauth2.sdk.token.Tokens;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
@@ -38,6 +39,7 @@ import uk.gov.di.authentication.ipv.entity.IpvCallbackException;
 import uk.gov.di.authentication.ipv.helpers.IPVCallbackHelper;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.ipv.services.IPVTokenService;
+import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
@@ -77,7 +79,6 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
-import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -142,15 +143,14 @@ class IPVCallbackHandlerTest {
     private IPVCallbackHandler handler;
     private final byte[] salt = "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw=".getBytes();
     private final String redirectUriErrorMessage = "redirect_uri param must be provided";
-    private final String accessDeniedURI =
+    private final URI accessDeniedURI =
             new AuthenticationErrorResponse(
                             URI.create(REDIRECT_URI.toString()),
                             OAuth2Error.ACCESS_DENIED,
                             RP_STATE,
                             null)
-                    .toURI()
-                    .toString();
-    private final ClientRegistry clientRegistry = generateClientRegistry();
+                    .toURI();
+    private final ClientRegistry clientRegistry = generateClientRegistryNoClaims();
     private final UserProfile userProfile = generateUserProfile();
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
@@ -196,9 +196,10 @@ class IPVCallbackHandlerTest {
         var oidcValidClaimsRequestWithoutReturnCode =
                 new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
 
-        claimsSetRequest.add(ValidClaims.RETURN_CODE.getValue());
         var oidcValidClaimsRequestWithReturnCode =
-                new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
+                new OIDCClaimsRequest()
+                        .withUserInfoClaimsRequest(
+                                claimsSetRequest.add(ValidClaims.RETURN_CODE.getValue()));
 
         var expectedURI =
                 new AuthenticationErrorResponse(
@@ -206,38 +207,25 @@ class IPVCallbackHandlerTest {
                                 OAuth2Error.ACCESS_DENIED,
                                 RP_STATE,
                                 null)
-                        .toURI()
-                        .toString();
+                        .toURI();
 
         return Stream.of(
                 Arguments.of(
-                        generateClientRegistry().withClaims(emptyList()),
+                        generateClientRegistryNoClaims(),
                         oidcValidClaimsRequestWithoutReturnCode,
                         expectedURI),
                 Arguments.of(
-                        generateClientRegistry()
-                                .withClaims(
-                                        List.of("https://vocab.account.gov.uk/v1/coreIdentityJWT")),
-                        oidcValidClaimsRequestWithoutReturnCode,
-                        expectedURI),
-                Arguments.of(
-                        generateClientRegistry()
-                                .withClaims(
-                                        List.of(
-                                                "https://vocab.account.gov.uk/v1/coreIdentityJWT",
-                                                "https://vocab.account.gov.uk/v1/returnCode")),
-                        oidcValidClaimsRequestWithoutReturnCode,
-                        expectedURI),
-                Arguments.of(
-                        generateClientRegistry().withClaims(emptyList()),
+                        generateClientRegistryNoClaims(),
                         oidcValidClaimsRequestWithReturnCode,
                         expectedURI),
                 Arguments.of(
-                        generateClientRegistry()
-                                .withClaims(
-                                        List.of("https://vocab.account.gov.uk/v1/coreIdentityJWT")),
+                        generateClientWithReturnCodes(),
+                        oidcValidClaimsRequestWithoutReturnCode,
+                        expectedURI),
+                Arguments.of(
+                        generateClientWithReturnCodes(),
                         oidcValidClaimsRequestWithReturnCode,
-                        expectedURI));
+                        REDIRECT_URI));
     }
 
     @BeforeEach
@@ -263,13 +251,16 @@ class IPVCallbackHandlerTest {
         when(configService.isAccountInterventionServiceActionEnabled()).thenReturn(true);
         when(context.getAwsRequestId()).thenReturn(REQUEST_ID);
         when(cookieHelper.parseSessionCookie(anyMap())).thenCallRealMethod();
-        when(ipvCallbackHelper.getAccountInterventionStatus(any()))
+        when(ipvCallbackHelper.getAccountInterventionStatus(any(), any()))
                 .thenReturn(new AccountInterventionStatus(false, false, false, false));
         when(ipvCallbackHelper.generateAuthenticationErrorResponse(
                         any(), any(), anyBoolean(), anyString(), anyString()))
                 .thenReturn(
                         generateApiGatewayProxyResponse(
-                                302, "", Map.of(ResponseHeaders.LOCATION, accessDeniedURI), null));
+                                302,
+                                "",
+                                Map.of(ResponseHeaders.LOCATION, accessDeniedURI.toString()),
+                                null));
     }
 
     @Test
@@ -321,13 +312,15 @@ class IPVCallbackHandlerTest {
                 ClientSubjectHelper.getSubjectWithSectorIdentifier(
                                 userProfile, configService.getInternalSectorUri(), dynamoService)
                         .getValue();
-        verify(ipvCallbackHelper).getAccountInterventionStatus(expectedInternalPairwiseSubjectId);
+        verify(ipvCallbackHelper)
+                .getAccountInterventionStatus(
+                        eq(expectedInternalPairwiseSubjectId), any(AuditContext.class));
     }
 
     @ParameterizedTest
     @MethodSource("returnCodeClaims")
     void shouldReturnAccessDeniedToRPIfReturnCodePresentButNotPermittedAndRequested(
-            ClientRegistry clientRegistry, OIDCClaimsRequest claimsRequest, String expectedURI)
+            ClientRegistry clientRegistry, OIDCClaimsRequest claimsRequest, URI expectedURI)
             throws UnsuccessfulCredentialResponseException,
                     IpvCallbackException,
                     UserNotFoundException {
@@ -346,12 +339,11 @@ class IPVCallbackHandlerTest {
                                         List.of(Map.of("code", "A")))));
         when(ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo))
                 .thenReturn(Optional.of(OAuth2Error.ACCESS_DENIED));
-        when(ipvCallbackHelper.processReturnCode(
-                        any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
-                        any()))
+        when(ipvCallbackHelper.generateReturnCodeAuthenticationResponse(
+                        any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(
-                        generateApiGatewayProxyResponse(
-                                302, "", Map.of(ResponseHeaders.LOCATION, accessDeniedURI), null));
+                        new AuthenticationSuccessResponse(
+                                REDIRECT_URI, null, null, null, null, null, null));
         var clientSession =
                 new ClientSession(
                         generateAuthRequest(claimsRequest).toParameters(), null, null, CLIENT_NAME);
@@ -363,7 +355,7 @@ class IPVCallbackHandlerTest {
                         getApiGatewayProxyRequestEvent(userIdentityUserInfo, clientRegistry));
 
         assertThat(response, hasStatus(302));
-        assertEquals(expectedURI, response.getHeaders().get(ResponseHeaders.LOCATION));
+        assertEquals(expectedURI.toString(), response.getHeaders().get(ResponseHeaders.LOCATION));
     }
 
     @Test
@@ -390,7 +382,7 @@ class IPVCallbackHandlerTest {
                                         ValidClaims.RETURN_CODE.getValue(),
                                         List.of(Map.of("code", "Z")))));
         var clientRegistry =
-                generateClientRegistry()
+                generateClientRegistryNoClaims()
                         .withClaims(
                                 List.of(
                                         "https://vocab.account.gov.uk/v1/coreIdentityJWT",
@@ -407,23 +399,21 @@ class IPVCallbackHandlerTest {
                 new ClientSession(
                         generateAuthRequest(claimsRequest).toParameters(), null, null, CLIENT_NAME);
 
+        when(responseService.validateResponse(anyMap(), anyString())).thenReturn(Optional.empty());
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(clientSession));
         when(ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo))
                 .thenReturn(Optional.of(OAuth2Error.ACCESS_DENIED));
-        when(ipvCallbackHelper.processReturnCode(
-                        any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
-                        any()))
+        when(ipvCallbackHelper.generateReturnCodeAuthenticationResponse(
+                        any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(
-                        generateApiGatewayProxyResponse(
-                                302,
-                                "",
-                                Map.of(
-                                        ResponseHeaders.LOCATION,
-                                        new URIBuilder(LOGIN_URL)
-                                                .setPath("ipv-callback")
-                                                .build()
-                                                .toString()),
+                        new AuthenticationSuccessResponse(
+                                new URIBuilder(LOGIN_URL).setPath("ipv-callback").build(),
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
                                 null));
 
         var response =
@@ -433,11 +423,6 @@ class IPVCallbackHandlerTest {
         var expectedURI = new URIBuilder(LOGIN_URL).setPath("ipv-callback").build().toString();
         assertThat(response, hasStatus(302));
         assertEquals(expectedURI, response.getHeaders().get(ResponseHeaders.LOCATION));
-        assertThat(
-                logging.events(),
-                hasItem(
-                        withMessageContaining(
-                                "SPOT will not be invoked. Returning authCode to RP")));
     }
 
     @Test
@@ -452,7 +437,6 @@ class IPVCallbackHandlerTest {
                                         "sub", "sub-val",
                                         "vot", "P0",
                                         "vtm", OIDC_BASE_URL + "/trustmark")));
-
         when(ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo))
                 .thenReturn(Optional.of(OAuth2Error.ACCESS_DENIED));
 
@@ -587,7 +571,7 @@ class IPVCallbackHandlerTest {
         responseHeaders.put("code", AUTH_CODE.getValue());
         responseHeaders.put("state", STATE.getValue());
         when(dynamoClientService.getClient(CLIENT_ID.getValue()))
-                .thenReturn(Optional.of(generateClientRegistry()));
+                .thenReturn(Optional.of(generateClientRegistryNoClaims()));
         when(responseService.validateResponse(responseHeaders, SESSION_ID))
                 .thenReturn(Optional.empty());
         when(dynamoService.getUserProfileFromEmail(TEST_EMAIL_ADDRESS))
@@ -645,7 +629,7 @@ class IPVCallbackHandlerTest {
         responseHeaders.put("state", STATE.getValue());
         responseHeaders.put("error", errorObject.toString());
         when(dynamoClientService.getClient(CLIENT_ID.getValue()))
-                .thenReturn(Optional.of(generateClientRegistry()));
+                .thenReturn(Optional.of(generateClientRegistryNoClaims()));
         when(responseService.validateResponse(responseHeaders, SESSION_ID))
                 .thenReturn(
                         Optional.of(
@@ -666,8 +650,11 @@ class IPVCallbackHandlerTest {
                         .getValue();
 
         assertThat(response, hasStatus(302));
-        assertEquals(accessDeniedURI, response.getHeaders().get(ResponseHeaders.LOCATION));
-        verify(ipvCallbackHelper).getAccountInterventionStatus(expectedInternalPairwiseSubjectId);
+        assertEquals(
+                accessDeniedURI.toString(), response.getHeaders().get(ResponseHeaders.LOCATION));
+        verify(ipvCallbackHelper)
+                .getAccountInterventionStatus(
+                        eq(expectedInternalPairwiseSubjectId), any(AuditContext.class));
 
         verifyNoInteractions(ipvTokenService);
         verifyNoInteractions(dynamoIdentityService);
@@ -683,7 +670,7 @@ class IPVCallbackHandlerTest {
         responseHeaders.put("state", STATE.getValue());
         responseHeaders.put("error", errorObject.toString());
         when(dynamoClientService.getClient(CLIENT_ID.getValue()))
-                .thenReturn(Optional.of(generateClientRegistry()));
+                .thenReturn(Optional.of(generateClientRegistryNoClaims()));
         when(responseService.validateResponse(responseHeaders, SESSION_ID))
                 .thenReturn(
                         Optional.of(
@@ -699,7 +686,8 @@ class IPVCallbackHandlerTest {
         var response = handler.handleRequest(event, context);
 
         assertThat(response, hasStatus(302));
-        assertEquals(accessDeniedURI, response.getHeaders().get(ResponseHeaders.LOCATION));
+        assertEquals(
+                accessDeniedURI.toString(), response.getHeaders().get(ResponseHeaders.LOCATION));
         verify(ipvCallbackHelper)
                 .generateAuthenticationErrorResponse(
                         any(), any(), anyBoolean(), anyString(), anyString());
@@ -748,7 +736,7 @@ class IPVCallbackHandlerTest {
     void shouldRedirectToFrontendErrorPageWhenTokenResponseIsNotSuccessful()
             throws URISyntaxException {
         var salt = "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw=".getBytes();
-        var clientRegistry = generateClientRegistry();
+        var clientRegistry = generateClientRegistryNoClaims();
         var userProfile = generateUserProfile();
         usingValidSession();
         usingValidClientSession();
@@ -915,7 +903,7 @@ class IPVCallbackHandlerTest {
                 .withSubjectID(SUBJECT.getValue());
     }
 
-    private static ClientRegistry generateClientRegistry() {
+    private static ClientRegistry generateClientRegistryNoClaims() {
         return new ClientRegistry()
                 .withClientID(CLIENT_ID.getValue())
                 .withConsentRequired(false)
@@ -923,6 +911,17 @@ class IPVCallbackHandlerTest {
                 .withRedirectUrls(singletonList(REDIRECT_URI.toString()))
                 .withSectorIdentifierUri("https://test.com")
                 .withSubjectType("pairwise");
+    }
+
+    private static ClientRegistry generateClientWithReturnCodes() {
+        return new ClientRegistry()
+                .withClientID(CLIENT_ID.getValue())
+                .withConsentRequired(false)
+                .withClientName("test-client")
+                .withRedirectUrls(singletonList(REDIRECT_URI.toString()))
+                .withSectorIdentifierUri("https://test.com")
+                .withSubjectType("pairwise")
+                .withClaims(List.of("https://vocab.account.gov.uk/v1/returnCode"));
     }
 
     public static AuthenticationRequest generateAuthRequest(OIDCClaimsRequest oidcClaimsRequest) {

@@ -19,7 +19,7 @@ import static uk.gov.di.orchestration.shared.domain.AccountInterventionsAuditabl
 
 public class AccountInterventionService {
 
-    private static final Logger LOGGER = LogManager.getLogger(AccountInterventionService.class);
+    private static final Logger LOG = LogManager.getLogger(AccountInterventionService.class);
     private final HttpClient httpClient;
     private final URI accountInterventionServiceURI;
     private final AuditService auditService;
@@ -97,7 +97,7 @@ public class AccountInterventionService {
             throw new AccountInterventionException(
                     "Problem communicating with Account Intervention Service", e);
         }
-        LOGGER.warn("Problem communicating with Account Intervention Service " + e);
+        LOG.warn("Problem communicating with Account Intervention Service " + e);
         return noInterventionResponse();
     }
 
@@ -123,6 +123,20 @@ public class AccountInterventionService {
         incrementCloudwatchMetrics(accountInterventionStatus);
 
         return accountInterventionStatus;
+    }
+
+    public void doAccountIntervention(AccountInterventionStatus accountInterventionStatus) {
+        if (accountInterventionStatus.blocked()) {
+            LOG.info("Account is blocked");
+            // TODO: (ATO-171) back channel logout + (ATO-170) redirect to blocked page
+        } else if (accountInterventionStatus.suspended()
+                || accountInterventionStatus.resetPassword()
+                || accountInterventionStatus.reproveIdentity()) {
+            LOG.info(
+                    "Account is suspended, requires a password reset, or requires identity to be reproved");
+            // TODO: (ATO-171) back channel logout + (ATO-170) redirect to suspended
+            // page
+        }
     }
 
     private void incrementCloudwatchMetrics(AccountInterventionStatus accountInterventionStatus) {

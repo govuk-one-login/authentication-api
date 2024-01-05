@@ -10,9 +10,6 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityResponse;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityStatus;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
@@ -36,8 +33,6 @@ import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -47,12 +42,10 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
@@ -101,32 +94,6 @@ class ProcessingIdentityHandlerTest {
     private final APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
     protected final Json objectMapper = SerializationService.getInstance();
     private ProcessingIdentityHandler handler;
-
-    private static Stream<Arguments> aisResults() {
-        return Stream.of(
-                Arguments.of(new AccountInterventionStatus(false, false, false, false), ""),
-                Arguments.of(
-                        new AccountInterventionStatus(true, false, false, false),
-                        "Account is blocked"),
-                Arguments.of(
-                        new AccountInterventionStatus(false, true, false, false),
-                        "Account is suspended, requires a password reset, or requires identity to be reproved"),
-                Arguments.of(
-                        new AccountInterventionStatus(false, true, true, false),
-                        "Account is suspended, requires a password reset, or requires identity to be reproved"),
-                Arguments.of(
-                        new AccountInterventionStatus(false, true, false, true),
-                        "Account is suspended, requires a password reset, or requires identity to be reproved"),
-                Arguments.of(
-                        new AccountInterventionStatus(false, true, true, true),
-                        "Account is suspended, requires a password reset, or requires identity to be reproved"),
-                Arguments.of(
-                        new AccountInterventionStatus(false, false, true, false),
-                        "Account is suspended, requires a password reset, or requires identity to be reproved"),
-                Arguments.of(
-                        new AccountInterventionStatus(false, false, false, true),
-                        "Account is suspended, requires a password reset, or requires identity to be reproved"));
-    }
 
     @BeforeEach
     void setup() {
@@ -234,19 +201,16 @@ class ProcessingIdentityHandlerTest {
                                 ProcessingIdentityStatus.COMPLETED.toString()));
     }
 
-    @ParameterizedTest
-    @MethodSource("aisResults")
-    void shouldInterveneIfAccountInterventionServiceAuditIsEnabledAndProcessingStatusIsCOMPLETED(
-            AccountInterventionStatus aisResult, String expectedLogMessage)
+    @Test
+    void shouldInterveneIfAccountInterventionServiceAuditIsEnabledAndProcessingStatusIsCOMPLETED()
             throws Json.JsonException {
         usingValidSession();
-        var outputStreamCaptor = new ByteArrayOutputStream();
-        System.setOut(new PrintStream(outputStreamCaptor));
         var identityCredentials =
                 new IdentityCredentials()
                         .withSubjectID(PAIRWISE_SUBJECT.getValue())
                         .withAdditionalClaims(Collections.emptyMap())
                         .withCoreIdentityJWT("a-core-identity");
+        var aisResult = new AccountInterventionStatus(false, false, false, false);
         when(dynamoIdentityService.getIdentityCredentials(anyString()))
                 .thenReturn(Optional.of(identityCredentials));
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
@@ -272,10 +236,7 @@ class ProcessingIdentityHandlerTest {
                                 ENVIRONMENT,
                                 "Status",
                                 ProcessingIdentityStatus.COMPLETED.toString()));
-
-        assertThat(outputStreamCaptor.toString(), containsString(expectedLogMessage));
-
-        System.setOut(System.out);
+        verify(accountInterventionService).doAccountIntervention(aisResult);
     }
 
     @Test

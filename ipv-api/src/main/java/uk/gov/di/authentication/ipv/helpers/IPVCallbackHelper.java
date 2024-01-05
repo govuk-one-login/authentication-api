@@ -15,8 +15,8 @@ import uk.gov.di.authentication.ipv.entity.IpvCallbackException;
 import uk.gov.di.authentication.ipv.entity.LogIds;
 import uk.gov.di.authentication.ipv.entity.SPOTClaims;
 import uk.gov.di.authentication.ipv.entity.SPOTRequest;
+import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
-import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.IdentityClaims;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
@@ -47,7 +47,6 @@ import java.util.Optional;
 
 import static uk.gov.di.orchestration.shared.entity.IdentityClaims.VOT;
 import static uk.gov.di.orchestration.shared.entity.IdentityClaims.VTM;
-import static uk.gov.di.orchestration.shared.entity.ValidClaims.RETURN_CODE;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -153,13 +152,13 @@ public class IPVCallbackHelper {
     }
 
     public AccountInterventionStatus getAccountInterventionStatus(
-            String internalPairwiseSubjectId) {
+            String internalPairwiseSubjectId, AuditContext auditContext) {
         var accountInterventionStatus =
                 segmentedFunctionCall(
                         "AIS: getAccountStatus",
                         () ->
                                 this.accountInterventionService.getAccountStatus(
-                                        internalPairwiseSubjectId));
+                                        internalPairwiseSubjectId, auditContext));
         cloudwatchMetricsService.incrementCounter(
                 "AISResult",
                 Map.of(
@@ -172,6 +171,14 @@ public class IPVCallbackHelper {
                         "reproveIdentity",
                         String.valueOf(accountInterventionStatus.reproveIdentity())));
         return accountInterventionStatus;
+    }
+
+    public void doAccountIntervention(AccountInterventionStatus accountInterventionStatus) {
+        segmentedFunctionCall(
+                "AIS: getAccountStatus",
+                () ->
+                        this.accountInterventionService.doAccountIntervention(
+                                accountInterventionStatus));
     }
 
     public Optional<ErrorObject> validateUserIdentityResponse(UserInfo userIdentityUserInfo)
@@ -194,8 +201,7 @@ public class IPVCallbackHelper {
         return Optional.empty();
     }
 
-    public APIGatewayProxyResponseEvent processReturnCode(
-            ClientRegistry clientRegistry,
+    public AuthenticationSuccessResponse generateReturnCodeAuthenticationResponse(
             AuthenticationRequest authRequest,
             String clientSessionId,
             UserProfile userProfile,
@@ -207,26 +213,6 @@ public class IPVCallbackHelper {
             String ipAddress,
             String persistentSessionId)
             throws UserNotFoundException {
-        if (!clientRegistry.getClaims().contains(RETURN_CODE.getValue())
-                || authRequest
-                                .getOIDCClaims()
-                                .getUserInfoClaimsRequest()
-                                .get(RETURN_CODE.getValue())
-                        == null) {
-            LOG.warn("SPOT will not be invoked. Returning Error to RP");
-            var errorResponse =
-                    new AuthenticationErrorResponse(
-                            authRequest.getRedirectionURI(),
-                            OAuth2Error.ACCESS_DENIED,
-                            authRequest.getState(),
-                            authRequest.getResponseMode());
-            return generateApiGatewayProxyResponse(
-                    302,
-                    "",
-                    Map.of(ResponseHeaders.LOCATION, errorResponse.toURI().toString()),
-                    null);
-        }
-
         LOG.warn("SPOT will not be invoked due to returnCode. Returning authCode to RP");
         segmentedFunctionCall(
                 "saveIdentityClaims",
@@ -234,7 +220,6 @@ public class IPVCallbackHelper {
         var authCode =
                 authorisationCodeService.generateAndSaveAuthorisationCode(
                         clientSessionId, userProfile.getEmail(), clientSession);
-
         var authenticationResponse =
                 new AuthenticationSuccessResponse(
                         authRequest.getRedirectionURI(),
@@ -281,12 +266,7 @@ public class IPVCallbackHelper {
 
         authCodeResponseService.saveSession(false, sessionService, session);
 
-        LOG.info("Generating auth code response");
-        return generateApiGatewayProxyResponse(
-                302,
-                "",
-                Map.of(ResponseHeaders.LOCATION, authenticationResponse.toURI().toString()),
-                null);
+        return authenticationResponse;
     }
 
     public void queueSPOTRequest(

@@ -1,6 +1,5 @@
 package uk.gov.di.authentication.ipv.helpers;
 
-import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
@@ -11,11 +10,9 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
-import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import net.minidev.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,16 +24,12 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.entity.IpvCallbackException;
 import uk.gov.di.authentication.ipv.entity.LogIds;
+import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
-import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
-import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
-import uk.gov.di.orchestration.shared.entity.ValidClaims;
-import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.SaltHelper;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.AccountInterventionService;
@@ -54,29 +47,26 @@ import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Named.named;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
 class IPVCallbackHelperTest {
     private final AccountInterventionService accountInterventionService =
             mock(AccountInterventionService.class);
+    private final AuditContext auditContext = mock(AuditContext.class);
     private final AuditService auditService = mock(AuditService.class);
     private final AuthCodeResponseGenerationService authCodeResponseService =
             mock(AuthCodeResponseGenerationService.class);
@@ -97,25 +87,17 @@ class IPVCallbackHelperTest {
     private static final URI REDIRECT_URI = URI.create("test-uri");
     private static final String SESSION_ID = "a-session-id";
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
-    private static final String ARBITRARY_UNIX_TIMESTAMP = "1700558480962";
-    private static final String IP_ADDRESS = "123.123.123.123";
-    private static final String PERSISTENT_SESSION_ID =
-            IdGenerator.generate() + "--" + ARBITRARY_UNIX_TIMESTAMP;
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
     private static final Subject PUBLIC_SUBJECT =
             new Subject("TsEVC7vg0NPAmzB33vRUFztL2c0-fecKWKcc73fuDhc");
     private static final Subject SUBJECT = new Subject("subject-id");
     private static final ClientID CLIENT_ID = new ClientID();
-    private static final String CLIENT_NAME = "client-name";
     private static final String INTERNAL_PAIRWISE_ID = "internal-pairwise-id";
     private static final String INTERNAL_PAIRWISE_ID_WITH_INTERVENTION =
             "internal-pairwise-id-with-intervention";
     private static final Subject RP_PAIRWISE_SUBJECT = new Subject("rp-pairwise-id");
     private static final State RP_STATE = new State();
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
-    private static final ClientRegistry clientWithReturnCodes = generateClientWithReturnCodes();
-    private static final ClientRegistry clientWithoutReturnCodes =
-            generateClientWithoutReturnCodes();
     private static final UserProfile userProfile = generateUserProfile();
 
     private final UserInfo validUserIdentityUserInfo =
@@ -134,18 +116,6 @@ class IPVCallbackHelperTest {
     @RegisterExtension
     private final CaptureLoggingExtension logging =
             new CaptureLoggingExtension(IPVCallbackHelper.class);
-
-    private final Session session =
-            new Session(SESSION_ID)
-                    .setEmailAddress(TEST_EMAIL_ADDRESS)
-                    .setInternalCommonSubjectIdentifier(expectedCommonSubject);
-
-    private static final ClientSession clientSession =
-            new ClientSession(
-                    generateAuthRequest(new OIDCClaimsRequest()).toParameters(),
-                    null,
-                    null,
-                    CLIENT_NAME);
 
     private IPVCallbackHelper helper;
 
@@ -177,76 +147,6 @@ class IPVCallbackHelperTest {
                         new AccountInterventionStatus(false, true, false, false)));
     }
 
-    private static Stream<Arguments> returnCodeClaims() {
-        var successfulLogMessage =
-                "SPOT will not be invoked due to returnCode. Returning authCode to RP";
-        var errorLogMessage = "SPOT will not be invoked. Returning Error to RP";
-
-        var claimsSetRequest =
-                new ClaimsSetRequest()
-                        .add(ValidClaims.ADDRESS.getValue())
-                        .add(ValidClaims.PASSPORT.getValue())
-                        .add(ValidClaims.CORE_IDENTITY_JWT.getValue());
-        var authRequestWithoutReturnCode =
-                generateAuthRequest(
-                        new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest));
-
-        var authRequestWithReturnCode =
-                generateAuthRequest(
-                        new OIDCClaimsRequest()
-                                .withUserInfoClaimsRequest(
-                                        claimsSetRequest.add(ValidClaims.RETURN_CODE.getValue())));
-
-        var successResponse =
-                new AuthenticationSuccessResponse(
-                                authRequestWithReturnCode.getRedirectionURI(),
-                                AUTH_CODE,
-                                null,
-                                null,
-                                authRequestWithReturnCode.getState(),
-                                null,
-                                authRequestWithReturnCode.getResponseMode())
-                        .toURI()
-                        .toString();
-        var successResponseEvent =
-                generateApiGatewayProxyResponse(
-                        302, "", Map.of(ResponseHeaders.LOCATION, successResponse), null);
-
-        var errorResponse =
-                new AuthenticationErrorResponse(
-                                URI.create(REDIRECT_URI.toString()),
-                                OAuth2Error.ACCESS_DENIED,
-                                RP_STATE,
-                                null)
-                        .toURI()
-                        .toString();
-        var errorResponseEvent =
-                generateApiGatewayProxyResponse(
-                        302, "", Map.of(ResponseHeaders.LOCATION, errorResponse), null);
-
-        return Stream.of(
-                Arguments.of(
-                        named("clientWithReturnCodes", clientWithReturnCodes),
-                        named("authRequestWithReturnCode", authRequestWithReturnCode),
-                        successfulLogMessage,
-                        successResponseEvent),
-                Arguments.of(
-                        named("clientWithReturnCodes", clientWithReturnCodes),
-                        named("authRequestWithoutReturnCode", authRequestWithoutReturnCode),
-                        errorLogMessage,
-                        errorResponseEvent),
-                Arguments.of(
-                        named("clientWithoutReturnCodes", clientWithoutReturnCodes),
-                        named("authRequestWithReturnCode", authRequestWithReturnCode),
-                        errorLogMessage,
-                        errorResponseEvent),
-                Arguments.of(
-                        named("clientWithoutReturnCodes", clientWithoutReturnCodes),
-                        named("authRequestWithoutReturnCode", authRequestWithoutReturnCode),
-                        errorLogMessage,
-                        errorResponseEvent));
-    }
-
     @BeforeEach
     void setUp() {
         helper =
@@ -263,9 +163,10 @@ class IPVCallbackHelperTest {
                         SerializationService.getInstance(),
                         sessionService,
                         sqsClient);
-        when(accountInterventionService.getAccountStatus(INTERNAL_PAIRWISE_ID))
+        when(accountInterventionService.getAccountStatus(INTERNAL_PAIRWISE_ID, auditContext))
                 .thenReturn(new AccountInterventionStatus(false, false, false, false));
-        when(accountInterventionService.getAccountStatus(INTERNAL_PAIRWISE_ID_WITH_INTERVENTION))
+        when(accountInterventionService.getAccountStatus(
+                        INTERNAL_PAIRWISE_ID_WITH_INTERVENTION, auditContext))
                 .thenReturn(new AccountInterventionStatus(false, true, false, false));
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
                         anyString(), anyString(), any(ClientSession.class)))
@@ -314,9 +215,9 @@ class IPVCallbackHelperTest {
             String internalPairwiseId,
             Map<String, String> expectedIncrementCounterMap,
             AccountInterventionStatus expectedAISResult) {
-        var response = helper.getAccountInterventionStatus(internalPairwiseId);
+        var response = helper.getAccountInterventionStatus(internalPairwiseId, auditContext);
 
-        verify(accountInterventionService).getAccountStatus(internalPairwiseId);
+        verify(accountInterventionService).getAccountStatus(internalPairwiseId, auditContext);
         verify(cloudwatchMetricsService).incrementCounter("AISResult", expectedIncrementCounterMap);
         assertEquals(expectedAISResult, response);
     }
@@ -362,33 +263,6 @@ class IPVCallbackHelperTest {
                         "Expected to throw IpvCallbackException");
 
         assertEquals("IPV trustmark is invalid", exception.getMessage());
-    }
-
-    @ParameterizedTest
-    @MethodSource("returnCodeClaims")
-    void shouldReturnAppropriateResponseDependingOnReturnCodePermissionsAndRequest(
-            ClientRegistry client,
-            AuthenticationRequest authRequest,
-            String expectedLogMessage,
-            APIGatewayProxyResponseEvent expectedResponse)
-            throws UserNotFoundException {
-        var response =
-                helper.processReturnCode(
-                        client,
-                        authRequest,
-                        CLIENT_SESSION_ID,
-                        userProfile,
-                        session,
-                        clientSession,
-                        RP_PAIRWISE_SUBJECT,
-                        INTERNAL_PAIRWISE_ID,
-                        validUserIdentityUserInfo,
-                        IP_ADDRESS,
-                        PERSISTENT_SESSION_ID);
-
-        assertThat(logging.events(), hasItem(withMessageContaining(expectedLogMessage)));
-        assertEquals(302, response.getStatusCode());
-        assertEquals(expectedResponse, response);
     }
 
     @Test
@@ -470,27 +344,6 @@ class IPVCallbackHelperTest {
                         Map.of("https://vocab.account.gov.uk/v1/passport", "passport"),
                         "P2",
                         "core-identity");
-    }
-
-    private static ClientRegistry generateClientWithReturnCodes() {
-        return new ClientRegistry()
-                .withClientID(CLIENT_ID.getValue())
-                .withConsentRequired(false)
-                .withClientName("test-client")
-                .withRedirectUrls(singletonList(REDIRECT_URI.toString()))
-                .withSectorIdentifierUri("https://test.com")
-                .withSubjectType("pairwise")
-                .withClaims(List.of("https://vocab.account.gov.uk/v1/returnCode"));
-    }
-
-    private static ClientRegistry generateClientWithoutReturnCodes() {
-        return new ClientRegistry()
-                .withClientID(CLIENT_ID.getValue())
-                .withConsentRequired(false)
-                .withClientName("test-client")
-                .withRedirectUrls(singletonList(REDIRECT_URI.toString()))
-                .withSectorIdentifierUri("https://test.com")
-                .withSubjectType("pairwise");
     }
 
     private static UserProfile generateUserProfile() {

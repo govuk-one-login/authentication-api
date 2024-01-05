@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.oauth2.sdk.ErrorObject;
+import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
@@ -19,6 +20,8 @@ import uk.gov.di.authentication.ipv.entity.LogIds;
 import uk.gov.di.authentication.ipv.helpers.IPVCallbackHelper;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.ipv.services.IPVTokenService;
+import uk.gov.di.orchestration.audit.AuditContext;
+import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
@@ -217,28 +220,34 @@ public class IPVCallbackHandler
                             URI.create(configurationService.getInternalSectorUri()),
                             dynamoService.getOrGenerateSalt(userProfile));
 
+            var ipAddress = IpAddressHelper.extractIpAddress(input);
+            var auditContext =
+                    new AuditContext(
+                            clientSessionId,
+                            session.getSessionId(),
+                            clientId,
+                            session.getInternalCommonSubjectIdentifier(),
+                            session.getEmailAddress(),
+                            ipAddress,
+                            Objects.isNull(userProfile.getPhoneNumber())
+                                    ? AuditService.UNKNOWN
+                                    : userProfile.getPhoneNumber(),
+                            persistentId);
+
             if (errorObject.isPresent()) {
                 var accountInterventionStatus =
-                        ipvCallbackHelper.getAccountInterventionStatus(internalPairwiseSubjectId);
+                        ipvCallbackHelper.getAccountInterventionStatus(
+                                internalPairwiseSubjectId, auditContext);
                 if (configurationService.isAccountInterventionServiceActionEnabled()) {
-                    if (accountInterventionStatus.blocked()) {
-                        // TODO: back channel logout + redirect to blocked page
-                        LOG.info("Account is blocked");
-                    } else if (accountInterventionStatus.suspended()
-                            || accountInterventionStatus.resetPassword()
-                            || accountInterventionStatus.reproveIdentity()) {
-                        // TODO: back channel logout + redirect to suspended page
-                        LOG.info(
-                                "Account is suspended, requires a password reset, or requires identity to be reproved");
-                    }
-
-                    return ipvCallbackHelper.generateAuthenticationErrorResponse(
-                            authRequest,
-                            new ErrorObject(ACCESS_DENIED_CODE, errorObject.get().getDescription()),
-                            false,
-                            clientSessionId,
-                            session.getSessionId());
+                    ipvCallbackHelper.doAccountIntervention(accountInterventionStatus);
                 }
+
+                return ipvCallbackHelper.generateAuthenticationErrorResponse(
+                        authRequest,
+                        new ErrorObject(ACCESS_DENIED_CODE, errorObject.get().getDescription()),
+                        false,
+                        clientSessionId,
+                        session.getSessionId());
             }
 
             auditService.submitAuditEvent(
@@ -314,36 +323,49 @@ public class IPVCallbackHandler
                     ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo);
             if (userIdentityError.isPresent()) {
                 var accountInterventionStatus =
-                        ipvCallbackHelper.getAccountInterventionStatus(internalPairwiseSubjectId);
+                        ipvCallbackHelper.getAccountInterventionStatus(
+                                internalPairwiseSubjectId, auditContext);
                 if (configurationService.isAccountInterventionServiceActionEnabled()) {
-                    if (accountInterventionStatus.blocked()) {
-                        // TODO: back channel logout + redirect to blocked page
-                        LOG.info("Account is blocked");
-                    } else if (accountInterventionStatus.suspended()
-                            || accountInterventionStatus.resetPassword()
-                            || accountInterventionStatus.reproveIdentity()) {
-                        // TODO: back channel logout + redirect to suspended page
-                        LOG.info(
-                                "Account is suspended, requires a password reset, or requires identity to be reproved");
-                    }
+                    ipvCallbackHelper.doAccountIntervention(accountInterventionStatus);
                 }
 
                 var returnCode = userIdentityUserInfo.getClaim(RETURN_CODE.getValue());
-                if (returnCode instanceof List<?> && !((List<?>) returnCode).isEmpty()) {
-                    LOG.warn("SPOT will not be invoked. Returning authCode to RP");
-                    var ipAddress = IpAddressHelper.extractIpAddress(input);
-                    return ipvCallbackHelper.processReturnCode(
-                            clientRegistry,
-                            authRequest,
-                            clientSessionId,
-                            userProfile,
-                            session,
-                            clientSession,
-                            rpPairwiseSubject,
-                            internalPairwiseSubjectId,
-                            userIdentityUserInfo,
-                            ipAddress,
-                            persistentId);
+                if (returnCode instanceof List<?> returnCodeList && !returnCodeList.isEmpty()) {
+                    if (!isReturnCodePresentAndRequested(clientRegistry, authRequest)) {
+                        LOG.warn("SPOT will not be invoked. Returning Error to RP");
+                        var errorResponse =
+                                new AuthenticationErrorResponse(
+                                        authRequest.getRedirectionURI(),
+                                        OAuth2Error.ACCESS_DENIED,
+                                        authRequest.getState(),
+                                        authRequest.getResponseMode());
+                        return generateApiGatewayProxyResponse(
+                                302,
+                                "",
+                                Map.of(ResponseHeaders.LOCATION, errorResponse.toURI().toString()),
+                                null);
+                    } else {
+                        LOG.info("Generating auth code response");
+                        var authenticationResponse =
+                                ipvCallbackHelper.generateReturnCodeAuthenticationResponse(
+                                        authRequest,
+                                        clientSessionId,
+                                        userProfile,
+                                        session,
+                                        clientSession,
+                                        rpPairwiseSubject,
+                                        internalPairwiseSubjectId,
+                                        userIdentityUserInfo,
+                                        ipAddress,
+                                        persistentId);
+                        return generateApiGatewayProxyResponse(
+                                302,
+                                "",
+                                Map.of(
+                                        ResponseHeaders.LOCATION,
+                                        authenticationResponse.toURI().toString()),
+                                null);
+                    }
                 }
 
                 LOG.warn("SPOT will not be invoked. Returning Error to RP");
@@ -431,5 +453,15 @@ public class IPVCallbackHandler
                                         errorPagePath)
                                 .toString()),
                 null);
+    }
+
+    private boolean isReturnCodePresentAndRequested(
+            ClientRegistry clientRegistry, AuthenticationRequest authRequest) {
+        return clientRegistry.getClaims().contains(RETURN_CODE.getValue())
+                && authRequest
+                                .getOIDCClaims()
+                                .getUserInfoClaimsRequest()
+                                .get(RETURN_CODE.getValue())
+                        != null;
     }
 }
