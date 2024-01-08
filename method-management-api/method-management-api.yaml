@@ -1,0 +1,175 @@
+openapi: 3.0.3
+info:
+  title: Method Management API
+  description: Method Management API
+  version: 0.0.1
+servers:
+  - url: 'https://localhost:63342'
+paths:
+  /get-mfa-methods:
+    post:
+      tags:
+        - 2FAManagement
+      summary: Retrieves the list of MFA Methods for a user
+      operationId: "get-mfa-methods"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MfaRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MfaMethodList'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetails'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetails'
+  /mfa-method:
+    put:
+      tags:
+        - 2FAManagement
+      summary: Creates or Updates the mfa method identified by the priority identifier
+      operationId: "mfa-method"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MfaMethodRequest'
+      responses:
+        '201':
+          description: MFA Method Created
+        '202':
+          description: MFA Method Updated
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetails'
+    delete:
+      tags:
+        - 2FAManagement
+      summary: Deletes the mfa method identified by the priority identifier
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MfaMethodDelete'
+      responses:
+        '200':
+          description: MFA Method Deleted
+        '404':
+          description: MFA Method Not found
+  /mfa-method-priority:
+    post:
+      tags:
+        - 2FAManagement
+      summary: Sets the priority for a given mfa method (Primary, secondary)
+      operationId: "mfa-method-priority"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MethodPriorityReq'
+      responses:
+        '200':
+          description: Successful Operation
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetails'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetails'
+components:
+  schemas:
+    MfaRequest:
+      required:
+        - email
+      type: object
+      properties:
+        email:
+          type: string
+    MfaMethodList:
+      type: array
+      items:
+        type: object
+        properties:
+          priorityIdentifier:
+            type: string
+            enum:
+              - PRIMARY
+              - SECONDARY
+          mfaMethodType:
+            type: string
+            enum:
+              - SMS
+              - AUTH_APP
+          endPoint:
+            type: string
+          methodVerified:
+            type: boolean
+    MfaMethodRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        priorityIdentifier:
+          type: string
+          enum:
+            - PRIMARY
+            - SECONDARY
+        mfaMethodType:
+          type: string
+          enum:
+            - SMS
+            - AUTH_APP
+        endpoint:
+          type: string
+        credential:
+          type: string
+        otp:
+          type: string
+    MethodPriorityReq:
+      type: object
+      properties:
+        email:
+          type: string
+        priorityIdentifier:
+          type: string
+          enum:
+            - PRIMARY
+            - SECONDARY
+        updatedPriorityIdentifier:
+          type: string
+          enum:
+            - PRIMARY
+            - SECONDARY
+    MfaMethodDelete:
+      type: object
+      properties:
+        email:
+          type: string
+        priorityIdentifier:
+          enum:
+            - SECONDARY
+    ErrorDetails:
+      type: string
