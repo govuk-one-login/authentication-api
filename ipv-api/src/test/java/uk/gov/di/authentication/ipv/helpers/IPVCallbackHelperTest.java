@@ -47,6 +47,7 @@ import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -344,6 +345,66 @@ class IPVCallbackHelperTest {
                         Map.of("https://vocab.account.gov.uk/v1/passport", "passport"),
                         "P2",
                         "core-identity");
+    }
+
+    @Test
+    void handlesMissingCoreIdentity() {
+        var userInfo =
+                new UserInfo(
+                        new JSONObject(
+                                Map.of(
+                                        "sub", "sub-val",
+                                        "vot", "P2",
+                                        "vtm", OIDC_BASE_URL + "/trustmark",
+                                        "https://vocab.account.gov.uk/v1/passport", "passport")));
+        helper.saveIdentityClaimsToDynamo(RP_PAIRWISE_SUBJECT, userInfo);
+
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                "Checking for additional identity claims to save to dynamo")));
+        assertThat(
+                logging.events(),
+                hasItem(withMessageContaining("Additional identity claims present: true")));
+        verify(dynamoIdentityService)
+                .saveIdentityClaims(
+                        "rp-pairwise-id",
+                        Map.of("https://vocab.account.gov.uk/v1/passport", "passport"),
+                        "P2",
+                        "");
+    }
+
+    @Test
+    void handlesNullCoreIdentity() {
+        var userInfo =
+                new UserInfo(
+                        new JSONObject(
+                                new HashMap<String, String>() {
+                                    {
+                                        put("sub", "sub-val");
+                                        put("vot", "P2");
+                                        put("vtm", OIDC_BASE_URL + "/trustmark");
+                                        put("https://vocab.account.gov.uk/v1/coreIdentity", null);
+                                        put("https://vocab.account.gov.uk/v1/passport", "passport");
+                                    }
+                                }));
+        helper.saveIdentityClaimsToDynamo(RP_PAIRWISE_SUBJECT, userInfo);
+
+        assertThat(
+                logging.events(),
+                hasItem(
+                        withMessageContaining(
+                                "Checking for additional identity claims to save to dynamo")));
+        assertThat(
+                logging.events(),
+                hasItem(withMessageContaining("Additional identity claims present: true")));
+        verify(dynamoIdentityService)
+                .saveIdentityClaims(
+                        "rp-pairwise-id",
+                        Map.of("https://vocab.account.gov.uk/v1/passport", "passport"),
+                        "P2",
+                        "");
     }
 
     private static UserProfile generateUserProfile() {

@@ -332,10 +332,14 @@ public class IPVCallbackHelper {
                                                 .toString()));
         LOG.info("Additional identity claims present: {}", !additionalClaims.isEmpty());
 
+        var ipvCoreIdentityClaim =
+                userIdentityUserInfo.getClaim(IdentityClaims.CORE_IDENTITY.getValue());
+        String ipvCoreIdentityString =
+                ipvCoreIdentityClaim == null ? "" : ipvCoreIdentityClaim.toString();
         dynamoIdentityService.saveIdentityClaims(
                 rpPairwiseSubject.getValue(),
                 additionalClaims,
                 (String) userIdentityUserInfo.getClaim(VOT.getValue()),
-                userIdentityUserInfo.getClaim(IdentityClaims.CORE_IDENTITY.getValue()).toString());
+                ipvCoreIdentityString);
     }
 }
