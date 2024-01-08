@@ -339,7 +339,14 @@ class VerifyMfaCodeHandlerTest {
     }
 
     private static Stream<JourneyType> existingUserAuthAppJourneyTypes() {
-        return Stream.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA);
+        return existingUserAuthAppJourneyTypeList().stream();
+    }
+
+    private static List<JourneyType> existingUserAuthAppJourneyTypeList() {
+        return List.of(
+                JourneyType.SIGN_IN,
+                JourneyType.PASSWORD_RESET_MFA,
+                JourneyType.FORCED_PASSWORD_RESET_MFA);
     }
 
     @ParameterizedTest
@@ -383,9 +390,7 @@ class VerifyMfaCodeHandlerTest {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.empty());
         var authAppSecret =
-                List.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA).contains(journeyType)
-                        ? null
-                        : AUTH_APP_SECRET;
+                existingUserAuthAppJourneyTypeList().contains(journeyType) ? null : AUTH_APP_SECRET;
         var codeRequest =
                 new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, journeyType, authAppSecret);
         var result = makeCallWithCode(codeRequest);
@@ -406,9 +411,7 @@ class VerifyMfaCodeHandlerTest {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.empty());
         var phoneNumber =
-                List.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA).contains(journeyType)
-                        ? null
-                        : PHONE_NUMBER;
+                existingUserAuthAppJourneyTypeList().contains(journeyType) ? null : PHONE_NUMBER;
         var codeRequest =
                 new VerifyMfaCodeRequest(MFAMethodType.SMS, CODE, journeyType, phoneNumber);
         var result = makeCallWithCode(codeRequest);
@@ -428,8 +431,10 @@ class VerifyMfaCodeHandlerTest {
                         JourneyType.ACCOUNT_RECOVERY, CodeRequestType.AUTH_APP_ACCOUNT_RECOVERY),
                 Arguments.of(JourneyType.REGISTRATION, CodeRequestType.AUTH_APP_REGISTRATION),
                 Arguments.of(JourneyType.SIGN_IN, CodeRequestType.AUTH_APP_SIGN_IN),
+                Arguments.of(JourneyType.PASSWORD_RESET_MFA, CodeRequestType.PW_RESET_MFA_AUTH_APP),
                 Arguments.of(
-                        JourneyType.PASSWORD_RESET_MFA, CodeRequestType.PW_RESET_MFA_AUTH_APP));
+                        JourneyType.FORCED_PASSWORD_RESET_MFA,
+                        CodeRequestType.FORCED_PW_RESET_MFA_AUTH_APP));
     }
 
     @ParameterizedTest
@@ -440,9 +445,7 @@ class VerifyMfaCodeHandlerTest {
                 .thenReturn(Optional.of(authAppCodeProcessor));
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.of(ErrorResponse.ERROR_1042));
         var authAppSecret =
-                List.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA).contains(journeyType)
-                        ? null
-                        : AUTH_APP_SECRET;
+                existingUserAuthAppJourneyTypeList().contains(journeyType) ? null : AUTH_APP_SECRET;
         var codeRequest =
                 new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, journeyType, authAppSecret);
         var result = makeCallWithCode(codeRequest);
@@ -481,9 +484,7 @@ class VerifyMfaCodeHandlerTest {
         when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX))
                 .thenReturn(true);
         var authAppSecret =
-                List.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA).contains(journeyType)
-                        ? null
-                        : AUTH_APP_SECRET;
+                existingUserAuthAppJourneyTypeList().contains(journeyType) ? null : AUTH_APP_SECRET;
         var codeRequest =
                 new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, journeyType, authAppSecret);
         var result = makeCallWithCode(codeRequest);
@@ -517,9 +518,7 @@ class VerifyMfaCodeHandlerTest {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(authAppCodeProcessor));
         var profileInformation =
-                List.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA).contains(journeyType)
-                        ? null
-                        : AUTH_APP_SECRET;
+                existingUserAuthAppJourneyTypeList().contains(journeyType) ? null : AUTH_APP_SECRET;
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.of(ErrorResponse.ERROR_1043));
         var codeRequest =
                 new VerifyMfaCodeRequest(
@@ -551,6 +550,9 @@ class VerifyMfaCodeHandlerTest {
     private static Stream<Arguments> blockedCodeForInvalidPhoneNumberTooManyTimes() {
         return Stream.of(
                 Arguments.of(JourneyType.ACCOUNT_RECOVERY, CodeRequestType.SMS_ACCOUNT_RECOVERY),
+                Arguments.of(
+                        JourneyType.FORCED_PASSWORD_RESET_MFA,
+                        CodeRequestType.FORCED_PW_RESET_MFA_SMS),
                 Arguments.of(JourneyType.PASSWORD_RESET_MFA, CodeRequestType.PW_RESET_MFA_SMS),
                 Arguments.of(JourneyType.REGISTRATION, CodeRequestType.SMS_REGISTRATION));
     }

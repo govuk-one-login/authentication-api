@@ -3,6 +3,8 @@ package uk.gov.di.authentication.api;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import uk.gov.di.authentication.frontendapi.entity.MfaRequest;
 import uk.gov.di.authentication.frontendapi.lambda.MfaHandler;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -78,12 +80,15 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(requests.get(0).getNotificationType(), equalTo(MFA_SMS));
     }
 
-    @Test
-    void shouldReturn204AndTriggerMfaSmsNotificationTypeWhenResettingPassword() {
+    @ParameterizedTest
+    @EnumSource(
+            value = JourneyType.class,
+            names = {"PASSWORD_RESET_MFA", "FORCED_PASSWORD_RESET_MFA"})
+    void shouldReturn204AndTriggerMfaSmsNotificationTypeWhenResettingPassword(
+            JourneyType journeyType) {
         var response =
                 makeRequest(
-                        Optional.of(
-                                new MfaRequest(USER_EMAIL, false, JourneyType.PASSWORD_RESET_MFA)),
+                        Optional.of(new MfaRequest(USER_EMAIL, false, journeyType)),
                         constructFrontendHeaders(SESSION_ID),
                         Map.of());
 

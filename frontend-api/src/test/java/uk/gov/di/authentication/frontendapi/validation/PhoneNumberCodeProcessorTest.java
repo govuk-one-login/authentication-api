@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
@@ -101,15 +102,15 @@ class PhoneNumberCodeProcessorTest {
                 equalTo(Optional.of(ErrorResponse.ERROR_1037)));
     }
 
-    @Test
-    void shouldReturnErrorForInvalidMfaPhoneNumberCode() {
+    @ParameterizedTest
+    @EnumSource(
+            value = JourneyType.class,
+            names = {"PASSWORD_RESET_MFA", "FORCED_PASSWORD_RESET_MFA"})
+    void shouldReturnErrorForPasswordResetInvalidMfaPhoneNumberCode(JourneyType journeyType) {
         setupPhoneNumberCode(
                 new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS,
-                        INVALID_CODE,
-                        JourneyType.PASSWORD_RESET_MFA,
-                        PHONE_NUMBER),
-                CodeRequestType.PW_RESET_MFA_SMS);
+                        MFAMethodType.SMS, INVALID_CODE, journeyType, PHONE_NUMBER),
+                CodeRequestType.getCodeRequestType(MFAMethodType.SMS, journeyType));
 
         assertThat(
                 phoneNumberCodeProcessor.validateCode(),
@@ -142,14 +143,15 @@ class PhoneNumberCodeProcessorTest {
                 equalTo(Optional.of(ErrorResponse.ERROR_1034)));
     }
 
-    @Test
-    void shouldReturnErrorWhenInvalidMfaPhoneNumberCodeUsedTooManyTimes() {
+    @ParameterizedTest
+    @EnumSource(
+            value = JourneyType.class,
+            names = {"PASSWORD_RESET_MFA", "FORCED_PASSWORD_RESET_MFA"})
+    void shouldReturnErrorWhenPasswordResetInvalidMfaPhoneNumberCodeUsedTooManyTimes(
+            JourneyType journeyType) {
         setUpPhoneNumberCodeRetryLimitExceeded(
                 new VerifyMfaCodeRequest(
-                        MFAMethodType.SMS,
-                        INVALID_CODE,
-                        JourneyType.PASSWORD_RESET_MFA,
-                        PHONE_NUMBER));
+                        MFAMethodType.SMS, INVALID_CODE, journeyType, PHONE_NUMBER));
 
         assertThat(
                 phoneNumberCodeProcessor.validateCode(),
@@ -331,6 +333,10 @@ class PhoneNumberCodeProcessorTest {
                 Arguments.of(
                         CodeRequestType.PW_RESET_MFA_SMS,
                         JourneyType.PASSWORD_RESET_MFA,
+                        NotificationType.MFA_SMS),
+                Arguments.of(
+                        CodeRequestType.FORCED_PW_RESET_MFA_SMS,
+                        JourneyType.FORCED_PASSWORD_RESET_MFA,
                         NotificationType.MFA_SMS),
                 Arguments.of(
                         CodeRequestType.SMS_REGISTRATION,

@@ -276,7 +276,10 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     }
 
     private static Stream<JourneyType> journeyTypes() {
-        return Stream.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA);
+        return Stream.of(
+                JourneyType.SIGN_IN,
+                JourneyType.PASSWORD_RESET_MFA,
+                JourneyType.FORCED_PASSWORD_RESET_MFA);
     }
 
     @ParameterizedTest

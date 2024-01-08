@@ -9,11 +9,13 @@ public enum CodeRequestType {
     EMAIL_PASSWORD_RESET(MFAMethodType.EMAIL, JourneyType.PASSWORD_RESET),
     SMS_ACCOUNT_RECOVERY(MFAMethodType.SMS, JourneyType.ACCOUNT_RECOVERY),
     PW_RESET_MFA_SMS(MFAMethodType.SMS, JourneyType.PASSWORD_RESET_MFA),
+    FORCED_PW_RESET_MFA_SMS(MFAMethodType.SMS, JourneyType.FORCED_PASSWORD_RESET_MFA),
     SMS_REGISTRATION(MFAMethodType.SMS, JourneyType.REGISTRATION),
     SMS_SIGN_IN(MFAMethodType.SMS, JourneyType.SIGN_IN),
     AUTH_APP_ACCOUNT_RECOVERY(MFAMethodType.AUTH_APP, JourneyType.ACCOUNT_RECOVERY),
     AUTH_APP_SIGN_IN(MFAMethodType.AUTH_APP, JourneyType.SIGN_IN),
     PW_RESET_MFA_AUTH_APP(MFAMethodType.AUTH_APP, JourneyType.PASSWORD_RESET_MFA),
+    FORCED_PW_RESET_MFA_AUTH_APP(MFAMethodType.AUTH_APP, JourneyType.FORCED_PASSWORD_RESET_MFA),
     AUTH_APP_REGISTRATION(MFAMethodType.AUTH_APP, JourneyType.REGISTRATION);
 
     private static final Map<CodeRequestTypeKey, CodeRequestType> codeRequestTypeMap =

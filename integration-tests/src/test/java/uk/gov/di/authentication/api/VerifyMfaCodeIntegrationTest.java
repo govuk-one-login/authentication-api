@@ -93,11 +93,16 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 Arguments.of(JourneyType.REGISTRATION, ALTERNATIVE_AUTH_APP_SECRET_BASE_32),
                 Arguments.of(JourneyType.ACCOUNT_RECOVERY, ALTERNATIVE_AUTH_APP_SECRET_BASE_32),
                 Arguments.of(JourneyType.PASSWORD_RESET_MFA, ALTERNATIVE_AUTH_APP_SECRET_BASE_32),
+                Arguments.of(
+                        JourneyType.FORCED_PASSWORD_RESET_MFA, ALTERNATIVE_AUTH_APP_SECRET_BASE_32),
                 Arguments.of(JourneyType.SIGN_IN, null));
     }
 
     private static Stream<JourneyType> existingUserAuthAppJourneyTypes() {
-        return Stream.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA);
+        return Stream.of(
+                JourneyType.SIGN_IN,
+                JourneyType.PASSWORD_RESET_MFA,
+                JourneyType.FORCED_PASSWORD_RESET_MFA);
     }
 
     @ParameterizedTest
@@ -328,7 +333,11 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             JourneyType journeyType, String profileInformation) {
         setUpAuthAppRequest(journeyType);
         var authAppSecret =
-                List.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA).contains(journeyType)
+                List.of(
+                                        JourneyType.SIGN_IN,
+                                        JourneyType.PASSWORD_RESET_MFA,
+                                        JourneyType.FORCED_PASSWORD_RESET_MFA)
+                                .contains(journeyType)
                         ? AUTH_APP_SECRET_BASE_32
                         : profileInformation;
         long oneMinuteAgo = NowHelper.nowMinus(2, ChronoUnit.MINUTES).getTime();
@@ -345,7 +354,11 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(204));
         List<AuditableEvent> expectedAuditableEvents =
-                List.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA).contains(journeyType)
+                List.of(
+                                        JourneyType.SIGN_IN,
+                                        JourneyType.PASSWORD_RESET_MFA,
+                                        JourneyType.FORCED_PASSWORD_RESET_MFA)
+                                .contains(journeyType)
                         ? singletonList(CODE_VERIFIED)
                         : List.of(CODE_VERIFIED, UPDATE_PROFILE_AUTH_APP);
         assertTxmaAuditEventsReceived(txmaAuditQueue, expectedAuditableEvents);
@@ -362,7 +375,11 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             JourneyType journeyType, String profileInformation) {
         setUpAuthAppRequest(journeyType);
         var authAppSecret =
-                List.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA).contains(journeyType)
+                List.of(
+                                        JourneyType.SIGN_IN,
+                                        JourneyType.PASSWORD_RESET_MFA,
+                                        JourneyType.FORCED_PASSWORD_RESET_MFA)
+                                .contains(journeyType)
                         ? AUTH_APP_SECRET_BASE_32
                         : profileInformation;
         long tenMinutesAgo = NowHelper.nowMinus(5, ChronoUnit.MINUTES).getTime();
@@ -383,7 +400,8 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 List.of(
                                 JourneyType.ACCOUNT_RECOVERY,
                                 JourneyType.SIGN_IN,
-                                JourneyType.PASSWORD_RESET_MFA)
+                                JourneyType.PASSWORD_RESET_MFA,
+                                JourneyType.FORCED_PASSWORD_RESET_MFA)
                         .contains(journeyType);
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(isAccountVerified));
         assertThat(userStore.isAuthAppVerified(EMAIL_ADDRESS), equalTo(isAccountVerified));
@@ -413,7 +431,8 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 List.of(
                                 JourneyType.ACCOUNT_RECOVERY,
                                 JourneyType.SIGN_IN,
-                                JourneyType.PASSWORD_RESET_MFA)
+                                JourneyType.PASSWORD_RESET_MFA,
+                                JourneyType.FORCED_PASSWORD_RESET_MFA)
                         .contains(journeyType);
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1043));
@@ -509,7 +528,8 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 List.of(
                                 JourneyType.ACCOUNT_RECOVERY,
                                 JourneyType.SIGN_IN,
-                                JourneyType.PASSWORD_RESET_MFA)
+                                JourneyType.PASSWORD_RESET_MFA,
+                                JourneyType.FORCED_PASSWORD_RESET_MFA)
                         .contains(journeyType);
         assertThat(response, hasStatus(400));
         assertThat(response, hasJsonBody(ErrorResponse.ERROR_1043));
@@ -529,7 +549,11 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             JourneyType journeyType, String profileInformation) {
         setUpAuthAppRequest(journeyType);
         var authAppSecret =
-                List.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA).contains(journeyType)
+                List.of(
+                                        JourneyType.SIGN_IN,
+                                        JourneyType.PASSWORD_RESET_MFA,
+                                        JourneyType.FORCED_PASSWORD_RESET_MFA)
+                                .contains(journeyType)
                         ? AUTH_APP_SECRET_BASE_32
                         : profileInformation;
         String code = AUTH_APP_STUB.getAuthAppOneTimeCode(authAppSecret);
@@ -555,7 +579,8 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 List.of(
                                 JourneyType.ACCOUNT_RECOVERY,
                                 JourneyType.SIGN_IN,
-                                JourneyType.PASSWORD_RESET_MFA)
+                                JourneyType.PASSWORD_RESET_MFA,
+                                JourneyType.FORCED_PASSWORD_RESET_MFA)
                         .contains(journeyType);
 
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(isAccountVerified));

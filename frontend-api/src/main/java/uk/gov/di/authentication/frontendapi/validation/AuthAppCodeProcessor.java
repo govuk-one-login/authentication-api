@@ -76,9 +76,14 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
             return Optional.of(ErrorResponse.ERROR_1042);
         }
 
+        var authAppJourneyTypes =
+                List.of(
+                        JourneyType.SIGN_IN,
+                        JourneyType.PASSWORD_RESET_MFA,
+                        JourneyType.FORCED_PASSWORD_RESET_MFA);
+
         var authAppSecret =
-                List.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA)
-                                .contains(codeRequest.getJourneyType())
+                authAppJourneyTypes.contains(codeRequest.getJourneyType())
                         ? getMfaCredentialValue().orElse(null)
                         : codeRequest.getProfileInformation();
 
@@ -87,8 +92,7 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
             return Optional.of(ErrorResponse.ERROR_1043);
         }
 
-        if (!List.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA)
-                        .contains(codeRequest.getJourneyType())
+        if (!authAppJourneyTypes.contains(codeRequest.getJourneyType())
                 && !base32.isInAlphabet(codeRequest.getProfileInformation())) {
             return Optional.of(ErrorResponse.ERROR_1041);
         }
@@ -130,6 +134,7 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
                 break;
             case SIGN_IN:
             case PASSWORD_RESET_MFA:
+            case FORCED_PASSWORD_RESET_MFA:
                 clearAccountRecoveryBlockIfPresent(AUTH_APP, ipAddress, persistentSessionId);
         }
     }
