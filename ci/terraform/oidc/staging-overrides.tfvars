@@ -89,3 +89,5 @@ logging_endpoint_arns = [
 ]
 
 shared_state_bucket = "di-auth-staging-tfstate"
+
+support_auth_orch_split = true
