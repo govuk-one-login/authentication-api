@@ -4,9 +4,7 @@ import com.google.gson.annotations.Expose;
 import org.apache.logging.log4j.core.config.plugins.validation.constraints.Required;
 
 public record Intervention(
-        @Expose @Required String updatedAt,
-        @Expose @Required String appliedAt,
-        @Expose @Required String sentAt,
-        @Expose @Required String description,
-        @Expose @Required String reprovedIdentityAt,
-        @Expose @Required String resetPasswordAt) {}
+        @Expose @Required boolean blocked,
+        @Expose @Required boolean suspended,
+        @Expose @Required boolean reproveIdentity,
+        @Expose @Required boolean resetPassword) {}

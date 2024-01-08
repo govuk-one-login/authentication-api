@@ -328,14 +328,14 @@ public class AccountInterventionsHandlerTest {
     private AccountInterventionsInboundResponse generateAccountInterventionResponse(
             boolean blocked, boolean suspended, boolean reproveIdentity, boolean resetPassword) {
         return new AccountInterventionsInboundResponse(
-                new Intervention(
+                new Intervention(blocked, suspended, reproveIdentity, resetPassword),
+                new State(
                         "1696969322935",
                         "1696869005821",
                         "1696869003456",
                         "AIS_USER_PASSWORD_RESET_AND_IDENTITY_VERIFIED",
                         "1696969322935",
-                        "1696875903456"),
-                new State(blocked, suspended, reproveIdentity, resetPassword));
+                        "1696875903456"));
     }
 
     private Map<String, String> getHeaders() {

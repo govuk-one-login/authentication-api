@@ -10,7 +10,7 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsInboundResponse;
 import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsRequest;
 import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsResponse;
-import uk.gov.di.authentication.frontendapi.entity.State;
+import uk.gov.di.authentication.frontendapi.entity.Intervention;
 import uk.gov.di.authentication.frontendapi.services.AccountInterventionsService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -43,20 +43,20 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
     private final AccountInterventionsService accountInterventionsService;
     private final AuditService auditService;
 
-    private static final Map<State, FrontendAuditableEvent>
+    private static final Map<Intervention, FrontendAuditableEvent>
             ACCOUNT_INTERVENTIONS_STATE_TO_AUDIT_EVENT =
                     Map.of(
-                            new State(false, false, false, false),
+                            new Intervention(false, false, false, false),
                             FrontendAuditableEvent.NO_INTERVENTION,
-                            new State(false, true, true, false),
+                            new Intervention(false, true, true, false),
                             FrontendAuditableEvent.NO_INTERVENTION,
-                            new State(false, true, false, true),
+                            new Intervention(false, true, false, true),
                             FrontendAuditableEvent.PASSWORD_RESET_INTERVENTION,
-                            new State(false, true, true, true),
+                            new Intervention(false, true, true, true),
                             FrontendAuditableEvent.PASSWORD_RESET_INTERVENTION,
-                            new State(false, true, false, false),
+                            new Intervention(false, true, false, false),
                             FrontendAuditableEvent.TEMP_SUSPENDED_INTERVENTION,
-                            new State(true, false, false, false),
+                            new Intervention(true, false, false, false),
                             FrontendAuditableEvent.PERMANENTLY_BLOCKED_INTERVENTION);
 
     protected AccountInterventionsHandler(
@@ -123,7 +123,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
             var accountInterventionsURI =
                     buildURI(accountInterventionsEndpoint, "/v1/ais/" + internalPairwiseId);
             var accountInterventionsInboundRequest = new HTTPRequest(GET, accountInterventionsURI);
-            var accountInterventionsInboundResponse =
+            AccountInterventionsInboundResponse accountInterventionsInboundResponse =
                     accountInterventionsService.sendAccountInterventionsOutboundRequest(
                             accountInterventionsInboundRequest);
 
@@ -133,9 +133,9 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
             LOG.info("Generating Account Interventions outbound response for frontend");
             var accountInterventionsResponse =
                     new AccountInterventionsResponse(
-                            accountInterventionsInboundResponse.state().resetPassword(),
-                            accountInterventionsInboundResponse.state().blocked(),
-                            accountInterventionsInboundResponse.state().suspended());
+                            accountInterventionsInboundResponse.intervention().resetPassword(),
+                            accountInterventionsInboundResponse.intervention().blocked(),
+                            accountInterventionsInboundResponse.intervention().suspended());
             return generateApiGatewayProxyResponse(200, accountInterventionsResponse, true);
         } catch (UnsuccessfulAccountInterventionsResponseException e) {
             LOG.error(
@@ -165,10 +165,10 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
             APIGatewayProxyRequestEvent input,
             UserContext userContext,
             String persistentSessionID) {
-        State requiredInterventionsState = accountInterventionsInboundResponse.state();
+        Intervention requiredInterventions = accountInterventionsInboundResponse.intervention();
 
         FrontendAuditableEvent auditEvent =
-                ACCOUNT_INTERVENTIONS_STATE_TO_AUDIT_EVENT.get(requiredInterventionsState);
+                ACCOUNT_INTERVENTIONS_STATE_TO_AUDIT_EVENT.get(requiredInterventions);
 
         if (auditEvent != null) {
             auditService.submitAuditEvent(
@@ -187,7 +187,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
         } else {
             LOG.error(
                     "Unhandled account interventions state combination to calculate audit event: {}",
-                    requiredInterventionsState);
+                    requiredInterventions);
         }
     }
 }
