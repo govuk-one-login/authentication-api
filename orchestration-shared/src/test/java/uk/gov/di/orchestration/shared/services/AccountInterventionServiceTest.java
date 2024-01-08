@@ -33,7 +33,7 @@ class AccountInterventionServiceTest {
             mock(CloudwatchMetricsService.class);
     private final AuditService auditService = mock(AuditService.class);
 
-    private static String ACCOUNT_INTERVENTION_SERVICE_RESPONSE_SUSPEND_REPROVE =
+    private static final String ACCOUNT_INTERVENTION_SERVICE_RESPONSE_SUSPEND_REPROVE =
             """
             {
                 "intervention": {
@@ -54,8 +54,8 @@ class AccountInterventionServiceTest {
             }
             """;
 
-    private static String BASE_AIS_URL = "http://example.com/somepath/";
-    private static AuditContext someAuditContext =
+    private static final String BASE_AIS_URL = "http://example.com/somepath/";
+    private static final AuditContext someAuditContext =
             new AuditContext(
                     "some-client-session-id",
                     "some-session-id",
@@ -137,10 +137,10 @@ class AccountInterventionServiceTest {
 
         verifyNoInteractions(httpClient);
 
-        assertEquals(false, status.blocked());
-        assertEquals(false, status.suspended());
-        assertEquals(false, status.reproveIdentity());
-        assertEquals(false, status.resetPassword());
+        assertFalse(status.blocked());
+        assertFalse(status.suspended());
+        assertFalse(status.reproveIdentity());
+        assertFalse(status.resetPassword());
     }
 
     @Test
@@ -158,9 +158,7 @@ class AccountInterventionServiceTest {
 
         assertThrows(
                 AccountInterventionException.class,
-                () -> {
-                    accountInterventionService.getAccountStatus(internalPairwiseSubjectId);
-                });
+                () -> accountInterventionService.getAccountStatus(internalPairwiseSubjectId));
     }
 
     @Test
@@ -223,8 +221,6 @@ class AccountInterventionServiceTest {
 
         assertThrows(
                 AccountInterventionException.class,
-                () -> {
-                    accountInterventionService.getAccountStatus(internalPairwiseSubjectId, null);
-                });
+                () -> accountInterventionService.getAccountStatus(internalPairwiseSubjectId, null));
     }
 }

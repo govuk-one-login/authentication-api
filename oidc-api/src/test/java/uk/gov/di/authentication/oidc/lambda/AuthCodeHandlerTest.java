@@ -38,12 +38,14 @@ import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
+import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.helpers.SaltHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AuditService;
+import uk.gov.di.orchestration.shared.services.AuthCodeResponseGenerationService;
 import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
 import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
@@ -59,6 +61,7 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -71,9 +74,12 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -84,6 +90,8 @@ import static uk.gov.di.authentication.oidc.helper.RequestObjectTestHelper.gener
 import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevel.LOW_LEVEL;
 import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.orchestration.shared.entity.Session.AccountState;
+import static uk.gov.di.orchestration.shared.entity.Session.AccountState.EXISTING;
+import static uk.gov.di.orchestration.shared.entity.Session.AccountState.EXISTING_DOC_APP_JOURNEY;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.orchestration.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
@@ -91,6 +99,24 @@ import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyRespons
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class AuthCodeHandlerTest {
+    private final AuthCodeResponseGenerationService authCodeResponseService =
+            mock(AuthCodeResponseGenerationService.class);
+    private final AuditService auditService = mock(AuditService.class);
+    private final AuthorisationCodeService authorisationCodeService =
+            mock(AuthorisationCodeService.class);
+    private final ClientSession clientSession = mock(ClientSession.class);
+    private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
+    private final CloudwatchMetricsService cloudwatchMetricsService =
+            mock(CloudwatchMetricsService.class);
+    private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final Context context = mock(Context.class);
+    private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
+    private final DynamoService dynamoService = mock(DynamoService.class);
+    private final OrchestrationAuthorizationService orchestrationAuthorizationService =
+            mock(OrchestrationAuthorizationService.class);
+    private final SessionService sessionService = mock(SessionService.class);
+    private final VectorOfTrust vectorOfTrust = mock(VectorOfTrust.class);
+
     private static final String SESSION_ID = IdGenerator.generate();
     private static final String CLIENT_SESSION_ID = IdGenerator.generate();
     private static final String PERSISTENT_SESSION_ID = IdGenerator.generate();
@@ -106,22 +132,6 @@ class AuthCodeHandlerTest {
     private static final Nonce NONCE = new Nonce();
     private static final byte[] SALT = SaltHelper.generateNewSalt();
     private static final Json objectMapper = SerializationService.getInstance();
-
-    private final OrchestrationAuthorizationService orchestrationAuthorizationService =
-            mock(OrchestrationAuthorizationService.class);
-    private final AuthorisationCodeService authorisationCodeService =
-            mock(AuthorisationCodeService.class);
-    private final SessionService sessionService = mock(SessionService.class);
-    private final Context context = mock(Context.class);
-    private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
-    private final ClientSession clientSession = mock(ClientSession.class);
-    private final AuditService auditService = mock(AuditService.class);
-    private final VectorOfTrust vectorOfTrust = mock(VectorOfTrust.class);
-    private final CloudwatchMetricsService cloudwatchMetricsService =
-            mock(CloudwatchMetricsService.class);
-    private final DynamoService dynamoService = mock(DynamoService.class);
-    private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private AuthCodeHandler handler;
 
     private final Session session = new Session(SESSION_ID).addClientSession(CLIENT_SESSION_ID);
@@ -145,10 +155,11 @@ class AuthCodeHandlerTest {
     }
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws UserNotFoundException, ClientNotFoundException {
         handler =
                 new AuthCodeHandler(
                         sessionService,
+                        authCodeResponseService,
                         authorisationCodeService,
                         orchestrationAuthorizationService,
                         clientSessionService,
@@ -160,6 +171,25 @@ class AuthCodeHandlerTest {
         when(context.getAwsRequestId()).thenReturn("aws-session-id");
         when(configurationService.getEnvironment()).thenReturn("unit-test");
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
+        when(authCodeResponseService.getSubjectId(session)).thenReturn(SUBJECT.getValue());
+        when(authCodeResponseService.getRpPairwiseId(session, CLIENT_ID, dynamoClientService))
+                .thenReturn(
+                        ClientSubjectHelper.calculatePairwiseIdentifier(
+                                SUBJECT.getValue(), "rp-sector-uri", SALT));
+        doAnswer(
+                        (i) -> {
+                            session.setNewAccount(EXISTING_DOC_APP_JOURNEY);
+                            return null;
+                        })
+                .when(authCodeResponseService)
+                .saveSession(true, sessionService, session);
+        doAnswer(
+                        (i) -> {
+                            session.setAuthenticated(true).setNewAccount(EXISTING);
+                            return null;
+                        })
+                .when(authCodeResponseService)
+                .saveSession(false, sessionService, session);
     }
 
     private static Stream<Arguments> upliftTestParameters() {
@@ -183,6 +213,34 @@ class AuthCodeHandlerTest {
         when(dynamoClientService.getClient(CLIENT_ID.getValue()))
                 .thenReturn(Optional.of(generateClientRegistry()));
         when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
+        if (Objects.nonNull(mfaMethodType)) {
+            when(authCodeResponseService.getDimensions(
+                            eq(session),
+                            eq(clientSession),
+                            eq(CLIENT_ID.getValue()),
+                            anyBoolean(),
+                            anyBoolean()))
+                    .thenReturn(
+                            new HashMap<>(
+                                    Map.of(
+                                            "Account",
+                                            "NEW",
+                                            "Environment",
+                                            "unit-test",
+                                            "Client",
+                                            CLIENT_ID.getValue(),
+                                            "IsTest",
+                                            "false",
+                                            "IsDocApp",
+                                            Boolean.toString(false),
+                                            "MfaMethod",
+                                            mfaMethodType.getValue(),
+                                            "ClientName",
+                                            CLIENT_NAME)));
+        }
+        doCallRealMethod()
+                .when(authCodeResponseService)
+                .processVectorOfTrust(eq(clientSession), any());
         var expectedCommonSubject =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         SUBJECT.getValue(), "test.account.gov.uk", SaltHelper.generateNewSalt());
@@ -223,7 +281,8 @@ class AuthCodeHandlerTest {
         assertThat(session.getCurrentCredentialStrength(), equalTo(finalLevel));
         assertTrue(session.isAuthenticated());
 
-        verify(sessionService, times(1)).save(session);
+        verify(authCodeResponseService, times(1))
+                .saveSession(anyBoolean(), eq(sessionService), eq(session));
 
         var expectedRpPairwiseId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
@@ -296,6 +355,26 @@ class AuthCodeHandlerTest {
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
                         CLIENT_SESSION_ID, null, clientSession))
                 .thenReturn(authorizationCode);
+        when(authCodeResponseService.getDimensions(
+                        eq(session),
+                        eq(clientSession),
+                        eq(CLIENT_ID.getValue()),
+                        anyBoolean(),
+                        eq(true)))
+                .thenReturn(
+                        Map.of(
+                                "Account",
+                                "UNKNOWN",
+                                "Environment",
+                                "unit-test",
+                                "Client",
+                                CLIENT_ID.getValue(),
+                                "IsTest",
+                                "false",
+                                "IsDocApp",
+                                Boolean.toString(true),
+                                "ClientName",
+                                CLIENT_NAME));
         when(orchestrationAuthorizationService.generateSuccessfulAuthResponse(
                         any(AuthenticationRequest.class),
                         any(AuthorizationCode.class),
@@ -310,7 +389,8 @@ class AuthCodeHandlerTest {
         assertThat(authCodeResponse.getLocation(), equalTo(authSuccessResponse.toURI().toString()));
         assertThat(session.getCurrentCredentialStrength(), equalTo(requestedLevel));
         assertFalse(session.isAuthenticated());
-        verify(sessionService, times(1)).save(session);
+        verify(authCodeResponseService, times(1))
+                .saveSession(anyBoolean(), eq(sessionService), eq(session));
         verify(auditService)
                 .submitAuditEvent(
                         OidcAuditableEvent.AUTH_CODE_ISSUED,

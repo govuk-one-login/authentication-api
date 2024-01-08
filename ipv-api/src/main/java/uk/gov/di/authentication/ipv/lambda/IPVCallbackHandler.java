@@ -7,11 +7,9 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ParseException;
-import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.UserInfoRequest;
-import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
@@ -19,29 +17,26 @@ import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.entity.IPVCallbackNoSessionException;
 import uk.gov.di.authentication.ipv.entity.IpvCallbackException;
 import uk.gov.di.authentication.ipv.entity.LogIds;
-import uk.gov.di.authentication.ipv.entity.SPOTClaims;
-import uk.gov.di.authentication.ipv.entity.SPOTRequest;
+import uk.gov.di.authentication.ipv.helpers.IPVCallbackHelper;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.ipv.services.IPVTokenService;
-import uk.gov.di.orchestration.shared.entity.IdentityClaims;
-import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
+import uk.gov.di.orchestration.audit.AuditContext;
+import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
-import uk.gov.di.orchestration.shared.entity.UserProfile;
-import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
+import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.ConstructUriHelper;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
+import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.AuditService;
-import uk.gov.di.orchestration.shared.services.AwsSqsClient;
 import uk.gov.di.orchestration.shared.services.ClientSessionService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
-import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
@@ -49,17 +44,15 @@ import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 
-import java.util.HashMap;
+import java.net.URI;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 
 import static com.nimbusds.oauth2.sdk.OAuth2Error.ACCESS_DENIED_CODE;
-import static uk.gov.di.orchestration.shared.entity.IdentityClaims.VOT;
-import static uk.gov.di.orchestration.shared.entity.IdentityClaims.VTM;
+import static uk.gov.di.orchestration.shared.entity.ValidClaims.RETURN_CODE;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper.getSectorIdentifierForClient;
-import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
@@ -80,8 +73,7 @@ public class IPVCallbackHandler
     private final ClientSessionService clientSessionService;
     private final DynamoClientService dynamoClientService;
     private final AuditService auditService;
-    private final AwsSqsClient sqsClient;
-    private final DynamoIdentityService dynamoIdentityService;
+    private final IPVCallbackHelper ipvCallbackHelper;
     private final NoSessionOrchestrationService noSessionOrchestrationService;
     protected final Json objectMapper = SerializationService.getInstance();
     private static final String REDIRECT_PATH = "ipv-callback";
@@ -103,10 +95,9 @@ public class IPVCallbackHandler
             ClientSessionService clientSessionService,
             DynamoClientService dynamoClientService,
             AuditService auditService,
-            AwsSqsClient sqsClient,
-            DynamoIdentityService dynamoIdentityService,
             CookieHelper cookieHelper,
-            NoSessionOrchestrationService noSessionOrchestrationService) {
+            NoSessionOrchestrationService noSessionOrchestrationService,
+            IPVCallbackHelper ipvCallbackHelper) {
         this.configurationService = configurationService;
         this.ipvAuthorisationService = responseService;
         this.ipvTokenService = ipvTokenService;
@@ -115,10 +106,9 @@ public class IPVCallbackHandler
         this.clientSessionService = clientSessionService;
         this.dynamoClientService = dynamoClientService;
         this.auditService = auditService;
-        this.sqsClient = sqsClient;
-        this.dynamoIdentityService = dynamoIdentityService;
         this.cookieHelper = cookieHelper;
         this.noSessionOrchestrationService = noSessionOrchestrationService;
+        this.ipvCallbackHelper = ipvCallbackHelper;
     }
 
     public IPVCallbackHandler(ConfigurationService configurationService) {
@@ -135,15 +125,10 @@ public class IPVCallbackHandler
         this.clientSessionService = new ClientSessionService(configurationService);
         this.dynamoClientService = new DynamoClientService(configurationService);
         this.auditService = new AuditService(configurationService);
-        this.sqsClient =
-                new AwsSqsClient(
-                        configurationService.getAwsRegion(),
-                        configurationService.getSpotQueueUri(),
-                        configurationService.getSqsEndpointUri());
-        this.dynamoIdentityService = new DynamoIdentityService(configurationService);
         this.cookieHelper = new CookieHelper();
         this.noSessionOrchestrationService =
                 new NoSessionOrchestrationService(configurationService);
+        this.ipvCallbackHelper = new IPVCallbackHelper(configurationService);
     }
 
     @Override
@@ -166,7 +151,7 @@ public class IPVCallbackHandler
                         AuthenticationRequest.parse(
                                 noSessionEntity.getClientSession().getAuthRequestParams());
                 attachLogFieldToLogs(CLIENT_ID, authRequest.getClientID().getValue());
-                return generateAuthenticationErrorResponse(
+                return ipvCallbackHelper.generateAuthenticationErrorResponse(
                         authRequest,
                         noSessionEntity.getErrorObject(),
                         true,
@@ -212,14 +197,6 @@ public class IPVCallbackHandler
                                     ipvAuthorisationService.validateResponse(
                                             input.getQueryStringParameters(),
                                             session.getSessionId()));
-            if (errorObject.isPresent()) {
-                return generateAuthenticationErrorResponse(
-                        authRequest,
-                        new ErrorObject(ACCESS_DENIED_CODE, errorObject.get().getDescription()),
-                        false,
-                        clientSessionId,
-                        session.getSessionId());
-            }
             var userProfile =
                     dynamoService
                             .getUserProfileFromEmail(session.getEmailAddress())
@@ -227,13 +204,55 @@ public class IPVCallbackHandler
                                     () ->
                                             new IpvCallbackException(
                                                     "Email from session does not have a user profile"));
+            var rpPairwiseSubject =
+                    ClientSubjectHelper.getSubject(
+                            userProfile,
+                            clientRegistry,
+                            dynamoService,
+                            configurationService.getInternalSectorUri());
+
+            var internalPairwiseSubjectId =
+                    ClientSubjectHelper.calculatePairwiseIdentifier(
+                            userProfile.getSubjectID(),
+                            URI.create(configurationService.getInternalSectorUri()),
+                            dynamoService.getOrGenerateSalt(userProfile));
+
+            var ipAddress = IpAddressHelper.extractIpAddress(input);
+            var auditContext =
+                    new AuditContext(
+                            clientSessionId,
+                            session.getSessionId(),
+                            clientId,
+                            internalPairwiseSubjectId,
+                            session.getEmailAddress(),
+                            ipAddress,
+                            Objects.isNull(userProfile.getPhoneNumber())
+                                    ? AuditService.UNKNOWN
+                                    : userProfile.getPhoneNumber(),
+                            persistentId);
+
+            if (errorObject.isPresent()) {
+                var accountInterventionStatus =
+                        ipvCallbackHelper.getAccountInterventionStatus(
+                                internalPairwiseSubjectId, auditContext);
+                if (configurationService.isAccountInterventionServiceActionEnabled()) {
+                    ipvCallbackHelper.doAccountIntervention(accountInterventionStatus);
+                }
+
+                return ipvCallbackHelper.generateAuthenticationErrorResponse(
+                        authRequest,
+                        new ErrorObject(ACCESS_DENIED_CODE, errorObject.get().getDescription()),
+                        false,
+                        clientSessionId,
+                        session.getSessionId());
+            }
 
             auditService.submitAuditEvent(
                     IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED,
                     clientSessionId,
                     session.getSessionId(),
                     clientId,
-                    session.getInternalCommonSubjectIdentifier(),
+                    internalPairwiseSubjectId,
                     userProfile.getEmail(),
                     AuditService.UNKNOWN,
                     userProfile.getPhoneNumber(),
@@ -258,7 +277,7 @@ public class IPVCallbackHandler
                         clientSessionId,
                         session.getSessionId(),
                         clientId,
-                        session.getInternalCommonSubjectIdentifier(),
+                        internalPairwiseSubjectId,
                         userProfile.getEmail(),
                         AuditService.UNKNOWN,
                         userProfile.getPhoneNumber(),
@@ -270,20 +289,11 @@ public class IPVCallbackHandler
                     clientSessionId,
                     session.getSessionId(),
                     clientId,
-                    session.getInternalCommonSubjectIdentifier(),
+                    internalPairwiseSubjectId,
                     userProfile.getEmail(),
                     AuditService.UNKNOWN,
                     userProfile.getPhoneNumber(),
                     persistentId);
-            var pairwiseSubject =
-                    segmentedFunctionCall(
-                            "calculatePairwiseSubject",
-                            () ->
-                                    ClientSubjectHelper.getSubject(
-                                            userProfile,
-                                            clientRegistry,
-                                            dynamoService,
-                                            configurationService.getInternalSectorUri()));
 
             var userIdentityUserInfo =
                     ipvTokenService.sendIpvUserIdentityRequest(
@@ -301,14 +311,60 @@ public class IPVCallbackHandler
                     clientSessionId,
                     session.getSessionId(),
                     clientId,
-                    session.getInternalCommonSubjectIdentifier(),
+                    internalPairwiseSubjectId,
                     userProfile.getEmail(),
                     AuditService.UNKNOWN,
                     userProfile.getPhoneNumber(),
                     persistentId);
-
-            var userIdentityError = validateUserIdentityResponse(userIdentityUserInfo);
+            var userIdentityError =
+                    ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo);
             if (userIdentityError.isPresent()) {
+                var accountInterventionStatus =
+                        ipvCallbackHelper.getAccountInterventionStatus(
+                                internalPairwiseSubjectId, auditContext);
+                if (configurationService.isAccountInterventionServiceActionEnabled()) {
+                    ipvCallbackHelper.doAccountIntervention(accountInterventionStatus);
+                }
+
+                var returnCode = userIdentityUserInfo.getClaim(RETURN_CODE.getValue());
+                if (returnCodePresentInIPVResponse(returnCode)) {
+                    if (rpRequestedReturnCode(clientRegistry, authRequest)) {
+                        LOG.info("Generating auth code response for return code(s)");
+                        var authenticationResponse =
+                                ipvCallbackHelper.generateReturnCodeAuthenticationResponse(
+                                        authRequest,
+                                        clientSessionId,
+                                        userProfile,
+                                        session,
+                                        clientSession,
+                                        rpPairwiseSubject,
+                                        internalPairwiseSubjectId,
+                                        userIdentityUserInfo,
+                                        ipAddress,
+                                        persistentId);
+                        return generateApiGatewayProxyResponse(
+                                302,
+                                "",
+                                Map.of(
+                                        ResponseHeaders.LOCATION,
+                                        authenticationResponse.toURI().toString()),
+                                null);
+                    } else {
+                        LOG.warn("SPOT will not be invoked. Returning Error to RP");
+                        var errorResponse =
+                                new AuthenticationErrorResponse(
+                                        authRequest.getRedirectionURI(),
+                                        OAuth2Error.ACCESS_DENIED,
+                                        authRequest.getState(),
+                                        authRequest.getResponseMode());
+                        return generateApiGatewayProxyResponse(
+                                302,
+                                "",
+                                Map.of(ResponseHeaders.LOCATION, errorResponse.toURI().toString()),
+                                null);
+                    }
+                }
+
                 LOG.warn("SPOT will not be invoked. Returning Error to RP");
                 var errorResponse =
                         new AuthenticationErrorResponse(
@@ -331,12 +387,12 @@ public class IPVCallbackHandler
                             context.getAwsRequestId(),
                             clientId,
                             clientSessionId);
-            queueSPOTRequest(
+            ipvCallbackHelper.queueSPOTRequest(
                     logIds,
                     getSectorIdentifierForClient(
                             clientRegistry, configurationService.getInternalSectorUri()),
                     userProfile,
-                    pairwiseSubject,
+                    rpPairwiseSubject,
                     userIdentityUserInfo,
                     clientId);
 
@@ -345,14 +401,16 @@ public class IPVCallbackHandler
                     clientSessionId,
                     session.getSessionId(),
                     clientId,
-                    session.getInternalCommonSubjectIdentifier(),
+                    internalPairwiseSubjectId,
                     userProfile.getEmail(),
                     AuditService.UNKNOWN,
                     userProfile.getPhoneNumber(),
                     persistentId);
             segmentedFunctionCall(
                     "saveIdentityClaims",
-                    () -> saveIdentityClaimsToDynamo(pairwiseSubject, userIdentityUserInfo));
+                    () ->
+                            ipvCallbackHelper.saveIdentityClaimsToDynamo(
+                                    rpPairwiseSubject, userIdentityUserInfo));
             var redirectURI =
                     ConstructUriHelper.buildURI(
                             configurationService.getLoginURI().toString(), REDIRECT_PATH);
@@ -371,95 +429,14 @@ public class IPVCallbackHandler
         } catch (JsonException e) {
             LOG.error("Unable to serialize SPOTRequest when placing on queue");
             return redirectToFrontendErrorPage();
+        } catch (UserNotFoundException e) {
+            LOG.error(e.getMessage());
+            throw new RuntimeException(e);
         }
     }
 
-    private void saveIdentityClaimsToDynamo(
-            Subject pairwiseIdentifier, UserInfo userIdentityUserInfo) {
-        LOG.info("Checking for additional identity claims to save to dynamo");
-        var additionalClaims = new HashMap<String, String>();
-        ValidClaims.getAllValidClaims().stream()
-                .filter(t -> !t.equals(ValidClaims.CORE_IDENTITY_JWT.getValue()))
-                .filter(claim -> Objects.nonNull(userIdentityUserInfo.toJSONObject().get(claim)))
-                .forEach(
-                        finalClaim ->
-                                additionalClaims.put(
-                                        finalClaim,
-                                        userIdentityUserInfo
-                                                .toJSONObject()
-                                                .get(finalClaim)
-                                                .toString()));
-        LOG.info("Additional identity claims present: {}", !additionalClaims.isEmpty());
-
-        dynamoIdentityService.saveIdentityClaims(
-                pairwiseIdentifier.getValue(),
-                additionalClaims,
-                (String) userIdentityUserInfo.getClaim(VOT.getValue()),
-                userIdentityUserInfo.getClaim(IdentityClaims.CORE_IDENTITY.getValue()).toString());
-    }
-
-    private Optional<ErrorObject> validateUserIdentityResponse(UserInfo userIdentityUserInfo)
-            throws IpvCallbackException {
-        LOG.info("Validating userinfo response");
-        if (!LevelOfConfidence.MEDIUM_LEVEL
-                .getValue()
-                .equals(userIdentityUserInfo.getClaim(VOT.getValue()))) {
-            LOG.warn("IPV missing vot or vot not P2.");
-            return Optional.of(OAuth2Error.ACCESS_DENIED);
-        }
-        var trustmarkURL =
-                buildURI(configurationService.getOidcApiBaseURL().orElseThrow(), "/trustmark")
-                        .toString();
-
-        if (!trustmarkURL.equals(userIdentityUserInfo.getClaim(VTM.getValue()))) {
-            LOG.warn("VTM does not contain expected trustmark URL");
-            throw new IpvCallbackException("IPV trustmark is invalid");
-        }
-        return Optional.empty();
-    }
-
-    private void queueSPOTRequest(
-            LogIds logIds,
-            String sectorIdentifier,
-            UserProfile userProfile,
-            Subject pairwiseSubject,
-            UserInfo userIdentityUserInfo,
-            String clientId)
-            throws JsonException {
-        LOG.info("Constructing SPOT request ready to queue");
-        var spotClaimsBuilder =
-                SPOTClaims.builder()
-                        .withClaim(VOT.getValue(), userIdentityUserInfo.getClaim(VOT.getValue()))
-                        .withClaim(
-                                IdentityClaims.CREDENTIAL_JWT.getValue(),
-                                userIdentityUserInfo
-                                        .toJSONObject()
-                                        .get(IdentityClaims.CREDENTIAL_JWT.getValue()))
-                        .withClaim(
-                                IdentityClaims.CORE_IDENTITY.getValue(),
-                                userIdentityUserInfo
-                                        .toJSONObject()
-                                        .get(IdentityClaims.CORE_IDENTITY.getValue()))
-                        .withVtm(
-                                buildURI(
-                                                configurationService
-                                                        .getOidcApiBaseURL()
-                                                        .orElseThrow(),
-                                                "/trustmark")
-                                        .toString());
-
-        var spotRequest =
-                new SPOTRequest(
-                        spotClaimsBuilder.build(),
-                        userProfile.getSubjectID(),
-                        dynamoService.getOrGenerateSalt(userProfile),
-                        sectorIdentifier,
-                        pairwiseSubject.getValue(),
-                        logIds,
-                        clientId);
-        var spotRequestString = objectMapper.writeValueAsString(spotRequest);
-        sqsClient.send(spotRequestString);
-        LOG.info("SPOT request placed on queue");
+    private static boolean returnCodePresentInIPVResponse(Object returnCode) {
+        return returnCode instanceof List<?> returnCodeList && !returnCodeList.isEmpty();
     }
 
     private APIGatewayProxyResponseEvent redirectToFrontendErrorPage() {
@@ -480,34 +457,13 @@ public class IPVCallbackHandler
                 null);
     }
 
-    private APIGatewayProxyResponseEvent generateAuthenticationErrorResponse(
-            AuthenticationRequest authenticationRequest,
-            ErrorObject errorObject,
-            boolean noSessionErrorResponse,
-            String clientSessionId,
-            String sessionId) {
-        LOG.warn(
-                "Error in IPV AuthorisationResponse. ErrorCode: {}. ErrorDescription: {}. No Session Error: {}",
-                errorObject.getCode(),
-                errorObject.getDescription(),
-                noSessionErrorResponse);
-        auditService.submitAuditEvent(
-                IPVAuditableEvent.IPV_UNSUCCESSFUL_AUTHORISATION_RESPONSE_RECEIVED,
-                clientSessionId,
-                sessionId,
-                authenticationRequest.getClientID().getValue(),
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN,
-                AuditService.UNKNOWN);
-        var errorResponse =
-                new AuthenticationErrorResponse(
-                        authenticationRequest.getRedirectionURI(),
-                        errorObject,
-                        authenticationRequest.getState(),
-                        authenticationRequest.getResponseMode());
-        return generateApiGatewayProxyResponse(
-                302, "", Map.of(ResponseHeaders.LOCATION, errorResponse.toURI().toString()), null);
+    private boolean rpRequestedReturnCode(
+            ClientRegistry clientRegistry, AuthenticationRequest authRequest) {
+        return clientRegistry.getClaims().contains(RETURN_CODE.getValue())
+                && authRequest
+                                .getOIDCClaims()
+                                .getUserInfoClaimsRequest()
+                                .get(RETURN_CODE.getValue())
+                        != null;
     }
 }

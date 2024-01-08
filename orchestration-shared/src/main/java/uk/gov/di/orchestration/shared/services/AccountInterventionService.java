@@ -19,13 +19,12 @@ import static uk.gov.di.orchestration.shared.domain.AccountInterventionsAuditabl
 
 public class AccountInterventionService {
 
-    private static final Logger LOGGER = LogManager.getLogger(AccountInterventionService.class);
+    private static final Logger LOG = LogManager.getLogger(AccountInterventionService.class);
     private final HttpClient httpClient;
     private final URI accountInterventionServiceURI;
     private final AuditService auditService;
     private final boolean accountInterventionsCallEnabled;
     private final boolean accountInterventionsActionEnabled;
-    private final ConfigurationService configurationService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
 
     public AccountInterventionService(ConfigurationService configService) {
@@ -48,12 +47,11 @@ public class AccountInterventionService {
             HttpClient httpClient,
             CloudwatchMetricsService cloudwatchMetricsService,
             AuditService auditService) {
-        this.configurationService = configService;
         this.accountInterventionServiceURI = configService.getAccountInterventionServiceURI();
         this.accountInterventionsCallEnabled =
-                configurationService.isAccountInterventionServiceCallEnabled();
+                configService.isAccountInterventionServiceCallEnabled();
         this.accountInterventionsActionEnabled =
-                configurationService.isAccountInterventionServiceActionEnabled();
+                configService.isAccountInterventionServiceActionEnabled();
         this.httpClient = httpClient;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.auditService = auditService;
@@ -97,7 +95,7 @@ public class AccountInterventionService {
             throw new AccountInterventionException(
                     "Problem communicating with Account Intervention Service", e);
         }
-        LOGGER.warn("Problem communicating with Account Intervention Service " + e);
+        LOG.warn("Problem communicating with Account Intervention Service ", e);
         return noInterventionResponse();
     }
 
