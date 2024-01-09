@@ -7,8 +7,10 @@ import org.apache.http.client.utils.URIBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
+import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
+import uk.gov.di.orchestration.shared.helpers.ConstructUriHelper;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.services.AuditService;
@@ -62,6 +64,16 @@ public class LogoutService {
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.backChannelLogoutService = backChannelLogoutService;
+    }
+
+    public APIGatewayProxyResponseEvent handleAccountInterventionLogout(
+            Session session,
+            APIGatewayProxyRequestEvent input,
+            Optional<String> clientId,
+            Optional<String> sessionId,
+            AccountInterventionStatus accountStatus) {
+        destroySessions(session);
+        return generateAccountInterventionLogoutResponse(input, clientId, sessionId, accountStatus);
     }
 
     public void destroySessions(Session session) {
@@ -154,5 +166,34 @@ public class LogoutService {
 
         return generateApiGatewayProxyResponse(
                 302, "", Map.of(ResponseHeaders.LOCATION, uri.toString()), null);
+    }
+
+    private APIGatewayProxyResponseEvent generateAccountInterventionLogoutResponse(
+            APIGatewayProxyRequestEvent input,
+            Optional<String> clientId,
+            Optional<String> sessionId,
+            AccountInterventionStatus accountStatus) {
+        String redirectUri;
+        if (accountStatus.blocked()) {
+            redirectUri = configurationService.getAccountStatusBlockedURI();
+            LOG.info("Generating Account Intervention blocked logout response");
+        } else if (accountStatus.suspended()) {
+            redirectUri = configurationService.getAccountStatusSuspendedURI();
+            LOG.info("Generating Account Intervention suspended logout response");
+        } else {
+            throw new RuntimeException("Account status must be blocked or suspended");
+        }
+        sessionId.ifPresent(
+                t ->
+                        cloudwatchMetricsService.incrementLogout(
+                                clientId, Optional.of(accountStatus)));
+        return generateLogoutResponse(
+                ConstructUriHelper.buildURI(
+                        configurationService.getOidcApiBaseURL().orElseThrow(), redirectUri),
+                Optional.empty(),
+                Optional.empty(),
+                input,
+                clientId,
+                sessionId);
     }
 }

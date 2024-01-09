@@ -57,7 +57,7 @@ public class AccountInterventionsHandlerIntegrationTest extends ApiGatewayHandle
         handler =
                 new AccountInterventionsHandler(
                         ACCOUNT_INTERVENTIONS_HANDLER_CONFIGURATION_SERVICE);
-        accountInterventionsStubExtension.init(
+        accountInterventionsStubExtension.initWithBlockedUserId(
                 setupUserAndRetrieveUserId(TEST_EMAIL_ADDRESS),
                 setupUserAndRetrieveUserId(TEST_EMAIL_ADDRESS_PERMANENTLY_BLOCKED_USER));
         txmaAuditQueue.clear();

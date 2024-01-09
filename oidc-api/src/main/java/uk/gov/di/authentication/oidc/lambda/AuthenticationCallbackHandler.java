@@ -24,6 +24,7 @@ import uk.gov.di.authentication.oidc.exceptions.AuthenticationCallbackException;
 import uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService;
 import uk.gov.di.authentication.oidc.services.AuthenticationTokenService;
 import uk.gov.di.authentication.oidc.services.InitiateIPVAuthorisationService;
+import uk.gov.di.authentication.oidc.services.LogoutService;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
@@ -55,6 +56,7 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.GET;
 import static java.util.Objects.isNull;
@@ -89,6 +91,7 @@ public class AuthenticationCallbackHandler
     private final InitiateIPVAuthorisationService initiateIPVAuthorisationService;
     private final AccountInterventionService accountInterventionService;
     private final CookieHelper cookieHelper;
+    private final LogoutService logoutService;
     private static final String ERROR_PAGE_REDIRECT_PATH = "error";
 
     public AuthenticationCallbackHandler() {
@@ -122,6 +125,7 @@ public class AuthenticationCallbackHandler
         this.accountInterventionService =
                 new AccountInterventionService(
                         configurationService, cloudwatchMetricsService, auditService);
+        this.logoutService = new LogoutService(configurationService);
     }
 
     public AuthenticationCallbackHandler(
@@ -137,7 +141,8 @@ public class AuthenticationCallbackHandler
             AuthorisationCodeService authorisationCodeService,
             ClientService clientService,
             InitiateIPVAuthorisationService initiateIPVAuthorisationService,
-            AccountInterventionService accountInterventionService) {
+            AccountInterventionService accountInterventionService,
+            LogoutService logoutService) {
         this.configurationService = configurationService;
         this.authorisationService = responseService;
         this.tokenService = tokenService;
@@ -151,6 +156,7 @@ public class AuthenticationCallbackHandler
         this.clientService = clientService;
         this.initiateIPVAuthorisationService = initiateIPVAuthorisationService;
         this.accountInterventionService = accountInterventionService;
+        this.logoutService = logoutService;
     }
 
     public APIGatewayProxyResponseEvent handleRequest(
@@ -326,8 +332,23 @@ public class AuthenticationCallbackHandler
                                 persistentSessionId);
 
                 var accountStatus =
-                        accountInterventionService.getAccountStatus(
-                                userInfo.getSubject().getValue(), auditContext);
+                        configurationService.isAccountInterventionServiceCallEnabled()
+                                ? accountInterventionService.getAccountStatus(
+                                        userInfo.getSubject().getValue(), auditContext)
+                                : null;
+
+                if (nonNull(accountStatus)) {
+                    if (accountStatus.blocked()
+                            || accountStatus.resetPassword()
+                            || (!identityRequired && accountStatus.suspended())) {
+                        return logoutService.handleAccountInterventionLogout(
+                                userSession,
+                                input,
+                                Optional.of(clientId),
+                                Optional.of(userSession.getSessionId()),
+                                accountStatus);
+                    }
+                }
 
                 Boolean reproveIdentity =
                         configurationService.isAccountInterventionServiceActionEnabled()
