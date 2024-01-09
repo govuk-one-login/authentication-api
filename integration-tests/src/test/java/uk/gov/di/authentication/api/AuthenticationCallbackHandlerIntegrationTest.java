@@ -20,8 +20,6 @@ import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent;
 import uk.gov.di.authentication.oidc.lambda.AuthenticationCallbackHandler;
 import uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService;
-import uk.gov.di.authentication.sharedtest.extensions.AccountInterventionsStubExtension;
-import uk.gov.di.orchestration.shared.domain.AccountInterventionsAuditableEvent;
 import uk.gov.di.orchestration.shared.entity.AuthenticationUserInfo;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ClientType;
@@ -60,8 +58,6 @@ import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.orchestration.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
@@ -83,10 +79,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     protected final AuthenticationCallbackUserInfoStoreExtension userInfoStoreExtension =
             new AuthenticationCallbackUserInfoStoreExtension(180);
 
-    @RegisterExtension
-    public final AccountInterventionsStubExtension accountInterventionApiStub =
-            new AccountInterventionsStubExtension();
-
     protected final ConfigurationService configurationService =
             new AuthenticationCallbackHandlerIntegrationTest.TestConfigurationService(
                     authExternalApiStub,
@@ -96,8 +88,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                     tokenSigner,
                     ipvPrivateKeyJwtSigner,
                     spotQueue,
-                    docAppPrivateKeyJwtSigner,
-                    accountInterventionApiStub);
+                    docAppPrivateKeyJwtSigner);
 
     private static final String CLIENT_ID = "test-client-id";
     private static final String CLIENT_NAME = "test-client-name";
@@ -106,7 +97,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     private static final Subject SUBJECT_ID = new Subject();
 
     private static final String IPV_CLIENT_ID = "ipv-client-id";
-    private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final KeyPair keyPair = generateRsaKeyPair();
     private static final String publicKey =
             "-----BEGIN PUBLIC KEY-----\n"
@@ -121,8 +111,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
             setupTest();
             setupSession();
             setupClientRegWithoutIdentityVerificationSupported();
-            accountInterventionApiStub.initWithBlockedOrSuspended(
-                    SUBJECT_ID.getValue(), false, false);
         }
 
         @Test
@@ -152,7 +140,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                             OrchestrationAuditableEvent.AUTH_CALLBACK_RESPONSE_RECEIVED,
                             OrchestrationAuditableEvent.AUTH_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                             OrchestrationAuditableEvent.AUTH_SUCCESSFUL_USERINFO_RESPONSE_RECEIVED,
-                            AccountInterventionsAuditableEvent.AIS_RESPONSE_RECEIVED,
                             OidcAuditableEvent.AUTH_CODE_ISSUED));
 
             Optional<AuthenticationUserInfo> userInfoDbEntry =
@@ -258,12 +245,10 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
             setupTest();
             setupSession();
             setupClientRegWithIdentityVerificationSupported();
-            accountInterventionApiStub.initWithBlockedOrSuspended(
-                    SUBJECT_ID.getValue(), false, false);
         }
 
         @Test
-        void shouldRedirectToIPVWhenIdentityRequired() {
+        void shouldRedirectToIPVWhenIdentityRequired() throws Json.JsonException {
             var response =
                     makeRequest(
                             Optional.empty(),
@@ -284,7 +269,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                     txmaAuditQueue,
                     List.of(
                             OrchestrationAuditableEvent.AUTH_CALLBACK_RESPONSE_RECEIVED,
-                            AccountInterventionsAuditableEvent.AIS_RESPONSE_RECEIVED,
                             OrchestrationAuditableEvent.AUTH_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                             OrchestrationAuditableEvent.AUTH_SUCCESSFUL_USERINFO_RESPONSE_RECEIVED,
                             IPVAuditableEvent.IPV_AUTHORISATION_REQUESTED));
@@ -292,96 +276,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         private void setupClientRegWithIdentityVerificationSupported() {
             setupClientReg(true);
-        }
-    }
-
-    @Nested
-    class AccountInterventionJourney {
-
-        @BeforeEach()
-        void accountInterventionSetup() throws Json.JsonException {
-            setupTest();
-            setupSession();
-            setupClientRegWithoutIdentityVerificationSupported();
-        }
-
-        @Test
-        void shouldLogoutAndRedirectToBlockedPageWhenAccountIsBlocked() throws Json.JsonException {
-            accountInterventionApiStub.initWithBlockedOrSuspended(
-                    SUBJECT_ID.getValue(), true, false);
-
-            var session = redis.getSession(SESSION_ID);
-            assertNotNull(session);
-
-            var response =
-                    makeRequest(
-                            Optional.of(TEST_EMAIL_ADDRESS),
-                            constructHeaders(
-                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
-                            constructQueryStringParameters());
-
-            assertThat(response, hasStatus(302));
-            assertThrows(
-                    uk.gov.di.orchestration.shared.serialization.Json.JsonException.class,
-                    () -> redis.getSession(SESSION_ID));
-
-            URI redirectLocationHeader =
-                    URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
-
-            assertThat(
-                    redirectLocationHeader.toString(),
-                    containsString(configurationService.getAccountStatusBlockedURI().toString()));
-
-            assertTxmaAuditEventsReceived(
-                    txmaAuditQueue,
-                    List.of(
-                            OrchestrationAuditableEvent.AUTH_CALLBACK_RESPONSE_RECEIVED,
-                            AccountInterventionsAuditableEvent.AIS_RESPONSE_RECEIVED,
-                            OrchestrationAuditableEvent.AUTH_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
-                            OrchestrationAuditableEvent.AUTH_SUCCESSFUL_USERINFO_RESPONSE_RECEIVED,
-                            OidcAuditableEvent.LOG_OUT_SUCCESS));
-        }
-
-        @Test
-        void shouldLogoutAndRedirectToSuspendedPageWhenAccountIsSuspended()
-                throws Json.JsonException {
-            accountInterventionApiStub.initWithBlockedOrSuspended(
-                    SUBJECT_ID.getValue(), false, true);
-
-            var session = redis.getSession(SESSION_ID);
-            assertNotNull(session);
-
-            var response =
-                    makeRequest(
-                            Optional.of(TEST_EMAIL_ADDRESS),
-                            constructHeaders(
-                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
-                            constructQueryStringParameters());
-
-            assertThat(response, hasStatus(302));
-            assertThrows(
-                    uk.gov.di.orchestration.shared.serialization.Json.JsonException.class,
-                    () -> redis.getSession(SESSION_ID));
-
-            URI redirectLocationHeader =
-                    URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
-
-            assertThat(
-                    redirectLocationHeader.toString(),
-                    containsString(configurationService.getAccountStatusSuspendedURI().toString()));
-
-            assertTxmaAuditEventsReceived(
-                    txmaAuditQueue,
-                    List.of(
-                            OrchestrationAuditableEvent.AUTH_CALLBACK_RESPONSE_RECEIVED,
-                            AccountInterventionsAuditableEvent.AIS_RESPONSE_RECEIVED,
-                            OrchestrationAuditableEvent.AUTH_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
-                            OrchestrationAuditableEvent.AUTH_SUCCESSFUL_USERINFO_RESPONSE_RECEIVED,
-                            OidcAuditableEvent.LOG_OUT_SUCCESS));
-        }
-
-        private void setupClientRegWithoutIdentityVerificationSupported() {
-            setupClientReg(false);
         }
     }
 
@@ -463,7 +357,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     protected static class TestConfigurationService extends IntegrationTestConfigurationService {
 
         private final AuthExternalApiStubExtension authExternalApiStub;
-        private final AccountInterventionsStubExtension accountInterventionApiStub;
 
         public TestConfigurationService(
                 AuthExternalApiStubExtension authExternalApiStub,
@@ -473,8 +366,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                 TokenSigningExtension tokenSigningKey,
                 TokenSigningExtension ipvPrivateKeyJwtSigner,
                 SqsQueueExtension spotQueue,
-                TokenSigningExtension docAppPrivateKeyJwtSigner,
-                AccountInterventionsStubExtension accountInterventionsStubExtension) {
+                TokenSigningExtension docAppPrivateKeyJwtSigner) {
             super(
                     auditEventTopic,
                     notificationQueue,
@@ -485,7 +377,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                     docAppPrivateKeyJwtSigner,
                     configurationParameters);
             this.authExternalApiStub = authExternalApiStub;
-            this.accountInterventionApiStub = accountInterventionsStubExtension;
         }
 
         @Override
@@ -543,25 +434,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         @Override
         public URI getAccountInterventionServiceURI() {
-            try {
-                return new URIBuilder()
-                        .setHost("localhost")
-                        .setPort(accountInterventionApiStub.getHttpPort())
-                        .setScheme("http")
-                        .build();
-            } catch (URISyntaxException e) {
-                throw new RuntimeException(e);
-            }
-        }
-
-        @Override
-        public boolean isAccountInterventionServiceCallEnabled() {
-            return true;
-        }
-
-        @Override
-        public boolean isAccountInterventionServiceActionEnabled() {
-            return true;
+            return URI.create("https://authorize-account-intervention");
         }
     }
 }

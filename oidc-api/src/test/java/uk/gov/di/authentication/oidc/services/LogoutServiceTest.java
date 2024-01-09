@@ -20,7 +20,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatcher;
 import org.mockito.MockedStatic;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
-import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
@@ -47,8 +46,6 @@ import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -96,8 +93,6 @@ public class LogoutServiceTest {
     private static final String CLIENT_ID = "client-id";
     private static final Subject SUBJECT = new Subject();
     private static final String EMAIL = "joe.bloggs@test.com";
-
-    private static final String OIDC_API_BASE_URL = "https://oidc.test.account.gov.uk/";
 
     private SignedJWT signedIDToken;
     private Optional<String> audience;
@@ -262,72 +257,6 @@ public class LogoutServiceTest {
     }
 
     @Test
-    void destroysSessionsAndReturnsAccountInterventionLogoutResponseWhenAccountIsBlocked() {
-        when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_API_BASE_URL));
-        var accountStatus = new AccountInterventionStatus(true, false, false, false);
-        APIGatewayProxyResponseEvent response =
-                logoutService.handleAccountInterventionLogout(
-                        session,
-                        event,
-                        Optional.of(CLIENT_ID),
-                        Optional.of(SESSION_ID),
-                        accountStatus);
-
-        verify(clientSessionService)
-                .deleteClientSessionFromRedis(session.getClientSessions().get(0));
-        verify(sessionService).deleteSessionFromRedis(session.getSessionId());
-        verify(auditService)
-                .submitAuditEvent(
-                        OidcAuditableEvent.LOG_OUT_SUCCESS,
-                        AuditService.UNKNOWN,
-                        SESSION_ID,
-                        CLIENT_ID,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
-        verify(cloudwatchMetricsService)
-                .incrementLogout(Optional.of(CLIENT_ID), Optional.of(accountStatus));
-
-        assertThat(response, hasStatus(302));
-        assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), equalTo(OIDC_API_BASE_URL));
-    }
-
-    @Test
-    void destroysSessionsAndReturnsAccountInterventionLogoutResponseWhenAccountIsSuspended() {
-        when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_API_BASE_URL));
-        var accountStatus = new AccountInterventionStatus(false, true, false, false);
-        APIGatewayProxyResponseEvent response =
-                logoutService.handleAccountInterventionLogout(
-                        session,
-                        event,
-                        Optional.of(CLIENT_ID),
-                        Optional.of(SESSION_ID),
-                        accountStatus);
-
-        verify(clientSessionService)
-                .deleteClientSessionFromRedis(session.getClientSessions().get(0));
-        verify(sessionService).deleteSessionFromRedis(session.getSessionId());
-        verify(auditService)
-                .submitAuditEvent(
-                        OidcAuditableEvent.LOG_OUT_SUCCESS,
-                        AuditService.UNKNOWN,
-                        SESSION_ID,
-                        CLIENT_ID,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        IP_ADDRESS,
-                        AuditService.UNKNOWN,
-                        PERSISTENT_SESSION_ID);
-        verify(cloudwatchMetricsService)
-                .incrementLogout(Optional.of(CLIENT_ID), Optional.of(accountStatus));
-
-        assertThat(response, hasStatus(302));
-        assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), equalTo(OIDC_API_BASE_URL));
-    }
-
-    @Test
     public void shouldDeleteSessionFromRedisWhenNoCookieExists() {
         APIGatewayProxyRequestEvent input = new APIGatewayProxyRequestEvent();
         input.setQueryStringParameters(
@@ -371,26 +300,6 @@ public class LogoutServiceTest {
         verify(clientSessionService).deleteClientSessionFromRedis("client-session-id-2");
         verify(clientSessionService).deleteClientSessionFromRedis("client-session-id-3");
         verify(sessionService, times(1)).deleteSessionFromRedis(SESSION_ID);
-    }
-
-    @Test
-    void throwsWhenGenerateAccountInterventionLogoutResponseCalledInappropriately() {
-        AccountInterventionStatus status =
-                new AccountInterventionStatus(false, false, false, false);
-
-        RuntimeException exception =
-                assertThrows(
-                        RuntimeException.class,
-                        () ->
-                                logoutService.handleAccountInterventionLogout(
-                                        session,
-                                        event,
-                                        Optional.of(CLIENT_ID),
-                                        Optional.of(SESSION_ID),
-                                        status),
-                        "Expected to throw exception");
-
-        assertEquals("Account status must be blocked or suspended", exception.getMessage());
     }
 
     private Session generateSession() {

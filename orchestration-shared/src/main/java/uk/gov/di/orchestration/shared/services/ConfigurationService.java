@@ -92,14 +92,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 .equals("true");
     }
 
-    public String getAccountStatusBlockedURI() {
-        return "/orch-frontend/not-available";
-    }
-
-    public String getAccountStatusSuspendedURI() {
-        return "/orch-frontend/unavailable";
-    }
-
     public long getAuthCodeExpiry() {
         return Long.parseLong(System.getenv().getOrDefault("AUTH_CODE_EXPIRY", "300"));
     }

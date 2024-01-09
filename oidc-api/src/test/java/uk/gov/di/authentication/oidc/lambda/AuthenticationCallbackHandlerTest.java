@@ -21,7 +21,6 @@ import uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent;
 import uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService;
 import uk.gov.di.authentication.oidc.services.AuthenticationTokenService;
 import uk.gov.di.authentication.oidc.services.InitiateIPVAuthorisationService;
-import uk.gov.di.authentication.oidc.services.LogoutService;
 import uk.gov.di.orchestration.shared.conditions.IdentityHelper;
 import uk.gov.di.orchestration.shared.domain.AuditableEvent;
 import uk.gov.di.orchestration.shared.entity.*;
@@ -65,7 +64,6 @@ class AuthenticationCallbackHandlerTest {
             mock(InitiateIPVAuthorisationService.class);
     private static final AccountInterventionService accountInterventionService =
             mock(AccountInterventionService.class);
-    private static final LogoutService logoutService = mock(LogoutService.class);
     private static final CookieHelper cookieHelper = mock(CookieHelper.class);
     private final ClientService clientService = mock(ClientService.class);
     private static final String TEST_FRONTEND_BASE_URL = "test.orchestration.frontend.url";
@@ -139,8 +137,7 @@ class AuthenticationCallbackHandlerTest {
                         authorisationCodeService,
                         clientService,
                         initiateIPVAuthorisationService,
-                        accountInterventionService,
-                        logoutService);
+                        accountInterventionService);
     }
 
     @Test
@@ -200,6 +197,79 @@ class AuthenticationCallbackHandlerTest {
                         eq(pair("rpPairwiseId", PAIRWISE_SUBJECT_ID.getValue())),
                         eq(pair("nonce", RP_NONCE)),
                         eq(pair("authCode", AUTH_CODE_RP_TO_ORCH.getValue())));
+    }
+
+    @Nested
+    class redirectToIPV {
+        private static MockedStatic<IdentityHelper> mockedIdentityHelper;
+
+        @BeforeAll
+        static void init() {
+            when(authorizationService.validateRequest(any(), any())).thenReturn(true);
+        }
+
+        @BeforeEach
+        void setup() throws UnsuccessfulCredentialResponseException {
+            mockedIdentityHelper = mockStatic(IdentityHelper.class);
+            when(IdentityHelper.identityRequired(anyMap(), anyBoolean(), anyBoolean()))
+                    .thenReturn(true);
+            when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+            when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
+                    .thenReturn(USER_INFO);
+            when(initiateIPVAuthorisationService.sendRequestToIPV(
+                            any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                    .thenReturn(createIPVApiResponse());
+            usingValidSession();
+            usingValidClientSession();
+            usingValidClient();
+        }
+
+        @AfterEach
+        void afterEach() {
+            mockedIdentityHelper.close();
+        }
+
+        @Test
+        void shouldRedirectToIPVWhenIdentityRequired() {
+            var event = new APIGatewayProxyRequestEvent();
+            setValidHeadersAndQueryParameters(event);
+
+            var response = handler.handleRequest(event, null);
+
+            assertThat(response, hasStatus(302));
+
+            verify(cloudwatchMetricsService).incrementCounter(eq("AuthenticationCallback"), any());
+
+            verify(initiateIPVAuthorisationService)
+                    .sendRequestToIPV(
+                            any(), any(), any(), any(), any(), any(), any(), any(), any());
+        }
+
+        @Test
+        void shouldRedirectToIPVWithReproveIdentityWhenAccountInterventionsEnabled() {
+            when(configurationService.isAccountInterventionServiceCallEnabled()).thenReturn(true);
+            when(configurationService.isAccountInterventionServiceActionEnabled()).thenReturn(true);
+            boolean reproveIdentity = true;
+            when(accountInterventionService.getAccountStatus(anyString(), any()))
+                    .thenReturn(new AccountInterventionStatus(false, true, reproveIdentity, false));
+
+            var event = new APIGatewayProxyRequestEvent();
+            setValidHeadersAndQueryParameters(event);
+
+            handler.handleRequest(event, null);
+
+            verify(initiateIPVAuthorisationService)
+                    .sendRequestToIPV(
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            eq(reproveIdentity));
+        }
     }
 
     @Test
@@ -292,237 +362,6 @@ class AuthenticationCallbackHandlerTest {
                         OrchestrationAuditableEvent.AUTH_UNSUCCESSFUL_USERINFO_RESPONSE_RECEIVED),
                 auditService);
         verifyNoInteractions(userInfoStorageService, cloudwatchMetricsService);
-    }
-
-    @Nested
-    class identityJourney {
-        private static MockedStatic<IdentityHelper> mockedIdentityHelper;
-
-        @BeforeAll
-        static void init() {
-            when(authorizationService.validateRequest(any(), any())).thenReturn(true);
-        }
-
-        @BeforeEach
-        void setup() throws UnsuccessfulCredentialResponseException {
-            mockedIdentityHelper = mockStatic(IdentityHelper.class);
-            when(IdentityHelper.identityRequired(anyMap(), anyBoolean(), anyBoolean()))
-                    .thenReturn(true);
-            when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
-            when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
-                    .thenReturn(USER_INFO);
-            when(configurationService.isAccountInterventionServiceCallEnabled()).thenReturn(true);
-            when(configurationService.isAccountInterventionServiceActionEnabled()).thenReturn(true);
-            when(initiateIPVAuthorisationService.sendRequestToIPV(
-                            any(), any(), any(), any(), any(), any(), any(), any(), any()))
-                    .thenReturn(createIPVApiResponse());
-            usingValidSession();
-            usingValidClientSession();
-            usingValidClient();
-        }
-
-        @AfterEach
-        void afterEach() {
-            mockedIdentityHelper.close();
-        }
-
-        @Test
-        void shouldRedirectToIPVWhenAccountInterventionsDisabled() {
-            when(configurationService.isAccountInterventionServiceCallEnabled()).thenReturn(false);
-            when(configurationService.isAccountInterventionServiceActionEnabled())
-                    .thenReturn(false);
-            var event = new APIGatewayProxyRequestEvent();
-            setValidHeadersAndQueryParameters(event);
-
-            var response = handler.handleRequest(event, null);
-
-            assertThat(response, hasStatus(302));
-
-            verify(cloudwatchMetricsService).incrementCounter(eq("AuthenticationCallback"), any());
-
-            verify(initiateIPVAuthorisationService)
-                    .sendRequestToIPV(
-                            any(), any(), any(), any(), any(), any(), any(), any(), any());
-        }
-
-        @Test
-        void shouldRedirectToIPVWhenAccountInterventionsEnabledAndAccountStatusIsClear() {
-            when(configurationService.isAccountInterventionServiceCallEnabled()).thenReturn(true);
-            when(configurationService.isAccountInterventionServiceActionEnabled()).thenReturn(true);
-            boolean reproveIdentity = true;
-            when(accountInterventionService.getAccountStatus(anyString(), any()))
-                    .thenReturn(
-                            new AccountInterventionStatus(false, false, reproveIdentity, false));
-
-            var event = new APIGatewayProxyRequestEvent();
-            setValidHeadersAndQueryParameters(event);
-
-            handler.handleRequest(event, null);
-
-            verify(initiateIPVAuthorisationService)
-                    .sendRequestToIPV(
-                            any(),
-                            any(),
-                            any(),
-                            any(),
-                            any(),
-                            any(),
-                            any(),
-                            any(),
-                            eq(reproveIdentity));
-        }
-
-        @Test
-        void shouldRedirectToIPVWhenAccountStatusIsSuspended() {
-            boolean reproveIdentity = true;
-            when(accountInterventionService.getAccountStatus(anyString(), any()))
-                    .thenReturn(new AccountInterventionStatus(false, true, reproveIdentity, false));
-
-            var event = new APIGatewayProxyRequestEvent();
-            setValidHeadersAndQueryParameters(event);
-
-            handler.handleRequest(event, null);
-
-            verify(initiateIPVAuthorisationService)
-                    .sendRequestToIPV(
-                            any(),
-                            any(),
-                            any(),
-                            any(),
-                            any(),
-                            any(),
-                            any(),
-                            any(),
-                            eq(reproveIdentity));
-        }
-
-        @Test
-        void shouldNotRedirectToIPVWhenAccountStatusIsBlocked() {
-            AccountInterventionStatus accountStatus =
-                    new AccountInterventionStatus(true, false, false, false);
-            when(accountInterventionService.getAccountStatus(anyString(), any()))
-                    .thenReturn(accountStatus);
-
-            var event = new APIGatewayProxyRequestEvent();
-            setValidHeadersAndQueryParameters(event);
-
-            handler.handleRequest(event, null);
-
-            verifyNoInteractions(initiateIPVAuthorisationService);
-        }
-
-        @Test
-        void shouldNotRedirectToIPVWhenResetPasswordIsRequired() {
-            AccountInterventionStatus accountStatus =
-                    new AccountInterventionStatus(false, true, false, true);
-            when(accountInterventionService.getAccountStatus(any())).thenReturn(accountStatus);
-
-            var event = new APIGatewayProxyRequestEvent();
-            setValidHeadersAndQueryParameters(event);
-
-            handler.handleRequest(event, null);
-
-            verifyNoInteractions(initiateIPVAuthorisationService);
-        }
-    }
-
-    @Nested
-    class nonIdentityJourney {
-        private static MockedStatic<IdentityHelper> mockedIdentityHelper;
-
-        @BeforeAll
-        static void init() {
-            when(authorizationService.validateRequest(any(), any())).thenReturn(true);
-        }
-
-        @BeforeEach
-        void setup() throws UnsuccessfulCredentialResponseException {
-            mockedIdentityHelper = mockStatic(IdentityHelper.class);
-            when(IdentityHelper.identityRequired(anyMap(), anyBoolean(), anyBoolean()))
-                    .thenReturn(false);
-            when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
-            when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class)))
-                    .thenReturn(USER_INFO);
-            when(configurationService.isAccountInterventionServiceCallEnabled()).thenReturn(true);
-            when(configurationService.isAccountInterventionServiceActionEnabled()).thenReturn(true);
-            usingValidSession();
-            usingValidClientSession();
-            usingValidClient();
-        }
-
-        @AfterEach
-        void tearDown() {
-            mockedIdentityHelper.close();
-        }
-
-        @Test
-        void shouldPerformBackChannelLogoutWhenAccountStatusIsBlocked() {
-            AccountInterventionStatus accountStatus =
-                    new AccountInterventionStatus(true, false, false, false);
-            when(configurationService.isAccountInterventionServiceCallEnabled()).thenReturn(true);
-            when(configurationService.isAccountInterventionServiceActionEnabled()).thenReturn(true);
-            when(accountInterventionService.getAccountStatus(anyString(), any()))
-                    .thenReturn(accountStatus);
-
-            var event = new APIGatewayProxyRequestEvent();
-            setValidHeadersAndQueryParameters(event);
-
-            handler.handleRequest(event, null);
-
-            verify(logoutService)
-                    .handleAccountInterventionLogout(
-                            session,
-                            event,
-                            Optional.of(CLIENT_ID.toString()),
-                            Optional.of(SESSION_ID.toString()),
-                            accountStatus);
-        }
-
-        @Test
-        void shouldPerformBackChannelLogoutWhenResetPasswordIsRequired() {
-            AccountInterventionStatus accountStatus =
-                    new AccountInterventionStatus(false, true, false, true);
-            when(configurationService.isAccountInterventionServiceCallEnabled()).thenReturn(true);
-            when(configurationService.isAccountInterventionServiceActionEnabled()).thenReturn(true);
-            when(accountInterventionService.getAccountStatus(anyString(), any()))
-                    .thenReturn(accountStatus);
-
-            var event = new APIGatewayProxyRequestEvent();
-            setValidHeadersAndQueryParameters(event);
-
-            handler.handleRequest(event, null);
-
-            verify(logoutService)
-                    .handleAccountInterventionLogout(
-                            session,
-                            event,
-                            Optional.of(CLIENT_ID.toString()),
-                            Optional.of(SESSION_ID.toString()),
-                            accountStatus);
-        }
-
-        @Test
-        void shouldPerformBackChannelLogoutWhenAccountStatusIsSuspended() {
-            AccountInterventionStatus accountStatus =
-                    new AccountInterventionStatus(false, true, false, false);
-            when(configurationService.isAccountInterventionServiceCallEnabled()).thenReturn(true);
-            when(configurationService.isAccountInterventionServiceActionEnabled()).thenReturn(true);
-            when(accountInterventionService.getAccountStatus(anyString(), any()))
-                    .thenReturn(accountStatus);
-
-            var event = new APIGatewayProxyRequestEvent();
-            setValidHeadersAndQueryParameters(event);
-
-            handler.handleRequest(event, null);
-
-            verify(logoutService)
-                    .handleAccountInterventionLogout(
-                            session,
-                            event,
-                            Optional.of(CLIENT_ID.toString()),
-                            Optional.of(SESSION_ID.toString()),
-                            accountStatus);
-        }
     }
 
     private APIGatewayProxyResponseEvent createIPVApiResponse() {
