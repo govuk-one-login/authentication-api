@@ -388,7 +388,10 @@ class VerifyMfaCodeHandlerTest {
     }
 
     private static Stream<JourneyType> existingUserAuthAppJourneyTypes() {
-        return Stream.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA);
+        return Stream.of(
+                JourneyType.SIGN_IN,
+                JourneyType.PASSWORD_RESET_MFA,
+                JourneyType.REAUTHENTICATE_MFA);
     }
 
     @ParameterizedTest
@@ -432,7 +435,11 @@ class VerifyMfaCodeHandlerTest {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.empty());
         var authAppSecret =
-                List.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA).contains(journeyType)
+                List.of(
+                                        JourneyType.SIGN_IN,
+                                        JourneyType.PASSWORD_RESET_MFA,
+                                        JourneyType.REAUTHENTICATE_MFA)
+                                .contains(journeyType)
                         ? null
                         : AUTH_APP_SECRET;
         var codeRequest =
@@ -477,8 +484,9 @@ class VerifyMfaCodeHandlerTest {
                         JourneyType.ACCOUNT_RECOVERY, CodeRequestType.AUTH_APP_ACCOUNT_RECOVERY),
                 Arguments.of(JourneyType.REGISTRATION, CodeRequestType.AUTH_APP_REGISTRATION),
                 Arguments.of(JourneyType.SIGN_IN, CodeRequestType.AUTH_APP_SIGN_IN),
+                Arguments.of(JourneyType.PASSWORD_RESET_MFA, CodeRequestType.PW_RESET_MFA_AUTH_APP),
                 Arguments.of(
-                        JourneyType.PASSWORD_RESET_MFA, CodeRequestType.PW_RESET_MFA_AUTH_APP));
+                        JourneyType.REAUTHENTICATE_MFA, CodeRequestType.AUTH_APP_REAUTHENTICATION));
     }
 
     @ParameterizedTest

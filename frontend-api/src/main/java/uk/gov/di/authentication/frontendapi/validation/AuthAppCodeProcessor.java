@@ -64,6 +64,12 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
                 CodeRequestType.getCodeRequestType(AUTH_APP, codeRequest.getJourneyType());
         var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + codeRequestType;
 
+        var nonRegistrationJourneyTypes =
+                List.of(
+                        JourneyType.SIGN_IN,
+                        JourneyType.PASSWORD_RESET_MFA,
+                        JourneyType.REAUTHENTICATE_MFA);
+
         if (isCodeBlockedForSession(codeBlockedKeyPrefix)) {
             LOG.info("Code blocked for session");
             return Optional.of(ErrorResponse.ERROR_1042);
@@ -77,8 +83,7 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
         }
 
         var authAppSecret =
-                List.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA)
-                                .contains(codeRequest.getJourneyType())
+                nonRegistrationJourneyTypes.contains(codeRequest.getJourneyType())
                         ? getMfaCredentialValue().orElse(null)
                         : codeRequest.getProfileInformation();
 
@@ -87,8 +92,7 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
             return Optional.of(ErrorResponse.ERROR_1043);
         }
 
-        if (!List.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA)
-                        .contains(codeRequest.getJourneyType())
+        if (!nonRegistrationJourneyTypes.contains(codeRequest.getJourneyType())
                 && !base32.isInAlphabet(codeRequest.getProfileInformation())) {
             return Optional.of(ErrorResponse.ERROR_1041);
         }
