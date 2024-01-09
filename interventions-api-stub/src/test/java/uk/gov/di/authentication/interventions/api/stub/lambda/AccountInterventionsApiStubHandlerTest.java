@@ -43,12 +43,12 @@ class AccountInterventionsApiStubHandlerTest {
 
         var result = handler.handleRequest(event, context);
         assertEquals(200, result.getStatusCode());
-        var interventionBlock =
-                "{\"blocked\":true,\"resetPassword\":true,\"suspended\":true,\"reproveIdentity\":true}";
         var stateBlock =
+                "{\"blocked\":true,\"resetPassword\":true,\"suspended\":true,\"reproveIdentity\":true}";
+        var interventionBlock =
                 "{\"updatedAt\":1696969322935,\"appliedAt\":1696869005821,\"sentAt\":1696869003456,\"description\":\"AIS_USER_PASSWORD_RESET_AND_IDENTITY_VERIFIED\",\"reprovedIdentityAt\":1696969322935,\"resetPasswordAt\":1696875903456}";
         var expectedJson =
-                format("{\"intervention\":%s,\"state\":%s}", interventionBlock, stateBlock);
+                format("{\"state\":%s,\"intervention\":%s}", stateBlock, interventionBlock);
         assertEquals(expectedJson, result.getBody());
     }
 
