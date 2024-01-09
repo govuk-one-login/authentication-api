@@ -82,6 +82,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         ipvStub.init();
         handler = new IPVCallbackHandler(configurationService);
         txmaAuditQueue.clear();
+        spotQueue.clear();
     }
 
     @Test
@@ -395,6 +396,104 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                                 .get(ValidClaims.RETURN_CODE.getValue()),
                         JSONArray.class);
         assertThat(returnCode.size(), equalTo(1));
+    }
+
+    @Test
+    void shouldBypassSPoTAndReturnAuthCodeIfIPVReturnsP0ButReturnCodeIsPresentAndRequested()
+            throws Json.JsonException {
+        ipvStub.initWithInvalidLoCAndReturnCode();
+
+        var sessionId = "some-session-id";
+        var scope = new Scope(OIDCScopeValue.OPENID);
+        var oidcValidClaimsRequest =
+                new OIDCClaimsRequest()
+                        .withUserInfoClaimsRequest(
+                                new ClaimsSetRequest().add(ValidClaims.RETURN_CODE.getValue()));
+        var authRequestBuilder =
+                new AuthenticationRequest.Builder(
+                                ResponseType.CODE,
+                                scope,
+                                new ClientID(CLIENT_ID),
+                                URI.create(REDIRECT_URI))
+                        .nonce(new Nonce())
+                        .state(RP_STATE)
+                        .claims(oidcValidClaimsRequest);
+
+        redis.createSession(sessionId);
+        redis.createClientSession(
+                CLIENT_SESSION_ID, CLIENT_NAME, authRequestBuilder.build().toParameters());
+        redis.addStateToRedis(ORCHESTRATION_STATE, sessionId);
+        redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
+        setUpDynamo();
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        Map.of(
+                                "Cookie",
+                                format(
+                                        "gs=%s.%s;di-persistent-session-id=%s",
+                                        sessionId, CLIENT_SESSION_ID, PERSISTENT_SESSION_ID)),
+                        new HashMap<>(
+                                Map.of(
+                                        "state",
+                                        ORCHESTRATION_STATE.getValue(),
+                                        "code",
+                                        new AuthorizationCode().getValue())));
+
+        assertThat(response, hasStatus(302));
+
+        assertThat(spotQueue.getApproximateMessageCount(), equalTo(0));
+
+        assertThat(
+                response.getHeaders().get(ResponseHeaders.LOCATION),
+                startsWith(REDIRECT_URI + "?code"));
+    }
+
+    @Test
+    void
+            shouldBypassSPoTAndReturnAccessDeniedErrorIfIPVReturnsP0AndReturnCodeIsPresentButNotRequested()
+                    throws Json.JsonException {
+        ipvStub.initWithInvalidLoCAndReturnCode();
+
+        var sessionId = "some-session-id";
+        var scope = new Scope(OIDCScopeValue.OPENID);
+        var authRequestBuilder =
+                new AuthenticationRequest.Builder(
+                                ResponseType.CODE,
+                                scope,
+                                new ClientID(CLIENT_ID),
+                                URI.create(REDIRECT_URI))
+                        .nonce(new Nonce())
+                        .state(RP_STATE);
+
+        redis.createSession(sessionId);
+        redis.createClientSession(
+                CLIENT_SESSION_ID, CLIENT_NAME, authRequestBuilder.build().toParameters());
+        redis.addStateToRedis(ORCHESTRATION_STATE, sessionId);
+        redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
+        setUpDynamo();
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        Map.of(
+                                "Cookie",
+                                format(
+                                        "gs=%s.%s;di-persistent-session-id=%s",
+                                        sessionId, CLIENT_SESSION_ID, PERSISTENT_SESSION_ID)),
+                        new HashMap<>(
+                                Map.of(
+                                        "state",
+                                        ORCHESTRATION_STATE.getValue(),
+                                        "code",
+                                        new AuthorizationCode().getValue())));
+
+        assertThat(response, hasStatus(302));
+
+        assertThat(spotQueue.getApproximateMessageCount(), equalTo(0));
+
+        assertThat(
+                response.getHeaders().get(ResponseHeaders.LOCATION),
+                startsWith(REDIRECT_URI + "?error=access_denied"));
     }
 
     private void setUpDynamo() {
