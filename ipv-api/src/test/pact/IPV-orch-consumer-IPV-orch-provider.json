@@ -1,0 +1,59 @@
+{
+  "consumer": {
+    "name": "IPV-orch-consumer"
+  },
+  "interactions": [
+    {
+      "description": "request for a IPV",
+      "key": "398b66a",
+      "pending": false,
+      "request": {
+        "method": "GET",
+        "path": "/test_url"
+      },
+      "response": {
+        "body": {
+          "content": null,
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "status": 200
+      },
+      "transport": "https",
+      "type": "Synchronous/HTTP"
+    },
+    {
+      "description": "request for a report",
+      "key": "8af9887b",
+      "pending": false,
+      "request": {
+        "method": "GET",
+        "path": "/test_url"
+      },
+      "response": {
+        "body": {
+          "content": null,
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "status": 200
+      },
+      "transport": "https",
+      "type": "Synchronous/HTTP"
+    }
+  ],
+  "metadata": {
+    "pact-jvm": {
+      "version": "4.6.4"
+    },
+    "pactSpecification": {
+      "version": "4.0"
+    },
+    "plugins": [
+
+    ]
+  },
+  "provider": {
+    "name": "IPV-orch-provider"
+  }
+}
