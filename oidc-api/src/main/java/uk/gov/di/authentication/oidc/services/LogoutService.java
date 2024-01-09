@@ -183,10 +183,7 @@ public class LogoutService {
         } else {
             throw new RuntimeException("Account status must be blocked or suspended");
         }
-        sessionId.ifPresent(
-                t ->
-                        cloudwatchMetricsService.incrementLogout(
-                                clientId, Optional.of(accountStatus)));
+        sessionId.ifPresent(t -> cloudwatchMetricsService.incrementLogout(clientId));
         return generateLogoutResponse(
                 ConstructUriHelper.buildURI(
                         configurationService.getOidcApiBaseURL().orElseThrow(), redirectUri),

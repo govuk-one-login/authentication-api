@@ -264,14 +264,13 @@ public class LogoutServiceTest {
     @Test
     void destroysSessionsAndReturnsAccountInterventionLogoutResponseWhenAccountIsBlocked() {
         when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_API_BASE_URL));
-        var accountStatus = new AccountInterventionStatus(true, false, false, false);
         APIGatewayProxyResponseEvent response =
                 logoutService.handleAccountInterventionLogout(
                         session,
                         event,
                         Optional.of(CLIENT_ID),
                         Optional.of(SESSION_ID),
-                        accountStatus);
+                        new AccountInterventionStatus(true, false, false, false));
 
         verify(clientSessionService)
                 .deleteClientSessionFromRedis(session.getClientSessions().get(0));
@@ -287,8 +286,7 @@ public class LogoutServiceTest {
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PERSISTENT_SESSION_ID);
-        verify(cloudwatchMetricsService)
-                .incrementLogout(Optional.of(CLIENT_ID), Optional.of(accountStatus));
+        verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID));
 
         assertThat(response, hasStatus(302));
         assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), equalTo(OIDC_API_BASE_URL));
@@ -297,14 +295,13 @@ public class LogoutServiceTest {
     @Test
     void destroysSessionsAndReturnsAccountInterventionLogoutResponseWhenAccountIsSuspended() {
         when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_API_BASE_URL));
-        var accountStatus = new AccountInterventionStatus(false, true, false, false);
         APIGatewayProxyResponseEvent response =
                 logoutService.handleAccountInterventionLogout(
                         session,
                         event,
                         Optional.of(CLIENT_ID),
                         Optional.of(SESSION_ID),
-                        accountStatus);
+                        new AccountInterventionStatus(false, true, false, false));
 
         verify(clientSessionService)
                 .deleteClientSessionFromRedis(session.getClientSessions().get(0));
@@ -320,8 +317,7 @@ public class LogoutServiceTest {
                         IP_ADDRESS,
                         AuditService.UNKNOWN,
                         PERSISTENT_SESSION_ID);
-        verify(cloudwatchMetricsService)
-                .incrementLogout(Optional.of(CLIENT_ID), Optional.of(accountStatus));
+        verify(cloudwatchMetricsService).incrementLogout(Optional.of(CLIENT_ID));
 
         assertThat(response, hasStatus(302));
         assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), equalTo(OIDC_API_BASE_URL));

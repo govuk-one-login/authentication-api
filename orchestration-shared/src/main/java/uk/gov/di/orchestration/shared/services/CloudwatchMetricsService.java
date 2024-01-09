@@ -3,14 +3,12 @@ package uk.gov.di.orchestration.shared.services;
 import software.amazon.cloudwatchlogs.emf.logger.MetricsLogger;
 import software.amazon.cloudwatchlogs.emf.model.DimensionSet;
 import software.amazon.cloudwatchlogs.emf.model.Unit;
-import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
 import uk.gov.di.orchestration.shared.entity.Session;
 
 import java.util.Map;
 import java.util.Optional;
 
 import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.ACCOUNT;
-import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.ACCOUNT_INTERVENTION_STATUS;
 import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.CLIENT;
 import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.CLIENT_NAME;
 import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
@@ -137,29 +135,12 @@ public class CloudwatchMetricsService {
     }
 
     public void incrementLogout(Optional<String> clientId) {
-        incrementLogout(clientId, Optional.empty());
-    }
-
-    public void incrementLogout(
-            Optional<String> clientId,
-            Optional<AccountInterventionStatus> accountInterventionStatus) {
-        String accountInterventionStr = "unknown";
-        if (accountInterventionStatus.isPresent()) {
-            if (accountInterventionStatus.get().blocked()) {
-                accountInterventionStr = "blocked";
-            }
-            if (accountInterventionStatus.get().suspended()) {
-                accountInterventionStr = "suspended";
-            }
-        }
         incrementCounter(
                 LOGOUT_SUCCESS.getValue(),
                 Map.of(
                         ENVIRONMENT.getValue(),
                         configurationService.getEnvironment(),
                         CLIENT.getValue(),
-                        clientId.orElse("unknown"),
-                        ACCOUNT_INTERVENTION_STATUS.getValue(),
-                        accountInterventionStr));
+                        clientId.orElse("unknown")));
     }
 }
