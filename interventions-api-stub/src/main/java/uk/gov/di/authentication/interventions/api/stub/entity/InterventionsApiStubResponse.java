@@ -5,7 +5,7 @@ import com.google.gson.annotations.SerializedName;
 
 public class InterventionsApiStubResponse {
 
-    public static class Interventions {
+    public static class State {
         @SerializedName("blocked")
         @Expose
         private Boolean blocked;
@@ -22,7 +22,7 @@ public class InterventionsApiStubResponse {
         @Expose
         private Boolean reproveIdentity;
 
-        public Interventions(AccountInterventionsStore accountInterventions) {
+        public State(AccountInterventionsStore accountInterventions) {
             this.blocked = accountInterventions.isBlocked();
             this.reproveIdentity = accountInterventions.isReproveIdentity();
             this.suspended = accountInterventions.isSuspended();
@@ -30,7 +30,7 @@ public class InterventionsApiStubResponse {
         }
     }
 
-    public class State {
+    public class Intervention {
 
         @SerializedName("updatedAt")
         @Expose
@@ -56,7 +56,7 @@ public class InterventionsApiStubResponse {
         @Expose
         private Long resetPasswordAt;
 
-        public State() {
+        public Intervention() {
             this.updatedAt = 1696969322935L;
             this.appliedAt = 1696869005821L;
             this.sentAt = 1696869003456L;
@@ -67,15 +67,15 @@ public class InterventionsApiStubResponse {
     }
 
     @Expose
-    @SerializedName("intervention")
-    private Interventions interventions;
-
-    @Expose
     @SerializedName("state")
     private State state;
 
+    @Expose
+    @SerializedName("intervention")
+    private Intervention intervention;
+
     public InterventionsApiStubResponse(AccountInterventionsStore accountInterventions) {
-        this.state = new State();
-        this.interventions = new Interventions(accountInterventions);
+        this.intervention = new Intervention();
+        this.state = new State(accountInterventions);
     }
 }
