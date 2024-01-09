@@ -316,8 +316,9 @@ public class IPVCallbackHandler
                     AuditService.UNKNOWN,
                     userProfile.getPhoneNumber(),
                     persistentId);
+            var vtrList = clientSession.getVtrList();
             var userIdentityError =
-                    ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo);
+                    ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo, vtrList);
             if (userIdentityError.isPresent()) {
                 var accountInterventionStatus =
                         ipvCallbackHelper.getAccountInterventionStatus(

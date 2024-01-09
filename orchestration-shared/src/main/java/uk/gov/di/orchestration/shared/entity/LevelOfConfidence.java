@@ -27,10 +27,10 @@ public enum LevelOfConfidence {
         return supported;
     }
 
-    public static LevelOfConfidence retrieveLevelOfConfidence(String vrtSet) {
+    public static LevelOfConfidence retrieveLevelOfConfidence(String vtrSet) {
         return Arrays.stream(values())
                 .filter(LevelOfConfidence::isSupported)
-                .filter(tl -> vrtSet.equals(tl.getValue()))
+                .filter(tl -> vtrSet.equals(tl.getValue()))
                 .findFirst()
                 .orElseThrow(
                         () -> new IllegalArgumentException("Invalid LevelOfConfidence provided"));
@@ -41,5 +41,9 @@ public enum LevelOfConfidence {
                 .filter(LevelOfConfidence::isSupported)
                 .map(LevelOfConfidence::getValue)
                 .collect(Collectors.toList());
+    }
+
+    public static LevelOfConfidence getDefault() {
+        return MEDIUM_LEVEL;
     }
 }

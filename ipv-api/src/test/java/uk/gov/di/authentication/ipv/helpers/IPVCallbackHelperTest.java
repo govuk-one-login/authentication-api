@@ -27,8 +27,11 @@ import uk.gov.di.authentication.ipv.entity.LogIds;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
+import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
+import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
+import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.SaltHelper;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
@@ -48,6 +51,7 @@ import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -96,12 +100,29 @@ class IPVCallbackHelperTest {
     private static final String INTERNAL_PAIRWISE_ID = "internal-pairwise-id";
     private static final String INTERNAL_PAIRWISE_ID_WITH_INTERVENTION =
             "internal-pairwise-id-with-intervention";
+    private static final List<VectorOfTrust> VTR_LIST_P1_AND_P2 =
+            List.of(
+                    VectorOfTrust.of(CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.NONE),
+                    VectorOfTrust.of(
+                            CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL));
+    private static final List<VectorOfTrust> VTR_LIST_P2_ONLY =
+            List.of(
+                    VectorOfTrust.of(
+                            CredentialTrustLevel.LOW_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
+                    VectorOfTrust.of(
+                            CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL));
     private static final Subject RP_PAIRWISE_SUBJECT = new Subject("rp-pairwise-id");
     private static final State RP_STATE = new State();
     private static final AuthorizationCode AUTH_CODE = new AuthorizationCode();
     private static final UserProfile userProfile = generateUserProfile();
-
-    private final UserInfo validUserIdentityUserInfo =
+    private static final UserInfo p0VotUserIdentityUserInfo =
+            new UserInfo(
+                    new JSONObject(
+                            Map.of(
+                                    "sub", "sub-val",
+                                    "vot", "P0",
+                                    "vtm", OIDC_BASE_URL + "/trustmark")));
+    private static final UserInfo p2VotUserIdentityUserInfo =
             new UserInfo(
                     new JSONObject(
                             Map.of(
@@ -146,6 +167,12 @@ class IPVCallbackHelperTest {
                                 "reproveIdentity",
                                 "false"),
                         new AccountInterventionStatus(false, true, false, false)));
+    }
+
+    private static Stream<Arguments> validUserIdentities() {
+        return Stream.of(
+                Arguments.of(p0VotUserIdentityUserInfo, VTR_LIST_P1_AND_P2),
+                Arguments.of(p2VotUserIdentityUserInfo, VTR_LIST_P2_ONLY));
     }
 
     @BeforeEach
@@ -223,24 +250,33 @@ class IPVCallbackHelperTest {
         assertEquals(expectedAISResult, response);
     }
 
-    @Test
-    void shouldReturnEmptyErrorObjectIfValidUserIdentity() throws IpvCallbackException {
-        var response = helper.validateUserIdentityResponse(validUserIdentityUserInfo);
+    @ParameterizedTest
+    @MethodSource("validUserIdentities")
+    void shouldReturnEmptyErrorObjectIfUserIdentityVotInVtrList(
+            UserInfo userInfo, List<VectorOfTrust> vtrList) throws IpvCallbackException {
+        var response = helper.validateUserIdentityResponse(userInfo, vtrList);
 
         assertEquals(Optional.empty(), response);
     }
 
     @Test
-    void shouldReturnAccessDeniedIfIPVMissingVoTOrVotNotP2() throws IpvCallbackException {
-        var invalidVoTUserIdentityUserInfo =
+    void shouldReturnAccessDeniedIfIPVMissingVot() throws IpvCallbackException {
+        var missingVotUserIdentityUserInfo =
                 new UserInfo(
                         new JSONObject(
-                                Map.of(
-                                        "sub", "sub-val",
-                                        "vot", "P0",
-                                        "vtm", OIDC_BASE_URL + "/trustmark")));
+                                Map.of("sub", "sub-val", "vtm", OIDC_BASE_URL + "/trustmark")));
 
-        var response = helper.validateUserIdentityResponse(invalidVoTUserIdentityUserInfo);
+        var response =
+                helper.validateUserIdentityResponse(
+                        missingVotUserIdentityUserInfo, VTR_LIST_P2_ONLY);
+
+        assertEquals(Optional.of(OAuth2Error.ACCESS_DENIED), response);
+    }
+
+    @Test
+    void shouldReturnAccessDeniedIfIpvVotNotInVtrList() throws IpvCallbackException {
+        var response =
+                helper.validateUserIdentityResponse(p0VotUserIdentityUserInfo, VTR_LIST_P2_ONLY);
 
         assertEquals(Optional.of(OAuth2Error.ACCESS_DENIED), response);
     }
@@ -260,7 +296,7 @@ class IPVCallbackHelperTest {
                         IpvCallbackException.class,
                         () ->
                                 helper.validateUserIdentityResponse(
-                                        invalidTrustmarkUserIdentityUserInfo),
+                                        invalidTrustmarkUserIdentityUserInfo, VTR_LIST_P2_ONLY),
                         "Expected to throw IpvCallbackException");
 
         assertEquals("IPV trustmark is invalid", exception.getMessage());
@@ -273,7 +309,7 @@ class IPVCallbackHelperTest {
                 "sector-identifier",
                 userProfile,
                 SUBJECT,
-                validUserIdentityUserInfo,
+                p2VotUserIdentityUserInfo,
                 CLIENT_ID.getValue());
 
         assertThat(
@@ -316,7 +352,7 @@ class IPVCallbackHelperTest {
                                         "sector-identifier",
                                         userProfile,
                                         SUBJECT,
-                                        validUserIdentityUserInfo,
+                                        p2VotUserIdentityUserInfo,
                                         CLIENT_ID.getValue()),
                         "Expected to throw JsonException");
 
@@ -329,7 +365,7 @@ class IPVCallbackHelperTest {
 
     @Test
     void shouldSaveAdditionalIdentityClaimsToDynamo() {
-        helper.saveIdentityClaimsToDynamo(RP_PAIRWISE_SUBJECT, validUserIdentityUserInfo);
+        helper.saveIdentityClaimsToDynamo(RP_PAIRWISE_SUBJECT, p2VotUserIdentityUserInfo);
 
         assertThat(
                 logging.events(),
