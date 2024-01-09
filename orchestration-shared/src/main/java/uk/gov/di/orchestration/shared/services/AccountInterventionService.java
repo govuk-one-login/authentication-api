@@ -104,9 +104,7 @@ public class AccountInterventionService {
 
         HttpRequest request =
                 HttpRequest.newBuilder()
-                        .uri(
-                                accountInterventionServiceURI.resolve(
-                                        "/v1/ais/" + internalPairwiseSubjectId))
+                        .uri(accountInterventionServiceURI.resolve(internalPairwiseSubjectId))
                         .GET()
                         .build();
 
