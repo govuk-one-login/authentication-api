@@ -54,8 +54,8 @@ class AccountInterventionServiceTest {
             }
             """;
 
-    private static final String BASE_AIS_URL = "http://example.com/somepath/";
-    private static final AuditContext someAuditContext =
+    private static String BASE_AIS_URL = "http://example.com/v1/ais/";
+    private static AuditContext someAuditContext =
             new AuditContext(
                     "some-client-session-id",
                     "some-session-id",
