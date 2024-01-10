@@ -459,6 +459,10 @@ public class IPVCallbackHandler
 
     private boolean rpRequestedReturnCode(
             ClientRegistry clientRegistry, AuthenticationRequest authRequest) {
+        if (authRequest.getOIDCClaims() == null
+                || authRequest.getOIDCClaims().getUserInfoClaimsRequest() == null) {
+            return false;
+        }
         return clientRegistry.getClaims().contains(RETURN_CODE.getValue())
                 && authRequest
                                 .getOIDCClaims()

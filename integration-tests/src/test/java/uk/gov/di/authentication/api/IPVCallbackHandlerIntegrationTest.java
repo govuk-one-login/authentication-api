@@ -8,12 +8,16 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationErrorResponse;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
+import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
+import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import net.minidev.json.JSONArray;
 import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.ipv.entity.LogIds;
 import uk.gov.di.authentication.ipv.entity.SPOTRequest;
 import uk.gov.di.authentication.ipv.lambda.IPVCallbackHandler;
@@ -78,6 +82,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
         ipvStub.init();
         handler = new IPVCallbackHandler(configurationService);
         txmaAuditQueue.clear();
+        spotQueue.clear();
     }
 
     @Test
@@ -301,6 +306,196 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                 startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
     }
 
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void shouldStoreReturnCodesInDynamoWhenTheyArePresent(boolean validLoC)
+            throws Json.JsonException {
+        if (validLoC) {
+            ipvStub.initWithValidLoCAndReturnCode();
+        } else {
+            ipvStub.initWithInvalidLoCAndReturnCode();
+        }
+
+        var sessionId = "some-session-id";
+        var scope = new Scope(OIDCScopeValue.OPENID);
+        var oidcValidClaimsRequest =
+                new OIDCClaimsRequest()
+                        .withUserInfoClaimsRequest(
+                                new ClaimsSetRequest().add(ValidClaims.RETURN_CODE.getValue()));
+        var authRequestBuilder =
+                new AuthenticationRequest.Builder(
+                                ResponseType.CODE,
+                                scope,
+                                new ClientID(CLIENT_ID),
+                                URI.create(REDIRECT_URI))
+                        .nonce(new Nonce())
+                        .state(RP_STATE)
+                        .claims(oidcValidClaimsRequest);
+        redis.createSession(sessionId);
+        redis.createClientSession(
+                CLIENT_SESSION_ID, CLIENT_NAME, authRequestBuilder.build().toParameters());
+        redis.addStateToRedis(ORCHESTRATION_STATE, sessionId);
+        redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
+        setUpDynamo();
+        var salt = userStore.addSalt(TEST_EMAIL_ADDRESS);
+        var pairwiseIdentifier =
+                calculatePairwiseIdentifier(INTERNAL_SUBJECT.getValue(), "test.com", salt);
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        Map.of(
+                                "Cookie",
+                                format(
+                                        "gs=%s.%s;di-persistent-session-id=%s",
+                                        sessionId, CLIENT_SESSION_ID, PERSISTENT_SESSION_ID)),
+                        new HashMap<>(
+                                Map.of(
+                                        "state",
+                                        ORCHESTRATION_STATE.getValue(),
+                                        "code",
+                                        new AuthorizationCode().getValue())));
+
+        var identityCredentials = identityStore.getIdentityCredentials(pairwiseIdentifier);
+
+        assertThat(response, hasStatus(302));
+        if (validLoC) {
+            assertThat(
+                    response.getHeaders().get(ResponseHeaders.LOCATION),
+                    startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(
+                            IPV_AUTHORISATION_RESPONSE_RECEIVED,
+                            IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
+                            IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED,
+                            IPV_SPOT_REQUESTED));
+        } else {
+            assertThat(
+                    response.getHeaders().get(ResponseHeaders.LOCATION), startsWith(REDIRECT_URI));
+
+            assertTxmaAuditEventsReceived(
+                    txmaAuditQueue,
+                    List.of(
+                            IPV_AUTHORISATION_RESPONSE_RECEIVED,
+                            IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
+                            IPV_SUCCESSFUL_IDENTITY_RESPONSE_RECEIVED,
+                            AUTH_CODE_ISSUED));
+        }
+
+        assertTrue(
+                identityCredentials
+                        .map(IdentityCredentials::getAdditionalClaims)
+                        .map(t -> t.get(ValidClaims.RETURN_CODE.getValue()))
+                        .isPresent());
+        var returnCode =
+                objectMapper.readValue(
+                        identityCredentials
+                                .get()
+                                .getAdditionalClaims()
+                                .get(ValidClaims.RETURN_CODE.getValue()),
+                        JSONArray.class);
+        assertThat(returnCode.size(), equalTo(1));
+    }
+
+    @Test
+    void shouldBypassSPoTAndReturnAuthCodeIfIPVReturnsP0ButReturnCodeIsPresentAndRequested()
+            throws Json.JsonException {
+        ipvStub.initWithInvalidLoCAndReturnCode();
+
+        var sessionId = "some-session-id";
+        var scope = new Scope(OIDCScopeValue.OPENID);
+        var oidcValidClaimsRequest =
+                new OIDCClaimsRequest()
+                        .withUserInfoClaimsRequest(
+                                new ClaimsSetRequest().add(ValidClaims.RETURN_CODE.getValue()));
+        var authRequestBuilder =
+                new AuthenticationRequest.Builder(
+                                ResponseType.CODE,
+                                scope,
+                                new ClientID(CLIENT_ID),
+                                URI.create(REDIRECT_URI))
+                        .nonce(new Nonce())
+                        .state(RP_STATE)
+                        .claims(oidcValidClaimsRequest);
+
+        redis.createSession(sessionId);
+        redis.createClientSession(
+                CLIENT_SESSION_ID, CLIENT_NAME, authRequestBuilder.build().toParameters());
+        redis.addStateToRedis(ORCHESTRATION_STATE, sessionId);
+        redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
+        setUpDynamo();
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        Map.of(
+                                "Cookie",
+                                format(
+                                        "gs=%s.%s;di-persistent-session-id=%s",
+                                        sessionId, CLIENT_SESSION_ID, PERSISTENT_SESSION_ID)),
+                        new HashMap<>(
+                                Map.of(
+                                        "state",
+                                        ORCHESTRATION_STATE.getValue(),
+                                        "code",
+                                        new AuthorizationCode().getValue())));
+
+        assertThat(response, hasStatus(302));
+
+        assertThat(spotQueue.getApproximateMessageCount(), equalTo(0));
+
+        assertThat(
+                response.getHeaders().get(ResponseHeaders.LOCATION),
+                startsWith(REDIRECT_URI + "?code"));
+    }
+
+    @Test
+    void
+            shouldBypassSPoTAndReturnAccessDeniedErrorIfIPVReturnsP0AndReturnCodeIsPresentButNotRequested()
+                    throws Json.JsonException {
+        ipvStub.initWithInvalidLoCAndReturnCode();
+
+        var sessionId = "some-session-id";
+        var scope = new Scope(OIDCScopeValue.OPENID);
+        var authRequestBuilder =
+                new AuthenticationRequest.Builder(
+                                ResponseType.CODE,
+                                scope,
+                                new ClientID(CLIENT_ID),
+                                URI.create(REDIRECT_URI))
+                        .nonce(new Nonce())
+                        .state(RP_STATE);
+
+        redis.createSession(sessionId);
+        redis.createClientSession(
+                CLIENT_SESSION_ID, CLIENT_NAME, authRequestBuilder.build().toParameters());
+        redis.addStateToRedis(ORCHESTRATION_STATE, sessionId);
+        redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
+        setUpDynamo();
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        Map.of(
+                                "Cookie",
+                                format(
+                                        "gs=%s.%s;di-persistent-session-id=%s",
+                                        sessionId, CLIENT_SESSION_ID, PERSISTENT_SESSION_ID)),
+                        new HashMap<>(
+                                Map.of(
+                                        "state",
+                                        ORCHESTRATION_STATE.getValue(),
+                                        "code",
+                                        new AuthorizationCode().getValue())));
+
+        assertThat(response, hasStatus(302));
+
+        assertThat(spotQueue.getApproximateMessageCount(), equalTo(0));
+
+        assertThat(
+                response.getHeaders().get(ResponseHeaders.LOCATION),
+                startsWith(REDIRECT_URI + "?error=access_denied"));
+    }
+
     private void setUpDynamo() {
         userStore.signUp(TEST_EMAIL_ADDRESS, "password", INTERNAL_SUBJECT);
         clientStore.registerClient(
@@ -315,7 +510,8 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "pairwise",
-                true);
+                true,
+                List.of("https://vocab.account.gov.uk/v1/returnCode"));
     }
 
     protected static class TestConfigurationService extends IntegrationTestConfigurationService {
