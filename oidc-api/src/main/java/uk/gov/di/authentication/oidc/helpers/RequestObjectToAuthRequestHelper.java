@@ -10,6 +10,7 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
+import net.minidev.json.JSONObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.shared.serialization.Json;
@@ -47,7 +48,7 @@ public class RequestObjectToAuthRequestHelper {
                             .requestObject(authRequest.getRequestObject());
 
             if (Objects.nonNull(jwtClaimsSet.getClaim("claims"))) {
-                builder.claims(parseOidcClaims(jwtClaimsSet.getClaim("claims").toString()));
+                builder.claims(parseOidcClaims(jwtClaimsSet));
             }
 
             if (Objects.nonNull(jwtClaimsSet.getClaim("vtr"))) {
@@ -93,12 +94,34 @@ public class RequestObjectToAuthRequestHelper {
         }
     }
 
-    private static OIDCClaimsRequest parseOidcClaims(String claims) {
-        if (claims == null || claims.isEmpty()) {
+    private static OIDCClaimsRequest parseOidcClaims(JWTClaimsSet claimsSet) {
+        var stringClaim = claimsSet.getClaim("claims").toString();
+        if (stringClaim == null || stringClaim.isEmpty()) {
             throw new IllegalArgumentException("Claims must not be null or empty");
         }
+
         try {
-            return OIDCClaimsRequest.parse(claims);
+            return parseClaimsAsJson(claimsSet);
+        } catch (java.text.ParseException e) {
+            return parseClaimsAsString(claimsSet);
+        }
+    }
+
+    private static OIDCClaimsRequest parseClaimsAsJson(JWTClaimsSet claimsSet)
+            throws ParseException {
+        try {
+            var claimsObject = claimsSet.getJSONObjectClaim("claims");
+            return OIDCClaimsRequest.parse(new JSONObject(claimsObject));
+        } catch (com.nimbusds.oauth2.sdk.ParseException e) {
+            LOG.warn("Failed to parse OIDC claims: " + e.getMessage(), e);
+            throw new RuntimeException("Failed to parse OIDC claims", e);
+        }
+    }
+
+    private static OIDCClaimsRequest parseClaimsAsString(JWTClaimsSet claimsSet) {
+        try {
+            var stringClaims = claimsSet.getClaim("claims").toString();
+            return OIDCClaimsRequest.parse(stringClaims);
         } catch (com.nimbusds.oauth2.sdk.ParseException e) {
             LOG.warn("Failed to parse OIDC claims: " + e.getMessage(), e);
             throw new RuntimeException("Failed to parse OIDC claims", e);
