@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: Method Management API
   description: Method Management API
-  version: 0.0.1
+  version: 0.0.2
 servers:
   - url: 'https://localhost:63342'
 paths:
@@ -16,7 +16,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/MfaRequest'
+              $ref: '#/components/schemas/MfaListRequest'
         required: true
       responses:
         '200':
@@ -41,13 +41,13 @@ paths:
     put:
       tags:
         - 2FAManagement
-      summary: Creates or Updates the mfa method identified by the priority identifier
+      summary: Creates an mfa method, or updates an mfa method if an mfa identifier is passed. If the new MFA method created is 'PRIMARY', the current 'PRIMARY' gets relegated to secondary.
       operationId: "mfa-method"
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/MfaMethodRequest'
+              $ref: '#/components/schemas/MfaMethodCreateOrUpdateRequest'
       responses:
         '201':
           description: MFA Method Created
@@ -62,28 +62,30 @@ paths:
     delete:
       tags:
         - 2FAManagement
-      summary: Deletes the mfa method identified by the priority identifier
+      summary: Deletes the mfa method identified by the mfa identifier. Cannot delete an identifier that is 'PRIMARY'.
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/MfaMethodDelete'
+              $ref: '#/components/schemas/MfaMethodDeleteReq'
       responses:
         '200':
           description: MFA Method Deleted
         '404':
           description: MFA Method Not found
+        '412':
+          description: Cannot delete a Primary Mfa Method
   /mfa-method-priority:
     post:
       tags:
         - 2FAManagement
-      summary: Sets the priority for a given mfa method (Primary, secondary)
+      summary: Sets the priority for a given mfa method (Primary, secondary). Setting a method to 'PRIMARY' relegates the existing Primary to Secondary.
       operationId: "mfa-method-priority"
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/MethodPriorityReq'
+              $ref: '#/components/schemas/MethodPriorityChangeReq'
       responses:
         '200':
           description: Successful Operation
@@ -94,14 +96,33 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorDetails'
         '404':
-          description: Not Found
+          description: MFA Method not Found
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorDetails'
 components:
   schemas:
-    MfaRequest:
+    MfaMethod:
+      type: object
+      properties:
+        mfaIdentifier:
+          type: integer
+        priorityIdentifier:
+          type: string
+          enum:
+            - PRIMARY
+            - SECONDARY
+        mfaMethodType:
+          type: string
+          enum:
+            - SMS
+            - AUTH_APP
+        endPoint:
+          type: string
+        methodVerified:
+          type: boolean
+    MfaListRequest:
       required:
         - email
       type: object
@@ -111,26 +132,21 @@ components:
     MfaMethodList:
       type: array
       items:
-        type: object
-        properties:
-          priorityIdentifier:
-            type: string
-            enum:
-              - PRIMARY
-              - SECONDARY
-          mfaMethodType:
-            type: string
-            enum:
-              - SMS
-              - AUTH_APP
-          endPoint:
-            type: string
-          methodVerified:
-            type: boolean
-    MfaMethodRequest:
+        $ref: '#/components/schemas/MfaMethod'
+    MfaMethodCreateOrUpdateRequest:
+      required:
+        - email
+        - mfaIdentifier
+        - mfaMethodType
+        - priorityIdentifier
+        - endpoint
+        - credential
+        - otp
       type: object
       properties:
         email:
+          type: string
+        mfaIdentifier:
           type: string
         priorityIdentifier:
           type: string
@@ -148,28 +164,36 @@ components:
           type: string
         otp:
           type: string
-    MethodPriorityReq:
+    MethodPriorityChangeReq:
+      required:
+        - email
+        - mfaIdentifier
+        - updatedPriorityIdentifier
       type: object
       properties:
         email:
           type: string
-        priorityIdentifier:
-          type: string
-          enum:
-            - PRIMARY
-            - SECONDARY
+        mfaIdentifier:
+          type: integer
         updatedPriorityIdentifier:
           type: string
           enum:
             - PRIMARY
             - SECONDARY
-    MfaMethodDelete:
+    MfaMethodDeleteReq:
+      required:
+        - email
+        - mfaIdentifier
       type: object
       properties:
         email:
           type: string
-        priorityIdentifier:
-          enum:
-            - SECONDARY
+        mfaIdentifier:
+          type: integer
     ErrorDetails:
-      type: string
+      type: object
+      properties:
+        errorCode:
+          type: string
+        errorMessage:
+          type: string
