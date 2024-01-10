@@ -12,7 +12,9 @@ import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
+import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
+import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
@@ -20,6 +22,7 @@ import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
 
 import java.net.URI;
+import java.text.ParseException;
 import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -102,7 +105,8 @@ class RequestObjectToAuthRequestHelperTest {
     }
 
     @Test
-    void shouldConvertRequestObjectToAuthRequestWhenClaimsClaimIsPresent() throws JOSEException {
+    void shouldConvertRequestObjectToAuthRequestWhenClaimsClaimIsPresentAsString()
+            throws JOSEException, ParseException {
         var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
         var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);
         var jwtClaimsSet = getClaimsSetBuilder(scope).build();
@@ -130,6 +134,66 @@ class RequestObjectToAuthRequestHelperTest {
                 JsonParser.parseString(String.valueOf(transformedAuthRequest.getOIDCClaims()));
         JsonElement expectedClaims = JsonParser.parseString(CLAIMS);
         assertThat(actualClaims, equalTo(expectedClaims));
+    }
+
+    @Test
+    void shouldConvertRequestObjectToAuthRequestWhenClaimsClaimIsPresentAsJson()
+            throws JOSEException, ParseException {
+        var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+        var scope = new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL);
+        var jwtClaimsSet =
+                JWTClaimsSet.parse(
+                        """
+                {
+                  "iss": "test-issuer",
+                  "response_type": "code",
+                  "nonce": "test-nonce",
+                  "client_id": "test-client",
+                  "aud": "https://oidc.test.account.gov.uk/authorize",
+                  "rp_sid": "test-rp-sid",
+                  "ui_locales": "en",
+                  "vtr": ["Cl.Cm.P2"],
+                  "scope": "openid,email",
+                  "claims": {
+                    "userinfo": {
+                      "https://vocab.account.gov.uk/v1/coreIdentityJWT": null,
+                      "https://vocab.account.gov.uk/v1/address": null
+                    }
+                  },
+                  "redirect_uri": "https://test.gov.uk/redirect",
+                  "state": "test-state"
+                }
+                """);
+        var signedJWT = generateSignedJWT(jwtClaimsSet, keyPair);
+        var authRequest =
+                new AuthenticationRequest.Builder(
+                                ResponseType.CODE,
+                                new Scope(OIDCScopeValue.OPENID),
+                                CLIENT_ID,
+                                null)
+                        .requestObject(signedJWT)
+                        .build();
+
+        var transformedAuthRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
+
+        assertThat(transformedAuthRequest.getState(), equalTo(new State("test-state")));
+        assertThat(transformedAuthRequest.getNonce(), equalTo(new Nonce("test-nonce")));
+        assertThat(
+                transformedAuthRequest.getRedirectionURI(),
+                equalTo(URI.create("https://test.gov.uk/redirect")));
+        assertThat(transformedAuthRequest.getScope(), equalTo(scope));
+        assertThat(transformedAuthRequest.getClientID(), equalTo(new ClientID("test-client")));
+        assertThat(transformedAuthRequest.getResponseType(), equalTo(ResponseType.CODE));
+        assertThat(transformedAuthRequest.getRequestObject(), equalTo(signedJWT));
+
+        OIDCClaimsRequest actualClaims = transformedAuthRequest.getOIDCClaims();
+        OIDCClaimsRequest expectedClaims =
+                new OIDCClaimsRequest()
+                        .withUserInfoClaimsRequest(
+                                new ClaimsSetRequest()
+                                        .add("https://vocab.account.gov.uk/v1/coreIdentityJWT")
+                                        .add("https://vocab.account.gov.uk/v1/address"));
+        assertThat(actualClaims.toString(), equalTo(expectedClaims.toString()));
     }
 
     @Test
