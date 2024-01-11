@@ -82,6 +82,10 @@ class AuthAppCodeProcessorTest {
                         null,
                         CodeRequestType.PW_RESET_MFA_AUTH_APP),
                 Arguments.of(
+                        JourneyType.FORCED_PASSWORD_RESET_MFA,
+                        null,
+                        CodeRequestType.FORCED_PW_RESET_MFA_AUTH_APP),
+                Arguments.of(
                         JourneyType.REGISTRATION,
                         AUTH_APP_SECRET,
                         CodeRequestType.AUTH_APP_REGISTRATION));

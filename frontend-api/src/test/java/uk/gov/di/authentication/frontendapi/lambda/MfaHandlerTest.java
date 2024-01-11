@@ -669,6 +669,8 @@ public class MfaHandlerTest {
 
     private static Stream<Arguments> smsJourneyTypes() {
         return Stream.of(
-                Arguments.of(JourneyType.PASSWORD_RESET_MFA), Arguments.of(JourneyType.SIGN_IN));
+                Arguments.of(JourneyType.PASSWORD_RESET_MFA),
+                Arguments.of(JourneyType.SIGN_IN),
+                Arguments.of(JourneyType.FORCED_PASSWORD_RESET_MFA));
     }
 }
