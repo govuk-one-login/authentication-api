@@ -4,6 +4,7 @@ import com.google.gson.annotations.Expose;
 import com.nimbusds.oauth2.sdk.id.Subject;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -17,6 +18,8 @@ public class ClientSession {
 
     @Expose private VectorOfTrust effectiveVectorOfTrust;
 
+    @Expose private List<VectorOfTrust> vtrList = new ArrayList<>();
+
     @Expose private Subject docAppSubjectId;
 
     @Expose private String clientName;
@@ -29,6 +32,7 @@ public class ClientSession {
         this.authRequestParams = authRequestParams;
         this.creationDate = creationDate;
         this.effectiveVectorOfTrust = effectiveVectorOfTrust;
+        this.vtrList.add(effectiveVectorOfTrust);
         this.clientName = clientName;
     }
 
@@ -53,8 +57,13 @@ public class ClientSession {
         return effectiveVectorOfTrust;
     }
 
+    public List<VectorOfTrust> getVtrList() {
+        return vtrList;
+    }
+
     public ClientSession setEffectiveVectorOfTrust(VectorOfTrust effectiveVectorOfTrust) {
         this.effectiveVectorOfTrust = effectiveVectorOfTrust;
+        this.vtrList.add(effectiveVectorOfTrust);
         return this;
     }
 
