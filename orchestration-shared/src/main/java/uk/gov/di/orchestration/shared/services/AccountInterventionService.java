@@ -115,13 +115,9 @@ public class AccountInterventionService {
 
         String body = httpResponse.body();
 
-        LOG.info("ais response body: " + body);
-
         var response =
                 SerializationService.getInstance()
                         .readValue(body, AccountInterventionResponse.class);
-
-        LOG.info("AccountInterventionResponse: " + response.toString());
 
         var accountInterventionStatus = response.state();
         incrementCloudwatchMetrics(accountInterventionStatus);
