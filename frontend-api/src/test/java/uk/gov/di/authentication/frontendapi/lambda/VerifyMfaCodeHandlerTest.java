@@ -7,7 +7,6 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
-import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
@@ -85,9 +84,12 @@ class VerifyMfaCodeHandlerTest {
     private static final String PHONE_NUMBER = "+447700900000";
     private static final String AUTH_APP_SECRET =
             "JZ5PYIOWNZDAOBA65S5T77FEEKYCCIT2VE4RQDAJD7SO73T3LODA";
+    private static final String SECTOR_HOST = "test.account.gov.uk";
+    private static final byte[] SALT = SaltHelper.generateNewSalt();
+    private static final String TEST_SUBJECT_ID = "test-subject-id";
+
     private final String expectedCommonSubject =
-            ClientSubjectHelper.calculatePairwiseIdentifier(
-                    new Subject().getValue(), "test.account.gov.uk", SaltHelper.generateNewSalt());
+            ClientSubjectHelper.calculatePairwiseIdentifier(TEST_SUBJECT_ID, SECTOR_HOST, SALT);
     private final Session session =
             new Session("session-id")
                     .setEmailAddress(TEST_EMAIL_ADDRESS)
@@ -207,6 +209,53 @@ class VerifyMfaCodeHandlerTest {
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
                         Session.AccountState.NEW, CLIENT_ID, CLIENT_NAME, "P0", false, true);
+    }
+
+    @ParameterizedTest
+    @MethodSource("credentialTrustLevels")
+    void shouldReturn204WhenSuccessfulAuthAppCodePasswordResetRequest(
+            CredentialTrustLevel credentialTrustLevel) throws Json.JsonException {
+        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                .thenReturn(Optional.of(authAppCodeProcessor));
+        when(authAppCodeProcessor.validateCode()).thenReturn(Optional.empty());
+        when(configurationService.getInternalSectorUri()).thenReturn("http://" + SECTOR_HOST);
+        when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
+        session.setNewAccount(Session.AccountState.EXISTING);
+        session.setCurrentCredentialStrength(credentialTrustLevel);
+        session.setInternalCommonSubjectIdentifier(null);
+        var result =
+                makeCallWithCode(
+                        new VerifyMfaCodeRequest(
+                                MFAMethodType.AUTH_APP,
+                                CODE,
+                                JourneyType.PASSWORD_RESET_MFA,
+                                AUTH_APP_SECRET));
+
+        assertThat(result, hasStatus(204));
+        assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.AUTH_APP));
+        assertThat(
+                session.getCurrentCredentialStrength(), equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
+        verify(authAppCodeProcessor).processSuccessfulCodeRequest(anyString(), anyString());
+        verify(codeStorageService, never())
+                .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, 900L);
+        verify(codeStorageService, never()).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.CODE_VERIFIED,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        CLIENT_ID,
+                        expectedCommonSubject,
+                        TEST_EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
+                        pair("account-recovery", false));
+        verify(cloudwatchMetricsService)
+                .incrementAuthenticationSuccess(
+                        Session.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false, true);
     }
 
     @ParameterizedTest

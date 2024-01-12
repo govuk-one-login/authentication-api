@@ -8,6 +8,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
+import uk.gov.di.authentication.frontendapi.helpers.SessionHelper;
 import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessor;
 import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessorFactory;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
@@ -131,7 +132,14 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             if (errorResponse.filter(ErrorResponse.ERROR_1041::equals).isPresent()) {
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1041);
             }
-
+            if (JourneyType.PASSWORD_RESET_MFA.equals(codeRequest.getJourneyType())) {
+                SessionHelper.updateSessionWithSubject(
+                        userContext,
+                        authenticationService,
+                        configurationService,
+                        sessionService,
+                        session);
+            }
             processCodeSession(
                     errorResponse, session, input, userContext, codeRequest, mfaCodeProcessor);
 
