@@ -54,7 +54,7 @@ class AccountInterventionServiceTest {
             }
             """;
 
-    private static String BASE_AIS_URL = "http://example.com/v1/ais/";
+    private static String BASE_AIS_URL = "http://example.com/environment";
     private static AuditContext someAuditContext =
             new AuditContext(
                     "some-client-session-id",
@@ -92,7 +92,8 @@ class AccountInterventionServiceTest {
         verify(httpClient).send(httpRequestCaptor.capture(), any());
         var requestUri = httpRequestCaptor.getValue();
 
-        assertEquals(BASE_AIS_URL + internalPairwiseSubjectId, requestUri.uri().toString());
+        assertEquals(
+                BASE_AIS_URL + "/v1/ais/" + internalPairwiseSubjectId, requestUri.uri().toString());
     }
 
     @Test
