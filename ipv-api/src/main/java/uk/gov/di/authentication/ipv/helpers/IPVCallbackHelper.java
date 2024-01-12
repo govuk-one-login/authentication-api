@@ -19,11 +19,11 @@ import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.IdentityClaims;
-import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
+import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
@@ -41,6 +41,7 @@ import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -183,24 +184,28 @@ public class IPVCallbackHelper {
         }
     }
 
-    public Optional<ErrorObject> validateUserIdentityResponse(UserInfo userIdentityUserInfo)
+    public Optional<ErrorObject> validateUserIdentityResponse(
+            UserInfo userIdentityUserInfo, List<VectorOfTrust> vtrList)
             throws IpvCallbackException {
         LOG.info("Validating userinfo response");
-        if (!LevelOfConfidence.MEDIUM_LEVEL
-                .getValue()
-                .equals(userIdentityUserInfo.getClaim(VOT.getValue()))) {
-            LOG.warn("IPV missing vot or vot not P2.");
-            return Optional.of(OAuth2Error.ACCESS_DENIED);
+        for (VectorOfTrust vtr : vtrList) {
+            if (vtr.getLevelOfConfidence()
+                    .getValue()
+                    .equals(userIdentityUserInfo.getClaim(VOT.getValue()))) {
+                var trustmarkURL =
+                        buildURI(
+                                        configurationService.getOidcApiBaseURL().orElseThrow(),
+                                        "/trustmark")
+                                .toString();
+                if (!trustmarkURL.equals(userIdentityUserInfo.getClaim(VTM.getValue()))) {
+                    LOG.warn("VTM does not contain expected trustmark URL");
+                    throw new IpvCallbackException("IPV trustmark is invalid");
+                }
+                return Optional.empty();
+            }
         }
-        var trustmarkURL =
-                buildURI(configurationService.getOidcApiBaseURL().orElseThrow(), "/trustmark")
-                        .toString();
-
-        if (!trustmarkURL.equals(userIdentityUserInfo.getClaim(VTM.getValue()))) {
-            LOG.warn("VTM does not contain expected trustmark URL");
-            throw new IpvCallbackException("IPV trustmark is invalid");
-        }
-        return Optional.empty();
+        LOG.warn("IPV missing vot or vot not in vtr list.");
+        return Optional.of(OAuth2Error.ACCESS_DENIED);
     }
 
     public AuthenticationSuccessResponse generateReturnCodeAuthenticationResponse(

@@ -43,12 +43,14 @@ import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
+import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.IdentityClaims;
 import uk.gov.di.orchestration.shared.entity.NoSessionEntity;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
+import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
@@ -139,6 +141,10 @@ class IPVCallbackHandlerTest {
     private static final Subject PUBLIC_SUBJECT =
             new Subject("TsEVC7vg0NPAmzB33vRUFztL2c0-fecKWKcc73fuDhc");
     private static final State STATE = new State();
+    private static final List<VectorOfTrust> VTR_LIST =
+            List.of(
+                    new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL),
+                    new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL));
     private IPVCallbackHandler handler;
     private final byte[] salt = "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw=".getBytes();
     private final String redirectUriErrorMessage = "redirect_uri param must be provided";
@@ -166,10 +172,12 @@ class IPVCallbackHandlerTest {
 
     private final ClientSession clientSession =
             new ClientSession(
-                    generateAuthRequest(new OIDCClaimsRequest()).toParameters(),
-                    null,
-                    null,
-                    CLIENT_NAME);
+                            generateAuthRequest(new OIDCClaimsRequest()).toParameters(),
+                            null,
+                            new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL),
+                            CLIENT_NAME)
+                    .setEffectiveVectorOfTrust(
+                            new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL));
 
     private final Json objectMapper = SerializationService.getInstance();
 
@@ -290,7 +298,7 @@ class IPVCallbackHandlerTest {
                                         "vot", "P0",
                                         "vtm", OIDC_BASE_URL + "/trustmark")));
 
-        when(ipvCallbackHelper.validateUserIdentityResponse(any(UserInfo.class)))
+        when(ipvCallbackHelper.validateUserIdentityResponse(any(UserInfo.class), eq(VTR_LIST)))
                 .thenReturn(Optional.of(OAuth2Error.ACCESS_DENIED));
         when(configService.isAccountInterventionServiceActionEnabled()).thenReturn(false);
 
@@ -337,7 +345,7 @@ class IPVCallbackHandlerTest {
                                         OIDC_BASE_URL + "/trustmark",
                                         "https://vocab.account.gov.uk/v1/returnCode",
                                         List.of(Map.of("code", "A")))));
-        when(ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo))
+        when(ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo, VTR_LIST))
                 .thenReturn(Optional.of(OAuth2Error.ACCESS_DENIED));
         when(ipvCallbackHelper.generateReturnCodeAuthenticationResponse(
                         any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
@@ -346,7 +354,12 @@ class IPVCallbackHandlerTest {
                                 REDIRECT_URI, null, null, null, null, null, null));
         var clientSession =
                 new ClientSession(
-                        generateAuthRequest(claimsRequest).toParameters(), null, null, CLIENT_NAME);
+                                generateAuthRequest(claimsRequest).toParameters(),
+                                null,
+                                new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL),
+                                CLIENT_NAME)
+                        .setEffectiveVectorOfTrust(
+                                new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL));
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(clientSession));
 
@@ -402,7 +415,7 @@ class IPVCallbackHandlerTest {
         when(responseService.validateResponse(anyMap(), anyString())).thenReturn(Optional.empty());
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(clientSession));
-        when(ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo))
+        when(ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo, VTR_LIST))
                 .thenReturn(Optional.of(OAuth2Error.ACCESS_DENIED));
         when(ipvCallbackHelper.generateReturnCodeAuthenticationResponse(
                         any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
@@ -437,7 +450,7 @@ class IPVCallbackHandlerTest {
                                         "sub", "sub-val",
                                         "vot", "P0",
                                         "vtm", OIDC_BASE_URL + "/trustmark")));
-        when(ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo))
+        when(ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo, VTR_LIST))
                 .thenReturn(Optional.of(OAuth2Error.ACCESS_DENIED));
 
         var response =
@@ -537,7 +550,7 @@ class IPVCallbackHandlerTest {
                                         "vtm", OIDC_BASE_URL + "/invalid-trustmark")));
         doThrow(new IpvCallbackException("IPV trustmark is invalid"))
                 .when(ipvCallbackHelper)
-                .validateUserIdentityResponse(userIdentityUserInfo);
+                .validateUserIdentityResponse(userIdentityUserInfo, VTR_LIST);
 
         var event = getApiGatewayProxyRequestEvent(userIdentityUserInfo, clientRegistry);
 
