@@ -115,6 +115,8 @@ public class AccountInterventionService {
 
         String body = httpResponse.body();
 
+        LOG.info(SerializationService.getInstance().writeValueAsString(httpResponse));
+
         var response =
                 SerializationService.getInstance()
                         .readValue(body, AccountInterventionResponse.class);
