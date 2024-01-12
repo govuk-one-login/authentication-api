@@ -10,21 +10,22 @@ doc_app_cri_data_v2_endpoint       = "userinfo/v2"
 doc_app_use_cri_data_v2_endpoint   = true
 doc_app_decouple_enabled           = true
 
-ipv_api_enabled                 = true
-ipv_capacity_allowed            = true
-ipv_authorisation_client_id     = "authOrchestrator"
-ipv_authorisation_uri           = "https://identity.integration.account.gov.uk/oauth2/authorize"
-ipv_authorisation_callback_uri  = "https://oidc.integration.account.gov.uk/ipv-callback"
-ipv_backend_uri                 = "https://api.identity.integration.account.gov.uk"
-ipv_audience                    = "https://identity.integration.account.gov.uk"
-internal_sector_uri             = "https://identity.integration.account.gov.uk"
-spot_enabled                    = true
-language_cy_enabled             = true
-extended_feature_flags_enabled  = true
-support_auth_orch_split         = true
-custom_doc_app_claim_enabled    = true
-ipv_no_session_response_enabled = true
-orch_client_id                  = "orchestrationAuth"
+ipv_api_enabled                   = true
+ipv_capacity_allowed              = true
+ipv_authorisation_client_id       = "authOrchestrator"
+ipv_authorisation_uri             = "https://identity.integration.account.gov.uk/oauth2/authorize"
+ipv_authorisation_callback_uri    = "https://oidc.integration.account.gov.uk/ipv-callback"
+ipv_backend_uri                   = "https://api.identity.integration.account.gov.uk"
+ipv_audience                      = "https://identity.integration.account.gov.uk"
+internal_sector_uri               = "https://identity.integration.account.gov.uk"
+spot_enabled                      = true
+language_cy_enabled               = true
+extended_feature_flags_enabled    = true
+support_auth_orch_split           = true
+support_auth_orch_split_user_info = true
+custom_doc_app_claim_enabled      = true
+ipv_no_session_response_enabled   = true
+orch_client_id                    = "orchestrationAuth"
 
 auth_frontend_public_encryption_key = <<-EOT
 -----BEGIN PUBLIC KEY-----
