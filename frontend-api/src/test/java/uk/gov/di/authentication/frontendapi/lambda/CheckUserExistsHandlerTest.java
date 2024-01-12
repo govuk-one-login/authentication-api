@@ -57,6 +57,7 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
@@ -88,6 +89,7 @@ class CheckUserExistsHandlerTest {
     private final Session session = new Session(IdGenerator.generate());
     private static final String CLIENT_ID = "test-client-id";
     private static final String CLIENT_NAME = "test-client-name";
+    private static final String PHONE_NUMBER = "+44987654321";
     private static final Subject SUBJECT = new Subject();
     private static final String SECTOR_URI = "http://sector-identifier";
     private static final String PERSISTENT_SESSION_ID = "some-persistent-id-value";
@@ -127,6 +129,7 @@ class CheckUserExistsHandlerTest {
     void shouldReturn200IfUserExists() throws Json.JsonException {
         usingValidSession();
         var userProfile = generateUserProfile();
+        userProfile.setPhoneNumber(PHONE_NUMBER);
         when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT.array());
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL_ADDRESS))
                 .thenReturn(Optional.of(userProfile));
@@ -168,6 +171,7 @@ class CheckUserExistsHandlerTest {
         var checkUserExistsResponse =
                 objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
         assertEquals(EMAIL_ADDRESS, checkUserExistsResponse.getEmail());
+        assertEquals("321", checkUserExistsResponse.getPhoneNumberLastThree());
         assertEquals(MFAMethodType.SMS, checkUserExistsResponse.getMfaMethodType());
         assertTrue(checkUserExistsResponse.doesUserExist());
         var expectedRpPairwiseId =
@@ -231,6 +235,74 @@ class CheckUserExistsHandlerTest {
                         AuditService.UNKNOWN,
                         PERSISTENT_SESSION_ID,
                         AuditService.MetadataPair.pair("rpPairwiseId", AuditService.UNKNOWN));
+    }
+
+    @Test
+    void shouldReturnNoRedactedPhoneNumberIfNotPresent() throws Json.JsonException {
+        usingValidSession();
+        var userProfile = generateUserProfile();
+        when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT.array());
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL_ADDRESS))
+                .thenReturn(Optional.of(userProfile));
+        when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.of(generateClientRegistry()));
+        when(clientSessionService.getClientSessionFromRequestHeaders(any()))
+                .thenReturn(Optional.of(getClientSession()));
+        MFAMethod mfaMethod1 =
+                new MFAMethod(
+                        MFAMethodType.AUTH_APP.getValue(),
+                        "first-value",
+                        true,
+                        false,
+                        NowHelper.nowMinus(50, ChronoUnit.DAYS).toString());
+        MFAMethod mfaMethod2 =
+                new MFAMethod(
+                        MFAMethodType.SMS.getValue(),
+                        "second-value",
+                        true,
+                        true,
+                        NowHelper.nowMinus(50, ChronoUnit.DAYS).toString());
+        when(authenticationService.getUserCredentialsFromEmail(EMAIL_ADDRESS))
+                .thenReturn(new UserCredentials().withMfaMethods(List.of(mfaMethod1, mfaMethod2)));
+
+        var event =
+                new APIGatewayProxyRequestEvent()
+                        .withHeaders(
+                                Map.of(
+                                        "Session-Id",
+                                        session.getSessionId(),
+                                        CLIENT_SESSION_ID_HEADER,
+                                        CLIENT_SESSION_ID,
+                                        PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
+                                        PERSISTENT_SESSION_ID))
+                        .withBody(format("{\"email\": \"%s\" }", EMAIL_ADDRESS))
+                        .withRequestContext(contextWithSourceIp("123.123.123.123"));
+        var result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+        var checkUserExistsResponse =
+                objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
+        assertEquals(EMAIL_ADDRESS, checkUserExistsResponse.getEmail());
+        assertNull(checkUserExistsResponse.getPhoneNumberLastThree());
+        assertEquals(MFAMethodType.SMS, checkUserExistsResponse.getMfaMethodType());
+        assertTrue(checkUserExistsResponse.doesUserExist());
+        var expectedRpPairwiseId =
+                ClientSubjectHelper.calculatePairwiseIdentifier(
+                        SUBJECT.getValue(), "sector-identifier", SALT.array());
+        var expectedInternalPairwiseId =
+                ClientSubjectHelper.calculatePairwiseIdentifier(
+                        SUBJECT.getValue(), "test.account.gov.uk", SALT.array());
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.CHECK_USER_KNOWN_EMAIL,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        CLIENT_ID,
+                        expectedInternalPairwiseId,
+                        EMAIL_ADDRESS,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PERSISTENT_SESSION_ID,
+                        AuditService.MetadataPair.pair("rpPairwiseId", expectedRpPairwiseId));
     }
 
     @Test

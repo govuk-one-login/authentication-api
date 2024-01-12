@@ -13,6 +13,7 @@ import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -158,7 +159,11 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                 var userCredentials =
                         authenticationService.getUserCredentialsFromEmail(emailAddress);
                 userMfaDetail =
-                        getUserMFADetail(userContext, userCredentials, isPhoneNumberVerified);
+                        getUserMFADetail(
+                                userContext,
+                                userCredentials,
+                                userProfile.get().getPhoneNumber(),
+                                isPhoneNumberVerified);
             } else {
                 auditableEvent = FrontendAuditableEvent.CHECK_USER_NO_ACCOUNT_WITH_EMAIL;
             }
@@ -178,7 +183,10 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
                     pair("rpPairwiseId", rpPairwiseId));
             CheckUserExistsResponse checkUserExistsResponse =
                     new CheckUserExistsResponse(
-                            emailAddress, userExists, userMfaDetail.getMfaMethodType());
+                            emailAddress,
+                            userExists,
+                            userMfaDetail.getMfaMethodType(),
+                            getLastDigitsOfPhoneNumber(userMfaDetail));
             sessionService.save(userContext.getSession());
 
             LOG.info("Successfully processed request");
@@ -187,6 +195,18 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
         } catch (JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+        }
+    }
+
+    private String getLastDigitsOfPhoneNumber(UserMfaDetail userMfaDetail) {
+        if (userMfaDetail.getPhoneNumber() != null
+                && !userMfaDetail.getPhoneNumber().isEmpty()
+                && MFAMethodType.SMS.equals(userMfaDetail.getMfaMethodType())) {
+            return userMfaDetail
+                    .getPhoneNumber()
+                    .substring(userMfaDetail.getPhoneNumber().length() - 3);
+        } else {
+            return null;
         }
     }
 }
