@@ -18,6 +18,7 @@ doc_app_cri_data_v2_endpoint        = "credentials/issue"
 doc_app_use_cri_data_v2_endpoint    = true
 doc_app_decouple_enabled            = true
 orch_client_id                      = "orchestrationAuth"
+account_intervention_service_call_enabled = true
 auth_frontend_public_encryption_key = <<-EOT
 -----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApLJWOHz7uHLinSJr8XM0
