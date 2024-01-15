@@ -56,6 +56,7 @@ class ClientRegistrationHandlerTest {
     private static final List<String> REDIRECT_URIS = List.of("http://localhost:8080/redirect-uri");
     private static final List<String> CONTACTS = List.of("joe.bloggs@test.com");
     private static final String SERVICE_TYPE = String.valueOf(MANDATORY);
+    private static final boolean CONSENT_REQUIRED_FIXED_VALUE = false;
     private final String clientId = IdGenerator.generate();
     private final Context context = mock(Context.class);
     private final ClientService clientService = mock(ClientService.class);
@@ -116,7 +117,7 @@ class ClientRegistrationHandlerTest {
                         SERVICE_TYPE,
                         SECTOR_IDENTIFIER,
                         SUBJECT_TYPE,
-                        true,
+                        CONSENT_REQUIRED_FIXED_VALUE,
                         emptyList(),
                         ClientType.WEB.getValue(),
                         false,
@@ -159,7 +160,7 @@ class ClientRegistrationHandlerTest {
                         SERVICE_TYPE,
                         SECTOR_IDENTIFIER,
                         SUBJECT_TYPE,
-                        false,
+                        CONSENT_REQUIRED_FIXED_VALUE,
                         emptyList(),
                         ClientType.WEB.getValue(),
                         true,
@@ -194,7 +195,7 @@ class ClientRegistrationHandlerTest {
                         SERVICE_TYPE,
                         SECTOR_IDENTIFIER,
                         SUBJECT_TYPE,
-                        true,
+                        CONSENT_REQUIRED_FIXED_VALUE,
                         emptyList(),
                         ClientType.WEB.getValue(),
                         false,
