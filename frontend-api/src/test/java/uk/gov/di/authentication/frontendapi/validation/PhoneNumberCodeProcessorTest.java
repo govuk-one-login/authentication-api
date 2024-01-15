@@ -65,7 +65,7 @@ class PhoneNumberCodeProcessorTest {
     }
 
     @ParameterizedTest
-    @MethodSource("codRequestTypes")
+    @MethodSource("codeRequestTypes")
     void shouldReturnNoErrorForValidPhoneNumberCode(
             CodeRequestType codeRequestType, JourneyType journeyType) {
         setupPhoneNumberCode(
@@ -76,7 +76,7 @@ class PhoneNumberCodeProcessorTest {
     }
 
     @ParameterizedTest
-    @MethodSource("codRequestTypes")
+    @MethodSource("codeRequestTypes")
     void shouldDeleteMfaCodeFromDataStoreWhenValidRegistrationPhoneNumberCode(
             CodeRequestType codeRequestType,
             JourneyType journeyType,
@@ -117,7 +117,7 @@ class PhoneNumberCodeProcessorTest {
     }
 
     @ParameterizedTest
-    @MethodSource("codRequestTypes")
+    @MethodSource("codeRequestTypes")
     void shouldNotDeleteMfaCodeFromDataStoreWhenInvalidRegistrationPhoneNumberCode(
             CodeRequestType codeRequestType,
             JourneyType journeyType,
@@ -156,8 +156,22 @@ class PhoneNumberCodeProcessorTest {
                 equalTo(Optional.of(ErrorResponse.ERROR_1027)));
     }
 
+    @Test
+    void shouldReturnErrorWhenInvalidReauthenticateMfaPhoneNumberCodeUsedTooManyTimes() {
+        setUpPhoneNumberCodeRetryLimitExceeded(
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.SMS,
+                        INVALID_CODE,
+                        JourneyType.REAUTHENTICATE_MFA,
+                        PHONE_NUMBER));
+
+        assertThat(
+                phoneNumberCodeProcessor.validateCode(),
+                equalTo(Optional.of(ErrorResponse.ERROR_1027)));
+    }
+
     @ParameterizedTest
-    @MethodSource("codRequestTypes")
+    @MethodSource("codeRequestTypes")
     void shouldReturnErrorWhenUserIsBlockedFromEnteringRegistrationPhoneNumberCodes(
             CodeRequestType codeRequestType, JourneyType journeyType) {
         setUpBlockedPhoneNumberCode(
@@ -326,11 +340,15 @@ class PhoneNumberCodeProcessorTest {
                         accountModifiersService);
     }
 
-    private static Stream<Arguments> codRequestTypes() {
+    private static Stream<Arguments> codeRequestTypes() {
         return Stream.of(
                 Arguments.of(
                         CodeRequestType.PW_RESET_MFA_SMS,
                         JourneyType.PASSWORD_RESET_MFA,
+                        NotificationType.MFA_SMS),
+                Arguments.of(
+                        CodeRequestType.SMS_REAUTHENTICATION,
+                        JourneyType.REAUTHENTICATE_MFA,
                         NotificationType.MFA_SMS),
                 Arguments.of(
                         CodeRequestType.SMS_REGISTRATION,
