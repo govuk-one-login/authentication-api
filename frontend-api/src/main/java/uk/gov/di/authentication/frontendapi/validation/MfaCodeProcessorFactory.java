@@ -40,10 +40,7 @@ public class MfaCodeProcessorFactory {
         switch (mfaMethodType) {
             case AUTH_APP:
                 int codeMaxRetries =
-                        List.of(
-                                                JourneyType.SIGN_IN,
-                                                JourneyType.PASSWORD_RESET_MFA,
-                                                JourneyType.REAUTHENTICATE_MFA)
+                        List.of(JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA)
                                         .contains(codeRequest.getJourneyType())
                                 ? configurationService.getCodeMaxRetries()
                                 : configurationService.getCodeMaxRetriesRegistration();
