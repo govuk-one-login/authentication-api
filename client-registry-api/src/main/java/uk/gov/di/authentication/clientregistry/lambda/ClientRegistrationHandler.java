@@ -125,7 +125,8 @@ public class ClientRegistrationHandler
                     clientRegistrationRequest.getClientType(),
                     clientRegistrationRequest.isIdentityVerificationRequired(),
                     null,
-                    ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue());
+                    ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue(),
+                    clientRegistrationRequest.getClientLoCs());
 
             var clientRegistrationResponse =
                     new ClientRegistrationResponse(

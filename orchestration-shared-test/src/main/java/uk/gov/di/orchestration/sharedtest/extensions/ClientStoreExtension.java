@@ -15,8 +15,9 @@ import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.sharedtest.basetest.DynamoTestConfiguration;
 
-import java.util.Collections;
 import java.util.List;
+
+import static java.util.Collections.emptyList;
 
 public class ClientStoreExtension extends DynamoExtension implements AfterEachCallback {
 
@@ -181,11 +182,12 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 sectorIdentifierUri,
                 subjectType,
                 consentRequired,
-                Collections.emptyList(),
+                emptyList(),
                 clientType.getValue(),
                 identityVerificationSupported,
                 clientSecret,
-                clientAuthMethod);
+                clientAuthMethod,
+                emptyList());
     }
 
     public void registerClient(
@@ -216,11 +218,12 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 sectorIdentifierUri,
                 subjectType,
                 consentRequired,
-                Collections.emptyList(),
+                emptyList(),
                 clientType.getValue(),
                 identityVerificationSupported,
                 null,
-                ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue());
+                ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue(),
+                emptyList());
     }
 
     public void registerClient(
@@ -256,7 +259,8 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 clientType.getValue(),
                 identityVerificationSupported,
                 null,
-                ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue());
+                ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue(),
+                emptyList());
     }
 
     public boolean clientExists(String clientID) {

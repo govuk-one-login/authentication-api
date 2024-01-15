@@ -63,7 +63,8 @@ public class DynamoClientService implements ClientService {
             String clientType,
             boolean identityVerificationSupported,
             String clientSecret,
-            String tokenAuthMethod) {
+            String tokenAuthMethod,
+            List<String> clientLoCs) {
         var clientRegistry =
                 new ClientRegistry()
                         .withClientID(clientID)
@@ -84,6 +85,9 @@ public class DynamoClientService implements ClientService {
                         .withTokenAuthMethod(tokenAuthMethod);
         if (Objects.nonNull(clientSecret)) {
             clientRegistry.withClientSecret(Argon2EncoderHelper.argon2Hash(clientSecret));
+        }
+        if (Objects.nonNull(clientLoCs)) {
+            clientRegistry.withClientLoCs(clientLoCs);
         }
         dynamoClientRegistryTable.putItem(clientRegistry);
     }

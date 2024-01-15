@@ -28,7 +28,8 @@ public interface ClientService {
             String clientType,
             boolean identityVerificationSupported,
             String clientSecret,
-            String tokenAuthMethod);
+            String tokenAuthMethod,
+            List<String> clientLoCs);
 
     Optional<ClientRegistry> getClient(String clientId);
 
