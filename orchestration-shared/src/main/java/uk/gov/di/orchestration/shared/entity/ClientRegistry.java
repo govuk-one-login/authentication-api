@@ -36,6 +36,7 @@ public class ClientRegistry {
     private boolean oneLoginService = false;
     private String idTokenSigningAlgorithm = "ES256";
     private boolean smokeTest = false;
+    private List<String> clientLoCs = new ArrayList<>();
 
     public ClientRegistry() {}
 
@@ -374,6 +375,23 @@ public class ClientRegistry {
 
     public ClientRegistry withLandingPageUrl(String landingPageUrl) {
         this.landingPageUrl = landingPageUrl;
+        return this;
+    }
+
+    @DynamoDbAttribute("ClientLoCs")
+    public List<String> getClientLoCs() {
+        if (clientLoCs.isEmpty()) {
+            return LevelOfConfidence.getDefaultLevelOfConfidenceValues();
+        }
+        return clientLoCs;
+    }
+
+    public void setClientLoCs(List<String> clientLoCs) {
+        this.clientLoCs = clientLoCs;
+    }
+
+    public ClientRegistry withClientLoCs(List<String> clientLoCs) {
+        this.clientLoCs = clientLoCs;
         return this;
     }
 }
