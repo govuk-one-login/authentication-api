@@ -262,7 +262,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             APIGatewayProxyRequestEvent input,
             MFAMethodType mfaMethodType,
             boolean isAccountRecovery) {
-        int loginFailureCount = 0;
 
         switch (auditableEvent) {
             case CODE_MAX_RETRIES_REACHED:
@@ -299,7 +298,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         extractPersistentIdFromHeaders(input.getHeaders()),
                         pair("mfa-type", mfaMethodType.getValue()),
                         pair("account-recovery", isAccountRecovery),
-                        pair("loginFailureCount", 0),
+                        pair("loginFailureCount", session.getRetryCount()),
                         pair("MFACodeEntered", MFACode(input)));
                 break;
             case CODE_VERIFIED:

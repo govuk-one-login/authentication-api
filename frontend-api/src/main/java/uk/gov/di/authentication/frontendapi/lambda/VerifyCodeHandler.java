@@ -202,7 +202,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         var notificationType = codeRequest.getNotificationType();
         var accountRecoveryJourney =
                 codeRequest.getNotificationType().equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES);
-        int loginFailureCount = 0;
+        int loginFailureCount = session.getRetryCount();
         var metadataPairs =
                 new AuditService.MetadataPair[] {
                     pair("notification-type", notificationType.name()),
@@ -271,7 +271,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     pair("notification-type", notificationType.name()),
                     pair("account-recovery", accountRecoveryJourney),
                 };
-        int loginFailureCount = 0;
+        int loginFailureCount = session.getRetryCount();
         if (notificationType.equals(MFA_SMS)) {
             metadataPairs =
                     new AuditService.MetadataPair[] {

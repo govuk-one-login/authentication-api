@@ -169,8 +169,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
             if (!credentialsAreValid(request, userProfile)) {
                 codeStorageService.increaseIncorrectPasswordCount(request.getEmail());
-                var incorrectPasswordCountPair =
-                        pair("incorrectPasswordCount", incorrectPasswordCount);
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.INVALID_CREDENTIALS,
                         userContext.getClientSessionId(),
@@ -182,7 +180,9 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         AuditService.UNKNOWN,
                         persistentSessionId,
                         pair("internalSubjectId", userProfile.getSubjectID()),
-                        incorrectPasswordCountPair,
+                        pair(
+                                "incorrectPasswordCount",
+                                codeStorageService.getIncorrectPasswordCount(request.getEmail())),
                         pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()));
 
                 return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1008);
