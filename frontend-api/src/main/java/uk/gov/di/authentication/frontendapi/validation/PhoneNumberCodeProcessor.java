@@ -16,7 +16,6 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
-import java.util.List;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.helpers.TestClientHelper.isTestClientWithAllowedEmail;
@@ -55,8 +54,7 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
             throw new RuntimeException("Sign In Phone number codes are not supported");
         }
         var notificationType =
-                List.of(JourneyType.PASSWORD_RESET_MFA, JourneyType.REAUTHENTICATE_MFA)
-                                .contains(codeRequest.getJourneyType())
+                codeRequest.getJourneyType().equals(JourneyType.PASSWORD_RESET_MFA)
                         ? NotificationType.MFA_SMS
                         : NotificationType.VERIFY_PHONE_NUMBER;
 
