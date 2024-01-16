@@ -88,7 +88,7 @@ class AuthenticationCallbackHandlerTest {
             new ClientSession(
                     generateRPAuthRequestForClientSession().toParameters(),
                     null,
-                    new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL),
+                    VectorOfTrust.of(CredentialTrustLevel.LOW_LEVEL, LevelOfConfidence.LOW_LEVEL),
                     CLIENT_NAME);
     private static final String COOKIE_HEADER_NAME = "Cookie";
     private static final AuthorizationCode AUTH_CODE_ORCH_TO_AUTH = new AuthorizationCode();
@@ -314,7 +314,7 @@ class AuthenticationCallbackHandlerTest {
             when(configurationService.isAccountInterventionServiceCallEnabled()).thenReturn(true);
             when(configurationService.isAccountInterventionServiceActionEnabled()).thenReturn(true);
             when(initiateIPVAuthorisationService.sendRequestToIPV(
-                            any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                            any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
                     .thenReturn(createIPVApiResponse());
             usingValidSession();
             usingValidClientSession();
@@ -342,7 +342,7 @@ class AuthenticationCallbackHandlerTest {
 
             verify(initiateIPVAuthorisationService)
                     .sendRequestToIPV(
-                            any(), any(), any(), any(), any(), any(), any(), any(), any());
+                            any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
         }
 
         @Test
@@ -369,7 +369,8 @@ class AuthenticationCallbackHandlerTest {
                             any(),
                             any(),
                             any(),
-                            eq(reproveIdentity));
+                            eq(reproveIdentity),
+                            any());
         }
 
         @Test
@@ -393,7 +394,8 @@ class AuthenticationCallbackHandlerTest {
                             any(),
                             any(),
                             any(),
-                            eq(reproveIdentity));
+                            eq(reproveIdentity),
+                            any());
         }
 
         @Test

@@ -1,7 +1,15 @@
 package uk.gov.di.authentication.api;
 
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.crypto.RSADecrypter;
+import com.nimbusds.jwt.EncryptedJWT;
+import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
+import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
+import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -51,12 +59,15 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.endsWith;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.matchesPattern;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -101,10 +112,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
     private static final String CLIENT_ID = "test-client-id";
     private static final String CLIENT_NAME = "test-client-name";
-
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
     private static final Subject SUBJECT_ID = new Subject();
-
     private static final String IPV_CLIENT_ID = "ipv-client-id";
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final KeyPair keyPair = generateRsaKeyPair();
@@ -263,7 +272,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         }
 
         @Test
-        void shouldRedirectToIPVWhenIdentityRequired() {
+        void shouldRedirectToIPVWhenIdentityRequired()
+                throws ParseException, JOSEException, java.text.ParseException {
             var response =
                     makeRequest(
                             Optional.empty(),
@@ -271,14 +281,12 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                                     Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
                             constructQueryStringParameters());
 
-            assertThat(response, hasStatus(302));
+            var authRequest = validateQueryRequestToIPVAndReturnAuthRequest(response);
 
-            URI redirectLocationHeader =
-                    URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
+            var encryptedRequestObject = authRequest.getRequestObject();
+            var signedJWTResponse = decryptJWT((EncryptedJWT) encryptedRequestObject);
 
-            assertThat(
-                    redirectLocationHeader.toString(),
-                    startsWith(configurationService.getIPVAuthorisationURI().toString()));
+            validateClaimsInJar(signedJWTResponse);
 
             assertTxmaAuditEventsReceived(
                     txmaAuditQueue,
@@ -410,32 +418,12 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     }
 
     private void setupSession() throws Json.JsonException {
-        String vtrStr =
-                LevelOfConfidence.MEDIUM_LEVEL.getValue()
-                        + "."
-                        + CredentialTrustLevel.MEDIUM_LEVEL.getValue();
-        VectorOfTrust vot =
-                VectorOfTrust.parseFromAuthRequestAttribute(Arrays.asList("[\"" + vtrStr + "\"]"));
-
-        var authRequestBuilder =
-                new AuthenticationRequest.Builder(
-                                ResponseType.CODE, SCOPE, new ClientID(CLIENT_ID), REDIRECT_URI)
-                        .state(RP_STATE)
-                        .nonce(new Nonce())
-                        .customParameter("vtr", jsonArrayOf(vtrStr));
         redis.createSession(SESSION_ID);
-        var clientSession =
-                new ClientSession(
-                        authRequestBuilder.build().toParameters(),
-                        LocalDateTime.now(),
-                        vot,
-                        CLIENT_NAME);
-
-        redis.createClientSession(CLIENT_SESSION_ID, clientSession);
         redis.addStateToRedis(
                 AuthenticationAuthorizationService.AUTHENTICATION_STATE_STORAGE_PREFIX,
                 ORCH_TO_AUTH_STATE,
                 SESSION_ID);
+        setUpClientSession();
     }
 
     private Map<String, String> constructQueryStringParameters() {
@@ -563,5 +551,87 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         public boolean isAccountInterventionServiceActionEnabled() {
             return true;
         }
+    }
+
+    private void setUpClientSession() throws Json.JsonException {
+        String vtrStr =
+                LevelOfConfidence.MEDIUM_LEVEL.getValue()
+                        + "."
+                        + CredentialTrustLevel.MEDIUM_LEVEL.getValue();
+        VectorOfTrust vot =
+                VectorOfTrust.parseFromAuthRequestAttribute(Arrays.asList("[\"" + vtrStr + "\"]"));
+
+        var authRequestBuilder =
+                new AuthenticationRequest.Builder(
+                                ResponseType.CODE, SCOPE, new ClientID(CLIENT_ID), REDIRECT_URI)
+                        .state(RP_STATE)
+                        .nonce(new Nonce())
+                        .customParameter("vtr", jsonArrayOf(vtrStr));
+        var clientSession =
+                new ClientSession(
+                                authRequestBuilder.build().toParameters(),
+                                LocalDateTime.now(),
+                                vot,
+                                CLIENT_NAME)
+                        .setEffectiveVectorOfTrust(
+                                VectorOfTrust.of(
+                                        CredentialTrustLevel.LOW_LEVEL,
+                                        LevelOfConfidence.LOW_LEVEL));
+
+        redis.createClientSession(CLIENT_SESSION_ID, clientSession);
+    }
+
+    private AuthorizationRequest validateQueryRequestToIPVAndReturnAuthRequest(
+            APIGatewayProxyResponseEvent response) throws ParseException {
+        assertThat(response, hasStatus(302));
+        var expectedQueryStringRegex = "response_type=code&request=.*&client_id=ipv-client-id";
+        URI redirectLocationHeader =
+                URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
+        assertThat(
+                redirectLocationHeader.toString(),
+                startsWith(configurationService.getIPVAuthorisationURI().toString()));
+        assertThat(redirectLocationHeader.getQuery(), matchesPattern(expectedQueryStringRegex));
+
+        var authorisationRequest = AuthorizationRequest.parse(redirectLocationHeader);
+        assertThat(authorisationRequest.getClientID().getValue(), equalTo(IPV_CLIENT_ID));
+        assertThat(authorisationRequest.getResponseType(), equalTo(ResponseType.CODE));
+        assertTrue(Objects.nonNull(authorisationRequest.getRequestObject()));
+        return authorisationRequest;
+    }
+
+    private SignedJWT decryptJWT(EncryptedJWT encryptedJWT) throws JOSEException {
+        encryptedJWT.decrypt(new RSADecrypter(keyPair.getPrivate()));
+        return encryptedJWT.getPayload().toSignedJWT();
+    }
+
+    private void validateClaimsInJar(SignedJWT signedJWT) throws java.text.ParseException {
+        assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("sub")));
+        assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("iss")));
+        assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("response_type")));
+        assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("reprove_identity")));
+        assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("client_id")));
+        assertTrue(
+                Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("govuk_signin_journey_id")));
+        assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("aud")));
+        assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("nbf")));
+        assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("vtr")));
+        assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("scope")));
+        assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("state")));
+        assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("redirect_uri")));
+        assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("exp")));
+        assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("iat")));
+        assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("jti")));
+
+        assertThat(signedJWT.getJWTClaimsSet().getClaim("iss"), equalTo(IPV_CLIENT_ID));
+        assertThat(signedJWT.getJWTClaimsSet().getClaim("response_type"), equalTo("code"));
+        assertThat(
+                (boolean) signedJWT.getJWTClaimsSet().getClaim("reprove_identity"), equalTo(false));
+        assertThat(signedJWT.getJWTClaimsSet().getClaim("client_id"), equalTo(IPV_CLIENT_ID));
+        assertThat(
+                signedJWT.getJWTClaimsSet().getClaim("govuk_signin_journey_id"),
+                equalTo(CLIENT_SESSION_ID));
+        assertThat(signedJWT.getJWTClaimsSet().getClaim("vtr"), equalTo(List.of("P2", "P1")));
+        assertThat(signedJWT.getJWTClaimsSet().getClaim("scope"), equalTo("openid"));
+        assertThat(signedJWT.getHeader().getAlgorithm(), equalTo(JWSAlgorithm.ES256));
     }
 }

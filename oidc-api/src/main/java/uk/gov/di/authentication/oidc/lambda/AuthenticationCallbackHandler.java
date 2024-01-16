@@ -355,6 +355,7 @@ public class AuthenticationCallbackHandler
                         configurationService.isAccountInterventionServiceActionEnabled()
                                 ? accountStatus.reproveIdentity()
                                 : null;
+                var vtrList = clientSession.getVtrList();
 
                 if (identityRequired) {
                     return initiateIPVAuthorisationService.sendRequestToIPV(
@@ -366,7 +367,8 @@ public class AuthenticationCallbackHandler
                             clientId,
                             clientSessionId,
                             persistentSessionId,
-                            reproveIdentity);
+                            reproveIdentity,
+                            VectorOfTrust.getRequestedLevelsOfConfidence(vtrList));
                 }
 
                 URI clientRedirectURI = authenticationRequest.getRedirectionURI();

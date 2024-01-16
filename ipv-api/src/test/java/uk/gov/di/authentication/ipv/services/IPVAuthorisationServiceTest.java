@@ -252,7 +252,7 @@ class IPVAuthorisationServiceTest {
                                 claims,
                                 "journey-id",
                                 "test@test.com",
-                                List.of("Cl.Cm.P2", "Cl.Cm.PCL200"),
+                                List.of("P2", "PCL200"),
                                 true);
             }
 
@@ -292,7 +292,7 @@ class IPVAuthorisationServiceTest {
                     equalTo("journey-id"));
             assertThat(
                     signedJWTResponse.getJWTClaimsSet().getClaim("vtr"),
-                    equalTo(List.of("Cl.Cm.P2", "Cl.Cm.PCL200")));
+                    equalTo(List.of("P2", "PCL200")));
             assertThat(
                     signedJWTResponse.getJWTClaimsSet().getClaim("reprove_identity"),
                     equalTo(true));

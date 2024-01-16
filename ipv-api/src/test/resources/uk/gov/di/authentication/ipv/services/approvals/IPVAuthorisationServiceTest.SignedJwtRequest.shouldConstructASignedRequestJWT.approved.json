@@ -9,8 +9,8 @@
   "nbf": 1196676930,
   "email_address": "test@test.com",
   "vtr": [
-    "Cl.Cm.P2",
-    "Cl.Cm.PCL200"
+    "P2",
+    "PCL200"
   ],
   "scope": "openid",
   "claims": {
