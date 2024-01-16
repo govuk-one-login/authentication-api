@@ -500,7 +500,9 @@ class VerifyCodeHandlerTest {
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("notification-type", MFA_SMS.name()),
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
-                        pair("account-recovery", false));
+                        pair("account-recovery", false),
+                        pair("loginFailureCount", 0),
+                        pair("MFACodeEntered", "123456"));
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_REMOVED,
@@ -547,7 +549,9 @@ class VerifyCodeHandlerTest {
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("notification-type", MFA_SMS.name()),
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
-                        pair("account-recovery", false));
+                        pair("account-recovery", false),
+                        pair("loginFailureCount", 0),
+                        pair("MFACodeEntered", "123456"));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
                         Session.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false, true);
@@ -577,7 +581,10 @@ class VerifyCodeHandlerTest {
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("notification-type", MFA_SMS.name()),
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
-                        pair("account-recovery", false));
+                        pair("account-recovery", false),
+                        pair("loginFailureCount", 0),
+                        pair("MFACodeEntered", "6543221"),
+                        pair("MaxSmsCount", configurationService.getCodeMaxRetries()));
     }
 
     @ParameterizedTest
@@ -615,7 +622,10 @@ class VerifyCodeHandlerTest {
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("notification-type", MFA_SMS.name()),
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
-                        pair("account-recovery", false));
+                        pair("account-recovery", false),
+                        pair("loginFailureCount", 0),
+                        pair("MFACodeEntered", "6543221"),
+                        pair("MaxSmsCount", configurationService.getCodeMaxRetries()));
     }
 
     @Test

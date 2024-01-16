@@ -205,7 +205,8 @@ class VerifyMfaCodeHandlerTest {
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
-                        pair("account-recovery", false));
+                        pair("account-recovery", false),
+                        pair("MFACodeEntered", CODE));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
                         Session.AccountState.NEW, CLIENT_ID, CLIENT_NAME, "P0", false, true);
@@ -252,7 +253,8 @@ class VerifyMfaCodeHandlerTest {
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
-                        pair("account-recovery", false));
+                        pair("account-recovery", false),
+                        pair("MFACodeEntered", CODE));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
                         Session.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false, true);
@@ -293,7 +295,8 @@ class VerifyMfaCodeHandlerTest {
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
-                        pair("account-recovery", false));
+                        pair("account-recovery", false),
+                        pair("MFACodeEntered", CODE));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
                         Session.AccountState.NEW, CLIENT_ID, CLIENT_NAME, "P0", false, true);
@@ -337,7 +340,8 @@ class VerifyMfaCodeHandlerTest {
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
-                        pair("account-recovery", true));
+                        pair("account-recovery", true),
+                        pair("MFACodeEntered", CODE));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
                         Session.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false, true);
@@ -381,7 +385,8 @@ class VerifyMfaCodeHandlerTest {
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
-                        pair("account-recovery", true));
+                        pair("account-recovery", true),
+                        pair("MFACodeEntered", CODE));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
                         Session.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false, true);
@@ -419,7 +424,8 @@ class VerifyMfaCodeHandlerTest {
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
-                        pair("account-recovery", false));
+                        pair("account-recovery", false),
+                        pair("MFACodeEntered", CODE));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
                         Session.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false, true);
@@ -517,7 +523,8 @@ class VerifyMfaCodeHandlerTest {
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
-                        pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)));
+                        pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
+                        pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()));
     }
 
     @ParameterizedTest
@@ -556,7 +563,8 @@ class VerifyMfaCodeHandlerTest {
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
-                        pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)));
+                        pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
+                        pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()));
     }
 
     @ParameterizedTest
@@ -598,7 +606,9 @@ class VerifyMfaCodeHandlerTest {
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("mfa-type", MFAMethodType.AUTH_APP.getValue()),
-                        pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)));
+                        pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
+                        pair("loginFailureCount", 0),
+                        pair("MFACodeEntered", CODE));
     }
 
     private static Stream<Arguments> blockedCodeForInvalidPhoneNumberTooManyTimes() {
@@ -641,7 +651,8 @@ class VerifyMfaCodeHandlerTest {
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
-                        pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)));
+                        pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
+                        pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()));
     }
 
     @ParameterizedTest
@@ -678,7 +689,8 @@ class VerifyMfaCodeHandlerTest {
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
-                        pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)));
+                        pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
+                        pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()));
     }
 
     @ParameterizedTest
@@ -715,7 +727,9 @@ class VerifyMfaCodeHandlerTest {
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
-                        pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)));
+                        pair("account-recovery", journeyType.equals(JourneyType.ACCOUNT_RECOVERY)),
+                        pair("loginFailureCount", 0),
+                        pair("MFACodeEntered", CODE));
     }
 
     @ParameterizedTest

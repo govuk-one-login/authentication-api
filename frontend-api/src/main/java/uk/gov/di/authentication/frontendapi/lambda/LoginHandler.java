@@ -161,14 +161,14 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         IpAddressHelper.extractIpAddress(input),
                         userProfile.getPhoneNumber(),
                         persistentSessionId,
-                        pair("internalSubjectId", userProfile.getSubjectID()));
+                        pair("internalSubjectId", userProfile.getSubjectID()),
+                        pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()));
 
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1028);
             }
 
             if (!credentialsAreValid(request, userProfile)) {
                 codeStorageService.increaseIncorrectPasswordCount(request.getEmail());
-
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.INVALID_CREDENTIALS,
                         userContext.getClientSessionId(),
@@ -179,7 +179,11 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
                         persistentSessionId,
-                        pair("internalSubjectId", userProfile.getSubjectID()));
+                        pair("internalSubjectId", userProfile.getSubjectID()),
+                        pair(
+                                "incorrectPasswordCount",
+                                codeStorageService.getIncorrectPasswordCount(request.getEmail())),
+                        pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()));
 
                 return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1008);
             }
