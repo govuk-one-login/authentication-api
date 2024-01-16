@@ -10,7 +10,6 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.VerifyCodeRequest;
 import uk.gov.di.authentication.frontendapi.helpers.SessionHelper;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -241,12 +240,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         codeStorageService.deleteOtpCode(session.getEmailAddress(), notificationType);
         auditService.submitAuditEvent(
                 FrontendAuditableEvent.CODE_VERIFIED,
-                userContext.getClientSessionId(),
-                session.getSessionId(),
-                userContext
-                        .getClient()
-                        .map(ClientRegistry::getClientID)
-                        .orElse(AuditService.UNKNOWN),
+                userContext,
                 session.getInternalCommonSubjectIdentifier(),
                 session.getEmailAddress(),
                 IpAddressHelper.extractIpAddress(input),
@@ -302,12 +296,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         }
         auditService.submitAuditEvent(
                 auditableEvent,
-                userContext.getClientSessionId(),
-                session.getSessionId(),
-                userContext
-                        .getClient()
-                        .map(ClientRegistry::getClientID)
-                        .orElse(AuditService.UNKNOWN),
+                userContext,
                 session.getInternalCommonSubjectIdentifier(),
                 session.getEmailAddress(),
                 IpAddressHelper.extractIpAddress(input),
@@ -343,12 +332,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                     userContext.getSession().getInternalCommonSubjectIdentifier());
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_REMOVED,
-                    userContext.getClientSessionId(),
-                    userContext.getSession().getSessionId(),
-                    userContext
-                            .getClient()
-                            .map(ClientRegistry::getClientID)
-                            .orElse(AuditService.UNKNOWN),
+                    userContext,
                     userContext.getSession().getInternalCommonSubjectIdentifier(),
                     userContext.getSession().getEmailAddress(),
                     IpAddressHelper.extractIpAddress(input),

@@ -3,6 +3,7 @@ package uk.gov.di.authentication.shared.services;
 import uk.gov.di.audit.TxmaAuditUser;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
+import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.time.Clock;
 import java.util.Arrays;
@@ -37,6 +38,28 @@ public class AuditService {
                         configurationService.getAwsRegion(),
                         configurationService.getTxmaAuditQueueUrl(),
                         configurationService.getLocalstackEndpointUri());
+    }
+
+    public void submitAuditEvent(
+            AuditableEvent event,
+            UserContext userContext,
+            String subjectId,
+            String email,
+            String ipAddress,
+            String phoneNumber,
+            String persistentSessionId,
+            MetadataPair... metadataPairs) {
+        submitAuditEvent(
+                event,
+                userContext.getClientSessionId(),
+                userContext.getSession().getSessionId(),
+                userContext.getClientId(),
+                subjectId,
+                email,
+                ipAddress,
+                phoneNumber,
+                persistentSessionId,
+                metadataPairs);
     }
 
     public void submitAuditEvent(

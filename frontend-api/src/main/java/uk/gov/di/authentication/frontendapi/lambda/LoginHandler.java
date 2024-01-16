@@ -123,9 +123,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.NO_ACCOUNT_WITH_EMAIL,
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
-                        clientId,
+                        userContext,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         IpAddressHelper.extractIpAddress(input),
@@ -153,9 +151,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
-                        clientId,
+                        userContext,
                         internalCommonSubjectIdentifier.getValue(),
                         userProfile.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
@@ -171,9 +167,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 codeStorageService.increaseIncorrectPasswordCount(request.getEmail());
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.INVALID_CREDENTIALS,
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
-                        clientId,
+                        userContext,
                         internalCommonSubjectIdentifier.getValue(),
                         request.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
@@ -230,9 +224,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
             auditService.submitAuditEvent(
                     LOG_IN_SUCCESS,
-                    userContext.getClientSessionId(),
-                    userContext.getSession().getSessionId(),
-                    clientId,
+                    userContext,
                     internalCommonSubjectIdentifier.getValue(),
                     userProfile.getEmail(),
                     IpAddressHelper.extractIpAddress(input),
@@ -243,7 +235,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             if (!userMfaDetail.isMfaRequired()) {
                 cloudwatchMetricsService.incrementAuthenticationSuccess(
                         EXISTING,
-                        clientId,
+                        userContext.getClientId(),
                         userContext.getClientName(),
                         "P0",
                         clientService.isTestJourney(clientId, userProfile.getEmail()),

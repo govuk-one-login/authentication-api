@@ -164,12 +164,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             if (codeRequestValid.isPresent()) {
                 auditService.submitAuditEvent(
                         getInvalidCodeAuditEventFromNotificationType(request.getNotificationType()),
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
-                        userContext
-                                .getClient()
-                                .map(ClientRegistry::getClientID)
-                                .orElse(AuditService.UNKNOWN),
+                        userContext,
                         userContext.getSession().getInternalCommonSubjectIdentifier(),
                         request.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
@@ -272,12 +267,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         auditService.submitAuditEvent(
                 getSuccessfulAuditEventFromNotificationType(
                         notificationType, testClientWithAllowedEmail),
-                userContext.getClientSessionId(),
-                userContext.getSession().getSessionId(),
-                userContext
-                        .getClient()
-                        .map(ClientRegistry::getClientID)
-                        .orElse(AuditService.UNKNOWN),
+                userContext,
                 userContext.getSession().getInternalCommonSubjectIdentifier(),
                 request.getEmail(),
                 IpAddressHelper.extractIpAddress(input),

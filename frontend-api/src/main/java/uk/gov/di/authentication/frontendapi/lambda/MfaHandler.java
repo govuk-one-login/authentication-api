@@ -9,7 +9,6 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.MfaRequest;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -134,12 +133,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             if (codeRequestValid.isPresent()) {
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.MFA_INVALID_CODE_REQUEST,
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
-                        userContext
-                                .getClient()
-                                .map(ClientRegistry::getClientID)
-                                .orElse(AuditService.UNKNOWN),
+                        userContext,
                         AuditService.UNKNOWN,
                         email,
                         IpAddressHelper.extractIpAddress(input),
@@ -154,12 +148,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
 
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.MFA_MISMATCHED_EMAIL,
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
-                        userContext
-                                .getClient()
-                                .map(ClientRegistry::getClientID)
-                                .orElse(AuditService.UNKNOWN),
+                        userContext,
                         AuditService.UNKNOWN,
                         email,
                         IpAddressHelper.extractIpAddress(input),
@@ -173,12 +162,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             if (phoneNumber == null) {
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.MFA_MISSING_PHONE_NUMBER,
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
-                        userContext
-                                .getClient()
-                                .map(ClientRegistry::getClientID)
-                                .orElse(AuditService.UNKNOWN),
+                        userContext,
                         userContext.getSession().getInternalCommonSubjectIdentifier(),
                         email,
                         IpAddressHelper.extractIpAddress(input),
@@ -225,12 +209,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
             }
             auditService.submitAuditEvent(
                     auditableEvent,
-                    userContext.getClientSessionId(),
-                    userContext.getSession().getSessionId(),
-                    userContext
-                            .getClient()
-                            .map(ClientRegistry::getClientID)
-                            .orElse(AuditService.UNKNOWN),
+                    userContext,
                     userContext.getSession().getInternalCommonSubjectIdentifier(),
                     email,
                     IpAddressHelper.extractIpAddress(input),

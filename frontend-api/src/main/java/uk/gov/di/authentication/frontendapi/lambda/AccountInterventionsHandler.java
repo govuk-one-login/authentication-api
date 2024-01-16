@@ -173,9 +173,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
         if (auditEvent != null) {
             auditService.submitAuditEvent(
                     auditEvent,
-                    userContext.getClientSessionId(),
-                    userContext.getSession().getSessionId(),
-                    userContext.getClientId(),
+                    userContext,
                     userContext.getSession().getInternalCommonSubjectIdentifier(),
                     userContext.getSession().getEmailAddress(),
                     IpAddressHelper.extractIpAddress(input),

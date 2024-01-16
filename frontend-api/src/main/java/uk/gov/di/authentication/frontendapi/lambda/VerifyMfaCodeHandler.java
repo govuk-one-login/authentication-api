@@ -11,7 +11,6 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.helpers.SessionHelper;
 import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessor;
 import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessorFactory;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -268,12 +267,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             case CODE_MAX_RETRIES_REACHED:
                 auditService.submitAuditEvent(
                         auditableEvent,
-                        userContext.getClientSessionId(),
-                        session.getSessionId(),
-                        userContext
-                                .getClient()
-                                .map(ClientRegistry::getClientID)
-                                .orElse(AuditService.UNKNOWN),
+                        userContext,
                         session.getInternalCommonSubjectIdentifier(),
                         session.getEmailAddress(),
                         IpAddressHelper.extractIpAddress(input),
@@ -286,12 +280,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             case INVALID_CODE_SENT:
                 auditService.submitAuditEvent(
                         auditableEvent,
-                        userContext.getClientSessionId(),
-                        session.getSessionId(),
-                        userContext
-                                .getClient()
-                                .map(ClientRegistry::getClientID)
-                                .orElse(AuditService.UNKNOWN),
+                        userContext,
                         session.getInternalCommonSubjectIdentifier(),
                         session.getEmailAddress(),
                         IpAddressHelper.extractIpAddress(input),
@@ -305,12 +294,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             case CODE_VERIFIED:
                 auditService.submitAuditEvent(
                         auditableEvent,
-                        userContext.getClientSessionId(),
-                        session.getSessionId(),
-                        userContext
-                                .getClient()
-                                .map(ClientRegistry::getClientID)
-                                .orElse(AuditService.UNKNOWN),
+                        userContext,
                         session.getInternalCommonSubjectIdentifier(),
                         session.getEmailAddress(),
                         IpAddressHelper.extractIpAddress(input),
@@ -323,12 +307,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             default:
                 auditService.submitAuditEvent(
                         auditableEvent,
-                        userContext.getClientSessionId(),
-                        session.getSessionId(),
-                        userContext
-                                .getClient()
-                                .map(ClientRegistry::getClientID)
-                                .orElse(AuditService.UNKNOWN),
+                        userContext,
                         session.getInternalCommonSubjectIdentifier(),
                         session.getEmailAddress(),
                         IpAddressHelper.extractIpAddress(input),

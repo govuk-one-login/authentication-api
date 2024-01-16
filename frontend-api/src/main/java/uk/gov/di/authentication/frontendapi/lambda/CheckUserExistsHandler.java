@@ -11,7 +11,6 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsRequest;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
@@ -99,12 +98,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             if (errorResponse.isPresent()) {
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.CHECK_USER_INVALID_EMAIL,
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
-                        userContext
-                                .getClient()
-                                .map(ClientRegistry::getClientID)
-                                .orElse(AuditService.UNKNOWN),
+                        userContext,
                         AuditService.UNKNOWN,
                         emailAddress,
                         IpAddressHelper.extractIpAddress(input),
@@ -120,9 +114,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
 
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
-                        userContext.getClientId(),
+                        userContext,
                         AuditService.UNKNOWN,
                         emailAddress,
                         IpAddressHelper.extractIpAddress(input),
@@ -164,12 +156,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
             }
             auditService.submitAuditEvent(
                     auditableEvent,
-                    userContext.getClientSessionId(),
-                    userContext.getSession().getSessionId(),
-                    userContext
-                            .getClient()
-                            .map(ClientRegistry::getClientID)
-                            .orElse(AuditService.UNKNOWN),
+                    userContext,
                     internalPairwiseId,
                     emailAddress,
                     IpAddressHelper.extractIpAddress(input),

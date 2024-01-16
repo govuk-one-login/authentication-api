@@ -10,7 +10,6 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordCompletionRequest;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
@@ -189,12 +188,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             }
             auditService.submitAuditEvent(
                     auditableEvent,
-                    userContext.getClientSessionId(),
-                    userContext.getSession().getSessionId(),
-                    userContext
-                            .getClient()
-                            .map(ClientRegistry::getClientID)
-                            .orElse(AuditService.UNKNOWN),
+                    userContext,
                     internalCommonSubjectId.getValue(),
                     userCredentials.getEmail(),
                     IpAddressHelper.extractIpAddress(input),
@@ -256,12 +250,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
                     internalCommonSubjectId.getValue(), true);
             auditService.submitAuditEvent(
                     ACCOUNT_RECOVERY_BLOCK_ADDED,
-                    userContext.getClientSessionId(),
-                    userContext.getSession().getSessionId(),
-                    userContext
-                            .getClient()
-                            .map(ClientRegistry::getClientID)
-                            .orElse(AuditService.UNKNOWN),
+                    userContext,
                     internalCommonSubjectId.getValue(),
                     userCredentials.getEmail(),
                     IpAddressHelper.extractIpAddress(input),

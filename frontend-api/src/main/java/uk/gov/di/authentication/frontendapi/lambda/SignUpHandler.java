@@ -11,7 +11,6 @@ import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.SignUpResponse;
 import uk.gov.di.authentication.frontendapi.entity.SignupRequest;
 import uk.gov.di.authentication.shared.conditions.ConsentHelper;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -106,12 +105,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
 
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.CREATE_ACCOUNT_EMAIL_ALREADY_EXISTS,
-                        userContext.getClientSessionId(),
-                        userContext.getSession().getSessionId(),
-                        userContext
-                                .getClient()
-                                .map(ClientRegistry::getClientID)
-                                .orElse(AuditService.UNKNOWN),
+                        userContext,
                         AuditService.UNKNOWN,
                         request.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
@@ -155,12 +149,7 @@ public class SignUpHandler extends BaseFrontendHandler<SignupRequest>
 
             auditService.submitAuditEvent(
                     FrontendAuditableEvent.CREATE_ACCOUNT,
-                    userContext.getClientSessionId(),
-                    userContext.getSession().getSessionId(),
-                    userContext
-                            .getClient()
-                            .map(ClientRegistry::getClientID)
-                            .orElse(AuditService.UNKNOWN),
+                    userContext,
                     internalCommonSubjectIdentifier.getValue(),
                     request.getEmail(),
                     IpAddressHelper.extractIpAddress(input),

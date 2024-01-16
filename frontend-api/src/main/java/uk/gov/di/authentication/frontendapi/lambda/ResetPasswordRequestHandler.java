@@ -9,7 +9,6 @@ import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.authentication.frontendapi.entity.ResetPasswordRequest;
 import uk.gov.di.authentication.frontendapi.exceptions.SerializationException;
-import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
@@ -123,12 +122,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
                     isTestClient
                             ? PASSWORD_RESET_REQUESTED_FOR_TEST_CLIENT
                             : PASSWORD_RESET_REQUESTED,
-                    userContext.getClientSessionId(),
-                    userContext.getSession().getSessionId(),
-                    userContext
-                            .getClient()
-                            .map(ClientRegistry::getClientID)
-                            .orElse(AuditService.UNKNOWN),
+                    userContext,
                     AuditService.UNKNOWN,
                     request.getEmail(),
                     IpAddressHelper.extractIpAddress(input),
