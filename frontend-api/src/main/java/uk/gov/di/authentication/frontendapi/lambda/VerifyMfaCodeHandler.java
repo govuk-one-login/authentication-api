@@ -110,7 +110,6 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             Context context,
             VerifyMfaCodeRequest codeRequest,
             UserContext userContext) {
-
         LOG.info("Invoking verify MFA code handler");
         try {
             var session = userContext.getSession();
@@ -219,6 +218,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 userContext,
                 input,
                 codeRequest.getMfaMethodType(),
+                codeRequest.getCode(),
                 codeRequest.getJourneyType().equals(JourneyType.ACCOUNT_RECOVERY));
 
         if (errorResponse.isEmpty()) {
@@ -261,6 +261,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             UserContext userContext,
             APIGatewayProxyRequestEvent input,
             MFAMethodType mfaMethodType,
+            String code,
             boolean isAccountRecovery) {
 
         switch (auditableEvent) {
@@ -317,7 +318,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         extractPersistentIdFromHeaders(input.getHeaders()),
                         pair("mfa-type", mfaMethodType.getValue()),
                         pair("account-recovery", isAccountRecovery),
-                        pair("MFACodeEntered", MFACode(input)));
+                        pair("MFACodeEntered", code));
                 break;
             default:
                 auditService.submitAuditEvent(

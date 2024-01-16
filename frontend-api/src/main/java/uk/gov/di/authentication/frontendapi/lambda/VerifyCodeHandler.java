@@ -227,7 +227,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
                         pair("account-recovery", accountRecoveryJourney),
                         pair("loginFailureCount", loginFailureCount),
-                        pair("MFACodeEntered", MFACode(input))
+                        pair("MFACodeEntered", codeRequest.getCode())
                     };
             clearAccountRecoveryBlockIfPresent(userContext, input);
             cloudwatchMetricsService.incrementAuthenticationSuccess(
@@ -279,7 +279,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
                         pair("account-recovery", accountRecoveryJourney),
                         pair("loginFailureCount", loginFailureCount),
-                        pair("MFACodeEntered", MFACode(input)),
+                        pair("MFACodeEntered", codeRequest.getCode()),
                         pair("MaxSmsCount", configurationService.getCodeMaxRetries())
                     };
         }
@@ -380,18 +380,5 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             }
         }
         return journeyType;
-    }
-
-    private String MFACode(APIGatewayProxyRequestEvent input) {
-        String code = "";
-        String body = input.getBody();
-        String[] parts = body.split(",");
-        for (String part : parts) {
-            if (part.contains("\"code\"")) {
-                code = part.split(":")[1].replaceAll("\"", "").trim();
-                break;
-            }
-        }
-        return code;
     }
 }
