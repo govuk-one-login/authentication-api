@@ -262,17 +262,20 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             MFAMethodType mfaMethodType,
             String code,
             boolean isAccountRecovery) {
-
-        switch (auditableEvent) {
-            case CODE_MAX_RETRIES_REACHED:
-                auditService.submitAuditEvent(
-                        auditableEvent,
+        var auditContext =
+                new AuditService.AuditContext(
                         userContext,
                         session.getInternalCommonSubjectIdentifier(),
                         session.getEmailAddress(),
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
-                        extractPersistentIdFromHeaders(input.getHeaders()),
+                        extractPersistentIdFromHeaders(input.getHeaders()));
+
+        switch (auditableEvent) {
+            case CODE_MAX_RETRIES_REACHED:
+                auditService.submitAuditEvent(
+                        auditableEvent,
+                        auditContext,
                         pair("mfa-type", mfaMethodType.getValue()),
                         pair("account-recovery", isAccountRecovery),
                         pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()));
@@ -280,12 +283,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             case INVALID_CODE_SENT:
                 auditService.submitAuditEvent(
                         auditableEvent,
-                        userContext,
-                        session.getInternalCommonSubjectIdentifier(),
-                        session.getEmailAddress(),
-                        IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN,
-                        extractPersistentIdFromHeaders(input.getHeaders()),
+                        auditContext,
                         pair("mfa-type", mfaMethodType.getValue()),
                         pair("account-recovery", isAccountRecovery),
                         pair("loginFailureCount", session.getRetryCount()),
@@ -294,12 +292,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             case CODE_VERIFIED:
                 auditService.submitAuditEvent(
                         auditableEvent,
-                        userContext,
-                        session.getInternalCommonSubjectIdentifier(),
-                        session.getEmailAddress(),
-                        IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN,
-                        extractPersistentIdFromHeaders(input.getHeaders()),
+                        auditContext,
                         pair("mfa-type", mfaMethodType.getValue()),
                         pair("account-recovery", isAccountRecovery),
                         pair("MFACodeEntered", code));
@@ -307,12 +300,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             default:
                 auditService.submitAuditEvent(
                         auditableEvent,
-                        userContext,
-                        session.getInternalCommonSubjectIdentifier(),
-                        session.getEmailAddress(),
-                        IpAddressHelper.extractIpAddress(input),
-                        AuditService.UNKNOWN,
-                        extractPersistentIdFromHeaders(input.getHeaders()),
+                        auditContext,
                         pair("mfa-type", mfaMethodType.getValue()),
                         pair("account-recovery", isAccountRecovery));
         }

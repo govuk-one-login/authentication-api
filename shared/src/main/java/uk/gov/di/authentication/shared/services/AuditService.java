@@ -40,6 +40,28 @@ public class AuditService {
                         configurationService.getLocalstackEndpointUri());
     }
 
+    public record AuditContext(
+            UserContext userContext,
+            String subjectId,
+            String email,
+            String ipAddress,
+            String phoneNumber,
+            String persistentSessionId) {}
+    ;
+
+    public void submitAuditEvent(
+            AuditableEvent event, AuditContext auditContext, MetadataPair... metadataPairs) {
+        submitAuditEvent(
+                event,
+                auditContext.userContext,
+                auditContext.subjectId,
+                auditContext.email,
+                auditContext.ipAddress,
+                auditContext.phoneNumber,
+                auditContext.persistentSessionId,
+                metadataPairs);
+    }
+
     public void submitAuditEvent(
             AuditableEvent event,
             UserContext userContext,

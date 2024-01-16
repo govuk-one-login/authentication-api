@@ -137,6 +137,14 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             UserContext userContext) {
 
         attachSessionIdToLogs(userContext.getSession());
+        var auditContext =
+                new AuditService.AuditContext(
+                        userContext,
+                        userContext.getSession().getInternalCommonSubjectIdentifier(),
+                        request.getEmail(),
+                        IpAddressHelper.extractIpAddress(input),
+                        Optional.ofNullable(request.getPhoneNumber()).orElse(AuditService.UNKNOWN),
+                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
 
         try {
             if (!userContext.getSession().validateSession(request.getEmail())) {
@@ -164,12 +172,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             if (codeRequestValid.isPresent()) {
                 auditService.submitAuditEvent(
                         getInvalidCodeAuditEventFromNotificationType(request.getNotificationType()),
-                        userContext,
-                        userContext.getSession().getInternalCommonSubjectIdentifier(),
-                        request.getEmail(),
-                        IpAddressHelper.extractIpAddress(input),
-                        Optional.ofNullable(request.getPhoneNumber()).orElse(AuditService.UNKNOWN),
-                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+                        auditContext);
                 return generateApiGatewayProxyErrorResponse(400, codeRequestValid.get());
             }
             switch (request.getNotificationType()) {
@@ -182,7 +185,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                             userContext,
                             request.isRequestNewCode(),
                             request,
-                            input);
+                            auditContext);
                 case VERIFY_PHONE_NUMBER:
                     if (request.getPhoneNumber() == null) {
                         return generateApiGatewayProxyResponse(400, ERROR_1011);
@@ -205,7 +208,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                             userContext,
                             request.isRequestNewCode(),
                             request,
-                            input);
+                            auditContext);
             }
             return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
         } catch (SdkClientException ex) {
@@ -225,7 +228,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             UserContext userContext,
             Boolean requestNewCode,
             SendNotificationRequest request,
-            APIGatewayProxyRequestEvent input)
+            AuditService.AuditContext auditContext)
             throws JsonException, ClientNotFoundException {
 
         String code =
@@ -267,12 +270,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
         auditService.submitAuditEvent(
                 getSuccessfulAuditEventFromNotificationType(
                         notificationType, testClientWithAllowedEmail),
-                userContext,
-                userContext.getSession().getInternalCommonSubjectIdentifier(),
-                request.getEmail(),
-                IpAddressHelper.extractIpAddress(input),
-                Optional.ofNullable(request.getPhoneNumber()).orElse(AuditService.UNKNOWN),
-                PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
+                auditContext);
         return generateEmptySuccessApiGatewayResponse();
     }
 
