@@ -5,13 +5,16 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.lessThan;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class LevelOfConfidenceTest {
 
@@ -50,13 +53,34 @@ class LevelOfConfidenceTest {
         List<String> allLevelOfConfidenceValues =
                 LevelOfConfidence.getAllSupportedLevelOfConfidenceValues();
 
-        assertThat(allLevelOfConfidenceValues.size(), equalTo(2));
+        assertTrue(
+                allLevelOfConfidenceValues.stream()
+                        .allMatch(
+                                cl ->
+                                        LevelOfConfidence.retrieveLevelOfConfidence(cl)
+                                                .isSupported()));
+        assertTrue(
+                Arrays.stream(LevelOfConfidence.values())
+                        .noneMatch(
+                                cl ->
+                                        !allLevelOfConfidenceValues.contains(cl.getValue())
+                                                && cl.isSupported()));
+    }
 
-        assertThat(allLevelOfConfidenceValues.get(0), equalTo(LevelOfConfidence.NONE.getValue()));
+    @Test
+    void shouldReturnOnlyDefaultLevelOfConfidenceValues() {
+        List<String> allLevelOfConfidenceValues =
+                LevelOfConfidence.getDefaultLevelOfConfidenceValues();
 
-        assertThat(
-                allLevelOfConfidenceValues.get(1),
-                equalTo(LevelOfConfidence.MEDIUM_LEVEL.getValue()));
+        assertTrue(
+                allLevelOfConfidenceValues.stream()
+                        .allMatch(
+                                cl ->
+                                        LevelOfConfidence.retrieveLevelOfConfidence(cl)
+                                                .isSupported()));
+        assertTrue(
+                allLevelOfConfidenceValues.stream()
+                        .allMatch(Pattern.compile("P[0-9]").asPredicate()));
     }
 
     private static Stream<Arguments> supportedLevelOfConfidence() {
