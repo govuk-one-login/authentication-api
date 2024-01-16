@@ -20,6 +20,7 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_CLAIM;
+import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_CLIENT_LOCS;
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_CLIENT_TYPE;
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_POST_LOGOUT_URI;
 import static uk.gov.di.authentication.clientregistry.services.ClientConfigValidationService.INVALID_PUBLIC_KEY;
@@ -206,6 +207,30 @@ class ClientConfigValidationServiceTest {
                                 emptyList(),
                                 "Mobile"));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_CLIENT_TYPE)));
+    }
+
+    @Test
+    void shouldReturnErrorForInvalidCustomLoCsInRegistrationRequest() {
+        ClientRegistrationRequest regReq =
+                new ClientRegistrationRequest(
+                        "",
+                        singletonList("http://localhost:1000/redirect"),
+                        singletonList("test-client@test.com"),
+                        VALID_PUBLIC_CERT,
+                        singletonList("openid"),
+                        singletonList("http://localhost/post-redirect-logout"),
+                        "http://example.com",
+                        String.valueOf(MANDATORY),
+                        "http://test.com",
+                        "public",
+                        false,
+                        emptyList(),
+                        ClientType.WEB.getValue(),
+                        List.of("Not_an_accepted_LoC"));
+
+        Optional<ErrorObject> errorResponse =
+                validationService.validateClientRegistrationConfig(regReq);
+        assertThat(errorResponse, equalTo(Optional.of(INVALID_CLIENT_LOCS)));
     }
 
     @ParameterizedTest
