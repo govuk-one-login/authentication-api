@@ -150,6 +150,13 @@ public class VectorOfTrust {
                                                                 "Invalid VTR attribute")));
     }
 
+    public static List<String> getRequestedLevelsOfConfidence(List<VectorOfTrust> vtrList) {
+        return vtrList.stream()
+                .map(VectorOfTrust::getLevelOfConfidence)
+                .map(LevelOfConfidence::getValue)
+                .toList();
+    }
+
     @Override
     public String toString() {
         return "VectorOfTrust{"

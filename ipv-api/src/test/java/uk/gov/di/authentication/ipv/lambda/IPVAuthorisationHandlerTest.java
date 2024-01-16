@@ -37,8 +37,11 @@ import uk.gov.di.authentication.ipv.entity.IPVAuthorisationResponse;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
+import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
+import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
+import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
@@ -63,6 +66,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -76,7 +80,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -224,7 +227,7 @@ public class IPVAuthorisationHandlerTest {
                         any(),
                         eq(CLIENT_SESSION_ID),
                         eq(EMAIL_ADDRESS),
-                        isNull(),
+                        eq(List.of("P0", "P2")),
                         any());
         verify(auditService)
                 .submitAuditEvent(
@@ -263,8 +266,18 @@ public class IPVAuthorisationHandlerTest {
     private void usingValidClientSession() {
         when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(clientSession));
+        when(clientSessionService.getClientSession(anyString()))
+                .thenReturn(Optional.of(clientSession));
         when(clientSession.getAuthRequestParams())
                 .thenReturn(withAuthenticationRequest().toParameters());
+        when(clientSession.getVtrList())
+                .thenReturn(
+                        List.of(
+                                VectorOfTrust.of(
+                                        CredentialTrustLevel.LOW_LEVEL, LevelOfConfidence.NONE),
+                                VectorOfTrust.of(
+                                        CredentialTrustLevel.LOW_LEVEL,
+                                        LevelOfConfidence.MEDIUM_LEVEL)));
     }
 
     private AuthenticationRequest withAuthenticationRequest() {

@@ -69,6 +69,16 @@ class VectorOfTrustTest {
         assertThat(vectorOfTrust.getLevelOfConfidence(), equalTo(LevelOfConfidence.MEDIUM_LEVEL));
     }
 
+    @Test
+    void shouldReturnOnlyLevelsOfConfidenceWhenRequested() {
+        var vtrList =
+                List.of(
+                        VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
+                        VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.LOW_LEVEL));
+        var levelsOfConfidence = VectorOfTrust.getRequestedLevelsOfConfidence(vtrList);
+        assertThat(levelsOfConfidence, equalTo(List.of("P2", "P1")));
+    }
+
     @ParameterizedTest
     @MethodSource("invalidVtrValues")
     void shouldThrowWhenInvalidVtrPassed(String errorMessage, String jsonArray) {

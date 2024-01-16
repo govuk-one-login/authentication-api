@@ -17,10 +17,12 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.entity.IPVAuthorisationRequest;
 import uk.gov.di.authentication.ipv.entity.IPVAuthorisationResponse;
+import uk.gov.di.authentication.ipv.entity.IPVCallbackNoSessionException;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
+import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
@@ -139,6 +141,14 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
                             input.getHeaders(),
                             CLIENT_SESSION_ID_HEADER,
                             configurationService.getHeadersCaseInsensitive());
+            var clientSession =
+                    clientSessionService
+                            .getClientSession(clientSessionId)
+                            .orElseThrow(
+                                    () ->
+                                            new IPVCallbackNoSessionException(
+                                                    "ClientSession not found"));
+            var vtrList = clientSession.getVtrList();
 
             var encryptedJWT =
                     authorisationService.constructRequestJWT(
@@ -148,7 +158,7 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
                             claimsSetRequest,
                             Optional.ofNullable(clientSessionId).orElse("unknown"),
                             userContext.getUserProfile().map(UserProfile::getEmail).orElseThrow(),
-                            authRequest.getCustomParameter("vtr"),
+                            VectorOfTrust.getRequestedLevelsOfConfidence(vtrList),
                             false);
             var authRequestBuilder =
                     new AuthorizationRequest.Builder(
@@ -206,6 +216,8 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         } catch (ClientNotFoundException e) {
             return generateApiGatewayProxyErrorResponse(500, ErrorResponse.ERROR_1015);
+        } catch (IPVCallbackNoSessionException e) {
+            throw new RuntimeException(e);
         }
     }
 

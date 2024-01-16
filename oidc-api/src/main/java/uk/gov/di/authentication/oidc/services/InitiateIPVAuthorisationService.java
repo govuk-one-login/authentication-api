@@ -22,6 +22,7 @@ import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -59,7 +60,8 @@ public class InitiateIPVAuthorisationService {
             String rpClientID,
             String clientSessionId,
             String persistentSessionCookieId,
-            Boolean reproveIdentity) {
+            Boolean reproveIdentity,
+            List<String> levelsOfConfidence) {
         if (!configurationService.isIdentityEnabled()) {
             LOG.error("Identity is not enabled");
             throw new RuntimeException("Identity is not enabled");
@@ -80,7 +82,7 @@ public class InitiateIPVAuthorisationService {
                         claimsSetRequest,
                         Optional.ofNullable(clientSessionId).orElse("unknown"),
                         userInfo.getEmailAddress(),
-                        authRequest.getCustomParameter("vtr"),
+                        levelsOfConfidence,
                         reproveIdentity);
 
         var authRequestBuilder =

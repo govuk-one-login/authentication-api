@@ -46,6 +46,7 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import static java.util.Collections.singletonList;
@@ -66,6 +67,7 @@ public class InitiateIPVAuthorisationServiceTest {
     private static final String CLIENT_SESSION_ID = "client-session-v1";
     private static final String PERSISTENT_SESSION_ID = "a-persistent-session-id";
     private static final String CLIENT_ID = "test-client-id";
+    private static final List<String> LEVELS_OF_CONFIDENCE = List.of("P0", "P2");
     private static final String INTERNAL_SECTOR_URI = "https://ipv.account.gov.uk";
     private static final String SESSION_ID = "a-session-id";
     private static final String IPV_CLIENT_ID = "ipv-client-id";
@@ -143,7 +145,8 @@ public class InitiateIPVAuthorisationServiceTest {
                                         CLIENT_ID,
                                         CLIENT_SESSION_ID,
                                         PERSISTENT_SESSION_ID,
-                                        REPROVE_IDENTITY),
+                                        REPROVE_IDENTITY,
+                                        LEVELS_OF_CONFIDENCE),
                         "Expected to throw exception");
 
         assertThat(exception.getMessage(), equalTo("Identity is not enabled"));
@@ -160,7 +163,7 @@ public class InitiateIPVAuthorisationServiceTest {
                         any(),
                         eq(CLIENT_SESSION_ID),
                         anyString(),
-                        any(),
+                        eq(List.of("P0", "P2")),
                         anyBoolean()))
                 .thenReturn(encryptedJWT);
 
@@ -174,7 +177,8 @@ public class InitiateIPVAuthorisationServiceTest {
                         CLIENT_ID,
                         CLIENT_SESSION_ID,
                         PERSISTENT_SESSION_ID,
-                        REPROVE_IDENTITY);
+                        REPROVE_IDENTITY,
+                        LEVELS_OF_CONFIDENCE);
 
         assertThat(response, hasStatus(302));
         String redirectLocation = response.getHeaders().get("Location");
@@ -191,7 +195,7 @@ public class InitiateIPVAuthorisationServiceTest {
                         any(),
                         eq(CLIENT_SESSION_ID),
                         eq(EMAIL_ADDRESS),
-                        isNull(),
+                        eq(List.of("P0", "P2")),
                         eq(REPROVE_IDENTITY));
         verify(auditService)
                 .submitAuditEvent(
