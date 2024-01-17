@@ -17,7 +17,7 @@ public class AuthenticationUserInfoStorageService
                 AuthenticationUserInfo.class,
                 "authentication-callback-userinfo",
                 configurationService);
-        this.timeToExist = configurationService.getSessionExpiry();
+        this.timeToExist = 21600L; // 6 hours
     }
 
     public void addAuthenticationUserInfoData(String subjectID, UserInfo userInfo) {
