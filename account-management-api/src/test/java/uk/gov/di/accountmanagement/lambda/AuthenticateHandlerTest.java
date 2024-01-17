@@ -18,7 +18,6 @@ import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
@@ -72,6 +71,7 @@ class AuthenticateHandlerTest {
         when(authenticationService.userExists(EMAIL)).thenReturn(true);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(false);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -79,21 +79,42 @@ class AuthenticateHandlerTest {
         assertThat(result, hasStatus(401));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1008));
 
-        verifyNoInteractions(auditService);
+        verify(auditService)
+                .submitAuditEvent(
+                        AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        EMAIL,
+                        IP_ADDRESS,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN);
     }
 
     @Test
     public void shouldReturn400IfAnyRequestParametersAreMissing() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(format("{ \"password\": \"%s\"}", PASSWORD));
-
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(false);
+
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
 
-        verifyNoInteractions(auditService);
+        verify(auditService)
+                .submitAuditEvent(
+                        AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        IP_ADDRESS,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN);
     }
 
     @Test
@@ -101,6 +122,7 @@ class AuthenticateHandlerTest {
         when(authenticationService.userExists(EMAIL)).thenReturn(false);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
         when(authenticationService.login(EMAIL, PASSWORD)).thenReturn(false);
 
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
@@ -108,6 +130,16 @@ class AuthenticateHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1010));
 
-        verifyNoInteractions(auditService);
+        verify(auditService)
+                .submitAuditEvent(
+                        AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        EMAIL,
+                        IP_ADDRESS,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN);
     }
 }
