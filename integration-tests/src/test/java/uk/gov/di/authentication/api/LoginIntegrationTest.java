@@ -15,6 +15,7 @@ import uk.gov.di.authentication.frontendapi.entity.LoginRequest;
 import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
 import uk.gov.di.authentication.frontendapi.lambda.LoginHandler;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.ServiceType;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -114,7 +115,10 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         headers.put("Client-Session-Id", CLIENT_SESSION_ID);
 
         var response =
-                makeRequest(Optional.of(new LoginRequest(email, password)), headers, Map.of());
+                makeRequest(
+                        Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
+                        headers,
+                        Map.of());
         assertThat(response, hasStatus(200));
 
         var loginResponse = objectMapper.readValue(response.getBody(), LoginResponse.class);
@@ -171,7 +175,10 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         headers.put("X-API-Key", FRONTEND_API_KEY);
 
         var response =
-                makeRequest(Optional.of(new LoginRequest(email, password)), headers, Map.of());
+                makeRequest(
+                        Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
+                        headers,
+                        Map.of());
         assertThat(response, hasStatus(401));
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(INVALID_CREDENTIALS));
     }

@@ -28,10 +28,12 @@ public class CodeStorageService {
     private static final String RESET_PASSWORD_KEY_PREFIX = "reset-password-code:";
     private static final String MULTIPLE_INCORRECT_PASSWORDS_PREFIX =
             "multiple-incorrect-passwords:";
+    private static final String MULTIPLE_INCORRECT_PASSWORDS_REAUTH_PREFIX =
+            "multiple-incorrect-passwords-reauth:";
 
     private static final String VERIFY_CHANGE_HOW_GET_SECURITY_CODES_KEY_PREFIX =
             "change-how-get-security-codes";
-    private static final long MFA_ATTEMPTS_COUNTER_TIME_TO_LIVE_SECONDS = 900;
+    private static final long TIME_TO_LIVE_SECONDS = 900;
 
     public CodeStorageService(ConfigurationService configurationService) {
         this(new RedisConnectionService(configurationService));
@@ -42,104 +44,80 @@ public class CodeStorageService {
     }
 
     public int getIncorrectMfaCodeAttemptsCount(String email) {
-        Optional<String> count =
-                Optional.ofNullable(
-                        redisConnectionService.getValue(
-                                MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX
-                                        + HashHelper.hashSha256String(email)));
-        return count.map(Integer::parseInt).orElse(0);
+        return getIncorrectCount(email, MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX);
     }
 
     public int getIncorrectMfaCodeAttemptsCount(String email, MFAMethodType mfaMethodType) {
-        Optional<String> count =
-                Optional.ofNullable(
-                        redisConnectionService.getValue(
-                                MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX
-                                        + mfaMethodType.getValue()
-                                        + HashHelper.hashSha256String(email)));
-        return count.map(Integer::parseInt).orElse(0);
+        var prefix = MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX + mfaMethodType.getValue();
+        return getIncorrectCount(email, prefix);
     }
 
     public void increaseIncorrectMfaCodeAttemptsCount(String email) {
-        String encodedHash = HashHelper.hashSha256String(email);
-        String key = MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX + encodedHash;
-        Optional<String> count =
-                Optional.ofNullable(
-                        redisConnectionService.getValue(
-                                MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX + encodedHash));
-        int newCount = count.map(t -> Integer.parseInt(t) + 1).orElse(1);
-        try {
-            redisConnectionService.saveWithExpiry(
-                    key, String.valueOf(newCount), MFA_ATTEMPTS_COUNTER_TIME_TO_LIVE_SECONDS);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        increaseCount(email, MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX);
     }
 
     public void increaseIncorrectMfaCodeAttemptsCount(String email, MFAMethodType mfaMethodType) {
+        String prefix = MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX + mfaMethodType.getValue();
+        increaseCount(email, prefix);
+    }
+
+    public void deleteIncorrectMfaCodeAttemptsCount(String email) {
+        deleteCount(email, MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX);
+    }
+
+    public void deleteIncorrectMfaCodeAttemptsCount(String email, MFAMethodType mfaMethodType) {
+        String prefix = MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX + mfaMethodType.getValue();
+        deleteCount(email, prefix);
+    }
+
+    public void increaseIncorrectPasswordCount(String email) {
+        increaseCount(email, MULTIPLE_INCORRECT_PASSWORDS_PREFIX);
+    }
+
+    public void increaseIncorrectPasswordCountReauthJourney(String email) {
+        increaseCount(email, MULTIPLE_INCORRECT_PASSWORDS_REAUTH_PREFIX);
+    }
+
+    private void increaseCount(String email, String prefix) {
         String encodedHash = HashHelper.hashSha256String(email);
-        String key =
-                MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX + mfaMethodType.getValue() + encodedHash;
+        String key = prefix + encodedHash;
         Optional<String> count = Optional.ofNullable(redisConnectionService.getValue(key));
         int newCount = count.map(t -> Integer.parseInt(t) + 1).orElse(1);
         try {
             redisConnectionService.saveWithExpiry(
-                    key, String.valueOf(newCount), MFA_ATTEMPTS_COUNTER_TIME_TO_LIVE_SECONDS);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public void deleteIncorrectMfaCodeAttemptsCount(String email) {
-        String encodedHash = HashHelper.hashSha256String(email);
-        String key = MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX + encodedHash;
-
-        try {
-            redisConnectionService.deleteValue(key);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public void deleteIncorrectMfaCodeAttemptsCount(String email, MFAMethodType mfaMethodType) {
-        String encodedHash = HashHelper.hashSha256String(email);
-        String key =
-                MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX + mfaMethodType.getValue() + encodedHash;
-
-        try {
-            redisConnectionService.deleteValue(key);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public void increaseIncorrectPasswordCount(String email) {
-        String encodedHash = HashHelper.hashSha256String(email);
-        String key = MULTIPLE_INCORRECT_PASSWORDS_PREFIX + encodedHash;
-        Optional<String> count =
-                Optional.ofNullable(
-                        redisConnectionService.getValue(
-                                MULTIPLE_INCORRECT_PASSWORDS_PREFIX + encodedHash));
-        int newCount = count.map(t -> Integer.parseInt(t) + 1).orElse(1);
-        try {
-            redisConnectionService.saveWithExpiry(key, String.valueOf(newCount), 900L);
+                    key, String.valueOf(newCount), TIME_TO_LIVE_SECONDS);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
     public int getIncorrectPasswordCount(String email) {
+        return getIncorrectCount(email, MULTIPLE_INCORRECT_PASSWORDS_PREFIX);
+    }
+
+    public int getIncorrectPasswordCountReauthJourney(String email) {
+        return getIncorrectCount(email, MULTIPLE_INCORRECT_PASSWORDS_REAUTH_PREFIX);
+    }
+
+    private int getIncorrectCount(String email, String prefix) {
         Optional<String> count =
                 Optional.ofNullable(
                         redisConnectionService.getValue(
-                                MULTIPLE_INCORRECT_PASSWORDS_PREFIX
-                                        + HashHelper.hashSha256String(email)));
+                                prefix + HashHelper.hashSha256String(email)));
         return count.map(Integer::parseInt).orElse(0);
     }
 
     public void deleteIncorrectPasswordCount(String email) {
+        deleteCount(email, MULTIPLE_INCORRECT_PASSWORDS_PREFIX);
+    }
+
+    public void deleteIncorrectPasswordCountReauthJourney(String email) {
+        deleteCount(email, MULTIPLE_INCORRECT_PASSWORDS_REAUTH_PREFIX);
+    }
+
+    private void deleteCount(String email, String prefix) {
         String encodedHash = HashHelper.hashSha256String(email);
-        String key = MULTIPLE_INCORRECT_PASSWORDS_PREFIX + encodedHash;
+        String key = prefix + encodedHash;
 
         try {
             redisConnectionService.deleteValue(key);

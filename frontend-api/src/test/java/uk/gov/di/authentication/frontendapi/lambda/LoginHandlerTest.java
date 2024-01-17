@@ -25,6 +25,7 @@ import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CredentialTrustLevel;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.Session;
@@ -231,6 +232,75 @@ class LoginHandlerTest {
                 .save(argThat(t -> t.isNewAccount() == Session.AccountState.EXISTING));
     }
 
+    @Test
+    void shouldReturn200IfLoginIsSuccessfulAndMfaNotRequiredAndIsReauthJourney()
+            throws Json.JsonException {
+        Map<String, String> headers = new HashMap<>();
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
+        headers.put("Session-Id", session.getSessionId());
+        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
+        UserProfile userProfile = generateUserProfile(null);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        when(clientSession.getAuthRequestParams())
+                .thenReturn(generateAuthRequest(LOW_LEVEL).toParameters());
+        var vot =
+                VectorOfTrust.parseFromAuthRequestAttribute(
+                        Collections.singletonList(jsonArrayOf("P0.Cl")));
+        when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vot);
+
+        usingValidSession();
+        usingApplicableUserCredentialsWithLogin(SMS, true);
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setHeaders(headers);
+        event.setBody(
+                format(
+                        "{ \"password\": \"%s\", \"email\": \"%s\", \"journeyType\": \"%s\"}",
+                        PASSWORD, EMAIL.toUpperCase(), JourneyType.REAUTHENTICATION));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+
+        LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
+        assertThat(
+                response.getRedactedPhoneNumber(),
+                equalTo(RedactPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
+        assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
+        verify(authenticationService).getUserProfileByEmailMaybe(EMAIL);
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.LOG_IN_SUCCESS,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        CLIENT_ID.getValue(),
+                        expectedCommonSubject,
+                        userProfile.getEmail(),
+                        "123.123.123.123",
+                        userProfile.getPhoneNumber(),
+                        PERSISTENT_ID,
+                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
+        verify(cloudwatchMetricsService)
+                .incrementAuthenticationSuccess(
+                        Session.AccountState.EXISTING,
+                        CLIENT_ID.getValue(),
+                        CLIENT_NAME,
+                        "P0",
+                        false,
+                        false);
+
+        verify(sessionService, atLeastOnce())
+                .save(
+                        argThat(
+                                t ->
+                                        t.getInternalCommonSubjectIdentifier()
+                                                .equals(expectedCommonSubject)));
+        verify(sessionService, atLeastOnce())
+                .save(argThat(t -> t.isNewAccount() == Session.AccountState.EXISTING));
+    }
+
     @ParameterizedTest
     @EnumSource(MFAMethodType.class)
     void shouldReturn200IfLoginIsSuccessfulAndMfaIsRequired(MFAMethodType mfaMethodType)
@@ -254,6 +324,64 @@ class LoginHandlerTest {
                 format(
                         "{ \"password\": \"%s\", \"email\": \"%s\" }",
                         PASSWORD, EMAIL.toUpperCase()));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(200));
+
+        LoginResponse response = objectMapper.readValue(result.getBody(), LoginResponse.class);
+        assertThat(
+                response.getRedactedPhoneNumber(),
+                equalTo(RedactPhoneNumberHelper.redactPhoneNumber(PHONE_NUMBER)));
+        assertThat(response.getLatestTermsAndConditionsAccepted(), equalTo(true));
+        verify(authenticationService).getUserProfileByEmailMaybe(EMAIL);
+
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.LOG_IN_SUCCESS,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        CLIENT_ID.getValue(),
+                        expectedCommonSubject,
+                        userProfile.getEmail(),
+                        "123.123.123.123",
+                        userProfile.getPhoneNumber(),
+                        PERSISTENT_ID,
+                        pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()));
+        verifyNoInteractions(cloudwatchMetricsService);
+
+        verify(sessionService, atLeastOnce())
+                .save(
+                        argThat(
+                                t ->
+                                        t.getInternalCommonSubjectIdentifier()
+                                                .equals(expectedCommonSubject)));
+        verify(sessionService, atLeastOnce())
+                .save(argThat(t -> t.isNewAccount() == Session.AccountState.EXISTING));
+    }
+
+    @ParameterizedTest
+    @EnumSource(MFAMethodType.class)
+    void shouldReturn200IfLoginIsSuccessfulAndMfaIsRequiredAndIsReauthJourney(
+            MFAMethodType mfaMethodType) throws Json.JsonException {
+        Map<String, String> headers = new HashMap<>();
+        headers.put(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, PERSISTENT_ID);
+        headers.put("Session-Id", session.getSessionId());
+        headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
+        UserProfile userProfile = generateUserProfile(null);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        when(clientSession.getAuthRequestParams()).thenReturn(generateAuthRequest().toParameters());
+        usingValidSession();
+        usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
+        usingDefaultVectorOfTrust();
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+        event.setHeaders(headers);
+        event.setBody(
+                format(
+                        "{ \"password\": \"%s\", \"email\": \"%s\", \"journeyType\": \"%s\"}",
+                        PASSWORD, EMAIL.toUpperCase(), JourneyType.REAUTHENTICATION));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(200));
@@ -545,6 +673,38 @@ class LoginHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of("Session-Id", session.getSessionId()));
         event.setBody(format("{ \"password\": \"%s\", \"email\": \"%s\" }", PASSWORD, EMAIL));
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+
+        assertThat(result, hasStatus(400));
+
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1028));
+        verifyNoInteractions(cloudwatchMetricsService);
+        verify(sessionService, never())
+                .save(
+                        argThat(
+                                t ->
+                                        t.getInternalCommonSubjectIdentifier()
+                                                .equals(expectedCommonSubject)));
+    }
+
+    @ParameterizedTest
+    @EnumSource(MFAMethodType.class)
+    void shouldChangeStateToAccountTemporarilyLockedAfter5UnsuccessfulAttemptsForReauthJourney(
+            MFAMethodType mfaMethodType) {
+        UserProfile userProfile = generateUserProfile(null);
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
+                .thenReturn(Optional.of(userProfile));
+        when(codeStorageService.getIncorrectPasswordCountReauthJourney(EMAIL)).thenReturn(5);
+        usingValidSession();
+        usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
+        usingDefaultVectorOfTrust();
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(Map.of("Session-Id", session.getSessionId()));
+        event.setBody(
+                format(
+                        "{ \"password\": \"%s\", \"email\": \"%s\", \"journeyType\": \"%s\"}",
+                        PASSWORD, EMAIL, JourneyType.REAUTHENTICATION));
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
         assertThat(result, hasStatus(400));

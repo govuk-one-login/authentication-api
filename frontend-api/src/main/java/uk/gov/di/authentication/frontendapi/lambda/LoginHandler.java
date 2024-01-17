@@ -15,6 +15,7 @@ import uk.gov.di.authentication.shared.conditions.ConsentHelper;
 import uk.gov.di.authentication.shared.conditions.TermsAndConditionsHelper;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
@@ -137,9 +138,12 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
 
             UserProfile userProfile = userProfileMaybe.get();
             UserCredentials userCredentials = userContext.getUserCredentials().get();
-
+            var isReauthJourney = request.getJourneyType() == JourneyType.REAUTHENTICATION;
             int incorrectPasswordCount =
-                    codeStorageService.getIncorrectPasswordCount(request.getEmail());
+                    isReauthJourney
+                            ? codeStorageService.getIncorrectPasswordCountReauthJourney(
+                                    request.getEmail())
+                            : codeStorageService.getIncorrectPasswordCount(request.getEmail());
 
             LOG.info("Calculating internal common subject identifier");
             var internalCommonSubjectIdentifier =
@@ -168,7 +172,13 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             }
 
             if (!credentialsAreValid(request, userProfile)) {
-                codeStorageService.increaseIncorrectPasswordCount(request.getEmail());
+                if (isReauthJourney) {
+                    codeStorageService.increaseIncorrectPasswordCountReauthJourney(
+                            request.getEmail());
+                } else {
+                    codeStorageService.increaseIncorrectPasswordCount(request.getEmail());
+                }
+
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.INVALID_CREDENTIALS,
                         userContext.getClientSessionId(),
@@ -189,7 +199,12 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             }
 
             if (incorrectPasswordCount != 0) {
-                codeStorageService.deleteIncorrectPasswordCount(request.getEmail());
+                if (isReauthJourney) {
+                    codeStorageService.deleteIncorrectPasswordCountReauthJourney(
+                            request.getEmail());
+                } else {
+                    codeStorageService.deleteIncorrectPasswordCount(request.getEmail());
+                }
             }
 
             LOG.info("Setting internal common subject identifier in user session");
