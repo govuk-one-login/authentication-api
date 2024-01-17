@@ -15,7 +15,8 @@ public enum CodeRequestType {
     AUTH_APP_SIGN_IN(MFAMethodType.AUTH_APP, JourneyType.SIGN_IN),
     PW_RESET_MFA_AUTH_APP(MFAMethodType.AUTH_APP, JourneyType.PASSWORD_RESET_MFA),
     AUTH_APP_REGISTRATION(MFAMethodType.AUTH_APP, JourneyType.REGISTRATION),
-    SMS_REAUTHENTICATION(MFAMethodType.SMS, JourneyType.REAUTHENTICATE_MFA);
+    SMS_REAUTHENTICATION(MFAMethodType.SMS, JourneyType.REAUTHENTICATE_MFA),
+    AUTH_APP_REAUTHENTICATION(MFAMethodType.AUTH_APP, JourneyType.REAUTHENTICATE_MFA);
 
     private static final Map<CodeRequestTypeKey, CodeRequestType> codeRequestTypeMap =
             new HashMap<>();

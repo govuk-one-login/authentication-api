@@ -84,7 +84,11 @@ class AuthAppCodeProcessorTest {
                 Arguments.of(
                         JourneyType.REGISTRATION,
                         AUTH_APP_SECRET,
-                        CodeRequestType.AUTH_APP_REGISTRATION));
+                        CodeRequestType.AUTH_APP_REGISTRATION),
+                Arguments.of(
+                        JourneyType.REAUTHENTICATE_MFA,
+                        null,
+                        CodeRequestType.AUTH_APP_REAUTHENTICATION));
     }
 
     @ParameterizedTest
