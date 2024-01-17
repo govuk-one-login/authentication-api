@@ -78,7 +78,7 @@ public class OrchestrationAuthorizationService {
                 new DynamoClientService(configurationService),
                 new IPVCapacityService(configurationService),
                 new KmsConnectionService(configurationService),
-                new RedisConnectionService(configurationService));
+                RedisConnectionService.getInstance(configurationService));
     }
 
     public boolean isClientRedirectUriValid(ClientID clientID, URI redirectURI)

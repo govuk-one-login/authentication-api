@@ -97,7 +97,7 @@ public class TokenHandler
         var kms = new KmsConnectionService(configurationService);
 
         this.configurationService = configurationService;
-        this.redisConnectionService = new RedisConnectionService(configurationService);
+        this.redisConnectionService = RedisConnectionService.getInstance(configurationService);
         this.tokenService =
                 new TokenService(configurationService, this.redisConnectionService, kms);
         this.dynamoService = new DynamoService(configurationService);

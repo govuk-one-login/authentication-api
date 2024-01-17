@@ -76,7 +76,7 @@ public class UpdatePhoneNumberHandler
                         configurationService.getEmailQueueUri(),
                         configurationService.getSqsEndpointUri());
         this.codeStorageService =
-                new CodeStorageService(new RedisConnectionService(configurationService));
+                new CodeStorageService(RedisConnectionService.getInstance(configurationService));
         this.auditService = new AuditService(configurationService);
         this.configurationService = configurationService;
     }

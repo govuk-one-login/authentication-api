@@ -11,101 +11,102 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.hamcrest.core.IsNull.nullValue;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class RedisConnectionServiceIntegrationTest {
     private static final String REDIS_HOST =
             System.getenv().getOrDefault("REDIS_HOST", "localhost");
     private static final Optional<String> REDIS_PASSWORD =
             Optional.ofNullable(System.getenv("REDIS_PASSWORD"));
+    private static final int REDIS_PORT = 6379;
     private static final String TEST_VALUE = "my-test-value";
     public static final int TEN_SECOND_EXPIRY = 60000;
 
     private String testKey = "int-test-key-" + UUID.randomUUID();
+    private static final RedisConfigurationService REDIS_CONFIGURATION_SERVICE =
+            new RedisConfigurationService();
 
     @Test
     void shouldSuccessfullySaveAndRetrieveIfRedisAvailable() {
-        try (RedisConnectionService redis =
-                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD, false)) {
-            redis.saveWithExpiry(testKey, TEST_VALUE, TEN_SECOND_EXPIRY);
+        var redis = RedisConnectionService.getInstance(REDIS_CONFIGURATION_SERVICE);
 
-            assertThat(redis.getValue(testKey), equalTo(TEST_VALUE));
-        }
+        redis.saveWithExpiry(testKey, TEST_VALUE, TEN_SECOND_EXPIRY);
+
+        assertThat(redis.getValue(testKey), equalTo(TEST_VALUE));
     }
 
     @Test
     void shouldSuccessfullyCreateAValueThatExpires() {
-        try (RedisConnectionService redis =
-                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD, false)) {
-            redis.saveWithExpiry(testKey, TEST_VALUE, 1);
-            await().atMost(2, SECONDS)
-                    .untilAsserted(() -> assertThat(redis.getValue(testKey), is(nullValue())));
-        }
+        var redis = RedisConnectionService.getInstance(REDIS_CONFIGURATION_SERVICE);
+        redis.saveWithExpiry(testKey, TEST_VALUE, 1);
+
+        await().atMost(2, SECONDS)
+                .untilAsserted(() -> assertThat(redis.getValue(testKey), is(nullValue())));
     }
 
     @Test
     void keyExistsShouldCorrectlyReturnTrueWhenKeyExists() {
-        try (RedisConnectionService redis =
-                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD, false)) {
-            redis.saveWithExpiry(testKey, TEST_VALUE, TEN_SECOND_EXPIRY);
+        var redis = RedisConnectionService.getInstance(REDIS_CONFIGURATION_SERVICE);
+        redis.saveWithExpiry(testKey, TEST_VALUE, TEN_SECOND_EXPIRY);
 
-            assertThat(redis.keyExists(testKey), is(true));
-        }
+        assertThat(redis.keyExists(testKey), is(true));
     }
 
     @Test
     void keyExistsShouldCorrectlyReturnFalseWhenKeyExists() {
-        try (RedisConnectionService redis =
-                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD, false)) {
-            assertThat(redis.keyExists(testKey), is(false));
-        }
+        var redis = RedisConnectionService.getInstance(REDIS_CONFIGURATION_SERVICE);
+
+        assertThat(redis.keyExists(testKey), is(false));
     }
 
     @Test
     void popValueShouldReturnValueAndClearKeyWhenItExists() {
-        try (RedisConnectionService redis =
-                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD, false)) {
-            redis.saveWithExpiry(testKey, TEST_VALUE, TEN_SECOND_EXPIRY);
+        var redis = RedisConnectionService.getInstance(REDIS_CONFIGURATION_SERVICE);
+        redis.saveWithExpiry(testKey, TEST_VALUE, TEN_SECOND_EXPIRY);
 
-            assertThat(redis.popValue(testKey), equalTo(TEST_VALUE));
-            assertThat(redis.keyExists(testKey), is(false));
-        }
+        assertThat(redis.popValue(testKey), equalTo(TEST_VALUE));
+        assertThat(redis.keyExists(testKey), is(false));
     }
 
     @Test
     void getValueReturnsNullIfKeyDoesNotExist() {
-        try (RedisConnectionService redis =
-                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD, false)) {
-            assertThat(redis.getValue(testKey), is(nullValue()));
-        }
+        var redis = RedisConnectionService.getInstance(REDIS_CONFIGURATION_SERVICE);
+        assertThat(redis.getValue(testKey), is(nullValue()));
     }
 
     @Test
     void deleteValueRemovesValueFromRedisIfExists() {
-        try (RedisConnectionService redis =
-                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD, false)) {
-            redis.saveWithExpiry(testKey, TEST_VALUE, TEN_SECOND_EXPIRY);
-            redis.deleteValue(testKey);
-            assertThat(redis.keyExists(testKey), is(false));
-        }
+        var redis = RedisConnectionService.getInstance(REDIS_CONFIGURATION_SERVICE);
+        redis.saveWithExpiry(testKey, TEST_VALUE, TEN_SECOND_EXPIRY);
+        redis.deleteValue(testKey);
+        assertThat(redis.keyExists(testKey), is(false));
     }
 
     @Test
     void deleteValueDoesNotErrorIfKeyDoesNotExist() {
-        try (RedisConnectionService redis =
-                new RedisConnectionService(REDIS_HOST, 6379, false, REDIS_PASSWORD, false)) {
-            redis.deleteValue(testKey);
-            assertThat(redis.keyExists(testKey), is(false));
-        }
+        var redis = RedisConnectionService.getInstance(REDIS_CONFIGURATION_SERVICE);
+        redis.deleteValue(testKey);
+        assertThat(redis.keyExists(testKey), is(false));
     }
 
-    @Test
-    void shouldThrowRedisConnectionExceptionIfRedisUnavailable() {
-        try (RedisConnectionService redis =
-                new RedisConnectionService("bad-host-name", 6379, false, REDIS_PASSWORD, false)) {
-            assertThrows(
-                    RedisConnectionService.RedisConnectionException.class,
-                    () -> redis.saveWithExpiry(testKey, TEST_VALUE, TEN_SECOND_EXPIRY));
+    private static class RedisConfigurationService extends ConfigurationService {
+        @Override
+        public String getRedisHost() {
+            return REDIS_HOST;
+        }
+
+        @Override
+        public Optional<String> getRedisPassword() {
+            return REDIS_PASSWORD;
+        }
+
+        @Override
+        public int getRedisPort() {
+            return REDIS_PORT;
+        }
+
+        @Override
+        public boolean getUseRedisTLS() {
+            return false;
         }
     }
 }

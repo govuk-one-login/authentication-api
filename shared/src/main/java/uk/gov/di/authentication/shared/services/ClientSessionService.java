@@ -31,12 +31,7 @@ public class ClientSessionService {
 
     public ClientSessionService(ConfigurationService configurationService) {
         this.configurationService = configurationService;
-        this.redisConnectionService =
-                new RedisConnectionService(
-                        configurationService.getRedisHost(),
-                        configurationService.getRedisPort(),
-                        configurationService.getUseRedisTLS(),
-                        configurationService.getRedisPassword());
+        this.redisConnectionService = RedisConnectionService.getInstance(configurationService);
         objectMapper = SerializationService.getInstance();
     }
 
