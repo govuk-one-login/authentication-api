@@ -16,6 +16,7 @@ import com.nimbusds.jose.Payload;
 import com.nimbusds.jose.crypto.ECDSASigner;
 import com.nimbusds.jose.crypto.RSAEncrypter;
 import com.nimbusds.jose.jwk.Curve;
+import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 import com.nimbusds.jwt.EncryptedJWT;
@@ -34,6 +35,7 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCError;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
+import com.nimbusds.openid.connect.sdk.Prompt;
 import org.apache.logging.log4j.core.LogEvent;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,6 +46,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.mockito.MockedStatic;
 import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
@@ -71,8 +74,10 @@ import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DocAppAuthorisationService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
+import uk.gov.di.orchestration.shared.services.TokenValidationService;
 import uk.gov.di.orchestration.shared.state.UserContext;
 import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
+import uk.gov.di.orchestration.sharedtest.helper.TokenGeneratorHelper;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
@@ -80,6 +85,7 @@ import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.security.KeyPair;
 import java.text.ParseException;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -96,6 +102,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -135,6 +142,8 @@ class AuthorisationHandlerTest {
 
     private final NoSessionOrchestrationService noSessionOrchestrationService =
             mock(NoSessionOrchestrationService.class);
+    private final TokenValidationService tokenValidationService =
+            mock(TokenValidationService.class);
     private final RequestObjectAuthorizeValidator requestObjectAuthorizeValidator =
             mock(RequestObjectAuthorizeValidator.class);
     private final QueryParamsAuthorizeValidator queryParamsAuthorizeValidator =
@@ -166,6 +175,8 @@ class AuthorisationHandlerTest {
     private static final Boolean IS_COOKIE_CONSENT_SHARED = false;
     private static final Boolean IS_CONSENT_REQUIRED = true;
     private static final String RP_SERVICE_TYPE = "MANDATORY";
+    private static final KeyPair RSA_KEY_PAIR = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+    private static final ECKey EC_SIGNING_KEY = generateECSigningKey();
 
     static {
         try {
@@ -179,6 +190,12 @@ class AuthorisationHandlerTest {
     private static final String CLIENT_SESSION_ID = "client-session-id";
     private static final State STATE = new State();
     private static final Nonce NONCE = new Nonce();
+    private static final Subject SUBJECT = new Subject();
+    private static final String SERIALIZED_SIGNED_ID_TOKEN =
+            TokenGeneratorHelper.generateIDToken(
+                            CLIENT_ID.getValue(), SUBJECT, "http://localhost-rp", EC_SIGNING_KEY)
+                    .serialize();
+    private static final String ID_TOKEN_AUDIENCE = getIdTokenAudience();
 
     private AuthorisationHandler handler;
 
@@ -216,7 +233,8 @@ class AuthorisationHandlerTest {
                         clientService,
                         docAppAuthorisationService,
                         cloudwatchMetricsService,
-                        noSessionOrchestrationService);
+                        noSessionOrchestrationService,
+                        tokenValidationService);
         session = new Session("a-session-id");
         when(sessionService.createSession()).thenReturn(session);
         when(clientSessionService.generateClientSessionId()).thenReturn(CLIENT_SESSION_ID);
@@ -756,9 +774,8 @@ class AuthorisationHandlerTest {
         @Test
         void shouldValidateRequestObjectWhenJARValidationIsRequired() throws JOSEException {
             when(orchestrationAuthorizationService.isJarValidationRequired(any())).thenReturn(true);
-            var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
             var event = new APIGatewayProxyRequestEvent();
-            var jwtClaimsSet = buildjwtClaimsSet();
+            var jwtClaimsSet = buildjwtClaimsSet("https://localhost/authorize", null, null);
             event.setQueryStringParameters(
                     Map.of(
                             "client_id",
@@ -768,7 +785,7 @@ class AuthorisationHandlerTest {
                             "response_type",
                             "code",
                             "request",
-                            generateSignedJWT(jwtClaimsSet, keyPair).serialize()));
+                            generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
             event.setRequestContext(
                     new ProxyRequestContext()
                             .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
@@ -782,9 +799,8 @@ class AuthorisationHandlerTest {
         void shouldValidateRequestObjectWhenJARValidationIsNotRequired() throws JOSEException {
             when(orchestrationAuthorizationService.isJarValidationRequired(any()))
                     .thenReturn(false);
-            var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
             var event = new APIGatewayProxyRequestEvent();
-            var jwtClaimsSet = buildjwtClaimsSet();
+            var jwtClaimsSet = buildjwtClaimsSet("https://localhost/authorize", null, null);
             event.setQueryStringParameters(
                     Map.of(
                             "client_id",
@@ -794,7 +810,7 @@ class AuthorisationHandlerTest {
                             "response_type",
                             "code",
                             "request",
-                            generateSignedJWT(jwtClaimsSet, keyPair).serialize()));
+                            generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
             event.setRequestContext(
                     new ProxyRequestContext()
                             .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
@@ -836,11 +852,10 @@ class AuthorisationHandlerTest {
 
         @Test
         void shouldRedirectToLoginWhenRequestObjectIsValid() throws JOSEException {
-            var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
             when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                     .thenReturn(Optional.empty());
             var event = new APIGatewayProxyRequestEvent();
-            var jwtClaimsSet = buildjwtClaimsSet();
+            var jwtClaimsSet = buildjwtClaimsSet("https://localhost/authorize", null, null);
             event.setQueryStringParameters(
                     Map.of(
                             "client_id",
@@ -850,7 +865,7 @@ class AuthorisationHandlerTest {
                             "response_type",
                             "code",
                             "request",
-                            generateSignedJWT(jwtClaimsSet, keyPair).serialize()));
+                            generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
             event.setHttpMethod("GET");
             event.setRequestContext(
                     new ProxyRequestContext()
@@ -892,18 +907,17 @@ class AuthorisationHandlerTest {
 
         @Test
         void shouldRedirectToLoginWhenPostRequestObjectIsValid() throws JOSEException {
-            var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
             when(requestObjectAuthorizeValidator.validate(any(AuthenticationRequest.class)))
                     .thenReturn(Optional.empty());
             var event = new APIGatewayProxyRequestEvent();
             event.setHttpMethod("POST");
-            var jwtClaimsSet = buildjwtClaimsSet();
+            var jwtClaimsSet = buildjwtClaimsSet("https://localhost/authorize", null, null);
             event.setBody(
                     String.format(
                             "client_id=%s&scope=openid&response_type=code&request=%s",
                             URLEncoder.encode(CLIENT_ID.getValue(), Charset.defaultCharset()),
                             URLEncoder.encode(
-                                    generateSignedJWT(jwtClaimsSet, keyPair).serialize(),
+                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize(),
                                     Charset.defaultCharset())));
 
             event.setRequestContext(
@@ -953,20 +967,7 @@ class AuthorisationHandlerTest {
             APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
             URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
 
-            inOrder.verify(auditService)
-                    .submitAuditEvent(
-                            OidcAuditableEvent.AUTHORISATION_REQUEST_PARSED,
-                            CLIENT_SESSION_ID,
-                            AuditService.UNKNOWN,
-                            CLIENT_ID.getValue(),
-                            AuditService.UNKNOWN,
-                            AuditService.UNKNOWN,
-                            "123.123.123.123",
-                            AuditService.UNKNOWN,
-                            EXPECTED_PERSISTENT_COOKIE_VALUE_WITH_TIMESTAMP,
-                            pair("rpSid", rpSid),
-                            pair("identityRequested", false),
-                            pair("reauthRequested", false));
+            verifyAuthorisationRequestParsedAuditEvent(rpSid, false, false);
         }
 
         @Test
@@ -976,22 +977,9 @@ class AuthorisationHandlerTest {
             event.setRequestContext(
                     new ProxyRequestContext()
                             .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
+            makeHandlerRequest(event);
 
-            inOrder.verify(auditService)
-                    .submitAuditEvent(
-                            OidcAuditableEvent.AUTHORISATION_REQUEST_PARSED,
-                            CLIENT_SESSION_ID,
-                            AuditService.UNKNOWN,
-                            CLIENT_ID.getValue(),
-                            AuditService.UNKNOWN,
-                            AuditService.UNKNOWN,
-                            "123.123.123.123",
-                            AuditService.UNKNOWN,
-                            EXPECTED_PERSISTENT_COOKIE_VALUE_WITH_TIMESTAMP,
-                            pair("rpSid", AuditService.UNKNOWN),
-                            pair("identityRequested", false),
-                            pair("reauthRequested", false));
+            verifyAuthorisationRequestParsedAuditEvent(AuditService.UNKNOWN, false, false);
         }
 
         @Test
@@ -1001,22 +989,9 @@ class AuthorisationHandlerTest {
             event.setRequestContext(
                     new ProxyRequestContext()
                             .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
+            makeHandlerRequest(event);
 
-            inOrder.verify(auditService)
-                    .submitAuditEvent(
-                            OidcAuditableEvent.AUTHORISATION_REQUEST_PARSED,
-                            CLIENT_SESSION_ID,
-                            AuditService.UNKNOWN,
-                            CLIENT_ID.getValue(),
-                            AuditService.UNKNOWN,
-                            AuditService.UNKNOWN,
-                            "123.123.123.123",
-                            AuditService.UNKNOWN,
-                            EXPECTED_PERSISTENT_COOKIE_VALUE_WITH_TIMESTAMP,
-                            pair("rpSid", AuditService.UNKNOWN),
-                            pair("identityRequested", false),
-                            pair("reauthRequested", false));
+            verifyAuthorisationRequestParsedAuditEvent(AuditService.UNKNOWN, false, false);
         }
 
         @Test
@@ -1026,22 +1001,510 @@ class AuthorisationHandlerTest {
             event.setRequestContext(
                     new ProxyRequestContext()
                             .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            makeHandlerRequest(event);
+
+            verifyAuthorisationRequestParsedAuditEvent(AuditService.UNKNOWN, true, false);
+        }
+
+        @Test
+        void shouldNotAddReauthenticateClaimForQueryParameters() {
+            Map<String, String> requestParams =
+                    buildRequestParams(
+                            Map.of(
+                                    "prompt",
+                                    Prompt.Type.LOGIN.toString(),
+                                    "id_token_hint",
+                                    SERIALIZED_SIGNED_ID_TOKEN));
+            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
             APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
+
+            URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
+
+            verifyAuthorisationRequestParsedAuditEvent(AuditService.UNKNOWN, false, false);
+            assertThat(uri.getQuery(), not(containsString("reauthenticate")));
+        }
+
+        @Test
+        void shouldNotAddReauthenticateClaimForQueryParametersWithAuthOrchSplitEnabled() {
+            when(configService.isAuthOrchSplitEnabled()).thenReturn(true);
+
+            Map<String, String> requestParams =
+                    buildRequestParams(
+                            Map.of(
+                                    "prompt",
+                                    Prompt.Type.LOGIN.toString(),
+                                    "id_token_hint",
+                                    SERIALIZED_SIGNED_ID_TOKEN));
+            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            makeHandlerRequest(event);
+
+            verifyAuthorisationRequestParsedAuditEvent(AuditService.UNKNOWN, false, false);
+
+            ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
+            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
+            assertNull(argument.getValue().getClaim("reauthenticate"));
+        }
+
+        @Test
+        void shouldAddReauthenticateClaimIfPromptIsLoginAndIdTokenIsValid() throws JOSEException {
+            when(tokenValidationService.isTokenSignatureValid(any())).thenReturn(true);
+
+            var jwtClaimsSet =
+                    buildjwtClaimsSet(
+                            ID_TOKEN_AUDIENCE,
+                            Prompt.Type.LOGIN.toString(),
+                            SERIALIZED_SIGNED_ID_TOKEN);
+
+            Map<String, String> requestParams =
+                    buildRequestParams(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "response_type",
+                                    "code",
+                                    "scope",
+                                    "openid",
+                                    "request",
+                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
+
+            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
+            URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
+
+            verifyAuthorisationRequestParsedAuditEvent(AuditService.UNKNOWN, false, true);
+
+            assertThat(
+                    uri.getQuery(),
+                    containsString(String.format("reauthenticate=%s", ID_TOKEN_AUDIENCE)));
+        }
+
+        @Test
+        void shouldAddReauthenticateClaimIfPromptIsLoginAndIdTokenIsValidWithAuthOrchSplitFlag()
+                throws JOSEException, ParseException {
+            when(configService.isAuthOrchSplitEnabled()).thenReturn(true);
+            when(tokenValidationService.isTokenSignatureValid(any())).thenReturn(true);
+
+            var jwtClaimsSet =
+                    buildjwtClaimsSet(
+                            ID_TOKEN_AUDIENCE,
+                            Prompt.Type.LOGIN.toString(),
+                            SERIALIZED_SIGNED_ID_TOKEN);
+
+            Map<String, String> requestParams =
+                    buildRequestParams(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "response_type",
+                                    "code",
+                                    "scope",
+                                    "openid",
+                                    "request",
+                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
+
+            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            makeHandlerRequest(event);
+
+            verifyAuthorisationRequestParsedAuditEvent(AuditService.UNKNOWN, false, true);
+
+            ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
+            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
+            assertThat(
+                    argument.getValue().getStringClaim("reauthenticate"),
+                    equalTo(ID_TOKEN_AUDIENCE));
+        }
+
+        private static Stream<Prompt.Type> prompts() {
+            return Stream.of(Prompt.Type.CREATE, null);
+        }
+
+        @ParameterizedTest
+        @MethodSource("prompts")
+        void shouldNotAddReauthenticateClaimIfPromptIsNotLoginAndIdTokenIsValid(Prompt.Type prompt)
+                throws JOSEException {
+            when(tokenValidationService.isTokenSignatureValid(any())).thenReturn(true);
+
+            var jwtClaimsSet =
+                    buildjwtClaimsSet(
+                            ID_TOKEN_AUDIENCE,
+                            prompt == null ? null : prompt.toString(),
+                            SERIALIZED_SIGNED_ID_TOKEN);
+
+            Map<String, String> requestParams =
+                    buildRequestParams(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "response_type",
+                                    "code",
+                                    "scope",
+                                    "openid",
+                                    "request",
+                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
+
+            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
+            URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
+
+            verifyAuthorisationRequestParsedAuditEvent(AuditService.UNKNOWN, false, false);
+
+            assertThat(uri.getQuery(), not(containsString("reauthenticate")));
+        }
+
+        @ParameterizedTest
+        @MethodSource("prompts")
+        void
+                shouldNotAddReauthenticateClaimIfPromptIsNotLoginAndIdTokenIsValidWhenAuthOrchSplitFlagTrue(
+                        Prompt.Type prompt) throws JOSEException {
+            when(configService.isAuthOrchSplitEnabled()).thenReturn(true);
+            when(tokenValidationService.isTokenSignatureValid(any())).thenReturn(true);
+
+            var jwtClaimsSet =
+                    buildjwtClaimsSet(
+                            ID_TOKEN_AUDIENCE,
+                            prompt == null ? null : prompt.toString(),
+                            SERIALIZED_SIGNED_ID_TOKEN);
+
+            Map<String, String> requestParams =
+                    buildRequestParams(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "response_type",
+                                    "code",
+                                    "scope",
+                                    "openid",
+                                    "request",
+                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
+
+            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            makeHandlerRequest(event);
+
+            verifyAuthorisationRequestParsedAuditEvent(AuditService.UNKNOWN, false, false);
+
+            ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
+            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
+            assertNull(argument.getValue().getClaim("reauthenticate"));
+        }
+
+        @Test
+        void shouldNotAddReauthenticateClaimIfIdTokenHintIsNotPresent() throws JOSEException {
+            var jwtClaimsSet =
+                    buildjwtClaimsSet(ID_TOKEN_AUDIENCE, Prompt.Type.LOGIN.toString(), null);
+
+            Map<String, String> requestParams =
+                    buildRequestParams(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "response_type",
+                                    "code",
+                                    "scope",
+                                    "openid",
+                                    "request",
+                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
+
+            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
+            URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
+
+            verifyAuthorisationRequestParsedAuditEvent(AuditService.UNKNOWN, false, false);
+
+            assertThat(uri.getQuery(), not(containsString("reauthenticate")));
+        }
+
+        @Test
+        void shouldNotAddReauthenticateClaimIfIdTokenHintIsNotPresentWhenAuthOrchSplitFlagTrue()
+                throws JOSEException {
+            when(configService.isAuthOrchSplitEnabled()).thenReturn(true);
+
+            var jwtClaimsSet =
+                    buildjwtClaimsSet(ID_TOKEN_AUDIENCE, Prompt.Type.LOGIN.toString(), null);
+
+            Map<String, String> requestParams =
+                    buildRequestParams(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "response_type",
+                                    "code",
+                                    "scope",
+                                    "openid",
+                                    "request",
+                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
+
+            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            makeHandlerRequest(event);
+
+            verifyAuthorisationRequestParsedAuditEvent(AuditService.UNKNOWN, false, false);
+
+            ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
+            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
+            assertNull(argument.getValue().getClaim("reauthenticate"));
+        }
+
+        @Test
+        void shouldErrorIfIdTokenIsInvalid() throws JOSEException {
+            when(tokenValidationService.isTokenSignatureValid(any())).thenReturn(false);
+
+            var jwtClaimsSet =
+                    buildjwtClaimsSet(
+                            ID_TOKEN_AUDIENCE,
+                            Prompt.Type.LOGIN.toString(),
+                            SERIALIZED_SIGNED_ID_TOKEN);
+
+            Map<String, String> requestParams =
+                    buildRequestParams(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "response_type",
+                                    "code",
+                                    "scope",
+                                    "openid",
+                                    "request",
+                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
+
+            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
+
+            var expectedErrorObject =
+                    new ErrorObject(
+                            OAuth2Error.INVALID_REQUEST_CODE, "Unable to validate id_token_hint");
+            var expectedURI =
+                    new AuthenticationErrorResponse(
+                                    URI.create("https://localhost:8080"),
+                                    expectedErrorObject,
+                                    STATE,
+                                    null)
+                            .toURI()
+                            .toString();
+            assertThat(response, hasStatus(302));
+            assertEquals(expectedURI, response.getHeaders().get(ResponseHeaders.LOCATION));
+
+            verifyAuthorisationRequestParsedAuditEvent(AuditService.UNKNOWN, false, true);
+            inOrder.verify(auditService)
+                    .submitAuditEvent(
+                            AUTHORISATION_REQUEST_ERROR,
+                            CLIENT_SESSION_ID,
+                            "",
+                            CLIENT_ID.getValue(),
+                            "",
+                            "",
+                            "123.123.123.123",
+                            "",
+                            EXPECTED_PERSISTENT_COOKIE_VALUE_WITH_TIMESTAMP,
+                            pair("description", expectedErrorObject.getDescription()));
+        }
+
+        @Test
+        void shouldErrorIfIdTokenIsInvalidWhenAuthOrchSplitFlagTrue() throws JOSEException {
+            when(configService.isAuthOrchSplitEnabled()).thenReturn(true);
+            when(tokenValidationService.isTokenSignatureValid(any())).thenReturn(false);
+
+            var jwtClaimsSet =
+                    buildjwtClaimsSet(
+                            ID_TOKEN_AUDIENCE,
+                            Prompt.Type.LOGIN.toString(),
+                            SERIALIZED_SIGNED_ID_TOKEN);
+
+            Map<String, String> requestParams =
+                    buildRequestParams(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "response_type",
+                                    "code",
+                                    "scope",
+                                    "openid",
+                                    "request",
+                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
+
+            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
+
+            var expectedErrorObject =
+                    new ErrorObject(
+                            OAuth2Error.INVALID_REQUEST_CODE, "Unable to validate id_token_hint");
+            var expectedURI =
+                    new AuthenticationErrorResponse(
+                                    URI.create("https://localhost:8080"),
+                                    expectedErrorObject,
+                                    STATE,
+                                    null)
+                            .toURI()
+                            .toString();
+            assertThat(response, hasStatus(302));
+            assertEquals(expectedURI, response.getHeaders().get(ResponseHeaders.LOCATION));
+
+            verifyAuthorisationRequestParsedAuditEvent(AuditService.UNKNOWN, false, true);
+            inOrder.verify(auditService)
+                    .submitAuditEvent(
+                            AUTHORISATION_REQUEST_ERROR,
+                            CLIENT_SESSION_ID,
+                            "",
+                            CLIENT_ID.getValue(),
+                            "",
+                            "",
+                            "123.123.123.123",
+                            "",
+                            EXPECTED_PERSISTENT_COOKIE_VALUE_WITH_TIMESTAMP,
+                            pair("description", expectedErrorObject.getDescription()));
+        }
+
+        @Test
+        void shouldErrorIfIdTokenHasIncorrectClient() throws JOSEException {
+            when(tokenValidationService.isTokenSignatureValid(any())).thenReturn(true);
+
+            var signedIDTokenIncorrectClient =
+                    TokenGeneratorHelper.generateIDToken(
+                            "not-the-client-id", SUBJECT, "http://localhost-rp", EC_SIGNING_KEY);
+
+            var jwtClaimsSet =
+                    buildjwtClaimsSet(
+                            ID_TOKEN_AUDIENCE,
+                            Prompt.Type.LOGIN.toString(),
+                            signedIDTokenIncorrectClient.serialize());
+
+            Map<String, String> requestParams =
+                    buildRequestParams(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "response_type",
+                                    "code",
+                                    "scope",
+                                    "openid",
+                                    "request",
+                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
+
+            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
+
+            var expectedErrorObject =
+                    new ErrorObject(
+                            OAuth2Error.INVALID_REQUEST_CODE, "Invalid id_token_hint for client");
+            var expectedURI =
+                    new AuthenticationErrorResponse(
+                                    URI.create("https://localhost:8080"),
+                                    expectedErrorObject,
+                                    STATE,
+                                    null)
+                            .toURI()
+                            .toString();
+            assertThat(response, hasStatus(302));
+            assertEquals(expectedURI, response.getHeaders().get(ResponseHeaders.LOCATION));
+
+            verifyAuthorisationRequestParsedAuditEvent(AuditService.UNKNOWN, false, true);
+            inOrder.verify(auditService)
+                    .submitAuditEvent(
+                            AUTHORISATION_REQUEST_ERROR,
+                            CLIENT_SESSION_ID,
+                            "",
+                            CLIENT_ID.getValue(),
+                            "",
+                            "",
+                            "123.123.123.123",
+                            "",
+                            EXPECTED_PERSISTENT_COOKIE_VALUE_WITH_TIMESTAMP,
+                            pair("description", expectedErrorObject.getDescription()));
+        }
+
+        @Test
+        void shouldErrorIfIdTokenHasIncorrectClientWhenAuthOrchSplitFlagTrue()
+                throws JOSEException {
+            when(configService.isAuthOrchSplitEnabled()).thenReturn(false);
+            when(tokenValidationService.isTokenSignatureValid(any())).thenReturn(true);
+
+            var signedIDTokenIncorrectClient =
+                    TokenGeneratorHelper.generateIDToken(
+                            "not-the-client-id", SUBJECT, "http://localhost-rp", EC_SIGNING_KEY);
+
+            var jwtClaimsSet =
+                    buildjwtClaimsSet(
+                            ID_TOKEN_AUDIENCE,
+                            Prompt.Type.LOGIN.toString(),
+                            signedIDTokenIncorrectClient.serialize());
+
+            Map<String, String> requestParams =
+                    buildRequestParams(
+                            Map.of(
+                                    "client_id",
+                                    CLIENT_ID.getValue(),
+                                    "response_type",
+                                    "code",
+                                    "scope",
+                                    "openid",
+                                    "request",
+                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
+
+            APIGatewayProxyRequestEvent event = withRequestEvent(requestParams);
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
+
+            var expectedErrorObject =
+                    new ErrorObject(
+                            OAuth2Error.INVALID_REQUEST_CODE, "Invalid id_token_hint for client");
+            var expectedURI =
+                    new AuthenticationErrorResponse(
+                                    URI.create("https://localhost:8080"),
+                                    expectedErrorObject,
+                                    STATE,
+                                    null)
+                            .toURI()
+                            .toString();
+            assertThat(response, hasStatus(302));
+            assertEquals(expectedURI, response.getHeaders().get(ResponseHeaders.LOCATION));
+
+            verifyAuthorisationRequestParsedAuditEvent(AuditService.UNKNOWN, false, true);
 
             inOrder.verify(auditService)
                     .submitAuditEvent(
-                            OidcAuditableEvent.AUTHORISATION_REQUEST_PARSED,
+                            AUTHORISATION_REQUEST_ERROR,
                             CLIENT_SESSION_ID,
-                            AuditService.UNKNOWN,
+                            "",
                             CLIENT_ID.getValue(),
-                            AuditService.UNKNOWN,
-                            AuditService.UNKNOWN,
+                            "",
+                            "",
                             "123.123.123.123",
-                            AuditService.UNKNOWN,
+                            "",
                             EXPECTED_PERSISTENT_COOKIE_VALUE_WITH_TIMESTAMP,
-                            pair("rpSid", AuditService.UNKNOWN),
-                            pair("identityRequested", true),
-                            pair("reauthRequested", false));
+                            pair("description", expectedErrorObject.getDescription()));
         }
     }
 
@@ -1282,8 +1745,6 @@ class AuthorisationHandlerTest {
     }
 
     private APIGatewayProxyResponseEvent makeDocAppHandlerRequest() throws JOSEException {
-        var keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
-
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
                         .audience("oidc-audience")
@@ -1307,7 +1768,7 @@ class AuthorisationHandlerTest {
                                 "scope",
                                 "openid",
                                 "request",
-                                generateSignedJWT(jwtClaimsSet, keyPair).serialize()));
+                                generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
 
         return makeHandlerRequest(withRequestEvent(requestParams));
     }
@@ -1366,12 +1827,7 @@ class AuthorisationHandlerTest {
     }
 
     private static EncryptedJWT createEncryptedJWT() throws JOSEException, ParseException {
-        var ecSigningKey =
-                new ECKeyGenerator(Curve.P_256)
-                        .keyID("key-id")
-                        .algorithm(JWSAlgorithm.ES256)
-                        .generate();
-        var ecdsaSigner = new ECDSASigner(ecSigningKey);
+        var ecdsaSigner = new ECDSASigner(EC_SIGNING_KEY);
         var jwtClaimsSet =
                 new JWTClaimsSet.Builder()
                         .claim("client-name", RP_CLIENT_NAME)
@@ -1441,9 +1897,11 @@ class AuthorisationHandlerTest {
         }
     }
 
-    private static JWTClaimsSet buildjwtClaimsSet() {
+    private static JWTClaimsSet buildjwtClaimsSet(String audience, String prompt, String idToken) {
         return new JWTClaimsSet.Builder()
-                .audience("https://localhost/authorize")
+                .audience(audience)
+                .claim("prompt", prompt)
+                .claim("id_token_hint", idToken)
                 .claim("redirect_uri", REDIRECT_URI)
                 .claim("response_type", ResponseType.CODE.toString())
                 .claim("scope", SCOPE)
@@ -1453,5 +1911,47 @@ class AuthorisationHandlerTest {
                 .claim("claims", CLAIMS)
                 .issuer(CLIENT_ID.getValue())
                 .build();
+    }
+
+    private void verifyAuthorisationRequestParsedAuditEvent(
+            String rpSid, boolean identityRequested, boolean reauthRequested) {
+        inOrder.verify(auditService)
+                .submitAuditEvent(
+                        OidcAuditableEvent.AUTHORISATION_REQUEST_PARSED,
+                        CLIENT_SESSION_ID,
+                        AuditService.UNKNOWN,
+                        CLIENT_ID.getValue(),
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        EXPECTED_PERSISTENT_COOKIE_VALUE_WITH_TIMESTAMP,
+                        pair("rpSid", rpSid),
+                        pair("identityRequested", identityRequested),
+                        pair("reauthRequested", reauthRequested));
+    }
+
+    private static ECKey generateECSigningKey() {
+        try {
+            return new ECKeyGenerator(Curve.P_256)
+                    .keyID("key-id")
+                    .algorithm(JWSAlgorithm.ES256)
+                    .generate();
+        } catch (JOSEException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static String getIdTokenAudience() {
+        try {
+            return SignedJWT.parse(AuthorisationHandlerTest.SERIALIZED_SIGNED_ID_TOKEN)
+                    .getJWTClaimsSet()
+                    .getAudience()
+                    .stream()
+                    .findFirst()
+                    .orElse(null);
+        } catch (ParseException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
