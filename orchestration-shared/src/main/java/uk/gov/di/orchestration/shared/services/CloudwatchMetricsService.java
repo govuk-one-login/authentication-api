@@ -9,17 +9,10 @@ import uk.gov.di.orchestration.shared.entity.Session;
 import java.util.Map;
 import java.util.Optional;
 
-import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.ACCOUNT;
 import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.ACCOUNT_INTERVENTION_STATUS;
 import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.CLIENT;
 import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.CLIENT_NAME;
 import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.ENVIRONMENT;
-import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.IS_TEST;
-import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.MFA_REQUIRED;
-import static uk.gov.di.orchestration.shared.domain.CloudwatchMetricDimensions.REQUESTED_LEVEL_OF_CONFIDENCE;
-import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.AUTHENTICATION_SUCCESS;
-import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.AUTHENTICATION_SUCCESS_EXISTING_ACCOUNT_BY_CLIENT;
-import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.AUTHENTICATION_SUCCESS_NEW_ACCOUNT_BY_CLIENT;
 import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.LOGOUT_SUCCESS;
 import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.SIGN_IN_EXISTING_ACCOUNT_BY_CLIENT;
 import static uk.gov.di.orchestration.shared.domain.CloudwatchMetrics.SIGN_IN_NEW_ACCOUNT_BY_CLIENT;
@@ -78,54 +71,6 @@ public class CloudwatchMetricsService {
         if (EXISTING.equals(accountState) && !isTestJourney) {
             incrementCounter(
                     SIGN_IN_EXISTING_ACCOUNT_BY_CLIENT.getValue(),
-                    Map.of(
-                            ENVIRONMENT.getValue(),
-                            configurationService.getEnvironment(),
-                            CLIENT.getValue(),
-                            clientId,
-                            CLIENT_NAME.getValue(),
-                            clientName));
-        }
-    }
-
-    public void incrementAuthenticationSuccess(
-            Session.AccountState accountState,
-            String clientId,
-            String clientName,
-            String requestedLevelOfConfidence,
-            boolean isTestJourney,
-            boolean mfaRequired) {
-        incrementCounter(
-                AUTHENTICATION_SUCCESS.getValue(),
-                Map.of(
-                        ACCOUNT.getValue(),
-                        accountState.name(),
-                        ENVIRONMENT.getValue(),
-                        configurationService.getEnvironment(),
-                        CLIENT.getValue(),
-                        clientId,
-                        IS_TEST.getValue(),
-                        Boolean.toString(isTestJourney),
-                        REQUESTED_LEVEL_OF_CONFIDENCE.getValue(),
-                        requestedLevelOfConfidence,
-                        MFA_REQUIRED.getValue(),
-                        Boolean.toString(mfaRequired),
-                        CLIENT_NAME.getValue(),
-                        clientName));
-        if (NEW.equals(accountState) && !isTestJourney) {
-            incrementCounter(
-                    AUTHENTICATION_SUCCESS_NEW_ACCOUNT_BY_CLIENT.getValue(),
-                    Map.of(
-                            ENVIRONMENT.getValue(),
-                            configurationService.getEnvironment(),
-                            CLIENT.getValue(),
-                            clientId,
-                            CLIENT_NAME.getValue(),
-                            clientName));
-        }
-        if (EXISTING.equals(accountState) && !isTestJourney) {
-            incrementCounter(
-                    AUTHENTICATION_SUCCESS_EXISTING_ACCOUNT_BY_CLIENT.getValue(),
                     Map.of(
                             ENVIRONMENT.getValue(),
                             configurationService.getEnvironment(),

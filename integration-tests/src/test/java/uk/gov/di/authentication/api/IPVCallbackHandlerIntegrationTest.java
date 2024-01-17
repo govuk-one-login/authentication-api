@@ -544,9 +544,6 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                 TokenSigningExtension ipvPrivateKeyJwtSigner,
                 SqsQueueExtension spotQueue) {
             super(
-                    auditEventTopic,
-                    notificationQueue,
-                    auditSigningKey,
                     tokenSigningKey,
                     ipvPrivateKeyJwtSigner,
                     spotQueue,

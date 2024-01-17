@@ -1,12 +1,8 @@
 package uk.gov.di.orchestration.shared.services;
 
-import com.nimbusds.oauth2.sdk.token.AccessToken;
-import com.nimbusds.oauth2.sdk.token.AccessTokenType;
-import com.nimbusds.oauth2.sdk.token.BearerTokenError;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.shared.entity.token.AccessTokenStore;
-import uk.gov.di.orchestration.shared.exceptions.AccessTokenException;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 
 import java.time.temporal.ChronoUnit;
@@ -73,17 +69,6 @@ public class AccessTokenService extends BaseDynamoService<AccessTokenStore> {
                                     return ts;
                                 })
                 : Optional.empty();
-    }
-
-    public AccessToken getAccessTokenFromAuthorizationHeader(String authorizationHeader)
-            throws AccessTokenException {
-        try {
-            return AccessToken.parse(authorizationHeader, AccessTokenType.BEARER);
-        } catch (com.nimbusds.oauth2.sdk.ParseException e) {
-            LOG.warn("Unable to extract (opaque) bearer token");
-            throw new AccessTokenException(
-                    "Unable to extract (opaque) bearer token", BearerTokenError.INVALID_TOKEN);
-        }
     }
 
     public Optional<AccessTokenStore> setAccessTokenTtlTestOnly(String accessToken, long newTtl) {

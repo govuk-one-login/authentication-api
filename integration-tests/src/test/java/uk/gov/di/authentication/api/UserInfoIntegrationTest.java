@@ -102,9 +102,6 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void setup() throws JOSEException, NoSuchAlgorithmException {
         var configuration =
                 new IntegrationTestConfigurationService(
-                        auditTopic,
-                        notificationsQueue,
-                        auditSigningKey,
                         tokenSigner,
                         ipvPrivateKeyJwtSigner,
                         spotQueue,
@@ -561,9 +558,6 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         public UserInfoConfigurationService() {
             super(
-                    auditTopic,
-                    notificationsQueue,
-                    auditSigningKey,
                     tokenSigner,
                     ipvPrivateKeyJwtSigner,
                     spotQueue,

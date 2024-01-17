@@ -337,9 +337,6 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
 
         public TestConfigurationService(boolean authOrchSplitEnabled) {
             super(
-                    auditTopic,
-                    notificationsQueue,
-                    auditSigningKey,
                     tokenSigner,
                     ipvPrivateKeyJwtSigner,
                     spotQueue,

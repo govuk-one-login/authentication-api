@@ -1,7 +1,5 @@
 package uk.gov.di.orchestration.shared.services;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.regions.Region;
@@ -14,8 +12,6 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 public class AwsSqsClient {
-
-    private static Logger LOG = LogManager.getLogger(AwsSqsClient.class);
 
     private final SqsClient client;
     private final String queueUrl;
@@ -47,22 +43,5 @@ public class AwsSqsClient {
     public <T> void sendAsync(final T message) throws SdkClientException {
         CompletableFuture.runAsync(
                 () -> send(SerializationService.getInstance().writeValueAsString(message)));
-    }
-
-    static class NoOpSqsClient extends AwsSqsClient {
-
-        public NoOpSqsClient() {
-            super(null, null);
-        }
-
-        @Override
-        public void send(String event) throws SdkClientException {
-            // Do nothing
-        }
-
-        @Override
-        public <T> void sendAsync(T message) throws SdkClientException {
-            // Do nothing
-        }
     }
 }

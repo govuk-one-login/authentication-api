@@ -5,23 +5,10 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.api.StatefulRedisConnection;
-import org.junit.jupiter.api.extension.AfterAllCallback;
-import org.junit.jupiter.api.extension.AfterEachCallback;
-import org.junit.jupiter.api.extension.BeforeAllCallback;
-import org.junit.jupiter.api.extension.Extension;
-import org.junit.jupiter.api.extension.ExtensionContext;
-import uk.gov.di.orchestration.shared.entity.AuthCodeExchangeData;
-import uk.gov.di.orchestration.shared.entity.ClientSession;
-import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
-import uk.gov.di.orchestration.shared.entity.JourneyType;
-import uk.gov.di.orchestration.shared.entity.MFAMethodType;
-import uk.gov.di.orchestration.shared.entity.NotificationType;
-import uk.gov.di.orchestration.shared.entity.Session;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import org.junit.jupiter.api.extension.*;
+import uk.gov.di.orchestration.shared.entity.*;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.serialization.Json;
-import uk.gov.di.orchestration.shared.services.CodeGeneratorService;
-import uk.gov.di.orchestration.shared.services.CodeStorageService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 
@@ -30,16 +17,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static uk.gov.di.orchestration.shared.entity.NotificationType.MFA_SMS;
-import static uk.gov.di.orchestration.shared.entity.NotificationType.VERIFY_EMAIL;
-import static uk.gov.di.orchestration.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.orchestration.shared.services.AuthorisationCodeService.AUTH_CODE_PREFIX;
 import static uk.gov.di.orchestration.shared.services.ClientSessionService.CLIENT_SESSION_PREFIX;
 
 public class RedisExtension
         implements Extension, BeforeAllCallback, AfterAllCallback, AfterEachCallback {
     private final ConfigurationService configurationService;
-    private final CodeStorageService codeStorageService;
 
     private final Json objectMapper;
 
@@ -49,7 +32,6 @@ public class RedisExtension
     public RedisExtension(Json objectMapper, ConfigurationService configurationService) {
         this.objectMapper = objectMapper;
         this.configurationService = configurationService;
-        this.codeStorageService = new CodeStorageService(configurationService);
     }
 
     public String createSession(String sessionId) throws Json.JsonException {
@@ -79,10 +61,6 @@ public class RedisExtension
 
     public String createSession(boolean isAuthenticated) throws Json.JsonException {
         return createSession(IdGenerator.generate(), isAuthenticated, Optional.empty());
-    }
-
-    public String createUnauthenticatedSessionWithEmail(String email) throws Json.JsonException {
-        return createSession(IdGenerator.generate(), false, Optional.of(email));
     }
 
     public void addDocAppSubjectIdToClientSession(Subject subject, String clientSessionId)
@@ -127,10 +105,6 @@ public class RedisExtension
                 session.getSessionId(), objectMapper.writeValueAsString(session), 3600);
     }
 
-    public void incrementPasswordCount(String email) {
-        codeStorageService.increaseIncorrectPasswordCount(email);
-    }
-
     public void addAuthRequestToSession(
             String clientSessionId,
             String sessionId,
@@ -150,15 +124,6 @@ public class RedisExtension
                                 VectorOfTrust.getDefaults(),
                                 clientName)),
                 3600);
-    }
-
-    public void addInternalCommonSubjectIdToSession(
-            String sessionId, String internalCommonSubjectId) throws Json.JsonException {
-        var session =
-                objectMapper
-                        .readValue(redis.getValue(sessionId), Session.class)
-                        .setInternalCommonSubjectIdentifier(internalCommonSubjectId);
-        redis.saveWithExpiry(sessionId, objectMapper.writeValueAsString(session), 3600);
     }
 
     public void addIDTokenToSession(String clientSessionId, String idTokenHint)
@@ -191,74 +156,6 @@ public class RedisExtension
 
     public Session getSession(String sessionId) throws Json.JsonException {
         return objectMapper.readValue(redis.getValue(sessionId), Session.class);
-    }
-
-    public void incrementSessionCodeRequestCount(
-            String sessionId, NotificationType notificationType, JourneyType journeyType)
-            throws Json.JsonException {
-        var session =
-                objectMapper
-                        .readValue(redis.getValue(sessionId), Session.class)
-                        .incrementCodeRequestCount(notificationType, journeyType);
-        redis.saveWithExpiry(sessionId, objectMapper.writeValueAsString(session), 3600);
-    }
-
-    public String generateAndSaveEmailCode(String email, long codeExpiryTime) {
-        var code = new CodeGeneratorService().sixDigitCode();
-        codeStorageService.saveOtpCode(email, code, codeExpiryTime, VERIFY_EMAIL);
-
-        return code;
-    }
-
-    public String generateAndSaveEmailCode(
-            String email, long codeExpiryTime, NotificationType notificationType) {
-        var code = new CodeGeneratorService().sixDigitCode();
-        codeStorageService.saveOtpCode(email, code, codeExpiryTime, notificationType);
-
-        return code;
-    }
-
-    public String generateAndSavePhoneNumberCode(String email, long codeExpiryTime) {
-        var code = new CodeGeneratorService().sixDigitCode();
-        codeStorageService.saveOtpCode(email, code, codeExpiryTime, VERIFY_PHONE_NUMBER);
-
-        return code;
-    }
-
-    public String generateAndSaveMfaCode(String email, long codeExpiryTime) {
-        var code = new CodeGeneratorService().sixDigitCode();
-        codeStorageService.saveOtpCode(email, code, codeExpiryTime, MFA_SMS);
-
-        return code;
-    }
-
-    public Optional<String> getMfaCode(String email, NotificationType notificationType) {
-        return codeStorageService.getOtpCode(email, notificationType);
-    }
-
-    public void blockMfaCodesForEmail(String email, String codeBlockedKeyPrefix) {
-        var codeBlockedTime = 10;
-        codeStorageService.saveBlockedForEmail(email, codeBlockedKeyPrefix, codeBlockedTime);
-    }
-
-    public boolean isBlockedMfaCodesForEmail(String email, String codeBlockedKeyPrefix) {
-        return codeStorageService.isBlockedForEmail(email, codeBlockedKeyPrefix);
-    }
-
-    public int getMfaCodeAttemptsCount(String email) {
-        return codeStorageService.getIncorrectMfaCodeAttemptsCount(email);
-    }
-
-    public int getMfaCodeAttemptsCount(String email, MFAMethodType mfaMethodType) {
-        return codeStorageService.getIncorrectMfaCodeAttemptsCount(email, mfaMethodType);
-    }
-
-    public void increaseMfaCodeAttemptsCount(String email, MFAMethodType mfaMethodType) {
-        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(email, mfaMethodType);
-    }
-
-    public void increaseMfaCodeAttemptsCount(String email) {
-        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(email);
     }
 
     public void addToRedis(String key, String value, Long expiry) {
@@ -330,7 +227,7 @@ public class RedisExtension
     }
 
     @Override
-    public void afterAll(ExtensionContext context) throws Exception {
+    public void afterAll(ExtensionContext context) {
         redis.close();
         client.shutdown();
     }

@@ -464,9 +464,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                 TokenSigningExtension docAppPrivateKeyJwtSigner,
                 AccountInterventionsStubExtension accountInterventionsStubExtension) {
             super(
-                    auditEventTopic,
-                    notificationQueue,
-                    auditSigningKey,
                     tokenSigningKey,
                     ipvPrivateKeyJwtSigner,
                     spotQueue,

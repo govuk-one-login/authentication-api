@@ -408,9 +408,6 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                 TokenSigningExtension docAppPrivateKeyJwtSigner,
                 boolean userInfoV2Enabled) {
             super(
-                    auditEventTopic,
-                    notificationQueue,
-                    auditSigningKey,
                     tokenSigningKey,
                     ipvPrivateKeyJwtSigner,
                     spotQueue,
