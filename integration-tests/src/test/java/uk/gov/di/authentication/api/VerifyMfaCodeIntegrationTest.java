@@ -80,7 +80,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                     JourneyType.ACCOUNT_RECOVERY,
                     JourneyType.SIGN_IN,
                     JourneyType.PASSWORD_RESET_MFA,
-                    JourneyType.REAUTHENTICATE_MFA);
+                    JourneyType.REAUTHENTICATION);
     private String sessionId;
 
     @BeforeEach
@@ -99,15 +99,13 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 Arguments.of(JourneyType.REGISTRATION, ALTERNATIVE_AUTH_APP_SECRET_BASE_32),
                 Arguments.of(JourneyType.ACCOUNT_RECOVERY, ALTERNATIVE_AUTH_APP_SECRET_BASE_32),
                 Arguments.of(JourneyType.PASSWORD_RESET_MFA, ALTERNATIVE_AUTH_APP_SECRET_BASE_32),
-                Arguments.of(JourneyType.REAUTHENTICATE_MFA, ALTERNATIVE_AUTH_APP_SECRET_BASE_32),
+                Arguments.of(JourneyType.REAUTHENTICATION, ALTERNATIVE_AUTH_APP_SECRET_BASE_32),
                 Arguments.of(JourneyType.SIGN_IN, null));
     }
 
     private static Stream<JourneyType> existingUserAuthAppJourneyTypes() {
         return Stream.of(
-                JourneyType.SIGN_IN,
-                JourneyType.PASSWORD_RESET_MFA,
-                JourneyType.REAUTHENTICATE_MFA);
+                JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA, JourneyType.REAUTHENTICATION);
     }
 
     @ParameterizedTest
@@ -343,7 +341,7 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 List.of(
                         JourneyType.SIGN_IN,
                         JourneyType.PASSWORD_RESET_MFA,
-                        JourneyType.REAUTHENTICATE_MFA);
+                        JourneyType.REAUTHENTICATION);
         var authAppSecret =
                 nonRegistrationJourneyTypes.contains(journeyType)
                         ? AUTH_APP_SECRET_BASE_32
@@ -915,10 +913,10 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         INVALID_CODE_SENT,
                         CODE_MAX_RETRIES_REACHED));
         var isAccountVerified =
-                List.of(JourneyType.ACCOUNT_RECOVERY, JourneyType.REAUTHENTICATE_MFA)
+                List.of(JourneyType.ACCOUNT_RECOVERY, JourneyType.REAUTHENTICATION)
                         .contains(journeyType);
         var expectedPhoneNumber =
-                List.of(JourneyType.ACCOUNT_RECOVERY, JourneyType.REAUTHENTICATE_MFA)
+                List.of(JourneyType.ACCOUNT_RECOVERY, JourneyType.REAUTHENTICATION)
                                 .contains(journeyType)
                         ? PHONE_NUMBER
                         : null;

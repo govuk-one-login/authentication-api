@@ -746,7 +746,7 @@ class VerifyCodeHandlerTest {
     private static Stream<Arguments> codeRequestTypes() {
         return Stream.of(
                 Arguments.of(CodeRequestType.PW_RESET_MFA_SMS, JourneyType.PASSWORD_RESET_MFA),
-                Arguments.of(CodeRequestType.SMS_REAUTHENTICATION, JourneyType.REAUTHENTICATE_MFA),
+                Arguments.of(CodeRequestType.SMS_REAUTHENTICATION, JourneyType.REAUTHENTICATION),
                 Arguments.of(CodeRequestType.SMS_SIGN_IN, JourneyType.SIGN_IN),
                 Arguments.of(CodeRequestType.SMS_SIGN_IN, null));
     }

@@ -105,7 +105,7 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var response =
                 makeRequest(
                         Optional.of(
-                                new MfaRequest(USER_EMAIL, false, JourneyType.REAUTHENTICATE_MFA)),
+                                new MfaRequest(USER_EMAIL, false, JourneyType.REAUTHENTICATION)),
                         constructFrontendHeaders(authenticatedSessionId),
                         Map.of());
 
@@ -123,20 +123,20 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             throws Json.JsonException {
         var authenticatedSessionId = redis.createAuthenticatedSessionWithEmail(USER_EMAIL);
         redis.incrementSessionCodeRequestCount(
-                authenticatedSessionId, MFA_SMS, JourneyType.REAUTHENTICATE_MFA);
+                authenticatedSessionId, MFA_SMS, JourneyType.REAUTHENTICATION);
         redis.incrementSessionCodeRequestCount(
-                authenticatedSessionId, MFA_SMS, JourneyType.REAUTHENTICATE_MFA);
+                authenticatedSessionId, MFA_SMS, JourneyType.REAUTHENTICATION);
         redis.incrementSessionCodeRequestCount(
-                authenticatedSessionId, MFA_SMS, JourneyType.REAUTHENTICATE_MFA);
+                authenticatedSessionId, MFA_SMS, JourneyType.REAUTHENTICATION);
         redis.incrementSessionCodeRequestCount(
-                authenticatedSessionId, MFA_SMS, JourneyType.REAUTHENTICATE_MFA);
+                authenticatedSessionId, MFA_SMS, JourneyType.REAUTHENTICATION);
         redis.incrementSessionCodeRequestCount(
-                authenticatedSessionId, MFA_SMS, JourneyType.REAUTHENTICATE_MFA);
+                authenticatedSessionId, MFA_SMS, JourneyType.REAUTHENTICATION);
 
         var response =
                 makeRequest(
                         Optional.of(
-                                new MfaRequest(USER_EMAIL, false, JourneyType.REAUTHENTICATE_MFA)),
+                                new MfaRequest(USER_EMAIL, false, JourneyType.REAUTHENTICATION)),
                         constructFrontendHeaders(authenticatedSessionId),
                         Map.of());
 

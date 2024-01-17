@@ -86,7 +86,7 @@ class AuthAppCodeProcessorTest {
                         AUTH_APP_SECRET,
                         CodeRequestType.AUTH_APP_REGISTRATION),
                 Arguments.of(
-                        JourneyType.REAUTHENTICATE_MFA,
+                        JourneyType.REAUTHENTICATION,
                         null,
                         CodeRequestType.AUTH_APP_REAUTHENTICATION));
     }
