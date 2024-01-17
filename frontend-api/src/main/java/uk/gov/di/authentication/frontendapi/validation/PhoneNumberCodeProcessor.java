@@ -55,7 +55,7 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
             throw new RuntimeException("Sign In Phone number codes are not supported");
         }
         var notificationType =
-                List.of(JourneyType.PASSWORD_RESET_MFA, JourneyType.REAUTHENTICATE_MFA)
+                List.of(JourneyType.PASSWORD_RESET_MFA, JourneyType.REAUTHENTICATION)
                                 .contains(codeRequest.getJourneyType())
                         ? NotificationType.MFA_SMS
                         : NotificationType.VERIFY_PHONE_NUMBER;

@@ -162,7 +162,7 @@ class PhoneNumberCodeProcessorTest {
                 new VerifyMfaCodeRequest(
                         MFAMethodType.SMS,
                         INVALID_CODE,
-                        JourneyType.REAUTHENTICATE_MFA,
+                        JourneyType.REAUTHENTICATION,
                         PHONE_NUMBER));
 
         assertThat(
@@ -348,7 +348,7 @@ class PhoneNumberCodeProcessorTest {
                         NotificationType.MFA_SMS),
                 Arguments.of(
                         CodeRequestType.SMS_REAUTHENTICATION,
-                        JourneyType.REAUTHENTICATE_MFA,
+                        JourneyType.REAUTHENTICATION,
                         NotificationType.MFA_SMS),
                 Arguments.of(
                         CodeRequestType.SMS_REGISTRATION,

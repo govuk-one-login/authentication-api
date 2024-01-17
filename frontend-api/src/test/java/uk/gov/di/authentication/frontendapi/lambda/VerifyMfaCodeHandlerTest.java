@@ -394,9 +394,7 @@ class VerifyMfaCodeHandlerTest {
 
     private static Stream<JourneyType> existingUserAuthAppJourneyTypes() {
         return Stream.of(
-                JourneyType.SIGN_IN,
-                JourneyType.PASSWORD_RESET_MFA,
-                JourneyType.REAUTHENTICATE_MFA);
+                JourneyType.SIGN_IN, JourneyType.PASSWORD_RESET_MFA, JourneyType.REAUTHENTICATION);
     }
 
     @ParameterizedTest
@@ -444,7 +442,7 @@ class VerifyMfaCodeHandlerTest {
                 List.of(
                                         JourneyType.SIGN_IN,
                                         JourneyType.PASSWORD_RESET_MFA,
-                                        JourneyType.REAUTHENTICATE_MFA)
+                                        JourneyType.REAUTHENTICATION)
                                 .contains(journeyType)
                         ? null
                         : AUTH_APP_SECRET;
@@ -492,7 +490,7 @@ class VerifyMfaCodeHandlerTest {
                 Arguments.of(JourneyType.SIGN_IN, CodeRequestType.AUTH_APP_SIGN_IN),
                 Arguments.of(JourneyType.PASSWORD_RESET_MFA, CodeRequestType.PW_RESET_MFA_AUTH_APP),
                 Arguments.of(
-                        JourneyType.REAUTHENTICATE_MFA, CodeRequestType.AUTH_APP_REAUTHENTICATION));
+                        JourneyType.REAUTHENTICATION, CodeRequestType.AUTH_APP_REAUTHENTICATION));
     }
 
     @ParameterizedTest
@@ -585,7 +583,7 @@ class VerifyMfaCodeHandlerTest {
                 List.of(
                                         JourneyType.SIGN_IN,
                                         JourneyType.PASSWORD_RESET_MFA,
-                                        JourneyType.REAUTHENTICATE_MFA)
+                                        JourneyType.REAUTHENTICATION)
                                 .contains(journeyType)
                         ? null
                         : AUTH_APP_SECRET;
@@ -624,7 +622,7 @@ class VerifyMfaCodeHandlerTest {
                 Arguments.of(JourneyType.ACCOUNT_RECOVERY, CodeRequestType.SMS_ACCOUNT_RECOVERY),
                 Arguments.of(JourneyType.PASSWORD_RESET_MFA, CodeRequestType.PW_RESET_MFA_SMS),
                 Arguments.of(JourneyType.REGISTRATION, CodeRequestType.SMS_REGISTRATION),
-                Arguments.of(JourneyType.REAUTHENTICATE_MFA, CodeRequestType.SMS_REAUTHENTICATION));
+                Arguments.of(JourneyType.REAUTHENTICATION, CodeRequestType.SMS_REAUTHENTICATION));
     }
 
     @ParameterizedTest

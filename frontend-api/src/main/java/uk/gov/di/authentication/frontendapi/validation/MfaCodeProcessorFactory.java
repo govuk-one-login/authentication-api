@@ -43,7 +43,7 @@ public class MfaCodeProcessorFactory {
                         List.of(
                                                 JourneyType.SIGN_IN,
                                                 JourneyType.PASSWORD_RESET_MFA,
-                                                JourneyType.REAUTHENTICATE_MFA)
+                                                JourneyType.REAUTHENTICATION)
                                         .contains(codeRequest.getJourneyType())
                                 ? configurationService.getCodeMaxRetries()
                                 : configurationService.getCodeMaxRetriesRegistration();

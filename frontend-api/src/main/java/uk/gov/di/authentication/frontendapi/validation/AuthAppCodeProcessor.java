@@ -68,7 +68,7 @@ public class AuthAppCodeProcessor extends MfaCodeProcessor {
                 List.of(
                         JourneyType.SIGN_IN,
                         JourneyType.PASSWORD_RESET_MFA,
-                        JourneyType.REAUTHENTICATE_MFA);
+                        JourneyType.REAUTHENTICATION);
 
         if (isCodeBlockedForSession(codeBlockedKeyPrefix)) {
             LOG.info("Code blocked for session");

@@ -671,6 +671,6 @@ public class MfaHandlerTest {
         return Stream.of(
                 Arguments.of(JourneyType.PASSWORD_RESET_MFA),
                 Arguments.of(JourneyType.SIGN_IN),
-                Arguments.of(JourneyType.REAUTHENTICATE_MFA));
+                Arguments.of(JourneyType.REAUTHENTICATION));
     }
 }
