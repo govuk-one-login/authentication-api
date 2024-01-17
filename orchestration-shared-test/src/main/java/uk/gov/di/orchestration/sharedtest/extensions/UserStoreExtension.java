@@ -12,18 +12,13 @@ import software.amazon.awssdk.services.dynamodb.model.KeyType;
 import software.amazon.awssdk.services.dynamodb.model.ProjectionType;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
 import uk.gov.di.orchestration.shared.entity.ClientConsent;
-import uk.gov.di.orchestration.shared.entity.MFAMethod;
-import uk.gov.di.orchestration.shared.entity.MFAMethodType;
 import uk.gov.di.orchestration.shared.entity.TermsAndConditions;
-import uk.gov.di.orchestration.shared.entity.UserCredentials;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.sharedtest.basetest.DynamoTestConfiguration;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 public class UserStoreExtension extends DynamoExtension implements AfterEachCallback {
@@ -44,29 +39,11 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
 
     private DynamoService dynamoService;
 
-    public boolean userExists(String email) {
-        return dynamoService.userExists(email);
-    }
-
-    public String getEmailForUser(Subject subject) {
-        var credentials = dynamoService.getUserCredentialsFromSubject(subject.getValue());
-        return credentials.getEmail();
-    }
-
-    public String getPasswordForUser(String email) {
-        var credentials = dynamoService.getUserCredentialsFromEmail(email);
-        return credentials.getPassword();
-    }
-
     public String getPublicSubjectIdForEmail(String email) {
         return dynamoService
                 .getUserProfileByEmailMaybe(email)
                 .map(UserProfile::getPublicSubjectID)
                 .orElseThrow();
-    }
-
-    public Optional<String> getPhoneNumberForUser(String email) {
-        return dynamoService.getPhoneNumber(email);
     }
 
     public void signUp(String email, String password) {
@@ -75,16 +52,6 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
 
     public String signUp(String email, String password, Subject subject) {
         return signUp(email, password, subject, false);
-    }
-
-    public String addUnverifiedUser(
-            String email, String password, Subject subject, String termsAndConditionsVersion) {
-        return signUp(
-                email, password, subject, false, Optional.ofNullable(termsAndConditionsVersion), 0);
-    }
-
-    public String addUnverifiedUser(String email, String password) {
-        return signUp(email, password, new Subject(), false, Optional.of("1.0"), 0);
     }
 
     public String signUp(
@@ -116,18 +83,6 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
         return dynamoService.getUserProfileByEmail(email).getPublicSubjectID();
     }
 
-    public void createBulkTestUsers(Map<UserProfile, UserCredentials> testUsers) {
-        dynamoService.createBatchTestUsers(testUsers);
-    }
-
-    public List<UserProfile> getAllTestUsers() {
-        return dynamoService.getAllBulkTestUsers();
-    }
-
-    public Optional<UserProfile> getUserProfileFromEmail(String email) {
-        return dynamoService.getUserProfileFromEmail(email);
-    }
-
     public void updateConsent(String email, ClientConsent clientConsent) {
         dynamoService.updateConsent(email, clientConsent);
     }
@@ -145,76 +100,10 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
                 email, phoneNumber, phoneNumberVerified, accountVerified);
     }
 
-    public void setAccountVerified(String email) {
-        dynamoService.setAccountVerified(email);
-    }
-
-    public List<MFAMethod> getMfaMethod(String email) {
-        return dynamoService.getUserCredentialsFromEmail(email).getMfaMethods();
-    }
-
     public byte[] addSalt(String email) {
         UserProfile userProfile = dynamoService.getUserProfileByEmailMaybe(email).orElseThrow();
 
         return dynamoService.getOrGenerateSalt(userProfile);
-    }
-
-    public Optional<List<ClientConsent>> getUserConsents(String email) {
-        return dynamoService.getUserConsents(email);
-    }
-
-    public void updateTermsAndConditions(String email, String version) {
-        dynamoService.updateTermsAndConditions(email, version);
-    }
-
-    public boolean isAccountVerified(String email) {
-        return dynamoService.getUserProfileByEmail(email).getAccountVerified() == 1;
-    }
-
-    public boolean isPhoneNumberVerified(String email) {
-        return dynamoService.getUserProfileByEmail(email).isPhoneNumberVerified();
-    }
-
-    public boolean isAuthAppVerified(String email) {
-        return Optional.ofNullable(dynamoService.getUserCredentialsFromEmail(email).getMfaMethods())
-                .map(
-                        t ->
-                                t.stream()
-                                        .filter(
-                                                e ->
-                                                        e.getMfaMethodType()
-                                                                .equals(
-                                                                        MFAMethodType.AUTH_APP
-                                                                                .getValue()))
-                                        .anyMatch(MFAMethod::isMethodVerified))
-                .orElse(false);
-    }
-
-    public boolean isAuthAppEnabled(String email) {
-        var mfaMethods = dynamoService.getUserCredentialsFromEmail(email).getMfaMethods();
-        return mfaMethods != null
-                && mfaMethods.stream()
-                        .filter(t -> t.getMfaMethodType().equals(MFAMethodType.AUTH_APP.getValue()))
-                        .anyMatch(MFAMethod::isEnabled);
-    }
-
-    public void addMfaMethod(
-            String email,
-            MFAMethodType mfaMethodType,
-            boolean isVerified,
-            boolean isEnabled,
-            String credentialValue) {
-        dynamoService.updateMFAMethod(email, mfaMethodType, isVerified, isEnabled, credentialValue);
-    }
-
-    public void updateMFAMethod(
-            String email,
-            MFAMethodType mfaMethodType,
-            boolean methodVerified,
-            boolean enabled,
-            String credentialValue) {
-        dynamoService.updateMFAMethod(
-                email, mfaMethodType, methodVerified, enabled, credentialValue);
     }
 
     @Override

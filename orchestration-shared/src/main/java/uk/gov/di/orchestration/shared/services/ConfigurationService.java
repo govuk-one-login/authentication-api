@@ -12,13 +12,11 @@ import software.amazon.awssdk.services.ssm.model.Parameter;
 import software.amazon.awssdk.services.ssm.model.ParameterNotFoundException;
 import uk.gov.di.orchestration.shared.configuration.AuditPublisherConfiguration;
 import uk.gov.di.orchestration.shared.configuration.BaseLambdaConfiguration;
-import uk.gov.di.orchestration.shared.entity.DeliveryReceiptsNotificationType;
 import uk.gov.di.orchestration.shared.exceptions.SSMParameterNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.LocaleHelper.SupportedLanguage;
 
 import java.net.URI;
 import java.time.Clock;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -41,7 +39,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     private SsmClient ssmClient;
     private Map<String, String> ssmRedisParameters;
 
-    private String notifyCallbackBearerToken;
     protected SystemService systemService;
 
     public ConfigurationService() {}
@@ -86,16 +83,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public long getAuthCodeExpiry() {
         return Long.parseLong(System.getenv().getOrDefault("AUTH_CODE_EXPIRY", "300"));
-    }
-
-    public List<String> getBulkUserEmailIncludedTermsAndConditions() {
-        String configurationValue =
-                systemService.getOrDefault("BULK_USER_EMAIL_INCLUDED_TERMS_AND_CONDITIONS", "");
-        if (configurationValue == null || configurationValue.isEmpty()) {
-            return List.of();
-        } else {
-            return Arrays.stream(configurationValue.split(",")).collect(Collectors.toList());
-        }
     }
 
     public Clock getClock() {
@@ -296,40 +283,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public URI getLoginURI() {
         return URI.create(System.getenv("LOGIN_URI"));
-    }
-
-    public String getNotifyCallbackBearerToken() {
-        if (notifyCallbackBearerToken == null) {
-
-            var request =
-                    GetParameterRequest.builder()
-                            .withDecryption(true)
-                            .name(format("{0}-notify-callback-bearer-token", getEnvironment()))
-                            .build();
-
-            notifyCallbackBearerToken = getSsmClient().getParameter(request).parameter().value();
-        }
-
-        return notifyCallbackBearerToken;
-    }
-
-    public Optional<DeliveryReceiptsNotificationType> getNotificationTypeFromTemplateId(
-            String templateId) {
-        for (DeliveryReceiptsNotificationType type : DeliveryReceiptsNotificationType.values()) {
-            if (commaSeparatedListContains(
-                    templateId, systemService.getenv(type.getTemplateName()))) {
-                return Optional.of(type);
-            }
-        }
-        return Optional.empty();
-    }
-
-    boolean commaSeparatedListContains(String searchTerm, String stringToSearch) {
-        return (searchTerm != null
-                && !searchTerm.isBlank()
-                && stringToSearch != null
-                && !stringToSearch.isBlank()
-                && Arrays.stream(stringToSearch.split(",")).anyMatch(id -> id.equals(searchTerm)));
     }
 
     public Optional<String> getOidcApiBaseURL() {

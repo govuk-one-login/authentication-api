@@ -85,9 +85,5 @@ public class Argon2MatcherHelper {
         public Argon2Parameters getParameters() {
             return this.parameters;
         }
-
-        public void setParameters(Argon2Parameters parameters) {
-            this.parameters = parameters;
-        }
     }
 }
