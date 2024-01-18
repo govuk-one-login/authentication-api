@@ -470,7 +470,8 @@ class AuthorisationHandlerTest {
         void shouldRedirectToLoginWhenUserNeedsToBeUplifted() {
             session.setCurrentCredentialStrength(CredentialTrustLevel.LOW_LEVEL);
             withExistingSession(session);
-            when(clientSession.getEffectiveVectorOfTrust()).thenReturn(VectorOfTrust.getDefaults());
+            when(clientSession.getVtrWithLowestCredentialTrustLevel())
+                    .thenReturn(VectorOfTrust.getDefaults());
             when(userContext.getClientSession()).thenReturn(clientSession);
             when(userContext.getSession()).thenReturn(session);
             when(clientSession.getAuthRequestParams())

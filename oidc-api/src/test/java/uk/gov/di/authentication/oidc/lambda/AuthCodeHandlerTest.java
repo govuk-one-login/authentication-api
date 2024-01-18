@@ -570,7 +570,7 @@ class AuthCodeHandlerTest {
         when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(clientSession));
         when(vectorOfTrust.getCredentialTrustLevel()).thenReturn(requestedLevel);
-        when(clientSession.getEffectiveVectorOfTrust()).thenReturn(vectorOfTrust);
+        when(clientSession.getVtrWithLowestCredentialTrustLevel()).thenReturn(vectorOfTrust);
         when(clientSession.getAuthRequestParams()).thenReturn(authRequestParams);
         when(clientSession.getClientName()).thenReturn(CLIENT_NAME);
     }

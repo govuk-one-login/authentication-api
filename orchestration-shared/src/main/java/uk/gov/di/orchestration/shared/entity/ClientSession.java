@@ -5,6 +5,7 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -65,6 +66,30 @@ public class ClientSession {
         this.effectiveVectorOfTrust = effectiveVectorOfTrust;
         this.vtrList.add(effectiveVectorOfTrust);
         return this;
+    }
+
+    public VectorOfTrust getVtrWithLowestCredentialTrustLevel() {
+        return this.vtrList.stream()
+                .filter(vot -> vot.getLevelOfConfidence() != null)
+                .min(
+                        Comparator.comparing(
+                                        VectorOfTrust::getLevelOfConfidence,
+                                        Comparator.nullsFirst(Comparator.naturalOrder()))
+                                .thenComparing(
+                                        VectorOfTrust::getCredentialTrustLevel,
+                                        Comparator.nullsFirst(Comparator.naturalOrder())))
+                .orElseGet(
+                        () ->
+                                this.vtrList.stream()
+                                        .min(
+                                                Comparator.comparing(
+                                                        VectorOfTrust::getCredentialTrustLevel,
+                                                        Comparator.nullsFirst(
+                                                                Comparator.naturalOrder())))
+                                        .orElseThrow(
+                                                () ->
+                                                        new IllegalArgumentException(
+                                                                "Invalid VTR attribute")));
     }
 
     public Subject getDocAppSubjectId() {

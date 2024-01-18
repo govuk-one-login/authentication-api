@@ -323,7 +323,7 @@ public class AuthCodeHandler
         if (!orchestrationAuthorizationService.isClientRedirectUriValid(clientID, redirectUri)) {
             throw new ProcessAuthRequestException(400, ErrorResponse.ERROR_1016);
         }
-        VectorOfTrust requestedVectorOfTrust = clientSession.getEffectiveVectorOfTrust();
+        VectorOfTrust requestedVectorOfTrust = clientSession.getVtrWithLowestCredentialTrustLevel();
         if (isNull(session.getCurrentCredentialStrength())
                 || requestedVectorOfTrust
                                 .getCredentialTrustLevel()
