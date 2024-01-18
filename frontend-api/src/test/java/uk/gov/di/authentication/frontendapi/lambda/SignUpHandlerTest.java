@@ -26,6 +26,7 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.TermsAndConditions;
 import uk.gov.di.authentication.shared.entity.User;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -102,7 +103,8 @@ class SignUpHandlerTest {
 
     private final Session session = new Session(IdGenerator.generate());
     private final ClientSession clientSession =
-            new ClientSession(generateAuthRequest().toParameters(), null, null, CLIENT_NAME);
+            new ClientSession(
+                    generateAuthRequest().toParameters(), null, (VectorOfTrust) null, CLIENT_NAME);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging =

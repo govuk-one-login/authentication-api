@@ -37,6 +37,18 @@ public class ClientSession {
         this.clientName = clientName;
     }
 
+    public ClientSession(
+            Map<String, List<String>> authRequestParams,
+            LocalDateTime creationDate,
+            List<VectorOfTrust> vtrList,
+            String clientName) {
+        this.authRequestParams = authRequestParams;
+        this.creationDate = creationDate;
+        this.vtrList = vtrList;
+        this.effectiveVectorOfTrust = getVtrWithLowestCredentialTrustLevel();
+        this.clientName = clientName;
+    }
+
     public ClientSession setIdTokenHint(String idTokenHint) {
         this.idTokenHint = idTokenHint;
         return this;
@@ -52,10 +64,6 @@ public class ClientSession {
 
     public LocalDateTime getCreationDate() {
         return creationDate;
-    }
-
-    public VectorOfTrust getEffectiveVectorOfTrust() {
-        return effectiveVectorOfTrust;
     }
 
     public List<VectorOfTrust> getVtrList() {
