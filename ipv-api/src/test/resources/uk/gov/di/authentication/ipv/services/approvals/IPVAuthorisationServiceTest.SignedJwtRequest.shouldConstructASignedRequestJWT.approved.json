@@ -18,7 +18,12 @@
       "https://vocab.account.gov.uk/v1/coreIdentityJWT": {
         "essential": true
       },
-      "https://vocab.account.gov.uk/v1/address": null
+      "https://vocab.account.gov.uk/v1/address": null,
+      "https://vocab.account.gov.uk/v1/inheritedIdentityJWT": {
+        "values": [
+          "jwt"
+        ]
+      }
     }
   },
   "state": "test-state",
