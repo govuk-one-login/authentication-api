@@ -128,6 +128,11 @@ public class ClientConfigValidationService {
                 .orElse(true)) {
             return Optional.of(INVALID_CLIENT_TYPE);
         }
+        if (!Optional.ofNullable(updateRequest.getClientLoCs())
+                .map(this::areClientLoCsValid)
+                .orElse(true)) {
+            return Optional.of(INVALID_CLIENT_LOCS);
+        }
         return Optional.empty();
     }
 

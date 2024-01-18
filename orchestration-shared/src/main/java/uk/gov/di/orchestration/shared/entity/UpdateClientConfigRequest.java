@@ -51,6 +51,10 @@ public class UpdateClientConfigRequest {
     @Expose
     private String clientType;
 
+    @SerializedName("accepted_levels_of_confidence")
+    @Expose
+    private List<String> clientLoCs;
+
     public UpdateClientConfigRequest() {}
 
     public String getClientId() {
@@ -95,6 +99,10 @@ public class UpdateClientConfigRequest {
 
     public String getClientType() {
         return clientType;
+    }
+
+    public List<String> getClientLoCs() {
+        return clientLoCs;
     }
 
     public UpdateClientConfigRequest setClientId(String clientId) {
@@ -145,6 +153,11 @@ public class UpdateClientConfigRequest {
 
     public UpdateClientConfigRequest setClientType(String clientType) {
         this.clientType = clientType;
+        return this;
+    }
+
+    public UpdateClientConfigRequest setClientLoCs(List<String> clientLoCs) {
+        this.clientLoCs = clientLoCs;
         return this;
     }
 
