@@ -272,6 +272,7 @@ class AuthCodeHandlerTest {
                         any(URI.class),
                         any(State.class)))
                 .thenReturn(authSuccessResponse);
+        when(clientSession.getVtrLocsAsCommaSeparatedString()).thenReturn("P0");
 
         var response = generateApiRequest();
 

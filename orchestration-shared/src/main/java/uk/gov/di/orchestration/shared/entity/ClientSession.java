@@ -104,4 +104,20 @@ public class ClientSession {
     public String getClientName() {
         return clientName;
     }
+
+    public String getVtrLocsAsCommaSeparatedString() {
+        StringBuilder strBuilder = new StringBuilder();
+        for (VectorOfTrust vtr : this.vtrList) {
+            String loc =
+                    vtr.containsLevelOfConfidence()
+                            ? vtr.getLevelOfConfidence().getValue()
+                            : LevelOfConfidence.NONE.getValue();
+            strBuilder.append(loc).append(",");
+        }
+        if (strBuilder.length() > 0) {
+            strBuilder.setLength(strBuilder.length() - 1);
+            return strBuilder.toString();
+        }
+        return "";
+    }
 }
