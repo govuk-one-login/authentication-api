@@ -12,7 +12,7 @@ public class EmailCheckResultStore {
     public static final String ATTRIBUTE_TIME_TO_EXIST = "TimeToExist";
 
     private String email;
-    private String status;
+    private EmailCheckResultStatus status;
     private long timeToExist;
 
     @DynamoDbPartitionKey
@@ -31,15 +31,15 @@ public class EmailCheckResultStore {
     }
 
     @DynamoDbAttribute(ATTRIBUTE_STATUS)
-    public String getStatus() {
+    public EmailCheckResultStatus getStatus() {
         return status;
     }
 
-    public void setStatus(String status) {
+    public void setStatus(EmailCheckResultStatus status) {
         this.status = status;
     }
 
-    public EmailCheckResultStore withStatus(String status) {
+    public EmailCheckResultStore withStatus(EmailCheckResultStatus status) {
         this.status = status;
         return this;
     }

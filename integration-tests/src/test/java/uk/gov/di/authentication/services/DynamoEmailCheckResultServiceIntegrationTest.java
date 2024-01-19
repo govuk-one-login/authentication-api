@@ -2,6 +2,7 @@ package uk.gov.di.authentication.services;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import uk.gov.di.authentication.shared.entity.EmailCheckResultStatus;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoEmailCheckResultService;
@@ -17,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class DynamoEmailCheckResultServiceIntegrationTest {
 
     private static String email = "test.user@example.com";
-    private static String status = "some-status";
+    private static EmailCheckResultStatus status = EmailCheckResultStatus.PENDING;
 
     DynamoEmailCheckResultService dynamoEmailCheckResultService =
             new DynamoEmailCheckResultService(ConfigurationService.getInstance());
