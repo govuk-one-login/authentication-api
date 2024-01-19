@@ -1,27 +1,26 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-###Export The di-Auth-devlopment account profile below 
 export AWS_PROFILE=di-auth-dev
 
-envvalue=( "authdev1" "authdev2"  )
+envvalue=("authdev1" "authdev2")
 
 select word in "${envvalue[@]}"; do
-    if [[ -z "$word" ]]; then
-        printf '"%s" is not a valid choice\n' "$REPLY" >&2
-    else
-        user_in="$(( REPLY - 1 ))"
-        break
-    fi
+  if [[ -z "$word" ]]; then
+    printf '"%s" is not a valid choice\n' "$REPLY" >&2
+  else
+    user_in="$((REPLY - 1))"
+    break
+  fi
 done
 
-for (( i = 0; i < ${#envvalue[@]}; ++i )); do
-    if (( i == user_in )); then
-        printf 'You picked "%s"\n' "${envvalue[$i]}"
-        export env=${envvalue[$i]}
-        printf "deploying in enviorment %s\n" "$env"
-        read -r -p "Press enter to continue or ctr c to abort"
-    fi
+for ((i = 0; i < ${#envvalue[@]}; ++i)); do
+  if ((i == user_in)); then
+    printf 'You picked "%s"\n' "${envvalue[$i]}"
+    export env=${envvalue[$i]}
+    printf "deploying in environment %s\n" "$env"
+    read -r -p "Press enter to continue or ctrl+c to abort"
+  fi
 done
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
@@ -143,7 +142,6 @@ while [[ $# -gt 0 ]]; do
   esac
   shift
 done
-
 
 if [[ $BUILD == "1" ]]; then
   echo "Building deployment artefacts ... "
