@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.shared.services;
 
 import uk.gov.di.authentication.shared.entity.EmailCheckResultStore;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 
 import java.util.Optional;
 
@@ -11,7 +12,8 @@ public class DynamoEmailCheckResultService extends BaseDynamoService<EmailCheckR
     }
 
     public Optional<EmailCheckResultStore> getEmailCheckStore(String email) {
-        return get(email);
+        return get(email)
+                .filter(t -> t.getTimeToExist() > NowHelper.now().toInstant().getEpochSecond());
     }
 
     public void saveEmailCheckResult(String email, String status, Long timeToExist) {

@@ -11,6 +11,7 @@ import java.time.temporal.ChronoUnit;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DynamoEmailCheckResultServiceIntegrationTest {
@@ -34,6 +35,17 @@ class DynamoEmailCheckResultServiceIntegrationTest {
         assertTrue(result.isPresent());
         assertThat(result.get().getEmail(), equalTo(email));
         assertThat(result.get().getStatus(), equalTo(status));
+    }
+
+    @Test
+    void shouldNotReturnAnEmailCheckResultWhenTimeToLiveHasExpired() {
+        long unixTimeInThePast =
+                NowHelper.nowPlus(-1, ChronoUnit.DAYS).toInstant().getEpochSecond();
+        dynamoEmailCheckResultService.saveEmailCheckResult(email, status, unixTimeInThePast);
+
+        var result = dynamoEmailCheckResultService.getEmailCheckStore(email);
+
+        assertFalse(result.isPresent());
     }
 
     private long unixTimePlusNDays(Integer numberOfDays) {
