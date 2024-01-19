@@ -79,6 +79,8 @@ resource "aws_api_gateway_deployment" "frontend_deployment" {
       module.orch_auth_code.method_trigger_value,
       module.identity_progress.integration_trigger_value,
       module.identity_progress.method_trigger_value,
+      local.deploy_account_interventions_count == 1 ? module.account_interventions[0].integration_trigger_value : null,
+      local.deploy_account_interventions_count == 1 ? module.account_interventions[0].method_trigger_value : null,
       local.account_modifiers_encryption_policy_arn,
     ]))
   }
