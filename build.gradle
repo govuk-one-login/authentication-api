@@ -12,7 +12,7 @@ plugins {
     id "com.diffplug.spotless" version "6.25.0"
     id "com.avast.gradle.docker-compose" version "0.17.6"
     id "org.sonarqube" version "4.4.1.3373"
-    id "jacoco"
+    id "jacoco-report-aggregation"
 }
 
 apply plugin: "java"
@@ -337,13 +337,53 @@ task utilsTerraform (type: Terraform) {
     dependsOn "oidcTerraform"
 }
 
+String jacocoBuildReportPath = "reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml"
+
 sonarqube {
     properties {
         property "sonar.projectKey", "govuk-one-login_authentication-api"
         property "sonar.organization", "govuk-one-login"
         property "sonar.host.url", "https://sonarcloud.io"
-        property "sonar.coverage.exclusions", "**/shared-test/**,**/orchestration-shared-test/**"
+        property "sonar.coverage.exclusions", "**/shared-test/**,**/orchestration-shared-test/**,**/orchestration-shared-test/**"
+        property "sonar.coverage.jacoco.xmlReportPaths", "$project.buildDir/$jacocoBuildReportPath"
     }
+}
+
+subprojects {
+    sonar {
+        properties {
+            property 'sonar.coverage.jacoco.xmlReportPaths', "$projectDir.parentFile.path/build/$jacocoBuildReportPath"
+        }
+    }
+}
+
+reporting {
+    reports {
+        testCodeCoverageReport(JacocoCoverageReport) {
+            testType = TestSuiteType.UNIT_TEST
+        }
+    }
+}
+
+dependencies {
+    jacocoAggregation project(':account-management-api')
+    jacocoAggregation project(':client-registry-api')
+    jacocoAggregation project(':frontend-api')
+    jacocoAggregation project(':integration-tests')
+    jacocoAggregation project(':account-management-integration-tests')
+    jacocoAggregation project(':oidc-api')
+    jacocoAggregation project(':shared')
+    jacocoAggregation project(':orchestration-shared')
+    jacocoAggregation project(':orchestration-shared-test')
+    jacocoAggregation project(':shared-test')
+    jacocoAggregation project(':delivery-receipts-api')
+    jacocoAggregation project(':ipv-api')
+    jacocoAggregation project(':delivery-receipts-integration-tests')
+    jacocoAggregation project(':doc-checking-app-api')
+    jacocoAggregation project(':utils')
+    jacocoAggregation project(':test-services-api')
+    jacocoAggregation project(':auth-external-api')
+    jacocoAggregation project(':interventions-api-stub')
 }
 
 jacocoTestReport {
