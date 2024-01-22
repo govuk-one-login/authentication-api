@@ -114,6 +114,7 @@ public class LogoutServiceTest {
 
         when(configurationService.getDefaultLogoutURI()).thenReturn(DEFAULT_LOGOUT_URI);
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
+        when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_API_BASE_URL));
         logoutService =
                 new LogoutService(
                         configurationService,
@@ -263,7 +264,6 @@ public class LogoutServiceTest {
 
     @Test
     void destroysSessionsAndReturnsAccountInterventionLogoutResponseWhenAccountIsBlocked() {
-        when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_API_BASE_URL));
         var accountStatus = new AccountInterventionStatus(true, false, false, false);
         APIGatewayProxyResponseEvent response =
                 logoutService.handleAccountInterventionLogout(
@@ -296,7 +296,6 @@ public class LogoutServiceTest {
 
     @Test
     void destroysSessionsAndReturnsAccountInterventionLogoutResponseWhenAccountIsSuspended() {
-        when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_API_BASE_URL));
         var accountStatus = new AccountInterventionStatus(false, true, false, false);
         APIGatewayProxyResponseEvent response =
                 logoutService.handleAccountInterventionLogout(
