@@ -7,17 +7,21 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.net.URI;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 class ClientSessionTest {
@@ -58,6 +62,35 @@ class ClientSessionTest {
         var css = clientSession.getVtrLocsAsCommaSeparatedString();
 
         assertThat(css, equalTo(expectedCss));
+    }
+
+    @Test
+    void shouldThrowExceptionForEmptyVtrList() {
+        ClientSession clientSession =
+                new ClientSession(
+                        generateAuthRequest().toParameters(),
+                        LocalDateTime.now(),
+                        Collections.emptyList(),
+                        CLIENT_NAME);
+
+        IllegalArgumentException exception =
+                assertThrows(
+                        IllegalArgumentException.class,
+                        () -> clientSession.getVtrWithLowestCredentialTrustLevel());
+
+        assertEquals("Invalid VTR attribute", exception.getMessage());
+    }
+
+    @Test
+    void shouldReturnEmptyStringForEmptyVtrList() {
+        ClientSession clientSession =
+                new ClientSession(
+                        generateAuthRequest().toParameters(),
+                        LocalDateTime.now(),
+                        Collections.emptyList(),
+                        CLIENT_NAME);
+
+        assertEquals("", clientSession.getVtrLocsAsCommaSeparatedString());
     }
 
     private static Stream<Arguments> lowestCtrTestCases() {
@@ -142,20 +175,20 @@ class ClientSessionTest {
                         List.of(
                                 VectorOfTrust.of(
                                         CredentialTrustLevel.getDefault(),
-                                        LevelOfConfidence.LOW_LEVEL),
+                                        LevelOfConfidence.VERY_HIGH_LEVEL),
                                 VectorOfTrust.of(
                                         CredentialTrustLevel.getDefault(),
-                                        LevelOfConfidence.VERY_HIGH_LEVEL),
+                                        LevelOfConfidence.LOW_LEVEL),
                                 VectorOfTrust.of(
                                         CredentialTrustLevel.getDefault(),
                                         LevelOfConfidence.MEDIUM_LEVEL),
                                 VectorOfTrust.of(
                                         CredentialTrustLevel.getDefault(),
                                         LevelOfConfidence.LOW_LEVEL)),
-                        "P1,P4,P2,P1"));
+                        "P1,P1,P2,P4"));
     }
 
-    public static AuthenticationRequest generateAuthRequest() {
+    private static AuthenticationRequest generateAuthRequest() {
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         State state = new State();
         Scope scope = new Scope();

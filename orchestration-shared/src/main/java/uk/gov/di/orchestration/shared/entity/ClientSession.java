@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class ClientSession {
 
@@ -45,7 +46,9 @@ public class ClientSession {
         this.authRequestParams = authRequestParams;
         this.creationDate = creationDate;
         this.vtrList = vtrList;
-        this.effectiveVectorOfTrust = getVtrWithLowestCredentialTrustLevel();
+        if (vtrList.size() > 0) {
+            this.effectiveVectorOfTrust = getVtrWithLowestCredentialTrustLevel();
+        }
         this.clientName = clientName;
     }
 
@@ -77,27 +80,11 @@ public class ClientSession {
     }
 
     public VectorOfTrust getVtrWithLowestCredentialTrustLevel() {
-        return this.vtrList.stream()
-                .filter(vot -> vot.getLevelOfConfidence() != null)
-                .min(
-                        Comparator.comparing(
-                                        VectorOfTrust::getLevelOfConfidence,
-                                        Comparator.nullsFirst(Comparator.naturalOrder()))
-                                .thenComparing(
-                                        VectorOfTrust::getCredentialTrustLevel,
-                                        Comparator.nullsFirst(Comparator.naturalOrder())))
-                .orElseGet(
-                        () ->
-                                this.vtrList.stream()
-                                        .min(
-                                                Comparator.comparing(
-                                                        VectorOfTrust::getCredentialTrustLevel,
-                                                        Comparator.nullsFirst(
-                                                                Comparator.naturalOrder())))
-                                        .orElseThrow(
-                                                () ->
-                                                        new IllegalArgumentException(
-                                                                "Invalid VTR attribute")));
+        List<VectorOfTrust> orderedVtrList = orderVtrList();
+        if (orderedVtrList.isEmpty()) {
+            throw new IllegalArgumentException("Invalid VTR attribute");
+        }
+        return orderedVtrList.get(0);
     }
 
     public Subject getDocAppSubjectId() {
@@ -114,8 +101,9 @@ public class ClientSession {
     }
 
     public String getVtrLocsAsCommaSeparatedString() {
+        List<VectorOfTrust> orderedVtrList = orderVtrList();
         StringBuilder strBuilder = new StringBuilder();
-        for (VectorOfTrust vtr : this.vtrList) {
+        for (VectorOfTrust vtr : orderedVtrList) {
             String loc =
                     vtr.containsLevelOfConfidence()
                             ? vtr.getLevelOfConfidence().getValue()
@@ -127,5 +115,17 @@ public class ClientSession {
             return strBuilder.toString();
         }
         return "";
+    }
+
+    private List<VectorOfTrust> orderVtrList() {
+        return this.vtrList.stream()
+                .sorted(
+                        Comparator.comparing(
+                                        VectorOfTrust::getLevelOfConfidence,
+                                        Comparator.nullsFirst(Comparator.naturalOrder()))
+                                .thenComparing(
+                                        VectorOfTrust::getCredentialTrustLevel,
+                                        Comparator.nullsFirst(Comparator.naturalOrder())))
+                .collect(Collectors.toList());
     }
 }
