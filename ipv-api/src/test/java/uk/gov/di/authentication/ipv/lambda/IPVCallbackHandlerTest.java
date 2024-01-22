@@ -775,29 +775,8 @@ class IPVCallbackHandlerTest {
 
         assertDoesRedirectToFrontendErrorPage(event, "error");
 
-        verify(auditService)
-                .submitAuditEvent(
-                        IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        CLIENT_ID.getValue(),
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        AuditService.UNKNOWN,
-                        userProfile.getPhoneNumber(),
-                        PERSISTENT_SESSION_ID);
-
-        verify(auditService)
-                .submitAuditEvent(
-                        IPVAuditableEvent.IPV_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
-                        CLIENT_SESSION_ID,
-                        SESSION_ID,
-                        CLIENT_ID.getValue(),
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        AuditService.UNKNOWN,
-                        userProfile.getPhoneNumber(),
-                        PERSISTENT_SESSION_ID);
+        verifyAuditEvent(IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED);
+        verifyAuditEvent(IPVAuditableEvent.IPV_UNSUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
 
         verifyNoMoreInteractions(auditService);
         verifyNoInteractions(dynamoIdentityService);
