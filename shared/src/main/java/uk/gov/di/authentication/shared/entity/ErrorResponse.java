@@ -66,7 +66,8 @@ public enum ErrorResponse {
     ERROR_1052(1052, "Account Interventions API response Server Error"),
     ERROR_1053(1053, "Account Interventions API Bad Gateway"),
     ERROR_1054(1054, "Account Interventions API Gateway Timeout"),
-    ERROR_1055(1055, "Account Interventions API Unexpected Error");
+    ERROR_1055(1055, "Account Interventions API Unexpected Error"),
+    ERROR_1056(1056, "MFA Method(s) not found for the provided parameters");
 
     private int code;
 

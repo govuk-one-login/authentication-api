@@ -50,6 +50,7 @@ locals {
   }
 
   request_tracing_allowed = contains(["build", "sandpit"], var.environment)
+  deploy_get_mfa_methods_count = contains(["build", "sandpit"], var.environment) ? 1 : 0
 
   access_logging_template = jsonencode({
     requestId                    = "$context.requestId"
