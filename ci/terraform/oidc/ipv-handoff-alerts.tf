@@ -20,6 +20,28 @@ resource "aws_cloudwatch_log_metric_filter" "ipv_authorize_metric_filter" {
   }
 }
 
+data "aws_cloudwatch_log_group" "authentication_callback_lambda_log_group" {
+  count = var.use_localstack ? 0 : 1
+  name  = replace("/aws/lambda/${var.environment}-orchestration-redirect-lambda", ".", "")
+
+  depends_on = [
+    module.authentication_callback
+  ]
+}
+
+resource "aws_cloudwatch_log_metric_filter" "authentication_callback_metric_filter" {
+  count          = var.use_localstack ? 0 : 1
+  name           = replace("${var.environment}-ipv-handoff-p1-post-split-errors", ".", "")
+  pattern        = "{($.level = \"ERROR\")}"
+  log_group_name = data.aws_cloudwatch_log_group.authentication_callback_lambda_log_group[0].name
+
+  metric_transformation {
+    name      = replace("${var.environment}-ipv-handoff-post-split-error-count", ".", "")
+    namespace = "LambdaErrorsNamespace"
+    value     = "1"
+  }
+}
+
 resource "aws_cloudwatch_metric_alarm" "ipv_handoff_p1_cloudwatch_alarm" {
   count               = var.use_localstack ? 0 : 1
   alarm_name          = replace("${var.environment}-P1-ipv-handoff-alarm", ".", "")
