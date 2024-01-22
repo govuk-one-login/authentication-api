@@ -1,0 +1,30 @@
+name: Contract test
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - ready_for_review
+      - synchronize
+  merge_group:
+    # merge main
+    branches: [ main ]
+
+jobs:
+
+  contract-testing:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v3
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'gradle'
+      - name: Run contract tests
+        run: ./gradlew --parallel ipv-api:contractTest
+      - name: Upload pacts to broker
+        if: ${{ github.actor != 'dependabot[bot]' && github.event_name != 'merge_group' }}
+        run: pact-broker publish */pact/ --consumer-app-version ${{ github.sha }} --branch ${{ github.ref_name }} -u=${{ secrets.PACT_USER }} -p=${{ secrets.PACT_PASSWORD }} -b=${{ secrets.PACT_URL }}
