@@ -255,7 +255,7 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_frontend_api" {
     name     = "${var.environment}-frontend-waf-rate-based-rule"
     statement {
       rate_based_statement {
-        limit              = var.environment == "staging" ? 10000000 : 7200
+        limit              = var.environment == "staging" ? 10000000 : 36000
         aggregate_key_type = "IP"
       }
     }
