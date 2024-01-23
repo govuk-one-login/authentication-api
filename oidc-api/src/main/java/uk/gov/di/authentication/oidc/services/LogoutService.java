@@ -178,7 +178,7 @@ public class LogoutService {
         // Temporarily redirect to auth frontend (in staging and production) instead of orch
         // frontend, while orch frontend is not deployed in these envs.
         String env = configurationService.getEnvironment();
-        if (env == "staging" || env == "production") {
+        if (env.equals("staging") || env.equals("production")) {
             baseRedirectUrl = configurationService.getFrontendBaseUrl();
             if (accountStatus.blocked()) {
                 redirectPath = "/unavailable-permanent";

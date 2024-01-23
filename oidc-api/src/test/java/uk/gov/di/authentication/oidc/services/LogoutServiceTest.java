@@ -99,6 +99,8 @@ public class LogoutServiceTest {
 
     private static final String OIDC_API_BASE_URL = "https://oidc.test.account.gov.uk/";
 
+    private static final String ENVIRONMENT = "test";
+
     private SignedJWT signedIDToken;
     private Optional<String> audience;
     private Session session;
@@ -115,6 +117,7 @@ public class LogoutServiceTest {
         when(configurationService.getDefaultLogoutURI()).thenReturn(DEFAULT_LOGOUT_URI);
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_API_BASE_URL));
+        when(configurationService.getEnvironment()).thenReturn(ENVIRONMENT);
         logoutService =
                 new LogoutService(
                         configurationService,
