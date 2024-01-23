@@ -472,3 +472,38 @@ resource "aws_dynamodb_table" "authentication_callback_userinfo" {
 
   tags = local.default_tags
 }
+
+resource "aws_dynamodb_table" "email-check-result" {
+  name         = "${var.environment}-email-check-result"
+  billing_mode = var.provision_dynamo ? "PROVISIONED" : "PAY_PER_REQUEST"
+
+  hash_key = "Email"
+
+  read_capacity  = var.provision_dynamo ? var.dynamo_default_read_capacity : null
+  write_capacity = var.provision_dynamo ? var.dynamo_default_write_capacity : null
+
+  attribute {
+    name = "Email"
+    type = "S"
+  }
+
+  ttl {
+    attribute_name = "TimeToExist"
+    enabled        = true
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+
+  server_side_encryption {
+    enabled     = true
+    kms_key_arn = aws_kms_key.email_check_result_encryption_key.arn
+  }
+
+  lifecycle {
+    prevent_destroy = false
+  }
+
+  tags = local.default_tags
+}
