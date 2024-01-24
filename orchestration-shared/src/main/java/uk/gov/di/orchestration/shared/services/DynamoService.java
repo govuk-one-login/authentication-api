@@ -55,6 +55,15 @@ public class DynamoService implements AuthenticationService {
     private static final String TEST_USER_INDEX_NAME = "TestUserIndex";
     private static final Logger LOG = LogManager.getLogger(DynamoService.class);
 
+    public DynamoService(
+            DynamoDbTable<UserProfile> dynamoUserProfileTable,
+            DynamoDbTable<UserCredentials> dynamoUserCredentialsTable,
+            DynamoDbEnhancedClient dynamoDbEnhancedClient) {
+        this.dynamoUserProfileTable = dynamoUserProfileTable;
+        this.dynamoUserCredentialsTable = dynamoUserCredentialsTable;
+        this.dynamoDbEnhancedClient = dynamoDbEnhancedClient;
+    }
+
     public DynamoService(ConfigurationService configurationService) {
         String userProfileTableName =
                 configurationService.getEnvironment() + "-" + USER_PROFILE_TABLE;
@@ -173,8 +182,13 @@ public class DynamoService implements AuthenticationService {
 
     @Override
     public UserProfile getUserProfileByEmail(String email) {
-        return dynamoUserProfileTable.getItem(
-                Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
+        if (email != null) {
+            return dynamoUserProfileTable.getItem(
+                    Key.builder().partitionValue(email.toLowerCase(Locale.ROOT)).build());
+        } else {
+            LOG.warn("Cannot get user profile as email is null");
+            return null;
+        }
     }
 
     @Override

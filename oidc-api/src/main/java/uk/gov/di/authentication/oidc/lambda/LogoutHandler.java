@@ -89,12 +89,10 @@ public class LogoutHandler
             APIGatewayProxyRequestEvent input, Context context) {
         ThreadContext.clearMap();
         return segmentedFunctionCall(
-                "oidc-api::" + getClass().getSimpleName(),
-                () -> logoutRequestHandler(input, context));
+                "oidc-api::" + getClass().getSimpleName(), () -> logoutRequestHandler(input));
     }
 
-    public APIGatewayProxyResponseEvent logoutRequestHandler(
-            APIGatewayProxyRequestEvent input, Context context) {
+    public APIGatewayProxyResponseEvent logoutRequestHandler(APIGatewayProxyRequestEvent input) {
         LOG.info("Logout request received");
         Optional<String> state;
         if (input.getQueryStringParameters() == null
@@ -111,9 +109,7 @@ public class LogoutHandler
         if (sessionFromSessionCookie.isPresent()) {
             return segmentedFunctionCall(
                     "processLogoutRequest",
-                    () ->
-                            processLogoutRequest(
-                                    sessionFromSessionCookie.get(), input, state, context));
+                    () -> processLogoutRequest(sessionFromSessionCookie.get(), input, state));
         } else {
             return segmentedFunctionCall(
                     "generateDefaultLogoutResponse",
@@ -124,10 +120,7 @@ public class LogoutHandler
     }
 
     private APIGatewayProxyResponseEvent processLogoutRequest(
-            Session session,
-            APIGatewayProxyRequestEvent input,
-            Optional<String> state,
-            Context context) {
+            Session session, APIGatewayProxyRequestEvent input, Optional<String> state) {
 
         CookieHelper.SessionCookieIds sessionCookieIds =
                 cookieHelper.parseSessionCookie(input.getHeaders()).orElseThrow();
@@ -215,7 +208,6 @@ public class LogoutHandler
                                     finalAudience,
                                     state,
                                     input,
-                                    context,
                                     Optional.of(session.getSessionId())));
         } else {
             return logoutService.generateDefaultLogoutResponse(
@@ -228,7 +220,6 @@ public class LogoutHandler
             String clientID,
             Optional<String> state,
             APIGatewayProxyRequestEvent input,
-            Context context,
             Optional<String> sessionId) {
         LOG.info("Validating ClientID");
         attachLogFieldToLogs(CLIENT_ID, clientID);
