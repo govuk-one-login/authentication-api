@@ -19,14 +19,14 @@ public class SPOTClaims {
     public static class SPOTClaimsBuilder {
         Map<String, Object> spotClaims = new HashMap<>();
 
-        public SPOTClaimsBuilder withClaims(HashMap<String, Object> claims) {
+        public SPOTClaimsBuilder withClaims(Map<String, Object> claims) {
             claims.entrySet().stream()
                     .filter(SPOTClaimsBuilder::isAddableClaim)
                     .forEach(c -> spotClaims.put(c.getKey(), c.getValue()));
             return this;
         }
 
-        private static boolean isAddableClaim(Map.Entry claim) {
+        private static boolean isAddableClaim(Map.Entry<String, Object> claim) {
             return !claim.getKey().equals(SUB.getValue()) && !claim.getKey().equals(VTM.getValue());
         }
 
