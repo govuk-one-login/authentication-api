@@ -258,7 +258,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
         }
 
         codeStorageService.saveBlockedForEmail(
-                emailAddress, codeBlockedKeyPrefix, configurationService.getBlockedEmailDuration());
+                emailAddress, codeBlockedKeyPrefix, configurationService.getLockoutDuration());
 
         if (mfaMethodType == MFAMethodType.SMS) {
             codeStorageService.deleteIncorrectMfaCodeAttemptsCount(emailAddress);

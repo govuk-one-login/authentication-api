@@ -27,7 +27,7 @@ module "mfa" {
 
   handler_environment_variables = {
     ENVIRONMENT                            = var.environment
-    BLOCKED_EMAIL_DURATION                 = var.blocked_email_duration
+    LOCKOUT_DURATION                       = var.lockout_duration
     DEFAULT_OTP_CODE_EXPIRY                = var.otp_code_ttl_duration
     EMAIL_OTP_ACCOUNT_CREATION_CODE_EXPIRY = var.email_acct_creation_otp_code_ttl_duration
     EMAIL_QUEUE_URL                        = aws_sqs_queue.email_queue.id

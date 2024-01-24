@@ -277,9 +277,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                     "User has requested too many OTP codes. Setting block with prefix: {}",
                     newCodeRequestBlockPrefix);
             codeStorageService.saveBlockedForEmail(
-                    email,
-                    newCodeRequestBlockPrefix,
-                    configurationService.getBlockedEmailDuration());
+                    email, newCodeRequestBlockPrefix, configurationService.getLockoutDuration());
             LOG.info("Resetting code request count");
             sessionService.save(
                     session.resetCodeRequestCount(NotificationType.MFA_SMS, journeyType));

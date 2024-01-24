@@ -18,6 +18,7 @@ public class CodeStorageService {
     private static final Logger LOG = LogManager.getLogger(CodeStorageService.class);
 
     private final RedisConnectionService redisConnectionService;
+    private final ConfigurationService configurationService;
     private static final String EMAIL_KEY_PREFIX = "email-code:";
     private static final String PHONE_NUMBER_KEY_PREFIX = "phone-number-code:";
     private static final String MFA_KEY_PREFIX = "mfa-code:";
@@ -35,23 +36,26 @@ public class CodeStorageService {
 
     private static final String VERIFY_CHANGE_HOW_GET_SECURITY_CODES_KEY_PREFIX =
             "change-how-get-security-codes";
-    private static final long TIME_TO_LIVE_SECONDS = 900;
 
     public CodeStorageService(ConfigurationService configurationService) {
-        this(new RedisConnectionService(configurationService));
+        this.configurationService = configurationService;
+        this.redisConnectionService = new RedisConnectionService(configurationService);
     }
 
-    public CodeStorageService(RedisConnectionService redisConnectionService) {
+    public CodeStorageService(
+            ConfigurationService configurationService,
+            RedisConnectionService redisConnectionService) {
+        this.configurationService = configurationService;
         this.redisConnectionService = redisConnectionService;
     }
 
     public int getIncorrectMfaCodeAttemptsCount(String email) {
-        return getIncorrectCount(email, MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX);
+        return getCount(email, MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX);
     }
 
     public int getIncorrectMfaCodeAttemptsCount(String email, MFAMethodType mfaMethodType) {
         var prefix = MULTIPLE_INCORRECT_MFA_CODES_KEY_PREFIX + mfaMethodType.getValue();
-        return getIncorrectCount(email, prefix);
+        return getCount(email, prefix);
     }
 
     public void increaseIncorrectMfaCodeAttemptsCount(String email) {
@@ -91,7 +95,7 @@ public class CodeStorageService {
         int newCount = count.map(t -> Integer.parseInt(t) + 1).orElse(1);
         try {
             redisConnectionService.saveWithExpiry(
-                    key, String.valueOf(newCount), TIME_TO_LIVE_SECONDS);
+                    key, String.valueOf(newCount), configurationService.getLockoutDuration());
             LOG.info("count increased from: {} to: {}", count, newCount);
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -99,18 +103,18 @@ public class CodeStorageService {
     }
 
     public int getIncorrectPasswordCount(String email) {
-        return getIncorrectCount(email, MULTIPLE_INCORRECT_PASSWORDS_PREFIX);
+        return getCount(email, MULTIPLE_INCORRECT_PASSWORDS_PREFIX);
     }
 
     public int getIncorrectEmailCount(String email) {
-        return getIncorrectCount(email, MULTIPLE_INCORRECT_REAUTH_EMAIL_PREFIX);
+        return getCount(email, MULTIPLE_INCORRECT_REAUTH_EMAIL_PREFIX);
     }
 
     public int getIncorrectPasswordCountReauthJourney(String email) {
-        return getIncorrectCount(email, MULTIPLE_INCORRECT_PASSWORDS_REAUTH_PREFIX);
+        return getCount(email, MULTIPLE_INCORRECT_PASSWORDS_REAUTH_PREFIX);
     }
 
-    private int getIncorrectCount(String email, String prefix) {
+    private int getCount(String email, String prefix) {
         Optional<String> count =
                 Optional.ofNullable(
                         redisConnectionService.getValue(

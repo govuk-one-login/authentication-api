@@ -198,7 +198,7 @@ public class ResetPasswordRequestHandler extends BaseFrontendHandler<ResetPasswo
             codeStorageService.saveBlockedForEmail(
                     userContext.getSession().getEmailAddress(),
                     codeRequestBlockedKeyPrefix,
-                    configurationService.getBlockedEmailDuration());
+                    configurationService.getLockoutDuration());
             sessionService.save(userContext.getSession().resetPasswordResetCount());
             return Optional.of(ErrorResponse.ERROR_1022);
         }
