@@ -195,9 +195,19 @@ variable "txma_account_id" {
   type    = string
 }
 
-variable "blocked_email_duration" {
+variable "lockout_duration" {
+  type    = number
+  default = 7200
+}
+
+variable "original_lockout_duration" {
   type    = number
   default = 900
+}
+
+variable "increased_lockout_duration" {
+  type    = string
+  default = "false"
 }
 
 variable "otp_code_ttl_duration" {

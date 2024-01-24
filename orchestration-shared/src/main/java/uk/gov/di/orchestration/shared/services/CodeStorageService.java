@@ -31,7 +31,8 @@ public class CodeStorageService {
 
     private static final String VERIFY_CHANGE_HOW_GET_SECURITY_CODES_KEY_PREFIX =
             "change-how-get-security-codes";
-    private static final long MFA_ATTEMPTS_COUNTER_TIME_TO_LIVE_SECONDS = 900;
+    private static final long MFA_ATTEMPTS_COUNTER_TIME_TO_LIVE_SECONDS = 7200;
+    private static final long PASSWORD_ATTEMPTS_COUNTER_TIME_TO_LIVE_SECONDS = 7200;
 
     public CodeStorageService(ConfigurationService configurationService) {
         this(new RedisConnectionService(configurationService));
@@ -122,7 +123,8 @@ public class CodeStorageService {
                                 MULTIPLE_INCORRECT_PASSWORDS_PREFIX + encodedHash));
         int newCount = count.map(t -> Integer.parseInt(t) + 1).orElse(1);
         try {
-            redisConnectionService.saveWithExpiry(key, String.valueOf(newCount), 900L);
+            redisConnectionService.saveWithExpiry(
+                    key, String.valueOf(newCount), PASSWORD_ATTEMPTS_COUNTER_TIME_TO_LIVE_SECONDS);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

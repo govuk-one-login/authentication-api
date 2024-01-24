@@ -60,7 +60,7 @@ class CodeStorageServiceTest {
         }
     }
 
-    private static final long CODE_EXPIRY_TIME = 900;
+    private static final long CODE_EXPIRY_TIME = 7200;
     private static final long AUTH_CODE_EXPIRY_TIME = 300;
     private static final String CODE_BLOCKED_VALUE = "blocked";
 

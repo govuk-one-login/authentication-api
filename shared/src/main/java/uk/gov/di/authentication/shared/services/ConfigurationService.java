@@ -80,8 +80,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Long.parseLong(System.getenv().getOrDefault("AUTH_CODE_EXPIRY", "300"));
     }
 
-    public long getBlockedEmailDuration() {
-        return Long.parseLong(System.getenv().getOrDefault("BLOCKED_EMAIL_DURATION", "900"));
+    public long getLockoutDuration() {
+        if (System.getenv().getOrDefault("INCREASED_LOCKOUT_DURATION", "false").equals("true")) {
+            return Long.parseLong(System.getenv().getOrDefault("LOCKOUT_DURATION", "7200"));
+        } else {
+            return Long.parseLong(System.getenv().getOrDefault("ORIGINAL_LOCKOUT_DURATION", "900"));
+        }
     }
 
     public int getBulkUserEmailBatchQueryLimit() {

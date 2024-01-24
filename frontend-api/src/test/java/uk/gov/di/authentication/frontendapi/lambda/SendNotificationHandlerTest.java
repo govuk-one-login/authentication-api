@@ -101,7 +101,7 @@ class SendNotificationHandlerTest {
     private static final String TEST_PHONE_NUMBER = "07755551084";
     private static final String TEST_SIX_DIGIT_CODE = "123456";
     private static final long CODE_EXPIRY_TIME = 900;
-    private static final long BLOCKED_EMAIL_DURATION = 799;
+    private static final long LOCKOUT_DURATION = 799;
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     new Subject().getValue(), "test.account.gov.uk", SaltHelper.generateNewSalt());
@@ -175,7 +175,7 @@ class SendNotificationHandlerTest {
         when(configurationService.isEmailCheckEnabled()).thenReturn(true);
         when(configurationService.getEmailAccountCreationOtpCodeExpiry())
                 .thenReturn(CODE_EXPIRY_TIME);
-        when(configurationService.getBlockedEmailDuration()).thenReturn(BLOCKED_EMAIL_DURATION);
+        when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
         when(codeGeneratorService.sixDigitCode()).thenReturn(TEST_SIX_DIGIT_CODE);
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(configurationService.getEnvironment()).thenReturn("unit-test");
@@ -708,7 +708,7 @@ class SendNotificationHandlerTest {
                 .saveBlockedForEmail(
                         TEST_EMAIL_ADDRESS,
                         CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_REGISTRATION,
-                        BLOCKED_EMAIL_DURATION);
+                        LOCKOUT_DURATION);
         verify(codeStorageService, never())
                 .saveOtpCode(
                         TEST_EMAIL_ADDRESS, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, VERIFY_EMAIL);
@@ -746,7 +746,7 @@ class SendNotificationHandlerTest {
                 .saveBlockedForEmail(
                         TEST_EMAIL_ADDRESS,
                         CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_ACCOUNT_RECOVERY,
-                        BLOCKED_EMAIL_DURATION);
+                        LOCKOUT_DURATION);
         verify(codeStorageService, never())
                 .saveOtpCode(
                         TEST_EMAIL_ADDRESS,
@@ -788,7 +788,7 @@ class SendNotificationHandlerTest {
                 .saveBlockedForEmail(
                         TEST_EMAIL_ADDRESS,
                         CODE_REQUEST_BLOCKED_KEY_PREFIX + CodeRequestType.SMS_REGISTRATION,
-                        BLOCKED_EMAIL_DURATION);
+                        LOCKOUT_DURATION);
         verify(codeStorageService, never())
                 .saveOtpCode(
                         TEST_EMAIL_ADDRESS,

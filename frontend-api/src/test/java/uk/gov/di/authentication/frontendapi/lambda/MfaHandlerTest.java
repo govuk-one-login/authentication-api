@@ -85,7 +85,7 @@ public class MfaHandlerTest {
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
     private static final String CODE = "123456";
     private static final long CODE_EXPIRY_TIME = 900;
-    private static final long BLOCKED_EMAIL_DURATION = 799;
+    private static final long LOCKOUT_DURATION = 799;
     private static final String TEST_CLIENT_ID = "test-client-id";
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
@@ -383,7 +383,7 @@ public class MfaHandlerTest {
                 .thenReturn(Optional.of(PHONE_NUMBER));
 
         usingValidSession();
-        when(configurationService.getBlockedEmailDuration()).thenReturn(BLOCKED_EMAIL_DURATION);
+        when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
         session.incrementCodeRequestCount(NotificationType.VERIFY_EMAIL, JourneyType.REGISTRATION);
         session.incrementCodeRequestCount(NotificationType.VERIFY_EMAIL, JourneyType.REGISTRATION);
         session.incrementCodeRequestCount(NotificationType.VERIFY_EMAIL, JourneyType.REGISTRATION);
@@ -412,7 +412,7 @@ public class MfaHandlerTest {
 
         usingValidSession();
 
-        when(configurationService.getBlockedEmailDuration()).thenReturn(BLOCKED_EMAIL_DURATION);
+        when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
 
         CodeRequestType codeRequestTypeForBlockedOtpRequestType =
                 CodeRequestType.getCodeRequestType(
@@ -441,7 +441,7 @@ public class MfaHandlerTest {
     @MethodSource("smsJourneyTypes")
     void shouldReturn400IfUserHasReachedTheSmsSignInCodeRequestLimit(JourneyType journeyType) {
         usingValidSession();
-        when(configurationService.getBlockedEmailDuration()).thenReturn(BLOCKED_EMAIL_DURATION);
+        when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
         session.incrementCodeRequestCount(MFA_SMS, journeyType);
         session.incrementCodeRequestCount(MFA_SMS, journeyType);
         session.incrementCodeRequestCount(MFA_SMS, journeyType);
@@ -471,7 +471,7 @@ public class MfaHandlerTest {
                 .saveBlockedForEmail(
                         TEST_EMAIL_ADDRESS,
                         CODE_REQUEST_BLOCKED_KEY_PREFIX + codeRequestType,
-                        BLOCKED_EMAIL_DURATION);
+                        LOCKOUT_DURATION);
 
         verify(auditService)
                 .submitAuditEvent(

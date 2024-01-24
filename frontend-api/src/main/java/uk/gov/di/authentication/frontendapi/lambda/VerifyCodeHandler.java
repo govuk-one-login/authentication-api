@@ -185,7 +185,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
         codeStorageService.saveBlockedForEmail(
                 session.getEmailAddress(),
                 codeBlockPrefix,
-                configurationService.getBlockedEmailDuration());
+                configurationService.getLockoutDuration());
         LOG.info("Email is blocked");
     }
 
