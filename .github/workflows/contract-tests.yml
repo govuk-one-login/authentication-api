@@ -1,4 +1,12 @@
 name: Contract test
+
+env:
+  PACT_USER: ${{ secrets.PACT_USER }}
+  PACT_PASSWORD: ${{ secrets.PACT_PASSWORD }}
+  PACT_URL: ${{ secrets.PACT_URL }}
+  GIT_BRANCH: ${{ github.head_ref }}
+  CONSUMER_APP_VERSION: ${{ github.event.pull_request.head.sha }}
+
 on:
   pull_request:
     types:
@@ -11,7 +19,6 @@ on:
     branches: [ main ]
 
 jobs:
-
   contract-testing:
     runs-on: ubuntu-latest
     steps:
@@ -27,4 +34,4 @@ jobs:
         run: ./gradlew --parallel ipv-api:contractTest
       - name: Upload pacts to broker
         if: ${{ github.actor != 'dependabot[bot]' && github.event_name != 'merge_group' }}
-        run: pact-broker publish */pact/ --consumer-app-version ${{ github.sha }} --branch ${{ github.ref_name }} -u=${{ secrets.PACT_USER }} -p=${{ secrets.PACT_PASSWORD }} -b=${{ secrets.PACT_URL }}
+        run: ./gradlew :ipv-api:pactPublish

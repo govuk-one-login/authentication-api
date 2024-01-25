@@ -1,6 +1,7 @@
 plugins {
     id "java"
     id "jacoco"
+    id "au.com.dius.pact" version "4.6.5"
 }
 
 group "uk.gov.di.authentication.ipvapi"
@@ -40,10 +41,23 @@ test {
     exclude 'uk/gov/di/authentication/ipv/contract/**'
 }
 
+var pactDir = "$rootDir/ipv-api/src/test/pact"
+
 task contractTest (type: Test) {
     useJUnitPlatform()
     include '/uk/gov/di/authentication/ipv/contract/**'
-    systemProperties['pact.rootDir'] = "$rootDir/ipv-api/src/test/pact"
+    systemProperties['pact.rootDir'] = pactDir
+}
+
+pact {
+    publish {
+        pactDirectory = pactDir
+        pactBrokerUrl = "$System.env.PACT_URL"
+        pactBrokerUsername = "$System.env.PACT_USER"
+        pactBrokerPassword = "$System.env.PACT_PASSWORD"
+        consumerVersion = "$System.env.CONSUMER_APP_VERSION"
+        tags = ["$System.env.GIT_BRANCH"]
+    }
 }
 
 task buildZip(type: Zip) {
