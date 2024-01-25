@@ -15,6 +15,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -147,10 +148,30 @@ class AccountInterventionServiceTest {
     }
 
     @Test
-    void shouldThrowAccountInterventionExceptionWhenExceptionThrownByHttpClient()
+    void
+            shouldNotThrowAccountInterventionExceptionWhenExceptionThrownByHttpClientAndAbortFlagIsOff()
+                    throws IOException, InterruptedException {
+
+        when(config.isAccountInterventionServiceActionEnabled()).thenReturn(true);
+        when(config.abortOnAccountInterventionsErrorResponse()).thenReturn(false);
+
+        var internalPairwiseSubjectId = "some-internal-subject-id";
+        var accountInterventionService =
+                new AccountInterventionService(
+                        config, httpClient, cloudwatchMetricsService, auditService);
+
+        when(httpClient.send(any(), any())).thenThrow(new IOException("Test IO Exception"));
+
+        assertDoesNotThrow(
+                () -> accountInterventionService.getAccountStatus(internalPairwiseSubjectId));
+    }
+
+    @Test
+    void shouldThrowAccountInterventionExceptionWhenExceptionThrownByHttpClientAndAbortFlagIsOn()
             throws IOException, InterruptedException {
 
         when(config.isAccountInterventionServiceActionEnabled()).thenReturn(true);
+        when(config.abortOnAccountInterventionsErrorResponse()).thenReturn(true);
 
         var internalPairwiseSubjectId = "some-internal-subject-id";
         var accountInterventionService =
@@ -211,10 +232,11 @@ class AccountInterventionServiceTest {
     }
 
     @Test
-    void shouldThrowExceptionWhenNullAuditContextSuppliedAndActionEnabled()
+    void shouldThrowExceptionWhenNullAuditContextSuppliedAndActionEnabledAndAbortEnabled()
             throws IOException, InterruptedException {
 
         when(config.isAccountInterventionServiceActionEnabled()).thenReturn(true);
+        when(config.abortOnAccountInterventionsErrorResponse()).thenReturn(true);
 
         var internalPairwiseSubjectId = "some-internal-subject-id";
         var accountInterventionService =
