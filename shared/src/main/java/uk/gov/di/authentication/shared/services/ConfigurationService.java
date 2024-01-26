@@ -258,6 +258,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("EMAIL_QUEUE_URL");
     }
 
+    public String getExperianPhoneCheckerQueueUri() {
+        return System.getenv("EXPERIAN_PHONE_CHECKER_QUEUE_URL");
+    }
+
     public String getSpotQueueUri() {
         return System.getenv("SPOT_QUEUE_URL");
     }
