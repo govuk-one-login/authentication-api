@@ -1,19 +1,27 @@
 package uk.gov.di.authentication.frontendapi.validation;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
+import uk.gov.di.authentication.frontendapi.entity.PhoneNumberRequest;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
+import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.ValidationHelper;
+import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
+import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.List;
@@ -27,6 +35,9 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
     private final ConfigurationService configurationService;
     private final UserContext userContext;
     private final CodeRequest codeRequest;
+    private final AwsSqsClient sqsClient;
+    private final Json objectMapper = SerializationService.getInstance();
+    private static final Logger LOG = LogManager.getLogger(PhoneNumberCodeProcessor.class);
 
     PhoneNumberCodeProcessor(
             CodeStorageService codeStorageService,
@@ -46,6 +57,33 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
         this.userContext = userContext;
         this.configurationService = configurationService;
         this.codeRequest = codeRequest;
+        this.sqsClient =
+                new AwsSqsClient(
+                        configurationService.getAwsRegion(),
+                        configurationService.getEmailQueueUri(),
+                        configurationService.getSqsEndpointUri());
+    }
+
+    PhoneNumberCodeProcessor(
+            CodeStorageService codeStorageService,
+            UserContext userContext,
+            ConfigurationService configurationService,
+            CodeRequest codeRequest,
+            AuthenticationService dynamoService,
+            AuditService auditService,
+            DynamoAccountModifiersService dynamoAccountModifiersService,
+            AwsSqsClient sqsClient) {
+        super(
+                userContext,
+                codeStorageService,
+                configurationService.getCodeMaxRetries(),
+                dynamoService,
+                auditService,
+                dynamoAccountModifiersService);
+        this.userContext = userContext;
+        this.configurationService = configurationService;
+        this.codeRequest = codeRequest;
+        this.sqsClient = sqsClient;
     }
 
     @Override
@@ -98,29 +136,49 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
 
     @Override
     public void processSuccessfulCodeRequest(String ipAddress, String persistentSessionId) {
-        switch (codeRequest.getJourneyType()) {
-            case REGISTRATION:
-                dynamoService.updatePhoneNumberAndAccountVerifiedStatus(
+        if (codeRequest.getJourneyType() == JourneyType.REGISTRATION
+                || codeRequest.getJourneyType() == JourneyType.ACCOUNT_RECOVERY) {
+            if (configurationService.isPhoneCheckerWithReplyEnabled()) {
+                Session session = userContext.getSession();
+                UserProfile userProfile = userContext.getUserProfile().get();
+                boolean phoneNumberVerified = userProfile.isPhoneNumberVerified();
+                String phoneNumber = codeRequest.getProfileInformation();
+                boolean updatedPhoneNumber =
+                        codeRequest.getProfileInformation().equals(userProfile.getPhoneNumber());
+                JourneyType journeyType = codeRequest.getJourneyType();
+                String internalCommonSubjectIdentifier =
+                        session != null ? session.getInternalCommonSubjectIdentifier() : "";
+
+                var phoneNumberRequest =
+                        new PhoneNumberRequest(
+                                phoneNumberVerified,
+                                phoneNumber,
+                                updatedPhoneNumber,
+                                journeyType,
+                                internalCommonSubjectIdentifier);
+
+                try {
+                    sqsClient.send(objectMapper.writeValueAsString(phoneNumberRequest));
+                } catch (Json.JsonException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
+            switch (codeRequest.getJourneyType()) {
+                case REGISTRATION -> dynamoService.updatePhoneNumberAndAccountVerifiedStatus(
                         emailAddress, codeRequest.getProfileInformation(), true, true);
-                submitAuditEvent(
-                        FrontendAuditableEvent.UPDATE_PROFILE_PHONE_NUMBER,
-                        MFAMethodType.SMS,
-                        codeRequest.getProfileInformation(),
-                        ipAddress,
-                        persistentSessionId,
-                        false);
-                break;
-            case ACCOUNT_RECOVERY:
-                dynamoService.setVerifiedPhoneNumberAndRemoveAuthAppIfPresent(
-                        emailAddress, codeRequest.getProfileInformation());
-                submitAuditEvent(
-                        FrontendAuditableEvent.UPDATE_PROFILE_PHONE_NUMBER,
-                        MFAMethodType.SMS,
-                        codeRequest.getProfileInformation(),
-                        ipAddress,
-                        persistentSessionId,
-                        true);
-                break;
+                case ACCOUNT_RECOVERY -> dynamoService
+                        .setVerifiedPhoneNumberAndRemoveAuthAppIfPresent(
+                                emailAddress, codeRequest.getProfileInformation());
+            }
+
+            submitAuditEvent(
+                    FrontendAuditableEvent.UPDATE_PROFILE_PHONE_NUMBER,
+                    MFAMethodType.SMS,
+                    codeRequest.getProfileInformation(),
+                    ipAddress,
+                    persistentSessionId,
+                    codeRequest.getJourneyType() == JourneyType.ACCOUNT_RECOVERY);
         }
     }
 }

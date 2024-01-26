@@ -259,6 +259,11 @@ variable "test_clients_enabled" {
   default = "false"
 }
 
+variable "phone_checker_with_reply" {
+  type    = string
+  default = "false"
+}
+
 variable "client_registry_api_enabled" {
   default = true
 }
@@ -502,6 +507,12 @@ variable "authorize_protected_subnet_enabled" {
   description = "Flag to move authorize lambda to protected subnet"
   type        = bool
   default     = false
+}
+
+variable "experian_phone_check_release_zip_file" {
+  default     = "../../../experian-phone-check/build/distributions/experian-phone-check.zip"
+  description = "Location of the Experian Phone Check distribution ZIP file"
+  type        = string
 }
 
 locals {

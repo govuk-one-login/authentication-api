@@ -36,6 +36,15 @@ resource "aws_s3_object" "frontend_api_release_zip" {
   source_hash            = filemd5(var.frontend_api_lambda_zip_file)
 }
 
+resource "aws_s3_object" "experian_phone_check_release_zip" {
+  bucket = aws_s3_bucket.source_bucket.bucket
+  key    = "experian-phone-check-release.zip"
+
+  server_side_encryption = "AES256"
+  source                 = var.experian_phone_check_release_zip_file
+  source_hash            = filemd5(var.experian_phone_check_release_zip_file)
+}
+
 resource "aws_s3_object" "ipv_api_release_zip" {
   bucket = aws_s3_bucket.source_bucket.bucket
   key    = "ipv-api-release.zip"
