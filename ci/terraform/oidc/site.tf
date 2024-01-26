@@ -1,18 +1,18 @@
 terraform {
-  required_version = ">= 1.3.1"
+  required_version = ">= 1.7.1"
 
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "= 5.13.1"
+      version = "= 5.34.0"
     }
     time = {
       source  = "hashicorp/time"
-      version = ">= 0.7.1"
+      version = ">= 0.10.0"
     }
     random = {
       source  = "hashicorp/random"
-      version = ">= 3.1.0"
+      version = ">= 3.6.0"
     }
   }
 
@@ -80,5 +80,3 @@ locals {
 data "aws_caller_identity" "current" {}
 
 data "aws_partition" "current" {}
-
-
