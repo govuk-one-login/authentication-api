@@ -31,6 +31,10 @@ output "email_queue" {
   value = aws_sqs_queue.email_queue.id
 }
 
+output "experian_phone_checker_queue" {
+  value = aws_sqs_queue.experian_phone_checker_queue.id
+}
+
 output "analytics_cookie_domain" {
   value = local.service_domain
 }
