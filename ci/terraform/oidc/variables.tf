@@ -277,6 +277,11 @@ variable "test_clients_enabled" {
   default = "false"
 }
 
+variable "phone_checker_with_reply" {
+  type    = string
+  default = "false"
+}
+
 variable "client_registry_api_enabled" {
   default = true
 }
