@@ -5,13 +5,9 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 
-import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 
-import static uk.gov.di.orchestration.shared.domain.RequestHeaders.AUTHORIZATION_HEADER;
 import static uk.gov.di.orchestration.shared.helpers.RequestBodyHelper.parseRequestBody;
-import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
 
 public class TokenClientAuthValidatorFactory {
 
@@ -25,8 +21,7 @@ public class TokenClientAuthValidatorFactory {
         this.dynamoClientService = dynamoClientService;
     }
 
-    public Optional<TokenClientAuthValidator> getTokenAuthenticationValidator(
-            String inputBody, Map<String, String> requestHeaders) {
+    public Optional<TokenClientAuthValidator> getTokenAuthenticationValidator(String inputBody) {
         LOG.info("Getting ClientAuthenticationMethod from request");
         LOG.info("ClientSecretSupport: {}", configurationService.isClientSecretSupported());
         var requestBody = parseRequestBody(inputBody);
@@ -42,19 +37,6 @@ public class TokenClientAuthValidatorFactory {
                 && configurationService.isClientSecretSupported()) {
             LOG.info("Client auth method is: client_secret_post");
             return Optional.of(new ClientSecretPostClientAuthValidator(dynamoClientService));
-        }
-        var authorizationHeader =
-                getHeaderValueFromHeaders(
-                        requestHeaders,
-                        AUTHORIZATION_HEADER,
-                        configurationService.getHeadersCaseInsensitive());
-        if (Objects.nonNull(authorizationHeader)
-                && authorizationHeader.startsWith("Basic")
-                && configurationService.isClientSecretSupported()) {
-            LOG.info("Client auth method is: client_secret_basic");
-            return Optional.of(
-                    new ClientSecretBasicClientAuthValidator(
-                            dynamoClientService, configurationService));
         }
         return Optional.empty();
     }
