@@ -263,6 +263,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("PENDING_EMAIL_CHECK_QUEUE_URL");
     }
 
+    public String getExperianPhoneCheckerQueueUri() {
+        return System.getenv("EXPERIAN_PHONE_CHECKER_QUEUE_URL");
+    }
+
     public String getSpotQueueUri() {
         return System.getenv("SPOT_QUEUE_URL");
     }
@@ -517,6 +521,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public boolean isTestClientsEnabled() {
         return System.getenv().getOrDefault("TEST_CLIENTS_ENABLED", "false").equals("true");
+    }
+
+    public boolean isPhoneCheckerWithReplyEnabled() {
+        return System.getenv().getOrDefault("PHONE_CHECKER_WITH_RETRY", "false").equals("true");
     }
 
     public String getSyntheticsUsers() {
