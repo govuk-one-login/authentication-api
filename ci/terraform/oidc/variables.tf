@@ -493,6 +493,12 @@ variable "account_intervention_service_uri" {
   type    = string
 }
 
+variable "account_intervention_service_call_timeout" {
+  default     = 5000
+  type        = number
+  description = "The HTTP Client connection timeout for requests to Account Intervention Service (in milliseconds)."
+}
+
 variable "orch_redirect_uri" {
   type        = string
   description = "The redirect URI set by Orchestration in the OAuth2 authorize request to Authentication"

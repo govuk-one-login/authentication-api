@@ -82,6 +82,11 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return URI.create(System.getenv().getOrDefault("ACCOUNT_INTERVENTION_SERVICE_URI", ""));
     }
 
+    public long getAccountInterventionServiceCallTimeout() {
+        return Long.parseLong(
+                System.getenv().getOrDefault("ACCOUNT_INTERVENTION_SERVICE_CALL_TIMEOUT", "5000"));
+    }
+
     public String getAccountStatusBlockedURI() {
         return "/orch-frontend/not-available";
     }

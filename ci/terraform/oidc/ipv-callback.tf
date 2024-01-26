@@ -40,6 +40,7 @@ module "ipv-callback" {
     ACCOUNT_INTERVENTION_SERVICE_CALL_ENABLED   = var.account_intervention_service_call_enabled
     ACCOUNT_INTERVENTION_SERVICE_URI            = var.account_intervention_service_uri
     ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR = var.account_intervention_service_abort_on_error
+    ACCOUNT_INTERVENTION_SERVICE_CALL_TIMEOUT   = var.account_intervention_service_call_timeout
     IPV_AUDIENCE                                = var.ipv_audience
     IPV_AUTHORISATION_CALLBACK_URI              = var.ipv_authorisation_callback_uri
     IPV_AUTHORISATION_CLIENT_ID                 = var.ipv_authorisation_client_id
