@@ -2,7 +2,6 @@ package uk.gov.di.orchestration.shared.validation;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.oauth2.sdk.auth.ClientSecretBasic;
 import com.nimbusds.oauth2.sdk.auth.ClientSecretPost;
 import com.nimbusds.oauth2.sdk.auth.JWTAuthenticationClaimsSet;
 import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
@@ -17,10 +16,8 @@ import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
 
-import java.util.Map;
 import java.util.Optional;
 
-import static java.util.Collections.emptyMap;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -53,24 +50,10 @@ class TokenClientAuthValidatorFactoryTest {
 
         var tokenAuthenticationValidator =
                 tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(
-                        URLUtils.serializeParameters(privateKeyJWT.toParameters()), emptyMap());
+                        URLUtils.serializeParameters(privateKeyJWT.toParameters()));
 
         assertInstanceOf(
                 PrivateKeyJwtClientAuthValidator.class, tokenAuthenticationValidator.get());
-    }
-
-    @Test
-    void shouldReturnClientSecretBasicClientAuthValidator() {
-        when(configurationService.isClientSecretSupported()).thenReturn(true);
-        var clientSecretBasic = new ClientSecretBasic(CLIENT_ID, CLIENT_SECRET);
-
-        var tokenAuthenticationValidator =
-                tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(
-                        null,
-                        Map.of("Authorization", clientSecretBasic.toHTTPAuthorizationHeader()));
-
-        assertInstanceOf(
-                ClientSecretBasicClientAuthValidator.class, tokenAuthenticationValidator.get());
     }
 
     @Test
@@ -80,24 +63,10 @@ class TokenClientAuthValidatorFactoryTest {
         var requestString = URLUtils.serializeParameters(clientSecretPost.toParameters());
 
         var tokenAuthenticationValidator =
-                tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(
-                        requestString, emptyMap());
+                tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(requestString);
 
         assertInstanceOf(
                 ClientSecretPostClientAuthValidator.class, tokenAuthenticationValidator.get());
-    }
-
-    @Test
-    void shouldReturnEmptyWhenClientSecretBasicButIsNotYetSupported() {
-        when(configurationService.isClientSecretSupported()).thenReturn(false);
-        var clientSecretBasic = new ClientSecretBasic(CLIENT_ID, CLIENT_SECRET);
-
-        var tokenAuthenticationValidator =
-                tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(
-                        null,
-                        Map.of("Authorization", clientSecretBasic.toHTTPAuthorizationHeader()));
-
-        assertThat(tokenAuthenticationValidator, equalTo(Optional.empty()));
     }
 
     @Test
@@ -107,8 +76,7 @@ class TokenClientAuthValidatorFactoryTest {
         var requestString = URLUtils.serializeParameters(clientSecretPost.toParameters());
 
         var tokenAuthenticationValidator =
-                tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(
-                        requestString, emptyMap());
+                tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(requestString);
 
         assertThat(tokenAuthenticationValidator, equalTo(Optional.empty()));
     }

@@ -149,7 +149,7 @@ public class TokenHandler
         try {
             var tokenAuthenticationValidator =
                     tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(
-                            input.getBody(), input.getHeaders());
+                            input.getBody());
             if (tokenAuthenticationValidator.isEmpty()) {
                 LOG.warn("Unsupported token authentication method used");
                 return generateApiGatewayProxyResponse(

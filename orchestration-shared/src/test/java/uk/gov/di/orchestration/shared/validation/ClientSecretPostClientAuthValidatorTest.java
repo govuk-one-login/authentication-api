@@ -21,6 +21,7 @@ import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.samePropertyValuesAs;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -101,10 +102,10 @@ class ClientSecretPostClientAuthValidatorTest {
         assertThat(tokenAuthInvalidException.getClientId(), equalTo(CLIENT_ID.getValue()));
         assertThat(
                 tokenAuthInvalidException.getErrorObject(),
-                equalTo(
+                samePropertyValuesAs(
                         new ErrorObject(
                                 OAuth2Error.INVALID_CLIENT_CODE,
-                                "Client is not registered to use client_secret_basic")));
+                                "Client is not registered to use client_secret_post")));
     }
 
     @Test

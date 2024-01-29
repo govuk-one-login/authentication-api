@@ -14,7 +14,6 @@ import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.TokenResponse;
 import com.nimbusds.oauth2.sdk.auth.ClientAuthenticationMethod;
-import com.nimbusds.oauth2.sdk.auth.ClientSecretBasic;
 import com.nimbusds.oauth2.sdk.auth.ClientSecretPost;
 import com.nimbusds.oauth2.sdk.auth.JWTAuthenticationClaimsSet;
 import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
@@ -149,46 +148,6 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .getJWTClaimsSet()
                         .getClaim(VOT.getValue()),
                 equalTo(expectedVotClaim));
-
-        AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
-    }
-
-    @Test
-    void
-            shouldCallTokenResourceAndReturnAccessAndRefreshTokenWhenAuthenticatingWithClientSecretBasic()
-                    throws Exception {
-        var clientSecret = new Secret();
-        var scope =
-                new Scope(
-                        OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.OFFLINE_ACCESS.getValue());
-        registerUser(scope, new Subject());
-        registerClientSecretClient(
-                clientSecret.getValue(), ClientAuthenticationMethod.CLIENT_SECRET_BASIC, scope);
-        var baseTokenRequest =
-                constructBaseTokenRequest(
-                        scope, Optional.of("Cl.Cm"), Optional.empty(), Optional.of(CLIENT_ID));
-        var response = makeTokenRequestWithClientSecretBasic(baseTokenRequest, clientSecret);
-
-        assertThat(response, hasStatus(200));
-        var jsonResponse = JSONObjectUtils.parse(response.getBody());
-        assertNotNull(
-                TokenResponse.parse(jsonResponse)
-                        .toSuccessResponse()
-                        .getTokens()
-                        .getRefreshToken());
-        assertNotNull(
-                TokenResponse.parse(jsonResponse)
-                        .toSuccessResponse()
-                        .getTokens()
-                        .getBearerAccessToken());
-
-        assertThat(
-                OIDCTokenResponse.parse(jsonResponse)
-                        .getOIDCTokens()
-                        .getIDToken()
-                        .getJWTClaimsSet()
-                        .getClaim(VOT.getValue()),
-                equalTo("Cl.Cm"));
 
         AuditAssertionsHelper.assertNoTxmaAuditEventsReceived(txmaAuditQueue);
     }
@@ -629,17 +588,6 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         var requestBody = URLUtils.serializeParameters(requestParams);
         return makeRequest(Optional.of(requestBody), Map.of(), Map.of());
-    }
-
-    private APIGatewayProxyResponseEvent makeTokenRequestWithClientSecretBasic(
-            Map<String, List<String>> requestParams, Secret clientSecret) {
-        var clientSecretBasic = new ClientSecretBasic(new ClientID(CLIENT_ID), clientSecret);
-
-        var requestBody = URLUtils.serializeParameters(requestParams);
-        return makeRequest(
-                Optional.of(requestBody),
-                Map.of("Authorization", clientSecretBasic.toHTTPAuthorizationHeader()),
-                Map.of());
     }
 
     private APIGatewayProxyResponseEvent makeTokenRequestWithClientSecretPost(
