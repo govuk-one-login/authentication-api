@@ -98,4 +98,43 @@ stub_rp_clients = [
     one_login_service = false
     service_type      = "MANDATORY"
   },
+  {
+    client_name = "relying-party-stub-build"
+    callback_urls = [
+      "https://rp-build.build.stubs.account.gov.uk/oidc/authorization-code/callback",
+    ]
+    logout_urls = [
+      "https://rp-build.build.stubs.account.gov.uk/signed-out",
+    ]
+    test_client                     = "0"
+    consent_required                = "0"
+    identity_verification_supported = "1"
+    client_type                     = "web"
+    scopes = [
+      "openid",
+      "email",
+      "phone",
+    ]
+    one_login_service = false
+    service_type      = "MANDATORY"
+  },
+  {
+    client_name = "relying-party-stub-build-app"
+    callback_urls = [
+      "https://doc-app-rp-build.build.stubs.account.gov.uk/oidc/authorization-code/callback",
+    ]
+    logout_urls = [
+      "https://doc-app-rp-build.build.stubs.account.gov.uk/signed-out",
+    ]
+    test_client                     = "1"
+    consent_required                = "0"
+    identity_verification_supported = "1"
+    client_type                     = "app"
+    scopes = [
+      "openid",
+      "doc-checking-app",
+    ]
+    one_login_service = false
+    service_type      = "MANDATORY"
+  },
 ]
