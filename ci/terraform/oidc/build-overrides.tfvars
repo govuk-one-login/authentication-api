@@ -19,6 +19,8 @@ doc_app_use_cri_data_v2_endpoint            = true
 doc_app_decouple_enabled                    = true
 orch_client_id                              = "orchestrationAuth"
 account_intervention_service_call_enabled   = true
+account_intervention_service_action_enabled = true
+# account_intervention_service_uri is stored in AWS Secrets Manager and populated using read_secrets.sh
 account_intervention_service_abort_on_error = true
 auth_frontend_public_encryption_key         = <<-EOT
 -----BEGIN PUBLIC KEY-----
