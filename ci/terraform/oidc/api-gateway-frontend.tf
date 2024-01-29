@@ -244,7 +244,7 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_frontend_api" {
   scope = "REGIONAL"
 
   lifecycle {
-    ignore_changes = all
+    ignore_changes = [rule]
   }
 
   default_action {
