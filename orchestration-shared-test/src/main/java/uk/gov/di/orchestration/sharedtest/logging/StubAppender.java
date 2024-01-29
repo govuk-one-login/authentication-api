@@ -19,8 +19,8 @@ public class StubAppender extends AbstractAppender {
 
     @Override
     public void append(final LogEvent event) {
-        if (event instanceof MutableLogEvent) {
-            events.add(((MutableLogEvent) event).createMemento());
+        if (event instanceof MutableLogEvent mutableLogEvent) {
+            events.add(mutableLogEvent.createMemento());
         } else {
             events.add(event);
         }

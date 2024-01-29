@@ -17,7 +17,6 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.stream.Collectors;
 
 class HttpStub {
 
@@ -142,7 +141,7 @@ class HttpStub {
     public int getCountOfRequestsTo(final String path) {
         return recordedRequests.stream()
                 .filter(input -> input.getPath().equals(path))
-                .collect(Collectors.toList())
+                .toList()
                 .size();
     }
 

@@ -29,11 +29,7 @@ public class AuditAssertionsHelper {
     public static void assertTxmaAuditEventsReceived(
             SqsQueueExtension queue, Collection<AuditableEvent> events) {
 
-        var txmaEvents =
-                events.stream()
-                        .map(Objects::toString)
-                        .map("AUTH_"::concat)
-                        .collect(Collectors.toList());
+        var txmaEvents = events.stream().map(Objects::toString).map("AUTH_"::concat).toList();
 
         if (txmaEvents.isEmpty()) {
             throw new RuntimeException(

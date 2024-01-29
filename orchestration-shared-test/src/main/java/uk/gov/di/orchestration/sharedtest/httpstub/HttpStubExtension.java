@@ -9,7 +9,6 @@ import uk.gov.di.orchestration.shared.services.SerializationService;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class HttpStubExtension implements AfterAllCallback {
 
@@ -117,7 +116,7 @@ public class HttpStubExtension implements AfterAllCallback {
                                 throw new RuntimeException(ex);
                             }
                         })
-                .collect(Collectors.toList());
+                .toList();
     }
 
     private URIBuilder baseUri() {

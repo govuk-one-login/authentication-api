@@ -14,7 +14,7 @@ import static java.lang.String.format;
 
 public class CriStubExtension extends HttpStubExtension {
 
-    private final String credential =
+    private static final String credential =
             "{"
                     + "  \"sub\": \"urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6\","
                     + "  \"nbf\": 1647017990,"
