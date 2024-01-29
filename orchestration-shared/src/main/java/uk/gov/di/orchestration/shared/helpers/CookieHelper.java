@@ -1,8 +1,5 @@
 package uk.gov.di.orchestration.shared.helpers;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import java.net.HttpCookie;
 import java.util.Arrays;
 import java.util.List;
@@ -16,7 +13,6 @@ import static uk.gov.di.orchestration.shared.helpers.PersistentIdHelper.isValidP
 
 public class CookieHelper {
 
-    private static final Logger LOG = LogManager.getLogger(CookieHelper.class);
     public static final String REQUEST_COOKIE_HEADER = "Cookie";
     public static final String RESPONSE_COOKIE_HEADER = "Set-Cookie";
     public static final String PERSISTENT_COOKIE_NAME = "di-persistent-session-id";

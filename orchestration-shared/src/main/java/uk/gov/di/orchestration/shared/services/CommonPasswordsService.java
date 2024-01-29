@@ -13,7 +13,6 @@ import uk.gov.di.orchestration.shared.entity.CommonPassword;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 import static uk.gov.di.orchestration.shared.dynamodb.DynamoClientHelper.createDynamoEnhancedClient;
 
@@ -40,7 +39,7 @@ public class CommonPasswordsService {
         var commonPasswords =
                 passwords.stream()
                         .map(password -> new CommonPassword().withPassword(password))
-                        .collect(Collectors.toList());
+                        .toList();
         LOG.info("Add common passwords batch method called with {} items", commonPasswords.size());
 
         int maxBatchWriteItems = 25;

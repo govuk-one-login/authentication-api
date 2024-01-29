@@ -78,7 +78,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
 
-public class TokenServiceTest {
+class TokenServiceTest {
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);

@@ -15,12 +15,12 @@ public class RequestBodyHelper {
 
     public static Map<String, String> parseRequestBody(String body) {
         LOG.info("Parsing request body");
-        Map<String, String> query_pairs = new HashMap<>();
+        Map<String, String> queryPairs = new HashMap<>();
 
         for (NameValuePair pair : URLEncodedUtils.parse(body, Charset.defaultCharset())) {
-            query_pairs.put(pair.getName(), pair.getValue());
+            queryPairs.put(pair.getName(), pair.getValue());
         }
 
-        return query_pairs;
+        return queryPairs;
     }
 }

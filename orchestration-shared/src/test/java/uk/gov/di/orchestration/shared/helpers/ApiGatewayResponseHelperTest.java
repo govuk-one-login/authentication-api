@@ -8,7 +8,7 @@ import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.collection.IsMapContaining.hasEntry;
 
-public class ApiGatewayResponseHelperTest {
+class ApiGatewayResponseHelperTest {
 
     @Test
     void ShouldAddDefaultSecurityHeadersForErrorResponses() {

@@ -30,7 +30,7 @@ import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.getHead
 
 public abstract class BaseOrchestrationFrontendHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
-    private static final Logger LOG = LogManager.getLogger(BaseFrontendHandler.class);
+    private static final Logger LOG = LogManager.getLogger(BaseOrchestrationFrontendHandler.class);
     private static final String CLIENT_ID = "client_id";
     protected final ConfigurationService configurationService;
     protected final SessionService sessionService;

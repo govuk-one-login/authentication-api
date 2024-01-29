@@ -15,6 +15,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import static java.lang.String.format;
+
 public class ApiGatewayResponseHelper {
 
     public enum SecurityHeaders {
@@ -62,7 +64,7 @@ public class ApiGatewayResponseHelper {
             return generateApiGatewayProxyResponse(
                     statusCode, objectMapper.writeValueAsString(errorResponse));
         } catch (JsonException e) {
-            LOG.warn("Unable to generateApiGatewayProxyErrorResponse: " + e);
+            LOG.warn(format("Unable to generateApiGatewayProxyErrorResponse: %s", e));
             return generateApiGatewayProxyResponse(500, "Internal server error");
         }
     }

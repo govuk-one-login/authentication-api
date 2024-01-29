@@ -94,7 +94,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         if (configurationValue == null || configurationValue.isEmpty()) {
             return List.of();
         } else {
-            return Arrays.stream(configurationValue.split(",")).collect(Collectors.toList());
+            return Arrays.stream(configurationValue.split(",")).toList();
         }
     }
 

@@ -22,7 +22,7 @@ import static uk.gov.di.orchestration.shared.helpers.CookieHelper.getHttpCookieF
 import static uk.gov.di.orchestration.shared.helpers.CookieHelper.getHttpCookieFromResponseHeaders;
 import static uk.gov.di.orchestration.shared.helpers.CookieHelper.parsePersistentCookie;
 
-public class CookieHelperTest {
+class CookieHelperTest {
     private static final CookieHelper cookieHelper = new CookieHelper();
 
     static Stream<String> inputs() {

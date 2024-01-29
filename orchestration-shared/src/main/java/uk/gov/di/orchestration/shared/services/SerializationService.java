@@ -23,7 +23,7 @@ import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segme
 public class SerializationService implements Json {
 
     private static SerializationService INSTANCE;
-    private static Logger LOG = LogManager.getLogger(SerializationService.class);
+    private static final Logger LOG = LogManager.getLogger(SerializationService.class);
 
     private final Gson gson;
     private final RequiredFieldValidator defaultValidator = new RequiredFieldValidator();

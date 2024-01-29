@@ -28,7 +28,9 @@ public class KmsConnectionService {
     public KmsConnectionService(
             Optional<String> localstackEndpointUri, String awsRegion, String tokenSigningKeyId) {
         if (localstackEndpointUri.isPresent()) {
-            LOG.info("Localstack endpoint URI is present: " + localstackEndpointUri.get());
+            LOG.info(
+                    String.format(
+                            "Localstack endpoint URI is present: %s", localstackEndpointUri.get()));
             this.kmsClient =
                     KmsClient.builder()
                             .endpointOverride(URI.create(localstackEndpointUri.get()))

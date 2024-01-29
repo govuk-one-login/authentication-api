@@ -237,7 +237,7 @@ public class TokenService {
                             OAuth2Error.INVALID_REQUEST_CODE, "Request is missing refresh token"));
         }
         try {
-            RefreshToken refreshToken = new RefreshToken(requestBody.get("refresh_token"));
+            new RefreshToken(requestBody.get("refresh_token"));
         } catch (IllegalArgumentException e) {
             LOG.warn("Invalid RefreshToken", e);
             return Optional.of(
@@ -317,7 +317,7 @@ public class TokenService {
                     "claims",
                     claimsRequest.getUserInfoClaimsRequest().getEntries().stream()
                             .map(ClaimsSetRequest.Entry::getClaimName)
-                            .collect(Collectors.toList()));
+                            .toList());
         } else {
             LOG.info("No identity claims to populate in access token");
         }

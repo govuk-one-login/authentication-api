@@ -12,7 +12,7 @@ import static java.util.Objects.nonNull;
 
 public class RequiredFieldValidator implements Validator {
 
-    private static Logger LOG = LogManager.getLogger(RequiredFieldValidator.class);
+    private static final Logger LOG = LogManager.getLogger(RequiredFieldValidator.class);
 
     @Override
     public List<String> validate(Object object) {

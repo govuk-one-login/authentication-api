@@ -2,8 +2,6 @@ package uk.gov.di.orchestration.shared.services;
 
 import com.amazonaws.services.lambda.runtime.events.ScheduledEvent;
 import net.minidev.json.JSONObject;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.regions.Region;
@@ -14,8 +12,6 @@ import uk.gov.di.orchestration.shared.exceptions.LambdaInvokerServiceException;
 import uk.gov.di.orchestration.shared.serialization.Json;
 
 public class LambdaInvokerService implements LambdaInvoker {
-
-    private static final Logger LOG = LogManager.getLogger(LambdaInvokerService.class);
 
     protected final Json objectMapper = SerializationService.getInstance();
 
