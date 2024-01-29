@@ -26,6 +26,7 @@ public class AccountInterventionService {
     private final boolean accountInterventionsCallEnabled;
     private final boolean accountInterventionsActionEnabled;
     private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final ConfigurationService configurationService;
 
     public AccountInterventionService(ConfigurationService configService) {
         this(
@@ -55,6 +56,7 @@ public class AccountInterventionService {
         this.httpClient = httpClient;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.auditService = auditService;
+        this.configurationService = configService;
     }
 
     public AccountInterventionStatus getAccountStatus(String internalPairwiseSubjectId)
@@ -91,6 +93,8 @@ public class AccountInterventionService {
     }
 
     private AccountInterventionStatus handleException(Exception e) {
+        cloudwatchMetricsService.incrementCounter(
+                "AISCallFailure", Map.of("Environment", configurationService.getEnvironment()));
         if (accountInterventionsActionEnabled) {
             throw new AccountInterventionException(
                     "Problem communicating with Account Intervention Service", e);

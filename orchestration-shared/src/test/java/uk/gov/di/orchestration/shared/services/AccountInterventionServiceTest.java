@@ -65,12 +65,14 @@ class AccountInterventionServiceTest {
                     "some-ip-address",
                     "some-phone-number",
                     "some-persistent-session-id");
+    private static final String ENVIRONMENT = "test-environment";
 
     @BeforeEach
     void setup() throws URISyntaxException {
         when(config.getAccountInterventionServiceURI()).thenReturn(new URI(BASE_AIS_URL));
         when(config.isAccountInterventionServiceCallEnabled()).thenReturn(true);
         when(config.isAccountInterventionServiceActionEnabled()).thenReturn(false);
+        when(config.getEnvironment()).thenReturn(ENVIRONMENT);
     }
 
     @Test
@@ -160,6 +162,9 @@ class AccountInterventionServiceTest {
         assertThrows(
                 AccountInterventionException.class,
                 () -> accountInterventionService.getAccountStatus(internalPairwiseSubjectId));
+
+        verify(cloudwatchMetricsService)
+                .incrementCounter("AISCallFailure", Map.of("Environment", ENVIRONMENT));
     }
 
     @Test
