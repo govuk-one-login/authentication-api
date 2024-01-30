@@ -33,38 +33,10 @@ public class ClientSecretPostClientAuthValidator extends TokenClientAuthValidato
             var clientSecretPost = ClientSecretPost.parse(requestBody);
             attachLogFieldToLogs(CLIENT_ID, clientSecretPost.getClientID().getValue());
             addAnnotation("client_id", clientSecretPost.getClientID().getValue());
+
             var clientRegistry = getClientRegistryFromTokenAuth(clientSecretPost.getClientID());
-            if (Objects.isNull(clientRegistry.getTokenAuthMethod())
-                    || !clientRegistry
-                            .getTokenAuthMethod()
-                            .equals(ClientAuthenticationMethod.CLIENT_SECRET_POST.getValue())) {
-                LOG.warn("Client is not registered to use client_secret_post");
-                throw new TokenAuthInvalidException(
-                        new ErrorObject(
-                                OAuth2Error.INVALID_CLIENT_CODE,
-                                "Client is not registered to use client_secret_post"),
-                        ClientAuthenticationMethod.CLIENT_SECRET_POST,
-                        clientRegistry.getClientID());
-            }
-            if (Objects.isNull(clientRegistry.getClientSecret())) {
-                LOG.warn("No client secret registered for this client");
-                throw new TokenAuthInvalidException(
-                        new ErrorObject(
-                                OAuth2Error.INVALID_CLIENT_CODE, "No client secret registered"),
-                        ClientAuthenticationMethod.CLIENT_SECRET_POST,
-                        clientRegistry.getClientID());
-            }
-            var validSecret =
-                    Argon2MatcherHelper.matchRawStringWithEncoded(
-                            clientSecretPost.getClientSecret().getValue(),
-                            clientRegistry.getClientSecret());
-            if (!validSecret) {
-                LOG.warn("Invalid Client Secret when validating for client_secret_post");
-                throw new TokenAuthInvalidException(
-                        new ErrorObject(OAuth2Error.INVALID_CLIENT_CODE, "Invalid client secret"),
-                        ClientAuthenticationMethod.CLIENT_SECRET_POST,
-                        clientRegistry.getClientID());
-            }
+            validateTokenAuthMethod(clientRegistry);
+            validateSecret(clientSecretPost.getClientSecret().getValue(), clientRegistry);
             LOG.info("client_secret_post is valid");
             return clientRegistry;
         } catch (InvalidClientException e) {
@@ -80,5 +52,43 @@ public class ClientSecretPostClientAuthValidator extends TokenClientAuthValidato
                     ClientAuthenticationMethod.CLIENT_SECRET_POST,
                     "unknown");
         }
+    }
+
+    private void validateTokenAuthMethod(ClientRegistry clientRegistry)
+            throws TokenAuthInvalidException {
+        if (Objects.isNull(clientRegistry.getTokenAuthMethod())
+                || !clientRegistry
+                        .getTokenAuthMethod()
+                        .equals(ClientAuthenticationMethod.CLIENT_SECRET_POST.getValue())) {
+            LOG.warn("Client is not registered to use client_secret_post");
+            throw generateExceptionWithInvalidClientCode(
+                    "Client is not registered to use client_secret_post",
+                    clientRegistry.getClientID());
+        }
+        if (Objects.isNull(clientRegistry.getClientSecret())) {
+            LOG.warn("No client secret registered for this client");
+            throw generateExceptionWithInvalidClientCode(
+                    "No client secret registered", clientRegistry.getClientID());
+        }
+    }
+
+    private void validateSecret(String requestSecret, ClientRegistry clientRegistry)
+            throws TokenAuthInvalidException {
+        var validSecret =
+                Argon2MatcherHelper.matchRawStringWithEncoded(
+                        requestSecret, clientRegistry.getClientSecret());
+        if (!validSecret) {
+            LOG.warn("Invalid Client Secret when validating for client_secret_post");
+            throw generateExceptionWithInvalidClientCode(
+                    "Invalid client secret", clientRegistry.getClientID());
+        }
+    }
+
+    private TokenAuthInvalidException generateExceptionWithInvalidClientCode(
+            String description, String clientID) {
+        return new TokenAuthInvalidException(
+                new ErrorObject(OAuth2Error.INVALID_CLIENT_CODE, description),
+                ClientAuthenticationMethod.CLIENT_SECRET_POST,
+                clientID);
     }
 }

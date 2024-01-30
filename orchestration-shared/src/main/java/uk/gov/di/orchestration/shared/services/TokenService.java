@@ -217,11 +217,11 @@ public class TokenService {
             LOG.warn("Client consent is empty for user");
             throw new RuntimeException("Client consent is empty for user");
         }
-        Set<String> claimsFromAuthnRequest =
+        Set<String> claimsFromAuthRequest =
                 ValidScopes.getClaimsForListOfScopes(authRequestScopes.toStringList());
         Set<String> claims =
                 clientConsent.getClaims().stream()
-                        .filter(t -> claimsFromAuthnRequest.stream().anyMatch(t::equals))
+                        .filter(t -> claimsFromAuthRequest.stream().anyMatch(t::equals))
                         .collect(Collectors.toSet());
         List<String> scopesForIdToken = ValidScopes.getScopesForListOfClaims(claims);
         if (authRequestScopes.contains(OIDCScopeValue.OFFLINE_ACCESS.getValue())) {
@@ -237,7 +237,7 @@ public class TokenService {
                             OAuth2Error.INVALID_REQUEST_CODE, "Request is missing refresh token"));
         }
         try {
-            RefreshToken refreshToken = new RefreshToken(requestBody.get("refresh_token"));
+            new RefreshToken(requestBody.get("refresh_token"));
         } catch (IllegalArgumentException e) {
             LOG.warn("Invalid RefreshToken", e);
             return Optional.of(
@@ -388,15 +388,7 @@ public class TokenService {
     public SignedJWT generateSignedJWT(
             JWTClaimsSet claimsSet, Optional<String> type, JWSAlgorithm algorithm) {
 
-        var signingKey =
-                algorithm == JWSAlgorithm.ES256
-                        ? configService.getTokenSigningKeyAlias()
-                        : configService.getTokenSigningKeyRsaAlias();
-
-        var signingKeyId =
-                kmsConnectionService
-                        .getPublicKey(GetPublicKeyRequest.builder().keyId(signingKey).build())
-                        .keyId();
+        var signingKeyId = getSigningKeyId(algorithm);
 
         try {
             var jwsHeader = new JWSHeader.Builder(algorithm).keyID(hashSha256String(signingKeyId));
@@ -436,5 +428,15 @@ public class TokenService {
             LOG.error("Exception thrown when trying to parse SignedJWT or JWTClaimSet", e);
             throw new RuntimeException(e);
         }
+    }
+
+    private String getSigningKeyId(JWSAlgorithm algorithm) {
+        var signingKey =
+                algorithm == JWSAlgorithm.ES256
+                        ? configService.getTokenSigningKeyAlias()
+                        : configService.getTokenSigningKeyRsaAlias();
+        return kmsConnectionService
+                .getPublicKey(GetPublicKeyRequest.builder().keyId(signingKey).build())
+                .keyId();
     }
 }

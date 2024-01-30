@@ -23,6 +23,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.orchestration.shared.helpers.RequestBodyHelper.parseRequestBody;
 
 class TokenClientAuthValidatorFactoryTest {
 
@@ -50,7 +51,8 @@ class TokenClientAuthValidatorFactoryTest {
 
         var tokenAuthenticationValidator =
                 tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(
-                        URLUtils.serializeParameters(privateKeyJWT.toParameters()));
+                        parseRequestBody(
+                                URLUtils.serializeParameters(privateKeyJWT.toParameters())));
 
         assertInstanceOf(
                 PrivateKeyJwtClientAuthValidator.class, tokenAuthenticationValidator.get());
@@ -60,7 +62,8 @@ class TokenClientAuthValidatorFactoryTest {
     void shouldReturnClientSecretPostClientAuthValidator() {
         when(configurationService.isClientSecretSupported()).thenReturn(true);
         var clientSecretPost = new ClientSecretPost(CLIENT_ID, CLIENT_SECRET);
-        var requestString = URLUtils.serializeParameters(clientSecretPost.toParameters());
+        var requestString =
+                parseRequestBody(URLUtils.serializeParameters(clientSecretPost.toParameters()));
 
         var tokenAuthenticationValidator =
                 tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(requestString);
@@ -73,7 +76,8 @@ class TokenClientAuthValidatorFactoryTest {
     void shouldReturnEmptyWhenClientSecretPostButIsNotYetSupported() {
         when(configurationService.isClientSecretSupported()).thenReturn(false);
         var clientSecretPost = new ClientSecretPost(CLIENT_ID, CLIENT_SECRET);
-        var requestString = URLUtils.serializeParameters(clientSecretPost.toParameters());
+        var requestString =
+                parseRequestBody(URLUtils.serializeParameters(clientSecretPost.toParameters()));
 
         var tokenAuthenticationValidator =
                 tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(requestString);

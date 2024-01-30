@@ -24,7 +24,9 @@ import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.exceptions.InvalidRedirectUriException;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthInvalidException;
+import uk.gov.di.orchestration.shared.exceptions.TokenAuthUnsupportedMethodException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
@@ -39,6 +41,7 @@ import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.TokenService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
+import uk.gov.di.orchestration.shared.validation.TokenClientAuthValidator;
 import uk.gov.di.orchestration.shared.validation.TokenClientAuthValidatorFactory;
 
 import java.util.HashMap;
@@ -123,108 +126,227 @@ public class TokenHandler
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         return segmentedFunctionCall(
-                "oidc-api::" + getClass().getSimpleName(),
-                () -> tokenRequestHandler(input, context));
+                "oidc-api::" + getClass().getSimpleName(), () -> tokenRequestHandler(input));
     }
 
-    public APIGatewayProxyResponseEvent tokenRequestHandler(
-            APIGatewayProxyRequestEvent input, Context context) {
+    public APIGatewayProxyResponseEvent tokenRequestHandler(APIGatewayProxyRequestEvent input) {
         ThreadContext.clearMap();
         LOG.info("Token request received");
         Optional<ErrorObject> invalidRequestParamError =
                 tokenService.validateTokenRequestParams(input.getBody());
         if (invalidRequestParamError.isPresent()) {
-            LOG.warn(
-                    "Invalid Token Request. ErrorCode: {}. ErrorDescription: {}",
-                    invalidRequestParamError.get().getCode(),
-                    invalidRequestParamError.get().getDescription());
-            return generateApiGatewayProxyResponse(
-                    400, invalidRequestParamError.get().toJSONObject().toJSONString());
+            return invalidRequestResponse(invalidRequestParamError.get());
         }
 
         Map<String, String> requestBody = parseRequestBody(input.getBody());
         addAnnotation("grant_type", requestBody.get("grant_type"));
-        ClientRegistry clientRegistry;
-        AuthCodeExchangeData authCodeExchangeData;
-        JWSAlgorithm signingAlgorithm;
+
+        TokenClientAuthValidator tokenAuthenticationValidator;
         try {
-            var tokenAuthenticationValidator =
-                    tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(
-                            input.getBody());
-            if (tokenAuthenticationValidator.isEmpty()) {
-                LOG.warn("Unsupported token authentication method used");
-                return generateApiGatewayProxyResponse(
-                        400,
-                        new ErrorObject(
-                                        OAuth2Error.INVALID_REQUEST_CODE,
-                                        "Invalid token authentication method used")
-                                .toJSONObject()
-                                .toJSONString());
-            }
-            clientRegistry =
-                    tokenAuthenticationValidator
-                            .get()
-                            .validateTokenAuthAndReturnClientRegistryIfValid(
-                                    input.getBody(), input.getHeaders());
-            signingAlgorithm =
-                    configurationService.isRsaSigningAvailable()
-                                    && "RSA256".equals(clientRegistry.getIdTokenSigningAlgorithm())
-                            ? JWSAlgorithm.RS256
-                            : JWSAlgorithm.ES256;
-            if (requestBody.get("grant_type").equals(GrantType.REFRESH_TOKEN.getValue())) {
-                LOG.info("Processing refresh token request");
-                return segmentedFunctionCall(
-                        "processRefreshTokenRequest",
-                        () ->
-                                processRefreshTokenRequest(
-                                        clientRegistry.getScopes(),
-                                        new RefreshToken(requestBody.get("refresh_token")),
-                                        clientRegistry.getClientID(),
-                                        signingAlgorithm));
-            }
-            authCodeExchangeData =
-                    segmentedFunctionCall(
-                            "authorisationCodeService",
-                            () ->
-                                    authorisationCodeService
-                                            .getExchangeDataForCode(requestBody.get("code"))
-                                            .orElseThrow());
-            updateAttachedLogFieldToLogs(
-                    CLIENT_SESSION_ID, authCodeExchangeData.getClientSessionId());
-            updateAttachedLogFieldToLogs(
-                    GOVUK_SIGNIN_JOURNEY_ID, authCodeExchangeData.getClientSessionId());
+            tokenAuthenticationValidator = getTokenAuthenticationMethod(requestBody);
+        } catch (TokenAuthUnsupportedMethodException e) {
+            LOG.warn("Unsupported token authentication method used");
+            return generateApiGatewayProxyResponse(
+                    400, e.getErrorObject().toJSONObject().toJSONString());
+        }
+
+        ClientRegistry clientRegistry;
+        try {
+            clientRegistry = getClientRegistry(tokenAuthenticationValidator, input);
         } catch (TokenAuthInvalidException e) {
             LOG.warn("Unable to validate token auth method", e);
             return generateApiGatewayProxyResponse(
                     400, e.getErrorObject().toJSONObject().toJSONString());
-        } catch (NoSuchElementException e) {
-            LOG.warn("Could not retrieve clientRegistry session ID from code", e);
+        }
+
+        if (refreshTokenRequest(requestBody)) {
+            LOG.info("Processing refresh token request");
+            return segmentedFunctionCall(
+                    "processRefreshTokenRequest",
+                    () ->
+                            processRefreshTokenRequest(
+                                    clientRegistry.getScopes(),
+                                    new RefreshToken(requestBody.get("refresh_token")),
+                                    clientRegistry.getClientID(),
+                                    getSigningAlgorithm(clientRegistry)));
+        }
+
+        Optional<AuthCodeExchangeData> authCodeExchangeDataMaybe =
+                segmentedFunctionCall(
+                        "authorisationCodeService",
+                        () ->
+                                authorisationCodeService.getExchangeDataForCode(
+                                        requestBody.get("code")));
+        if (authCodeExchangeDataMaybe.isEmpty()) {
+            LOG.warn("Could not retrieve session data from code");
             return generateApiGatewayProxyResponse(
                     400, OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
         }
+        AuthCodeExchangeData authCodeExchangeData = authCodeExchangeDataMaybe.get();
+        updateAttachedLogFieldToLogs(CLIENT_SESSION_ID, authCodeExchangeData.getClientSessionId());
+        updateAttachedLogFieldToLogs(
+                GOVUK_SIGNIN_JOURNEY_ID, authCodeExchangeData.getClientSessionId());
 
         ClientSession clientSession = authCodeExchangeData.getClientSession();
         AuthenticationRequest authRequest;
         try {
             authRequest = AuthenticationRequest.parse(clientSession.getAuthRequestParams());
+            checkRedirectURI(authRequest, requestBody.get("redirect_uri"));
         } catch (ParseException e) {
             LOG.warn("Could not parse authentication request from clientRegistry session", e);
             throw new RuntimeException(
                     format(
                             "Unable to parse Auth Request\n Auth Request Params: %s \n Exception: %s",
                             clientSession.getAuthRequestParams(), e));
+        } catch (InvalidRedirectUriException e) {
+            return generateApiGatewayProxyResponse(
+                    400, e.getErrorObject().toJSONObject().toJSONString());
         }
 
-        var authRequestRedirectURI = authRequest.getRedirectionURI().toString();
-        if (!authRequestRedirectURI.equals(requestBody.get("redirect_uri"))) {
-            LOG.warn(
-                    "Redirect URI for auth request ({}) does not match redirect URI for request body ({})",
-                    authRequestRedirectURI,
-                    requestBody.get("redirect_uri"));
+        var tokenResponse =
+                getTokenResponse(
+                        clientSession,
+                        clientRegistry,
+                        authRequest,
+                        getSigningAlgorithm(clientRegistry),
+                        authCodeExchangeData);
+
+        clientSessionService.saveClientSession(
+                authCodeExchangeData.getClientSessionId(),
+                clientSession.setIdTokenHint(
+                        tokenResponse.getOIDCTokens().getIDToken().serialize()));
+        LOG.info("Successfully generated tokens");
+        return generateApiGatewayProxyResponse(200, tokenResponse.toJSONObject().toJSONString());
+    }
+
+    private static boolean refreshTokenRequest(Map<String, String> requestBody) {
+        return requestBody.get("grant_type").equals(GrantType.REFRESH_TOKEN.getValue());
+    }
+
+    private static APIGatewayProxyResponseEvent invalidRequestResponse(
+            ErrorObject invalidRequestParamError) {
+        LOG.warn(
+                "Invalid Token Request. ErrorCode: {}. ErrorDescription: {}",
+                invalidRequestParamError.getCode(),
+                invalidRequestParamError.getDescription());
+        return generateApiGatewayProxyResponse(
+                400, invalidRequestParamError.toJSONObject().toJSONString());
+    }
+
+    private APIGatewayProxyResponseEvent processRefreshTokenRequest(
+            List<String> clientScopes,
+            RefreshToken currentRefreshToken,
+            String clientId,
+            JWSAlgorithm signingAlgorithm) {
+        boolean refreshTokenSignatureValid =
+                tokenValidationService.validateRefreshTokenSignatureAndExpiry(currentRefreshToken);
+        if (!refreshTokenSignatureValid) {
             return generateApiGatewayProxyResponse(
                     400, OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
         }
+        Subject rpPairwiseSubject;
+        List<String> scopes;
+        String jti;
+        try {
+            SignedJWT signedJwt = SignedJWT.parse(currentRefreshToken.getValue());
+            rpPairwiseSubject = new Subject(signedJwt.getJWTClaimsSet().getSubject());
+            scopes = (List<String>) signedJwt.getJWTClaimsSet().getClaim("scope");
+            jti = signedJwt.getJWTClaimsSet().getJWTID();
+        } catch (java.text.ParseException e) {
+            LOG.warn("Unable to parse RefreshToken");
+            return generateInvalidGrantCodeApiGatewayProxyResponse();
+        }
+        boolean areScopesValid =
+                tokenValidationService.validateRefreshTokenScopes(clientScopes, scopes);
+        if (!areScopesValid) {
+            return generateApiGatewayProxyResponse(
+                    400, OAuth2Error.INVALID_SCOPE.toJSONObject().toJSONString());
+        }
 
+        String redisKey = REFRESH_TOKEN_PREFIX + jti;
+        Optional<String> refreshToken =
+                Optional.ofNullable(redisConnectionService.popValue(redisKey));
+        RefreshTokenStore tokenStore;
+        try {
+            tokenStore = objectMapper.readValue(refreshToken.get(), RefreshTokenStore.class);
+        } catch (JsonException | NoSuchElementException | IllegalArgumentException e) {
+            LOG.warn("Refresh token not found with given key");
+            return generateInvalidGrantCodeApiGatewayProxyResponse();
+        }
+        if (!tokenStore.getRefreshToken().equals(currentRefreshToken.getValue())) {
+            LOG.warn("Refresh token store does not contain Refresh token in request");
+            return generateInvalidGrantCodeApiGatewayProxyResponse();
+        }
+
+        OIDCTokenResponse tokenResponse =
+                tokenService.generateRefreshTokenResponse(
+                        clientId,
+                        new Subject(tokenStore.getInternalSubjectId()),
+                        scopes,
+                        rpPairwiseSubject,
+                        new Subject(tokenStore.getInternalPairwiseSubjectId()),
+                        signingAlgorithm);
+        LOG.info("Generating successful RefreshToken response");
+        return generateApiGatewayProxyResponse(200, tokenResponse.toJSONObject().toJSONString());
+    }
+
+    private TokenClientAuthValidator getTokenAuthenticationMethod(Map<String, String> requestBody)
+            throws TokenAuthUnsupportedMethodException {
+        var tokenAuthenticationValidator =
+                tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(requestBody);
+        if (tokenAuthenticationValidator.isEmpty()) {
+            LOG.warn("Unsupported token authentication method used");
+            throw new TokenAuthUnsupportedMethodException(
+                    new ErrorObject(
+                            OAuth2Error.INVALID_REQUEST_CODE,
+                            "Invalid token authentication method used"));
+        }
+        return tokenAuthenticationValidator.get();
+    }
+
+    private ClientRegistry getClientRegistry(
+            TokenClientAuthValidator tokenAuthenticationValidator,
+            APIGatewayProxyRequestEvent request)
+            throws TokenAuthInvalidException {
+        return tokenAuthenticationValidator.validateTokenAuthAndReturnClientRegistryIfValid(
+                request.getBody(), request.getHeaders());
+    }
+
+    private JWSAlgorithm getSigningAlgorithm(ClientRegistry clientRegistry) {
+        return configurationService.isRsaSigningAvailable()
+                        && "RSA256".equals(clientRegistry.getIdTokenSigningAlgorithm())
+                ? JWSAlgorithm.RS256
+                : JWSAlgorithm.ES256;
+    }
+
+    private void checkRedirectURI(AuthenticationRequest authRequest, String requestBodyRedirectUri)
+            throws InvalidRedirectUriException {
+        var authRequestRedirectURI = authRequest.getRedirectionURI().toString();
+        if (!authRequestRedirectURI.equals(requestBodyRedirectUri)) {
+            LOG.warn(
+                    "Redirect URI for auth request ({}) does not match redirect URI for request body ({})",
+                    authRequestRedirectURI,
+                    requestBodyRedirectUri);
+            throw new InvalidRedirectUriException(OAuth2Error.INVALID_GRANT);
+        }
+    }
+
+    private OIDCClaimsRequest getClaimsRequest(
+            VectorOfTrust vtr, AuthenticationRequest authRequest) {
+        OIDCClaimsRequest claimsRequest = null;
+        if (Objects.nonNull(vtr.getLevelOfConfidence())
+                && Objects.nonNull(authRequest.getOIDCClaims())) {
+            claimsRequest = authRequest.getOIDCClaims();
+        }
+        return claimsRequest;
+    }
+
+    private OIDCTokenResponse getTokenResponse(
+            ClientSession clientSession,
+            ClientRegistry clientRegistry,
+            AuthenticationRequest authRequest,
+            JWSAlgorithm signingAlgorithm,
+            AuthCodeExchangeData authCodeExchangeData) {
         Map<String, Object> additionalTokenClaims = new HashMap<>();
         if (authRequest.getNonce() != null) {
             additionalTokenClaims.put("nonce", authRequest.getNonce());
@@ -232,14 +354,10 @@ public class TokenHandler
         VectorOfTrust vtr = clientSession.getVtrWithLowestCredentialTrustLevel();
         String vot = vtr.retrieveVectorOfTrustForToken();
 
-        OIDCClaimsRequest claimsRequest = null;
-        if (Objects.nonNull(vtr.getLevelOfConfidence())
-                && Objects.nonNull(authRequest.getOIDCClaims())) {
-            claimsRequest = authRequest.getOIDCClaims();
-        }
+        final OIDCClaimsRequest finalClaimsRequest = getClaimsRequest(vtr, authRequest);
+
         var isConsentRequired =
                 clientRegistry.isConsentRequired() && !vtr.containsLevelOfConfidence();
-        final OIDCClaimsRequest finalClaimsRequest = claimsRequest;
         OIDCTokenResponse tokenResponse;
         if (isDocCheckingAppUserWithSubjectId(clientSession)) {
             tokenResponse =
@@ -293,81 +411,14 @@ public class TokenHandler
                                             authCodeExchangeData.getClientSessionId(),
                                             vot));
         }
-
-        clientSessionService.saveClientSession(
-                authCodeExchangeData.getClientSessionId(),
-                clientSession.setIdTokenHint(
-                        tokenResponse.getOIDCTokens().getIDToken().serialize()));
-        LOG.info("Successfully generated tokens");
-        return generateApiGatewayProxyResponse(200, tokenResponse.toJSONObject().toJSONString());
+        return tokenResponse;
     }
 
-    private APIGatewayProxyResponseEvent processRefreshTokenRequest(
-            List<String> clientScopes,
-            RefreshToken currentRefreshToken,
-            String clientId,
-            JWSAlgorithm signingAlgorithm) {
-        boolean refreshTokenSignatureValid =
-                tokenValidationService.validateRefreshTokenSignatureAndExpiry(currentRefreshToken);
-        if (!refreshTokenSignatureValid) {
-            return generateApiGatewayProxyResponse(
-                    400, OAuth2Error.INVALID_GRANT.toJSONObject().toJSONString());
-        }
-        Subject rpPairwiseSubject;
-        List<String> scopes;
-        String jti;
-        try {
-            SignedJWT signedJwt = SignedJWT.parse(currentRefreshToken.getValue());
-            rpPairwiseSubject = new Subject(signedJwt.getJWTClaimsSet().getSubject());
-            scopes = (List<String>) signedJwt.getJWTClaimsSet().getClaim("scope");
-            jti = signedJwt.getJWTClaimsSet().getJWTID();
-        } catch (java.text.ParseException e) {
-            LOG.warn("Unable to parse RefreshToken");
-            return generateApiGatewayProxyResponse(
-                    400,
-                    new ErrorObject(OAuth2Error.INVALID_GRANT_CODE, "Invalid Refresh token")
-                            .toJSONObject()
-                            .toJSONString());
-        }
-        boolean areScopesValid =
-                tokenValidationService.validateRefreshTokenScopes(clientScopes, scopes);
-        if (!areScopesValid) {
-            return generateApiGatewayProxyResponse(
-                    400, OAuth2Error.INVALID_SCOPE.toJSONObject().toJSONString());
-        }
-
-        String redisKey = REFRESH_TOKEN_PREFIX + jti;
-        Optional<String> refreshToken =
-                Optional.ofNullable(redisConnectionService.popValue(redisKey));
-        RefreshTokenStore tokenStore;
-        try {
-            tokenStore = objectMapper.readValue(refreshToken.get(), RefreshTokenStore.class);
-        } catch (JsonException | NoSuchElementException | IllegalArgumentException e) {
-            LOG.warn("Refresh token not found with given key");
-            return generateApiGatewayProxyResponse(
-                    400,
-                    new ErrorObject(OAuth2Error.INVALID_GRANT_CODE, "Invalid Refresh token")
-                            .toJSONObject()
-                            .toJSONString());
-        }
-        if (!tokenStore.getRefreshToken().equals(currentRefreshToken.getValue())) {
-            LOG.warn("Refresh token store does not contain Refresh token in request");
-            return generateApiGatewayProxyResponse(
-                    400,
-                    new ErrorObject(OAuth2Error.INVALID_GRANT_CODE, "Invalid Refresh token")
-                            .toJSONObject()
-                            .toJSONString());
-        }
-
-        OIDCTokenResponse tokenResponse =
-                tokenService.generateRefreshTokenResponse(
-                        clientId,
-                        new Subject(tokenStore.getInternalSubjectId()),
-                        scopes,
-                        rpPairwiseSubject,
-                        new Subject(tokenStore.getInternalPairwiseSubjectId()),
-                        signingAlgorithm);
-        LOG.info("Generating successful RefreshToken response");
-        return generateApiGatewayProxyResponse(200, tokenResponse.toJSONObject().toJSONString());
+    private APIGatewayProxyResponseEvent generateInvalidGrantCodeApiGatewayProxyResponse() {
+        return generateApiGatewayProxyResponse(
+                400,
+                new ErrorObject(OAuth2Error.INVALID_GRANT_CODE, "Invalid Refresh token")
+                        .toJSONObject()
+                        .toJSONString());
     }
 }
