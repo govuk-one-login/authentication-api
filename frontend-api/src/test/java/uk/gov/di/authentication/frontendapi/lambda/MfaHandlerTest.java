@@ -19,6 +19,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
+import uk.gov.di.authentication.frontendapi.entity.MfaRequest;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
@@ -43,6 +44,7 @@ import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.shared.state.UserContext;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
@@ -264,6 +266,35 @@ public class MfaHandlerTest {
                         "123.123.123.123",
                         PHONE_NUMBER,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
+    }
+
+    @Test
+    void shouldReturn400WhenInvalidMFAJourneyCombination() throws Json.JsonException {
+        usingValidSession();
+
+        when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
+                .thenReturn(Optional.of(PHONE_NUMBER));
+        when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
+        NotifyRequest notifyRequest =
+                new NotifyRequest(PHONE_NUMBER, MFA_SMS, CODE, SupportedLanguage.EN);
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(
+                Map.of(
+                        "Session-Id",
+                        session.getSessionId(),
+                        CLIENT_SESSION_ID_HEADER,
+                        CLIENT_SESSION_ID));
+        event.setBody(format("{ \"email\": \"%s\"}", TEST_EMAIL_ADDRESS));
+        event.setRequestContext(contextWithSourceIp("123.123.123.123"));
+
+        MfaRequest test = new MfaRequest(TEST_EMAIL_ADDRESS, false, JourneyType.PASSWORD_RESET);
+        APIGatewayProxyResponseEvent result =
+                handler.handleRequestWithUserContext(
+                        event, context, test, UserContext.builder(session).build());
+
+        assertThat(result, hasStatus(400));
+
+        verifyNoInteractions(auditService);
     }
 
     @Test

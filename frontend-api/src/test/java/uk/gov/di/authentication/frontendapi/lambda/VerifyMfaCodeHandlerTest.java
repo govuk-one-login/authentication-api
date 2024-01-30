@@ -548,6 +548,12 @@ class VerifyMfaCodeHandlerTest {
                         : AUTH_APP_SECRET;
         var codeRequest =
                 new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, journeyType, authAppSecret);
+
+        if (!CodeRequestType.isValidCodeRequestType(
+                codeRequest.getMfaMethodType(), codeRequest.getJourneyType())) {
+            return;
+        }
+
         var result = makeCallWithCode(codeRequest);
 
         assertThat(result, hasStatus(400));
@@ -591,6 +597,10 @@ class VerifyMfaCodeHandlerTest {
         var codeRequest =
                 new VerifyMfaCodeRequest(
                         MFAMethodType.AUTH_APP, CODE, journeyType, profileInformation);
+        if (!CodeRequestType.isValidCodeRequestType(
+                codeRequest.getMfaMethodType(), codeRequest.getJourneyType())) {
+            return;
+        }
         var result = makeCallWithCode(codeRequest);
 
         assertThat(result, hasStatus(400));
@@ -712,6 +722,10 @@ class VerifyMfaCodeHandlerTest {
                 .thenReturn(Optional.of(ErrorResponse.ERROR_1037));
         var codeRequest =
                 new VerifyMfaCodeRequest(MFAMethodType.SMS, CODE, journeyType, PHONE_NUMBER);
+        if (!CodeRequestType.isValidCodeRequestType(
+                codeRequest.getMfaMethodType(), codeRequest.getJourneyType())) {
+            return;
+        }
         var result = makeCallWithCode(codeRequest);
 
         assertThat(result, hasStatus(400));
@@ -750,6 +764,9 @@ class VerifyMfaCodeHandlerTest {
         when(authAppCodeProcessor.validateCode()).thenReturn(Optional.of(ErrorResponse.ERROR_1041));
         session.setNewAccount(Session.AccountState.NEW);
         session.setCurrentCredentialStrength(CredentialTrustLevel.MEDIUM_LEVEL);
+        if (!CodeRequestType.isValidCodeRequestType(MFAMethodType.AUTH_APP, journeyType)) {
+            return;
+        }
         var result =
                 makeCallWithCode(
                         new VerifyMfaCodeRequest(

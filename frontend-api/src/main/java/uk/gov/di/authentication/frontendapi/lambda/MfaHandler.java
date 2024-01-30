@@ -38,6 +38,7 @@ import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1000;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1001;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1002;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1014;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
@@ -129,6 +130,16 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                     request.getJourneyType() != null
                             ? request.getJourneyType()
                             : JourneyType.SIGN_IN;
+
+            if (!CodeRequestType.isValidCodeRequestType(
+                    NotificationType.MFA_SMS.getMfaMethodType(), journeyType)) {
+                LOG.warn(
+                        "Invalid MFA Type '{}' for journey '{}'",
+                        NotificationType.MFA_SMS.getMfaMethodType().getValue(),
+                        journeyType.getValue());
+                return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
+            }
+
             Optional<ErrorResponse> codeRequestValid =
                     validateCodeRequestAttempts(email, journeyType, userContext);
             if (codeRequestValid.isPresent()) {
@@ -204,6 +215,7 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                                                 notificationType);
                                         return newCode;
                                     });
+
             LOG.info("Incrementing code request count");
             sessionService.save(
                     userContext
