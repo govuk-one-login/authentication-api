@@ -11,7 +11,7 @@ resource "random_string" "stub_rp_client_id" {
   lower   = true
   upper   = true
   special = false
-  number  = true
+  numeric = true
   length  = 32
 }
 

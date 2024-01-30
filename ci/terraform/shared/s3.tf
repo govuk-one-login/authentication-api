@@ -1,17 +1,26 @@
 resource "aws_s3_bucket" "smoketest_sms_bucket" {
   bucket = "${var.environment}-smoke-test-sms-codes"
 
-  acl = "private"
+  tags = local.default_tags
+}
 
-  server_side_encryption_configuration {
-    rule {
-      apply_server_side_encryption_by_default {
-        sse_algorithm = "AES256"
-      }
+resource "aws_s3_bucket_server_side_encryption_configuration" "smoketest_sms_bucket" {
+  bucket = aws_s3_bucket.smoketest_sms_bucket.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
     }
   }
+}
 
-  tags = local.default_tags
+resource "aws_s3_bucket_ownership_controls" "smoketest_sms_bucket" {
+  bucket = aws_s3_bucket.smoketest_sms_bucket.id
+
+  rule {
+    object_ownership = "BucketOwnerEnforced"
+  }
+
 }
 
 resource "aws_s3_bucket_public_access_block" "smoke-test_private_bucket" {
