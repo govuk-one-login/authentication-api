@@ -28,7 +28,6 @@ import java.text.ParseException;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
@@ -96,7 +95,7 @@ public class AccessTokenService {
                                             .toJson(signedJWT.getJWTClaimsSet().getClaim("scope")))
                             .stream()
                             .map(Objects::toString)
-                            .collect(Collectors.toList());
+                            .toList();
             if (!areScopesValid(scopes) || !client.getScopes().containsAll(scopes)) {
                 LOG.warn("Invalid Scopes: {}", scopes);
                 throw new AccessTokenException("Invalid Scopes", OAuth2Error.INVALID_SCOPE);
@@ -173,7 +172,7 @@ public class AccessTokenService {
         var identityClaims =
                 JSONArrayUtils.parse(new Gson().toJson(claimsSet.getClaim("claims"))).stream()
                         .map(Objects::toString)
-                        .collect(Collectors.toList());
+                        .toList();
         if (!ValidClaims.getAllValidClaims().containsAll(identityClaims)) {
             LOG.warn("Invalid set of Identity claims present in access token: {}", identityClaims);
             throw new AccessTokenException("Invalid Identity claims", OAuth2Error.INVALID_REQUEST);

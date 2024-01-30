@@ -330,7 +330,7 @@ public class LogoutServiceTest {
     }
 
     @Test
-    public void shouldDeleteSessionFromRedisWhenNoCookieExists() {
+    void shouldDeleteSessionFromRedisWhenNoCookieExists() {
         APIGatewayProxyRequestEvent input = new APIGatewayProxyRequestEvent();
         input.setQueryStringParameters(
                 Map.of(

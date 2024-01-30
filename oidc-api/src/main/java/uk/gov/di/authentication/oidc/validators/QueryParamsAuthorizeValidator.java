@@ -18,7 +18,6 @@ import uk.gov.di.orchestration.shared.services.DynamoClientService;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
@@ -144,7 +143,7 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
         List<String> claimNames =
                 claimsRequest.getUserInfoClaimsRequest().getEntries().stream()
                         .map(ClaimsSetRequest.Entry::getClaimName)
-                        .collect(Collectors.toList());
+                        .toList();
 
         boolean containsUnsupportedClaims =
                 claimNames.stream()

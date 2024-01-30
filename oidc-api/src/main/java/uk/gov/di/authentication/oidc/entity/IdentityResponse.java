@@ -14,7 +14,6 @@ public class IdentityResponse {
     private String identityCredential;
 
     public IdentityResponse() {}
-    ;
 
     public IdentityResponse(String sub, String identityCredential) {
         this.sub = sub;
