@@ -141,7 +141,6 @@ public class AccountInterventionService {
 
     private AccountInterventionStatus retrieveAccountStatus(String internalPairwiseSubjectId)
             throws IOException, InterruptedException, Json.JsonException {
-
         HttpRequest request =
                 HttpRequest.newBuilder()
                         .uri(
@@ -152,23 +151,50 @@ public class AccountInterventionService {
                         .GET()
                         .build();
 
-        HttpResponse<String> httpResponse =
-                httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-
-        String body = httpResponse.body();
-
-        var response =
-                SerializationService.getInstance()
-                        .readValue(body, AccountInterventionResponse.class);
-
-        var accountInterventionStatus = response.state();
-        if (Objects.isNull(accountInterventionStatus)) {
-            LOG.error(
-                    "Account Intervention Status is null. This may be due to an error or timeout response from Account Intervention Service.");
-            throw new AccountInterventionException("Account Intervention Status is null.");
-        }
+        HttpResponse<String> response = sendRequestToAis(request);
+        AccountInterventionStatus accountInterventionStatus = serializeResponse(response);
         incrementCloudwatchMetrics(accountInterventionStatus);
+        return accountInterventionStatus;
+    }
 
+    private HttpResponse<String> sendRequestToAis(HttpRequest request) {
+        HttpResponse<String> httpResponse = null;
+        try {
+            httpResponse = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+        } catch (IOException | InterruptedException e) {
+            logAndThrowAccountInterventionException(
+                    "Failed to send request to Account Intervention Service.");
+        }
+        validateResponse(httpResponse);
+        return httpResponse;
+    }
+
+    private void validateResponse(HttpResponse<String> httpResponse) {
+        if (Objects.isNull(httpResponse)) {
+            logAndThrowAccountInterventionException(
+                    "Account Intervention Service response is null. The request may have timed out.");
+        }
+        int responseStatus = httpResponse.statusCode();
+        if (responseStatus < 200 || responseStatus > 299) {
+            logAndThrowAccountInterventionException(
+                    "Account Intervention Service responded with status code: " + responseStatus);
+        }
+    }
+
+    private AccountInterventionStatus serializeResponse(HttpResponse<String> httpResponse) {
+        AccountInterventionStatus accountInterventionStatus = null;
+        try {
+            var response =
+                    SerializationService.getInstance()
+                            .readValue(httpResponse.body(), AccountInterventionResponse.class);
+            accountInterventionStatus = response.state();
+        } catch (Exception e) {
+            logAndThrowAccountInterventionException("Failed to serialize AIS response body.");
+        }
+        if (Objects.isNull(accountInterventionStatus)) {
+            logAndThrowAccountInterventionException("Account Intervention Status is null.");
+        }
         return accountInterventionStatus;
     }
 
@@ -188,5 +214,10 @@ public class AccountInterventionService {
 
     private static AccountInterventionStatus noInterventionResponse() {
         return new AccountInterventionStatus(false, false, false, false);
+    }
+
+    private void logAndThrowAccountInterventionException(String message) {
+        LOG.error(message);
+        throw new AccountInterventionException(message);
     }
 }
