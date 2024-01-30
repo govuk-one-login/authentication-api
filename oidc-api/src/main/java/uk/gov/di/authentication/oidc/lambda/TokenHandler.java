@@ -23,6 +23,7 @@ import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
+import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
@@ -228,16 +229,16 @@ public class TokenHandler
         if (authRequest.getNonce() != null) {
             additionalTokenClaims.put("nonce", authRequest.getNonce());
         }
-        String vot = clientSession.getEffectiveVectorOfTrust().retrieveVectorOfTrustForToken();
+        VectorOfTrust vtr = clientSession.getVtrWithLowestCredentialTrustLevel();
+        String vot = vtr.retrieveVectorOfTrustForToken();
 
         OIDCClaimsRequest claimsRequest = null;
-        if (Objects.nonNull(clientSession.getEffectiveVectorOfTrust().getLevelOfConfidence())
+        if (Objects.nonNull(vtr.getLevelOfConfidence())
                 && Objects.nonNull(authRequest.getOIDCClaims())) {
             claimsRequest = authRequest.getOIDCClaims();
         }
         var isConsentRequired =
-                clientRegistry.isConsentRequired()
-                        && !clientSession.getEffectiveVectorOfTrust().containsLevelOfConfidence();
+                clientRegistry.isConsentRequired() && !vtr.containsLevelOfConfidence();
         final OIDCClaimsRequest finalClaimsRequest = claimsRequest;
         OIDCTokenResponse tokenResponse;
         if (isDocCheckingAppUserWithSubjectId(clientSession)) {

@@ -16,7 +16,7 @@ public class UpliftHelper {
                         .getCurrentCredentialStrength()
                         .compareTo(
                                 context.getClientSession()
-                                        .getEffectiveVectorOfTrust()
+                                        .getVtrWithLowestCredentialTrustLevel()
                                         .getCredentialTrustLevel())
                 < 0);
     }

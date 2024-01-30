@@ -34,6 +34,7 @@ import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.NoSessionEntity;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
+import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
@@ -112,7 +113,8 @@ class DocAppCallbackHandlerTest {
     private final Session session = new Session(SESSION_ID).setEmailAddress(TEST_EMAIL_ADDRESS);
 
     private final ClientSession clientSession =
-            new ClientSession(generateAuthRequest().toParameters(), null, null, null);
+            new ClientSession(
+                    generateAuthRequest().toParameters(), null, (VectorOfTrust) null, null);
 
     @RegisterExtension
     private final CaptureLoggingExtension logging =

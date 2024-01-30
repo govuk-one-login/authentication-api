@@ -377,7 +377,8 @@ public class AuthenticationCallbackHandler
 
                 LOG.info("Redirecting to: {} with state: {}", clientRedirectURI, state);
 
-                VectorOfTrust requestedVectorOfTrust = clientSession.getEffectiveVectorOfTrust();
+                VectorOfTrust requestedVectorOfTrust =
+                        clientSession.getVtrWithLowestCredentialTrustLevel();
                 if (isNull(userSession.getCurrentCredentialStrength())
                         || requestedVectorOfTrust
                                         .getCredentialTrustLevel()
@@ -483,15 +484,11 @@ public class AuthenticationCallbackHandler
             LOG.info(
                     "No mfa method to set. User is either authenticated or signing in from a low level service");
         }
-        var mfaRequired =
-                !clientSession
-                        .getEffectiveVectorOfTrust()
-                        .getCredentialTrustLevel()
-                        .equals(CredentialTrustLevel.LOW_LEVEL);
+        VectorOfTrust vtr = clientSession.getVtrWithLowestCredentialTrustLevel();
+        var mfaRequired = !vtr.getCredentialTrustLevel().equals(CredentialTrustLevel.LOW_LEVEL);
         var levelOfConfidence = LevelOfConfidence.NONE.getValue();
-        if (clientSession.getEffectiveVectorOfTrust().containsLevelOfConfidence()) {
-            levelOfConfidence =
-                    clientSession.getEffectiveVectorOfTrust().getLevelOfConfidence().getValue();
+        if (vtr.containsLevelOfConfidence()) {
+            levelOfConfidence = vtr.getLevelOfConfidence().getValue();
         }
         dimensions.put("MfaRequired", mfaRequired ? "Yes" : "No");
         dimensions.put("RequestedLevelOfConfidence", levelOfConfidence);

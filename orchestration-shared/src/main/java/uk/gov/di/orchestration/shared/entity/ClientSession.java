@@ -5,8 +5,10 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class ClientSession {
 
@@ -36,6 +38,20 @@ public class ClientSession {
         this.clientName = clientName;
     }
 
+    public ClientSession(
+            Map<String, List<String>> authRequestParams,
+            LocalDateTime creationDate,
+            List<VectorOfTrust> vtrList,
+            String clientName) {
+        this.authRequestParams = authRequestParams;
+        this.creationDate = creationDate;
+        this.vtrList = vtrList;
+        if (vtrList.size() > 0) {
+            this.effectiveVectorOfTrust = getVtrWithLowestCredentialTrustLevel();
+        }
+        this.clientName = clientName;
+    }
+
     public ClientSession setIdTokenHint(String idTokenHint) {
         this.idTokenHint = idTokenHint;
         return this;
@@ -53,10 +69,6 @@ public class ClientSession {
         return creationDate;
     }
 
-    public VectorOfTrust getEffectiveVectorOfTrust() {
-        return effectiveVectorOfTrust;
-    }
-
     public List<VectorOfTrust> getVtrList() {
         return vtrList;
     }
@@ -65,6 +77,14 @@ public class ClientSession {
         this.effectiveVectorOfTrust = effectiveVectorOfTrust;
         this.vtrList.add(effectiveVectorOfTrust);
         return this;
+    }
+
+    public VectorOfTrust getVtrWithLowestCredentialTrustLevel() {
+        List<VectorOfTrust> orderedVtrList = orderVtrList();
+        if (orderedVtrList.isEmpty()) {
+            throw new IllegalArgumentException("Invalid VTR attribute");
+        }
+        return orderedVtrList.get(0);
     }
 
     public Subject getDocAppSubjectId() {
@@ -78,5 +98,34 @@ public class ClientSession {
 
     public String getClientName() {
         return clientName;
+    }
+
+    public String getVtrLocsAsCommaSeparatedString() {
+        List<VectorOfTrust> orderedVtrList = orderVtrList();
+        StringBuilder strBuilder = new StringBuilder();
+        for (VectorOfTrust vtr : orderedVtrList) {
+            String loc =
+                    vtr.containsLevelOfConfidence()
+                            ? vtr.getLevelOfConfidence().getValue()
+                            : LevelOfConfidence.NONE.getValue();
+            strBuilder.append(loc).append(",");
+        }
+        if (strBuilder.length() > 0) {
+            strBuilder.setLength(strBuilder.length() - 1);
+            return strBuilder.toString();
+        }
+        return "";
+    }
+
+    private List<VectorOfTrust> orderVtrList() {
+        return this.vtrList.stream()
+                .sorted(
+                        Comparator.comparing(
+                                        VectorOfTrust::getLevelOfConfidence,
+                                        Comparator.nullsFirst(Comparator.naturalOrder()))
+                                .thenComparing(
+                                        VectorOfTrust::getCredentialTrustLevel,
+                                        Comparator.nullsFirst(Comparator.naturalOrder())))
+                .collect(Collectors.toList());
     }
 }

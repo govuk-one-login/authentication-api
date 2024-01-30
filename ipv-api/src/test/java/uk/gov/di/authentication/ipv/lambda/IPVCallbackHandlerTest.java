@@ -410,7 +410,10 @@ class IPVCallbackHandlerTest {
                                         .add(ValidClaims.RETURN_CODE.getValue()));
         var clientSession =
                 new ClientSession(
-                        generateAuthRequest(claimsRequest).toParameters(), null, null, CLIENT_NAME);
+                        generateAuthRequest(claimsRequest).toParameters(),
+                        null,
+                        (VectorOfTrust) null,
+                        CLIENT_NAME);
 
         when(responseService.validateResponse(anyMap(), anyString())).thenReturn(Optional.empty());
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
