@@ -7,15 +7,19 @@ import uk.gov.di.orchestration.shared.entity.AccountInterventionResponse;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
 import uk.gov.di.orchestration.shared.exceptions.AccountInterventionException;
 import uk.gov.di.orchestration.shared.serialization.Json;
+import uk.gov.di.orchestration.shared.services.AuditService.MetadataPair;
 
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.Arrays;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import static uk.gov.di.orchestration.shared.domain.AccountInterventionsAuditableEvent.AIS_RESPONSE_RECEIVED;
+import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
 
 public class AccountInterventionService {
 
@@ -76,7 +80,8 @@ public class AccountInterventionService {
                         throw new AccountInterventionException(
                                 "Account intervention Audit enabled, but no AuditContext provided");
                     }
-                    auditService.submitAuditEvent(AIS_RESPONSE_RECEIVED, auditContext);
+                    auditService.submitAuditEvent(
+                            AIS_RESPONSE_RECEIVED, addStatusMetadata(auditContext, status));
                 }
 
                 return status;
@@ -90,6 +95,31 @@ public class AccountInterventionService {
         }
 
         return noInterventionResponse();
+    }
+
+    private static AuditContext addStatusMetadata(
+            AuditContext auditContext, AccountInterventionStatus status) {
+        var existingMetadataPairs = Arrays.stream(auditContext.metadataPairs());
+        var statusMetadataPairs =
+                Stream.of(
+                        pair("blocked", status.blocked()),
+                        pair("suspended", status.suspended()),
+                        pair("resetPassword", status.resetPassword()),
+                        pair("reproveIdentity", status.reproveIdentity()));
+        var metadataPairs =
+                Stream.concat(existingMetadataPairs, statusMetadataPairs)
+                        .toArray(MetadataPair[]::new);
+
+        return new AuditContext(
+                auditContext.clientSessionId(),
+                auditContext.sessionId(),
+                auditContext.clientId(),
+                auditContext.subjectId(),
+                auditContext.email(),
+                auditContext.ipAddress(),
+                auditContext.phoneNumber(),
+                auditContext.persistentSessionId(),
+                metadataPairs);
     }
 
     private AccountInterventionStatus handleException(Exception e) {
@@ -135,11 +165,14 @@ public class AccountInterventionService {
         cloudwatchMetricsService.incrementCounter(
                 "AISResult",
                 Map.of(
-                        "blocked", String.valueOf(accountInterventionStatus.blocked()),
-                        "suspended", String.valueOf(accountInterventionStatus.suspended()),
-                        "resetPassword", String.valueOf(accountInterventionStatus.resetPassword()),
+                        "blocked",
+                        String.valueOf(accountInterventionStatus.blocked()),
+                        "suspended",
+                        String.valueOf(accountInterventionStatus.suspended()),
+                        "resetPassword",
+                        String.valueOf(accountInterventionStatus.resetPassword()),
                         "reproveIdentity",
-                                String.valueOf(accountInterventionStatus.reproveIdentity())));
+                        String.valueOf(accountInterventionStatus.reproveIdentity())));
     }
 
     private static AccountInterventionStatus noInterventionResponse() {
