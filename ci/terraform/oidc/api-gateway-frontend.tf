@@ -243,10 +243,6 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_frontend_api" {
   name  = "${var.environment}-frontend-waf-web-acl"
   scope = "REGIONAL"
 
-  lifecycle {
-    ignore_changes = all
-  }
-
   default_action {
     allow {}
   }
