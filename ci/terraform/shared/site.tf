@@ -1,21 +1,4 @@
 terraform {
-  required_version = ">= 1.3.1"
-
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "= 5.13.1"
-    }
-    time = {
-      source  = "hashicorp/time"
-      version = ">= 0.7.1"
-    }
-    random = {
-      source  = "hashicorp/random"
-      version = ">= 3.1.0"
-    }
-  }
-
   backend "s3" {
   }
 }

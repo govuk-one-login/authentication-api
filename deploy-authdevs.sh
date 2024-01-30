@@ -30,7 +30,7 @@ function runTerraform() {
   echo "Running ${1} Terraform..."
   pushd "${DIR}/ci/terraform/${1}" >/dev/null
   rm -rf .terraform/
-  terraform init -backend-config="$env".hcl
+  terraform init -upgrade -backend-config="$env".hcl
   if [ "${RUN_SHELL}" == "1" ]; then
     ${SHELL} -i
   else
