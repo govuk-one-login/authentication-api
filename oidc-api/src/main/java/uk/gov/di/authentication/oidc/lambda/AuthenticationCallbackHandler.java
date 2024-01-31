@@ -49,6 +49,7 @@ import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
+import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 
@@ -121,7 +122,8 @@ public class AuthenticationCallbackHandler
                         auditService,
                         new IPVAuthorisationService(
                                 configurationService, redisConnectionService, kmsConnectionService),
-                        cloudwatchMetricsService);
+                        cloudwatchMetricsService,
+                        new NoSessionOrchestrationService(configurationService));
         this.accountInterventionService =
                 new AccountInterventionService(
                         configurationService, cloudwatchMetricsService, auditService);
