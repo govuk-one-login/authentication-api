@@ -121,14 +121,14 @@ class ClientSessionServiceTest {
                 clientSessionService.generateClientSession(
                         Map.of("authparam", List.of("v1", "v2")),
                         LocalDateTime.now(),
-                        VectorOfTrust.getDefaults(),
+                        List.of(VectorOfTrust.getDefaults()),
                         "client-name");
 
         assertEquals(
                 Map.of("authparam", List.of("v1", "v2")), clientSession.getAuthRequestParams());
         assertEquals(
                 VectorOfTrust.getDefaults().getCredentialTrustLevel(),
-                clientSession.getVtrWithLowestCredentialTrustLevel().getCredentialTrustLevel());
+                VectorOfTrust.getLowestCredentialTrustLevel(clientSession.getVtrList()));
         assertEquals("client-name", clientSession.getClientName());
     }
 
@@ -137,7 +137,7 @@ class ClientSessionServiceTest {
                 new ClientSession(
                         Map.of("authparam", List.of("v1", "v2")),
                         LocalDateTime.now(),
-                        VectorOfTrust.getDefaults(),
+                        List.of(VectorOfTrust.getDefaults()),
                         "client-name"));
     }
 }

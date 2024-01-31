@@ -21,7 +21,6 @@ import java.util.stream.Stream;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 class ClientSessionTest {
@@ -42,9 +41,10 @@ class ClientSessionTest {
                         vtrList,
                         CLIENT_NAME);
 
-        var lowestVtr = clientSession.getVtrWithLowestCredentialTrustLevel();
+        var lowestRequestedCredentialTrustLevel =
+                VectorOfTrust.getLowestCredentialTrustLevel(clientSession.getVtrList());
 
-        assertThat(lowestVtr.getCredentialTrustLevel().getValue(), equalTo(expectedCtl.getValue()));
+        assertThat(lowestRequestedCredentialTrustLevel.getValue(), equalTo(expectedCtl.getValue()));
     }
 
     @ParameterizedTest
@@ -62,23 +62,6 @@ class ClientSessionTest {
         var css = clientSession.getVtrLocsAsCommaSeparatedString();
 
         assertThat(css, equalTo(expectedCss));
-    }
-
-    @Test
-    void shouldThrowExceptionForEmptyVtrList() {
-        ClientSession clientSession =
-                new ClientSession(
-                        generateAuthRequest().toParameters(),
-                        LocalDateTime.now(),
-                        Collections.emptyList(),
-                        CLIENT_NAME);
-
-        IllegalArgumentException exception =
-                assertThrows(
-                        IllegalArgumentException.class,
-                        () -> clientSession.getVtrWithLowestCredentialTrustLevel());
-
-        assertEquals("Invalid VTR attribute", exception.getMessage());
     }
 
     @Test

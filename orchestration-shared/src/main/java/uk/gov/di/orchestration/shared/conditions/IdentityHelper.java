@@ -28,8 +28,10 @@ public class IdentityHelper {
             throw new RuntimeException();
         }
         List<String> vtr = authRequest.getCustomParameter("vtr");
-        VectorOfTrust vectorOfTrust = VectorOfTrust.parseFromAuthRequestAttribute(vtr);
-        return Objects.nonNull(vectorOfTrust.getLevelOfConfidence())
-                && !(vectorOfTrust.getLevelOfConfidence().equals(NONE));
+        List<VectorOfTrust> vtrList = VectorOfTrust.parseFromAuthRequestAttribute(vtr);
+        // Assumption: Requested vectors of trust will either all be for identity or none, and so we
+        // can check just the first
+        return Objects.nonNull(vtrList.get(0).getLevelOfConfidence())
+                && !(vtrList.get(0).getLevelOfConfidence().equals(NONE));
     }
 }

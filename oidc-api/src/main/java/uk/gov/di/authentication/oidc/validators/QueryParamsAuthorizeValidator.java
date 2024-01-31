@@ -97,7 +97,7 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
         List<String> authRequestVtr = authRequest.getCustomParameter(VTR_PARAM);
         try {
             var vectorOfTrust = VectorOfTrust.parseFromAuthRequestAttribute(authRequestVtr);
-            if (vectorOfTrust.containsLevelOfConfidence()
+            if (vectorOfTrust.get(0).containsLevelOfConfidence()
                     && !ipvCapacityService.isIPVCapacityAvailable()
                     && !client.isTestClient()) {
                 return Optional.of(

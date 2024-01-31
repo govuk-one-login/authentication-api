@@ -219,7 +219,7 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
         try {
             authRequestVtr = getRequestObjectVtrAsList(jwtClaimsSet);
             var vectorOfTrust = VectorOfTrust.parseFromAuthRequestAttribute(authRequestVtr);
-            if (vectorOfTrust.containsLevelOfConfidence()
+            if (vectorOfTrust.get(0).containsLevelOfConfidence()
                     && !ipvCapacityService.isIPVCapacityAvailable()) {
                 return errorResponse(redirectURI, OAuth2Error.TEMPORARILY_UNAVAILABLE);
             }

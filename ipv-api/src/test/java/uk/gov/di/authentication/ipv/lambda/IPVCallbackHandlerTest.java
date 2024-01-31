@@ -172,12 +172,12 @@ class IPVCallbackHandlerTest {
 
     private final ClientSession clientSession =
             new ClientSession(
-                            generateAuthRequest(new OIDCClaimsRequest()).toParameters(),
-                            null,
+                    generateAuthRequest(new OIDCClaimsRequest()).toParameters(),
+                    null,
+                    List.of(
                             new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL),
-                            CLIENT_NAME)
-                    .setEffectiveVectorOfTrust(
-                            new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL));
+                            new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL)),
+                    CLIENT_NAME);
 
     private final Json objectMapper = SerializationService.getInstance();
 
@@ -354,12 +354,12 @@ class IPVCallbackHandlerTest {
                                 REDIRECT_URI, null, null, null, null, null, null));
         var clientSession =
                 new ClientSession(
-                                generateAuthRequest(claimsRequest).toParameters(),
-                                null,
+                        generateAuthRequest(claimsRequest).toParameters(),
+                        null,
+                        List.of(
                                 new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL),
-                                CLIENT_NAME)
-                        .setEffectiveVectorOfTrust(
-                                new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL));
+                                new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL)),
+                        CLIENT_NAME);
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(clientSession));
 
@@ -410,10 +410,7 @@ class IPVCallbackHandlerTest {
                                         .add(ValidClaims.RETURN_CODE.getValue()));
         var clientSession =
                 new ClientSession(
-                        generateAuthRequest(claimsRequest).toParameters(),
-                        null,
-                        (VectorOfTrust) null,
-                        CLIENT_NAME);
+                        generateAuthRequest(claimsRequest).toParameters(), null, null, CLIENT_NAME);
 
         when(responseService.validateResponse(anyMap(), anyString())).thenReturn(Optional.empty());
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))

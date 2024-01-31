@@ -555,8 +555,13 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                 LevelOfConfidence.MEDIUM_LEVEL.getValue()
                         + "."
                         + CredentialTrustLevel.MEDIUM_LEVEL.getValue();
-        VectorOfTrust vot =
-                VectorOfTrust.parseFromAuthRequestAttribute(Arrays.asList("[\"" + vtrStr + "\"]"));
+        List<VectorOfTrust> votList =
+                List.of(
+                        VectorOfTrust.parseFromAuthRequestAttribute(
+                                        Arrays.asList("[\"" + vtrStr + "\"]"))
+                                .get(0),
+                        VectorOfTrust.of(
+                                CredentialTrustLevel.LOW_LEVEL, LevelOfConfidence.LOW_LEVEL));
 
         var authRequestBuilder =
                 new AuthenticationRequest.Builder(
@@ -566,14 +571,10 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         .customParameter("vtr", jsonArrayOf(vtrStr));
         var clientSession =
                 new ClientSession(
-                                authRequestBuilder.build().toParameters(),
-                                LocalDateTime.now(),
-                                vot,
-                                CLIENT_NAME)
-                        .setEffectiveVectorOfTrust(
-                                VectorOfTrust.of(
-                                        CredentialTrustLevel.LOW_LEVEL,
-                                        LevelOfConfidence.LOW_LEVEL));
+                        authRequestBuilder.build().toParameters(),
+                        LocalDateTime.now(),
+                        votList,
+                        CLIENT_NAME);
 
         redis.createClientSession(CLIENT_SESSION_ID, clientSession);
     }

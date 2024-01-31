@@ -222,9 +222,10 @@ public class TokenHandlerTest {
         String authCode = new AuthorizationCode().toString();
         AuthenticationRequest authenticationRequest =
                 generateAuthRequest(JsonArrayHelper.jsonArrayOf(vectorValue));
-        VectorOfTrust vtr =
+        List<VectorOfTrust> vtr =
                 VectorOfTrust.parseFromAuthRequestAttribute(
                         authenticationRequest.getCustomParameter("vtr"));
+        VectorOfTrust vtrLowestCredentialTrustLevel = VectorOfTrust.orderVtrList(vtr).get(0);
         when(authorisationCodeService.getExchangeDataForCode(authCode))
                 .thenReturn(
                         Optional.of(
@@ -251,7 +252,7 @@ public class TokenHandlerTest {
                         false,
                         JWSAlgorithm.ES256,
                         CLIENT_SESSION_ID,
-                        vtr.retrieveVectorOfTrustForToken()))
+                        vtrLowestCredentialTrustLevel.retrieveVectorOfTrustForToken()))
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result =
@@ -295,9 +296,10 @@ public class TokenHandlerTest {
         String authCode = new AuthorizationCode().toString();
         AuthenticationRequest authenticationRequest =
                 generateAuthRequest(JsonArrayHelper.jsonArrayOf(vectorValue));
-        VectorOfTrust vtr =
+        List<VectorOfTrust> vtr =
                 VectorOfTrust.parseFromAuthRequestAttribute(
                         authenticationRequest.getCustomParameter("vtr"));
+        VectorOfTrust vtrLowestCredentialTrustLevel = VectorOfTrust.orderVtrList(vtr).get(0);
         when(authorisationCodeService.getExchangeDataForCode(authCode))
                 .thenReturn(
                         Optional.of(
@@ -324,7 +326,7 @@ public class TokenHandlerTest {
                         false,
                         JWSAlgorithm.RS256,
                         CLIENT_SESSION_ID,
-                        vtr.retrieveVectorOfTrustForToken()))
+                        vtrLowestCredentialTrustLevel.retrieveVectorOfTrustForToken()))
                 .thenReturn(tokenResponse);
 
         APIGatewayProxyResponseEvent result =
@@ -558,7 +560,7 @@ public class TokenHandlerTest {
                                                 new ClientSession(
                                                         generateAuthRequest().toParameters(),
                                                         LocalDateTime.now(),
-                                                        mock(VectorOfTrust.class),
+                                                        List.of(mock(VectorOfTrust.class)),
                                                         CLIENT_NAME))));
 
         APIGatewayProxyResponseEvent result =
@@ -593,9 +595,10 @@ public class TokenHandlerTest {
                 .thenReturn(clientRegistry);
         String authCode = new AuthorizationCode().toString();
         AuthorizationRequest authenticationRequest = generateRequestObjectAuthRequest();
-        VectorOfTrust vtr =
+        List<VectorOfTrust> vtr =
                 VectorOfTrust.parseFromAuthRequestAttribute(
                         authenticationRequest.getCustomParameter("vtr"));
+        VectorOfTrust vtrLowestCredentialTrustLevel = VectorOfTrust.orderVtrList(vtr).get(0);
         ClientSession clientSession =
                 new ClientSession(
                         authenticationRequest.toParameters(),
@@ -624,7 +627,7 @@ public class TokenHandlerTest {
                         true,
                         JWSAlgorithm.ES256,
                         CLIENT_SESSION_ID,
-                        vtr.retrieveVectorOfTrustForToken()))
+                        vtrLowestCredentialTrustLevel.retrieveVectorOfTrustForToken()))
                 .thenReturn(tokenResponse);
 
         var result =

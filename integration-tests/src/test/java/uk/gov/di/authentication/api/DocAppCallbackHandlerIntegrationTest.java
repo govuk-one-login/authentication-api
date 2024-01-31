@@ -374,7 +374,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                 new ClientSession(
                         authRequestBuilder.build().toParameters(),
                         LocalDateTime.now(),
-                        VectorOfTrust.getDefaults(),
+                        List.of(VectorOfTrust.getDefaults()),
                         CLIENT_NAME);
         clientSession.setDocAppSubjectId(docAppSubjectId);
         redis.createClientSession(CLIENT_SESSION_ID, clientSession);

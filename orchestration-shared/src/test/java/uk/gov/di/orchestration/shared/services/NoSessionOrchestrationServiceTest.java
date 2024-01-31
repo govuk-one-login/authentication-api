@@ -12,7 +12,6 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 
 import java.net.URI;
@@ -253,6 +252,6 @@ class NoSessionOrchestrationServiceTest {
                         .state(new State())
                         .nonce(new Nonce())
                         .build();
-        return new ClientSession(authRequest.toParameters(), null, (VectorOfTrust) null, null);
+        return new ClientSession(authRequest.toParameters(), null, null, null);
     }
 }

@@ -44,6 +44,7 @@ import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import java.net.URI;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -198,7 +199,7 @@ public class OrchestrationAuthorizationService {
         return new AuthenticationErrorResponse(redirectUri, errorObject, state, responseMode);
     }
 
-    public VectorOfTrust getEffectiveVectorOfTrust(AuthenticationRequest authenticationRequest) {
+    public List<VectorOfTrust> getVtrList(AuthenticationRequest authenticationRequest) {
         return VectorOfTrust.parseFromAuthRequestAttribute(
                 authenticationRequest.getCustomParameter(VTR_PARAM));
     }

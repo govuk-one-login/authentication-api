@@ -89,7 +89,8 @@ class RequestObjectToAuthRequestHelperTest {
 
         var vtr =
                 VectorOfTrust.parseFromAuthRequestAttribute(
-                        transformedAuthRequest.getCustomParameter("vtr"));
+                                transformedAuthRequest.getCustomParameter("vtr"))
+                        .get(0);
         assertThat(vtr.getCredentialTrustLevel(), equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
         assertThat(vtr.getLevelOfConfidence(), equalTo(LevelOfConfidence.MEDIUM_LEVEL));
         assertThat(transformedAuthRequest.getState(), equalTo(STATE));

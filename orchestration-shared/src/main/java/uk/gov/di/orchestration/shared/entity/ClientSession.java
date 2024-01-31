@@ -4,7 +4,6 @@ import com.google.gson.annotations.Expose;
 import com.nimbusds.oauth2.sdk.id.Subject;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -18,25 +17,11 @@ public class ClientSession {
 
     @Expose private LocalDateTime creationDate;
 
-    @Expose private VectorOfTrust effectiveVectorOfTrust;
-
-    @Expose private List<VectorOfTrust> vtrList = new ArrayList<>();
+    @Expose private List<VectorOfTrust> vtrList;
 
     @Expose private Subject docAppSubjectId;
 
     @Expose private String clientName;
-
-    public ClientSession(
-            Map<String, List<String>> authRequestParams,
-            LocalDateTime creationDate,
-            VectorOfTrust effectiveVectorOfTrust,
-            String clientName) {
-        this.authRequestParams = authRequestParams;
-        this.creationDate = creationDate;
-        this.effectiveVectorOfTrust = effectiveVectorOfTrust;
-        this.vtrList.add(effectiveVectorOfTrust);
-        this.clientName = clientName;
-    }
 
     public ClientSession(
             Map<String, List<String>> authRequestParams,
@@ -46,9 +31,6 @@ public class ClientSession {
         this.authRequestParams = authRequestParams;
         this.creationDate = creationDate;
         this.vtrList = vtrList;
-        if (vtrList.size() > 0) {
-            this.effectiveVectorOfTrust = getVtrWithLowestCredentialTrustLevel();
-        }
         this.clientName = clientName;
     }
 
@@ -73,18 +55,9 @@ public class ClientSession {
         return vtrList;
     }
 
-    public ClientSession setEffectiveVectorOfTrust(VectorOfTrust effectiveVectorOfTrust) {
-        this.effectiveVectorOfTrust = effectiveVectorOfTrust;
-        this.vtrList.add(effectiveVectorOfTrust);
+    public ClientSession setVtrList(List<VectorOfTrust> vtrList) {
+        this.vtrList = vtrList;
         return this;
-    }
-
-    public VectorOfTrust getVtrWithLowestCredentialTrustLevel() {
-        List<VectorOfTrust> orderedVtrList = orderVtrList();
-        if (orderedVtrList.isEmpty()) {
-            throw new IllegalArgumentException("Invalid VTR attribute");
-        }
-        return orderedVtrList.get(0);
     }
 
     public Subject getDocAppSubjectId() {

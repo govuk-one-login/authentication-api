@@ -63,7 +63,6 @@ import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.DocAppSubjectIdHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.services.AuditService;
@@ -217,8 +216,7 @@ class AuthorisationHandlerTest {
                 .thenReturn(Optional.empty());
         when(orchestrationAuthorizationService.getExistingOrCreateNewPersistentSessionId(any()))
                 .thenReturn(EXPECTED_PERSISTENT_COOKIE_VALUE_WITH_TIMESTAMP);
-        when(orchestrationAuthorizationService.getEffectiveVectorOfTrust(any()))
-                .thenCallRealMethod();
+        when(orchestrationAuthorizationService.getVtrList(any())).thenCallRealMethod();
         when(userContext.getClient()).thenReturn(Optional.of(generateClientRegistry()));
         when(context.getAwsRequestId()).thenReturn(AWS_REQUEST_ID);
         handler =
@@ -470,8 +468,6 @@ class AuthorisationHandlerTest {
         void shouldRedirectToLoginWhenUserNeedsToBeUplifted() {
             session.setCurrentCredentialStrength(CredentialTrustLevel.LOW_LEVEL);
             withExistingSession(session);
-            when(clientSession.getVtrWithLowestCredentialTrustLevel())
-                    .thenReturn(VectorOfTrust.getDefaults());
             when(userContext.getClientSession()).thenReturn(clientSession);
             when(userContext.getSession()).thenReturn(session);
             when(clientSession.getAuthRequestParams())

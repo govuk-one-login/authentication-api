@@ -50,12 +50,12 @@ public class VectorOfTrust {
         return levelOfConfidence != null && !levelOfConfidence.equals(NONE);
     }
 
-    public static VectorOfTrust parseFromAuthRequestAttribute(List<String> vtr) {
+    public static List<VectorOfTrust> parseFromAuthRequestAttribute(List<String> vtr) {
         if (isNull(vtr) || vtr.isEmpty()) {
             LOG.info(
                     "VTR attribute is not present so defaulting to {}",
                     CredentialTrustLevel.getDefault().getValue());
-            return new VectorOfTrust(CredentialTrustLevel.getDefault());
+            return List.of(new VectorOfTrust(CredentialTrustLevel.getDefault()));
         }
         JSONParser parser = new JSONParser(DEFAULT_PERMISSIVE_MODE);
         JSONArray vtrJsonArray;
@@ -69,10 +69,30 @@ public class VectorOfTrust {
             LOG.warn("Error when parsing vtr attribute", e);
             throw new IllegalArgumentException("Invalid VTR attribute", e);
         }
-        VectorOfTrust vectorOfTrust = parseVtrSet(vtrJsonArray);
-        LOG.info("VTR has been processed at vectorOfTrust: {}", vectorOfTrust);
+        List<VectorOfTrust> vtrList = parseVtrSet(vtrJsonArray);
+        LOG.info("VTR has been processed at vectorOfTrust: [{}]", stringifyVtrList(vtrList));
 
-        return vectorOfTrust;
+        return vtrList;
+    }
+
+    public static CredentialTrustLevel getLowestCredentialTrustLevel(List<VectorOfTrust> vtrList) {
+        List<VectorOfTrust> orderedVtrList = orderVtrList(vtrList);
+        if (orderedVtrList.isEmpty()) {
+            throw new IllegalArgumentException("Invalid VTR attribute");
+        }
+        return orderedVtrList.get(0).getCredentialTrustLevel();
+    }
+
+    public static List<VectorOfTrust> orderVtrList(List<VectorOfTrust> vtrList) {
+        return vtrList.stream()
+                .sorted(
+                        Comparator.comparing(
+                                        VectorOfTrust::getLevelOfConfidence,
+                                        Comparator.nullsFirst(Comparator.naturalOrder()))
+                                .thenComparing(
+                                        VectorOfTrust::getCredentialTrustLevel,
+                                        Comparator.nullsFirst(Comparator.naturalOrder())))
+                .toList();
     }
 
     public static VectorOfTrust getDefaults() {
@@ -90,7 +110,7 @@ public class VectorOfTrust {
                                 getCredentialTrustLevel(), CredentialTrustLevel.LOW_LEVEL));
     }
 
-    private static VectorOfTrust parseVtrSet(JSONArray vtrJsonArray) {
+    private static List<VectorOfTrust> parseVtrSet(JSONArray vtrJsonArray) {
         List<VectorOfTrust> vectorOfTrusts = new ArrayList<>();
         for (Object obj : vtrJsonArray) {
             String vtr = (String) obj;
@@ -126,28 +146,7 @@ public class VectorOfTrust {
             }
             vectorOfTrusts.add(vot);
         }
-
-        return vectorOfTrusts.stream()
-                .filter(vot -> vot.getLevelOfConfidence() != null)
-                .min(
-                        Comparator.comparing(
-                                        VectorOfTrust::getLevelOfConfidence,
-                                        Comparator.nullsFirst(Comparator.naturalOrder()))
-                                .thenComparing(
-                                        VectorOfTrust::getCredentialTrustLevel,
-                                        Comparator.nullsFirst(Comparator.naturalOrder())))
-                .orElseGet(
-                        () ->
-                                vectorOfTrusts.stream()
-                                        .min(
-                                                Comparator.comparing(
-                                                        VectorOfTrust::getCredentialTrustLevel,
-                                                        Comparator.nullsFirst(
-                                                                Comparator.naturalOrder())))
-                                        .orElseThrow(
-                                                () ->
-                                                        new IllegalArgumentException(
-                                                                "Invalid VTR attribute")));
+        return vectorOfTrusts;
     }
 
     public static List<String> getRequestedLevelsOfConfidence(List<VectorOfTrust> vtrList) {
@@ -155,6 +154,14 @@ public class VectorOfTrust {
                 .map(VectorOfTrust::getLevelOfConfidence)
                 .map(LevelOfConfidence::getValue)
                 .toList();
+    }
+
+    private static String stringifyVtrList(List<VectorOfTrust> vtrList) {
+        var vtrBuilder = new StringBuilder();
+        for (VectorOfTrust vot : vtrList) {
+            vtrBuilder.append(vot.toString()).append(",");
+        }
+        return vtrBuilder.substring(0, vtrBuilder.length() - 1);
     }
 
     @Override

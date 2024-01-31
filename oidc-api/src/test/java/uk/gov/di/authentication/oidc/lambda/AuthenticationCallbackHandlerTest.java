@@ -88,7 +88,9 @@ class AuthenticationCallbackHandlerTest {
             new ClientSession(
                     generateRPAuthRequestForClientSession().toParameters(),
                     null,
-                    VectorOfTrust.of(CredentialTrustLevel.LOW_LEVEL, LevelOfConfidence.LOW_LEVEL),
+                    List.of(
+                            VectorOfTrust.of(
+                                    CredentialTrustLevel.LOW_LEVEL, LevelOfConfidence.LOW_LEVEL)),
                     CLIENT_NAME);
     private static final String COOKIE_HEADER_NAME = "Cookie";
     private static final AuthorizationCode AUTH_CODE_ORCH_TO_AUTH = new AuthorizationCode();

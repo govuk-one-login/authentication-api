@@ -606,9 +606,9 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             Optional<String> clientId)
             throws Json.JsonException {
         String code = new AuthorizationCode().toString();
-        VectorOfTrust vectorOfTrust = VectorOfTrust.getDefaults();
+        List<VectorOfTrust> vtrList = List.of(VectorOfTrust.getDefaults());
         if (vtr.isPresent()) {
-            vectorOfTrust =
+            vtrList =
                     VectorOfTrust.parseFromAuthRequestAttribute(
                             singletonList(JsonArrayHelper.jsonArrayOf(vtr.get())));
         }
@@ -617,7 +617,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 "a-client-session-id",
                 TEST_EMAIL,
                 generateAuthRequest(scope, vtr, oidcClaimsRequest).toParameters(),
-                vectorOfTrust,
+                vtrList,
                 "client-name");
         Map<String, List<String>> customParams = new HashMap<>();
         customParams.put(

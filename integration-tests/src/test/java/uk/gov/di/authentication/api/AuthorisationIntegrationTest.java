@@ -720,7 +720,10 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 equalTo(List.of("[\"P2.Cl.Cm\",\"Cl.Cm\"]")));
         assertThat(
                 clientSession.getVtrList(),
-                equalTo(List.of(VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL))));
+                equalTo(
+                        List.of(
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
+                                new VectorOfTrust(MEDIUM_LEVEL))));
 
         JsonElement actualClaims =
                 JsonParser.parseString(String.valueOf(authRequest.getOIDCClaims()));

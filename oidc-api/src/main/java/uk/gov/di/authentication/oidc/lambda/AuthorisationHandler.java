@@ -41,6 +41,7 @@ import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
+import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
@@ -307,7 +308,7 @@ public class AuthorisationHandler
                 clientSessionService.generateClientSession(
                         authRequest.toParameters(),
                         LocalDateTime.now(),
-                        orchestrationAuthorizationService.getEffectiveVectorOfTrust(authRequest),
+                        orchestrationAuthorizationService.getVtrList(authRequest),
                         client.getClientName());
         if (configurationService.isDocAppDecoupleEnabled()
                 && DocAppUserHelper.isDocCheckingAppUser(
@@ -578,6 +579,11 @@ public class AuthorisationHandler
                         clientSessionId);
             }
 
+            var confidence =
+                    VectorOfTrust.getLowestCredentialTrustLevel(
+                                    orchestrationAuthorizationService.getVtrList(
+                                            authenticationRequest))
+                            .getValue();
             var claimsBuilder =
                     new JWTClaimsSet.Builder()
                             .issuer(configurationService.getOrchestrationClientId())
@@ -595,12 +601,7 @@ public class AuthorisationHandler
                             .claim("is_one_login_service", client.isOneLoginService())
                             .claim("service_type", client.getServiceType())
                             .claim("govuk_signin_journey_id", clientSessionId)
-                            .claim(
-                                    "confidence",
-                                    orchestrationAuthorizationService
-                                            .getEffectiveVectorOfTrust(authenticationRequest)
-                                            .getCredentialTrustLevel()
-                                            .getValue())
+                            .claim("confidence", confidence)
                             .claim("state", state.getValue())
                             .claim("client_id", configurationService.getOrchestrationClientId())
                             .claim(

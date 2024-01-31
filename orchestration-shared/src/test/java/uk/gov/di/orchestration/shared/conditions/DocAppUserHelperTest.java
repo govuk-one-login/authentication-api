@@ -30,6 +30,7 @@ import java.net.URI;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -177,7 +178,7 @@ class DocAppUserHelperTest {
                 new ClientSession(
                         authRequest.toParameters(),
                         LocalDateTime.now(),
-                        VectorOfTrust.getDefaults(),
+                        List.of(VectorOfTrust.getDefaults()),
                         CLIENT_NAME);
         subject.ifPresent(clientSession::setDocAppSubjectId);
         var clientRegistry =
