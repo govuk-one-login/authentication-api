@@ -72,12 +72,32 @@ public class AuthenticateHandler
                     objectMapper.readValue(input.getBody(), AuthenticateRequest.class);
             boolean userHasAccount = authenticationService.userExists(loginRequest.getEmail());
             if (!userHasAccount) {
+                auditService.submitAuditEvent(
+                        AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE,
+                        AuditService.UNKNOWN,
+                        sessionId,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        loginRequest.getEmail(),
+                        IpAddressHelper.extractIpAddress(input),
+                        AuditService.UNKNOWN,
+                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
             }
             boolean hasValidCredentials =
                     authenticationService.login(
                             loginRequest.getEmail(), loginRequest.getPassword());
             if (!hasValidCredentials) {
+                auditService.submitAuditEvent(
+                        AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE,
+                        AuditService.UNKNOWN,
+                        sessionId,
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        loginRequest.getEmail(),
+                        IpAddressHelper.extractIpAddress(input),
+                        AuditService.UNKNOWN,
+                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
                 return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1008);
             }
             LOG.info("User has successfully Logged in. Generating successful AuthenticateResponse");
@@ -95,6 +115,16 @@ public class AuthenticateHandler
 
             return generateEmptySuccessApiGatewayResponse();
         } catch (JsonException e) {
+            auditService.submitAuditEvent(
+                    AccountManagementAuditableEvent.ACCOUNT_MANAGEMENT_AUTHENTICATE_FAILURE,
+                    AuditService.UNKNOWN,
+                    sessionId,
+                    AuditService.UNKNOWN,
+                    AuditService.UNKNOWN,
+                    AuditService.UNKNOWN,
+                    IpAddressHelper.extractIpAddress(input),
+                    AuditService.UNKNOWN,
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
     }
