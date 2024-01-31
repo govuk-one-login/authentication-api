@@ -483,11 +483,6 @@ variable "account_intervention_service_call_enabled" {
   type    = bool
 }
 
-variable "account_intervention_service_abort_on_error" {
-  default = false
-  type    = bool
-}
-
 variable "account_intervention_service_uri" {
   default = "undefined"
   type    = string

@@ -82,8 +82,4 @@ public class AccountInterventionsStubExtension extends HttpStubExtension {
                         + "  }"
                         + "}");
     }
-
-    public void initWithErrorResponse(String userId) {
-        register("/v1/ais/" + userId, 500, "application/json", "{}");
-    }
 }

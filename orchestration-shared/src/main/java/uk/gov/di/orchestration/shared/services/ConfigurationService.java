@@ -72,12 +72,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 .equals("true");
     }
 
-    public boolean abortOnAccountInterventionsErrorResponse() {
-        return System.getenv()
-                .getOrDefault("ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR", "false")
-                .equals("true");
-    }
-
     public URI getAccountInterventionServiceURI() {
         return URI.create(System.getenv().getOrDefault("ACCOUNT_INTERVENTION_SERVICE_URI", ""));
     }
