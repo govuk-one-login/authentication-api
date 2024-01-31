@@ -139,6 +139,9 @@ echo -n "Getting Terraform variables from Secrets Manager ... "
 source "${DIR}/scripts/read_secrets__main.sh" "sandpit"
 echo "done!"
 
+GIT_SHA=$(git rev-parse --verify HEAD)
+export TF_VAR_provenance_sha="${GIT_SHA}"
+
 if [[ $SHARED == "1" ]]; then
   runTerraform "shared" "${TERRAFORM_OPTS}"
 fi
