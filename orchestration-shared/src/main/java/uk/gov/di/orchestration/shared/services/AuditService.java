@@ -40,33 +40,17 @@ public class AuditService {
     }
 
     public void submitAuditEvent(AuditableEvent event, AuditContext auditContext) {
-        var user =
-                TxmaAuditUser.user()
-                        .withUserId(auditContext.getSubjectId())
-                        .withPhone(auditContext.getPhoneNumber())
-                        .withEmail(auditContext.getEmail())
-                        .withIpAddress(auditContext.getIpAddress())
-                        .withSessionId(auditContext.getSessionId())
-                        .withPersistentSessionId(auditContext.getPersistentSessionId())
-                        .withGovukSigninJourneyId(auditContext.getClientSessionId());
-
-        var txmaAuditEvent =
-                auditEventWithTime(event, () -> Date.from(clock.instant()))
-                        .withClientId(auditContext.getClientId())
-                        .withComponentId(configurationService.getOidcApiBaseURL().orElse("UNKNOWN"))
-                        .withUser(user);
-
-        Arrays.stream(auditContext.getMetadataPairs())
-                .forEach(pair -> txmaAuditEvent.addExtension(pair.getKey(), pair.getValue()));
-
-        Optional.ofNullable(auditContext.getPhoneNumber())
-                .filter(not(String::isBlank))
-                .flatMap(PhoneNumberHelper::maybeGetCountry)
-                .ifPresent(
-                        country ->
-                                txmaAuditEvent.addExtension("phone_number_country_code", country));
-
-        txmaQueueClient.send(txmaAuditEvent.serialize());
+        submitAuditEvent(
+                event,
+                auditContext.clientSessionId(),
+                auditContext.sessionId(),
+                auditContext.clientId(),
+                auditContext.subjectId(),
+                auditContext.email(),
+                auditContext.ipAddress(),
+                auditContext.phoneNumber(),
+                auditContext.persistentSessionId(),
+                auditContext.metadataPairs());
     }
 
     public void submitAuditEvent(

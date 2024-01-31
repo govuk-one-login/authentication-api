@@ -13,6 +13,7 @@ import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.Arrays;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -35,24 +36,24 @@ class AccountInterventionServiceTest {
 
     private static final String ACCOUNT_INTERVENTION_SERVICE_RESPONSE_SUSPEND_REPROVE =
             """
-            {
-                "intervention": {
-                    "updatedAt": 1696969322935,
-                    "appliedAt": 1696869005821,
-                    "sentAt": 1696869003456,
-                    "description": "AIS_USER_PASSWORD_RESET_AND_IDENTITY_REVERIFIED",
-                    "reprovedIdentityAt": 1696969322935
-                },
-                "state": {
-                    "blocked": false,
-                    "suspended": true,
-                    "reproveIdentity": true,
-                    "resetPassword": false
-                },
-                "auditLevel": "standard",
-                "history": []
-            }
-            """;
+                    {
+                        "intervention": {
+                            "updatedAt": 1696969322935,
+                            "appliedAt": 1696869005821,
+                            "sentAt": 1696869003456,
+                            "description": "AIS_USER_PASSWORD_RESET_AND_IDENTITY_REVERIFIED",
+                            "reprovedIdentityAt": 1696969322935
+                        },
+                        "state": {
+                            "blocked": false,
+                            "suspended": true,
+                            "reproveIdentity": true,
+                            "resetPassword": false
+                        },
+                        "auditLevel": "standard",
+                        "history": []
+                    }
+                    """;
 
     private static String BASE_AIS_URL = "http://example.com/environment";
     private static AuditContext someAuditContext =
@@ -186,10 +187,25 @@ class AccountInterventionServiceTest {
 
         accountInterventionService.getAccountStatus(internalPairwiseSubjectId, someAuditContext);
 
+        var expectedAuditContext =
+                new AuditContext(
+                        someAuditContext.clientSessionId(),
+                        someAuditContext.sessionId(),
+                        someAuditContext.clientId(),
+                        someAuditContext.subjectId(),
+                        someAuditContext.email(),
+                        someAuditContext.ipAddress(),
+                        someAuditContext.phoneNumber(),
+                        someAuditContext.persistentSessionId(),
+                        AuditService.MetadataPair.pair("blocked", false),
+                        AuditService.MetadataPair.pair("suspended", true),
+                        AuditService.MetadataPair.pair("resetPassword", false),
+                        AuditService.MetadataPair.pair("reproveIdentity", true));
+
         verify(auditService)
                 .submitAuditEvent(auditEventNameCaptor.capture(), auditContextCaptor.capture());
         assertEquals(AIS_RESPONSE_RECEIVED, auditEventNameCaptor.getValue());
-        assertEquals(someAuditContext, auditContextCaptor.getValue());
+        assertMatchingAuditContext(expectedAuditContext, auditContextCaptor.getValue());
     }
 
     @Test
@@ -228,5 +244,17 @@ class AccountInterventionServiceTest {
         assertThrows(
                 AccountInterventionException.class,
                 () -> accountInterventionService.getAccountStatus(internalPairwiseSubjectId, null));
+    }
+
+    private void assertMatchingAuditContext(AuditContext expected, AuditContext actual) {
+        assertEquals(expected.clientSessionId(), actual.clientSessionId());
+        assertEquals(expected.sessionId(), actual.sessionId());
+        assertEquals(expected.clientId(), actual.clientId());
+        assertEquals(expected.subjectId(), actual.subjectId());
+        assertEquals(expected.email(), actual.email());
+        assertEquals(expected.ipAddress(), actual.ipAddress());
+        assertEquals(expected.phoneNumber(), actual.phoneNumber());
+        assertEquals(expected.persistentSessionId(), actual.persistentSessionId());
+        assertTrue(Arrays.deepEquals(expected.metadataPairs(), actual.metadataPairs()));
     }
 }
