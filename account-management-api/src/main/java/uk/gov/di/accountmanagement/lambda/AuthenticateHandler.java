@@ -81,7 +81,7 @@ public class AuthenticateHandler
                         loginRequest.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
-                        AuditService.UNKNOWN);
+                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1010);
             }
             boolean hasValidCredentials =
@@ -97,7 +97,7 @@ public class AuthenticateHandler
                         loginRequest.getEmail(),
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
-                        AuditService.UNKNOWN);
+                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
                 return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1008);
             }
             LOG.info("User has successfully Logged in. Generating successful AuthenticateResponse");
@@ -124,7 +124,7 @@ public class AuthenticateHandler
                     AuditService.UNKNOWN,
                     IpAddressHelper.extractIpAddress(input),
                     AuditService.UNKNOWN,
-                    AuditService.UNKNOWN);
+                    PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders()));
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
     }
