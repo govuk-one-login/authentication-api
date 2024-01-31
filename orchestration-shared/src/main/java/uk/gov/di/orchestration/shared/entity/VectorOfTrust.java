@@ -70,7 +70,7 @@ public class VectorOfTrust {
             throw new IllegalArgumentException("Invalid VTR attribute", e);
         }
         VectorOfTrust vectorOfTrust = parseVtrSet(vtrJsonArray);
-        LOG.info("VTR has been processed at vectorOfTrust: {}", vectorOfTrust.toString());
+        LOG.info("VTR has been processed at vectorOfTrust: {}", vectorOfTrust);
 
         return vectorOfTrust;
     }

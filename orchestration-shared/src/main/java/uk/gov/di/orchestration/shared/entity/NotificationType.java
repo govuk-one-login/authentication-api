@@ -3,7 +3,7 @@ package uk.gov.di.orchestration.shared.entity;
 import uk.gov.di.orchestration.shared.helpers.LocaleHelper.SupportedLanguage;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.Map;
 
 public enum NotificationType implements TemplateAware {
@@ -51,7 +51,8 @@ public enum NotificationType implements TemplateAware {
     private final String templateName;
     private final MFAMethodType mfaMethodType;
 
-    private Map<SupportedLanguage, String> languageSpecificTemplates = new HashMap<>();
+    private Map<SupportedLanguage, String> languageSpecificTemplates =
+            new EnumMap<>(SupportedLanguage.class);
 
     NotificationType(String templateName, MFAMethodType mfaMethodType) {
         this.templateName = templateName;

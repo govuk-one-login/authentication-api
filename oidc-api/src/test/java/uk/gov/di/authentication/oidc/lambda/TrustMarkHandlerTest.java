@@ -27,7 +27,7 @@ class TrustMarkHandlerTest {
     private final Context context = mock(Context.class);
     private static final String BASE_URL = "https://example.com";
     private TrustMarkHandler handler;
-    private Json objectMapper = SerializationService.getInstance();
+    private final Json objectMapper = SerializationService.getInstance();
 
     @BeforeEach
     public void setUp() {
@@ -37,7 +37,7 @@ class TrustMarkHandlerTest {
     }
 
     @Test
-    public void shouldReturn200WhenRequestIsSuccessful() throws Json.JsonException {
+    void shouldReturn200WhenRequestIsSuccessful() throws Json.JsonException {
         TrustMarkResponse trustMarkResponse =
                 new TrustMarkResponse(
                         configurationService.getOidcApiBaseURL().orElseThrow(),

@@ -35,7 +35,7 @@ import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.sharedtest.helper.IdentityTestData.RETURN_CODE;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
-public class UserInfoHandlerTest {
+class UserInfoHandlerTest {
 
     private static final String EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String PHONE_NUMBER = "01234567890";

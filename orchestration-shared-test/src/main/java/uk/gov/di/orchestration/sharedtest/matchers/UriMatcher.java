@@ -5,7 +5,6 @@ import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeDiagnosingMatcher;
 
-import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.util.Arrays;
@@ -61,20 +60,11 @@ public class UriMatcher<T> extends TypeSafeDiagnosingMatcher<URI> {
     public static UriMatcher<Map<? extends String, ? extends String>> redirectQueryParameters(
             Matcher<Map<? extends String, ? extends String>> expected) {
         return new UriMatcher<>(
-                "uri query parameters",
-                uri -> {
-                    try {
-                        return parseQueryString(uri.getRawQuery());
-                    } catch (UnsupportedEncodingException e) {
-                        throw new RuntimeException(e);
-                    }
-                },
-                expected);
+                "uri query parameters", uri -> parseQueryString(uri.getRawQuery()), expected);
     }
 
-    private static Map<String, String> parseQueryString(String queryString)
-            throws UnsupportedEncodingException {
-        if ((queryString == null) || (queryString.equals(""))) {
+    private static Map<String, String> parseQueryString(String queryString) {
+        if ((queryString == null) || (queryString.isEmpty())) {
             return Map.of();
         }
         String[] params = queryString.split("&");

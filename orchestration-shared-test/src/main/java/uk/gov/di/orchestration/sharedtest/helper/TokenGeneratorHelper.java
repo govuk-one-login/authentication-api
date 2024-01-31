@@ -26,12 +26,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 public class TokenGeneratorHelper {
-
-    private static final String KEY_ID = "14342354354353";
-
     public static SignedJWT generateIDToken(
             String clientId, Subject subject, String issuerUrl, JWK signingKey) {
         Date expiryDate = NowHelper.nowPlus(2, ChronoUnit.MINUTES);
@@ -123,7 +119,7 @@ public class TokenGeneratorHelper {
                     "claims",
                     identityClaims.getUserInfoClaimsRequest().getEntries().stream()
                             .map(ClaimsSetRequest.Entry::getClaimName)
-                            .collect(Collectors.toList()));
+                            .toList());
         }
 
         JWSHeader jwsHeader =

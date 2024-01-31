@@ -13,7 +13,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
-public class IPVCapacityHandlerTest {
+class IPVCapacityHandlerTest {
 
     private final Context context = mock(Context.class);
 

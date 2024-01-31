@@ -91,7 +91,7 @@ class LogoutHandlerTest {
     public final CaptureLoggingExtension logging = new CaptureLoggingExtension(LogoutHandler.class);
 
     @AfterEach
-    public void tearDown() {
+    void tearDown() {
         assertThat(
                 logging.events(),
                 not(
@@ -104,7 +104,7 @@ class LogoutHandlerTest {
     }
 
     @BeforeEach
-    public void setUp() throws JOSEException, ParseException {
+    void setUp() throws JOSEException, ParseException {
         handler =
                 new LogoutHandler(
                         sessionService,
@@ -132,7 +132,7 @@ class LogoutHandlerTest {
     }
 
     @Test
-    public void shouldDeleteSessionAndRedirectToClientLogoutUriForValidLogoutRequest() {
+    void shouldDeleteSessionAndRedirectToClientLogoutUriForValidLogoutRequest() {
         var idTokenHint = signedIDToken.serialize();
 
         when(dynamoClientService.getClient("client-id"))
@@ -162,7 +162,7 @@ class LogoutHandlerTest {
     }
 
     @Test
-    public void shouldNotThrowWhenTryingToDeleteClientSessionWhichHasExpired() {
+    void shouldNotThrowWhenTryingToDeleteClientSessionWhichHasExpired() {
         when(dynamoClientService.getClient("client-id"))
                 .thenReturn(Optional.of(createClientRegistry()));
         when(tokenValidationService.isTokenSignatureValid(signedIDToken.serialize()))
@@ -191,8 +191,7 @@ class LogoutHandlerTest {
     }
 
     @Test
-    public void
-            shouldDeleteSessionAndRedirectToDefaultLogoutUriForValidLogoutRequestWithHintOnly() {
+    void shouldDeleteSessionAndRedirectToDefaultLogoutUriForValidLogoutRequestWithHintOnly() {
         when(dynamoClientService.getClient("client-id"))
                 .thenReturn(Optional.of(createClientRegistry()));
         when(tokenValidationService.isTokenSignatureValid(signedIDToken.serialize()))
@@ -210,8 +209,7 @@ class LogoutHandlerTest {
     }
 
     @Test
-    public void
-            shouldDeleteSessionAndRedirectToDefaultLogoutUriForValidLogoutRequestWithLogoutURIOnly() {
+    void shouldDeleteSessionAndRedirectToDefaultLogoutUriForValidLogoutRequestWithLogoutURIOnly() {
         when(dynamoClientService.getClient("client-id"))
                 .thenReturn(Optional.of(createClientRegistry()));
         when(tokenValidationService.isTokenSignatureValid(signedIDToken.serialize()))
@@ -230,8 +228,7 @@ class LogoutHandlerTest {
     }
 
     @Test
-    public void
-            shouldDeleteSessionAndRedirectToDefaultLogoutUriForValidLogoutRequestWithNoQueryParams() {
+    void shouldDeleteSessionAndRedirectToDefaultLogoutUriForValidLogoutRequestWithNoQueryParams() {
         when(dynamoClientService.getClient("client-id"))
                 .thenReturn(Optional.of(createClientRegistry()));
         when(tokenValidationService.isTokenSignatureValid(signedIDToken.serialize()))
@@ -248,7 +245,7 @@ class LogoutHandlerTest {
     }
 
     @Test
-    public void shouldRedirectToDefaultLogoutUriWhenNoCookieExists() {
+    void shouldRedirectToDefaultLogoutUriWhenNoCookieExists() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(
                 Map.of(
@@ -267,8 +264,7 @@ class LogoutHandlerTest {
     }
 
     @Test
-    public void
-            shouldRedirectToDefaultLogoutUriWithErrorMessageWhenClientSessionIdIsNotFoundInSession() {
+    void shouldRedirectToDefaultLogoutUriWithErrorMessageWhenClientSessionIdIsNotFoundInSession() {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(
                 Map.of(
@@ -293,8 +289,7 @@ class LogoutHandlerTest {
     }
 
     @Test
-    public void
-            shouldRedirectToDefaultLogoutUriWithErrorMessageWhenIDTokenHintIsNotFoundInSession() {
+    void shouldRedirectToDefaultLogoutUriWithErrorMessageWhenIDTokenHintIsNotFoundInSession() {
         APIGatewayProxyRequestEvent event =
                 generateRequestEvent(
                         Map.of(
@@ -315,7 +310,7 @@ class LogoutHandlerTest {
     }
 
     @Test
-    public void shouldRedirectToDefaultLogoutUriWithErrorMessageWhenSignatureIdTokenIsInvalid()
+    void shouldRedirectToDefaultLogoutUriWithErrorMessageWhenSignatureIdTokenIsInvalid()
             throws JOSEException {
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
@@ -346,9 +341,8 @@ class LogoutHandlerTest {
     }
 
     @Test
-    public void
-            shouldRedirectToDefaultLogoutUriWithErrorMessageWhenClientIsNotFoundInClientRegistry()
-                    throws JOSEException, ParseException {
+    void shouldRedirectToDefaultLogoutUriWithErrorMessageWhenClientIsNotFoundInClientRegistry()
+            throws JOSEException, ParseException {
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
         SignedJWT signedJWT =
@@ -378,7 +372,7 @@ class LogoutHandlerTest {
     }
 
     @Test
-    public void
+    void
             shouldRedirectToDefaultLogoutUriWithErrorMessageWhenLogoutUriInRequestDoesNotMatchClientRegistry()
                     throws JOSEException, ParseException {
         ECKey ecSigningKey =

@@ -14,7 +14,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 
-public class DynamoServiceTest {
+class DynamoServiceTest {
     private static final DynamoDbTable<UserProfile> dynamoUserProfileTable =
             mock(DynamoDbTable.class);
     private static final DynamoDbTable<UserCredentials> dynamoUserCredentialsTable =

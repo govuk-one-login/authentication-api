@@ -19,7 +19,6 @@ import uk.gov.di.orchestration.shared.services.SerializationService;
 import java.net.URI;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import static java.text.MessageFormat.format;
 
@@ -65,9 +64,7 @@ public class SqsQueueExtension extends BaseAwsResourceExtension implements Befor
     }
 
     public List<String> getRawMessages() {
-        return getMessages(DEFAULT_NUMBER_OF_MESSAGES).stream()
-                .map(Message::body)
-                .collect(Collectors.toList());
+        return getMessages(DEFAULT_NUMBER_OF_MESSAGES).stream().map(Message::body).toList();
     }
 
     public <T> List<T> getMessages(Class<T> messageClass, int numberOfMessages) {
@@ -80,7 +77,7 @@ public class SqsQueueExtension extends BaseAwsResourceExtension implements Befor
                                 throw new RuntimeException(e);
                             }
                         })
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override

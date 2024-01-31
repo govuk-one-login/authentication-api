@@ -9,7 +9,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class ValidScopes {
@@ -76,7 +75,7 @@ public class ValidScopes {
         return Stream.concat(
                         allowedOIDCScopes.stream().map(Identifier::getValue),
                         allowedCustomScopes.stream().map(Identifier::getValue))
-                .collect(Collectors.toList());
+                .toList();
     }
 
     public static List<String> getPublicValidScopes() {
@@ -85,12 +84,11 @@ public class ValidScopes {
                         allowedCustomScopes.stream()
                                 .filter(CustomScopeValue::isPublicScope)
                                 .map(Identifier::getValue))
-                .collect(Collectors.toList());
+                .toList();
     }
 
     public static Scope getScopesForWellKnownHandler() {
-        List<String> scopeValues =
-                allowedOIDCScopes.stream().map(Identifier::getValue).collect(Collectors.toList());
+        List<String> scopeValues = allowedOIDCScopes.stream().map(Identifier::getValue).toList();
         Scope scope = new Scope();
         for (String scopeValue : scopeValues) {
             scope.add(scopeValue);

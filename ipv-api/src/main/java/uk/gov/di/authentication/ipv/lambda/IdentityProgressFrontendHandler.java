@@ -38,7 +38,7 @@ public class IdentityProgressFrontendHandler extends BaseOrchestrationFrontendHa
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final AuthenticationUserInfoStorageService userInfoStorageService;
 
-    private static final Logger LOG = LogManager.getLogger(ProcessingIdentityHandler.class);
+    private static final Logger LOG = LogManager.getLogger(IdentityProgressFrontendHandler.class);
 
     public IdentityProgressFrontendHandler(ConfigurationService configurationService) {
         super(configurationService);

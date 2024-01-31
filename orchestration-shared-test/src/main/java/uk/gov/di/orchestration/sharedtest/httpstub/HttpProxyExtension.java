@@ -10,7 +10,7 @@ public class HttpProxyExtension extends HttpStubExtension implements BeforeAllCa
     private String currentPort;
     private String currentNonProxyHosts;
 
-    private void disableProxy() throws Exception {
+    private void disableProxy() {
         System.setProperty("http.proxyHost", currentHost);
         System.setProperty("http.proxyPort", currentPort);
         System.setProperty("http.nonProxyHosts", currentNonProxyHosts);

@@ -75,8 +75,8 @@ public abstract class ApiGatewayHandlerIntegrationTest
         request.getRequestContext().setAuthorizer(authorizerParams);
         body.ifPresent(
                 o -> {
-                    if (o instanceof String) {
-                        request.withBody((String) o);
+                    if (o instanceof String string) {
+                        request.withBody(string);
                     } else {
                         try {
                             request.withBody(objectMapper.writeValueAsString(o));

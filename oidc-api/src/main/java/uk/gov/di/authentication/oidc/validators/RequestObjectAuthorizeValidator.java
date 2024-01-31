@@ -248,7 +248,7 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
         } else if (vtrClaim instanceof String vtr) {
             return List.of(vtr);
         } else if (vtrClaim instanceof List<?> vtrList
-                && vtrList.stream().allMatch(vtr -> vtr instanceof String)) {
+                && vtrList.stream().allMatch(String.class::isInstance)) {
             return List.of(
                     objectMapper.writeValueAsString(jwtClaimsSet.getStringArrayClaim("vtr")));
         }

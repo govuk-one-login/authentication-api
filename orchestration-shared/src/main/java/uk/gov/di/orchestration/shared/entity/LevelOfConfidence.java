@@ -2,7 +2,6 @@ package uk.gov.di.orchestration.shared.entity;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public enum LevelOfConfidence {
     NONE("P0", true),
@@ -40,7 +39,7 @@ public enum LevelOfConfidence {
         return Arrays.stream(LevelOfConfidence.values())
                 .filter(LevelOfConfidence::isSupported)
                 .map(LevelOfConfidence::getValue)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     public static LevelOfConfidence getDefault() {

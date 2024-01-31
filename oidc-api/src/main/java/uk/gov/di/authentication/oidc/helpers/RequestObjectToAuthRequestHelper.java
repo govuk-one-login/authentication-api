@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Objects;
 
 import static com.nimbusds.openid.connect.sdk.Prompt.Type.parse;
+import static java.lang.String.format;
 
 public class RequestObjectToAuthRequestHelper {
     private static final Json objectMapper = SerializationService.getInstance();
@@ -93,7 +94,7 @@ public class RequestObjectToAuthRequestHelper {
         if (vtrClaim instanceof String vtr) {
             builder.customParameter("vtr", vtr);
         } else if (vtrClaim instanceof List<?> vtrList
-                && vtrList.stream().allMatch(vtr -> vtr instanceof String)) {
+                && vtrList.stream().allMatch(String.class::isInstance)) {
             builder.customParameter(
                     "vtr",
                     objectMapper.writeValueAsString(jwtClaimsSet.getStringArrayClaim("vtr")));
@@ -122,7 +123,7 @@ public class RequestObjectToAuthRequestHelper {
             var claimsObject = claimsSet.getJSONObjectClaim("claims");
             return OIDCClaimsRequest.parse(new JSONObject(claimsObject));
         } catch (com.nimbusds.oauth2.sdk.ParseException e) {
-            LOG.warn("Failed to parse OIDC claims: " + e.getMessage(), e);
+            LOG.warn(format("Failed to parse OIDC claims: %s", e.getMessage()), e);
             throw new RuntimeException("Failed to parse OIDC claims", e);
         }
     }
@@ -132,7 +133,7 @@ public class RequestObjectToAuthRequestHelper {
             var stringClaims = claimsSet.getClaim("claims").toString();
             return OIDCClaimsRequest.parse(stringClaims);
         } catch (com.nimbusds.oauth2.sdk.ParseException e) {
-            LOG.warn("Failed to parse OIDC claims: " + e.getMessage(), e);
+            LOG.warn(format("Failed to parse OIDC claims: %s", e.getMessage()), e);
             throw new RuntimeException("Failed to parse OIDC claims", e);
         }
     }

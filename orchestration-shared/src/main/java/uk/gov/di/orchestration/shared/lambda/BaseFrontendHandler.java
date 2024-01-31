@@ -180,11 +180,11 @@ public abstract class BaseFrontendHandler<T>
                                         .withUserProfile(userProfile)
                                         .withUserAuthenticated(true),
                         () -> {
-                            if (request instanceof BaseFrontendRequest)
+                            if (request instanceof BaseFrontendRequest baseFrontendRequest)
                                 userContextBuilder
                                         .withUserProfile(
                                                 authenticationService.getUserProfileFromEmail(
-                                                        ((BaseFrontendRequest) request)
+                                                        baseFrontendRequest
                                                                 .getEmail()
                                                                 .toLowerCase(Locale.ROOT)))
                                         .withUserAuthenticated(false);
