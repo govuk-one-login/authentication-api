@@ -28,6 +28,7 @@ resource "aws_lambda_function" "endpoint_lambda" {
       local.deploy_dynatrace ? local.dynatrace_environment_variables : {},
       {
         JAVA_TOOL_OPTIONS = "-XX:+TieredCompilation -XX:TieredStopAtLevel=1"
+        SCM_REF           = var.provenance_sha
     })
   }
   kms_key_arn = var.lambda_env_vars_encryption_kms_key_arn
