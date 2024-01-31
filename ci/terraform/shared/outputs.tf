@@ -63,6 +63,10 @@ output "sqs_lambda_iam_role_name" {
   value = aws_iam_role.sqs_lambda_iam_role.name
 }
 
+output "pending_email_check_queue_id" {
+  value = aws_sqs_queue.pending_email_check_queue.id
+}
+
 output "email_lambda_iam_role_arn" {
   value = aws_iam_role.email_lambda_iam_role.arn
 }
