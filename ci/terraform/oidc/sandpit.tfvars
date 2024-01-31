@@ -10,7 +10,7 @@ ipv_authorisation_uri          = ""
 ipv_authorisation_client_id    = ""
 logging_endpoint_enabled       = false
 logging_endpoint_arns          = []
-account_intervention_service_abort_on_error = true
+
 auth_frontend_public_encryption_key = <<-EOT
 -----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAs41htFRe62BIfwQZ0OCT
