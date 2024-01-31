@@ -5,6 +5,8 @@ import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.id.State;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.NotNull;
+import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.NoSessionEntity;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 
@@ -13,6 +15,8 @@ import java.util.Objects;
 import java.util.Optional;
 
 import static java.lang.String.format;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_ID;
+import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_NAME;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.CLIENT_SESSION_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.LogFieldName.GOVUK_SIGNIN_JOURNEY_ID;
 import static uk.gov.di.orchestration.shared.helpers.LogLineHelper.attachLogFieldToLogs;
@@ -65,7 +69,16 @@ public class NoSessionOrchestrationService {
                                     () ->
                                             new NoSessionException(
                                                     "No client session found with given client sessionId"));
+
             LOG.info("ClientSession found using clientSessionId");
+
+            try {
+                attachLogFieldToLogs(CLIENT_NAME, clientSession.getClientName());
+                attachLogFieldToLogs(CLIENT_ID, clientIdFromClientSession(clientSession));
+            } catch (Exception e) {
+                LOG.warn("Failed to attach client details to logs");
+            }
+
             var errorObject =
                     new ErrorObject(
                             OAuth2Error.ACCESS_DENIED_CODE,
@@ -82,6 +95,13 @@ public class NoSessionOrchestrationService {
                             "Session Cookie not present and access_denied or state param missing from error response. NoSessionResponseEnabled: %s",
                             noSessionResponseEnabled));
         }
+    }
+
+    @NotNull
+    private static String clientIdFromClientSession(ClientSession clientSession) {
+        return clientSession.getAuthRequestParams().get("client_id").stream()
+                .findFirst()
+                .orElse("unknown");
     }
 
     public void storeClientSessionIdAgainstState(String clientSessionId, State state) {
