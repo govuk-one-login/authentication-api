@@ -67,15 +67,6 @@ resource "aws_lambda_alias" "authorizer_alias" {
   function_version = aws_lambda_function.authorizer.version
 }
 
-resource "time_sleep" "wait_for_alias_to_reassign" {
-  depends_on = [aws_lambda_alias.authorizer_alias]
-
-  triggers = {
-    function_name    = aws_lambda_function.authorizer.arn
-    function_version = aws_lambda_function.authorizer.version
-  }
-  create_duration = "60s"
-}
 
 resource "aws_lambda_provisioned_concurrency_config" "endpoint_lambda_concurrency_config" {
   count = local.authorizer_provisioned_concurrency == 0 ? 0 : 1
@@ -84,10 +75,6 @@ resource "aws_lambda_provisioned_concurrency_config" "endpoint_lambda_concurrenc
   qualifier     = aws_lambda_alias.authorizer_alias.name
 
   provisioned_concurrent_executions = local.authorizer_provisioned_concurrency
-
-  depends_on = [
-    time_sleep.wait_for_alias_to_reassign
-  ]
 }
 
 resource "aws_appautoscaling_target" "lambda_target" {
