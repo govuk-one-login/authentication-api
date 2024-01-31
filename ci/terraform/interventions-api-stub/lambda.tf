@@ -42,4 +42,6 @@ module "account_interventions_stub_lambda" {
   default_tags                           = local.default_tags
 
   use_localstack = false
+
+  provenance_sha = var.provenance_sha
 }

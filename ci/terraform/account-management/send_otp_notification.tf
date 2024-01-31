@@ -69,6 +69,8 @@ module "send_otp_notification" {
   authorizer_id                          = aws_api_gateway_authorizer.di_account_management_api.id
   use_localstack                         = var.use_localstack
 
+  provenance_sha = var.provenance_sha
+
   depends_on = [
     aws_api_gateway_rest_api.di_account_management_api,
     aws_sqs_queue.email_queue,

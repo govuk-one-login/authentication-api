@@ -58,4 +58,6 @@ module "authenticate" {
   default_tags                           = local.default_tags
 
   use_localstack = var.use_localstack
+
+  provenance_sha = var.provenance_sha
 }

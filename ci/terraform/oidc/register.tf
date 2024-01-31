@@ -59,6 +59,8 @@ module "register" {
 
   use_localstack = var.use_localstack
 
+  provenance_sha = var.provenance_sha
+
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_api,
     aws_api_gateway_resource.connect_resource,

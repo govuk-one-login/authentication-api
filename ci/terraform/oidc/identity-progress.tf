@@ -65,4 +65,6 @@ module "identity_progress" {
   ]
 
   use_localstack = var.use_localstack
+
+  provenance_sha = var.provenance_sha
 }

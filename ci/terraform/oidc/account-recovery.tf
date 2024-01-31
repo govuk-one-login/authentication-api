@@ -68,4 +68,6 @@ module "account_recovery" {
   api_key_required                       = true
 
   use_localstack = var.use_localstack
+
+  provenance_sha = var.provenance_sha
 }

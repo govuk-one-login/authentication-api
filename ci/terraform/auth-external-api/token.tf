@@ -67,6 +67,8 @@ module "auth_token" {
   lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
   default_tags                           = local.default_tags
 
+  provenance_sha = var.provenance_sha
+
   use_localstack = false
 
   depends_on = [

@@ -75,4 +75,6 @@ module "processing-identity" {
   ]
 
   use_localstack = var.use_localstack
+
+  provenance_sha = var.provenance_sha
 }

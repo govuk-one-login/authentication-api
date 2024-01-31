@@ -61,4 +61,5 @@ module "delete_account" {
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
 
+  provenance_sha = var.provenance_sha
 }

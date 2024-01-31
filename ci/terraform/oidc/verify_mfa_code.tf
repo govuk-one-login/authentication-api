@@ -72,6 +72,8 @@ module "verify_mfa_code" {
   api_key_required                       = true
   use_localstack                         = var.use_localstack
 
+  provenance_sha = var.provenance_sha
+
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_frontend_api,
   ]

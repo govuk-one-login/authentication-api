@@ -172,3 +172,7 @@ variable "max_provisioned_concurrency" {
 variable "scaling_trigger" {
   default = 0.7
 }
+
+variable "provenance_sha" {
+  type = string
+}
