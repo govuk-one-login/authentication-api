@@ -1,9 +1,9 @@
-module "account_management_api_get_mfa_methods" {
+module "account_management_api_retrieve_mfa_methods" {
   source      = "../modules/lambda-role"
   environment = var.environment
-  role_name   = "account-management-api-get_mfa_methods"
+  role_name   = "account-management-api-retrieve_mfa_methods"
   vpc_arn     = local.vpc_arn
-  count       = local.deploy_get_mfa_methods_count
+  count       = local.deploy_retrieve_mfa_methods_count
 
   policies_to_attach = [
     aws_iam_policy.dynamo_am_user_read_access_policy.arn,
@@ -14,11 +14,11 @@ module "account_management_api_get_mfa_methods" {
   ]
 }
 
-module "get-mfa-methods" {
+module "retrieve-mfa-methods" {
   source = "../modules/endpoint-module"
 
-  endpoint_name   = "get-mfa-methods"
-  path_part       = "get-mfa-methods"
+  endpoint_name   = "mfa-methods/retrieve"
+  path_part       = "mfa-methods/retrieve"
   endpoint_method = ["POST"]
   handler_environment_variables = {
     ENVIRONMENT          = var.environment
@@ -36,10 +36,10 @@ module "get-mfa-methods" {
   root_resource_id = aws_api_gateway_rest_api.di_account_management_api.root_resource_id
   execution_arn    = aws_api_gateway_rest_api.di_account_management_api.execution_arn
 
-  memory_size                 = lookup(var.performance_tuning, "get-mfa-methods", local.default_performance_parameters).memory
-  provisioned_concurrency     = lookup(var.performance_tuning, "get-mfa-methods", local.default_performance_parameters).concurrency
-  max_provisioned_concurrency = lookup(var.performance_tuning, "get-mfa-methods", local.default_performance_parameters).max_concurrency
-  scaling_trigger             = lookup(var.performance_tuning, "get-mfa-methods", local.default_performance_parameters).scaling_trigger
+  memory_size                 = lookup(var.performance_tuning, "retrieve-mfa-methods", local.default_performance_parameters).memory
+  provisioned_concurrency     = lookup(var.performance_tuning, "retrieve-mfa-methods", local.default_performance_parameters).concurrency
+  max_provisioned_concurrency = lookup(var.performance_tuning, "retrieve-mfa-methods", local.default_performance_parameters).max_concurrency
+  scaling_trigger             = lookup(var.performance_tuning, "retrieve-mfa-methods", local.default_performance_parameters).scaling_trigger
 
   source_bucket           = aws_s3_bucket.source_bucket.bucket
   lambda_zip_file         = aws_s3_object.account_management_api_release_zip.key
@@ -60,5 +60,5 @@ module "get-mfa-methods" {
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
-  count                                  = local.deploy_get_mfa_methods_count
+  count                                  = local.deploy_retrieve_mfa_methods_count
 }
