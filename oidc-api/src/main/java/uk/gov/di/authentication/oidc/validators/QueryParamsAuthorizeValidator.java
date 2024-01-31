@@ -137,7 +137,7 @@ public class QueryParamsAuthorizeValidator extends BaseAuthorizeValidator {
     }
 
     private boolean areClaimsValid(OIDCClaimsRequest claimsRequest, ClientRegistry clientRegistry) {
-        if (claimsRequest == null) {
+        if (claimsRequest == null || claimsRequest.getUserInfoClaimsRequest() == null) {
             LOG.info("No claims present in auth request");
             return true;
         }
