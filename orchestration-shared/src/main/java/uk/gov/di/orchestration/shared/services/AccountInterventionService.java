@@ -14,6 +14,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.Map;
+import java.util.Objects;
 
 import static uk.gov.di.orchestration.shared.domain.AccountInterventionsAuditableEvent.AIS_RESPONSE_RECEIVED;
 
@@ -25,6 +26,7 @@ public class AccountInterventionService {
     private final AuditService auditService;
     private final boolean accountInterventionsCallEnabled;
     private final boolean accountInterventionsActionEnabled;
+    private final boolean acountInterventionsAbortOnError;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final ConfigurationService configurationService;
 
@@ -53,6 +55,8 @@ public class AccountInterventionService {
                 configService.isAccountInterventionServiceCallEnabled();
         this.accountInterventionsActionEnabled =
                 configService.isAccountInterventionServiceActionEnabled();
+        this.acountInterventionsAbortOnError =
+                configService.abortOnAccountInterventionsErrorResponse();
         this.httpClient = httpClient;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.auditService = auditService;
@@ -81,7 +85,7 @@ public class AccountInterventionService {
 
                 return status;
 
-            } catch (IOException | Json.JsonException e) {
+            } catch (IOException | Json.JsonException | AccountInterventionException e) {
                 return handleException(e);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -95,11 +99,13 @@ public class AccountInterventionService {
     private AccountInterventionStatus handleException(Exception e) {
         cloudwatchMetricsService.incrementCounter(
                 "AISCallFailure", Map.of("Environment", configurationService.getEnvironment()));
-        if (accountInterventionsActionEnabled) {
+        if (accountInterventionsActionEnabled && acountInterventionsAbortOnError) {
             throw new AccountInterventionException(
                     "Problem communicating with Account Intervention Service", e);
         }
-        LOG.warn("Problem communicating with Account Intervention Service ", e);
+        LOG.error(
+                "Problem communicating with Account Intervention Service. Assuming no intervention. ",
+                e);
         return noInterventionResponse();
     }
 
@@ -126,6 +132,11 @@ public class AccountInterventionService {
                         .readValue(body, AccountInterventionResponse.class);
 
         var accountInterventionStatus = response.state();
+        if (Objects.isNull(accountInterventionStatus)) {
+            LOG.error(
+                    "Account Intervention Status is null. This may be due to an error or timeout response from Account Intervention Service.");
+            throw new AccountInterventionException("Account Intervention Status is null.");
+        }
         incrementCloudwatchMetrics(accountInterventionStatus);
 
         return accountInterventionStatus;
