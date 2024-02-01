@@ -130,7 +130,7 @@ resource "aws_sqs_queue_policy" "experian_phone_checker_queue_policy" {
 resource "aws_lambda_function" "experian_phone_checker_sqs_lambda" {
   function_name = "${var.environment}-experian-phone-checker-sqs-lambda"
   role          = module.experian_phone_checker_sqs_role.arn
-  handler       = "uk.gov.di.accountmanagement.lambda.PhoneCheckerHandler::handleRequest"
+  handler       = "uk.gov.di.authentication.contraindicators.experianphonecheck.lambda.ExperianPhoneCheckSQSHandler::handleRequest"
   timeout       = 30
   memory_size   = 512
   runtime       = "java17"
