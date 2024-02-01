@@ -47,7 +47,7 @@ public class ClientSession {
         this.creationDate = creationDate;
         this.vtrList = vtrList;
         if (vtrList.size() > 0) {
-            this.effectiveVectorOfTrust = getVtrWithLowestCredentialTrustLevel();
+            this.effectiveVectorOfTrust = VectorOfTrust.orderVtrList(vtrList).get(0);
         }
         this.clientName = clientName;
     }
@@ -77,14 +77,6 @@ public class ClientSession {
         this.effectiveVectorOfTrust = effectiveVectorOfTrust;
         this.vtrList.add(effectiveVectorOfTrust);
         return this;
-    }
-
-    public VectorOfTrust getVtrWithLowestCredentialTrustLevel() {
-        List<VectorOfTrust> orderedVtrList = orderVtrList();
-        if (orderedVtrList.isEmpty()) {
-            throw new IllegalArgumentException("Invalid VTR attribute");
-        }
-        return orderedVtrList.get(0);
     }
 
     public Subject getDocAppSubjectId() {

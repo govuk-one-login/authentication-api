@@ -272,6 +272,7 @@ class AuthCodeHandlerTest {
                         any(URI.class),
                         any(State.class)))
                 .thenReturn(authSuccessResponse);
+        when(clientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(requestedLevel)));
         when(clientSession.getVtrLocsAsCommaSeparatedString()).thenReturn("P0");
 
         var response = generateApiRequest();
@@ -351,6 +352,7 @@ class AuthCodeHandlerTest {
                         authRequest.getResponseMode());
 
         when(clientSession.getDocAppSubjectId()).thenReturn(new Subject(DOC_APP_SUBJECT_ID));
+        when(clientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(requestedLevel)));
         when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
                 .thenReturn(true);
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
@@ -571,7 +573,6 @@ class AuthCodeHandlerTest {
         when(clientSessionService.getClientSessionFromRequestHeaders(anyMap()))
                 .thenReturn(Optional.of(clientSession));
         when(vectorOfTrust.getCredentialTrustLevel()).thenReturn(requestedLevel);
-        when(clientSession.getVtrWithLowestCredentialTrustLevel()).thenReturn(vectorOfTrust);
         when(clientSession.getAuthRequestParams()).thenReturn(authRequestParams);
         when(clientSession.getClientName()).thenReturn(CLIENT_NAME);
     }

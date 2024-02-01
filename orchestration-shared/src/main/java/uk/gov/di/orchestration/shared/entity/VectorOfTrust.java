@@ -75,6 +75,26 @@ public class VectorOfTrust {
         return vectorOfTrust;
     }
 
+    public static CredentialTrustLevel getLowestCredentialTrustLevel(List<VectorOfTrust> vtrList) {
+        List<VectorOfTrust> orderedVtrList = orderVtrList(vtrList);
+        if (orderedVtrList.isEmpty()) {
+            throw new IllegalArgumentException("Invalid VTR attribute");
+        }
+        return orderedVtrList.get(0).getCredentialTrustLevel();
+    }
+
+    public static List<VectorOfTrust> orderVtrList(List<VectorOfTrust> vtrList) {
+        return vtrList.stream()
+                .sorted(
+                        Comparator.comparing(
+                                        VectorOfTrust::getLevelOfConfidence,
+                                        Comparator.nullsFirst(Comparator.naturalOrder()))
+                                .thenComparing(
+                                        VectorOfTrust::getCredentialTrustLevel,
+                                        Comparator.nullsFirst(Comparator.naturalOrder())))
+                .toList();
+    }
+
     public static VectorOfTrust getDefaults() {
         return VectorOfTrust.of(CredentialTrustLevel.getDefault(), LevelOfConfidence.getDefault());
     }
