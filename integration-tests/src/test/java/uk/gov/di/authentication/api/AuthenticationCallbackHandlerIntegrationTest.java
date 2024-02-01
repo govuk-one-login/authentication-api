@@ -115,15 +115,15 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                     + "\n-----END PUBLIC KEY-----\n";
 
     @Nested
-    class AuthJourney {
+    class AuthOnlyJourney {
 
         @BeforeEach()
         void authSetup() throws Json.JsonException {
             setupTestWithDefaultEnvVars();
             setupSession();
             setupClientRegWithoutIdentityVerificationSupported();
-            accountInterventionApiStub.initWithBlockedOrSuspended(
-                    SUBJECT_ID.getValue(), false, false);
+            accountInterventionApiStub.initWithAccountStatus(
+                    SUBJECT_ID.getValue(), false, false, false, false);
         }
 
         @Test
@@ -135,32 +135,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                                     Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
                             constructQueryStringParameters());
 
-            assertThat(response, hasStatus(302));
-
-            URI redirectLocationHeader =
-                    URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
-            assertEquals(
-                    REDIRECT_URI.getAuthority() + REDIRECT_URI.getPath(),
-                    redirectLocationHeader.getAuthority() + redirectLocationHeader.getPath());
-
-            assertThat(redirectLocationHeader.getQuery(), containsString(RP_STATE.getValue()));
-
-            assertThat(redirectLocationHeader.getQuery(), containsString("code"));
-
-            assertTxmaAuditEventsReceived(
-                    txmaAuditQueue,
-                    List.of(
-                            OrchestrationAuditableEvent.AUTH_CALLBACK_RESPONSE_RECEIVED,
-                            OrchestrationAuditableEvent.AUTH_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
-                            OrchestrationAuditableEvent.AUTH_SUCCESSFUL_USERINFO_RESPONSE_RECEIVED,
-                            AccountInterventionsAuditableEvent.AIS_RESPONSE_RECEIVED,
-                            OidcAuditableEvent.AUTH_CODE_ISSUED));
-
-            Optional<AuthenticationUserInfo> userInfoDbEntry =
-                    userInfoStoreExtension.getUserInfoBySubjectId(SUBJECT_ID.getValue());
-            assertTrue(userInfoDbEntry.isPresent());
-            assertEquals(SUBJECT_ID.getValue(), userInfoDbEntry.get().getSubjectID());
-            assertThat(userInfoDbEntry.get().getUserInfo(), containsString("new_account"));
+            assertUserInfoStoredAndRedirectedToRp(response);
         }
 
         @Test
@@ -252,15 +227,15 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     }
 
     @Nested
-    class IPVJourney {
+    class IdentityJourney {
 
         @BeforeEach()
         void ipvSetup() throws Json.JsonException {
             setupTestWithDefaultEnvVars();
             setupSession();
             setupClientRegWithIdentityVerificationSupported();
-            accountInterventionApiStub.initWithBlockedOrSuspended(
-                    SUBJECT_ID.getValue(), false, false);
+            accountInterventionApiStub.initWithAccountStatus(
+                    SUBJECT_ID.getValue(), false, false, false, false);
         }
 
         @Test
@@ -273,30 +248,12 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                                     Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
                             constructQueryStringParameters());
 
-            var authRequest = validateQueryRequestToIPVAndReturnAuthRequest(response);
-
-            var encryptedRequestObject = authRequest.getRequestObject();
-            var signedJWTResponse = decryptJWT((EncryptedJWT) encryptedRequestObject);
-
-            validateClaimsInJar(signedJWTResponse);
-
-            assertTxmaAuditEventsReceived(
-                    txmaAuditQueue,
-                    List.of(
-                            OrchestrationAuditableEvent.AUTH_CALLBACK_RESPONSE_RECEIVED,
-                            AccountInterventionsAuditableEvent.AIS_RESPONSE_RECEIVED,
-                            OrchestrationAuditableEvent.AUTH_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
-                            OrchestrationAuditableEvent.AUTH_SUCCESSFUL_USERINFO_RESPONSE_RECEIVED,
-                            IPVAuditableEvent.IPV_AUTHORISATION_REQUESTED));
-        }
-
-        private void setupClientRegWithIdentityVerificationSupported() {
-            setupClientReg(true);
+            assertRedirectToIpv(response, false);
         }
     }
 
     @Nested
-    class AccountInterventionJourney {
+    class AccountInterventionsAuthOnlyJourney {
 
         @BeforeEach()
         void accountInterventionSetup() throws Json.JsonException {
@@ -305,10 +262,10 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         }
 
         @Test
-        void shouldLogoutAndRedirectToBlockedPageWhenAccountIsBlocked() throws Json.JsonException {
+        void shouldRedirectToRpWhenAccountStatusIsNoIntervention() throws Json.JsonException {
             setupTestWithDefaultEnvVars();
-            accountInterventionApiStub.initWithBlockedOrSuspended(
-                    SUBJECT_ID.getValue(), true, false);
+            accountInterventionApiStub.initWithAccountStatus(
+                    SUBJECT_ID.getValue(), false, false, false, false);
 
             var session = redis.getSession(SESSION_ID);
             assertNotNull(session);
@@ -320,34 +277,15 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                                     Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
                             constructQueryStringParameters());
 
-            assertThat(response, hasStatus(302));
-            assertThrows(
-                    uk.gov.di.orchestration.shared.serialization.Json.JsonException.class,
-                    () -> redis.getSession(SESSION_ID));
-
-            URI redirectLocationHeader =
-                    URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
-
-            assertThat(
-                    redirectLocationHeader.toString(),
-                    containsString(configurationService.getAccountStatusBlockedURI().toString()));
-
-            assertTxmaAuditEventsReceived(
-                    txmaAuditQueue,
-                    List.of(
-                            OrchestrationAuditableEvent.AUTH_CALLBACK_RESPONSE_RECEIVED,
-                            AccountInterventionsAuditableEvent.AIS_RESPONSE_RECEIVED,
-                            OrchestrationAuditableEvent.AUTH_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
-                            OrchestrationAuditableEvent.AUTH_SUCCESSFUL_USERINFO_RESPONSE_RECEIVED,
-                            OidcAuditableEvent.LOG_OUT_SUCCESS));
+            assertUserInfoStoredAndRedirectedToRp(response);
         }
 
         @Test
-        void shouldLogoutAndRedirectToSuspendedPageWhenAccountIsSuspended()
+        void shouldLogoutAndRedirectToBlockedPageWhenAccountStatusIsBlocked()
                 throws Json.JsonException {
             setupTestWithDefaultEnvVars();
-            accountInterventionApiStub.initWithBlockedOrSuspended(
-                    SUBJECT_ID.getValue(), false, true);
+            accountInterventionApiStub.initWithAccountStatus(
+                    SUBJECT_ID.getValue(), true, false, false, false);
 
             var session = redis.getSession(SESSION_ID);
             assertNotNull(session);
@@ -359,26 +297,88 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                                     Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
                             constructQueryStringParameters());
 
-            assertThat(response, hasStatus(302));
-            assertThrows(
-                    uk.gov.di.orchestration.shared.serialization.Json.JsonException.class,
-                    () -> redis.getSession(SESSION_ID));
+            assertRedirectToBlockedPage(response);
+        }
 
-            URI redirectLocationHeader =
-                    URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
+        @Test
+        void shouldLogoutAndRedirectToSuspendedPageWhenAccountStatusIsSuspendedNoAction()
+                throws Json.JsonException {
+            setupTestWithDefaultEnvVars();
+            accountInterventionApiStub.initWithAccountStatus(
+                    SUBJECT_ID.getValue(), false, true, false, false);
 
-            assertThat(
-                    redirectLocationHeader.toString(),
-                    containsString(configurationService.getAccountStatusSuspendedURI().toString()));
+            var session = redis.getSession(SESSION_ID);
+            assertNotNull(session);
 
-            assertTxmaAuditEventsReceived(
-                    txmaAuditQueue,
-                    List.of(
-                            OrchestrationAuditableEvent.AUTH_CALLBACK_RESPONSE_RECEIVED,
-                            AccountInterventionsAuditableEvent.AIS_RESPONSE_RECEIVED,
-                            OrchestrationAuditableEvent.AUTH_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
-                            OrchestrationAuditableEvent.AUTH_SUCCESSFUL_USERINFO_RESPONSE_RECEIVED,
-                            OidcAuditableEvent.LOG_OUT_SUCCESS));
+            var response =
+                    makeRequest(
+                            Optional.of(TEST_EMAIL_ADDRESS),
+                            constructHeaders(
+                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                            constructQueryStringParameters());
+
+            assertRedirectToSuspendedPage(response);
+        }
+
+        @Test
+        void shouldLogoutAndRedirectToSuspendedPageWhenAccountStatusIsSuspendedResetPassword()
+                throws Json.JsonException {
+            setupTestWithDefaultEnvVars();
+            accountInterventionApiStub.initWithAccountStatus(
+                    SUBJECT_ID.getValue(), false, true, false, true);
+
+            var session = redis.getSession(SESSION_ID);
+            assertNotNull(session);
+
+            var response =
+                    makeRequest(
+                            Optional.of(TEST_EMAIL_ADDRESS),
+                            constructHeaders(
+                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                            constructQueryStringParameters());
+
+            assertRedirectToSuspendedPage(response);
+        }
+
+        @Test
+        void shouldRedirectToRpWhenAccountStatusIsSuspendedReproveIdentity()
+                throws Json.JsonException {
+            setupTestWithDefaultEnvVars();
+            accountInterventionApiStub.initWithAccountStatus(
+                    SUBJECT_ID.getValue(), false, true, true, false);
+
+            var session = redis.getSession(SESSION_ID);
+            assertNotNull(session);
+
+            var response =
+                    makeRequest(
+                            Optional.of(TEST_EMAIL_ADDRESS),
+                            constructHeaders(
+                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                            constructQueryStringParameters());
+
+            assertUserInfoStoredAndRedirectedToRp(response);
+        }
+
+        @Test
+        void
+                shouldLogoutAndRedirectToSuspendedPageWhenAccountStatusIsSuspendedResetPasswordReproveIdentity()
+                        throws Json.JsonException {
+            setupTestWithDefaultEnvVars();
+            accountInterventionApiStub.initWithAccountStatus(
+                    SUBJECT_ID.getValue(), false, true, false, true);
+
+            var session = redis.getSession(SESSION_ID);
+            assertNotNull(session);
+
+            var response =
+                    makeRequest(
+                            Optional.of(TEST_EMAIL_ADDRESS),
+                            constructHeaders(
+                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                            constructQueryStringParameters());
+
+            assertRedirectToSuspendedPage(response);
         }
 
         @Test
@@ -419,10 +419,270 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                                                             SESSION_ID, CLIENT_SESSION_ID))),
                                     constructQueryStringParameters()));
         }
+    }
 
-        private void setupClientRegWithoutIdentityVerificationSupported() {
-            setupClientReg(false);
+    @Nested
+    class AccountInterventionsIdentityJourney {
+
+        @BeforeEach()
+        void accountInterventionSetup() throws Json.JsonException {
+            setupSession();
+            setupClientRegWithIdentityVerificationSupported();
         }
+
+        @Test
+        void shouldRedirectToIpvWhenAccountStatusIsNoIntervention()
+                throws Json.JsonException, java.text.ParseException, ParseException, JOSEException {
+            setupTestWithDefaultEnvVars();
+            accountInterventionApiStub.initWithAccountStatus(
+                    SUBJECT_ID.getValue(), false, false, false, false);
+
+            var session = redis.getSession(SESSION_ID);
+            assertNotNull(session);
+
+            var response =
+                    makeRequest(
+                            Optional.of(TEST_EMAIL_ADDRESS),
+                            constructHeaders(
+                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                            constructQueryStringParameters());
+
+            assertRedirectToIpv(response, false);
+        }
+
+        @Test
+        void shouldLogoutAndRedirectToBlockedPageWhenAccountStatusIsBlocked()
+                throws Json.JsonException {
+            setupTestWithDefaultEnvVars();
+            accountInterventionApiStub.initWithAccountStatus(
+                    SUBJECT_ID.getValue(), true, false, false, false);
+
+            var session = redis.getSession(SESSION_ID);
+            assertNotNull(session);
+
+            var response =
+                    makeRequest(
+                            Optional.of(TEST_EMAIL_ADDRESS),
+                            constructHeaders(
+                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                            constructQueryStringParameters());
+
+            assertRedirectToBlockedPage(response);
+        }
+
+        @Test
+        void shouldRedirectToIpvpWhenAccountStatusIsSuspendedNoAction()
+                throws Json.JsonException, java.text.ParseException, ParseException, JOSEException {
+            setupTestWithDefaultEnvVars();
+            accountInterventionApiStub.initWithAccountStatus(
+                    SUBJECT_ID.getValue(), false, false, false, false);
+
+            var session = redis.getSession(SESSION_ID);
+            assertNotNull(session);
+
+            var response =
+                    makeRequest(
+                            Optional.of(TEST_EMAIL_ADDRESS),
+                            constructHeaders(
+                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                            constructQueryStringParameters());
+
+            assertRedirectToIpv(response, false);
+        }
+
+        @Test
+        void shouldLogoutAndRedirectToSuspendedPageWhenAccountStatusIsSuspendedResetPassword()
+                throws Json.JsonException {
+            setupTestWithDefaultEnvVars();
+            accountInterventionApiStub.initWithAccountStatus(
+                    SUBJECT_ID.getValue(), false, true, false, true);
+
+            var session = redis.getSession(SESSION_ID);
+            assertNotNull(session);
+
+            var response =
+                    makeRequest(
+                            Optional.of(TEST_EMAIL_ADDRESS),
+                            constructHeaders(
+                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                            constructQueryStringParameters());
+
+            assertRedirectToSuspendedPage(response);
+        }
+
+        @Test
+        void shouldRedirectToIpvWhenAccountStatusIsSuspendedReproveIdentity()
+                throws Json.JsonException, java.text.ParseException, ParseException, JOSEException {
+            setupTestWithDefaultEnvVars();
+            accountInterventionApiStub.initWithAccountStatus(
+                    SUBJECT_ID.getValue(), false, true, true, false);
+
+            var session = redis.getSession(SESSION_ID);
+            assertNotNull(session);
+
+            var response =
+                    makeRequest(
+                            Optional.of(TEST_EMAIL_ADDRESS),
+                            constructHeaders(
+                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                            constructQueryStringParameters());
+
+            assertRedirectToIpv(response, true);
+        }
+
+        @Test
+        void
+                shouldLogoutAndRedirectToSuspendedPageWhenAccountStatusIsSuspendedResetPasswordReproveIdentity()
+                        throws Json.JsonException {
+            setupTestWithDefaultEnvVars();
+            accountInterventionApiStub.initWithAccountStatus(
+                    SUBJECT_ID.getValue(), false, true, false, true);
+
+            var session = redis.getSession(SESSION_ID);
+            assertNotNull(session);
+
+            var response =
+                    makeRequest(
+                            Optional.of(TEST_EMAIL_ADDRESS),
+                            constructHeaders(
+                                    Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
+                            constructQueryStringParameters());
+
+            assertRedirectToSuspendedPage(response);
+        }
+
+        @Test
+        void byDefaultDoesNotThrowWhenAisReturns500() throws Json.JsonException {
+            setupTestWithDefaultEnvVars();
+            accountInterventionApiStub.initWithErrorResponse(SUBJECT_ID.getValue());
+
+            var session = redis.getSession(SESSION_ID);
+            assertNotNull(session);
+
+            assertDoesNotThrow(
+                    () ->
+                            makeRequest(
+                                    Optional.of(TEST_EMAIL_ADDRESS),
+                                    constructHeaders(
+                                            Optional.of(
+                                                    buildSessionCookie(
+                                                            SESSION_ID, CLIENT_SESSION_ID))),
+                                    constructQueryStringParameters()));
+        }
+
+        @Test
+        void doesThrowWhenAisReturns500AndAbortFlagIsOn() throws Json.JsonException {
+            setupTestWithAbortOnAisErrorResponseFlagOn();
+            accountInterventionApiStub.initWithErrorResponse(SUBJECT_ID.getValue());
+
+            var session = redis.getSession(SESSION_ID);
+            assertNotNull(session);
+
+            assertThrows(
+                    AccountInterventionException.class,
+                    () ->
+                            makeRequest(
+                                    Optional.of(TEST_EMAIL_ADDRESS),
+                                    constructHeaders(
+                                            Optional.of(
+                                                    buildSessionCookie(
+                                                            SESSION_ID, CLIENT_SESSION_ID))),
+                                    constructQueryStringParameters()));
+        }
+    }
+
+    private void assertRedirectToSuspendedPage(APIGatewayProxyResponseEvent response) {
+        assertThat(response, hasStatus(302));
+        assertThrows(
+                uk.gov.di.orchestration.shared.serialization.Json.JsonException.class,
+                () -> redis.getSession(SESSION_ID));
+
+        URI redirectLocationHeader =
+                URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
+
+        assertThat(
+                redirectLocationHeader.toString(),
+                containsString(configurationService.getAccountStatusSuspendedURI()));
+
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue,
+                List.of(
+                        OrchestrationAuditableEvent.AUTH_CALLBACK_RESPONSE_RECEIVED,
+                        AccountInterventionsAuditableEvent.AIS_RESPONSE_RECEIVED,
+                        OrchestrationAuditableEvent.AUTH_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
+                        OrchestrationAuditableEvent.AUTH_SUCCESSFUL_USERINFO_RESPONSE_RECEIVED,
+                        OidcAuditableEvent.LOG_OUT_SUCCESS));
+    }
+
+    private void assertRedirectToBlockedPage(APIGatewayProxyResponseEvent response) {
+        assertThat(response, hasStatus(302));
+        assertThrows(
+                uk.gov.di.orchestration.shared.serialization.Json.JsonException.class,
+                () -> redis.getSession(SESSION_ID));
+
+        URI redirectLocationHeader =
+                URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
+
+        assertThat(
+                redirectLocationHeader.toString(),
+                containsString(configurationService.getAccountStatusBlockedURI()));
+
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue,
+                List.of(
+                        OrchestrationAuditableEvent.AUTH_CALLBACK_RESPONSE_RECEIVED,
+                        AccountInterventionsAuditableEvent.AIS_RESPONSE_RECEIVED,
+                        OrchestrationAuditableEvent.AUTH_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
+                        OrchestrationAuditableEvent.AUTH_SUCCESSFUL_USERINFO_RESPONSE_RECEIVED,
+                        OidcAuditableEvent.LOG_OUT_SUCCESS));
+    }
+
+    private void assertRedirectToIpv(APIGatewayProxyResponseEvent response, boolean reproveIdentity)
+            throws java.text.ParseException, JOSEException, ParseException {
+        var authRequest = validateQueryRequestToIPVAndReturnAuthRequest(response);
+
+        var encryptedRequestObject = authRequest.getRequestObject();
+        var signedJWTResponse = decryptJWT((EncryptedJWT) encryptedRequestObject);
+
+        validateClaimsInJar(signedJWTResponse, reproveIdentity);
+
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue,
+                List.of(
+                        OrchestrationAuditableEvent.AUTH_CALLBACK_RESPONSE_RECEIVED,
+                        AccountInterventionsAuditableEvent.AIS_RESPONSE_RECEIVED,
+                        OrchestrationAuditableEvent.AUTH_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
+                        OrchestrationAuditableEvent.AUTH_SUCCESSFUL_USERINFO_RESPONSE_RECEIVED,
+                        IPVAuditableEvent.IPV_AUTHORISATION_REQUESTED));
+    }
+
+    private void assertUserInfoStoredAndRedirectedToRp(APIGatewayProxyResponseEvent response) {
+        assertThat(response, hasStatus(302));
+
+        URI redirectLocationHeader =
+                URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
+        assertEquals(
+                REDIRECT_URI.getAuthority() + REDIRECT_URI.getPath(),
+                redirectLocationHeader.getAuthority() + redirectLocationHeader.getPath());
+
+        assertThat(redirectLocationHeader.getQuery(), containsString(RP_STATE.getValue()));
+
+        assertThat(redirectLocationHeader.getQuery(), containsString("code"));
+
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue,
+                List.of(
+                        OrchestrationAuditableEvent.AUTH_CALLBACK_RESPONSE_RECEIVED,
+                        OrchestrationAuditableEvent.AUTH_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
+                        OrchestrationAuditableEvent.AUTH_SUCCESSFUL_USERINFO_RESPONSE_RECEIVED,
+                        AccountInterventionsAuditableEvent.AIS_RESPONSE_RECEIVED,
+                        OidcAuditableEvent.AUTH_CODE_ISSUED));
+
+        Optional<AuthenticationUserInfo> userInfoDbEntry =
+                userInfoStoreExtension.getUserInfoBySubjectId(SUBJECT_ID.getValue());
+        assertTrue(userInfoDbEntry.isPresent());
+        assertEquals(SUBJECT_ID.getValue(), userInfoDbEntry.get().getSubjectID());
+        assertThat(userInfoDbEntry.get().getUserInfo(), containsString("new_account"));
     }
 
     private void setupClientReg(boolean identityVerificationSupport) {
@@ -441,6 +701,14 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                 true,
                 ClientType.APP,
                 identityVerificationSupport);
+    }
+
+    private void setupClientRegWithIdentityVerificationSupported() {
+        setupClientReg(true);
+    }
+
+    private void setupClientRegWithoutIdentityVerificationSupported() {
+        setupClientReg(false);
     }
 
     private void setupTestWithDefaultEnvVars() {
@@ -661,7 +929,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         return encryptedJWT.getPayload().toSignedJWT();
     }
 
-    private void validateClaimsInJar(SignedJWT signedJWT) throws java.text.ParseException {
+    private void validateClaimsInJar(SignedJWT signedJWT, boolean reproveIdentity)
+            throws java.text.ParseException {
         assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("sub")));
         assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("iss")));
         assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("response_type")));
@@ -682,7 +951,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         assertThat(signedJWT.getJWTClaimsSet().getClaim("iss"), equalTo(IPV_CLIENT_ID));
         assertThat(signedJWT.getJWTClaimsSet().getClaim("response_type"), equalTo("code"));
         assertThat(
-                (boolean) signedJWT.getJWTClaimsSet().getClaim("reprove_identity"), equalTo(false));
+                (boolean) signedJWT.getJWTClaimsSet().getClaim("reprove_identity"),
+                equalTo(reproveIdentity));
         assertThat(signedJWT.getJWTClaimsSet().getClaim("client_id"), equalTo(IPV_CLIENT_ID));
         assertThat(
                 signedJWT.getJWTClaimsSet().getClaim("govuk_signin_journey_id"),
