@@ -54,7 +54,7 @@ public class SendOtpNotificationHandler
     private static final Logger LOG = LogManager.getLogger(SendOtpNotificationHandler.class);
 
     private final ConfigurationService configurationService;
-    private final AwsSqsClient sqsClient;
+    private final AwsSqsClient emailSqsClient;
     private final CodeGeneratorService codeGeneratorService;
     private final CodeStorageService codeStorageService;
     private final DynamoService dynamoService;
@@ -66,14 +66,14 @@ public class SendOtpNotificationHandler
 
     public SendOtpNotificationHandler(
             ConfigurationService configurationService,
-            AwsSqsClient sqsClient,
+            AwsSqsClient emailSqsClient,
             CodeGeneratorService codeGeneratorService,
             CodeStorageService codeStorageService,
             DynamoService dynamoService,
             AuditService auditService,
             ClientService clientService) {
         this.configurationService = configurationService;
-        this.sqsClient = sqsClient;
+        this.emailSqsClient = emailSqsClient;
         this.codeGeneratorService = codeGeneratorService;
         this.codeStorageService = codeStorageService;
         this.dynamoService = dynamoService;
@@ -83,7 +83,7 @@ public class SendOtpNotificationHandler
 
     public SendOtpNotificationHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
-        this.sqsClient =
+        this.emailSqsClient =
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),
                         configurationService.getEmailQueueUri(),
@@ -238,7 +238,7 @@ public class SendOtpNotificationHandler
             LOG.info(
                     "Sending message to SQS queue for notificationType: {}",
                     sendNotificationRequest.getNotificationType());
-            sqsClient.send(serialiseRequest(notifyRequest));
+            emailSqsClient.send(serialiseRequest(notifyRequest));
         }
 
         auditService.submitAuditEvent(
