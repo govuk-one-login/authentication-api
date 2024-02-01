@@ -30,6 +30,7 @@ import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
+import uk.gov.di.orchestration.shared.services.LogoutService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 
@@ -90,6 +91,7 @@ class ProcessingIdentityHandlerTest {
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
+    private final LogoutService logoutService = mock(LogoutService.class);
     private final Session session = new Session(SESSION_ID);
     private final APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
     protected final Json objectMapper = SerializationService.getInstance();
@@ -104,6 +106,7 @@ class ProcessingIdentityHandlerTest {
                 .thenReturn(Optional.of(userProfile));
         when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(SALT.array());
         when(configurationService.getEnvironment()).thenReturn(ENVIRONMENT);
+        when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
         Map<String, String> headers = new HashMap<>();
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         headers.put(SESSION_ID_HEADER, SESSION_ID);
@@ -120,7 +123,8 @@ class ProcessingIdentityHandlerTest {
                         dynamoService,
                         configurationService,
                         auditService,
-                        cloudwatchMetricsService);
+                        cloudwatchMetricsService,
+                        logoutService);
     }
 
     @Test
