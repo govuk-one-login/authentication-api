@@ -262,6 +262,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv("EMAIL_QUEUE_URL");
     }
 
+    public String getPendingEmailCheckQueueUri() {
+        return System.getenv("PENDING_EMAIL_CHECK_QUEUE_URL");
+    }
+
     public String getSpotQueueUri() {
         return System.getenv("SPOT_QUEUE_URL");
     }
