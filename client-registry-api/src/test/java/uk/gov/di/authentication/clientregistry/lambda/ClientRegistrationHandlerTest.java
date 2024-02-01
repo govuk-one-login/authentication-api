@@ -122,7 +122,8 @@ class ClientRegistrationHandlerTest {
                         ClientType.WEB.getValue(),
                         false,
                         null,
-                        ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue());
+                        ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue(),
+                        emptyList());
     }
 
     @Test
@@ -165,7 +166,8 @@ class ClientRegistrationHandlerTest {
                         ClientType.WEB.getValue(),
                         true,
                         null,
-                        ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue());
+                        ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue(),
+                        emptyList());
     }
 
     @Test
@@ -200,7 +202,8 @@ class ClientRegistrationHandlerTest {
                         ClientType.WEB.getValue(),
                         false,
                         null,
-                        ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue());
+                        ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue(),
+                        emptyList());
     }
 
     @Test

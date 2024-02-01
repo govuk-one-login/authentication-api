@@ -5,6 +5,7 @@ import com.nimbusds.oauth2.sdk.client.RegistrationError;
 import com.nimbusds.openid.connect.sdk.SubjectType;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
 import uk.gov.di.orchestration.shared.entity.ClientType;
+import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.UpdateClientConfigRequest;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.entity.ValidScopes;
@@ -40,6 +41,8 @@ public class ClientConfigValidationService {
             new ErrorObject("invalid_client_metadata", "Invalid Sector Identifier URI");
     public static final ErrorObject INVALID_CLIENT_TYPE =
             new ErrorObject("invalid_client_metadata", "Invalid Client Type");
+    public static final ErrorObject INVALID_CLIENT_LOCS =
+            new ErrorObject("invalid_client_metadata", "Invalid Accepted Levels of Confidence");
 
     public Optional<ErrorObject> validateClientRegistrationConfig(
             ClientRegistrationRequest registrationRequest) {
@@ -82,6 +85,9 @@ public class ClientConfigValidationService {
                 .noneMatch(t -> t.getValue().equals(registrationRequest.getClientType()))) {
             return Optional.of(INVALID_CLIENT_TYPE);
         }
+        if (!areClientLoCsValid(registrationRequest.getClientLoCs())) {
+            return Optional.of(INVALID_CLIENT_LOCS);
+        }
         return Optional.empty();
     }
 
@@ -121,6 +127,11 @@ public class ClientConfigValidationService {
                 .map(c -> Arrays.stream(ClientType.values()).anyMatch(t -> t.getValue().equals(c)))
                 .orElse(true)) {
             return Optional.of(INVALID_CLIENT_TYPE);
+        }
+        if (!Optional.ofNullable(updateRequest.getClientLoCs())
+                .map(this::areClientLoCsValid)
+                .orElse(true)) {
+            return Optional.of(INVALID_CLIENT_LOCS);
         }
         return Optional.empty();
     }
@@ -170,6 +181,16 @@ public class ClientConfigValidationService {
     private boolean areClaimsValid(List<String> claims) {
         for (String claim : claims) {
             if (ValidClaims.getAllValidClaims().stream().noneMatch(t -> t.equals(claim))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean areClientLoCsValid(List<String> clientLoCs) {
+        for (String clientLoC : clientLoCs) {
+            if (LevelOfConfidence.getAllSupportedLevelOfConfidenceValues().stream()
+                    .noneMatch(t -> t.equals(clientLoC))) {
                 return false;
             }
         }

@@ -71,6 +71,10 @@ public class ClientRegistrationRequest {
     @Expose
     private String clientType = ClientType.WEB.getValue();
 
+    @SerializedName("accepted_levels_of_confidence")
+    @Expose
+    private List<String> clientLoCs = new ArrayList<>();
+
     public ClientRegistrationRequest() {}
 
     public ClientRegistrationRequest(
@@ -87,6 +91,38 @@ public class ClientRegistrationRequest {
             boolean identityVerificationRequired,
             List<String> claims,
             String clientType) {
+        this(
+                clientName,
+                redirectUris,
+                contacts,
+                publicKey,
+                scopes,
+                postLogoutRedirectUris,
+                backChannelLogoutUri,
+                serviceType,
+                sectorIdentifierUri,
+                subjectType,
+                identityVerificationRequired,
+                claims,
+                clientType,
+                null);
+    }
+
+    public ClientRegistrationRequest(
+            String clientName,
+            List<String> redirectUris,
+            List<String> contacts,
+            String publicKey,
+            List<String> scopes,
+            List<String> postLogoutRedirectUris,
+            String backChannelLogoutUri,
+            String serviceType,
+            String sectorIdentifierUri,
+            String subjectType,
+            boolean identityVerificationRequired,
+            List<String> claims,
+            String clientType,
+            List<String> clientLoCs) {
         this.clientName = clientName;
         this.redirectUris = redirectUris;
         this.contacts = contacts;
@@ -110,6 +146,9 @@ public class ClientRegistrationRequest {
             clientType = ClientType.WEB.getValue();
         }
         this.clientType = clientType;
+        if (Objects.nonNull(clientLoCs)) {
+            this.clientLoCs = clientLoCs;
+        }
     }
 
     public String getClientName() {
@@ -162,5 +201,9 @@ public class ClientRegistrationRequest {
 
     public String getClientType() {
         return clientType;
+    }
+
+    public List<String> getClientLoCs() {
+        return clientLoCs;
     }
 }

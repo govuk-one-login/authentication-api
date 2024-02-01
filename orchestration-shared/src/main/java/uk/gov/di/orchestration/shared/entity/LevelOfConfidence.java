@@ -5,6 +5,8 @@ import java.util.List;
 
 public enum LevelOfConfidence {
     NONE("P0", true),
+    HMRC200("PCL200", true),
+    HMRC250("PCL250", true),
     LOW_LEVEL("P1", false),
     MEDIUM_LEVEL("P2", true),
     HIGH_LEVEL("P3", false),
@@ -44,5 +46,19 @@ public enum LevelOfConfidence {
 
     public static LevelOfConfidence getDefault() {
         return MEDIUM_LEVEL;
+    }
+
+    public static List<String> getDefaultLevelOfConfidenceValues() {
+        List<LevelOfConfidence> defaults =
+                List.of(
+                        LevelOfConfidence.NONE,
+                        LevelOfConfidence.LOW_LEVEL,
+                        LevelOfConfidence.MEDIUM_LEVEL,
+                        LevelOfConfidence.HIGH_LEVEL,
+                        LevelOfConfidence.VERY_HIGH_LEVEL);
+        return defaults.stream()
+                .filter(LevelOfConfidence::isSupported)
+                .map(LevelOfConfidence::getValue)
+                .toList();
     }
 }
