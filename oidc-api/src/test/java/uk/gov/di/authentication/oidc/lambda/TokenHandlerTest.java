@@ -214,7 +214,7 @@ public class TokenHandlerTest {
                 generateClientRegistry(keyPair, clientRegistryConsent, CLIENT_ID);
 
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
-        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(anyString()))
+        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
                 .thenReturn(Optional.of(tokenClientAuthValidator));
         when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
                         anyString(), any()))
@@ -287,7 +287,7 @@ public class TokenHandlerTest {
                         .withIdTokenSigningAlgorithm("RSA256");
 
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
-        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(anyString()))
+        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
                 .thenReturn(Optional.of(tokenClientAuthValidator));
         when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
                         anyString(), any()))
@@ -348,7 +348,7 @@ public class TokenHandlerTest {
         ClientRegistry clientRegistry = generateClientRegistry(keyPair, false, CLIENT_ID);
 
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
-        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(anyString()))
+        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
                 .thenReturn(Optional.of(tokenClientAuthValidator));
         when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
                         anyString(), any()))
@@ -404,7 +404,7 @@ public class TokenHandlerTest {
                         .withIdTokenSigningAlgorithm("RSA256");
 
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
-        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(anyString()))
+        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
                 .thenReturn(Optional.of(tokenClientAuthValidator));
         when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
                         anyString(), any()))
@@ -447,7 +447,7 @@ public class TokenHandlerTest {
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
         KeyPair keyPair = generateRsaKeyPair();
         PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
-        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(anyString()))
+        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
                 .thenReturn(Optional.of(tokenClientAuthValidator));
         when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
                         anyString(), any()))
@@ -486,7 +486,7 @@ public class TokenHandlerTest {
         var privateKeyJWT = generatePrivateKeyJWT(generateRsaKeyPair().getPrivate());
 
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
-        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(anyString()))
+        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
                 .thenReturn(Optional.of(tokenClientAuthValidator));
         when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
                         anyString(), any()))
@@ -519,7 +519,7 @@ public class TokenHandlerTest {
         PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
         ClientRegistry clientRegistry = generateClientRegistry(keyPair, false, CLIENT_ID);
 
-        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(anyString()))
+        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
                 .thenReturn(Optional.of(tokenClientAuthValidator));
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
         when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
@@ -542,7 +542,7 @@ public class TokenHandlerTest {
         PrivateKeyJWT privateKeyJWT = generatePrivateKeyJWT(keyPair.getPrivate());
         ClientRegistry clientRegistry = generateClientRegistry(keyPair, false, CLIENT_ID);
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
-        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(anyString()))
+        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
                 .thenReturn(Optional.of(tokenClientAuthValidator));
         when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
                         anyString(), any()))
@@ -586,7 +586,7 @@ public class TokenHandlerTest {
                 generateClientRegistry(keyPair, false, DOC_APP_CLIENT_ID.getValue());
 
         when(tokenService.validateTokenRequestParams(anyString())).thenReturn(Optional.empty());
-        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(anyString()))
+        when(tokenClientAuthValidatorFactory.getTokenAuthenticationValidator(any()))
                 .thenReturn(Optional.of(tokenClientAuthValidator));
         when(tokenClientAuthValidator.validateTokenAuthAndReturnClientRegistryIfValid(
                         anyString(), any()))
