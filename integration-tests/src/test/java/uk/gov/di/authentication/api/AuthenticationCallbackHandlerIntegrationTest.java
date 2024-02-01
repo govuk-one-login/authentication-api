@@ -38,6 +38,7 @@ import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.exceptions.AccountInterventionException;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
@@ -69,6 +70,7 @@ import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.matchesPattern;
 import static org.hamcrest.Matchers.startsWith;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -98,17 +100,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     public final AccountInterventionsStubExtension accountInterventionApiStub =
             new AccountInterventionsStubExtension();
 
-    protected final ConfigurationService configurationService =
-            new AuthenticationCallbackHandlerIntegrationTest.TestConfigurationService(
-                    authExternalApiStub,
-                    auditTopic,
-                    notificationsQueue,
-                    auditSigningKey,
-                    tokenSigner,
-                    ipvPrivateKeyJwtSigner,
-                    spotQueue,
-                    docAppPrivateKeyJwtSigner,
-                    accountInterventionApiStub);
+    protected ConfigurationService configurationService;
 
     private static final String CLIENT_ID = "test-client-id";
     private static final String CLIENT_NAME = "test-client-name";
@@ -127,7 +119,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         @BeforeEach()
         void authSetup() throws Json.JsonException {
-            setupTest();
+            setupTestWithDefaultEnvVars();
             setupSession();
             setupClientRegWithoutIdentityVerificationSupported();
             accountInterventionApiStub.initWithBlockedOrSuspended(
@@ -264,7 +256,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         @BeforeEach()
         void ipvSetup() throws Json.JsonException {
-            setupTest();
+            setupTestWithDefaultEnvVars();
             setupSession();
             setupClientRegWithIdentityVerificationSupported();
             accountInterventionApiStub.initWithBlockedOrSuspended(
@@ -308,13 +300,13 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         @BeforeEach()
         void accountInterventionSetup() throws Json.JsonException {
-            setupTest();
             setupSession();
             setupClientRegWithoutIdentityVerificationSupported();
         }
 
         @Test
         void shouldLogoutAndRedirectToBlockedPageWhenAccountIsBlocked() throws Json.JsonException {
+            setupTestWithDefaultEnvVars();
             accountInterventionApiStub.initWithBlockedOrSuspended(
                     SUBJECT_ID.getValue(), true, false);
 
@@ -353,6 +345,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         @Test
         void shouldLogoutAndRedirectToSuspendedPageWhenAccountIsSuspended()
                 throws Json.JsonException {
+            setupTestWithDefaultEnvVars();
             accountInterventionApiStub.initWithBlockedOrSuspended(
                     SUBJECT_ID.getValue(), false, true);
 
@@ -388,6 +381,45 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                             OidcAuditableEvent.LOG_OUT_SUCCESS));
         }
 
+        @Test
+        void byDefaultDoesNotThrowWhenAisReturns500() throws Json.JsonException {
+            setupTestWithDefaultEnvVars();
+            accountInterventionApiStub.initWithErrorResponse(SUBJECT_ID.getValue());
+
+            var session = redis.getSession(SESSION_ID);
+            assertNotNull(session);
+
+            assertDoesNotThrow(
+                    () ->
+                            makeRequest(
+                                    Optional.of(TEST_EMAIL_ADDRESS),
+                                    constructHeaders(
+                                            Optional.of(
+                                                    buildSessionCookie(
+                                                            SESSION_ID, CLIENT_SESSION_ID))),
+                                    constructQueryStringParameters()));
+        }
+
+        @Test
+        void doesThrowWhenAisReturns500AndAbortFlagIsOn() throws Json.JsonException {
+            setupTestWithAbortOnAisErrorResponseFlagOn();
+            accountInterventionApiStub.initWithErrorResponse(SUBJECT_ID.getValue());
+
+            var session = redis.getSession(SESSION_ID);
+            assertNotNull(session);
+
+            assertThrows(
+                    AccountInterventionException.class,
+                    () ->
+                            makeRequest(
+                                    Optional.of(TEST_EMAIL_ADDRESS),
+                                    constructHeaders(
+                                            Optional.of(
+                                                    buildSessionCookie(
+                                                            SESSION_ID, CLIENT_SESSION_ID))),
+                                    constructQueryStringParameters()));
+        }
+
         private void setupClientRegWithoutIdentityVerificationSupported() {
             setupClientReg(false);
         }
@@ -411,7 +443,27 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                 identityVerificationSupport);
     }
 
-    private void setupTest() {
+    private void setupTestWithDefaultEnvVars() {
+        setupTest(false);
+    }
+
+    private void setupTestWithAbortOnAisErrorResponseFlagOn() {
+        setupTest(true);
+    }
+
+    private void setupTest(boolean abortOnAisErrorResponse) {
+        configurationService =
+                new AuthenticationCallbackHandlerIntegrationTest.TestConfigurationService(
+                        authExternalApiStub,
+                        auditTopic,
+                        notificationsQueue,
+                        auditSigningKey,
+                        tokenSigner,
+                        ipvPrivateKeyJwtSigner,
+                        spotQueue,
+                        docAppPrivateKeyJwtSigner,
+                        accountInterventionApiStub,
+                        abortOnAisErrorResponse);
         handler = new AuthenticationCallbackHandler(configurationService);
         authExternalApiStub.init(SUBJECT_ID);
         txmaAuditQueue.clear();
@@ -452,6 +504,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         private final AuthExternalApiStubExtension authExternalApiStub;
         private final AccountInterventionsStubExtension accountInterventionApiStub;
+        private final boolean abortOnAisErrorResponse;
 
         public TestConfigurationService(
                 AuthExternalApiStubExtension authExternalApiStub,
@@ -462,7 +515,8 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                 TokenSigningExtension ipvPrivateKeyJwtSigner,
                 SqsQueueExtension spotQueue,
                 TokenSigningExtension docAppPrivateKeyJwtSigner,
-                AccountInterventionsStubExtension accountInterventionsStubExtension) {
+                AccountInterventionsStubExtension accountInterventionsStubExtension,
+                boolean abortOnAisErrorResponse) {
             super(
                     tokenSigningKey,
                     ipvPrivateKeyJwtSigner,
@@ -471,6 +525,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                     configurationParameters);
             this.authExternalApiStub = authExternalApiStub;
             this.accountInterventionApiStub = accountInterventionsStubExtension;
+            this.abortOnAisErrorResponse = abortOnAisErrorResponse;
         }
 
         @Override
@@ -547,6 +602,11 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         @Override
         public boolean isAccountInterventionServiceActionEnabled() {
             return true;
+        }
+
+        @Override
+        public boolean abortOnAccountInterventionsErrorResponse() {
+            return this.abortOnAisErrorResponse;
         }
     }
 

@@ -50,6 +50,7 @@ module "authentication_callback" {
     TXMA_AUDIT_QUEUE_URL                        = module.oidc_txma_audit.queue_url
     OIDC_API_BASE_URL                           = local.api_base_url
     FRONTEND_BASE_URL                           = "https://${local.frontend_fqdn}/"
+    ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR = var.account_intervention_service_abort_on_error
   }
 
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.AuthenticationCallbackHandler::handleRequest"

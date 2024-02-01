@@ -1,17 +1,19 @@
-environment                    = "sandpit"
-dns_state_bucket               = null
-dns_state_key                  = null
-dns_state_role                 = null
-shared_state_bucket            = "digital-identity-dev-tfstate"
-test_clients_enabled           = "true"
-ipv_api_enabled                = true
-ipv_authorisation_callback_uri = ""
-ipv_authorisation_uri          = ""
-ipv_authorisation_client_id    = ""
-logging_endpoint_enabled       = false
-logging_endpoint_arns          = []
-
-auth_frontend_public_encryption_key = <<-EOT
+environment                                 = "sandpit"
+dns_state_bucket                            = null
+dns_state_key                               = null
+dns_state_role                              = null
+shared_state_bucket                         = "digital-identity-dev-tfstate"
+test_clients_enabled                        = "true"
+ipv_api_enabled                             = true
+ipv_authorisation_callback_uri              = ""
+ipv_authorisation_uri                       = ""
+ipv_authorisation_client_id                 = ""
+logging_endpoint_enabled                    = false
+logging_endpoint_arns                       = []
+account_intervention_service_call_enabled   = true
+account_intervention_service_action_enabled = true
+account_intervention_service_abort_on_error = true
+auth_frontend_public_encryption_key         = <<-EOT
 -----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAs41htFRe62BIfwQZ0OCT
 g5p2NHAekvIAJaNb6ZkLuLXYdLBax+2c9f4ALTrltmLMBpgtS6VQg2zO8UmSE4bX
