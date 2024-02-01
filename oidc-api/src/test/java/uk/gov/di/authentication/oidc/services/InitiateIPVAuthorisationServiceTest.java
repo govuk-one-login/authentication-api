@@ -40,6 +40,7 @@ import uk.gov.di.orchestration.shared.helpers.SaltHelper;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
 
 import java.net.URI;
 import java.net.URLDecoder;
@@ -87,6 +88,8 @@ public class InitiateIPVAuthorisationServiceTest {
             mock(IPVAuthorisationService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
             mock(CloudwatchMetricsService.class);
+    private final NoSessionOrchestrationService noSessionOrchestrationService =
+            mock(NoSessionOrchestrationService.class);
     private InitiateIPVAuthorisationService initiateAuthorisationService;
     private APIGatewayProxyRequestEvent event;
     private final ClaimsSetRequest.Entry nameEntry =
@@ -116,7 +119,8 @@ public class InitiateIPVAuthorisationServiceTest {
                         configService,
                         auditService,
                         authorisationService,
-                        cloudwatchMetricsService);
+                        cloudwatchMetricsService,
+                        noSessionOrchestrationService);
 
         event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
@@ -186,6 +190,8 @@ public class InitiateIPVAuthorisationServiceTest {
 
         assertThat(splitQuery(redirectLocation).get("request"), equalTo(encryptedJWT.serialize()));
         verify(authorisationService).storeState(eq(session.getSessionId()), any(State.class));
+        verify(noSessionOrchestrationService)
+                .storeClientSessionIdAgainstState(eq(CLIENT_SESSION_ID), any(State.class));
 
         verify(authorisationService)
                 .constructRequestJWT(
@@ -248,20 +254,20 @@ public class InitiateIPVAuthorisationServiceTest {
         String jsonString =
                 String.format(
                         """
-                        {
-                            "sub": "urn:fdc:gov.uk:2022:jdgfhgfsdret",
-                            "legacy_subject_id": "odkjfshsdkjhdkjfshsdkjhdkjfshsdkjh",
-                            "public_subject_id": "pdkjfshsdkjhdkjfshsdkjhdkjfshsdkjh",
-                            "local_account_id": "dkjfshsdkjhdkjfshsdkjhdkjfshsdkjh",
-                            "rp_pairwise_id": "%s",
-                            "email": "%s",
-                            "email_verified": true,
-                            "phone_number": "007492837401",
-                            "phone_number_verified": true,
-                            "new_account": "true",
-                            "salt": ""
-                        }
-                        """,
+                                {
+                                    "sub": "urn:fdc:gov.uk:2022:jdgfhgfsdret",
+                                    "legacy_subject_id": "odkjfshsdkjhdkjfshsdkjhdkjfshsdkjh",
+                                    "public_subject_id": "pdkjfshsdkjhdkjfshsdkjhdkjfshsdkjh",
+                                    "local_account_id": "dkjfshsdkjhdkjfshsdkjhdkjfshsdkjh",
+                                    "rp_pairwise_id": "%s",
+                                    "email": "%s",
+                                    "email_verified": true,
+                                    "phone_number": "007492837401",
+                                    "phone_number_verified": true,
+                                    "new_account": "true",
+                                    "salt": ""
+                                }
+                                """,
                         RP_PAIRWISE_ID, EMAIL_ADDRESS);
         return UserInfo.parse(jsonString);
     }

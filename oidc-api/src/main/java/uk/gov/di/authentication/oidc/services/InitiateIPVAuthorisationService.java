@@ -21,6 +21,7 @@ import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
 
 import java.util.List;
 import java.util.Map;
@@ -39,16 +40,19 @@ public class InitiateIPVAuthorisationService {
     private final AuditService auditService;
     private final IPVAuthorisationService authorisationService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final NoSessionOrchestrationService noSessionOrchestrationService;
 
     public InitiateIPVAuthorisationService(
             ConfigurationService configurationService,
             AuditService auditService,
             IPVAuthorisationService authorisationService,
-            CloudwatchMetricsService cloudwatchMetricsService) {
+            CloudwatchMetricsService cloudwatchMetricsService,
+            NoSessionOrchestrationService noSessionOrchestrationService) {
         this.configurationService = configurationService;
         this.auditService = auditService;
         this.authorisationService = authorisationService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.noSessionOrchestrationService = noSessionOrchestrationService;
     }
 
     public APIGatewayProxyResponseEvent sendRequestToIPV(
@@ -94,6 +98,7 @@ public class InitiateIPVAuthorisationService {
 
         var ipvAuthorisationRequest = authRequestBuilder.build();
         authorisationService.storeState(session.getSessionId(), state);
+        noSessionOrchestrationService.storeClientSessionIdAgainstState(clientSessionId, state);
 
         var rpPairwiseId = userInfo.getClaim("rp_pairwise_id");
 
