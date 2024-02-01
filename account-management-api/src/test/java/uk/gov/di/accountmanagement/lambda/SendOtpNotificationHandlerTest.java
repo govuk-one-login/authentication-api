@@ -59,7 +59,8 @@ class SendOtpNotificationHandlerTest {
 
     private final Json objectMapper = SerializationService.getInstance();
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final AwsSqsClient awsSqsClient = mock(AwsSqsClient.class);
+    private final AwsSqsClient emailSqsClient = mock(AwsSqsClient.class);
+    private final AwsSqsClient pendingEmailCheckSqsClient = mock(AwsSqsClient.class);
     private final CodeGeneratorService codeGeneratorService = mock(CodeGeneratorService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
@@ -71,7 +72,8 @@ class SendOtpNotificationHandlerTest {
     private final SendOtpNotificationHandler handler =
             new SendOtpNotificationHandler(
                     configurationService,
-                    awsSqsClient,
+                    emailSqsClient,
+                    pendingEmailCheckSqsClient,
                     codeGeneratorService,
                     codeStorageService,
                     dynamoService,
@@ -116,7 +118,7 @@ class SendOtpNotificationHandlerTest {
 
         assertEquals(204, result.getStatusCode());
 
-        verify(awsSqsClient).send(serialisedRequest);
+        verify(emailSqsClient).send(serialisedRequest);
         verify(codeStorageService)
                 .saveOtpCode(
                         TEST_EMAIL_ADDRESS, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, VERIFY_EMAIL);
@@ -158,7 +160,7 @@ class SendOtpNotificationHandlerTest {
 
         assertEquals(204, result.getStatusCode());
 
-        verify(awsSqsClient).send(serialisedRequest);
+        verify(emailSqsClient).send(serialisedRequest);
         verify(codeStorageService)
                 .saveOtpCode(
                         TEST_EMAIL_ADDRESS,
@@ -199,7 +201,7 @@ class SendOtpNotificationHandlerTest {
 
         assertEquals(204, result.getStatusCode());
 
-        verifyNoInteractions(awsSqsClient);
+        verifyNoInteractions(emailSqsClient);
         verify(codeStorageService)
                 .saveOtpCode(
                         TEST_TEST_USER_EMAIL_ADDRESS,
@@ -239,7 +241,7 @@ class SendOtpNotificationHandlerTest {
 
         assertEquals(500, result.getStatusCode());
 
-        verifyNoInteractions(awsSqsClient, codeStorageService, auditService);
+        verifyNoInteractions(emailSqsClient, codeStorageService, auditService);
     }
 
     @Test
@@ -325,7 +327,7 @@ class SendOtpNotificationHandlerTest {
                         TEST_SIX_DIGIT_CODE,
                         SupportedLanguage.EN);
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
-        Mockito.doThrow(SdkClientException.class).when(awsSqsClient).send(eq(serialisedRequest));
+        Mockito.doThrow(SdkClientException.class).when(emailSqsClient).send(eq(serialisedRequest));
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of());
@@ -356,7 +358,7 @@ class SendOtpNotificationHandlerTest {
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
 
-        verify(awsSqsClient, never()).send(anyString());
+        verify(emailSqsClient, never()).send(anyString());
         verify(codeStorageService, never())
                 .saveOtpCode(anyString(), anyString(), anyLong(), any(NotificationType.class));
 

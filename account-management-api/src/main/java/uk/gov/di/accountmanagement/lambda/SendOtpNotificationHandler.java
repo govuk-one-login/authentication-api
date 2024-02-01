@@ -55,6 +55,8 @@ public class SendOtpNotificationHandler
 
     private final ConfigurationService configurationService;
     private final AwsSqsClient emailSqsClient;
+
+    private final AwsSqsClient pendingEmailCheckSqsClient;
     private final CodeGeneratorService codeGeneratorService;
     private final CodeStorageService codeStorageService;
     private final DynamoService dynamoService;
@@ -67,6 +69,7 @@ public class SendOtpNotificationHandler
     public SendOtpNotificationHandler(
             ConfigurationService configurationService,
             AwsSqsClient emailSqsClient,
+            AwsSqsClient pendingEmailCheckSqsClient,
             CodeGeneratorService codeGeneratorService,
             CodeStorageService codeStorageService,
             DynamoService dynamoService,
@@ -74,6 +77,7 @@ public class SendOtpNotificationHandler
             ClientService clientService) {
         this.configurationService = configurationService;
         this.emailSqsClient = emailSqsClient;
+        this.pendingEmailCheckSqsClient = pendingEmailCheckSqsClient;
         this.codeGeneratorService = codeGeneratorService;
         this.codeStorageService = codeStorageService;
         this.dynamoService = dynamoService;
@@ -88,6 +92,10 @@ public class SendOtpNotificationHandler
                         configurationService.getAwsRegion(),
                         configurationService.getEmailQueueUri(),
                         configurationService.getSqsEndpointUri());
+        this.pendingEmailCheckSqsClient = new AwsSqsClient(
+                configurationService.getAwsRegion(),
+                configurationService.getPendingEmailCheckQueueUri(),
+                configurationService.getSqsEndpointUri());
         this.codeGeneratorService = new CodeGeneratorService();
         this.codeStorageService =
                 new CodeStorageService(new RedisConnectionService(configurationService));
