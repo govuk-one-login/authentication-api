@@ -26,6 +26,7 @@ import uk.gov.di.authentication.oidc.services.AuthenticationTokenService;
 import uk.gov.di.authentication.oidc.services.InitiateIPVAuthorisationService;
 import uk.gov.di.authentication.oidc.services.LogoutService;
 import uk.gov.di.orchestration.audit.AuditContext;
+import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
@@ -333,31 +334,38 @@ public class AuthenticationCallbackHandler
                                         : userInfo.getPhoneNumber(),
                                 persistentSessionId);
 
-                var accountStatus =
-                        configurationService.isAccountInterventionServiceCallEnabled()
-                                ? accountInterventionService.getAccountStatus(
-                                        userInfo.getSubject().getValue(), auditContext)
-                                : null;
+                AccountInterventionStatus accountStatus =
+                        accountInterventionService.getAccountStatus(
+                                userInfo.getSubject().getValue(), auditContext);
 
-                if (configurationService.isAccountInterventionServiceActionEnabled()
-                        && nonNull(accountStatus)) {
-                    if (accountStatus.blocked()
-                            || accountStatus.resetPassword()
-                            || (!identityRequired && accountStatus.suspended())) {
-                        return logoutService.handleAccountInterventionLogout(
-                                userSession,
-                                input,
-                                Optional.of(clientId),
-                                Optional.of(userSession.getSessionId()),
-                                accountStatus);
+                Boolean reproveIdentity = null;
+                if (configurationService.isAccountInterventionServiceActionEnabled()) {
+                    reproveIdentity = accountStatus.reproveIdentity();
+                    if (identityRequired) {
+                        if (accountStatus.blocked() || accountStatus.resetPassword()) {
+                            return logoutService.handleAccountInterventionLogout(
+                                    userSession,
+                                    input,
+                                    Optional.of(clientId),
+                                    Optional.of(userSession.getSessionId()),
+                                    accountStatus);
+                        }
+                    } else {
+                        if (accountStatus.blocked() || accountStatus.suspended()) {
+                            // Handle case that there is no identity reproving on auth-only journey
+                            if (!(accountStatus.suspended()
+                                    && accountStatus.reproveIdentity()
+                                    && !accountStatus.resetPassword())) {
+                                return logoutService.handleAccountInterventionLogout(
+                                        userSession,
+                                        input,
+                                        Optional.of(clientId),
+                                        Optional.of(userSession.getSessionId()),
+                                        accountStatus);
+                            }
+                        }
                     }
                 }
-
-                Boolean reproveIdentity =
-                        configurationService.isAccountInterventionServiceActionEnabled()
-                                ? accountStatus.reproveIdentity()
-                                : null;
-                var vtrList = clientSession.getVtrList();
 
                 if (identityRequired) {
                     return initiateIPVAuthorisationService.sendRequestToIPV(
@@ -370,7 +378,8 @@ public class AuthenticationCallbackHandler
                             clientSessionId,
                             persistentSessionId,
                             reproveIdentity,
-                            VectorOfTrust.getRequestedLevelsOfConfidence(vtrList));
+                            VectorOfTrust.getRequestedLevelsOfConfidence(
+                                    clientSession.getVtrList()));
                 }
 
                 URI clientRedirectURI = authenticationRequest.getRedirectionURI();
