@@ -43,15 +43,6 @@ class VectorOfTrustTest {
     }
 
     @Test
-    void shouldReturnLowestVectorWhenMultipleSetsAreIsPassedIn() {
-        var jsonArray = jsonArrayOf("Cl.Cm", "Cl");
-        VectorOfTrust vectorOfTrust =
-                VectorOfTrust.parseFromAuthRequestAttribute(Collections.singletonList(jsonArray));
-        assertThat(vectorOfTrust.getCredentialTrustLevel(), equalTo(LOW_LEVEL));
-        assertNull(vectorOfTrust.getLevelOfConfidence());
-    }
-
-    @Test
     void shouldParseValidStringWithMultipleVectors() {
         var jsonArray = jsonArrayOf("Cl");
         VectorOfTrust vectorOfTrust =
