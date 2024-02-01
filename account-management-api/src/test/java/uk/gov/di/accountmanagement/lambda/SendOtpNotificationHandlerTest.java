@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
@@ -12,20 +13,20 @@ import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
+import uk.gov.di.authentication.shared.domain.RequestHeaders;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
-import uk.gov.di.authentication.shared.services.AuditService;
-import uk.gov.di.authentication.shared.services.ClientService;
-import uk.gov.di.authentication.shared.services.CodeGeneratorService;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoService;
-import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.authentication.shared.services.*;
 
+import java.util.Date;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -108,17 +109,43 @@ class SendOtpNotificationHandlerTest {
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentIdValue));
+        event.setHeaders(
+                Map.of(
+                        PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
+                        persistentIdValue,
+                        RequestHeaders.SESSION_ID_HEADER,
+                        "some-session-id",
+                        RequestHeaders.CLIENT_SESSION_ID_HEADER,
+                        "some-client-session-id"));
         event.setRequestContext(eventContext);
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
                         TEST_EMAIL_ADDRESS, VERIFY_EMAIL));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
+        Date mockedDate = new Date();
+        UUID mockedUUID = UUID.fromString("5fc03087-d265-11e7-b8c6-83e29cd24f4c");
+        MockedStatic<NowHelper> mockedNowHelperClass = Mockito.mockStatic(NowHelper.class);
+        MockedStatic<UUID> mockedUUIDClass = Mockito.mockStatic(UUID.class);
+        mockedNowHelperClass.when(NowHelper::now).thenReturn(mockedDate);
+        mockedUUIDClass.when(UUID::randomUUID).thenReturn(mockedUUID);
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
         assertEquals(204, result.getStatusCode());
 
         verify(emailSqsClient).send(serialisedRequest);
+        verify(pendingEmailCheckSqsClient)
+                .send(
+                        format(
+                                "{\"requestReference\":\"%s\",\"emailAddress\":\"%s\",\"userSessionId\":\"%s\",\"govukSigninJourneyId\":\"%s\",\"persistentSessionId\":\"%s\",\"ipAddress\":\"%s\",\"journeyType\":\"%s\",\"timeOfInitialRequest\":\"%s\"}",
+                                mockedUUID,
+                                TEST_EMAIL_ADDRESS,
+                                "some-session-id",
+                                "some-client-session-id",
+                                "some-persistent-session-id",
+                                "123.123.123.123",
+                                JourneyType.ACCOUNT_MANAGEMENT,
+                                mockedDate.toInstant().getEpochSecond()));
         verify(codeStorageService)
                 .saveOtpCode(
                         TEST_EMAIL_ADDRESS, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, VERIFY_EMAIL);

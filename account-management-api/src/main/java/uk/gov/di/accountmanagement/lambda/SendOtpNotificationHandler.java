@@ -11,31 +11,24 @@ import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
+import uk.gov.di.accountmanagement.entity.PendingEmailCheckRequest;
 import uk.gov.di.accountmanagement.entity.SendNotificationRequest;
 import uk.gov.di.accountmanagement.exceptions.MissingConfigurationParameterException;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
-import uk.gov.di.authentication.shared.entity.ErrorResponse;
-import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.entity.*;
+import uk.gov.di.authentication.shared.helpers.*;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
-import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
-import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
-import uk.gov.di.authentication.shared.helpers.ValidationHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
-import uk.gov.di.authentication.shared.services.AuditService;
-import uk.gov.di.authentication.shared.services.ClientService;
-import uk.gov.di.authentication.shared.services.CodeGeneratorService;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.DynamoClientService;
-import uk.gov.di.authentication.shared.services.DynamoService;
-import uk.gov.di.authentication.shared.services.RedisConnectionService;
-import uk.gov.di.authentication.shared.services.SerializationService;
+import uk.gov.di.authentication.shared.services.*;
 
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 
+import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1001;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1002;
@@ -63,7 +56,6 @@ public class SendOtpNotificationHandler
     private final ClientService clientService;
     private final Json objectMapper = SerializationService.getInstance();
     private final AuditService auditService;
-
     private static final String GENERIC_500_ERROR_MESSAGE = "Internal server error";
 
     public SendOtpNotificationHandler(
@@ -92,10 +84,11 @@ public class SendOtpNotificationHandler
                         configurationService.getAwsRegion(),
                         configurationService.getEmailQueueUri(),
                         configurationService.getSqsEndpointUri());
-        this.pendingEmailCheckSqsClient = new AwsSqsClient(
-                configurationService.getAwsRegion(),
-                configurationService.getPendingEmailCheckQueueUri(),
-                configurationService.getSqsEndpointUri());
+        this.pendingEmailCheckSqsClient =
+                new AwsSqsClient(
+                        configurationService.getAwsRegion(),
+                        configurationService.getPendingEmailCheckQueueUri(),
+                        configurationService.getSqsEndpointUri());
         this.codeGeneratorService = new CodeGeneratorService();
         this.codeStorageService =
                 new CodeStorageService(new RedisConnectionService(configurationService));
@@ -119,8 +112,11 @@ public class SendOtpNotificationHandler
 
     public APIGatewayProxyResponseEvent sendOtpRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
-        String sessionId =
-                RequestHeaderHelper.getHeaderValueOrElse(input.getHeaders(), SESSION_ID_HEADER, "");
+        Map<String, String> headers = input.getHeaders();
+        String sessionId = RequestHeaderHelper.getHeaderValueOrElse(headers, SESSION_ID_HEADER, "");
+        String clientSessionId =
+                RequestHeaderHelper.getHeaderValueOrElse(headers, CLIENT_SESSION_ID_HEADER, "");
+        String persistentSessionId = PersistentIdHelper.extractPersistentIdFromHeaders(headers);
         attachSessionIdToLogs(sessionId);
         LOG.info("Request received in SendOtp Lambda");
 
@@ -159,24 +155,39 @@ public class SendOtpNotificationHandler
 
         SupportedLanguage userLanguage =
                 matchSupportedLanguage(
-                        getUserLanguageFromRequestHeaders(
-                                input.getHeaders(), configurationService));
+                        getUserLanguageFromRequestHeaders(headers, configurationService));
         try {
+            String email = sendNotificationRequest.getEmail();
             switch (sendNotificationRequest.getNotificationType()) {
                 case VERIFY_EMAIL:
                     LOG.info("NotificationType is VERIFY_EMAIL");
                     Optional<ErrorResponse> emailErrorResponse =
-                            ValidationHelper.validateEmailAddress(
-                                    sendNotificationRequest.getEmail());
+                            ValidationHelper.validateEmailAddress(email);
                     if (emailErrorResponse.isPresent()) {
                         return generateApiGatewayProxyErrorResponse(400, emailErrorResponse.get());
                     }
-                    if (dynamoService.userExists(sendNotificationRequest.getEmail())) {
+                    if (dynamoService.userExists(email)) {
                         return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1009);
                     }
+
+                    pendingEmailCheckSqsClient.send(
+                            objectMapper.writeValueAsString(
+                                    new PendingEmailCheckRequest(
+                                            UUID.randomUUID(),
+                                            email,
+                                            sessionId,
+                                            clientSessionId,
+                                            persistentSessionId,
+                                            IpAddressHelper.extractIpAddress(input),
+                                            JourneyType.ACCOUNT_MANAGEMENT,
+                                            String.valueOf(
+                                                    NowHelper.now()
+                                                            .toInstant()
+                                                            .getEpochSecond()))));
+
                     return handleNotificationRequest(
                             isTestUserRequest,
-                            sendNotificationRequest.getEmail(),
+                            email,
                             sendNotificationRequest,
                             input,
                             context,
@@ -185,7 +196,7 @@ public class SendOtpNotificationHandler
                     LOG.info("NotificationType is VERIFY_PHONE_NUMBER");
                     var existingPhoneNumber =
                             dynamoService
-                                    .getUserProfileByEmailMaybe(sendNotificationRequest.getEmail())
+                                    .getUserProfileByEmailMaybe(email)
                                     .map(UserProfile::getPhoneNumber)
                                     .orElse(null);
                     var phoneNumberValidationError =
