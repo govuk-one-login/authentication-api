@@ -33,12 +33,15 @@ import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
+import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.ClientSessionService;
+import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
+import uk.gov.di.orchestration.shared.services.LogoutService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
@@ -73,6 +76,8 @@ public class IPVCallbackHandler
     private final ClientSessionService clientSessionService;
     private final DynamoClientService dynamoClientService;
     private final AuditService auditService;
+    private final LogoutService logoutService;
+    private final AccountInterventionService accountInterventionService;
     private final IPVCallbackHelper ipvCallbackHelper;
     private final NoSessionOrchestrationService noSessionOrchestrationService;
     protected final Json objectMapper = SerializationService.getInstance();
@@ -95,6 +100,8 @@ public class IPVCallbackHandler
             ClientSessionService clientSessionService,
             DynamoClientService dynamoClientService,
             AuditService auditService,
+            LogoutService logoutService,
+            AccountInterventionService accountInterventionService,
             CookieHelper cookieHelper,
             NoSessionOrchestrationService noSessionOrchestrationService,
             IPVCallbackHelper ipvCallbackHelper) {
@@ -106,6 +113,8 @@ public class IPVCallbackHandler
         this.clientSessionService = clientSessionService;
         this.dynamoClientService = dynamoClientService;
         this.auditService = auditService;
+        this.logoutService = logoutService;
+        this.accountInterventionService = accountInterventionService;
         this.cookieHelper = cookieHelper;
         this.noSessionOrchestrationService = noSessionOrchestrationService;
         this.ipvCallbackHelper = ipvCallbackHelper;
@@ -125,6 +134,12 @@ public class IPVCallbackHandler
         this.clientSessionService = new ClientSessionService(configurationService);
         this.dynamoClientService = new DynamoClientService(configurationService);
         this.auditService = new AuditService(configurationService);
+        this.logoutService = new LogoutService(configurationService);
+        this.accountInterventionService =
+                new AccountInterventionService(
+                        configurationService,
+                        new CloudwatchMetricsService(configurationService),
+                        auditService);
         this.cookieHelper = new CookieHelper();
         this.noSessionOrchestrationService =
                 new NoSessionOrchestrationService(configurationService);
@@ -233,10 +248,16 @@ public class IPVCallbackHandler
 
             if (errorObject.isPresent()) {
                 var accountInterventionStatus =
-                        ipvCallbackHelper.getAccountInterventionStatus(
-                                internalPairwiseSubjectId, auditContext);
-                if (configurationService.isAccountInterventionServiceActionEnabled()) {
-                    ipvCallbackHelper.doAccountIntervention(accountInterventionStatus);
+                        segmentedFunctionCall(
+                                "AIS: getAccountStatus",
+                                () ->
+                                        this.accountInterventionService.getAccountStatus(
+                                                internalPairwiseSubjectId, auditContext));
+                if (configurationService.isAccountInterventionServiceActionEnabled()
+                        && (accountInterventionStatus.blocked()
+                                || accountInterventionStatus.suspended())) {
+                    return logoutService.handleAccountInterventionLogout(
+                            session, input, clientId, accountInterventionStatus);
                 }
 
                 return ipvCallbackHelper.generateAuthenticationErrorResponse(
@@ -321,10 +342,16 @@ public class IPVCallbackHandler
                     ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo, vtrList);
             if (userIdentityError.isPresent()) {
                 var accountInterventionStatus =
-                        ipvCallbackHelper.getAccountInterventionStatus(
-                                internalPairwiseSubjectId, auditContext);
-                if (configurationService.isAccountInterventionServiceActionEnabled()) {
-                    ipvCallbackHelper.doAccountIntervention(accountInterventionStatus);
+                        segmentedFunctionCall(
+                                "AIS: getAccountStatus",
+                                () ->
+                                        this.accountInterventionService.getAccountStatus(
+                                                internalPairwiseSubjectId, auditContext));
+                if (configurationService.isAccountInterventionServiceActionEnabled()
+                        && (accountInterventionStatus.blocked()
+                                || accountInterventionStatus.suspended())) {
+                    return logoutService.handleAccountInterventionLogout(
+                            session, input, clientId, accountInterventionStatus);
                 }
 
                 var returnCode = userIdentityUserInfo.getClaim(RETURN_CODE.getValue());

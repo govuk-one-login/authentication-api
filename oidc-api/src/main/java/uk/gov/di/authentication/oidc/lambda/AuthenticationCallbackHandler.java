@@ -58,7 +58,6 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 
 import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.GET;
 import static java.util.Objects.isNull;
@@ -344,11 +343,7 @@ public class AuthenticationCallbackHandler
                     if (identityRequired) {
                         if (accountStatus.blocked() || accountStatus.resetPassword()) {
                             return logoutService.handleAccountInterventionLogout(
-                                    userSession,
-                                    input,
-                                    Optional.of(clientId),
-                                    Optional.of(userSession.getSessionId()),
-                                    accountStatus);
+                                    userSession, input, clientId, accountStatus);
                         }
                     } else {
                         if (accountStatus.blocked() || accountStatus.suspended()) {
@@ -357,11 +352,7 @@ public class AuthenticationCallbackHandler
                                     && accountStatus.reproveIdentity()
                                     && !accountStatus.resetPassword())) {
                                 return logoutService.handleAccountInterventionLogout(
-                                        userSession,
-                                        input,
-                                        Optional.of(clientId),
-                                        Optional.of(userSession.getSessionId()),
-                                        accountStatus);
+                                        userSession, input, clientId, accountStatus);
                             }
                         }
                     }

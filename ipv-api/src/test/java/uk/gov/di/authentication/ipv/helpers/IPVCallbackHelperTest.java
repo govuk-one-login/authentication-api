@@ -32,8 +32,6 @@ import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
-import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.orchestration.shared.helpers.SaltHelper;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
@@ -131,43 +129,12 @@ class IPVCallbackHelperTest {
                                     "vtm", OIDC_BASE_URL + "/trustmark",
                                     "https://vocab.account.gov.uk/v1/coreIdentity", "core-identity",
                                     "https://vocab.account.gov.uk/v1/passport", "passport")));
-    private final String expectedCommonSubject =
-            ClientSubjectHelper.calculatePairwiseIdentifier(
-                    SUBJECT.getValue(), "test.account.gov.uk", SaltHelper.generateNewSalt());
 
     @RegisterExtension
     private final CaptureLoggingExtension logging =
             new CaptureLoggingExtension(IPVCallbackHelper.class);
 
     private IPVCallbackHelper helper;
-
-    private static Stream<Arguments> internalPairwiseIds() {
-        return Stream.of(
-                Arguments.of(
-                        INTERNAL_PAIRWISE_ID,
-                        Map.of(
-                                "blocked",
-                                "false",
-                                "suspended",
-                                "false",
-                                "resetPassword",
-                                "false",
-                                "reproveIdentity",
-                                "false"),
-                        new AccountInterventionStatus(false, false, false, false)),
-                Arguments.of(
-                        INTERNAL_PAIRWISE_ID_WITH_INTERVENTION,
-                        Map.of(
-                                "blocked",
-                                "false",
-                                "suspended",
-                                "true",
-                                "resetPassword",
-                                "false",
-                                "reproveIdentity",
-                                "false"),
-                        new AccountInterventionStatus(false, true, false, false)));
-    }
 
     private static Stream<Arguments> validUserIdentities() {
         return Stream.of(
@@ -179,7 +146,6 @@ class IPVCallbackHelperTest {
     void setUp() {
         helper =
                 new IPVCallbackHelper(
-                        accountInterventionService,
                         auditService,
                         authCodeResponseService,
                         authorisationCodeService,
@@ -235,19 +201,6 @@ class IPVCallbackHelperTest {
                         AuditService.UNKNOWN);
         assertEquals(302, response.getStatusCode());
         assertEquals(expectedURI, response.getHeaders().get(ResponseHeaders.LOCATION));
-    }
-
-    @ParameterizedTest
-    @MethodSource("internalPairwiseIds")
-    void shouldReturnAccountInterventionStatus(
-            String internalPairwiseId,
-            Map<String, String> expectedIncrementCounterMap,
-            AccountInterventionStatus expectedAISResult) {
-        var response = helper.getAccountInterventionStatus(internalPairwiseId, auditContext);
-
-        verify(accountInterventionService).getAccountStatus(internalPairwiseId, auditContext);
-        verify(cloudwatchMetricsService).incrementCounter("AISResult", expectedIncrementCounterMap);
-        assertEquals(expectedAISResult, response);
     }
 
     @ParameterizedTest
@@ -329,7 +282,6 @@ class IPVCallbackHelperTest {
         var objectMapper = mock(SerializationService.class);
         helper =
                 new IPVCallbackHelper(
-                        accountInterventionService,
                         auditService,
                         authCodeResponseService,
                         authorisationCodeService,

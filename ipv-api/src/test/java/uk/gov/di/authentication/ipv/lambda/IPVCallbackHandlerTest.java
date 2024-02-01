@@ -58,6 +58,7 @@ import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.serialization.Json;
+import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AwsSqsClient;
 import uk.gov.di.orchestration.shared.services.ClientSessionService;
@@ -65,6 +66,7 @@ import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
+import uk.gov.di.orchestration.shared.services.LogoutService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
@@ -118,6 +120,9 @@ class IPVCallbackHandlerTest {
     private final DynamoIdentityService dynamoIdentityService = mock(DynamoIdentityService.class);
     private final NoSessionOrchestrationService noSessionOrchestrationService =
             mock(NoSessionOrchestrationService.class);
+    private final LogoutService logoutService = mock(LogoutService.class);
+    private final AccountInterventionService accountInterventionService =
+            mock(AccountInterventionService.class);
     private final IPVCallbackHelper ipvCallbackHelper = mock(IPVCallbackHelper.class);
     private final AuditService auditService = mock(AuditService.class);
     private final AwsSqsClient awsSqsClient = mock(AwsSqsClient.class);
@@ -247,6 +252,8 @@ class IPVCallbackHandlerTest {
                         clientSessionService,
                         dynamoClientService,
                         auditService,
+                        logoutService,
+                        accountInterventionService,
                         cookieHelper,
                         noSessionOrchestrationService,
                         ipvCallbackHelper);
@@ -259,7 +266,7 @@ class IPVCallbackHandlerTest {
         when(context.getAwsRequestId()).thenReturn(REQUEST_ID);
         when(cookieHelper.parseSessionCookie(anyMap())).thenCallRealMethod();
         when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(salt);
-        when(ipvCallbackHelper.getAccountInterventionStatus(any(), any()))
+        when(accountInterventionService.getAccountStatus(any(), any()))
                 .thenReturn(new AccountInterventionStatus(false, false, false, false));
         when(ipvCallbackHelper.generateAuthenticationErrorResponse(
                         any(), any(), anyBoolean(), anyString(), anyString()))
@@ -320,9 +327,8 @@ class IPVCallbackHandlerTest {
                 ClientSubjectHelper.getSubjectWithSectorIdentifier(
                                 userProfile, configService.getInternalSectorUri(), dynamoService)
                         .getValue();
-        verify(ipvCallbackHelper)
-                .getAccountInterventionStatus(
-                        eq(expectedInternalPairwiseSubjectId), any(AuditContext.class));
+        verify(accountInterventionService)
+                .getAccountStatus(eq(expectedInternalPairwiseSubjectId), any(AuditContext.class));
     }
 
     @ParameterizedTest
@@ -668,9 +674,8 @@ class IPVCallbackHandlerTest {
         assertThat(response, hasStatus(302));
         assertEquals(
                 accessDeniedURI.toString(), response.getHeaders().get(ResponseHeaders.LOCATION));
-        verify(ipvCallbackHelper)
-                .getAccountInterventionStatus(
-                        eq(expectedInternalPairwiseSubjectId), any(AuditContext.class));
+        verify(accountInterventionService)
+                .getAccountStatus(eq(expectedInternalPairwiseSubjectId), any(AuditContext.class));
 
         verifyNoInteractions(ipvTokenService);
         verifyNoInteractions(dynamoIdentityService);

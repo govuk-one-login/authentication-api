@@ -39,6 +39,7 @@ module "ipv-callback" {
     ACCOUNT_INTERVENTION_SERVICE_ACTION_ENABLED = var.account_intervention_service_action_enabled
     ACCOUNT_INTERVENTION_SERVICE_CALL_ENABLED   = var.account_intervention_service_call_enabled
     ACCOUNT_INTERVENTION_SERVICE_URI            = var.account_intervention_service_uri
+    ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR = var.account_intervention_service_abort_on_error
     IPV_AUDIENCE                                = var.ipv_audience
     IPV_AUTHORISATION_CALLBACK_URI              = var.ipv_authorisation_callback_uri
     IPV_AUTHORISATION_CLIENT_ID                 = var.ipv_authorisation_client_id
@@ -52,6 +53,7 @@ module "ipv-callback" {
     REDIS_KEY                                   = local.redis_key
     SPOT_QUEUE_URL                              = aws_sqs_queue.spot_request_queue.id
     TXMA_AUDIT_QUEUE_URL                        = module.oidc_txma_audit.queue_url
+    FRONTEND_BASE_URL                           = "https://${local.frontend_fqdn}/"
   }
   handler_function_name = "uk.gov.di.authentication.ipv.lambda.IPVCallbackHandler::handleRequest"
 
