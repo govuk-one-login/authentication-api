@@ -1,28 +1,24 @@
-package uk.gov.di.authentication.oidc.services;
+package uk.gov.di.orchestration.shared.services;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import uk.gov.di.authentication.oidc.entity.BackChannelLogoutMessage;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
+import uk.gov.di.orchestration.shared.entity.BackChannelLogoutMessage;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
-import uk.gov.di.orchestration.shared.services.AuthenticationService;
-import uk.gov.di.orchestration.shared.services.AwsSqsClient;
 
 import java.util.Optional;
 import java.util.stream.Stream;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 class BackChannelLogoutServiceTest {
 
-    private final AwsSqsClient sqs = mock(AwsSqsClient.class);
-    private final AuthenticationService authenticationService = mock(AuthenticationService.class);
+    private final AwsSqsClient sqs = Mockito.mock(AwsSqsClient.class);
+    private final AuthenticationService authenticationService =
+            Mockito.mock(AuthenticationService.class);
     private final BackChannelLogoutService service =
             new BackChannelLogoutService(sqs, authenticationService);
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
@@ -31,9 +27,9 @@ class BackChannelLogoutServiceTest {
     void shouldPostBackChannelLogoutMessageToSqsForPairwiseClients() {
         var user = new UserProfile().withPublicSubjectID("public").withSubjectID("subject");
 
-        when(authenticationService.getUserProfileByEmailMaybe("test@test.com"))
+        Mockito.when(authenticationService.getUserProfileByEmailMaybe("test@test.com"))
                 .thenReturn(Optional.of(user));
-        when(authenticationService.getOrGenerateSalt(user)).thenReturn("salt".getBytes());
+        Mockito.when(authenticationService.getOrGenerateSalt(user)).thenReturn("salt".getBytes());
 
         service.sendLogoutMessage(
                 new ClientRegistry()
@@ -46,7 +42,7 @@ class BackChannelLogoutServiceTest {
 
         var captor = ArgumentCaptor.forClass(BackChannelLogoutMessage.class);
 
-        verify(sqs).sendAsync(captor.capture());
+        Mockito.verify(sqs).sendAsync(captor.capture());
 
         var message = captor.getValue();
 
@@ -69,12 +65,12 @@ class BackChannelLogoutServiceTest {
                                 service.sendLogoutMessage(
                                         clientRegistry, null, INTERNAL_SECTOR_URI));
 
-        verify(sqs, never()).send(anyString());
+        Mockito.verify(sqs, Mockito.never()).send(ArgumentMatchers.anyString());
     }
 
     @Test
     void shouldNotPostMessageToSqsIfUserProfileDoesNotExist() {
-        when(authenticationService.getUserProfileByEmailMaybe("test@test.com"))
+        Mockito.when(authenticationService.getUserProfileByEmailMaybe("test@test.com"))
                 .thenReturn(Optional.empty());
 
         service.sendLogoutMessage(
@@ -84,6 +80,6 @@ class BackChannelLogoutServiceTest {
                 "test@test.com",
                 INTERNAL_SECTOR_URI);
 
-        verify(sqs, never()).send(anyString());
+        Mockito.verify(sqs, Mockito.never()).send(ArgumentMatchers.anyString());
     }
 }

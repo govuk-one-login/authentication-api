@@ -1,13 +1,9 @@
-package uk.gov.di.authentication.oidc.services;
+package uk.gov.di.orchestration.shared.services;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.authentication.oidc.entity.BackChannelLogoutMessage;
+import uk.gov.di.orchestration.shared.entity.BackChannelLogoutMessage;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
-import uk.gov.di.orchestration.shared.services.AuthenticationService;
-import uk.gov.di.orchestration.shared.services.AwsSqsClient;
-import uk.gov.di.orchestration.shared.services.ConfigurationService;
-import uk.gov.di.orchestration.shared.services.DynamoService;
 
 import static org.apache.logging.log4j.util.Strings.isBlank;
 import static uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper.getSubject;

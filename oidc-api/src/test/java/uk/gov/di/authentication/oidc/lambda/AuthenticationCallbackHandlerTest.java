@@ -21,13 +21,13 @@ import uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent;
 import uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService;
 import uk.gov.di.authentication.oidc.services.AuthenticationTokenService;
 import uk.gov.di.authentication.oidc.services.InitiateIPVAuthorisationService;
-import uk.gov.di.authentication.oidc.services.LogoutService;
 import uk.gov.di.orchestration.shared.conditions.IdentityHelper;
 import uk.gov.di.orchestration.shared.domain.AuditableEvent;
 import uk.gov.di.orchestration.shared.entity.*;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.services.*;
+import uk.gov.di.orchestration.shared.services.LogoutService;
 
 import java.net.URI;
 import java.util.*;
