@@ -67,6 +67,11 @@ output "pending_email_check_queue_id" {
   value = aws_sqs_queue.pending_email_check_queue.id
 }
 
+output "pending_email_check_queue_encryption_key_arn" {
+  description = "the ARN of the KMS key used to encrypt payloads in the pending email check queue"
+  value       = aws_kms_key.pending_email_check_queue_encryption_key.arn
+}
+
 output "email_lambda_iam_role_arn" {
   value = aws_iam_role.email_lambda_iam_role.arn
 }
