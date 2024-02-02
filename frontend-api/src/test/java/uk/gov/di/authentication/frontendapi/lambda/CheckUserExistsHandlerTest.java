@@ -88,7 +88,6 @@ class CheckUserExistsHandlerTest {
     private final Session session = new Session(IdGenerator.generate());
     private static final String CLIENT_ID = "test-client-id";
     private static final String CLIENT_NAME = "test-client-name";
-    private static final String PHONE_NUMBER = "+44987654321";
     private static final Subject SUBJECT = new Subject();
     private static final String SECTOR_URI = "http://sector-identifier";
     private static final String PERSISTENT_SESSION_ID = "some-persistent-id-value";
@@ -128,7 +127,6 @@ class CheckUserExistsHandlerTest {
     void shouldReturn200IfUserExists() throws Json.JsonException {
         usingValidSession();
         var userProfile = generateUserProfile();
-        userProfile.setPhoneNumber(PHONE_NUMBER);
         when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT.array());
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL_ADDRESS))
                 .thenReturn(Optional.of(userProfile));
@@ -170,7 +168,6 @@ class CheckUserExistsHandlerTest {
         var checkUserExistsResponse =
                 objectMapper.readValue(result.getBody(), CheckUserExistsResponse.class);
         assertEquals(EMAIL_ADDRESS, checkUserExistsResponse.getEmail());
-        assertEquals("321", checkUserExistsResponse.getPhoneNumberLastThree());
         assertEquals(MFAMethodType.SMS, checkUserExistsResponse.getMfaMethodType());
         assertTrue(checkUserExistsResponse.doesUserExist());
         var expectedRpPairwiseId =

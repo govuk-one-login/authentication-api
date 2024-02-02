@@ -234,11 +234,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             var consentRequired = ConsentHelper.userHasNotGivenConsent(userContext);
 
             var userMfaDetail =
-                    getUserMFADetail(
-                            userContext,
-                            userCredentials,
-                            userProfile.getPhoneNumber(),
-                            isPhoneNumberVerified);
+                    getUserMFADetail(userContext, userCredentials, isPhoneNumberVerified);
 
             boolean isPasswordChangeRequired = isPasswordResetRequired(request.getPassword());
 
