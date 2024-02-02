@@ -41,7 +41,6 @@ public class MfaHelper {
     public static UserMfaDetail getUserMFADetail(
             UserContext userContext,
             UserCredentials userCredentials,
-            String phoneNumber,
             boolean isPhoneNumberVerified) {
         var isMfaRequired = mfaRequired(userContext.getClientSession().getAuthRequestParams());
         var mfaMethodVerified = isPhoneNumberVerified;
@@ -54,6 +53,6 @@ public class MfaHelper {
         } else if (!isPhoneNumberVerified && mfaMethod.isPresent()) {
             mfaMethodType = MFAMethodType.valueOf(mfaMethod.get().getMfaMethodType());
         }
-        return new UserMfaDetail(isMfaRequired, mfaMethodVerified, mfaMethodType, phoneNumber);
+        return new UserMfaDetail(isMfaRequired, mfaMethodVerified, mfaMethodType);
     }
 }

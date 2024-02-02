@@ -18,10 +18,6 @@ public class CheckUserExistsResponse {
     @Expose
     private MFAMethodType mfaMethodType;
 
-    @SerializedName("phoneNumberLastThree")
-    @Expose
-    private String phoneNumberLastThree;
-
     public CheckUserExistsResponse() {}
 
     public CheckUserExistsResponse(
@@ -29,17 +25,6 @@ public class CheckUserExistsResponse {
         this.email = email;
         this.doesUserExist = doesUserExist;
         this.mfaMethodType = mfaMethodType;
-    }
-
-    public CheckUserExistsResponse(
-            String email,
-            boolean doesUserExist,
-            MFAMethodType mfaMethodType,
-            String phoneNumberLastThree) {
-        this.email = email;
-        this.doesUserExist = doesUserExist;
-        this.mfaMethodType = mfaMethodType;
-        this.phoneNumberLastThree = phoneNumberLastThree;
     }
 
     public String getEmail() {
@@ -52,9 +37,5 @@ public class CheckUserExistsResponse {
 
     public MFAMethodType getMfaMethodType() {
         return mfaMethodType;
-    }
-
-    public String getPhoneNumberLastThree() {
-        return phoneNumberLastThree;
     }
 }
