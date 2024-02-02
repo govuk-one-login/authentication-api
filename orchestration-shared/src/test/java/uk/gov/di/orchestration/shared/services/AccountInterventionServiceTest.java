@@ -111,6 +111,7 @@ class AccountInterventionServiceTest {
 
         when(httpClient.send(any(), any())).thenReturn(httpResponse);
         when(httpResponse.body()).thenReturn(ACCOUNT_INTERVENTION_SERVICE_RESPONSE_SUSPEND_REPROVE);
+        when(httpResponse.statusCode()).thenReturn(200);
 
         var status = accountInterventionService.getAccountStatus(internalPairwiseSubjectId);
 
@@ -186,7 +187,7 @@ class AccountInterventionServiceTest {
                 () -> accountInterventionService.getAccountStatus(internalPairwiseSubjectId));
 
         verify(cloudwatchMetricsService)
-                .incrementCounter("AISCallFailure", Map.of("Environment", ENVIRONMENT));
+                .incrementCounter("AISException", Map.of("Environment", ENVIRONMENT));
     }
 
     @Test
@@ -205,6 +206,7 @@ class AccountInterventionServiceTest {
 
         when(httpClient.send(any(), any())).thenReturn(httpResponse);
         when(httpResponse.body()).thenReturn(ACCOUNT_INTERVENTION_SERVICE_RESPONSE_SUSPEND_REPROVE);
+        when(httpResponse.statusCode()).thenReturn(200);
 
         accountInterventionService.getAccountStatus(internalPairwiseSubjectId, someAuditContext);
 
