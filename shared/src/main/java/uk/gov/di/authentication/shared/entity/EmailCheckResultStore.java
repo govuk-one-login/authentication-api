@@ -10,10 +10,12 @@ public class EmailCheckResultStore {
     public static final String ATTRIBUTE_EMAIL = "Email";
     public static final String ATTRIBUTE_STATUS = "Status";
     public static final String ATTRIBUTE_TIME_TO_EXIST = "TimeToExist";
+    public static final String ATTRIBUTE_REFERENCE_NUMBER = "ReferenceNumber";
 
     private String email;
     private EmailCheckResultStatus status;
     private long timeToExist;
+    private String referenceNumber;
 
     @DynamoDbPartitionKey
     @DynamoDbAttribute(ATTRIBUTE_EMAIL)
@@ -55,6 +57,20 @@ public class EmailCheckResultStore {
 
     public EmailCheckResultStore withTimeToExist(long timeToExist) {
         this.timeToExist = timeToExist;
+        return this;
+    }
+
+    @DynamoDbAttribute(ATTRIBUTE_REFERENCE_NUMBER)
+    public String getReferenceNumber() {
+        return referenceNumber;
+    }
+
+    public void setReferenceNumber(String referenceNumber) {
+        this.referenceNumber = referenceNumber;
+    }
+
+    public EmailCheckResultStore withReferenceNumber(String referenceNumber) {
+        this.referenceNumber = referenceNumber;
         return this;
     }
 }
