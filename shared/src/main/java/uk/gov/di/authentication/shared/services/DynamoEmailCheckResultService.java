@@ -18,12 +18,13 @@ public class DynamoEmailCheckResultService extends BaseDynamoService<EmailCheckR
     }
 
     public void saveEmailCheckResult(
-            String email, EmailCheckResultStatus status, Long timeToExist) {
+            String email, EmailCheckResultStatus status, Long timeToExist, String referenceNumber) {
         var emailCheckResult =
                 new EmailCheckResultStore()
                         .withEmail(email)
                         .withStatus(status)
-                        .withTimeToExist(timeToExist);
+                        .withTimeToExist(timeToExist)
+                        .withReferenceNumber(referenceNumber);
         put(emailCheckResult);
     }
 }

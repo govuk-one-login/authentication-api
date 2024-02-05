@@ -18,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class DynamoEmailCheckResultServiceIntegrationTest {
 
     private static String email = "test.user@example.com";
+    private static String referenceNumber = "test-reference";
     private static EmailCheckResultStatus status = EmailCheckResultStatus.PENDING;
 
     DynamoEmailCheckResultService dynamoEmailCheckResultService =
@@ -29,20 +30,23 @@ class DynamoEmailCheckResultServiceIntegrationTest {
 
     @Test
     void shouldSaveAndReadAnEmailCheckResult() {
-        dynamoEmailCheckResultService.saveEmailCheckResult(email, status, unixTimePlusNDays(1));
+        dynamoEmailCheckResultService.saveEmailCheckResult(
+                email, status, unixTimePlusNDays(1), referenceNumber);
 
         var result = dynamoEmailCheckResultService.getEmailCheckStore(email);
 
         assertTrue(result.isPresent());
         assertThat(result.get().getEmail(), equalTo(email));
         assertThat(result.get().getStatus(), equalTo(status));
+        assertThat(result.get().getReferenceNumber(), equalTo(referenceNumber));
     }
 
     @Test
     void shouldNotReturnAnEmailCheckResultWhenTimeToLiveHasExpired() {
         long unixTimeInThePast =
                 NowHelper.nowPlus(-1, ChronoUnit.DAYS).toInstant().getEpochSecond();
-        dynamoEmailCheckResultService.saveEmailCheckResult(email, status, unixTimeInThePast);
+        dynamoEmailCheckResultService.saveEmailCheckResult(
+                email, status, unixTimeInThePast, referenceNumber);
 
         var result = dynamoEmailCheckResultService.getEmailCheckStore(email);
 
