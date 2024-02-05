@@ -51,14 +51,14 @@ public class EmailCheckResultWriterHandler implements RequestHandler<SQSEvent, V
                         objectMapper.readValue(msg.getBody(), EmailCheckResultSqsMessage.class);
 
                 db.saveEmailCheckResult(
-                        emailCheckResult.getEmail(),
-                        emailCheckResult.getEmailCheckResultStatus(),
-                        emailCheckResult.getTimeToExist(),
-                        emailCheckResult.getReferenceNumber());
+                        emailCheckResult.email(),
+                        emailCheckResult.emailCheckResultStatus(),
+                        emailCheckResult.timeToExist(),
+                        emailCheckResult.referenceNumber());
 
                 LOG.info(
                         "Message for email check reference {} written to database",
-                        emailCheckResult.getReferenceNumber());
+                        emailCheckResult.referenceNumber());
 
             } catch (JsonException e) {
                 LOG.error("Error when mapping message from queue to a EmailCheckResultSqsMessage");
