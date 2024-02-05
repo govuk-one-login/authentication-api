@@ -67,7 +67,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
@@ -779,7 +778,7 @@ class VerifyMfaCodeHandlerTest {
                     "abc.def@digital.cabinet-office.gov.uk",
                     "testclient.user2@internet.com",
             })
-    void shouldReturn204ForValidVerifyEmailRequestUsingTestClient(String email) {
+    void shouldReturn204ForValidVerifyEmailRequestUsingTestClient(String email) throws Json.JsonException {
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(configurationService.getTestClientVerifyEmailOTP())
@@ -792,9 +791,8 @@ class VerifyMfaCodeHandlerTest {
                         "{ \"code\": \"%s\", \"notificationType\": \"%s\"  }",
                         TEST_CLIENT_CODE, VERIFY_EMAIL);
 
-//        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.AUTH_APP, CODE, journeyType);
-//        var result = makeCallWithCode(codeRequest);
-//        var result = makeCallWithCode(body, Optional.of(session), CLIENT_ID);
+        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.EMAIL, CODE, JourneyType.REGISTRATION);
+        var result = makeCallWithCode(codeRequest);
 
 //        assertThat(result, hasStatus(204));
 //        verifyNoInteractions(accountModifiersService);
