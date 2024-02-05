@@ -6,6 +6,7 @@ import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
+import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -45,6 +46,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -214,6 +216,25 @@ class QueryParamsAuthorizeValidatorTest {
                         new ErrorObject(
                                 OAuth2Error.INVALID_REQUEST_CODE,
                                 "Request contains invalid claims")));
+    }
+
+    @Test
+    void shouldAcceptEmptyClaimsObject() throws ParseException {
+        when(dynamoClientService.getClient(CLIENT_ID.toString()))
+                .thenReturn(
+                        Optional.of(
+                                generateClientRegistry(
+                                        REDIRECT_URI.toString(), CLIENT_ID.toString())));
+
+        var authRequest =
+                AuthenticationRequest.parse(
+                        "client_id="
+                                + CLIENT_ID
+                                + "&redirect_uri="
+                                + REDIRECT_URI
+                                + "&response_type=code&scope=openid&nonce=1234&vtr=%5B%22Cl%22%5D&claims=%7B%0D%0A%20%20%22userinfo%22%3A%20%7B%7D%0D%0A%7D&state=ABCD");
+        var errorObject = queryParamsAuthorizeValidator.validate(authRequest);
+        assertEquals(Optional.empty(), errorObject);
     }
 
     @Test
