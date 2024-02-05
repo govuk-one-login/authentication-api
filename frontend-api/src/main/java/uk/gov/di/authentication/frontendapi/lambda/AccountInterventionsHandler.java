@@ -143,6 +143,18 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
                     "Error in Account Interventions response HttpCode: {}, ErrorMessage: {}.",
                     e.getHttpCode(),
                     e.getMessage());
+            if (!configurationService.abortOnAccountInterventionsErrorResponse()) {
+                try {
+                    LOG.error(
+                            "Swallowing error and returning default account interventions response");
+                    AccountInterventionsResponse defaultAccountInterventionsResponse =
+                            new AccountInterventionsResponse(false, false, false);
+                    return generateApiGatewayProxyResponse(
+                            200, defaultAccountInterventionsResponse, true);
+                } catch (JsonException ex) {
+                    return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+                }
+            }
             if (e.getHttpCode() == 429) {
                 return generateApiGatewayProxyErrorResponse(429, ErrorResponse.ERROR_1051);
             }
