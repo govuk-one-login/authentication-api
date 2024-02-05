@@ -239,6 +239,37 @@ public class AccountInterventionsHandlerTest {
         assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1055)));
     }
 
+    @Test
+    void
+            shouldReturn200AndDefaultAccountInterventionsResponseWhenAccountInterventionsRequestUnsuccessfulAndAbortOnErrorIsTrue()
+                    throws Json.JsonException, UnsuccessfulAccountInterventionsResponseException {
+        var context = mock(Context.class);
+        var event = new APIGatewayProxyRequestEvent();
+        AccountInterventionsResponse defaultAccountInterventionsResponse =
+                new AccountInterventionsResponse(false, false, false);
+        event.setHeaders(getHeaders());
+        event.setBody(format("{ \"email\": \"%s\" }", TEST_EMAIL_ADDRESS));
+        when(configurationService.abortOnAccountInterventionsErrorResponse()).thenReturn(true);
+        when(authenticationService.getUserProfileByEmailMaybe(anyString()))
+                .thenReturn(Optional.of(generateUserProfile()));
+        when(accountInterventionsService.sendAccountInterventionsOutboundRequest(any()))
+                .thenThrow(
+                        new UnsuccessfulAccountInterventionsResponseException(
+                                "Any 4xx/5xx error valid here", 404));
+        var result = handler.handleRequest(event, context);
+        assertThat(result, hasStatus(200));
+        assertThat(
+                result,
+                hasBody(
+                        objectMapper.writeValueAsStringCamelCase(
+                                defaultAccountInterventionsResponse)));
+        assertEquals(
+                result.getBody(),
+                String.format(
+                        "{\"passwordResetRequired\":%b,\"blocked\":%b,\"temporarilySuspended\":%b}",
+                        false, false, false));
+    }
+
     static Stream<Arguments> accountInterventionResponseParameters() {
         return Stream.of(
                 Arguments.of(false, false, false, false, FrontendAuditableEvent.NO_INTERVENTION),

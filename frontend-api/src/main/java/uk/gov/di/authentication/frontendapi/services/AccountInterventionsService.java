@@ -9,6 +9,7 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsInboundResponse;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountInterventionsResponseException;
 import uk.gov.di.authentication.shared.serialization.Json;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.io.IOException;
@@ -20,11 +21,17 @@ public class AccountInterventionsService {
     private static final Logger LOG = LogManager.getLogger(AccountInterventionsService.class);
     private final Json objectMapper = SerializationService.getInstance();
 
+    private ConfigurationService configurationService = new ConfigurationService();
+
     public AccountInterventionsInboundResponse sendAccountInterventionsOutboundRequest(
             HTTPRequest request) throws UnsuccessfulAccountInterventionsResponseException {
 
         try {
             LOG.info("Sending account interventions outbound request");
+            int timeoutMillis =
+                    (int) configurationService.getAccountInterventionServiceCallTimeout();
+            request.setConnectTimeout(timeoutMillis);
+            request.setReadTimeout(timeoutMillis);
             var response = request.send();
             if (!response.indicatesSuccess()) {
                 throw new UnsuccessfulAccountInterventionsResponseException(
