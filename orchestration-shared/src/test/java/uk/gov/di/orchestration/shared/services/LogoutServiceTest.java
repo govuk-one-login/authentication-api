@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.oidc.services;
+package uk.gov.di.orchestration.shared.services;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
@@ -19,7 +19,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatcher;
 import org.mockito.MockedStatic;
-import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
+import uk.gov.di.orchestration.shared.domain.LogoutAuditableEvent;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
@@ -29,12 +29,6 @@ import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
-import uk.gov.di.orchestration.shared.services.AuditService;
-import uk.gov.di.orchestration.shared.services.ClientSessionService;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
-import uk.gov.di.orchestration.shared.services.ConfigurationService;
-import uk.gov.di.orchestration.shared.services.DynamoClientService;
-import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.sharedtest.helper.TokenGeneratorHelper;
 
 import java.net.URI;
@@ -158,7 +152,7 @@ public class LogoutServiceTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        OidcAuditableEvent.LOG_OUT_SUCCESS,
+                        LogoutAuditableEvent.LOG_OUT_SUCCESS,
                         AuditService.UNKNOWN,
                         SESSION_ID,
                         CLIENT_ID,
@@ -185,7 +179,7 @@ public class LogoutServiceTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        OidcAuditableEvent.LOG_OUT_SUCCESS,
+                        LogoutAuditableEvent.LOG_OUT_SUCCESS,
                         AuditService.UNKNOWN,
                         SESSION_ID,
                         CLIENT_ID,
@@ -213,7 +207,7 @@ public class LogoutServiceTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        OidcAuditableEvent.LOG_OUT_SUCCESS,
+                        LogoutAuditableEvent.LOG_OUT_SUCCESS,
                         AuditService.UNKNOWN,
                         SESSION_ID,
                         CLIENT_ID,
@@ -242,7 +236,7 @@ public class LogoutServiceTest {
 
         verify(auditService)
                 .submitAuditEvent(
-                        OidcAuditableEvent.LOG_OUT_SUCCESS,
+                        LogoutAuditableEvent.LOG_OUT_SUCCESS,
                         AuditService.UNKNOWN,
                         SESSION_ID,
                         AuditService.UNKNOWN,
@@ -270,18 +264,14 @@ public class LogoutServiceTest {
         var accountStatus = new AccountInterventionStatus(true, false, false, false);
         APIGatewayProxyResponseEvent response =
                 logoutService.handleAccountInterventionLogout(
-                        session,
-                        event,
-                        Optional.of(CLIENT_ID),
-                        Optional.of(SESSION_ID),
-                        accountStatus);
+                        session, event, CLIENT_ID, accountStatus);
 
         verify(clientSessionService)
                 .deleteClientSessionFromRedis(session.getClientSessions().get(0));
         verify(sessionService).deleteSessionFromRedis(session.getSessionId());
         verify(auditService)
                 .submitAuditEvent(
-                        OidcAuditableEvent.LOG_OUT_SUCCESS,
+                        LogoutAuditableEvent.LOG_OUT_SUCCESS,
                         AuditService.UNKNOWN,
                         SESSION_ID,
                         CLIENT_ID,
@@ -302,18 +292,14 @@ public class LogoutServiceTest {
         var accountStatus = new AccountInterventionStatus(false, true, false, false);
         APIGatewayProxyResponseEvent response =
                 logoutService.handleAccountInterventionLogout(
-                        session,
-                        event,
-                        Optional.of(CLIENT_ID),
-                        Optional.of(SESSION_ID),
-                        accountStatus);
+                        session, event, CLIENT_ID, accountStatus);
 
         verify(clientSessionService)
                 .deleteClientSessionFromRedis(session.getClientSessions().get(0));
         verify(sessionService).deleteSessionFromRedis(session.getSessionId());
         verify(auditService)
                 .submitAuditEvent(
-                        OidcAuditableEvent.LOG_OUT_SUCCESS,
+                        LogoutAuditableEvent.LOG_OUT_SUCCESS,
                         AuditService.UNKNOWN,
                         SESSION_ID,
                         CLIENT_ID,
@@ -385,11 +371,7 @@ public class LogoutServiceTest {
                         RuntimeException.class,
                         () ->
                                 logoutService.handleAccountInterventionLogout(
-                                        session,
-                                        event,
-                                        Optional.of(CLIENT_ID),
-                                        Optional.of(SESSION_ID),
-                                        status),
+                                        session, event, CLIENT_ID, status),
                         "Expected to throw exception");
 
         assertEquals("Account status must be blocked or suspended", exception.getMessage());

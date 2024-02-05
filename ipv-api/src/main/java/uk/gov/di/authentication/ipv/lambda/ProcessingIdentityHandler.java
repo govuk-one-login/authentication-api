@@ -10,6 +10,7 @@ import uk.gov.di.authentication.ipv.entity.ProcessingIdentityRequest;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityResponse;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityStatus;
 import uk.gov.di.orchestration.audit.AuditContext;
+import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
@@ -24,9 +25,11 @@ import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
 import uk.gov.di.orchestration.shared.services.DynamoService;
+import uk.gov.di.orchestration.shared.services.LogoutService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.state.UserContext;
 
+import java.net.URI;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
@@ -40,6 +43,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
     private final AccountInterventionService accountInterventionService;
     private final AuditService auditService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final LogoutService logoutService;
 
     private static final Logger LOG = LogManager.getLogger(ProcessingIdentityHandler.class);
 
@@ -51,6 +55,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
         this.accountInterventionService =
                 new AccountInterventionService(
                         configurationService, cloudwatchMetricsService, auditService);
+        this.logoutService = new LogoutService(configurationService);
     }
 
     public ProcessingIdentityHandler() {
@@ -66,7 +71,8 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
             DynamoService dynamoService,
             ConfigurationService configurationService,
             AuditService auditService,
-            CloudwatchMetricsService cloudwatchMetricsService) {
+            CloudwatchMetricsService cloudwatchMetricsService,
+            LogoutService logoutService) {
         super(
                 ProcessingIdentityRequest.class,
                 configurationService,
@@ -78,6 +84,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
         this.accountInterventionService = accountInterventionService;
         this.auditService = auditService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.logoutService = logoutService;
     }
 
     @Override
@@ -94,19 +101,26 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
             UserContext userContext) {
         LOG.info("ProcessingIdentity request received");
         try {
-            var pairwiseSubject =
+            UserProfile userProfile = userContext.getUserProfile().orElseThrow();
+            ClientRegistry client = userContext.getClient().orElseThrow();
+            var rpPairwiseSubject =
                     ClientSubjectHelper.getSubject(
-                            userContext.getUserProfile().orElseThrow(),
-                            userContext.getClient().orElseThrow(),
+                            userProfile,
+                            client,
                             authenticationService,
                             configurationService.getInternalSectorUri());
+            var internalPairwiseSubjectId =
+                    ClientSubjectHelper.calculatePairwiseIdentifier(
+                            userProfile.getSubjectID(),
+                            URI.create(configurationService.getInternalSectorUri()),
+                            authenticationService.getOrGenerateSalt(userProfile));
             int processingAttempts = userContext.getSession().incrementProcessingIdentityAttempts();
             LOG.info(
                     "Attempting to find identity credentials in dynamo. Attempt: {}",
                     processingAttempts);
 
             var identityCredentials =
-                    dynamoIdentityService.getIdentityCredentials(pairwiseSubject.getValue());
+                    dynamoIdentityService.getIdentityCredentials(rpPairwiseSubject.getValue());
             var processingStatus = ProcessingIdentityStatus.PROCESSING;
             if (identityCredentials.isEmpty()
                     && userContext.getSession().getProcessingIdentityAttempts() == 1) {
@@ -129,7 +143,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                     new AuditContext(
                             userContext.getClientSessionId(),
                             userContext.getSession().getSessionId(),
-                            userContext.getClient().get().getClientID(),
+                            client.getClientID(),
                             AuditService.UNKNOWN,
                             userContext
                                     .getUserProfile()
@@ -146,7 +160,17 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                     "Generating ProcessingIdentityResponse with ProcessingIdentityStatus: {}",
                     processingStatus);
             if (processingStatus == ProcessingIdentityStatus.COMPLETED) {
-                checkAccountInterventionService(pairwiseSubject.getValue(), auditContext);
+                var aisResult =
+                        segmentedFunctionCall(
+                                "AIS: getAccountStatus",
+                                () ->
+                                        accountInterventionService.getAccountStatus(
+                                                internalPairwiseSubjectId, auditContext));
+                if (configurationService.isAccountInterventionServiceActionEnabled()
+                        && (aisResult.suspended() || aisResult.blocked())) {
+                    return logoutService.handleAccountInterventionLogout(
+                            userContext.getSession(), input, client.getClientID(), aisResult);
+                }
             }
             return generateApiGatewayProxyResponse(
                     200, new ProcessingIdentityResponse(processingStatus));
@@ -159,30 +183,6 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                     userContext.getUserProfile().isPresent(),
                     userContext.getClient().isPresent());
             throw new RuntimeException();
-        }
-    }
-
-    private void checkAccountInterventionService(
-            String internalPairwiseSubjectId, AuditContext auditContext) {
-        var aisResult =
-                segmentedFunctionCall(
-                        "AIS: getAccountStatus",
-                        () ->
-                                accountInterventionService.getAccountStatus(
-                                        internalPairwiseSubjectId, auditContext));
-
-        if (configurationService.isAccountInterventionServiceActionEnabled()) {
-            if (aisResult.blocked()) {
-                LOG.info("Account is blocked");
-                // TODO: (ATO-171) back channel logout + (ATO-170) redirect to blocked page
-            } else if (aisResult.suspended()
-                    || aisResult.resetPassword()
-                    || aisResult.reproveIdentity()) {
-                LOG.info(
-                        "Account is suspended, requires a password reset, or requires identity to be reproved");
-                // TODO: (ATO-171) back channel logout + (ATO-170) redirect to suspended
-                // page
-            }
         }
     }
 }

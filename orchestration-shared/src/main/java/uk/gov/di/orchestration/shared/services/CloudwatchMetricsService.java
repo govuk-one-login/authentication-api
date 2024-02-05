@@ -90,11 +90,11 @@ public class CloudwatchMetricsService {
             Optional<AccountInterventionStatus> accountInterventionStatus) {
         String accountInterventionStr = "unknown";
         if (accountInterventionStatus.isPresent()) {
-            if (accountInterventionStatus.get().blocked()) {
-                accountInterventionStr = "blocked";
-            }
             if (accountInterventionStatus.get().suspended()) {
                 accountInterventionStr = "suspended";
+            }
+            if (accountInterventionStatus.get().blocked()) {
+                accountInterventionStr = "blocked";
             }
         }
         incrementCounter(

@@ -39,6 +39,8 @@ module "processing-identity" {
     ACCOUNT_INTERVENTION_SERVICE_ACTION_ENABLED = var.account_intervention_service_action_enabled
     ACCOUNT_INTERVENTION_SERVICE_CALL_ENABLED   = var.account_intervention_service_call_enabled
     ACCOUNT_INTERVENTION_SERVICE_URI            = var.account_intervention_service_uri
+    FRONTEND_BASE_URL                           = "https://${local.frontend_fqdn}/"
+    ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR = var.account_intervention_service_abort_on_error
   }
   handler_function_name = "uk.gov.di.authentication.ipv.lambda.ProcessingIdentityHandler::handleRequest"
 

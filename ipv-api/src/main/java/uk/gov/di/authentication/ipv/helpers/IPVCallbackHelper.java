@@ -15,8 +15,6 @@ import uk.gov.di.authentication.ipv.entity.IpvCallbackException;
 import uk.gov.di.authentication.ipv.entity.LogIds;
 import uk.gov.di.authentication.ipv.entity.SPOTClaims;
 import uk.gov.di.authentication.ipv.entity.SPOTRequest;
-import uk.gov.di.orchestration.audit.AuditContext;
-import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.IdentityClaims;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
@@ -27,7 +25,6 @@ import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
-import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthCodeResponseGenerationService;
 import uk.gov.di.orchestration.shared.services.AuthorisationCodeService;
@@ -56,7 +53,6 @@ import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.
 public class IPVCallbackHelper {
     private static final Logger LOG = LogManager.getLogger(IPVCallbackHelper.class);
     protected final Json objectMapper;
-    private final AccountInterventionService accountInterventionService;
     private final AuditService auditService;
     private final AuthCodeResponseGenerationService authCodeResponseService;
     private final AuthorisationCodeService authorisationCodeService;
@@ -71,9 +67,6 @@ public class IPVCallbackHelper {
     public IPVCallbackHelper(ConfigurationService configurationService) {
         this.auditService = new AuditService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
-        this.accountInterventionService =
-                new AccountInterventionService(
-                        configurationService, cloudwatchMetricsService, auditService);
         this.authorisationCodeService = new AuthorisationCodeService(configurationService);
         this.configurationService = configurationService;
         this.dynamoClientService = new DynamoClientService(configurationService);
@@ -91,7 +84,6 @@ public class IPVCallbackHelper {
     }
 
     public IPVCallbackHelper(
-            AccountInterventionService accountInterventionService,
             AuditService auditService,
             AuthCodeResponseGenerationService authCodeResponseService,
             AuthorisationCodeService authorisationCodeService,
@@ -103,7 +95,6 @@ public class IPVCallbackHelper {
             SerializationService objectMapper,
             SessionService sessionService,
             AwsSqsClient sqsClient) {
-        this.accountInterventionService = accountInterventionService;
         this.auditService = auditService;
         this.authCodeResponseService = authCodeResponseService;
         this.authorisationCodeService = authorisationCodeService;
@@ -146,42 +137,6 @@ public class IPVCallbackHelper {
                         authenticationRequest.getResponseMode());
         return generateApiGatewayProxyResponse(
                 302, "", Map.of(ResponseHeaders.LOCATION, errorResponse.toURI().toString()), null);
-    }
-
-    public AccountInterventionStatus getAccountInterventionStatus(
-            String internalPairwiseSubjectId, AuditContext auditContext) {
-        var accountInterventionStatus =
-                segmentedFunctionCall(
-                        "AIS: getAccountStatus",
-                        () ->
-                                this.accountInterventionService.getAccountStatus(
-                                        internalPairwiseSubjectId, auditContext));
-        cloudwatchMetricsService.incrementCounter(
-                "AISResult",
-                Map.of(
-                        "blocked",
-                        String.valueOf(accountInterventionStatus.blocked()),
-                        "suspended",
-                        String.valueOf(accountInterventionStatus.suspended()),
-                        "resetPassword",
-                        String.valueOf(accountInterventionStatus.resetPassword()),
-                        "reproveIdentity",
-                        String.valueOf(accountInterventionStatus.reproveIdentity())));
-        return accountInterventionStatus;
-    }
-
-    public void doAccountIntervention(AccountInterventionStatus accountInterventionStatus) {
-        if (accountInterventionStatus.blocked()) {
-            LOG.info("Account is blocked");
-            // TODO: (ATO-171) back channel logout + (ATO-170) redirect to blocked page
-        } else if (accountInterventionStatus.suspended()
-                || accountInterventionStatus.resetPassword()
-                || accountInterventionStatus.reproveIdentity()) {
-            LOG.info(
-                    "Account is suspended, requires a password reset, or requires identity to be reproved");
-            // TODO: (ATO-171) back channel logout + (ATO-170) redirect to suspended
-            // page
-        }
     }
 
     public Optional<ErrorObject> validateUserIdentityResponse(

@@ -1,4 +1,4 @@
-package uk.gov.di.authentication.oidc.services;
+package uk.gov.di.orchestration.shared.services;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
@@ -6,19 +6,13 @@ import com.nimbusds.oauth2.sdk.ErrorObject;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
+import uk.gov.di.orchestration.shared.domain.LogoutAuditableEvent;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.ConstructUriHelper;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
-import uk.gov.di.orchestration.shared.services.AuditService;
-import uk.gov.di.orchestration.shared.services.ClientSessionService;
-import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
-import uk.gov.di.orchestration.shared.services.ConfigurationService;
-import uk.gov.di.orchestration.shared.services.DynamoClientService;
-import uk.gov.di.orchestration.shared.services.SessionService;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -69,11 +63,11 @@ public class LogoutService {
     public APIGatewayProxyResponseEvent handleAccountInterventionLogout(
             Session session,
             APIGatewayProxyRequestEvent input,
-            Optional<String> clientId,
-            Optional<String> sessionId,
+            String clientId,
             AccountInterventionStatus accountStatus) {
         destroySessions(session);
-        return generateAccountInterventionLogoutResponse(input, clientId, sessionId, accountStatus);
+        return generateAccountInterventionLogoutResponse(
+                input, clientId, session.getSessionId(), accountStatus);
     }
 
     public void destroySessions(Session session) {
@@ -154,7 +148,7 @@ public class LogoutService {
             throw new RuntimeException("Unable to build URI");
         }
         auditService.submitAuditEvent(
-                OidcAuditableEvent.LOG_OUT_SUCCESS,
+                LogoutAuditableEvent.LOG_OUT_SUCCESS,
                 AuditService.UNKNOWN,
                 sessionId.orElse(AuditService.UNKNOWN),
                 clientId.orElse(AuditService.UNKNOWN),
@@ -170,8 +164,8 @@ public class LogoutService {
 
     private APIGatewayProxyResponseEvent generateAccountInterventionLogoutResponse(
             APIGatewayProxyRequestEvent input,
-            Optional<String> clientId,
-            Optional<String> sessionId,
+            String clientId,
+            String sessionId,
             AccountInterventionStatus accountStatus) {
         String baseRedirectUrl;
         String redirectPath;
@@ -201,16 +195,13 @@ public class LogoutService {
                 throw new RuntimeException("Account status must be blocked or suspended");
             }
         }
-        sessionId.ifPresent(
-                t ->
-                        cloudwatchMetricsService.incrementLogout(
-                                clientId, Optional.of(accountStatus)));
+        cloudwatchMetricsService.incrementLogout(Optional.of(clientId), Optional.of(accountStatus));
         return generateLogoutResponse(
                 ConstructUriHelper.buildURI(baseRedirectUrl, redirectPath),
                 Optional.empty(),
                 Optional.empty(),
                 input,
-                clientId,
-                sessionId);
+                Optional.of(clientId),
+                Optional.of(sessionId));
     }
 }

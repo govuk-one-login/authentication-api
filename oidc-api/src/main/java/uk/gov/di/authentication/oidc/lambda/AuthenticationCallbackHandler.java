@@ -24,7 +24,6 @@ import uk.gov.di.authentication.oidc.exceptions.AuthenticationCallbackException;
 import uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService;
 import uk.gov.di.authentication.oidc.services.AuthenticationTokenService;
 import uk.gov.di.authentication.oidc.services.InitiateIPVAuthorisationService;
-import uk.gov.di.authentication.oidc.services.LogoutService;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
@@ -50,6 +49,7 @@ import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
+import uk.gov.di.orchestration.shared.services.LogoutService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
@@ -58,7 +58,6 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 
 import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.GET;
 import static java.util.Objects.isNull;
@@ -344,11 +343,7 @@ public class AuthenticationCallbackHandler
                     if (identityRequired) {
                         if (accountStatus.blocked() || accountStatus.resetPassword()) {
                             return logoutService.handleAccountInterventionLogout(
-                                    userSession,
-                                    input,
-                                    Optional.of(clientId),
-                                    Optional.of(userSession.getSessionId()),
-                                    accountStatus);
+                                    userSession, input, clientId, accountStatus);
                         }
                     } else {
                         if (accountStatus.blocked() || accountStatus.suspended()) {
@@ -357,11 +352,7 @@ public class AuthenticationCallbackHandler
                                     && accountStatus.reproveIdentity()
                                     && !accountStatus.resetPassword())) {
                                 return logoutService.handleAccountInterventionLogout(
-                                        userSession,
-                                        input,
-                                        Optional.of(clientId),
-                                        Optional.of(userSession.getSessionId()),
-                                        accountStatus);
+                                        userSession, input, clientId, accountStatus);
                             }
                         }
                     }

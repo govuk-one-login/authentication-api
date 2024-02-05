@@ -21,13 +21,13 @@ import uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent;
 import uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService;
 import uk.gov.di.authentication.oidc.services.AuthenticationTokenService;
 import uk.gov.di.authentication.oidc.services.InitiateIPVAuthorisationService;
-import uk.gov.di.authentication.oidc.services.LogoutService;
 import uk.gov.di.orchestration.shared.conditions.IdentityHelper;
 import uk.gov.di.orchestration.shared.domain.AuditableEvent;
 import uk.gov.di.orchestration.shared.entity.*;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.services.*;
+import uk.gov.di.orchestration.shared.services.LogoutService;
 
 import java.net.URI;
 import java.util.*;
@@ -369,11 +369,7 @@ class AuthenticationCallbackHandlerTest {
 
                 verify(logoutService)
                         .handleAccountInterventionLogout(
-                                session,
-                                event,
-                                Optional.of(CLIENT_ID.toString()),
-                                Optional.of(SESSION_ID),
-                                accountStatus);
+                                session, event, CLIENT_ID.toString(), accountStatus);
             }
 
             @Test
@@ -390,11 +386,7 @@ class AuthenticationCallbackHandlerTest {
 
                 verify(logoutService)
                         .handleAccountInterventionLogout(
-                                session,
-                                event,
-                                Optional.of(CLIENT_ID.toString()),
-                                Optional.of(SESSION_ID),
-                                accountStatus);
+                                session, event, CLIENT_ID.toString(), accountStatus);
             }
 
             @Test
@@ -411,11 +403,7 @@ class AuthenticationCallbackHandlerTest {
 
                 verify(logoutService)
                         .handleAccountInterventionLogout(
-                                session,
-                                event,
-                                Optional.of(CLIENT_ID.toString()),
-                                Optional.of(SESSION_ID),
-                                accountStatus);
+                                session, event, CLIENT_ID.toString(), accountStatus);
             }
 
             @Test
@@ -456,11 +444,7 @@ class AuthenticationCallbackHandlerTest {
 
                 verify(logoutService)
                         .handleAccountInterventionLogout(
-                                session,
-                                event,
-                                Optional.of(CLIENT_ID.toString()),
-                                Optional.of(SESSION_ID),
-                                accountStatus);
+                                session, event, CLIENT_ID.getValue(), accountStatus);
             }
         }
 
@@ -514,7 +498,7 @@ class AuthenticationCallbackHandlerTest {
                 handler.handleRequest(event, null);
 
                 verify(logoutService)
-                        .handleAccountInterventionLogout(any(), any(), any(), any(), eq(aisStatus));
+                        .handleAccountInterventionLogout(any(), any(), any(), eq(aisStatus));
                 verifyNoInteractions(initiateIPVAuthorisationService);
             }
 
@@ -558,7 +542,7 @@ class AuthenticationCallbackHandlerTest {
                 handler.handleRequest(event, null);
 
                 verify(logoutService)
-                        .handleAccountInterventionLogout(any(), any(), any(), any(), eq(aisStatus));
+                        .handleAccountInterventionLogout(any(), any(), any(), eq(aisStatus));
                 verifyNoInteractions(initiateIPVAuthorisationService);
             }
 
@@ -602,7 +586,7 @@ class AuthenticationCallbackHandlerTest {
                 handler.handleRequest(event, null);
 
                 verify(logoutService)
-                        .handleAccountInterventionLogout(any(), any(), any(), any(), eq(aisStatus));
+                        .handleAccountInterventionLogout(any(), any(), any(), eq(aisStatus));
                 verifyNoInteractions(initiateIPVAuthorisationService);
             }
         }
