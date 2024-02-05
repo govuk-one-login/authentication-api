@@ -4,10 +4,10 @@ resource "aws_s3_bucket" "common_passwords" {
 }
 
 resource "aws_s3_bucket_public_access_block" "common_passwords_private_bucket" {
-  bucket = aws_s3_bucket.common_passwords.id
-  block_public_acls = true
-  ignore_public_acls = true
-  block_public_policy = true
+  bucket                  = aws_s3_bucket.common_passwords.id
+  block_public_acls       = true
+  ignore_public_acls      = true
+  block_public_policy     = true
   restrict_public_buckets = true
 }
 

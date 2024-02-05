@@ -15,10 +15,10 @@ resource "aws_s3_bucket" "smoketest_sms_bucket" {
 }
 
 resource "aws_s3_bucket_public_access_block" "smoke-test_private_bucket" {
-  bucket = aws_s3_bucket.smoketest_sms_bucket.id
-  block_public_acls = true
-  ignore_public_acls = true
-  block_public_policy = true
+  bucket                  = aws_s3_bucket.smoketest_sms_bucket.id
+  block_public_acls       = true
+  ignore_public_acls      = true
+  block_public_policy     = true
   restrict_public_buckets = true
 }
 
