@@ -72,6 +72,11 @@ output "pending_email_check_queue_encryption_key_arn" {
   value       = aws_kms_key.pending_email_check_queue_encryption_key.arn
 }
 
+output "pending_email_check_queue_access_policy_arn" {
+  description = "the ARN of the IAM policy that allows write access to the pending email check queue"
+  value       = aws_iam_policy.pending_email_check_queue_access_policy.arn
+}
+
 output "email_lambda_iam_role_arn" {
   value = aws_iam_role.email_lambda_iam_role.arn
 }
