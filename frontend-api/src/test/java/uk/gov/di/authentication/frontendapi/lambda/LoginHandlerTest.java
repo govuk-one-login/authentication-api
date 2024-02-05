@@ -694,7 +694,7 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(codeStorageService.getIncorrectPasswordCountReauthJourney(EMAIL)).thenReturn(5);
+        when(codeStorageService.getIncorrectPasswordCountReauthJourney(EMAIL)).thenReturn(4);
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
         usingDefaultVectorOfTrust();

@@ -34,6 +34,7 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.INVALID_CREDENTIALS;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.LOG_IN_SUCCESS;
 import static uk.gov.di.authentication.shared.entity.CredentialTrustLevel.LOW_LEVEL;
@@ -181,5 +182,115 @@ public class LoginIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of());
         assertThat(response, hasStatus(401));
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(INVALID_CREDENTIALS));
+    }
+
+    @Test
+    void shouldCallLoginEndpoint5TimesAndReturn400WhenUserIdLockedOut() throws Json.JsonException {
+        String email = "joe.bloggs+4@digital.cabinet-office.gov.uk";
+        String password = "password-1";
+        userStore.signUp(email, "wrong-password");
+        String sessionId = redis.createUnauthenticatedSessionWithEmail(email);
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Session-Id", sessionId);
+        headers.put("X-API-Key", FRONTEND_API_KEY);
+
+        var response1 =
+                makeRequest(
+                        Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
+                        headers,
+                        Map.of());
+        assertThat(response1, hasStatus(401));
+        var response2 =
+                makeRequest(
+                        Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
+                        headers,
+                        Map.of());
+        assertThat(response2, hasStatus(401));
+        var response3 =
+                makeRequest(
+                        Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
+                        headers,
+                        Map.of());
+        assertThat(response3, hasStatus(401));
+        var response4 =
+                makeRequest(
+                        Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
+                        headers,
+                        Map.of());
+        assertThat(response4, hasStatus(401));
+        var response5 =
+                makeRequest(
+                        Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
+                        headers,
+                        Map.of());
+        assertThat(response5, hasStatus(400));
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue,
+                List.of(
+                        ACCOUNT_TEMPORARILY_LOCKED,
+                        INVALID_CREDENTIALS,
+                        INVALID_CREDENTIALS,
+                        INVALID_CREDENTIALS,
+                        INVALID_CREDENTIALS,
+                        INVALID_CREDENTIALS));
+    }
+
+    @Test
+    void shouldCallLoginEndpoint6TimesAndReturn400TwiceWhenUserIdLockedOut()
+            throws Json.JsonException {
+        String email = "joe.bloggs+4@digital.cabinet-office.gov.uk";
+        String password = "password-1";
+        userStore.signUp(email, "wrong-password");
+        String sessionId = redis.createUnauthenticatedSessionWithEmail(email);
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Session-Id", sessionId);
+        headers.put("X-API-Key", FRONTEND_API_KEY);
+
+        var response1 =
+                makeRequest(
+                        Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
+                        headers,
+                        Map.of());
+        assertThat(response1, hasStatus(401));
+        var response2 =
+                makeRequest(
+                        Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
+                        headers,
+                        Map.of());
+        assertThat(response2, hasStatus(401));
+        var response3 =
+                makeRequest(
+                        Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
+                        headers,
+                        Map.of());
+        assertThat(response3, hasStatus(401));
+        var response4 =
+                makeRequest(
+                        Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
+                        headers,
+                        Map.of());
+        assertThat(response4, hasStatus(401));
+        var response5 =
+                makeRequest(
+                        Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
+                        headers,
+                        Map.of());
+        assertThat(response5, hasStatus(400));
+        var response6 =
+                makeRequest(
+                        Optional.of(new LoginRequest(email, password, JourneyType.SIGN_IN)),
+                        headers,
+                        Map.of());
+        assertThat(response6, hasStatus(400));
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue,
+                List.of(
+                        ACCOUNT_TEMPORARILY_LOCKED,
+                        ACCOUNT_TEMPORARILY_LOCKED,
+                        INVALID_CREDENTIALS,
+                        INVALID_CREDENTIALS,
+                        INVALID_CREDENTIALS,
+                        INVALID_CREDENTIALS,
+                        INVALID_CREDENTIALS));
     }
 }
