@@ -17,6 +17,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
@@ -54,6 +55,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
@@ -65,6 +67,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
+import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
@@ -766,6 +770,47 @@ class VerifyMfaCodeHandlerTest {
         verifyNoInteractions(auditService);
         verifyNoInteractions(cloudwatchMetricsService);
     }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                    "testclient.user1@digital.cabinet-office.gov.uk",
+                    "abc@digital.cabinet-office.gov.uk",
+                    "abc.def@digital.cabinet-office.gov.uk",
+                    "testclient.user2@internet.com",
+            })
+    void shouldReturn204ForValidVerifyEmailRequestUsingTestClient(String email) {
+        when(configurationService.isTestClientsEnabled()).thenReturn(true);
+        when(configurationService.getCodeMaxRetries()).thenReturn(5);
+        when(configurationService.getTestClientVerifyEmailOTP())
+                .thenReturn(Optional.of(TEST_CLIENT_CODE));
+        when(codeStorageService.getOtpCode(email, VERIFY_EMAIL)).thenReturn(Optional.of(CODE));
+        session.setEmailAddress(email);
+        session.setInternalCommonSubjectIdentifier(expectedCommonSubject);
+        String body =
+                format(
+                        "{ \"code\": \"%s\", \"notificationType\": \"%s\"  }",
+                        TEST_CLIENT_CODE, VERIFY_EMAIL);
+        var result = makeCallWithCode(body, Optional.of(session), TEST_CLIENT_ID);
+
+        assertThat(result, hasStatus(204));
+        verifyNoInteractions(accountModifiersService);
+        verify(codeStorageService).deleteOtpCode(email, VERIFY_EMAIL);
+        verify(auditService)
+                .submitAuditEvent(
+                        FrontendAuditableEvent.CODE_VERIFIED,
+                        CLIENT_SESSION_ID,
+                        session.getSessionId(),
+                        TEST_CLIENT_ID,
+                        expectedCommonSubject,
+                        email,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        pair("notification-type", VERIFY_EMAIL.name()),
+                        pair("account-recovery", false));
+    }
+
 
     private APIGatewayProxyResponseEvent makeCallWithCode(CodeRequest mfaCodeRequest)
             throws Json.JsonException {
