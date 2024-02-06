@@ -395,11 +395,6 @@ variable "doc_app_use_cri_data_v2_endpoint" {
   default = false
 }
 
-variable "doc_app_decouple_enabled" {
-  type    = bool
-  default = false
-}
-
 variable "spot_account_number" {
   type        = string
   default     = "undefined"

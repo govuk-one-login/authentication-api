@@ -295,51 +295,41 @@ public class DocAppCallbackHandler
                                         "Successful", Boolean.toString(true)));
                 cloudwatchMetricsService.incrementCounter("DocAppCallback", dimensions);
 
-                if (configurationService.isDocAppDecoupleEnabled()) {
-                    var authCode =
-                            authorisationCodeService.generateAndSaveAuthorisationCode(
-                                    clientSessionId, session.getEmailAddress(), clientSession);
+                var authCode =
+                        authorisationCodeService.generateAndSaveAuthorisationCode(
+                                clientSessionId, session.getEmailAddress(), clientSession);
 
-                    var clientRedirectURI = authenticationRequest.getRedirectionURI();
-                    var state = authenticationRequest.getState();
-                    var responseMode = authenticationRequest.getResponseMode();
-                    var authenticationResponse =
-                            new AuthenticationSuccessResponse(
-                                    clientRedirectURI,
-                                    authCode,
-                                    null,
-                                    null,
-                                    state,
-                                    null,
-                                    responseMode);
+                var authenticationResponse =
+                        new AuthenticationSuccessResponse(
+                                authenticationRequest.getRedirectionURI(),
+                                authCode,
+                                null,
+                                null,
+                                authenticationRequest.getState(),
+                                null,
+                                authenticationRequest.getResponseMode());
 
-                    auditService.submitAuditEvent(
-                            AUTH_CODE_ISSUED,
-                            clientSessionId,
-                            session.getSessionId(),
-                            clientId,
-                            clientSession.getDocAppSubjectId().getValue(),
-                            session.getEmailAddress(),
-                            IpAddressHelper.extractIpAddress(input),
-                            AuditService.UNKNOWN,
-                            AuditService.UNKNOWN,
-                            pair("internalSubjectId", AuditService.UNKNOWN),
-                            pair("isNewAccount", session.isNewAccount()),
-                            pair("rpPairwiseId", AuditService.UNKNOWN),
-                            pair("nonce", authenticationRequest.getNonce()),
-                            pair("authCode", authCode));
-
-                    return generateApiGatewayProxyResponse(
-                            302,
-                            "",
-                            Map.of(
-                                    ResponseHeaders.LOCATION,
-                                    authenticationResponse.toURI().toString()),
-                            null);
-                }
+                auditService.submitAuditEvent(
+                        AUTH_CODE_ISSUED,
+                        clientSessionId,
+                        session.getSessionId(),
+                        clientId,
+                        clientSession.getDocAppSubjectId().getValue(),
+                        session.getEmailAddress(),
+                        IpAddressHelper.extractIpAddress(input),
+                        AuditService.UNKNOWN,
+                        AuditService.UNKNOWN,
+                        pair("internalSubjectId", AuditService.UNKNOWN),
+                        pair("isNewAccount", session.isNewAccount()),
+                        pair("rpPairwiseId", AuditService.UNKNOWN),
+                        pair("nonce", authenticationRequest.getNonce()),
+                        pair("authCode", authCode));
 
                 return generateApiGatewayProxyResponse(
-                        302, "", Map.of(ResponseHeaders.LOCATION, redirectURI.toString()), null);
+                        302,
+                        "",
+                        Map.of(ResponseHeaders.LOCATION, authenticationResponse.toURI().toString()),
+                        null);
 
             } catch (UnsuccessfulCredentialResponseException e) {
                 if (e.getHttpCode() == 404) {

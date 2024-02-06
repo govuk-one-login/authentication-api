@@ -147,8 +147,7 @@ class DocAppCallbackHandlerTest {
     }
 
     @Test
-    void shouldRedirectToFrontendCallbackForSuccessfulResponse()
-            throws URISyntaxException, UnsuccessfulCredentialResponseException {
+    void shouldRedirectToRPForSuccessfulResponse() throws UnsuccessfulCredentialResponseException {
         usingValidSession();
         usingValidClientSession();
         var successfulTokenResponse =
@@ -157,49 +156,6 @@ class DocAppCallbackHandlerTest {
         Map<String, String> responseHeaders = new HashMap<>();
         responseHeaders.put("code", AUTH_CODE.getValue());
         responseHeaders.put("state", STATE.getValue());
-        when(responseService.validateResponse(responseHeaders, SESSION_ID))
-                .thenReturn(Optional.empty());
-        when(tokenService.constructTokenRequest(AUTH_CODE.getValue())).thenReturn(tokenRequest);
-        when(tokenService.sendTokenRequest(tokenRequest)).thenReturn(successfulTokenResponse);
-        when(tokenService.sendCriDataRequest(any(HTTPRequest.class), any(String.class)))
-                .thenReturn(List.of("a-verifiable-credential"));
-
-        var event = new APIGatewayProxyRequestEvent();
-        event.setQueryStringParameters(responseHeaders);
-        event.setHeaders(Map.of(COOKIE, buildCookieString()));
-        var response = makeHandlerRequest(event);
-
-        assertThat(response, hasStatus(302));
-        var expectedRedirectURI = new URIBuilder(LOGIN_URL).setPath("doc-app-callback").build();
-        assertThat(response.getHeaders().get("Location"), equalTo(expectedRedirectURI.toString()));
-
-        verifyAuditServiceEvent(DocAppAuditableEvent.DOC_APP_AUTHORISATION_RESPONSE_RECEIVED);
-        verifyAuditServiceEvent(DocAppAuditableEvent.DOC_APP_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
-        verifyAuditServiceEvent(
-                DocAppAuditableEvent.DOC_APP_SUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED);
-
-        verifyNoMoreInteractions(auditService);
-        verify(dynamoDocAppService)
-                .addDocAppCredential(
-                        PAIRWISE_SUBJECT_ID.getValue(), List.of("a-verifiable-credential"));
-        verify(cloudwatchMetricsService)
-                .incrementCounter(
-                        "DocAppCallback",
-                        Map.of("Environment", ENVIRONMENT, "Successful", Boolean.toString(true)));
-    }
-
-    @Test
-    void shouldRedirectToRPWhenDecouplingIsEnabledForSuccessfulResponse()
-            throws UnsuccessfulCredentialResponseException {
-        usingValidSession();
-        usingValidClientSession();
-        var successfulTokenResponse =
-                new AccessTokenResponse(new Tokens(new BearerAccessToken(), null));
-        var tokenRequest = mock(TokenRequest.class);
-        Map<String, String> responseHeaders = new HashMap<>();
-        responseHeaders.put("code", AUTH_CODE.getValue());
-        responseHeaders.put("state", STATE.getValue());
-        when(configService.isDocAppDecoupleEnabled()).thenReturn(true);
         when(responseService.validateResponse(responseHeaders, SESSION_ID))
                 .thenReturn(Optional.empty());
         when(tokenService.constructTokenRequest(AUTH_CODE.getValue())).thenReturn(tokenRequest);

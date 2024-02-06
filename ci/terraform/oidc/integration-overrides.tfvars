@@ -8,7 +8,6 @@ doc_app_jwks_endpoint              = "https://api-backend-api.review-b.integrati
 doc_app_encryption_key_id          = "0948190d-384c-498d-81e2-a20dd30f147c"
 doc_app_cri_data_v2_endpoint       = "userinfo/v2"
 doc_app_use_cri_data_v2_endpoint   = true
-doc_app_decouple_enabled           = true
 
 ipv_api_enabled                   = true
 ipv_capacity_allowed              = true

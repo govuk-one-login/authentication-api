@@ -109,8 +109,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String CLAIMS =
             "{\"userinfo\":{\"https://vocab.account.gov.uk/v1/coreIdentityJWT\":{\"essential\":true},\"https://vocab.account.gov.uk/v1/address\":null}}";
 
-    private static IntegrationTestConfigurationService configuration =
-            configWithDocAppDecouple(false);
+    private static final IntegrationTestConfigurationService configuration = config();
 
     @Test
     void shouldRedirectToLoginUriWhenNoCookieIsPresent() {
@@ -822,7 +821,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private void setupForDocAppJourney() {
         registerClient(
                 CLIENT_ID, "test-client", List.of("openid", "doc-checking-app"), ClientType.APP);
-        handler = new AuthorisationHandler(configWithDocAppDecouple(true));
+        handler = new AuthorisationHandler(config());
         txmaAuditQueue.clear();
 
         var jwkKey =
@@ -901,8 +900,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         return signedJWT;
     }
 
-    private static IntegrationTestConfigurationService configWithDocAppDecouple(
-            boolean isDocAppDecoupleEnabled) {
+    private static IntegrationTestConfigurationService config() {
         return new IntegrationTestConfigurationService(
                 tokenSigner,
                 ipvPrivateKeyJwtSigner,
@@ -918,11 +916,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             public boolean isLanguageEnabled(LocaleHelper.SupportedLanguage supportedLanguage) {
                 return supportedLanguage.equals(LocaleHelper.SupportedLanguage.EN)
                         || supportedLanguage.equals(LocaleHelper.SupportedLanguage.CY);
-            }
-
-            @Override
-            public boolean isDocAppDecoupleEnabled() {
-                return isDocAppDecoupleEnabled;
             }
 
             @Override

@@ -53,7 +53,6 @@ module "authorize" {
     DOC_APP_ENCRYPTION_KEY_ID            = var.doc_app_encryption_key_id
     DOC_APP_TOKEN_SIGNING_KEY_ALIAS      = local.doc_app_auth_key_alias_name
     DOC_APP_DOMAIN                       = var.doc_app_domain
-    DOC_APP_DECOUPLE_ENABLED             = var.doc_app_decouple_enabled
     DYNAMO_ENDPOINT                      = var.use_localstack ? var.lambda_dynamo_endpoint : null
     CUSTOM_DOC_APP_CLAIM_ENABLED         = var.custom_doc_app_claim_enabled
     ORCH_REDIRECT_URI                    = var.orch_redirect_uri
