@@ -33,7 +33,9 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CHECK_USER_KNOWN_EMAIL;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CHECK_USER_NO_ACCOUNT_WITH_EMAIL;
@@ -66,7 +68,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         userStore.signUp(emailAddress, "password-1");
         if (MFAMethodType.SMS == mfaMethodType) {
             userStore.addMfaMethod(emailAddress, mfaMethodType, false, true, "credential");
-            userStore.addVerifiedPhoneNumber(emailAddress, "0987654321");
+            userStore.addVerifiedPhoneNumber(emailAddress, "+44987654321");
         } else {
             userStore.addMfaMethod(emailAddress, mfaMethodType, true, true, "credential");
         }
@@ -85,6 +87,13 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(checkUserExistsResponse.getEmail(), equalTo(emailAddress));
         assertThat(checkUserExistsResponse.getMfaMethodType(), equalTo(mfaMethodType));
         assertTrue(checkUserExistsResponse.doesUserExist());
+        if (MFAMethodType.SMS.equals(mfaMethodType)) {
+            assertThat(checkUserExistsResponse.getPhoneNumberLastThree(), equalTo("321"));
+        } else if (MFAMethodType.AUTH_APP.equals(mfaMethodType)) {
+            assertNull(checkUserExistsResponse.getPhoneNumberLastThree());
+        } else {
+            fail();
+        }
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CHECK_USER_KNOWN_EMAIL));
     }
 
@@ -110,6 +119,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(checkUserExistsResponse.getEmail(), equalTo(emailAddress));
         assertThat(checkUserExistsResponse.getMfaMethodType(), equalTo(MFAMethodType.NONE));
         assertFalse(checkUserExistsResponse.doesUserExist());
+        assertNull(checkUserExistsResponse.getPhoneNumberLastThree());
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(CHECK_USER_NO_ACCOUNT_WITH_EMAIL));
     }
 
