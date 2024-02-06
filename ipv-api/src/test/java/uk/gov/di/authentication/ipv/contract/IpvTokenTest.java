@@ -99,12 +99,14 @@ public class IpvTokenTest {
     private static final URI LOGIN_URL = URI.create("https://example.com");
     private static final String OIDC_BASE_URL = "https://base-url.com";
     private static final String IPV_TOKEN_PATH = "token";
-    private static final URI IPV_TOKEN_URI = ConstructUriHelper.buildURI("https://api.identity.account.gov.uk", IPV_TOKEN_PATH);
-    private static final Map<String, String> additionalClaims = Map.of(
-            ValidClaims.ADDRESS.getValue(),
-            ADDRESS_CLAIM,
-            ValidClaims.PASSPORT.getValue(),
-            PASSPORT_CLAIM);
+    private static final URI IPV_TOKEN_URI =
+            ConstructUriHelper.buildURI("https://api.identity.account.gov.uk", IPV_TOKEN_PATH);
+    private static final Map<String, String> additionalClaims =
+            Map.of(
+                    ValidClaims.ADDRESS.getValue(),
+                    ADDRESS_CLAIM,
+                    ValidClaims.PASSPORT.getValue(),
+                    PASSPORT_CLAIM);
 
     private final Session session =
             new Session(SESSION_ID)
@@ -120,8 +122,9 @@ public class IpvTokenTest {
     private final String URI_FIELD = "uri";
     private final String ACCESS_TOKEN_VALUE = "740e5834-3a29-46b4-9a6f-16142fde533a";
     private final String TOKEN_TYPE_VALUE = "bearer";
-    private final String EXPIRES_IN_VALUE  = "3600";
+    private final String EXPIRES_IN_VALUE = "3600";
     private final String URI_VALUE = "https://localhost";
+
     @BeforeEach
     void setUp() {
         handler =
@@ -149,12 +152,11 @@ public class IpvTokenTest {
 
     @Pact(consumer = "IPV-orch-token-consumer")
     RequestResponsePact success(PactDslWithProvider builder) {
-        return builder
-                .given("send token request to IPV")
+        return builder.given("send token request to IPV")
                 .uponReceiving("token request")
                 .path("/" + IPV_TOKEN_PATH)
                 .method("POST")
-                .matchQuery("client_id", "^[a-zA-Z0-9-_]*$",CLIENT_ID.getValue())
+                .matchQuery("client_id", "^[a-zA-Z0-9-_]*$", CLIENT_ID.getValue())
                 .matchQuery("resource", IPV_TOKEN_URI.toString())
                 .willRespondWith()
                 .status(200)
@@ -163,15 +165,22 @@ public class IpvTokenTest {
                                 .stringType(ACCESS_TOKEN_FIELD, ACCESS_TOKEN_VALUE)
                                 .stringType(TOKEN_TYPE_FIELD, TOKEN_TYPE_VALUE)
                                 .stringType(EXPIRES_IN_FIELD, EXPIRES_IN_VALUE)
-                                .stringType(URI_FIELD, URI_VALUE)
-                )
+                                .stringType(URI_FIELD, URI_VALUE))
                 .toPact();
     }
 
     @Test
-    @PactTestFor(providerName = "IPV-orch-token-provider", pactMethod = "success", pactVersion = PactSpecVersion.V3)
-    void getIPVResponse(MockServer mockServer) throws IOException, Json.JsonException, UnsuccessfulCredentialResponseException, URISyntaxException, ParseException {
-        URIBuilder builder = new URIBuilder(mockServer.getUrl() + "/" +IPV_TOKEN_PATH);
+    @PactTestFor(
+            providerName = "IPV-orch-token-provider",
+            pactMethod = "success",
+            pactVersion = PactSpecVersion.V3)
+    void getIPVResponse(MockServer mockServer)
+            throws IOException,
+                    Json.JsonException,
+                    UnsuccessfulCredentialResponseException,
+                    URISyntaxException,
+                    ParseException {
+        URIBuilder builder = new URIBuilder(mockServer.getUrl() + "/" + IPV_TOKEN_PATH);
         builder.setParameter("client_id", CLIENT_ID.getValue())
                 .setParameter("resource", IPV_TOKEN_URI.toString());
         Request.post(builder.build()).execute();
@@ -200,7 +209,8 @@ public class IpvTokenTest {
                                 CREDENTIAL_JWT_CLAIM));
         claims.putAll(userIdentityAdditionalClaims);
 
-        handler.handleRequest(getApiGatewayProxyRequestEvent(new UserInfo(new JSONObject(claims))), context);
+        handler.handleRequest(
+                getApiGatewayProxyRequestEvent(new UserInfo(new JSONObject(claims))), context);
 
         verifyAuditEvent(IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED);
         verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
@@ -265,7 +275,8 @@ public class IpvTokenTest {
     }
 
     private APIGatewayProxyRequestEvent getApiGatewayProxyRequestEvent(
-            UserInfo userIdentityUserInfo) throws UnsuccessfulCredentialResponseException, ParseException {
+            UserInfo userIdentityUserInfo)
+            throws UnsuccessfulCredentialResponseException, ParseException {
         var tokenRequest = mock(TokenRequest.class);
         Map<String, String> responseHeaders = new HashMap<>();
         responseHeaders.put("code", AUTH_CODE.getValue());
@@ -278,7 +289,8 @@ public class IpvTokenTest {
                 .thenReturn(Optional.of(userProfile));
         when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(salt);
         when(ipvTokenService.constructTokenRequest(AUTH_CODE.getValue())).thenReturn(tokenRequest);
-        when(ipvTokenService.sendTokenRequest(tokenRequest)).thenReturn(getSuccessfulTokenHttpResponse());
+        when(ipvTokenService.sendTokenRequest(tokenRequest))
+                .thenReturn(getSuccessfulTokenHttpResponse());
         when(ipvTokenService.sendIpvUserIdentityRequest(any())).thenReturn(userIdentityUserInfo);
 
         var event = new APIGatewayProxyRequestEvent();
@@ -301,10 +313,26 @@ public class IpvTokenTest {
     public TokenResponse getSuccessfulTokenHttpResponse() throws ParseException {
         var tokenResponseContent =
                 "{"
-                        + "  \"" + ACCESS_TOKEN_FIELD + "\": \"" + ACCESS_TOKEN_VALUE + "\","
-                        + "  \"" + TOKEN_TYPE_FIELD + "\": \"" + TOKEN_TYPE_VALUE + "\","
-                        + "  \"" + EXPIRES_IN_FIELD + "\": \"" + EXPIRES_IN_VALUE + "\","
-                        + "  \"" + URI_FIELD + "\": \"" + URI_VALUE + "\""
+                        + "  \""
+                        + ACCESS_TOKEN_FIELD
+                        + "\": \""
+                        + ACCESS_TOKEN_VALUE
+                        + "\","
+                        + "  \""
+                        + TOKEN_TYPE_FIELD
+                        + "\": \""
+                        + TOKEN_TYPE_VALUE
+                        + "\","
+                        + "  \""
+                        + EXPIRES_IN_FIELD
+                        + "\": \""
+                        + EXPIRES_IN_VALUE
+                        + "\","
+                        + "  \""
+                        + URI_FIELD
+                        + "\": \""
+                        + URI_VALUE
+                        + "\""
                         + "}";
         var tokenHTTPResponse = new HTTPResponse(200);
         tokenHTTPResponse.setEntityContentType(APPLICATION_JSON);

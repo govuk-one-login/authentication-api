@@ -44,7 +44,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 
 import static com.nimbusds.common.contenttype.ContentType.APPLICATION_JSON;
@@ -106,11 +105,12 @@ public class IpvUserIdentityTest {
     private static final String OIDC_BASE_URL = "https://base-url.com";
     private static final String IPV_USER_IDENTITY_PATH = "user-identity";
 
-    private static final Map<String, String> additionalClaims = Map.of(
-            ValidClaims.ADDRESS.getValue(),
-            ADDRESS_CLAIM,
-            ValidClaims.PASSPORT.getValue(),
-            PASSPORT_CLAIM);
+    private static final Map<String, String> additionalClaims =
+            Map.of(
+                    ValidClaims.ADDRESS.getValue(),
+                    ADDRESS_CLAIM,
+                    ValidClaims.PASSPORT.getValue(),
+                    PASSPORT_CLAIM);
 
     private final Session session =
             new Session(SESSION_ID)
@@ -161,10 +161,10 @@ public class IpvUserIdentityTest {
         when(sessionService.readSessionFromRedis(SESSION_ID)).thenReturn(Optional.of(session));
         accessToken = new Tokens(new BearerAccessToken(), null).getAccessToken();
     }
+
     @Pact(consumer = "IPV-orch-user-identity-consumer")
     RequestResponsePact success(PactDslWithProvider builder) {
-        return builder
-                .given("send user identity request to IPV")
+        return builder.given("send user identity request to IPV")
                 .uponReceiving("user identity request")
                 .path("/" + IPV_USER_IDENTITY_PATH)
                 .method("GET")
@@ -173,34 +173,43 @@ public class IpvUserIdentityTest {
                 .status(200)
                 .body(
                         new PactDslJsonBody()
-                            .stringType(SUB_FIELD, SUB_VALUE)
-                            .stringType(VOT_FIELD, VOT_VALUE)
-                            .stringType(VTM_FIELD, VTM_VALUE)
-                            .unorderedMaxArray(CREDENTIALS_JWT_FIELD, 1)
+                                .stringType(SUB_FIELD, SUB_VALUE)
+                                .stringType(VOT_FIELD, VOT_VALUE)
+                                .stringType(VTM_FIELD, VTM_VALUE)
+                                .unorderedMaxArray(CREDENTIALS_JWT_FIELD, 1)
                                 .stringType(CREDENTIALS_JWT_VALUE)
-                            .closeArray()
-                            .object(CORE_IDENTITY_FIELD)
+                                .closeArray()
+                                .object(CORE_IDENTITY_FIELD)
                                 .maxArrayLike(CORE_IDENTITY_NAME_FIELD, 1)
-                                    .eachLike(CORE_IDENTITY_NAME_PARTS_FIELD, 2)
-                                        .stringType("type", "Name")
-                                        .stringType("value", "Kenneth")
-                                        .closeObject()
-                                    .closeArray()
-                                    .closeObject()
+                                .eachLike(CORE_IDENTITY_NAME_PARTS_FIELD, 2)
+                                .stringType("type", "Name")
+                                .stringType("value", "Kenneth")
+                                .closeObject()
+                                .closeArray()
+                                .closeObject()
                                 .closeArray()
                                 .maxArrayLike(CORE_IDENTITY_BIRTH_FIELD, 1)
-                                    .stringType("value", CORE_IDENTITY_BIRTH_VALUE)
+                                .stringType("value", CORE_IDENTITY_BIRTH_VALUE)
                                 .closeArray()
-                            .closeObject()
-                )
+                                .closeObject())
                 .toPact();
     }
 
     @Test
-    @PactTestFor(providerName = "IPV-orch-user-identity-provider", pactMethod = "success", pactVersion = PactSpecVersion.V3)
-    void getIPVResponse(MockServer mockServer) throws IOException, Json.JsonException, UnsuccessfulCredentialResponseException, URISyntaxException, ParseException {
+    @PactTestFor(
+            providerName = "IPV-orch-user-identity-provider",
+            pactMethod = "success",
+            pactVersion = PactSpecVersion.V3)
+    void getIPVResponse(MockServer mockServer)
+            throws IOException,
+                    Json.JsonException,
+                    UnsuccessfulCredentialResponseException,
+                    URISyntaxException,
+                    ParseException {
         URIBuilder builder = new URIBuilder(mockServer.getUrl() + "/" + IPV_USER_IDENTITY_PATH);
-        Request.get(builder.build()).addHeader("Authorization", accessToken.toAuthorizationHeader()).execute();
+        Request.get(builder.build())
+                .addHeader("Authorization", accessToken.toAuthorizationHeader())
+                .execute();
 
         usingValidSession();
         usingValidClientSession();
@@ -268,7 +277,8 @@ public class IpvUserIdentityTest {
                 PERSISTENT_SESSION_ID);
     }
 
-    private APIGatewayProxyRequestEvent getApiGatewayProxyRequestEvent() throws UnsuccessfulCredentialResponseException, ParseException {
+    private APIGatewayProxyRequestEvent getApiGatewayProxyRequestEvent()
+            throws UnsuccessfulCredentialResponseException, ParseException {
         var successfulTokenResponse =
                 new AccessTokenResponse(new Tokens(new BearerAccessToken(), null));
         var tokenRequest = mock(TokenRequest.class);
@@ -284,7 +294,8 @@ public class IpvUserIdentityTest {
         when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(salt);
         when(ipvTokenService.constructTokenRequest(AUTH_CODE.getValue())).thenReturn(tokenRequest);
         when(ipvTokenService.sendTokenRequest(tokenRequest)).thenReturn(successfulTokenResponse);
-        when(ipvTokenService.sendIpvUserIdentityRequest(any())).thenReturn(getUserInfoFromSuccessfulUserIdentityHttpResponse());
+        when(ipvTokenService.sendIpvUserIdentityRequest(any()))
+                .thenReturn(getUserInfoFromSuccessfulUserIdentityHttpResponse());
 
         var event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(responseHeaders);
@@ -328,25 +339,52 @@ public class IpvUserIdentityTest {
     private UserInfo getUserInfoFromSuccessfulUserIdentityHttpResponse() throws ParseException {
         var userInfoHTTPResponse = new HTTPResponse(200);
         userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
-        userInfoHTTPResponse.setContent( "{"
-                + " \"" + SUB_FIELD + "\": \"" + SUB_VALUE + "\","
-                + " \"" + VOT_FIELD + "\": \"" + VOT_VALUE + "\","
-                + " \"" + VTM_FIELD + "\": \"" + VTM_FIELD + "\","
-                + " \"" + CREDENTIALS_JWT_FIELD + "\": ["
-                + "     \"" + CREDENTIALS_JWT_VALUE + "\""
-                + "],"
-                + " \"" + CORE_IDENTITY_FIELD + "\": {"
-                + "     \"" + CORE_IDENTITY_NAME_FIELD + "\": ["
-                + "         { \""+ CORE_IDENTITY_NAME_PARTS_FIELD + "\": ["
-                + "         { \"value\":\"GivenName\",\"value\":\"kenneth\" } "
-                + "         ] "
-                + "     } "
-                + "     ],"
-                + "     \"" + CORE_IDENTITY_BIRTH_FIELD + "\": [ "
-                + "         { \"value\": \"" + CORE_IDENTITY_BIRTH_VALUE +"\" } "
-                + "     ]"
-                + " }"
-                + "}");
+        userInfoHTTPResponse.setContent(
+                "{"
+                        + " \""
+                        + SUB_FIELD
+                        + "\": \""
+                        + SUB_VALUE
+                        + "\","
+                        + " \""
+                        + VOT_FIELD
+                        + "\": \""
+                        + VOT_VALUE
+                        + "\","
+                        + " \""
+                        + VTM_FIELD
+                        + "\": \""
+                        + VTM_FIELD
+                        + "\","
+                        + " \""
+                        + CREDENTIALS_JWT_FIELD
+                        + "\": ["
+                        + "     \""
+                        + CREDENTIALS_JWT_VALUE
+                        + "\""
+                        + "],"
+                        + " \""
+                        + CORE_IDENTITY_FIELD
+                        + "\": {"
+                        + "     \""
+                        + CORE_IDENTITY_NAME_FIELD
+                        + "\": ["
+                        + "         { \""
+                        + CORE_IDENTITY_NAME_PARTS_FIELD
+                        + "\": ["
+                        + "         { \"value\":\"GivenName\",\"value\":\"kenneth\" } "
+                        + "         ] "
+                        + "     } "
+                        + "     ],"
+                        + "     \""
+                        + CORE_IDENTITY_BIRTH_FIELD
+                        + "\": [ "
+                        + "         { \"value\": \""
+                        + CORE_IDENTITY_BIRTH_VALUE
+                        + "\" } "
+                        + "     ]"
+                        + " }"
+                        + "}");
         var userIdentityResponse = UserInfoResponse.parse(userInfoHTTPResponse);
         return userIdentityResponse.toSuccessResponse().getUserInfo();
     }
