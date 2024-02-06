@@ -5,6 +5,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.frontendapi.entity.MfaRequest;
 import uk.gov.di.authentication.frontendapi.lambda.MfaHandler;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -22,6 +23,7 @@ import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
+import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -142,6 +144,23 @@ class MfaHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(400));
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(MFA_INVALID_CODE_REQUEST));
+
+        List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
+        assertThat(requests, hasSize(0));
+    }
+
+    @Test
+    void shouldReturn400WhenInvalidMFAJourneyCombination() throws Json.JsonException {
+        var authenticatedSessionId = redis.createAuthenticatedSessionWithEmail(USER_EMAIL);
+
+        var response =
+                makeRequest(
+                        Optional.of(new MfaRequest(USER_EMAIL, false, JourneyType.PASSWORD_RESET)),
+                        constructFrontendHeaders(authenticatedSessionId),
+                        Map.of());
+
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1002));
 
         List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
         assertThat(requests, hasSize(0));

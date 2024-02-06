@@ -42,6 +42,7 @@ import static java.util.Map.entry;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_VERIFIED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.INVALID_CODE_SENT;
+import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1002;
 import static uk.gov.di.authentication.shared.entity.LevelOfConfidence.NONE;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.PersistentIdHelper.extractPersistentIdFromHeaders;
@@ -110,6 +111,16 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             Context context,
             VerifyMfaCodeRequest codeRequest,
             UserContext userContext) {
+
+        if (!CodeRequestType.isValidCodeRequestType(
+                codeRequest.getMfaMethodType(), codeRequest.getJourneyType())) {
+            LOG.warn(
+                    "Invalid MFA Type '{}' for journey '{}'",
+                    codeRequest.getMfaMethodType(),
+                    codeRequest.getJourneyType());
+            return generateApiGatewayProxyErrorResponse(400, ERROR_1002);
+        }
+
         LOG.info("Invoking verify MFA code handler");
         try {
             var session = userContext.getSession();

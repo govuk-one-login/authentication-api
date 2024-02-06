@@ -109,6 +109,9 @@ public class Session {
     }
 
     public int getCodeRequestCount(CodeRequestType requestType) {
+        if (requestType == null) {
+            throw new IllegalArgumentException("CodeRequestType cannot be null");
+        }
         LOG.info("CodeRequest count: {}", codeRequestCountMap);
         return codeRequestCountMap.getOrDefault(requestType, 0);
     }
@@ -120,7 +123,6 @@ public class Session {
         int currentCount = getCodeRequestCount(requestType);
         codeRequestCountMap.put(requestType, currentCount + 1);
         LOG.info("CodeRequest count incremented: {}", codeRequestCountMap);
-
         return this;
     }
 

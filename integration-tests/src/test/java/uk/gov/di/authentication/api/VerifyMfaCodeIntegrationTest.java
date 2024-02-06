@@ -927,6 +927,23 @@ class VerifyMfaCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(userStore.isAccountVerified(EMAIL_ADDRESS), equalTo(isAccountVerified));
     }
 
+    @Test
+    void shouldReturn400WhenInvalidMFAJourneyCombination() {
+        setUpAuthAppRequest(JourneyType.PASSWORD_RESET);
+        var code = AUTH_APP_STUB.getAuthAppOneTimeCode(AUTH_APP_SECRET_BASE_32);
+        var codeRequest =
+                new VerifyMfaCodeRequest(MFAMethodType.SMS, code, JourneyType.PASSWORD_RESET);
+
+        var response =
+                makeRequest(
+                        Optional.of(codeRequest),
+                        constructFrontendHeaders(sessionId, CLIENT_SESSION_ID),
+                        Map.of());
+
+        assertThat(response, hasStatus(400));
+        assertThat(response, hasJsonBody(ErrorResponse.ERROR_1002));
+    }
+
     private void setUpTest(String sessionId, Scope scope) throws Json.JsonException {
         userStore.addUnverifiedUser(EMAIL_ADDRESS, USER_PASSWORD);
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);

@@ -1,5 +1,7 @@
 package uk.gov.di.authentication.shared.entity;
 
+import uk.gov.di.authentication.shared.exceptions.CodeRequestTypeNotFoundException;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -38,6 +40,12 @@ public enum CodeRequestType {
         this.journeyType = journeyType;
     }
 
+    public static boolean isValidCodeRequestType(
+            MFAMethodType mfaMethodType, JourneyType journeyType) {
+        CodeRequestTypeKey key = new CodeRequestTypeKey(mfaMethodType, journeyType);
+        return codeRequestTypeMap.containsKey(key);
+    }
+
     public static CodeRequestType getCodeRequestType(
             NotificationType notificationType, JourneyType journeyType) {
         return getCodeRequestType(notificationType.getMfaMethodType(), journeyType);
@@ -45,6 +53,13 @@ public enum CodeRequestType {
 
     public static CodeRequestType getCodeRequestType(
             MFAMethodType mfaMethodType, JourneyType journeyType) {
+        if (!isValidCodeRequestType(mfaMethodType, journeyType)) {
+            throw new CodeRequestTypeNotFoundException(
+                    String.format(
+                            "CodeRequestType not found for MFA Type and Journey Type: [%s , %s]",
+                            mfaMethodType.getValue(), journeyType.getValue()));
+        }
+
         CodeRequestTypeKey key = new CodeRequestTypeKey(mfaMethodType, journeyType);
         return codeRequestTypeMap.get(key);
     }
@@ -53,7 +68,7 @@ public enum CodeRequestType {
         return mfaMethodType;
     }
 
-    private JourneyType getJourneyType() {
+    public JourneyType getJourneyType() {
         return journeyType;
     }
 
