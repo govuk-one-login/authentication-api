@@ -29,7 +29,7 @@ dependencies {
             configurations.sqs,
             configurations.kms,
             configurations.dynamodb,
-            "au.com.dius.pact.consumer:junit5:4.6.4"
+            configurations.pact_consumer
 
     testRuntimeOnly configurations.test_runtime
 }
