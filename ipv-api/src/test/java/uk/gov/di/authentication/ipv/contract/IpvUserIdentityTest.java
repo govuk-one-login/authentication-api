@@ -18,10 +18,7 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.oauth2.sdk.token.Tokens;
-import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
-import com.nimbusds.openid.connect.sdk.Nonce;
-import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
-import com.nimbusds.openid.connect.sdk.UserInfoResponse;
+import com.nimbusds.openid.connect.sdk.*;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import net.minidev.json.JSONArray;
 import org.apache.hc.client5.http.fluent.Request;
@@ -118,7 +115,14 @@ public class IpvUserIdentityTest {
                     .setInternalCommonSubjectIdentifier(expectedCommonSubject);
 
     private final ClientSession clientSession =
-            new ClientSession(generateAuthRequest().toParameters(), null, null, CLIENT_NAME);
+            new ClientSession(
+                            generateAuthRequest(new OIDCClaimsRequest()).toParameters(),
+                            null,
+                            new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL),
+                            CLIENT_NAME)
+                    .setEffectiveVectorOfTrust(
+                            new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL));
+
     private AccessToken accessToken;
 
     private final String SUB_FIELD = "sub";
@@ -323,7 +327,7 @@ public class IpvUserIdentityTest {
                 .withSubjectID(SUBJECT.getValue());
     }
 
-    public static AuthenticationRequest generateAuthRequest() {
+    public static AuthenticationRequest generateAuthRequest(OIDCClaimsRequest oidcClaimsRequest) {
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         Scope scope = new Scope();
         Nonce nonce = new Nonce();

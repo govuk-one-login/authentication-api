@@ -15,6 +15,7 @@ import com.nimbusds.oauth2.sdk.http.HTTPResponse;
 import com.nimbusds.oauth2.sdk.id.*;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
+import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import net.minidev.json.JSONArray;
@@ -114,7 +115,13 @@ public class IpvTokenTest {
                     .setInternalCommonSubjectIdentifier(expectedCommonSubject);
 
     private final ClientSession clientSession =
-            new ClientSession(generateAuthRequest().toParameters(), null, null, CLIENT_NAME);
+            new ClientSession(
+                            generateAuthRequest(new OIDCClaimsRequest()).toParameters(),
+                            null,
+                            new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL),
+                            CLIENT_NAME)
+                    .setEffectiveVectorOfTrust(
+                            new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL));
 
     private final String ACCESS_TOKEN_FIELD = "access_token";
     private final String TOKEN_TYPE_FIELD = "token_type";
@@ -238,7 +245,7 @@ public class IpvTokenTest {
                 .withSubjectID(SUBJECT.getValue());
     }
 
-    public static AuthenticationRequest generateAuthRequest() {
+    public static AuthenticationRequest generateAuthRequest(OIDCClaimsRequest oidcClaimsRequest) {
         ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
         Scope scope = new Scope();
         Nonce nonce = new Nonce();
