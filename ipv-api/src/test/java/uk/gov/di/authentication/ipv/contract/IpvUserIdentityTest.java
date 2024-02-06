@@ -11,19 +11,19 @@ import au.com.dius.pact.core.model.annotations.Pact;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.nimbusds.oauth2.sdk.*;
+import com.nimbusds.oauth2.sdk.http.HTTPResponse;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
-import com.nimbusds.oauth2.sdk.token.Token;
 import com.nimbusds.oauth2.sdk.token.Tokens;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
+import com.nimbusds.openid.connect.sdk.UserInfoResponse;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import net.minidev.json.JSONArray;
-import net.minidev.json.JSONObject;
 import org.apache.hc.client5.http.fluent.Request;
 import org.apache.hc.core5.net.URIBuilder;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,6 +47,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import static com.nimbusds.common.contenttype.ContentType.APPLICATION_JSON;
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static org.mockito.ArgumentMatchers.any;
@@ -104,7 +105,6 @@ public class IpvUserIdentityTest {
     private static final URI LOGIN_URL = URI.create("https://example.com");
     private static final String OIDC_BASE_URL = "https://base-url.com";
     private static final String IPV_USER_IDENTITY_PATH = "user-identity";
-    private static final URI IPV_TOKEN_URI = ConstructUriHelper.buildURI("https://api.identity.account.gov.uk", IPV_USER_IDENTITY_PATH);
 
     private static final Map<String, String> additionalClaims = Map.of(
             ValidClaims.ADDRESS.getValue(),
@@ -120,6 +120,22 @@ public class IpvUserIdentityTest {
     private final ClientSession clientSession =
             new ClientSession(generateAuthRequest().toParameters(), null, null, CLIENT_NAME);
     private AccessToken accessToken;
+
+    private final String SUB_FIELD = "sub";
+    private final String VOT_FIELD = "vot";
+    private final String VTM_FIELD = "vtm";
+    private final String CREDENTIALS_JWT_FIELD = "https://vocab.account.gov.uk/v1/credentialJWT";
+    private final String CORE_IDENTITY_FIELD = "https://vocab.account.gov.uk/v1/coreIdentity";
+    private final String CORE_IDENTITY_NAME_FIELD = "name";
+    private final String CORE_IDENTITY_NAME_PARTS_FIELD = "nameParts";
+    private final String CORE_IDENTITY_BIRTH_FIELD = "birthDate";
+
+    private final String SUB_VALUE = "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6";
+    private final String VOT_VALUE = "P2";
+    private final String VTM_VALUE = "http://localhost/trustmark";
+    private final String CREDENTIALS_JWT_VALUE = "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9";
+    private final String CORE_IDENTITY_BIRTH_VALUE = "1964-11-07";
+
     @BeforeEach
     void setUp() {
         handler =
@@ -157,23 +173,23 @@ public class IpvUserIdentityTest {
                 .status(200)
                 .body(
                         new PactDslJsonBody()
-                            .stringType("sub")
-                            .stringType("vot", "P2")
-                            .stringType("vtm")
-                            .unorderedMaxArray("https://vocab.account.gov.uk/v1/credentialJWT", 1)
-                                .stringType("JWT")
+                            .stringType(SUB_FIELD, SUB_VALUE)
+                            .stringType(VOT_FIELD, VOT_VALUE)
+                            .stringType(VTM_FIELD, VTM_VALUE)
+                            .unorderedMaxArray(CREDENTIALS_JWT_FIELD, 1)
+                                .stringType(CREDENTIALS_JWT_VALUE)
                             .closeArray()
-                            .object("https://vocab.account.gov.uk/v1/coreIdentity")
-                                .maxArrayLike("name", 1)
-                                    .eachLike("nameParts", 2)
+                            .object(CORE_IDENTITY_FIELD)
+                                .maxArrayLike(CORE_IDENTITY_NAME_FIELD, 1)
+                                    .eachLike(CORE_IDENTITY_NAME_PARTS_FIELD, 2)
                                         .stringType("type", "Name")
                                         .stringType("value", "Kenneth")
                                         .closeObject()
                                     .closeArray()
                                     .closeObject()
                                 .closeArray()
-                                .maxArrayLike("birthDate", 1)
-                                    .stringType("value", "1964-11-07")
+                                .maxArrayLike(CORE_IDENTITY_BIRTH_FIELD, 1)
+                                    .stringType("value", CORE_IDENTITY_BIRTH_VALUE)
                                 .closeArray()
                             .closeObject()
                             .maxArrayLike("https://vocab.account.gov.uk/v1/address", 1)
@@ -201,7 +217,7 @@ public class IpvUserIdentityTest {
 
     @Test
     @PactTestFor(providerName = "IPV-orch-user-identity-provider", pactMethod = "success", pactVersion = PactSpecVersion.V3)
-    void getIPVResponse(MockServer mockServer) throws IOException, Json.JsonException, UnsuccessfulCredentialResponseException, URISyntaxException {
+    void getIPVResponse(MockServer mockServer) throws IOException, Json.JsonException, UnsuccessfulCredentialResponseException, URISyntaxException, ParseException {
         URIBuilder builder = new URIBuilder(mockServer.getUrl() + "/" + IPV_USER_IDENTITY_PATH);
         Request.get(builder.build()).addHeader("Authorization", accessToken.toAuthorizationHeader()).execute();
 
@@ -229,7 +245,7 @@ public class IpvUserIdentityTest {
                                 CREDENTIAL_JWT_CLAIM));
         claims.putAll(userIdentityAdditionalClaims);
 
-        handler.handleRequest(getApiGatewayProxyRequestEvent(new UserInfo(new JSONObject(claims))), context);
+        handler.handleRequest(getApiGatewayProxyRequestEvent(), context);
 
         verifyAuditEvent(IPVAuditableEvent.IPV_AUTHORISATION_RESPONSE_RECEIVED);
         verifyAuditEvent(IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED);
@@ -271,8 +287,7 @@ public class IpvUserIdentityTest {
                 PERSISTENT_SESSION_ID);
     }
 
-    private APIGatewayProxyRequestEvent getApiGatewayProxyRequestEvent(
-            UserInfo userIdentityUserInfo) throws UnsuccessfulCredentialResponseException {
+    private APIGatewayProxyRequestEvent getApiGatewayProxyRequestEvent() throws UnsuccessfulCredentialResponseException, ParseException {
         var successfulTokenResponse =
                 new AccessTokenResponse(new Tokens(new BearerAccessToken(), null));
         var tokenRequest = mock(TokenRequest.class);
@@ -288,22 +303,12 @@ public class IpvUserIdentityTest {
         when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(salt);
         when(ipvTokenService.constructTokenRequest(AUTH_CODE.getValue())).thenReturn(tokenRequest);
         when(ipvTokenService.sendTokenRequest(tokenRequest)).thenReturn(successfulTokenResponse);
-        when(ipvTokenService.sendIpvUserIdentityRequest(any())).thenReturn(userIdentityUserInfo);
+        when(ipvTokenService.sendIpvUserIdentityRequest(any())).thenReturn(getUserInfoFromSuccessfulUserIdentityHttpResponse());
 
         var event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(responseHeaders);
         event.setHeaders(Map.of(COOKIE, buildCookieString()));
         return event;
-    }
-
-    private UserProfile generateUserProfile() {
-        return new UserProfile()
-                .withEmail(TEST_EMAIL_ADDRESS)
-                .withEmailVerified(true)
-                .withPhoneNumber("012345678902")
-                .withPhoneNumberVerified(true)
-                .withPublicSubjectID(PUBLIC_SUBJECT.getValue())
-                .withSubjectID(SUBJECT.getValue());
     }
 
     private ClientRegistry generateClientRegistry() {
@@ -314,6 +319,16 @@ public class IpvUserIdentityTest {
                 .withRedirectUrls(singletonList(REDIRECT_URI.toString()))
                 .withSectorIdentifierUri("https://test.com")
                 .withSubjectType("pairwise");
+    }
+
+    private UserProfile generateUserProfile() {
+        return new UserProfile()
+                .withEmail(TEST_EMAIL_ADDRESS)
+                .withEmailVerified(true)
+                .withPhoneNumber("012345678902")
+                .withPhoneNumberVerified(true)
+                .withPublicSubjectID(PUBLIC_SUBJECT.getValue())
+                .withSubjectID(SUBJECT.getValue());
     }
 
     public static AuthenticationRequest generateAuthRequest() {
@@ -329,15 +344,29 @@ public class IpvUserIdentityTest {
                 .build();
     }
 
-//    private TokenRequest createTokenRequest() {
-//        return new TokenRequest(
-//                IPV_TOKEN_URI,
-//                generatePrivateKeyJwt(claimsSet),
-//                codeGrant,
-//                null,
-//                singletonList(IPV_TOKEN_URI),
-//                Map.of(
-//                        "client_id",
-//                        singletonList(configurationService.getIPVAuthorisationClientId())));
-//    }
+    private UserInfo getUserInfoFromSuccessfulUserIdentityHttpResponse() throws ParseException {
+        var userInfoHTTPResponse = new HTTPResponse(200);
+        userInfoHTTPResponse.setEntityContentType(APPLICATION_JSON);
+        userInfoHTTPResponse.setContent( "{"
+                + " \"" + SUB_FIELD + "\": \"" + SUB_VALUE + "\","
+                + " \"" + VOT_FIELD + "\": \"" + VOT_VALUE + "\","
+                + " \"" + VTM_FIELD + "\": \"" + VTM_FIELD + "\","
+                + " \"" + CREDENTIALS_JWT_FIELD + "\": ["
+                + "     \"" + CREDENTIALS_JWT_VALUE + "\""
+                + "],"
+                + " \"" + CORE_IDENTITY_FIELD + "\": {"
+                + "     \"" + CORE_IDENTITY_NAME_FIELD + "\": ["
+                + "         { \""+ CORE_IDENTITY_NAME_PARTS_FIELD + "\": ["
+                + "         { \"value\":\"GivenName\",\"value\":\"kenneth\" } "
+                + "         ] "
+                + "     } "
+                + "     ],"
+                + "     \"" + CORE_IDENTITY_BIRTH_FIELD + "\": [ "
+                + "         { \"value\": \"" + CORE_IDENTITY_BIRTH_VALUE +"\" } "
+                + "     ]"
+                + " }"
+                + "}");
+        var userIdentityResponse = UserInfoResponse.parse(userInfoHTTPResponse);
+        return userIdentityResponse.toSuccessResponse().getUserInfo();
+    }
 }
