@@ -109,7 +109,58 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private static final String CLAIMS =
             "{\"userinfo\":{\"https://vocab.account.gov.uk/v1/coreIdentityJWT\":{\"essential\":true},\"https://vocab.account.gov.uk/v1/address\":null}}";
 
-    private static final IntegrationTestConfigurationService configuration = config();
+    private static final IntegrationTestConfigurationService configuration =
+            new IntegrationTestConfigurationService(
+                    tokenSigner,
+                    ipvPrivateKeyJwtSigner,
+                    spotQueue,
+                    docAppPrivateKeyJwtSigner,
+                    configurationParameters) {
+                @Override
+                public String getTxmaAuditQueueUrl() {
+                    return txmaAuditQueue.getQueueUrl();
+                }
+
+                @Override
+                public boolean isLanguageEnabled(LocaleHelper.SupportedLanguage supportedLanguage) {
+                    return supportedLanguage.equals(LocaleHelper.SupportedLanguage.EN)
+                            || supportedLanguage.equals(LocaleHelper.SupportedLanguage.CY);
+                }
+
+                @Override
+                public URI getDocAppJwksUri() {
+                    try {
+                        return new URIBuilder()
+                                .setHost("localhost")
+                                .setPort(jwksExtension.getHttpPort())
+                                .setPath("/.well-known/jwks.json")
+                                .setScheme("http")
+                                .build();
+                    } catch (URISyntaxException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+
+                @Override
+                public String getDocAppEncryptionKeyID() {
+                    return ENCRYPTION_KEY_ID;
+                }
+
+                @Override
+                public String getDocAppAuthorisationClientId() {
+                    return DOC_APP_CLIENT_ID;
+                }
+
+                @Override
+                public URI getDocAppAuthorisationURI() {
+                    return AUTHORIZE_URI;
+                }
+
+                @Override
+                public URI getDocAppAuthorisationCallbackURI() {
+                    return CALLBACK_URI;
+                }
+            };
 
     @Test
     void shouldRedirectToLoginUriWhenNoCookieIsPresent() {
@@ -663,6 +714,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @ParameterizedTest
     @ValueSource(strings = {"", "en", "cy", "en cy", "es fr ja", "cy-AR"})
     void shouldCallAuthorizeAsDocAppClient(String uiLocales) throws JOSEException, ParseException {
+        setupForDocAppJourney();
         registerClient(
                 CLIENT_ID,
                 "test-client",
@@ -689,9 +741,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         queryStringParameters,
                         Optional.of("GET"));
         assertThat(response, hasStatus(302));
-        assertThat(
-                getLocationResponseHeader(response),
-                startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+        assertThat(getLocationResponseHeader(response), startsWith(AUTHORIZE_URI.toString()));
         assertThat(
                 getHttpCookieFromMultiValueResponseHeaders(response.getMultiValueHeaders(), "gs")
                         .isPresent(),
@@ -739,7 +789,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 List.of(
                         AUTHORISATION_REQUEST_RECEIVED,
                         AUTHORISATION_REQUEST_PARSED,
-                        AUTHORISATION_INITIATED));
+                        DOC_APP_AUTHORISATION_REQUESTED));
     }
 
     @Test
@@ -821,7 +871,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     private void setupForDocAppJourney() {
         registerClient(
                 CLIENT_ID, "test-client", List.of("openid", "doc-checking-app"), ClientType.APP);
-        handler = new AuthorisationHandler(config());
+        handler = new AuthorisationHandler(configuration);
         txmaAuditQueue.clear();
 
         var jwkKey =
@@ -898,60 +948,6 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var signer = new RSASSASigner(KEY_PAIR.getPrivate());
         signedJWT.sign(signer);
         return signedJWT;
-    }
-
-    private static IntegrationTestConfigurationService config() {
-        return new IntegrationTestConfigurationService(
-                tokenSigner,
-                ipvPrivateKeyJwtSigner,
-                spotQueue,
-                docAppPrivateKeyJwtSigner,
-                configurationParameters) {
-            @Override
-            public String getTxmaAuditQueueUrl() {
-                return txmaAuditQueue.getQueueUrl();
-            }
-
-            @Override
-            public boolean isLanguageEnabled(LocaleHelper.SupportedLanguage supportedLanguage) {
-                return supportedLanguage.equals(LocaleHelper.SupportedLanguage.EN)
-                        || supportedLanguage.equals(LocaleHelper.SupportedLanguage.CY);
-            }
-
-            @Override
-            public URI getDocAppJwksUri() {
-                try {
-                    return new URIBuilder()
-                            .setHost("localhost")
-                            .setPort(jwksExtension.getHttpPort())
-                            .setPath("/.well-known/jwks.json")
-                            .setScheme("http")
-                            .build();
-                } catch (URISyntaxException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-
-            @Override
-            public String getDocAppEncryptionKeyID() {
-                return ENCRYPTION_KEY_ID;
-            }
-
-            @Override
-            public String getDocAppAuthorisationClientId() {
-                return DOC_APP_CLIENT_ID;
-            }
-
-            @Override
-            public URI getDocAppAuthorisationURI() {
-                return AUTHORIZE_URI;
-            }
-
-            @Override
-            public URI getDocAppAuthorisationCallbackURI() {
-                return CALLBACK_URI;
-            }
-        };
     }
 
     private static KeyPair generateRsaKeyPair() {

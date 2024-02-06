@@ -72,7 +72,6 @@ public class DocAppCallbackHandler
     private final AuthorisationCodeService authorisationCodeService;
     private final CookieHelper cookieHelper;
     protected final Json objectMapper = SerializationService.getInstance();
-    private static final String REDIRECT_PATH = "doc-app-callback";
 
     private static final String ERROR_PAGE_REDIRECT_PATH = "error";
 
@@ -284,9 +283,6 @@ public class DocAppCallbackHandler
                 dynamoDocAppService.addDocAppCredential(
                         clientSession.getDocAppSubjectId().getValue(), credential);
 
-                var redirectURI =
-                        ConstructUriHelper.buildURI(
-                                configurationService.getLoginURI().toString(), REDIRECT_PATH);
                 LOG.info("Redirecting to frontend");
                 var dimensions =
                         new HashMap<>(
