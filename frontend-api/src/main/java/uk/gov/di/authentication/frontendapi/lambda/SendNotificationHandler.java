@@ -71,7 +71,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
     private static final List<NotificationType> CONFIRMATION_NOTIFICATION_TYPES =
             List.of(ACCOUNT_CREATED_CONFIRMATION, CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION);
 
-    private final AwsSqsClient sqsClient;
+    private final AwsSqsClient emailSqsClient;
     private final CodeGeneratorService codeGeneratorService;
     private final CodeStorageService codeStorageService;
     private final AuditService auditService;
@@ -82,7 +82,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             ClientSessionService clientSessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
-            AwsSqsClient sqsClient,
+            AwsSqsClient emailSqsClient,
             CodeGeneratorService codeGeneratorService,
             CodeStorageService codeStorageService,
             AuditService auditService) {
@@ -93,7 +93,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 clientSessionService,
                 clientService,
                 authenticationService);
-        this.sqsClient = sqsClient;
+        this.emailSqsClient = emailSqsClient;
         this.codeGeneratorService = codeGeneratorService;
         this.codeStorageService = codeStorageService;
         this.auditService = auditService;
@@ -101,7 +101,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
 
     public SendNotificationHandler(ConfigurationService configurationService) {
         super(SendNotificationRequest.class, configurationService);
-        this.sqsClient =
+        this.emailSqsClient =
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),
                         configurationService.getEmailQueueUri(),
@@ -113,7 +113,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
 
     public SendNotificationHandler() {
         super(SendNotificationRequest.class, ConfigurationService.getInstance());
-        this.sqsClient =
+        this.emailSqsClient =
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),
                         configurationService.getEmailQueueUri(),
@@ -150,7 +150,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                                 request.getNotificationType(),
                                 userContext.getUserLanguage());
                 if (!isTestClientWithAllowedEmail(userContext, configurationService)) {
-                    sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
+                    emailSqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
                     LOG.info("{} email placed on queue", request.getNotificationType());
                 }
                 return generateEmptySuccessApiGatewayResponse();
@@ -265,7 +265,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             var notifyRequest =
                     new NotifyRequest(
                             destination, notificationType, code, userContext.getUserLanguage());
-            sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
+            emailSqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
             LOG.info("{} placed on queue", request.getNotificationType());
             LOG.info("Successfully processed request");
         }
