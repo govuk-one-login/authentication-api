@@ -13,6 +13,10 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import uk.gov.di.authentication.entity.UserMfaDetail;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.CheckUserExistsResponse;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -47,6 +51,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
@@ -394,6 +399,24 @@ class CheckUserExistsHandlerTest {
                         "123.123.123.123",
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
+    }
+
+    private static Stream<Arguments> userMfaDetail() {
+        return Stream.of(
+                Arguments.of(new UserMfaDetail(), null),
+                Arguments.of(new UserMfaDetail(false, false, MFAMethodType.SMS, ""), null),
+                Arguments.of(
+                        new UserMfaDetail(false, false, MFAMethodType.AUTH_APP, "123456789"), null),
+                Arguments.of(
+                        new UserMfaDetail(false, false, MFAMethodType.SMS, "123456789"), "789"),
+                Arguments.of(new UserMfaDetail(false, false, MFAMethodType.SMS, "12"), null));
+    }
+
+    @ParameterizedTest
+    @MethodSource("userMfaDetail")
+    void shouldReturnLastThreeDigitsOfPhoneNumber(UserMfaDetail userMfaDetail, String lastDigits) {
+        var result = handler.getLastDigitsOfPhoneNumber(userMfaDetail);
+        assertThat(result, equalTo(lastDigits));
     }
 
     private void usingValidSession() {

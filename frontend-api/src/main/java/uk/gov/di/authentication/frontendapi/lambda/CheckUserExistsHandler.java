@@ -41,6 +41,7 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private static final Logger LOG = LogManager.getLogger(CheckUserExistsHandler.class);
+    public static final int NUMBER_OF_LAST_DIGITS = 3;
 
     private final AuditService auditService;
     private final CodeStorageService codeStorageService;
@@ -198,13 +199,14 @@ public class CheckUserExistsHandler extends BaseFrontendHandler<CheckUserExistsR
         }
     }
 
-    private String getLastDigitsOfPhoneNumber(UserMfaDetail userMfaDetail) {
+    String getLastDigitsOfPhoneNumber(UserMfaDetail userMfaDetail) {
         if (userMfaDetail.getPhoneNumber() != null
                 && !userMfaDetail.getPhoneNumber().isEmpty()
+                && userMfaDetail.getPhoneNumber().length() >= NUMBER_OF_LAST_DIGITS
                 && MFAMethodType.SMS.equals(userMfaDetail.getMfaMethodType())) {
             return userMfaDetail
                     .getPhoneNumber()
-                    .substring(userMfaDetail.getPhoneNumber().length() - 3);
+                    .substring(userMfaDetail.getPhoneNumber().length() - NUMBER_OF_LAST_DIGITS);
         } else {
             return null;
         }
