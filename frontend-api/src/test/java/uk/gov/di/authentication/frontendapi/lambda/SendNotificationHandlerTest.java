@@ -19,6 +19,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -32,6 +33,7 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -48,10 +50,12 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
@@ -168,6 +172,7 @@ class SendNotificationHandlerTest {
     @BeforeEach
     void setup() {
         when(configurationService.getDefaultOtpCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
+        when(configurationService.isEmailCheckEnabled()).thenReturn(true);
         when(configurationService.getEmailAccountCreationOtpCodeExpiry())
                 .thenReturn(CODE_EXPIRY_TIME);
         when(configurationService.getBlockedEmailDuration()).thenReturn(BLOCKED_EMAIL_DURATION);
@@ -187,6 +192,84 @@ class SendNotificationHandlerTest {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
 
+        Date mockedDate = new Date();
+        UUID mockedUUID = UUID.fromString("5fc03087-d265-11e7-b8c6-83e29cd24f4c");
+        try (MockedStatic<NowHelper> mockedNowHelperClass = Mockito.mockStatic(NowHelper.class)) {
+            try (MockedStatic<UUID> mockedUUIDClass = Mockito.mockStatic(UUID.class)) {
+                mockedNowHelperClass.when(NowHelper::now).thenReturn(mockedDate);
+                mockedUUIDClass.when(UUID::randomUUID).thenReturn(mockedUUID);
+
+                var result =
+                        sendRequest(
+                                format(
+                                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
+                                        TEST_EMAIL_ADDRESS, notificationType, journeyType));
+
+                assertEquals(204, result.getStatusCode());
+                verify(emailSqsClient)
+                        .send(
+                                objectMapper.writeValueAsString(
+                                        new NotifyRequest(
+                                                TEST_EMAIL_ADDRESS,
+                                                notificationType,
+                                                TEST_SIX_DIGIT_CODE,
+                                                SupportedLanguage.EN)));
+                if (journeyType == JourneyType.REGISTRATION) {
+                    verify(pendingEmailCheckSqsClient)
+                            .send(
+                                    format(
+                                            "{\"requestReference\":\"%s\",\"emailAddress\":\"%s\",\"userSessionId\":\"%s\",\"govukSigninJourneyId\":\"%s\",\"persistentSessionId\":\"%s\",\"ipAddress\":\"%s\",\"journeyType\":\"%s\",\"timeOfInitialRequest\":\"%s\"}",
+                                            mockedUUID,
+                                            TEST_EMAIL_ADDRESS,
+                                            session.getSessionId(),
+                                            CLIENT_SESSION_ID,
+                                            PERSISTENT_ID,
+                                            "123.123.123.123",
+                                            JourneyType.REGISTRATION,
+                                            mockedDate.toInstant().getEpochSecond()));
+                } else {
+                    verifyNoInteractions(pendingEmailCheckSqsClient);
+                }
+                verify(codeGeneratorService).sixDigitCode();
+                verify(codeStorageService).getOtpCode(TEST_EMAIL_ADDRESS, notificationType);
+                verify(codeStorageService)
+                        .saveOtpCode(
+                                TEST_EMAIL_ADDRESS,
+                                TEST_SIX_DIGIT_CODE,
+                                CODE_EXPIRY_TIME,
+                                notificationType);
+                verify(codeStorageService).getOtpCode(TEST_EMAIL_ADDRESS, notificationType);
+                verify(sessionService)
+                        .save(
+                                argThat(
+                                        session ->
+                                                isSessionWithEmailSent(
+                                                        session, notificationType, journeyType)));
+                verify(auditService)
+                        .submitAuditEvent(
+                                notificationType.equals(VERIFY_EMAIL)
+                                        ? EMAIL_CODE_SENT
+                                        : ACCOUNT_RECOVERY_EMAIL_CODE_SENT,
+                                CLIENT_SESSION_ID,
+                                session.getSessionId(),
+                                CLIENT_ID,
+                                expectedCommonSubject,
+                                TEST_EMAIL_ADDRESS,
+                                "123.123.123.123",
+                                AuditService.UNKNOWN,
+                                PERSISTENT_ID);
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("notificationTypeAndJourneyTypeArgs")
+    void shouldReturn204AndNotEnqueuePendingEmailCheckWhenFeatureFlagDisabled(
+            NotificationType notificationType, JourneyType journeyType) throws Json.JsonException {
+        when(configurationService.isEmailCheckEnabled()).thenReturn(false);
+        usingValidSession();
+        usingValidClientSession(CLIENT_ID);
+
         var result =
                 sendRequest(
                         format(
@@ -194,42 +277,7 @@ class SendNotificationHandlerTest {
                                 TEST_EMAIL_ADDRESS, notificationType, journeyType));
 
         assertEquals(204, result.getStatusCode());
-        verify(emailSqsClient)
-                .send(
-                        objectMapper.writeValueAsString(
-                                new NotifyRequest(
-                                        TEST_EMAIL_ADDRESS,
-                                        notificationType,
-                                        TEST_SIX_DIGIT_CODE,
-                                        SupportedLanguage.EN)));
-        verify(codeGeneratorService).sixDigitCode();
-        verify(codeStorageService).getOtpCode(TEST_EMAIL_ADDRESS, notificationType);
-        verify(codeStorageService)
-                .saveOtpCode(
-                        TEST_EMAIL_ADDRESS,
-                        TEST_SIX_DIGIT_CODE,
-                        CODE_EXPIRY_TIME,
-                        notificationType);
-        verify(codeStorageService).getOtpCode(TEST_EMAIL_ADDRESS, notificationType);
-        verify(sessionService)
-                .save(
-                        argThat(
-                                session ->
-                                        isSessionWithEmailSent(
-                                                session, notificationType, journeyType)));
-        verify(auditService)
-                .submitAuditEvent(
-                        notificationType.equals(VERIFY_EMAIL)
-                                ? EMAIL_CODE_SENT
-                                : ACCOUNT_RECOVERY_EMAIL_CODE_SENT,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PERSISTENT_ID);
+        verifyNoInteractions(pendingEmailCheckSqsClient);
     }
 
     @ParameterizedTest

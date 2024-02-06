@@ -7,6 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.exception.SdkClientException;
+import uk.gov.di.authentication.entity.PendingEmailCheckRequest;
 import uk.gov.di.authentication.frontendapi.entity.SendNotificationRequest;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -18,6 +19,7 @@ import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import uk.gov.di.authentication.shared.helpers.ValidationHelper;
@@ -38,6 +40,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_EMAIL_CODE_SENT;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_EMAIL_CODE_SENT_FOR_TEST_CLIENT;
@@ -274,6 +277,30 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                                 configurationService.getEnvironment(),
                                 "Country",
                                 PhoneNumberHelper.getCountry(destination)));
+            }
+
+            if (request.getJourneyType() == JourneyType.REGISTRATION) {
+                String sessionId = userContext.getSession().getSessionId();
+                String clientSessionId = userContext.getClientSessionId();
+                String persistentSessionId =
+                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
+
+                if (configurationService.isEmailCheckEnabled()) {
+                    pendingEmailCheckSqsClient.send(
+                            objectMapper.writeValueAsString(
+                                    new PendingEmailCheckRequest(
+                                            UUID.randomUUID(),
+                                            destination,
+                                            sessionId,
+                                            clientSessionId,
+                                            persistentSessionId,
+                                            IpAddressHelper.extractIpAddress(input),
+                                            JourneyType.REGISTRATION,
+                                            String.valueOf(
+                                                    NowHelper.now()
+                                                            .toInstant()
+                                                            .getEpochSecond()))));
+                }
             }
             var notifyRequest =
                     new NotifyRequest(
