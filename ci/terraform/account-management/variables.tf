@@ -223,6 +223,12 @@ variable "test_clients_enabled" {
   default = "false"
 }
 
+variable "support_email_check_enabled" {
+  default     = false
+  type        = bool
+  description = "Feature flag which toggles the Experian email check on and off"
+}
+
 locals {
   default_performance_parameters = {
     memory          = var.endpoint_memory_size

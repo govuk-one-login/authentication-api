@@ -36,6 +36,7 @@ module "send_otp_notification" {
     DEFAULT_OTP_CODE_EXPIRY                = var.otp_code_ttl_duration
     EMAIL_OTP_ACCOUNT_CREATION_CODE_EXPIRY = var.email_acct_creation_otp_code_ttl_duration
     INTERNAl_SECTOR_URI                    = var.internal_sector_uri
+    SUPPORT_EMAIL_CHECK_ENABLED            = var.support_email_check_enabled
     TEST_CLIENT_VERIFY_EMAIL_OTP           = var.test_client_verify_email_otp
     TEST_CLIENT_VERIFY_PHONE_NUMBER_OTP    = var.test_client_verify_phone_number_otp
     TEST_CLIENTS_ENABLED                   = var.test_clients_enabled

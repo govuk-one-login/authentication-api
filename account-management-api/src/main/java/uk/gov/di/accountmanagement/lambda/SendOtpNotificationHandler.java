@@ -170,20 +170,22 @@ public class SendOtpNotificationHandler
                         return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1009);
                     }
 
-                    pendingEmailCheckSqsClient.send(
-                            objectMapper.writeValueAsString(
-                                    new PendingEmailCheckRequest(
-                                            UUID.randomUUID(),
-                                            email,
-                                            sessionId,
-                                            clientSessionId,
-                                            persistentSessionId,
-                                            IpAddressHelper.extractIpAddress(input),
-                                            JourneyType.ACCOUNT_MANAGEMENT,
-                                            String.valueOf(
-                                                    NowHelper.now()
-                                                            .toInstant()
-                                                            .getEpochSecond()))));
+                    if (configurationService.isEmailCheckEnabled()) {
+                        pendingEmailCheckSqsClient.send(
+                                objectMapper.writeValueAsString(
+                                        new PendingEmailCheckRequest(
+                                                UUID.randomUUID(),
+                                                email,
+                                                sessionId,
+                                                clientSessionId,
+                                                persistentSessionId,
+                                                IpAddressHelper.extractIpAddress(input),
+                                                JourneyType.ACCOUNT_MANAGEMENT,
+                                                String.valueOf(
+                                                        NowHelper.now()
+                                                                .toInstant()
+                                                                .getEpochSecond()))));
+                    }
 
                     return handleNotificationRequest(
                             isTestUserRequest,

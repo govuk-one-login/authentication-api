@@ -84,6 +84,8 @@ class SendOtpNotificationHandlerTest {
     @BeforeEach
     void setup() {
         when(configurationService.getDefaultOtpCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
+        when(configurationService.isEmailCheckEnabled())
+                .thenReturn(true);
         when(codeGeneratorService.sixDigitCode()).thenReturn(TEST_SIX_DIGIT_CODE);
         when(configurationService.getTestClientVerifyEmailOTP())
                 .thenReturn(Optional.of(TEST_CLIENT_AND_USER_SIX_DIGIT_CODE));
