@@ -11,7 +11,7 @@ import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
-import uk.gov.di.accountmanagement.entity.PendingEmailCheckRequest;
+import uk.gov.di.authentication.entity.PendingEmailCheckRequest;
 import uk.gov.di.accountmanagement.entity.SendNotificationRequest;
 import uk.gov.di.accountmanagement.exceptions.MissingConfigurationParameterException;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
