@@ -42,9 +42,9 @@ class ClientSessionTest {
                         vtrList,
                         CLIENT_NAME);
 
-        var lowestVtr = clientSession.getVtrWithLowestCredentialTrustLevel();
+        var lowestVtr = VectorOfTrust.getLowestCredentialTrustLevel(clientSession.getVtrList());
 
-        assertThat(lowestVtr.getCredentialTrustLevel().getValue(), equalTo(expectedCtl.getValue()));
+        assertThat(lowestVtr.getValue(), equalTo(expectedCtl.getValue()));
     }
 
     @ParameterizedTest
@@ -76,7 +76,9 @@ class ClientSessionTest {
         IllegalArgumentException exception =
                 assertThrows(
                         IllegalArgumentException.class,
-                        () -> clientSession.getVtrWithLowestCredentialTrustLevel());
+                        () ->
+                                VectorOfTrust.getLowestCredentialTrustLevel(
+                                        clientSession.getVtrList()));
 
         assertEquals("Invalid VTR attribute", exception.getMessage());
     }

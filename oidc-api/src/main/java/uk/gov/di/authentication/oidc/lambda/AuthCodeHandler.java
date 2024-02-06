@@ -19,6 +19,7 @@ import uk.gov.di.authentication.oidc.entity.AuthCodeResponse;
 import uk.gov.di.authentication.oidc.exceptions.ProcessAuthRequestException;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
+import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
@@ -323,13 +324,13 @@ public class AuthCodeHandler
         if (!orchestrationAuthorizationService.isClientRedirectUriValid(clientID, redirectUri)) {
             throw new ProcessAuthRequestException(400, ErrorResponse.ERROR_1016);
         }
-        VectorOfTrust requestedVectorOfTrust = clientSession.getVtrWithLowestCredentialTrustLevel();
+        CredentialTrustLevel lowestRequestedCredentialTrustLevel =
+                VectorOfTrust.getLowestCredentialTrustLevel(clientSession.getVtrList());
         if (isNull(session.getCurrentCredentialStrength())
-                || requestedVectorOfTrust
-                                .getCredentialTrustLevel()
-                                .compareTo(session.getCurrentCredentialStrength())
+                || lowestRequestedCredentialTrustLevel.compareTo(
+                                session.getCurrentCredentialStrength())
                         > 0) {
-            session.setCurrentCredentialStrength(requestedVectorOfTrust.getCredentialTrustLevel());
+            session.setCurrentCredentialStrength(lowestRequestedCredentialTrustLevel);
         }
         return authorisationCodeService.generateAndSaveAuthorisationCode(
                 clientSessionId, session.getEmailAddress(), clientSession);

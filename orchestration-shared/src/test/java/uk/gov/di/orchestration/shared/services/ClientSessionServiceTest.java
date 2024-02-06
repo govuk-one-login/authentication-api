@@ -128,7 +128,7 @@ class ClientSessionServiceTest {
                 Map.of("authparam", List.of("v1", "v2")), clientSession.getAuthRequestParams());
         assertEquals(
                 VectorOfTrust.getDefaults().getCredentialTrustLevel(),
-                clientSession.getVtrWithLowestCredentialTrustLevel().getCredentialTrustLevel());
+                VectorOfTrust.getLowestCredentialTrustLevel(clientSession.getVtrList()));
         assertEquals("client-name", clientSession.getClientName());
     }
 

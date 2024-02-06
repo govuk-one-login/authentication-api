@@ -351,7 +351,8 @@ public class TokenHandler
         if (authRequest.getNonce() != null) {
             additionalTokenClaims.put("nonce", authRequest.getNonce());
         }
-        VectorOfTrust vtr = clientSession.getVtrWithLowestCredentialTrustLevel();
+
+        VectorOfTrust vtr = VectorOfTrust.orderVtrList(clientSession.getVtrList()).get(0);
         String vot = vtr.retrieveVectorOfTrustForToken();
 
         final OIDCClaimsRequest finalClaimsRequest = getClaimsRequest(vtr, authRequest);

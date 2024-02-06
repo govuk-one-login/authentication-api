@@ -71,8 +71,10 @@ public class AuthCodeResponseGenerationService {
     }
 
     public void processVectorOfTrust(ClientSession clientSession, Map<String, String> dimensions) {
-        VectorOfTrust vtr = clientSession.getVtrWithLowestCredentialTrustLevel();
-        var mfaNotRequired = vtr.getCredentialTrustLevel().equals(CredentialTrustLevel.LOW_LEVEL);
+        CredentialTrustLevel lowestRequestedCredentialTrustLevel =
+                VectorOfTrust.getLowestCredentialTrustLevel(clientSession.getVtrList());
+        var mfaNotRequired =
+                lowestRequestedCredentialTrustLevel.equals(CredentialTrustLevel.LOW_LEVEL);
         dimensions.put("MfaRequired", mfaNotRequired ? "No" : "Yes");
         dimensions.put(
                 "RequestedLevelOfConfidence", clientSession.getVtrLocsAsCommaSeparatedString());

@@ -80,6 +80,65 @@ class VectorOfTrustTest {
     }
 
     @ParameterizedTest
+    @MethodSource("vtrListsWithLowestCredentialTrustVtrs")
+    void shouldReturnCredentialTrustLevelOfLowestVot(
+            List<VectorOfTrust> vtrList, CredentialTrustLevel expected) {
+        var lowestCredentialLevel = VectorOfTrust.getLowestCredentialTrustLevel(vtrList);
+        assertThat(lowestCredentialLevel, equalTo(expected));
+    }
+
+    public static Stream<Arguments> vtrListsWithLowestCredentialTrustVtrs() {
+        return Stream.of(
+                Arguments.of(
+                        List.of(
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
+                                VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.LOW_LEVEL)),
+                        LOW_LEVEL),
+                Arguments.of(
+                        List.of(
+                                VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.LOW_LEVEL),
+                                VectorOfTrust.of(MEDIUM_LEVEL, null)),
+                        MEDIUM_LEVEL),
+                Arguments.of(
+                        List.of(VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.NONE)), LOW_LEVEL));
+    }
+
+    @ParameterizedTest
+    @MethodSource("vtrListsToOrder")
+    void shouldOrderVtrListsBasedOnLocThenCtl(
+            List<VectorOfTrust> vtrList, List<VectorOfTrust> expected) {
+        var orderedList = VectorOfTrust.orderVtrList(vtrList);
+        assertThat(orderedList, equalTo(expected));
+    }
+
+    public static Stream<Arguments> vtrListsToOrder() {
+        return Stream.of(
+                Arguments.of(
+                        List.of(
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
+                                VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.LOW_LEVEL)),
+                        List.of(
+                                VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.LOW_LEVEL),
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL))),
+                Arguments.of(
+                        List.of(
+                                VectorOfTrust.of(MEDIUM_LEVEL, null),
+                                VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.LOW_LEVEL)),
+                        List.of(
+                                VectorOfTrust.of(MEDIUM_LEVEL, null),
+                                VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.LOW_LEVEL))),
+                Arguments.of(
+                        List.of(
+                                VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.LOW_LEVEL),
+                                VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.NONE)),
+                        List.of(
+                                VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.NONE),
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.LOW_LEVEL),
+                                VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.MEDIUM_LEVEL))));
+    }
+
+    @ParameterizedTest
     @MethodSource("invalidVtrValues")
     void shouldThrowWhenInvalidVtrPassed(String errorMessage, String jsonArray) {
         var exception =
