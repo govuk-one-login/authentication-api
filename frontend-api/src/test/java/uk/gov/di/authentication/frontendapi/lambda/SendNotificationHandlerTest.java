@@ -106,6 +106,7 @@ class SendNotificationHandlerTest {
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final AwsSqsClient emailSqsClient = mock(AwsSqsClient.class);
+    private final AwsSqsClient pendingEmailCheckSqsClient = mock(AwsSqsClient.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final CodeGeneratorService codeGeneratorService = mock(CodeGeneratorService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
@@ -141,6 +142,7 @@ class SendNotificationHandlerTest {
                     clientService,
                     authenticationService,
                     emailSqsClient,
+                    pendingEmailCheckSqsClient,
                     codeGeneratorService,
                     codeStorageService,
                     auditService);

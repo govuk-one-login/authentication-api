@@ -72,6 +72,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             List.of(ACCOUNT_CREATED_CONFIRMATION, CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION);
 
     private final AwsSqsClient emailSqsClient;
+    private final AwsSqsClient pendingEmailCheckSqsClient;
     private final CodeGeneratorService codeGeneratorService;
     private final CodeStorageService codeStorageService;
     private final AuditService auditService;
@@ -83,6 +84,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             ClientService clientService,
             AuthenticationService authenticationService,
             AwsSqsClient emailSqsClient,
+            AwsSqsClient pendingEmailCheckSqsClient,
             CodeGeneratorService codeGeneratorService,
             CodeStorageService codeStorageService,
             AuditService auditService) {
@@ -94,6 +96,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 clientService,
                 authenticationService);
         this.emailSqsClient = emailSqsClient;
+        this.pendingEmailCheckSqsClient = pendingEmailCheckSqsClient;
         this.codeGeneratorService = codeGeneratorService;
         this.codeStorageService = codeStorageService;
         this.auditService = auditService;
@@ -106,6 +109,11 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                         configurationService.getAwsRegion(),
                         configurationService.getEmailQueueUri(),
                         configurationService.getSqsEndpointUri());
+        this.pendingEmailCheckSqsClient =
+                new AwsSqsClient(
+                        configurationService.getAwsRegion(),
+                        configurationService.getPendingEmailCheckQueueUri(),
+                        configurationService.getSqsEndpointUri());
         this.codeGeneratorService = new CodeGeneratorService();
         this.codeStorageService = new CodeStorageService(configurationService);
         this.auditService = new AuditService(configurationService);
@@ -117,6 +125,11 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),
                         configurationService.getEmailQueueUri(),
+                        configurationService.getSqsEndpointUri());
+        this.pendingEmailCheckSqsClient =
+                new AwsSqsClient(
+                        configurationService.getAwsRegion(),
+                        configurationService.getPendingEmailCheckQueueUri(),
                         configurationService.getSqsEndpointUri());
         this.codeGeneratorService = new CodeGeneratorService();
         this.codeStorageService = new CodeStorageService(configurationService);
