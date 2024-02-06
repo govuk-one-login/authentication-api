@@ -12,10 +12,19 @@ import au.com.dius.pact.core.model.V4Pact;
 import au.com.dius.pact.core.model.annotations.Pact;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.crypto.ECDSASigner;
+import com.nimbusds.jose.crypto.impl.ECDSA;
+import com.nimbusds.jose.jwk.Curve;
+import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
+import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.*;
-import com.nimbusds.oauth2.sdk.id.ClientID;
-import com.nimbusds.oauth2.sdk.id.State;
-import com.nimbusds.oauth2.sdk.id.Subject;
+import com.nimbusds.oauth2.sdk.auth.JWTAuthenticationClaimsSet;
+import com.nimbusds.oauth2.sdk.http.HTTPRequest;
+import com.nimbusds.oauth2.sdk.http.HTTPResponse;
+import com.nimbusds.oauth2.sdk.id.*;
 import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.oauth2.sdk.token.Tokens;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
@@ -29,6 +38,10 @@ import org.apache.hc.core5.net.URIBuilder;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.services.kms.model.SignRequest;
+import software.amazon.awssdk.services.kms.model.SignResponse;
+import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.helpers.IPVCallbackHelper;
 import uk.gov.di.authentication.ipv.lambda.IPVCallbackHandler;
@@ -44,16 +57,20 @@ import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import static com.nimbusds.common.contenttype.ContentType.APPLICATION_JSON;
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.*;
+import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
+import static uk.gov.di.orchestration.sharedtest.exceptions.Unchecked.unchecked;
 import static uk.gov.di.orchestration.sharedtest.helper.IdentityTestData.*;
 import static uk.gov.di.orchestration.sharedtest.helper.IdentityTestData.PASSPORT_CLAIM;
 
@@ -107,7 +124,6 @@ public class IpvTokenTest {
     private static final String OIDC_BASE_URL = "https://base-url.com";
     private static final String IPV_TOKEN_PATH = "token";
     private static final URI IPV_TOKEN_URI = ConstructUriHelper.buildURI("https://api.identity.account.gov.uk", IPV_TOKEN_PATH);
-
     private static final Map<String, String> additionalClaims = Map.of(
             ValidClaims.ADDRESS.getValue(),
             ADDRESS_CLAIM,
@@ -121,6 +137,15 @@ public class IpvTokenTest {
 
     private final ClientSession clientSession =
             new ClientSession(generateAuthRequest().toParameters(), null, null, CLIENT_NAME);
+
+    private final String ACCESS_TOKEN_FIELD = "access_token";
+    private final String TOKEN_TYPE_FIELD = "token_type";
+    private final String EXPIRES_IN_FIELD = "expires_in";
+    private final String URI_FIELD = "uri";
+    private final String ACCESS_TOKEN_VALUE = "740e5834-3a29-46b4-9a6f-16142fde533a";
+    private final String TOKEN_TYPE_VALUE = "bearer";
+    private final String EXPIRES_IN_VALUE  = "3600";
+    private final String URI_VALUE = "https://localhost";
     @BeforeEach
     void setUp() {
         handler =
@@ -159,16 +184,17 @@ public class IpvTokenTest {
                 .status(200)
                 .body(
                         new PactDslJsonBody()
-                                .object("content")
-                                .stringTypes("access_token", "token_type", "expires_in", "uri")
-                                .closeObject()
+                                .stringType(ACCESS_TOKEN_FIELD, ACCESS_TOKEN_VALUE)
+                                .stringType(TOKEN_TYPE_FIELD, TOKEN_TYPE_VALUE)
+                                .stringType(EXPIRES_IN_FIELD, EXPIRES_IN_VALUE)
+                                .stringType(URI_FIELD, URI_VALUE)
                 )
                 .toPact();
     }
 
     @Test
     @PactTestFor(providerName = "IPV-orch-token-provider", pactMethod = "success", pactVersion = PactSpecVersion.V3)
-    void getIPVResponse(MockServer mockServer) throws IOException, Json.JsonException, UnsuccessfulCredentialResponseException, URISyntaxException {
+    void getIPVResponse(MockServer mockServer) throws IOException, Json.JsonException, UnsuccessfulCredentialResponseException, URISyntaxException, ParseException {
         URIBuilder builder = new URIBuilder(mockServer.getUrl() + "/" +IPV_TOKEN_PATH);
         builder.setParameter("client_id", CLIENT_ID.getValue())
                 .setParameter("resource", IPV_TOKEN_URI.toString());
@@ -206,6 +232,39 @@ public class IpvTokenTest {
         verifyAuditEvent(IPVAuditableEvent.IPV_SPOT_REQUESTED);
     }
 
+    private ClientRegistry generateClientRegistry() {
+        return new ClientRegistry()
+                .withClientID(CLIENT_ID.getValue())
+                .withConsentRequired(false)
+                .withClientName("test-client")
+                .withRedirectUrls(singletonList(REDIRECT_URI.toString()))
+                .withSectorIdentifierUri("https://test.com")
+                .withSubjectType("pairwise");
+    }
+
+    private UserProfile generateUserProfile() {
+        return new UserProfile()
+                .withEmail(TEST_EMAIL_ADDRESS)
+                .withEmailVerified(true)
+                .withPhoneNumber("012345678902")
+                .withPhoneNumberVerified(true)
+                .withPublicSubjectID(PUBLIC_SUBJECT.getValue())
+                .withSubjectID(SUBJECT.getValue());
+    }
+
+    public static AuthenticationRequest generateAuthRequest() {
+        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
+        Scope scope = new Scope();
+        Nonce nonce = new Nonce();
+        scope.add(OIDCScopeValue.OPENID);
+        scope.add("phone");
+        scope.add("email");
+        return new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
+                .state(RP_STATE)
+                .nonce(nonce)
+                .build();
+    }
+
     private void usingValidSession() {
         when(sessionService.readSessionFromRedis(SESSION_ID)).thenReturn(Optional.of(session));
     }
@@ -229,21 +288,8 @@ public class IpvTokenTest {
                         PERSISTENT_SESSION_ID);
     }
 
-    private static String buildCookieString() {
-        return format(
-                "%s=%s.%s; Max-Age=%d; %s di-persistent-session-id=%s; Max-Age=34190000; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
-                "gs",
-                SESSION_ID,
-                CLIENT_SESSION_ID,
-                3600,
-                "Secure; HttpOnly;",
-                PERSISTENT_SESSION_ID);
-    }
-
     private APIGatewayProxyRequestEvent getApiGatewayProxyRequestEvent(
-            UserInfo userIdentityUserInfo) throws UnsuccessfulCredentialResponseException {
-        var successfulTokenResponse =
-                new AccessTokenResponse(new Tokens(new BearerAccessToken(), null));
+            UserInfo userIdentityUserInfo) throws UnsuccessfulCredentialResponseException, ParseException {
         var tokenRequest = mock(TokenRequest.class);
         Map<String, String> responseHeaders = new HashMap<>();
         responseHeaders.put("code", AUTH_CODE.getValue());
@@ -256,7 +302,7 @@ public class IpvTokenTest {
                 .thenReturn(Optional.of(userProfile));
         when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(salt);
         when(ipvTokenService.constructTokenRequest(AUTH_CODE.getValue())).thenReturn(tokenRequest);
-        when(ipvTokenService.sendTokenRequest(tokenRequest)).thenReturn(successfulTokenResponse);
+        when(ipvTokenService.sendTokenRequest(tokenRequest)).thenReturn(getSuccessfulTokenHttpResponse());
         when(ipvTokenService.sendIpvUserIdentityRequest(any())).thenReturn(userIdentityUserInfo);
 
         var event = new APIGatewayProxyRequestEvent();
@@ -265,48 +311,29 @@ public class IpvTokenTest {
         return event;
     }
 
-    private UserProfile generateUserProfile() {
-        return new UserProfile()
-                .withEmail(TEST_EMAIL_ADDRESS)
-                .withEmailVerified(true)
-                .withPhoneNumber("012345678902")
-                .withPhoneNumberVerified(true)
-                .withPublicSubjectID(PUBLIC_SUBJECT.getValue())
-                .withSubjectID(SUBJECT.getValue());
+    private static String buildCookieString() {
+        return format(
+                "%s=%s.%s; Max-Age=%d; %s di-persistent-session-id=%s; Max-Age=34190000; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;",
+                "gs",
+                SESSION_ID,
+                CLIENT_SESSION_ID,
+                3600,
+                "Secure; HttpOnly;",
+                PERSISTENT_SESSION_ID);
     }
 
-    private ClientRegistry generateClientRegistry() {
-        return new ClientRegistry()
-                .withClientID(CLIENT_ID.getValue())
-                .withConsentRequired(false)
-                .withClientName("test-client")
-                .withRedirectUrls(singletonList(REDIRECT_URI.toString()))
-                .withSectorIdentifierUri("https://test.com")
-                .withSubjectType("pairwise");
-    }
+    public TokenResponse getSuccessfulTokenHttpResponse() throws ParseException {
+        var tokenResponseContent =
+                "{"
+                        + "  \"" + ACCESS_TOKEN_FIELD + "\": \"" + ACCESS_TOKEN_VALUE + "\","
+                        + "  \"" + TOKEN_TYPE_FIELD + "\": \"" + TOKEN_TYPE_VALUE + "\","
+                        + "  \"" + EXPIRES_IN_FIELD + "\": \"" + EXPIRES_IN_VALUE + "\","
+                        + "  \"" + URI_FIELD + "\": \"" + URI_VALUE + "\""
+                        + "}";
+        var tokenHTTPResponse = new HTTPResponse(200);
+        tokenHTTPResponse.setEntityContentType(APPLICATION_JSON);
+        tokenHTTPResponse.setContent(tokenResponseContent);
 
-    public static AuthenticationRequest generateAuthRequest() {
-        ResponseType responseType = new ResponseType(ResponseType.Value.CODE);
-        Scope scope = new Scope();
-        Nonce nonce = new Nonce();
-        scope.add(OIDCScopeValue.OPENID);
-        scope.add("phone");
-        scope.add("email");
-        return new AuthenticationRequest.Builder(responseType, scope, CLIENT_ID, REDIRECT_URI)
-                .state(RP_STATE)
-                .nonce(nonce)
-                .build();
+        return TokenResponse.parse(tokenHTTPResponse);
     }
-
-//    private TokenRequest createTokenRequest() {
-//        return new TokenRequest(
-//                IPV_TOKEN_URI,
-//                generatePrivateKeyJwt(claimsSet),
-//                codeGrant,
-//                null,
-//                singletonList(IPV_TOKEN_URI),
-//                Map.of(
-//                        "client_id",
-//                        singletonList(configurationService.getIPVAuthorisationClientId())));
-//    }
 }
