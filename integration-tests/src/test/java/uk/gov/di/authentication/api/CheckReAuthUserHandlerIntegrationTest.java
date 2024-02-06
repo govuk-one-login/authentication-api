@@ -1,28 +1,152 @@
 package uk.gov.di.authentication.api;
 
+import com.nimbusds.oauth2.sdk.ResponseType;
+import com.nimbusds.oauth2.sdk.Scope;
+import com.nimbusds.oauth2.sdk.id.ClientID;
+import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.oauth2.sdk.id.Subject;
+import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
+import com.nimbusds.openid.connect.sdk.Nonce;
+import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import uk.gov.di.authentication.frontendapi.entity.CheckReauthUserRequest;
 import uk.gov.di.authentication.frontendapi.lambda.CheckReAuthUserHandler;
+import uk.gov.di.authentication.shared.entity.ClientSession;
+import uk.gov.di.authentication.shared.entity.VectorOfTrust;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
+import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
 
+import java.net.URI;
+import java.security.KeyPair;
+import java.time.LocalDateTime;
+import java.util.Base64;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
+import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
+import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest {
+
+    private static final String TEST_EMAIL = "joe.bloggs@digital.cabinet-office.gov.uk";
+    private static final String INTERNAl_SECTOR_HOST = "test.account.gov.uk";
+    private static final String CLIENT_SESSION_ID = "a-client-session-id";
+    private static final String CLIENT_NAME = "some-client-name";
+    private static final ClientID CLIENT_ID = new ClientID("test-client");
+    private static final Subject SUBJECT = new Subject();
+    private final KeyPair keyPair = KeyPairHelper.GENERATE_RSA_KEY_PAIR();
+    private static final URI REDIRECT_URI =
+            URI.create(System.getenv("STUB_RELYING_PARTY_REDIRECT_URI"));
+    private Map<String, String> headers;
+
     @BeforeEach
     void setup() throws Json.JsonException {
-        handler = new CheckReAuthUserHandler();
+        var sessionId = redis.createSession();
+        headers = createHeaders(sessionId);
+        redis.createClientSession(CLIENT_SESSION_ID, createClientSession());
+        handler = new CheckReAuthUserHandler(TEST_CONFIGURATION_SERVICE);
+        txmaAuditQueue.clear();
     }
 
     @Test
-    void shouldReturn200StatusAndCheckBody() {
-        var response = makeRequest(Optional.empty(), Map.of(), Map.of());
+    void shouldReturn200WithSuccessfulCheckReAuthUserRequest() {
+        userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
+        registerClient("https://" + INTERNAl_SECTOR_HOST);
+
+        var request = new CheckReauthUserRequest(TEST_EMAIL);
+        byte[] salt = userStore.addSalt(TEST_EMAIL);
+        var internalCommonSubjectId =
+                ClientSubjectHelper.calculatePairwiseIdentifier(
+                        SUBJECT.getValue(), INTERNAl_SECTOR_HOST, salt);
+        var response =
+                makeRequest(
+                        Optional.of(request),
+                        headers,
+                        Collections.emptyMap(),
+                        Collections.emptyMap(),
+                        Map.of("principalId", internalCommonSubjectId));
+
         assertThat(response, hasStatus(200));
-        assertTrue(response.getBody().contains("Hello world"));
+    }
+
+    @Test
+    void shouldReturn404WhenUserNotFound() {
+        var request = new CheckReauthUserRequest(TEST_EMAIL);
+        var response =
+                makeRequest(
+                        Optional.of(request),
+                        headers,
+                        Collections.emptyMap(),
+                        Collections.emptyMap(),
+                        Map.of());
+
+        assertThat(response, hasStatus(404));
+    }
+
+    @Test
+    void shouldReturn404WhenUserNotMatched() {
+        userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
+        registerClient("https://randomSectorIDuRI.COM");
+
+        var request = new CheckReauthUserRequest(TEST_EMAIL);
+        byte[] salt = userStore.addSalt(TEST_EMAIL);
+        var internalCommonSubjectId =
+                ClientSubjectHelper.calculatePairwiseIdentifier(
+                        SUBJECT.getValue(), INTERNAl_SECTOR_HOST, salt);
+        var response =
+                makeRequest(
+                        Optional.of(request),
+                        headers,
+                        Collections.emptyMap(),
+                        Collections.emptyMap(),
+                        Map.of("principalId", internalCommonSubjectId));
+
+        assertThat(response, hasStatus(404));
+    }
+
+    private ClientSession createClientSession() {
+        var authRequestBuilder =
+                new AuthenticationRequest.Builder(
+                                ResponseType.CODE,
+                                new Scope(OIDCScopeValue.OPENID),
+                                new ClientID(CLIENT_ID),
+                                URI.create("http://localhost/redirect"))
+                        .state(new State())
+                        .nonce(new Nonce());
+        return new ClientSession(
+                authRequestBuilder.build().toParameters(),
+                LocalDateTime.now(),
+                VectorOfTrust.getDefaults(),
+                CLIENT_NAME);
+    }
+
+    private void registerClient(String sectorIdentifierUri) {
+        clientStore.registerClient(
+                CLIENT_ID.getValue(),
+                CLIENT_NAME,
+                singletonList(REDIRECT_URI.toString()),
+                singletonList(TEST_EMAIL),
+                new Scope(OIDCScopeValue.OPENID).toStringList(),
+                Base64.getMimeEncoder().encodeToString(keyPair.getPublic().getEncoded()),
+                singletonList("http://localhost/post-redirect-logout"),
+                "http://example.com",
+                String.valueOf(uk.gov.di.orchestration.shared.entity.ServiceType.MANDATORY),
+                sectorIdentifierUri,
+                "pairwise",
+                true);
+    }
+
+    private Map<String, String> createHeaders(String sessionId) {
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Session-Id", sessionId);
+        headers.put("X-API-Key", FRONTEND_API_KEY);
+        headers.put("Client-Session-Id", CLIENT_SESSION_ID);
+        return headers;
     }
 }
