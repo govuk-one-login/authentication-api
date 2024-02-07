@@ -65,6 +65,9 @@ public class IpvTokenTest {
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final NoSessionOrchestrationService noSessionOrchestrationService =
             mock(NoSessionOrchestrationService.class);
+    private final LogoutService logoutService = mock(LogoutService.class);
+    private final AccountInterventionService accountInterventionService =
+            mock(AccountInterventionService.class);
     private final IPVCallbackHelper ipvCallbackHelper = mock(IPVCallbackHelper.class);
     private final AuditService auditService = mock(AuditService.class);
 
@@ -144,6 +147,8 @@ public class IpvTokenTest {
                         clientSessionService,
                         dynamoClientService,
                         auditService,
+                        logoutService,
+                        accountInterventionService,
                         cookieHelper,
                         noSessionOrchestrationService,
                         ipvCallbackHelper);

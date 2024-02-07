@@ -21,3 +21,6 @@ logs/
 # Approval Tests
 *.received.txt
 *.received.json
+
+# Contract Tests
+pact/
