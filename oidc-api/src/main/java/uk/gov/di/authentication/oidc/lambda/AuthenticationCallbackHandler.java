@@ -60,6 +60,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.GET;
+import static java.lang.String.format;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static uk.gov.di.orchestration.shared.conditions.DocAppUserHelper.isDocCheckingAppUserWithSubjectId;
@@ -491,11 +492,13 @@ public class AuthenticationCallbackHandler
                         .getCredentialTrustLevel()
                         .equals(CredentialTrustLevel.LOW_LEVEL);
         var levelOfConfidence = LevelOfConfidence.NONE.getValue();
+        // Assumption: Requested vectors of trust will either all be for identity or none, and so we
+        // can check just the first
         if (orderedVtrList.get(0).containsLevelOfConfidence()) {
-            levelOfConfidence = orderedVtrList.get(0).getLevelOfConfidence().getValue();
+            levelOfConfidence = VectorOfTrust.stringifyLevelsOfConfidence(orderedVtrList);
         }
         dimensions.put("MfaRequired", mfaRequired ? "Yes" : "No");
-        dimensions.put("RequestedLevelOfConfidence", levelOfConfidence);
+        dimensions.put("RequestedLevelOfConfidence", format("%s", levelOfConfidence));
         return dimensions;
     }
 
