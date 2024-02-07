@@ -17,7 +17,8 @@ import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.g
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 
-public class DeleteMfaMethodHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+public class DeleteMfaMethodHandler
+        implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private final Json objectMapper = SerializationService.getInstance();
     private static final Logger LOG = LogManager.getLogger(RetrieveMfaMethodsHandler.class);
@@ -29,10 +30,11 @@ public class DeleteMfaMethodHandler implements RequestHandler<APIGatewayProxyReq
         try {
 
             String sessionId =
-                    RequestHeaderHelper.getHeaderValueOrElse(input.getHeaders(), SESSION_ID_HEADER, "");
+                    RequestHeaderHelper.getHeaderValueOrElse(
+                            input.getHeaders(), SESSION_ID_HEADER, "");
             attachSessionIdToLogs(sessionId);
 
-            String clientId = input.getPathParameters().get("mfaIdentifier");
+            // String clientId = input.getPathParameters().get("mfaIdentifier");
             var deleteMfaMethod =
                     objectMapper.readValue(input.getBody(), DeleteMfaMethodRequest.class);
 

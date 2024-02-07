@@ -13,14 +13,13 @@ import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
-import java.util.concurrent.ThreadLocalRandom;
-
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 
-public class CreateMfaMethodHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+public class CreateMfaMethodHandler
+        implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private final Json objectMapper = SerializationService.getInstance();
     private static final Logger LOG = LogManager.getLogger(RetrieveMfaMethodsHandler.class);
@@ -32,17 +31,21 @@ public class CreateMfaMethodHandler implements RequestHandler<APIGatewayProxyReq
         try {
 
             String sessionId =
-                    RequestHeaderHelper.getHeaderValueOrElse(input.getHeaders(), SESSION_ID_HEADER, "");
+                    RequestHeaderHelper.getHeaderValueOrElse(
+                            input.getHeaders(), SESSION_ID_HEADER, "");
             attachSessionIdToLogs(sessionId);
 
-            String mfaId = "" + ThreadLocalRandom.current().nextInt();
             UpdateMfaMethodRequest updateMfaMethod =
                     objectMapper.readValue(input.getBody(), UpdateMfaMethodRequest.class);
 
-            MFAMethod returnMfa = new MFAMethod(mfaId, updateMfaMethod.mfaMethod().priorityIdentifier(), updateMfaMethod.mfaMethod().mfaMethodType(), updateMfaMethod.mfaMethod().endpoint(),
-                    updateMfaMethod.mfaMethod().methodVerified());
+            MFAMethod returnMfa =
+                    new MFAMethod(
+                            updateMfaMethod.mfaMethod().mfaIdentifier(),
+                            updateMfaMethod.mfaMethod().priorityIdentifier(),
+                            updateMfaMethod.mfaMethod().mfaMethodType(),
+                            updateMfaMethod.mfaMethod().endpoint(),
+                            updateMfaMethod.mfaMethod().methodVerified());
 
-            //just fire back mfa method record
             return generateApiGatewayProxyResponse(200, objectMapper.writeValueAsString(returnMfa));
         } catch (Json.JsonException | IllegalArgumentException ex) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1056);

@@ -54,7 +54,12 @@ public class CreateMfaMethodIntegrationTest extends ApiGatewayHandlerIntegration
     void shouldCallMFAUpdateAndReturn200() throws Json.JsonException, ParseException {
         var response =
                 makeRequest(
-                        Optional.of(new UpdateMfaMethodRequest("me@you.co","TEST", "12345", new MFAMethod("1", "PRIMARY", "test1", "EP", true))),
+                        Optional.of(
+                                new UpdateMfaMethodRequest(
+                                        "me@you.co",
+                                        "TEST",
+                                        "12345",
+                                        new MFAMethod("1", "PRIMARY", "test1", "EP", true))),
                         constructFrontendHeaders(SESSION_ID),
                         Map.of());
 
