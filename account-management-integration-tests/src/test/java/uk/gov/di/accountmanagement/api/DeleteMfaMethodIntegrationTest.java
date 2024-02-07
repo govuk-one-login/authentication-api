@@ -6,7 +6,6 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.accountmanagement.entity.MFAMethod;
 import uk.gov.di.accountmanagement.entity.UpdateMfaMethodRequest;
 import uk.gov.di.accountmanagement.lambda.DeleteMfaMethodHandler;
-import uk.gov.di.accountmanagement.lambda.UpdateMfaMethodHandler;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.authentication.sharedtest.basetest.HandlerIntegrationTest;
@@ -55,10 +54,15 @@ public class DeleteMfaMethodIntegrationTest extends ApiGatewayHandlerIntegration
     void shouldCallMFAUpdateAndReturn200() throws Json.JsonException, ParseException {
         var response =
                 makeRequest(
-                        Optional.of(new UpdateMfaMethodRequest("me@you.co","TEST", "12345", new MFAMethod("1", "PRIMARY", "test1", "EP", true))),
+                        Optional.of(
+                                new UpdateMfaMethodRequest(
+                                        "me@you.co",
+                                        "TEST",
+                                        "12345",
+                                        new MFAMethod("1", "PRIMARY", "test1", "EP", true))),
                         constructFrontendHeaders(SESSION_ID),
                         Map.of());
 
-        assertThat(response, hasStatus(200));
+        assertThat(response, hasStatus(204));
     }
 }
