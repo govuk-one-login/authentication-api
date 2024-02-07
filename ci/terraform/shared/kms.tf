@@ -643,3 +643,34 @@ resource "aws_kms_key" "email_check_result_encryption_key" {
   })
   tags = local.default_tags
 }
+
+resource "aws_kms_key" "pending_email_check_queue_encryption_key" {
+  description              = "KMS signing key for encrypting pending email check audit queue at rest"
+  deletion_window_in_days  = 30
+  customer_master_key_spec = "SYMMETRIC_DEFAULT"
+  key_usage                = "ENCRYPT_DECRYPT"
+  enable_key_rotation      = true
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Id      = "key-policy-dynamodb",
+    Statement = [
+      {
+        Sid       = "DefaultAccessPolicy",
+        Effect    = "Allow",
+        Principal = { AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root" },
+        Action    = ["kms:*"],
+        Resource  = "*"
+      },
+      {
+        Sid       = "AllowPendingEmailCheckAccessToKmsAuditEncryptionKey-${var.environment}",
+        Effect    = "Allow",
+        Principal = { AWS = "arn:aws:iam::${var.auth_check_account_id}:root" },
+        Action    = ["kms:Decrypt"],
+        Resource  = "*"
+      }
+    ]
+  })
+
+  tags = local.default_tags
+}

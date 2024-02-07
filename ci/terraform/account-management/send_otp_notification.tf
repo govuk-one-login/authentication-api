@@ -11,7 +11,8 @@ module "account_management_api_send_notification_role" {
     aws_iam_policy.parameter_policy.arn,
     module.account_management_txma_audit.access_policy_arn,
     local.client_registry_encryption_policy_arn,
-    local.user_profile_encryption_policy_arn
+    local.user_profile_encryption_policy_arn,
+    local.pending_email_check_queue_access_policy_arn
   ]
 }
 
