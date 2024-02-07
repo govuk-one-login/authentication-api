@@ -14,6 +14,14 @@ resource "aws_s3_bucket" "smoketest_sms_bucket" {
   tags = local.default_tags
 }
 
+resource "aws_s3_bucket_public_access_block" "smoke-test_private_bucket" {
+  bucket                  = aws_s3_bucket.smoketest_sms_bucket.id
+  block_public_acls       = true
+  ignore_public_acls      = true
+  block_public_policy     = true
+  restrict_public_buckets = true
+}
+
 resource "aws_iam_policy" "s3_smoketest_policy" {
   count       = var.use_localstack ? 0 : 1
   name        = "${var.environment}-s3-smoketest-policy"
