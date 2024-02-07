@@ -44,7 +44,7 @@ public class ClientSession {
         this.authRequestParams = authRequestParams;
         this.creationDate = creationDate;
         this.vtrList = vtrList;
-        if (vtrList.size() > 0) {
+        if (!vtrList.isEmpty()) {
             this.effectiveVectorOfTrust = VectorOfTrust.orderVtrList(vtrList).get(0);
         }
         this.clientName = clientName;
@@ -100,7 +100,7 @@ public class ClientSession {
                             : LevelOfConfidence.NONE.getValue();
             strBuilder.append(loc).append(",");
         }
-        if (strBuilder.length() > 0) {
+        if (!strBuilder.isEmpty()) {
             strBuilder.setLength(strBuilder.length() - 1);
             return strBuilder.toString();
         }
