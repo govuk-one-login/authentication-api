@@ -12,7 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityResponse;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityStatus;
-import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
+import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
@@ -180,7 +180,7 @@ class ProcessingIdentityHandlerTest {
                 .thenReturn(Optional.of(getClientSession()));
         when(configurationService.isAccountInterventionServiceActionEnabled()).thenReturn(true);
         when(accountInterventionService.getAccountStatus(anyString(), any()))
-                .thenReturn(new AccountInterventionStatus(false, false, false, false));
+                .thenReturn(new AccountInterventionState(false, false, false, false));
 
         var result = handler.handleRequest(event, context);
 
@@ -210,7 +210,7 @@ class ProcessingIdentityHandlerTest {
                         .withSubjectID(PAIRWISE_SUBJECT.getValue())
                         .withAdditionalClaims(Collections.emptyMap())
                         .withCoreIdentityJWT("a-core-identity");
-        var aisResult = new AccountInterventionStatus(false, false, false, false);
+        var aisResult = new AccountInterventionState(false, false, false, false);
         when(dynamoIdentityService.getIdentityCredentials(anyString()))
                 .thenReturn(Optional.of(identityCredentials));
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))

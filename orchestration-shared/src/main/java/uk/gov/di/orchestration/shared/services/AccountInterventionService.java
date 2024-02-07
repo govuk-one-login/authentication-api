@@ -4,7 +4,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionResponse;
-import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
+import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.exceptions.AccountInterventionException;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AuditService.MetadataPair;
@@ -67,12 +67,12 @@ public class AccountInterventionService {
         this.configurationService = configService;
     }
 
-    public AccountInterventionStatus getAccountStatus(String internalPairwiseSubjectId)
+    public AccountInterventionState getAccountStatus(String internalPairwiseSubjectId)
             throws AccountInterventionException {
         return getAccountStatus(internalPairwiseSubjectId, null);
     }
 
-    public AccountInterventionStatus getAccountStatus(
+    public AccountInterventionState getAccountStatus(
             String internalPairwiseSubjectId, AuditContext auditContext)
             throws AccountInterventionException {
 
@@ -102,7 +102,7 @@ public class AccountInterventionService {
     }
 
     private static AuditContext addStatusMetadata(
-            AuditContext auditContext, AccountInterventionStatus status) {
+            AuditContext auditContext, AccountInterventionState status) {
         var existingMetadataPairs = Arrays.stream(auditContext.metadataPairs());
         var statusMetadataPairs =
                 Stream.of(
@@ -126,7 +126,7 @@ public class AccountInterventionService {
                 metadataPairs);
     }
 
-    private AccountInterventionStatus handleException(Exception e) {
+    private AccountInterventionState handleException(Exception e) {
         cloudwatchMetricsService.incrementCounter(
                 "AISException", Map.of("Environment", configurationService.getEnvironment()));
         if (accountInterventionsActionEnabled && acountInterventionsAbortOnError) {
@@ -139,7 +139,7 @@ public class AccountInterventionService {
         return noInterventionResponse();
     }
 
-    private AccountInterventionStatus retrieveAccountStatus(String internalPairwiseSubjectId)
+    private AccountInterventionState retrieveAccountStatus(String internalPairwiseSubjectId)
             throws IOException, InterruptedException, Json.JsonException {
         HttpRequest request =
                 HttpRequest.newBuilder()
@@ -152,9 +152,9 @@ public class AccountInterventionService {
                         .build();
 
         HttpResponse<String> response = sendRequestToAis(request);
-        AccountInterventionStatus accountInterventionStatus = serializeResponse(response);
-        incrementCloudwatchMetrics(accountInterventionStatus);
-        return accountInterventionStatus;
+        AccountInterventionState accountInterventionState = serializeResponse(response);
+        incrementCloudwatchMetrics(accountInterventionState);
+        return accountInterventionState;
     }
 
     private HttpResponse<String> sendRequestToAis(HttpRequest request) {
@@ -182,38 +182,38 @@ public class AccountInterventionService {
         }
     }
 
-    private AccountInterventionStatus serializeResponse(HttpResponse<String> httpResponse) {
-        AccountInterventionStatus accountInterventionStatus = null;
+    private AccountInterventionState serializeResponse(HttpResponse<String> httpResponse) {
+        AccountInterventionState accountInterventionState = null;
         try {
             var response =
                     SerializationService.getInstance()
                             .readValue(httpResponse.body(), AccountInterventionResponse.class);
-            accountInterventionStatus = response.state();
+            accountInterventionState = response.state();
         } catch (Exception e) {
             logAndThrowAccountInterventionException("Failed to serialize AIS response body.");
         }
-        if (Objects.isNull(accountInterventionStatus)) {
+        if (Objects.isNull(accountInterventionState)) {
             logAndThrowAccountInterventionException("Account Intervention Status is null.");
         }
-        return accountInterventionStatus;
+        return accountInterventionState;
     }
 
-    private void incrementCloudwatchMetrics(AccountInterventionStatus accountInterventionStatus) {
+    private void incrementCloudwatchMetrics(AccountInterventionState accountInterventionState) {
         cloudwatchMetricsService.incrementCounter(
                 "AISResult",
                 Map.of(
                         "blocked",
-                        String.valueOf(accountInterventionStatus.blocked()),
+                        String.valueOf(accountInterventionState.blocked()),
                         "suspended",
-                        String.valueOf(accountInterventionStatus.suspended()),
+                        String.valueOf(accountInterventionState.suspended()),
                         "resetPassword",
-                        String.valueOf(accountInterventionStatus.resetPassword()),
+                        String.valueOf(accountInterventionState.resetPassword()),
                         "reproveIdentity",
-                        String.valueOf(accountInterventionStatus.reproveIdentity())));
+                        String.valueOf(accountInterventionState.reproveIdentity())));
     }
 
-    private static AccountInterventionStatus noInterventionResponse() {
-        return new AccountInterventionStatus(false, false, false, false);
+    private static AccountInterventionState noInterventionResponse() {
+        return new AccountInterventionState(false, false, false, false);
     }
 
     private void logAndThrowAccountInterventionException(String message) {

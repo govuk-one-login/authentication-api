@@ -156,6 +156,10 @@ class AuthenticationCallbackHandlerTest {
 
         when(authorizationService.validateRequest(any(), any())).thenReturn(true);
         when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+        AccountInterventionState accountStatus =
+                new AccountInterventionState(false, false, false, false);
+        when(accountInterventionService.getAccountStatus(anyString(), any()))
+                .thenReturn(accountStatus);
 
         when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class))).thenReturn(USER_INFO);
 
@@ -333,8 +337,8 @@ class AuthenticationCallbackHandlerTest {
 
             @Test
             void shouldRedirectToRpWhenAccountStatusIsNoIntervention() {
-                AccountInterventionStatus accountStatus =
-                        new AccountInterventionStatus(false, false, false, false);
+                AccountInterventionState accountStatus =
+                        new AccountInterventionState(false, false, false, false);
                 when(accountInterventionService.getAccountStatus(anyString(), any()))
                         .thenReturn(accountStatus);
 
@@ -357,8 +361,8 @@ class AuthenticationCallbackHandlerTest {
 
             @Test
             void shouldLogoutWhenAccountStatusIsBlocked() {
-                AccountInterventionStatus accountStatus =
-                        new AccountInterventionStatus(true, false, false, false);
+                AccountInterventionState accountStatus =
+                        new AccountInterventionState(true, false, false, false);
                 when(accountInterventionService.getAccountStatus(anyString(), any()))
                         .thenReturn(accountStatus);
 
@@ -378,8 +382,8 @@ class AuthenticationCallbackHandlerTest {
 
             @Test
             void shouldLogoutWhenAccountStatusIsSuspendedNoAction() {
-                AccountInterventionStatus accountStatus =
-                        new AccountInterventionStatus(false, true, false, false);
+                AccountInterventionState accountStatus =
+                        new AccountInterventionState(false, true, false, false);
                 when(accountInterventionService.getAccountStatus(anyString(), any()))
                         .thenReturn(accountStatus);
 
@@ -399,8 +403,8 @@ class AuthenticationCallbackHandlerTest {
 
             @Test
             void shouldLogoutWhenAccountStatusIsSuspendedResetPassword() {
-                AccountInterventionStatus accountStatus =
-                        new AccountInterventionStatus(false, true, false, true);
+                AccountInterventionState accountStatus =
+                        new AccountInterventionState(false, true, false, true);
                 when(accountInterventionService.getAccountStatus(anyString(), any()))
                         .thenReturn(accountStatus);
 
@@ -420,8 +424,8 @@ class AuthenticationCallbackHandlerTest {
 
             @Test
             void shouldRedirectToRpWhenAccountStatusIsSuspendedReproveIdentity() {
-                AccountInterventionStatus accountStatus =
-                        new AccountInterventionStatus(false, true, true, false);
+                AccountInterventionState accountStatus =
+                        new AccountInterventionState(false, true, true, false);
                 when(accountInterventionService.getAccountStatus(anyString(), any()))
                         .thenReturn(accountStatus);
 
@@ -444,8 +448,8 @@ class AuthenticationCallbackHandlerTest {
 
             @Test
             void shouldLogoutWhenAccountStatusIsSuspendedResetPasswordReproveIdentity() {
-                AccountInterventionStatus accountStatus =
-                        new AccountInterventionStatus(false, true, true, true);
+                AccountInterventionState accountStatus =
+                        new AccountInterventionState(false, true, true, true);
                 when(accountInterventionService.getAccountStatus(anyString(), any()))
                         .thenReturn(accountStatus);
 
@@ -478,8 +482,7 @@ class AuthenticationCallbackHandlerTest {
                 boolean reproveIdentity = true;
                 when(accountInterventionService.getAccountStatus(anyString(), any()))
                         .thenReturn(
-                                new AccountInterventionStatus(
-                                        false, false, reproveIdentity, false));
+                                new AccountInterventionState(false, false, reproveIdentity, false));
 
                 var event = new APIGatewayProxyRequestEvent();
                 setValidHeadersAndQueryParameters(event);
@@ -503,8 +506,8 @@ class AuthenticationCallbackHandlerTest {
 
             @Test
             void shouldLogoutWhenAccountStatusIsBlocked() {
-                AccountInterventionStatus aisStatus =
-                        new AccountInterventionStatus(true, false, false, false);
+                AccountInterventionState aisStatus =
+                        new AccountInterventionState(true, false, false, false);
                 when(accountInterventionService.getAccountStatus(anyString(), any()))
                         .thenReturn(aisStatus);
 
@@ -523,7 +526,7 @@ class AuthenticationCallbackHandlerTest {
                 boolean reproveIdentity = false;
                 when(accountInterventionService.getAccountStatus(anyString(), any()))
                         .thenReturn(
-                                new AccountInterventionStatus(false, true, reproveIdentity, false));
+                                new AccountInterventionState(false, true, reproveIdentity, false));
 
                 var event = new APIGatewayProxyRequestEvent();
                 setValidHeadersAndQueryParameters(event);
@@ -547,8 +550,8 @@ class AuthenticationCallbackHandlerTest {
 
             @Test
             void shouldLogoutWhenAccountStatusIsSuspendedResetPassword() {
-                AccountInterventionStatus aisStatus =
-                        new AccountInterventionStatus(false, true, false, true);
+                AccountInterventionState aisStatus =
+                        new AccountInterventionState(false, true, false, true);
                 when(accountInterventionService.getAccountStatus(anyString(), any()))
                         .thenReturn(aisStatus);
 
@@ -567,7 +570,7 @@ class AuthenticationCallbackHandlerTest {
                 boolean reproveIdentity = true;
                 when(accountInterventionService.getAccountStatus(anyString(), any()))
                         .thenReturn(
-                                new AccountInterventionStatus(false, true, reproveIdentity, false));
+                                new AccountInterventionState(false, true, reproveIdentity, false));
 
                 var event = new APIGatewayProxyRequestEvent();
                 setValidHeadersAndQueryParameters(event);
@@ -591,8 +594,8 @@ class AuthenticationCallbackHandlerTest {
 
             @Test
             void shouldLogoutWhenAccountStatusIsSuspendedResetPasswordAndReproveIdentity() {
-                AccountInterventionStatus aisStatus =
-                        new AccountInterventionStatus(false, true, true, true);
+                AccountInterventionState aisStatus =
+                        new AccountInterventionState(false, true, true, true);
                 when(accountInterventionService.getAccountStatus(anyString(), any()))
                         .thenReturn(aisStatus);
 

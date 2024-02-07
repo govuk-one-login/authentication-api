@@ -25,7 +25,7 @@ import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.entity.IpvCallbackException;
 import uk.gov.di.authentication.ipv.entity.LogIds;
 import uk.gov.di.orchestration.audit.AuditContext;
-import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
+import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
@@ -154,7 +154,7 @@ class IPVCallbackHelperTest {
                                 "false",
                                 "reproveIdentity",
                                 "false"),
-                        new AccountInterventionStatus(false, false, false, false)),
+                        new AccountInterventionState(false, false, false, false)),
                 Arguments.of(
                         INTERNAL_PAIRWISE_ID_WITH_INTERVENTION,
                         Map.of(
@@ -166,7 +166,7 @@ class IPVCallbackHelperTest {
                                 "false",
                                 "reproveIdentity",
                                 "false"),
-                        new AccountInterventionStatus(false, true, false, false)));
+                        new AccountInterventionState(false, true, false, false)));
     }
 
     private static Stream<Arguments> validUserIdentities() {
@@ -192,10 +192,10 @@ class IPVCallbackHelperTest {
                         sessionService,
                         sqsClient);
         when(accountInterventionService.getAccountStatus(INTERNAL_PAIRWISE_ID, auditContext))
-                .thenReturn(new AccountInterventionStatus(false, false, false, false));
+                .thenReturn(new AccountInterventionState(false, false, false, false));
         when(accountInterventionService.getAccountStatus(
                         INTERNAL_PAIRWISE_ID_WITH_INTERVENTION, auditContext))
-                .thenReturn(new AccountInterventionStatus(false, true, false, false));
+                .thenReturn(new AccountInterventionState(false, true, false, false));
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
                         anyString(), anyString(), any(ClientSession.class)))
                 .thenReturn(AUTH_CODE);
@@ -242,7 +242,7 @@ class IPVCallbackHelperTest {
     void shouldReturnAccountInterventionStatus(
             String internalPairwiseId,
             Map<String, String> expectedIncrementCounterMap,
-            AccountInterventionStatus expectedAISResult) {
+            AccountInterventionState expectedAISResult) {
         var response = helper.getAccountInterventionStatus(internalPairwiseId, auditContext);
 
         verify(accountInterventionService).getAccountStatus(internalPairwiseId, auditContext);

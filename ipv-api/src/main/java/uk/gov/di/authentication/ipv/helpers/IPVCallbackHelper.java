@@ -16,7 +16,7 @@ import uk.gov.di.authentication.ipv.entity.LogIds;
 import uk.gov.di.authentication.ipv.entity.SPOTClaims;
 import uk.gov.di.authentication.ipv.entity.SPOTRequest;
 import uk.gov.di.orchestration.audit.AuditContext;
-import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
+import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.IdentityClaims;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
@@ -148,7 +148,7 @@ public class IPVCallbackHelper {
                 302, "", Map.of(ResponseHeaders.LOCATION, errorResponse.toURI().toString()), null);
     }
 
-    public AccountInterventionStatus getAccountInterventionStatus(
+    public AccountInterventionState getAccountInterventionStatus(
             String internalPairwiseSubjectId, AuditContext auditContext) {
         var accountInterventionStatus =
                 segmentedFunctionCall(
@@ -170,13 +170,13 @@ public class IPVCallbackHelper {
         return accountInterventionStatus;
     }
 
-    public void doAccountIntervention(AccountInterventionStatus accountInterventionStatus) {
-        if (accountInterventionStatus.blocked()) {
+    public void doAccountIntervention(AccountInterventionState accountInterventionState) {
+        if (accountInterventionState.blocked()) {
             LOG.info("Account is blocked");
             // TODO: (ATO-171) back channel logout + (ATO-170) redirect to blocked page
-        } else if (accountInterventionStatus.suspended()
-                || accountInterventionStatus.resetPassword()
-                || accountInterventionStatus.reproveIdentity()) {
+        } else if (accountInterventionState.suspended()
+                || accountInterventionState.resetPassword()
+                || accountInterventionState.reproveIdentity()) {
             LOG.info(
                     "Account is suspended, requires a password reset, or requires identity to be reproved");
             // TODO: (ATO-171) back channel logout + (ATO-170) redirect to suspended

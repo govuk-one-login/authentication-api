@@ -7,7 +7,7 @@ import org.apache.http.client.utils.URIBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
-import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
+import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.ConstructUriHelper;
@@ -71,9 +71,9 @@ public class LogoutService {
             APIGatewayProxyRequestEvent input,
             Optional<String> clientId,
             Optional<String> sessionId,
-            AccountInterventionStatus accountStatus) {
+            AccountInterventionState accountState) {
         destroySessions(session);
-        return generateAccountInterventionLogoutResponse(input, clientId, sessionId, accountStatus);
+        return generateAccountInterventionLogoutResponse(input, clientId, sessionId, accountState);
     }
 
     public void destroySessions(Session session) {
@@ -172,7 +172,7 @@ public class LogoutService {
             APIGatewayProxyRequestEvent input,
             Optional<String> clientId,
             Optional<String> sessionId,
-            AccountInterventionStatus accountStatus) {
+            AccountInterventionState accountState) {
         String baseRedirectUrl;
         String redirectPath;
         // Temporarily redirect to auth frontend (in staging and production) instead of orch
@@ -180,10 +180,10 @@ public class LogoutService {
         String env = configurationService.getEnvironment();
         if (env.equals("staging") || env.equals("production")) {
             baseRedirectUrl = configurationService.getFrontendBaseUrl();
-            if (accountStatus.blocked()) {
+            if (accountState.blocked()) {
                 redirectPath = "/unavailable-permanent";
                 LOG.info("Generating Account Intervention blocked logout response");
-            } else if (accountStatus.suspended()) {
+            } else if (accountState.suspended()) {
                 redirectPath = "/unavailable-temporary";
                 LOG.info("Generating Account Intervention suspended logout response");
             } else {
@@ -191,10 +191,10 @@ public class LogoutService {
             }
         } else {
             baseRedirectUrl = configurationService.getOidcApiBaseURL().orElseThrow();
-            if (accountStatus.blocked()) {
+            if (accountState.blocked()) {
                 redirectPath = configurationService.getAccountStatusBlockedURI();
                 LOG.info("Generating Account Intervention blocked logout response");
-            } else if (accountStatus.suspended()) {
+            } else if (accountState.suspended()) {
                 redirectPath = configurationService.getAccountStatusSuspendedURI();
                 LOG.info("Generating Account Intervention suspended logout response");
             } else {
@@ -202,9 +202,7 @@ public class LogoutService {
             }
         }
         sessionId.ifPresent(
-                t ->
-                        cloudwatchMetricsService.incrementLogout(
-                                clientId, Optional.of(accountStatus)));
+                t -> cloudwatchMetricsService.incrementLogout(clientId, Optional.of(accountState)));
         return generateLogoutResponse(
                 ConstructUriHelper.buildURI(baseRedirectUrl, redirectPath),
                 Optional.empty(),

@@ -40,7 +40,7 @@ import uk.gov.di.authentication.ipv.helpers.IPVCallbackHelper;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.ipv.services.IPVTokenService;
 import uk.gov.di.orchestration.audit.AuditContext;
-import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
+import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
@@ -260,7 +260,7 @@ class IPVCallbackHandlerTest {
         when(cookieHelper.parseSessionCookie(anyMap())).thenCallRealMethod();
         when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(salt);
         when(ipvCallbackHelper.getAccountInterventionStatus(any(), any()))
-                .thenReturn(new AccountInterventionStatus(false, false, false, false));
+                .thenReturn(new AccountInterventionState(false, false, false, false));
         when(ipvCallbackHelper.generateAuthenticationErrorResponse(
                         any(), any(), anyBoolean(), anyString(), anyString()))
                 .thenReturn(
