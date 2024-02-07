@@ -5,10 +5,8 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 public class ClientSession {
 
@@ -46,8 +44,8 @@ public class ClientSession {
         this.authRequestParams = authRequestParams;
         this.creationDate = creationDate;
         this.vtrList = vtrList;
-        if (vtrList.size() > 0) {
-            this.effectiveVectorOfTrust = getVtrWithLowestCredentialTrustLevel();
+        if (!vtrList.isEmpty()) {
+            this.effectiveVectorOfTrust = VectorOfTrust.orderVtrList(vtrList).get(0);
         }
         this.clientName = clientName;
     }
@@ -79,14 +77,6 @@ public class ClientSession {
         return this;
     }
 
-    public VectorOfTrust getVtrWithLowestCredentialTrustLevel() {
-        List<VectorOfTrust> orderedVtrList = orderVtrList();
-        if (orderedVtrList.isEmpty()) {
-            throw new IllegalArgumentException("Invalid VTR attribute");
-        }
-        return orderedVtrList.get(0);
-    }
-
     public Subject getDocAppSubjectId() {
         return docAppSubjectId;
     }
@@ -101,7 +91,7 @@ public class ClientSession {
     }
 
     public String getVtrLocsAsCommaSeparatedString() {
-        List<VectorOfTrust> orderedVtrList = orderVtrList();
+        List<VectorOfTrust> orderedVtrList = VectorOfTrust.orderVtrList(this.vtrList);
         StringBuilder strBuilder = new StringBuilder();
         for (VectorOfTrust vtr : orderedVtrList) {
             String loc =
@@ -110,22 +100,10 @@ public class ClientSession {
                             : LevelOfConfidence.NONE.getValue();
             strBuilder.append(loc).append(",");
         }
-        if (strBuilder.length() > 0) {
+        if (!strBuilder.isEmpty()) {
             strBuilder.setLength(strBuilder.length() - 1);
             return strBuilder.toString();
         }
         return "";
-    }
-
-    private List<VectorOfTrust> orderVtrList() {
-        return this.vtrList.stream()
-                .sorted(
-                        Comparator.comparing(
-                                        VectorOfTrust::getLevelOfConfidence,
-                                        Comparator.nullsFirst(Comparator.naturalOrder()))
-                                .thenComparing(
-                                        VectorOfTrust::getCredentialTrustLevel,
-                                        Comparator.nullsFirst(Comparator.naturalOrder())))
-                .collect(Collectors.toList());
     }
 }

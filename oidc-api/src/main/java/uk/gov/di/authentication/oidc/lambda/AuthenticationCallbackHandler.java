@@ -379,15 +379,13 @@ public class AuthenticationCallbackHandler
 
                 LOG.info("Redirecting to: {} with state: {}", clientRedirectURI, state);
 
-                VectorOfTrust requestedVectorOfTrust =
-                        clientSession.getVtrWithLowestCredentialTrustLevel();
+                CredentialTrustLevel lowestRequestedCredentialTrustLevel =
+                        VectorOfTrust.getLowestCredentialTrustLevel(clientSession.getVtrList());
                 if (isNull(userSession.getCurrentCredentialStrength())
-                        || requestedVectorOfTrust
-                                        .getCredentialTrustLevel()
-                                        .compareTo(userSession.getCurrentCredentialStrength())
+                        || lowestRequestedCredentialTrustLevel.compareTo(
+                                        userSession.getCurrentCredentialStrength())
                                 > 0) {
-                    userSession.setCurrentCredentialStrength(
-                            requestedVectorOfTrust.getCredentialTrustLevel());
+                    userSession.setCurrentCredentialStrength(lowestRequestedCredentialTrustLevel);
                 }
 
                 var authCode =
@@ -486,11 +484,15 @@ public class AuthenticationCallbackHandler
             LOG.info(
                     "No mfa method to set. User is either authenticated or signing in from a low level service");
         }
-        VectorOfTrust vtr = clientSession.getVtrWithLowestCredentialTrustLevel();
-        var mfaRequired = !vtr.getCredentialTrustLevel().equals(CredentialTrustLevel.LOW_LEVEL);
+        var orderedVtrList = VectorOfTrust.orderVtrList(clientSession.getVtrList());
+        var mfaRequired =
+                !orderedVtrList
+                        .get(0)
+                        .getCredentialTrustLevel()
+                        .equals(CredentialTrustLevel.LOW_LEVEL);
         var levelOfConfidence = LevelOfConfidence.NONE.getValue();
-        if (vtr.containsLevelOfConfidence()) {
-            levelOfConfidence = vtr.getLevelOfConfidence().getValue();
+        if (orderedVtrList.get(0).containsLevelOfConfidence()) {
+            levelOfConfidence = orderedVtrList.get(0).getLevelOfConfidence().getValue();
         }
         dimensions.put("MfaRequired", mfaRequired ? "Yes" : "No");
         dimensions.put("RequestedLevelOfConfidence", levelOfConfidence);
