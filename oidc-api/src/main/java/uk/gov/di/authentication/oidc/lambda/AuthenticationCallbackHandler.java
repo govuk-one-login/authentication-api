@@ -27,7 +27,7 @@ import uk.gov.di.authentication.oidc.services.AuthenticationTokenService;
 import uk.gov.di.authentication.oidc.services.InitiateIPVAuthorisationService;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.shared.conditions.MfaHelper;
-import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
+import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
@@ -360,8 +360,8 @@ public class AuthenticationCallbackHandler
                                         : userInfo.getPhoneNumber(),
                                 persistentSessionId);
 
-                AccountInterventionStatus accountStatus =
-                        accountInterventionService.getAccountStatus(
+                AccountInterventionState accountStatus =
+                        accountInterventionService.getAccountState(
                                 userInfo.getSubject().getValue(), auditContext);
 
                 Boolean reproveIdentity = null;

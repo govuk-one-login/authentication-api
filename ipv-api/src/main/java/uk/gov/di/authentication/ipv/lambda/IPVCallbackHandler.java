@@ -248,17 +248,17 @@ public class IPVCallbackHandler
                             persistentId);
 
             if (errorObject.isPresent()) {
-                var accountInterventionStatus =
+                var accountInterventionState =
                         segmentedFunctionCall(
-                                "AIS: getAccountStatus",
+                                "AIS: getAccountState",
                                 () ->
-                                        this.accountInterventionService.getAccountStatus(
+                                        this.accountInterventionService.getAccountState(
                                                 internalPairwiseSubjectId, auditContext));
                 if (configurationService.isAccountInterventionServiceActionEnabled()
-                        && (accountInterventionStatus.blocked()
-                                || accountInterventionStatus.suspended())) {
+                        && (accountInterventionState.blocked()
+                                || accountInterventionState.suspended())) {
                     return logoutService.handleAccountInterventionLogout(
-                            session, input, clientId, accountInterventionStatus);
+                            session, input, clientId, accountInterventionState);
                 }
 
                 return ipvCallbackHelper.generateAuthenticationErrorResponse(
@@ -339,17 +339,17 @@ public class IPVCallbackHandler
             var userIdentityError =
                     ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo, vtrList);
             if (userIdentityError.isPresent()) {
-                var accountInterventionStatus =
+                var accountInterventionState =
                         segmentedFunctionCall(
-                                "AIS: getAccountStatus",
+                                "AIS: getAccountState",
                                 () ->
-                                        this.accountInterventionService.getAccountStatus(
+                                        this.accountInterventionService.getAccountState(
                                                 internalPairwiseSubjectId, auditContext));
                 if (configurationService.isAccountInterventionServiceActionEnabled()
-                        && (accountInterventionStatus.blocked()
-                                || accountInterventionStatus.suspended())) {
+                        && (accountInterventionState.blocked()
+                                || accountInterventionState.suspended())) {
                     return logoutService.handleAccountInterventionLogout(
-                            session, input, clientId, accountInterventionStatus);
+                            session, input, clientId, accountInterventionState);
                 }
 
                 var returnCode = userIdentityUserInfo.getClaim(RETURN_CODE.getValue());

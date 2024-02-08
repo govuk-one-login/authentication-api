@@ -40,7 +40,7 @@ import uk.gov.di.authentication.ipv.helpers.IPVCallbackHelper;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.ipv.services.IPVTokenService;
 import uk.gov.di.orchestration.audit.AuditContext;
-import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
+import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
@@ -269,8 +269,8 @@ class IPVCallbackHandlerTest {
         when(context.getAwsRequestId()).thenReturn(REQUEST_ID);
         when(cookieHelper.parseSessionCookie(anyMap())).thenCallRealMethod();
         when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(salt);
-        when(accountInterventionService.getAccountStatus(any(), any()))
-                .thenReturn(new AccountInterventionStatus(false, false, false, false));
+        when(accountInterventionService.getAccountState(any(), any()))
+                .thenReturn(new AccountInterventionState(false, false, false, false));
         when(ipvCallbackHelper.generateAuthenticationErrorResponse(
                         any(), any(), anyBoolean(), anyString(), anyString()))
                 .thenReturn(
@@ -331,7 +331,7 @@ class IPVCallbackHandlerTest {
                                 userProfile, configService.getInternalSectorUri(), dynamoService)
                         .getValue();
         verify(accountInterventionService)
-                .getAccountStatus(eq(expectedInternalPairwiseSubjectId), any(AuditContext.class));
+                .getAccountState(eq(expectedInternalPairwiseSubjectId), any(AuditContext.class));
     }
 
     @ParameterizedTest
@@ -678,7 +678,7 @@ class IPVCallbackHandlerTest {
         assertEquals(
                 accessDeniedURI.toString(), response.getHeaders().get(ResponseHeaders.LOCATION));
         verify(accountInterventionService)
-                .getAccountStatus(eq(expectedInternalPairwiseSubjectId), any(AuditContext.class));
+                .getAccountState(eq(expectedInternalPairwiseSubjectId), any(AuditContext.class));
 
         verifyNoInteractions(ipvTokenService);
         verifyNoInteractions(dynamoIdentityService);

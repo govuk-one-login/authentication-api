@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatcher;
 import org.mockito.MockedStatic;
 import uk.gov.di.orchestration.shared.domain.LogoutAuditableEvent;
-import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
+import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
@@ -265,7 +265,7 @@ public class LogoutServiceTest {
 
     @Test
     void destroysSessionsAndReturnsAccountInterventionLogoutResponseWhenAccountIsBlocked() {
-        var accountStatus = new AccountInterventionStatus(true, false, false, false);
+        var accountStatus = new AccountInterventionState(true, false, false, false);
         APIGatewayProxyResponseEvent response =
                 logoutService.handleAccountInterventionLogout(
                         session, event, CLIENT_ID, accountStatus);
@@ -295,7 +295,7 @@ public class LogoutServiceTest {
 
     @Test
     void destroysSessionsAndReturnsAccountInterventionLogoutResponseWhenAccountIsSuspended() {
-        var accountStatus = new AccountInterventionStatus(false, true, false, false);
+        var accountStatus = new AccountInterventionState(false, true, false, false);
         APIGatewayProxyResponseEvent response =
                 logoutService.handleAccountInterventionLogout(
                         session, event, CLIENT_ID, accountStatus);
@@ -371,8 +371,7 @@ public class LogoutServiceTest {
 
     @Test
     void throwsWhenGenerateAccountInterventionLogoutResponseCalledInappropriately() {
-        AccountInterventionStatus status =
-                new AccountInterventionStatus(false, false, false, false);
+        AccountInterventionState status = new AccountInterventionState(false, false, false, false);
 
         RuntimeException exception =
                 assertThrows(

@@ -7,7 +7,7 @@ import org.apache.http.client.utils.URIBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.shared.domain.LogoutAuditableEvent;
-import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
+import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
@@ -63,7 +63,7 @@ public class LogoutService {
             Session session,
             APIGatewayProxyRequestEvent input,
             String clientId,
-            AccountInterventionStatus accountStatus) {
+            AccountInterventionState accountStatus) {
         destroySessions(session);
         return generateAccountInterventionLogoutResponse(
                 input, clientId, session.getSessionId(), accountStatus);

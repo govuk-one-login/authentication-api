@@ -92,7 +92,7 @@ class AccountInterventionServiceTest {
         when(httpClient.send(any(), any())).thenReturn(httpResponse);
         when(httpResponse.body()).thenReturn(ACCOUNT_INTERVENTION_SERVICE_RESPONSE_SUSPEND_REPROVE);
 
-        ais.getAccountStatus(internalPairwiseSubjectId);
+        ais.getAccountState(internalPairwiseSubjectId);
 
         verify(httpClient).send(httpRequestCaptor.capture(), any());
         var requestUri = httpRequestCaptor.getValue();
@@ -114,7 +114,7 @@ class AccountInterventionServiceTest {
         when(httpResponse.body()).thenReturn(ACCOUNT_INTERVENTION_SERVICE_RESPONSE_SUSPEND_REPROVE);
         when(httpResponse.statusCode()).thenReturn(200);
 
-        var status = accountInterventionService.getAccountStatus(internalPairwiseSubjectId);
+        var status = accountInterventionService.getAccountState(internalPairwiseSubjectId);
 
         assertFalse(status.blocked());
         assertTrue(status.suspended());
@@ -140,7 +140,7 @@ class AccountInterventionServiceTest {
         var ais =
                 new AccountInterventionService(
                         config, httpClient, cloudwatchMetricsService, auditService);
-        var status = ais.getAccountStatus(internalPairwiseSubjectId);
+        var status = ais.getAccountState(internalPairwiseSubjectId);
 
         verifyNoInteractions(httpClient);
 
@@ -166,7 +166,7 @@ class AccountInterventionServiceTest {
         when(httpClient.send(any(), any())).thenThrow(new IOException("Test IO Exception"));
 
         assertDoesNotThrow(
-                () -> accountInterventionService.getAccountStatus(internalPairwiseSubjectId));
+                () -> accountInterventionService.getAccountState(internalPairwiseSubjectId));
     }
 
     @Test
@@ -186,7 +186,7 @@ class AccountInterventionServiceTest {
 
         assertThrows(
                 AccountInterventionException.class,
-                () -> accountInterventionService.getAccountStatus(internalPairwiseSubjectId));
+                () -> accountInterventionService.getAccountState(internalPairwiseSubjectId));
 
         verify(cloudwatchMetricsService)
                 .incrementCounter("AISException", Map.of("Environment", ENVIRONMENT));
@@ -210,7 +210,7 @@ class AccountInterventionServiceTest {
         when(httpResponse.body()).thenReturn(ACCOUNT_INTERVENTION_SERVICE_RESPONSE_SUSPEND_REPROVE);
         when(httpResponse.statusCode()).thenReturn(200);
 
-        accountInterventionService.getAccountStatus(internalPairwiseSubjectId, someAuditContext);
+        accountInterventionService.getAccountState(internalPairwiseSubjectId, someAuditContext);
 
         var expectedAuditContext =
                 new AuditContext(
@@ -246,7 +246,7 @@ class AccountInterventionServiceTest {
         when(httpClient.send(any(), any())).thenReturn(httpResponse);
         when(httpResponse.body()).thenReturn(ACCOUNT_INTERVENTION_SERVICE_RESPONSE_SUSPEND_REPROVE);
 
-        accountInterventionService.getAccountStatus(internalPairwiseSubjectId, someAuditContext);
+        accountInterventionService.getAccountState(internalPairwiseSubjectId, someAuditContext);
 
         verifyNoInteractions(auditService);
     }
@@ -269,7 +269,7 @@ class AccountInterventionServiceTest {
 
         assertThrows(
                 AccountInterventionException.class,
-                () -> accountInterventionService.getAccountStatus(internalPairwiseSubjectId, null));
+                () -> accountInterventionService.getAccountState(internalPairwiseSubjectId, null));
     }
 
     private void assertMatchingAuditContext(AuditContext expected, AuditContext actual) {
