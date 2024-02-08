@@ -411,9 +411,7 @@ public class AuthorisationHandler
                 persistentSessionId);
 
         URI authorisationRequestUri = authorisationRequest.toURI();
-        LOG.info(
-                "DocAppAuthorizeHandler successfully processed request, redirect URI {}",
-                authorisationRequestUri);
+        LOG.info("Successfully processed request, redirect URI {}", authorisationRequestUri);
 
         cloudwatchMetricsService.incrementCounter(
                 "DocAppHandoff", Map.of("Environment", configurationService.getEnvironment()));
