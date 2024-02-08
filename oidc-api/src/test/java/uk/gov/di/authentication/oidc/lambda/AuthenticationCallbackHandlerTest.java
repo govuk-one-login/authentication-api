@@ -158,6 +158,8 @@ class AuthenticationCallbackHandlerTest {
 
         when(authorizationService.validateRequest(any(), any())).thenReturn(true);
         when(tokenService.sendTokenRequest(any())).thenReturn(SUCCESSFUL_TOKEN_RESPONSE);
+        when(accountInterventionService.getAccountState(anyString(), any()))
+                .thenReturn(new AccountInterventionState(false, false, false, false));
 
         when(tokenService.sendUserInfoDataRequest(any(HTTPRequest.class))).thenReturn(USER_INFO);
 

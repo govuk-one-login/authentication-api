@@ -28,6 +28,7 @@ import uk.gov.di.authentication.oidc.services.InitiateIPVAuthorisationService;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.shared.conditions.MfaHelper;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
+import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
@@ -360,28 +361,24 @@ public class AuthenticationCallbackHandler
                                         : userInfo.getPhoneNumber(),
                                 persistentSessionId);
 
-                AccountInterventionState accountStatus =
+                AccountInterventionState accountInterventionState =
                         accountInterventionService.getAccountState(
                                 userInfo.getSubject().getValue(), auditContext);
+                AccountInterventionStatus accountStatus = accountInterventionState.getStatus();
 
                 Boolean reproveIdentity = null;
                 if (configurationService.isAccountInterventionServiceActionEnabled()) {
-                    reproveIdentity = accountStatus.reproveIdentity();
-                    if (identityRequired) {
-                        if (accountStatus.blocked() || accountStatus.resetPassword()) {
-                            return logoutService.handleAccountInterventionLogout(
-                                    userSession, input, clientId, accountStatus);
-                        }
-                    } else {
-                        if (accountStatus.blocked() || accountStatus.suspended()) {
-                            // Handle case that there is no identity reproving on auth-only journey
-                            if (!(accountStatus.suspended()
-                                    && accountStatus.reproveIdentity()
-                                    && !accountStatus.resetPassword())) {
-                                return logoutService.handleAccountInterventionLogout(
-                                        userSession, input, clientId, accountStatus);
-                            }
-                        }
+                    reproveIdentity = accountInterventionState.reproveIdentity();
+                    if (accountStatus.equals(AccountInterventionStatus.BLOCKED)
+                            || accountStatus.equals(
+                                    AccountInterventionStatus.SUSPENDED_RESET_PASSWORD)
+                            || accountStatus.equals(
+                                    AccountInterventionStatus.SUSPENDED_RESET_PASSWORD_REPROVE_ID)
+                            || (!identityRequired
+                                    && accountStatus.equals(
+                                            AccountInterventionStatus.SUSPENDED_NO_ACTION))) {
+                        return logoutService.handleAccountInterventionLogout(
+                                userSession, input, clientId, accountInterventionState);
                     }
                 }
 
