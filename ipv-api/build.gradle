@@ -28,7 +28,8 @@ dependencies {
             configurations.lambda,
             configurations.sqs,
             configurations.kms,
-            configurations.dynamodb
+            configurations.dynamodb,
+            configurations.pact_consumer
 
     testRuntimeOnly configurations.test_runtime
 }
@@ -36,6 +37,7 @@ dependencies {
 test {
     useJUnitPlatform()
     environment "TRACING_ENABLED", "false"
+    systemProperties['pact.rootDir'] = "$rootDir/ipv-api/src/test/pact"
 }
 
 task buildZip(type: Zip) {
