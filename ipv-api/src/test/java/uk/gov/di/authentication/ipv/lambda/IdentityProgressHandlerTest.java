@@ -34,6 +34,7 @@ import uk.gov.di.orchestration.shared.services.SessionService;
 import java.net.URI;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -278,7 +279,7 @@ public class IdentityProgressHandlerTest {
                         .build();
 
         return new ClientSession(
-                authRequest.toParameters(), null, mock(VectorOfTrust.class), CLIENT_NAME);
+                authRequest.toParameters(), null, List.of(mock(VectorOfTrust.class)), CLIENT_NAME);
     }
 
     private void usingValidSession() {

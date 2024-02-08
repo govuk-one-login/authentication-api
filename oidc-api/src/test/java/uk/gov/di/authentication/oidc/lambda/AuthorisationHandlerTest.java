@@ -63,6 +63,7 @@ import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
+import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.DocAppSubjectIdHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.services.AuditService;
@@ -216,8 +217,7 @@ class AuthorisationHandlerTest {
                 .thenReturn(Optional.empty());
         when(orchestrationAuthorizationService.getExistingOrCreateNewPersistentSessionId(any()))
                 .thenReturn(EXPECTED_PERSISTENT_COOKIE_VALUE_WITH_TIMESTAMP);
-        when(orchestrationAuthorizationService.getEffectiveVectorOfTrust(any()))
-                .thenCallRealMethod();
+        when(orchestrationAuthorizationService.getVtrList(any())).thenCallRealMethod();
         when(userContext.getClient()).thenReturn(Optional.of(generateClientRegistry()));
         when(context.getAwsRequestId()).thenReturn(AWS_REQUEST_ID);
         handler =
@@ -237,7 +237,8 @@ class AuthorisationHandlerTest {
         session = new Session("a-session-id");
         when(sessionService.createSession()).thenReturn(session);
         when(clientSessionService.generateClientSessionId()).thenReturn(CLIENT_SESSION_ID);
-        when(clientSessionService.generateClientSession(any(), any(), any(), any()))
+        when(clientSessionService.generateClientSession(
+                        any(), any(), (List<VectorOfTrust>) any(), any()))
                 .thenReturn(clientSession);
         when(clientSession.getDocAppSubjectId()).thenReturn(new Subject("test-subject-id"));
         when(clientService.getClient(anyString()))

@@ -883,7 +883,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                 LevelOfConfidence.MEDIUM_LEVEL.getValue()
                         + "."
                         + CredentialTrustLevel.MEDIUM_LEVEL.getValue();
-        VectorOfTrust vot =
+        List<VectorOfTrust> vtrList =
                 VectorOfTrust.parseFromAuthRequestAttribute(Arrays.asList("[\"" + vtrStr + "\"]"));
 
         var authRequestBuilder =
@@ -896,7 +896,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                 new ClientSession(
                                 authRequestBuilder.build().toParameters(),
                                 LocalDateTime.now(),
-                                vot,
+                                vtrList,
                                 CLIENT_NAME)
                         .setEffectiveVectorOfTrust(
                                 VectorOfTrust.of(

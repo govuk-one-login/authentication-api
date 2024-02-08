@@ -82,6 +82,7 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
+import static java.util.Collections.EMPTY_LIST;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -177,12 +178,12 @@ class IPVCallbackHandlerTest {
 
     private final ClientSession clientSession =
             new ClientSession(
-                            generateAuthRequest(new OIDCClaimsRequest()).toParameters(),
-                            null,
+                    generateAuthRequest(new OIDCClaimsRequest()).toParameters(),
+                    null,
+                    List.of(
                             new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL),
-                            CLIENT_NAME)
-                    .setEffectiveVectorOfTrust(
-                            new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL));
+                            new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL)),
+                    CLIENT_NAME);
 
     private final Json objectMapper = SerializationService.getInstance();
 
@@ -360,12 +361,12 @@ class IPVCallbackHandlerTest {
                                 REDIRECT_URI, null, null, null, null, null, null));
         var clientSession =
                 new ClientSession(
-                                generateAuthRequest(claimsRequest).toParameters(),
-                                null,
+                        generateAuthRequest(claimsRequest).toParameters(),
+                        null,
+                        List.of(
                                 new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL),
-                                CLIENT_NAME)
-                        .setEffectiveVectorOfTrust(
-                                new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL));
+                                new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL)),
+                        CLIENT_NAME);
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(clientSession));
 
@@ -418,7 +419,7 @@ class IPVCallbackHandlerTest {
                 new ClientSession(
                         generateAuthRequest(claimsRequest).toParameters(),
                         null,
-                        (VectorOfTrust) null,
+                        (List<VectorOfTrust>) EMPTY_LIST,
                         CLIENT_NAME);
 
         when(responseService.validateResponse(anyMap(), anyString())).thenReturn(Optional.empty());

@@ -54,7 +54,15 @@ public class ClientSessionService {
             VectorOfTrust effectiveVectorOfTrust,
             String clientName) {
         return new ClientSession(
-                authRequestParams, creationDate, effectiveVectorOfTrust, clientName);
+                authRequestParams, creationDate, List.of(effectiveVectorOfTrust), clientName);
+    }
+
+    public ClientSession generateClientSession(
+            Map<String, List<String>> authRequestParams,
+            LocalDateTime creationDate,
+            List<VectorOfTrust> vtrList,
+            String clientName) {
+        return new ClientSession(authRequestParams, creationDate, vtrList, clientName);
     }
 
     public void storeClientSession(String clientSessionId, ClientSession clientSession) {

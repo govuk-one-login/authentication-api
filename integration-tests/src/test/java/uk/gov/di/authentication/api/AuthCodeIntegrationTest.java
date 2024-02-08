@@ -101,7 +101,7 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 new ClientSession(
                         authRequestParams,
                         LocalDateTime.now(ZoneId.of("UTC")),
-                        VectorOfTrust.getDefaults(),
+                        List.of(VectorOfTrust.getDefaults()),
                         CLIENT_NAME);
         clientSession.setDocAppSubjectId(new Subject());
         redis.addAuthRequestToSession(clientSessionId, sessionID, authRequestParams, CLIENT_NAME);
