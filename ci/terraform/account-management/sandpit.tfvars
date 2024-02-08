@@ -15,3 +15,5 @@ lambda_min_concurrency = 0
 blocked_email_duration                    = 30
 otp_code_ttl_duration                     = 120
 email_acct_creation_otp_code_ttl_duration = 60
+
+support_email_check_enabled = true

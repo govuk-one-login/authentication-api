@@ -5,6 +5,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
@@ -12,9 +13,12 @@ import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
+import uk.gov.di.authentication.shared.domain.RequestHeaders;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.AuditService;
@@ -24,8 +28,10 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
+import java.util.Date;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -59,7 +65,8 @@ class SendOtpNotificationHandlerTest {
 
     private final Json objectMapper = SerializationService.getInstance();
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final AwsSqsClient awsSqsClient = mock(AwsSqsClient.class);
+    private final AwsSqsClient emailSqsClient = mock(AwsSqsClient.class);
+    private final AwsSqsClient pendingEmailCheckSqsClient = mock(AwsSqsClient.class);
     private final CodeGeneratorService codeGeneratorService = mock(CodeGeneratorService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
@@ -71,7 +78,8 @@ class SendOtpNotificationHandlerTest {
     private final SendOtpNotificationHandler handler =
             new SendOtpNotificationHandler(
                     configurationService,
-                    awsSqsClient,
+                    emailSqsClient,
+                    pendingEmailCheckSqsClient,
                     codeGeneratorService,
                     codeStorageService,
                     dynamoService,
@@ -81,6 +89,7 @@ class SendOtpNotificationHandlerTest {
     @BeforeEach
     void setup() {
         when(configurationService.getDefaultOtpCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
+        when(configurationService.isEmailCheckEnabled()).thenReturn(true);
         when(codeGeneratorService.sixDigitCode()).thenReturn(TEST_SIX_DIGIT_CODE);
         when(configurationService.getTestClientVerifyEmailOTP())
                 .thenReturn(Optional.of(TEST_CLIENT_AND_USER_SIX_DIGIT_CODE));
@@ -106,34 +115,100 @@ class SendOtpNotificationHandlerTest {
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of(PersistentIdHelper.PERSISTENT_ID_HEADER_NAME, persistentIdValue));
+        event.setHeaders(
+                Map.of(
+                        PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
+                        persistentIdValue,
+                        RequestHeaders.SESSION_ID_HEADER,
+                        "some-session-id",
+                        RequestHeaders.CLIENT_SESSION_ID_HEADER,
+                        "some-client-session-id"));
         event.setRequestContext(eventContext);
         event.setBody(
                 format(
                         "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
                         TEST_EMAIL_ADDRESS, VERIFY_EMAIL));
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
 
+        Date mockedDate = new Date();
+        UUID mockedUUID = UUID.fromString("5fc03087-d265-11e7-b8c6-83e29cd24f4c");
+        try (MockedStatic<NowHelper> mockedNowHelperClass = Mockito.mockStatic(NowHelper.class)) {
+            try (MockedStatic<UUID> mockedUUIDClass = Mockito.mockStatic(UUID.class)) {
+                mockedNowHelperClass.when(NowHelper::now).thenReturn(mockedDate);
+                mockedUUIDClass.when(UUID::randomUUID).thenReturn(mockedUUID);
+
+                APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+                assertEquals(204, result.getStatusCode());
+
+                verify(emailSqsClient).send(serialisedRequest);
+                verify(pendingEmailCheckSqsClient)
+                        .send(
+                                format(
+                                        "{\"requestReference\":\"%s\",\"emailAddress\":\"%s\",\"userSessionId\":\"%s\",\"govukSigninJourneyId\":\"%s\",\"persistentSessionId\":\"%s\",\"ipAddress\":\"%s\",\"journeyType\":\"%s\",\"timeOfInitialRequest\":\"%s\"}",
+                                        mockedUUID,
+                                        TEST_EMAIL_ADDRESS,
+                                        "some-session-id",
+                                        "some-client-session-id",
+                                        "some-persistent-session-id",
+                                        "123.123.123.123",
+                                        JourneyType.ACCOUNT_MANAGEMENT,
+                                        mockedDate.toInstant().getEpochSecond()));
+                verify(codeStorageService)
+                        .saveOtpCode(
+                                TEST_EMAIL_ADDRESS,
+                                TEST_SIX_DIGIT_CODE,
+                                CODE_EXPIRY_TIME,
+                                VERIFY_EMAIL);
+
+                verify(auditService)
+                        .submitAuditEvent(
+                                AccountManagementAuditableEvent.SEND_OTP,
+                                AuditService.UNKNOWN,
+                                AuditService.UNKNOWN,
+                                AuditService.UNKNOWN,
+                                AuditService.UNKNOWN,
+                                TEST_EMAIL_ADDRESS,
+                                "123.123.123.123",
+                                null,
+                                persistentIdValue,
+                                pair("notification-type", VERIFY_EMAIL),
+                                pair("test-user", false));
+            }
+        }
+    }
+
+    @Test
+    void shouldReturn204AndNotEnqueuePendingEmailCheckWhenFeatureFlagDisabled()
+            throws Json.JsonException {
+        when(configurationService.isEmailCheckEnabled()).thenReturn(false);
+
+        String persistentIdValue = "some-persistent-session-id";
+        NotifyRequest notifyRequest =
+                new NotifyRequest(
+                        TEST_EMAIL_ADDRESS,
+                        VERIFY_EMAIL,
+                        TEST_SIX_DIGIT_CODE,
+                        SupportedLanguage.EN);
+        String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
+
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(
+                Map.of(
+                        PersistentIdHelper.PERSISTENT_ID_HEADER_NAME,
+                        persistentIdValue,
+                        RequestHeaders.SESSION_ID_HEADER,
+                        "some-session-id",
+                        RequestHeaders.CLIENT_SESSION_ID_HEADER,
+                        "some-client-session-id"));
+        event.setRequestContext(eventContext);
+        event.setBody(
+                format(
+                        "{ \"email\": \"%s\", \"notificationType\": \"%s\" }",
+                        TEST_EMAIL_ADDRESS, VERIFY_EMAIL));
+
+        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
         assertEquals(204, result.getStatusCode());
 
-        verify(awsSqsClient).send(serialisedRequest);
-        verify(codeStorageService)
-                .saveOtpCode(
-                        TEST_EMAIL_ADDRESS, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, VERIFY_EMAIL);
-
-        verify(auditService)
-                .submitAuditEvent(
-                        AccountManagementAuditableEvent.SEND_OTP,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        AuditService.UNKNOWN,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        null,
-                        persistentIdValue,
-                        pair("notification-type", VERIFY_EMAIL),
-                        pair("test-user", false));
+        verifyNoInteractions(pendingEmailCheckSqsClient);
     }
 
     @Test
@@ -158,7 +233,7 @@ class SendOtpNotificationHandlerTest {
 
         assertEquals(204, result.getStatusCode());
 
-        verify(awsSqsClient).send(serialisedRequest);
+        verify(emailSqsClient).send(serialisedRequest);
         verify(codeStorageService)
                 .saveOtpCode(
                         TEST_EMAIL_ADDRESS,
@@ -199,7 +274,7 @@ class SendOtpNotificationHandlerTest {
 
         assertEquals(204, result.getStatusCode());
 
-        verifyNoInteractions(awsSqsClient);
+        verifyNoInteractions(emailSqsClient);
         verify(codeStorageService)
                 .saveOtpCode(
                         TEST_TEST_USER_EMAIL_ADDRESS,
@@ -239,7 +314,7 @@ class SendOtpNotificationHandlerTest {
 
         assertEquals(500, result.getStatusCode());
 
-        verifyNoInteractions(awsSqsClient, codeStorageService, auditService);
+        verifyNoInteractions(emailSqsClient, codeStorageService, auditService);
     }
 
     @Test
@@ -325,7 +400,7 @@ class SendOtpNotificationHandlerTest {
                         TEST_SIX_DIGIT_CODE,
                         SupportedLanguage.EN);
         String serialisedRequest = objectMapper.writeValueAsString(notifyRequest);
-        Mockito.doThrow(SdkClientException.class).when(awsSqsClient).send(eq(serialisedRequest));
+        Mockito.doThrow(SdkClientException.class).when(emailSqsClient).send(eq(serialisedRequest));
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(Map.of());
@@ -356,7 +431,7 @@ class SendOtpNotificationHandlerTest {
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
 
-        verify(awsSqsClient, never()).send(anyString());
+        verify(emailSqsClient, never()).send(anyString());
         verify(codeStorageService, never())
                 .saveOtpCode(anyString(), anyString(), anyLong(), any(NotificationType.class));
 

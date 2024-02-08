@@ -11,14 +11,17 @@ import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.accountmanagement.domain.AccountManagementAuditableEvent;
 import uk.gov.di.accountmanagement.entity.NotificationType;
 import uk.gov.di.accountmanagement.entity.NotifyRequest;
+import uk.gov.di.accountmanagement.entity.PendingEmailCheckRequest;
 import uk.gov.di.accountmanagement.entity.SendNotificationRequest;
 import uk.gov.di.accountmanagement.exceptions.MissingConfigurationParameterException;
 import uk.gov.di.accountmanagement.services.AwsSqsClient;
 import uk.gov.di.accountmanagement.services.CodeStorageService;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.RequestHeaderHelper;
 import uk.gov.di.authentication.shared.helpers.ValidationHelper;
@@ -33,9 +36,12 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import uk.gov.di.authentication.shared.services.RedisConnectionService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 
+import static uk.gov.di.authentication.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.domain.RequestHeaders.SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1001;
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1002;
@@ -54,26 +60,29 @@ public class SendOtpNotificationHandler
     private static final Logger LOG = LogManager.getLogger(SendOtpNotificationHandler.class);
 
     private final ConfigurationService configurationService;
-    private final AwsSqsClient sqsClient;
+    private final AwsSqsClient emailSqsClient;
+
+    private final AwsSqsClient pendingEmailCheckSqsClient;
     private final CodeGeneratorService codeGeneratorService;
     private final CodeStorageService codeStorageService;
     private final DynamoService dynamoService;
     private final ClientService clientService;
     private final Json objectMapper = SerializationService.getInstance();
     private final AuditService auditService;
-
     private static final String GENERIC_500_ERROR_MESSAGE = "Internal server error";
 
     public SendOtpNotificationHandler(
             ConfigurationService configurationService,
-            AwsSqsClient sqsClient,
+            AwsSqsClient emailSqsClient,
+            AwsSqsClient pendingEmailCheckSqsClient,
             CodeGeneratorService codeGeneratorService,
             CodeStorageService codeStorageService,
             DynamoService dynamoService,
             AuditService auditService,
             ClientService clientService) {
         this.configurationService = configurationService;
-        this.sqsClient = sqsClient;
+        this.emailSqsClient = emailSqsClient;
+        this.pendingEmailCheckSqsClient = pendingEmailCheckSqsClient;
         this.codeGeneratorService = codeGeneratorService;
         this.codeStorageService = codeStorageService;
         this.dynamoService = dynamoService;
@@ -83,10 +92,15 @@ public class SendOtpNotificationHandler
 
     public SendOtpNotificationHandler(ConfigurationService configurationService) {
         this.configurationService = configurationService;
-        this.sqsClient =
+        this.emailSqsClient =
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),
                         configurationService.getEmailQueueUri(),
+                        configurationService.getSqsEndpointUri());
+        this.pendingEmailCheckSqsClient =
+                new AwsSqsClient(
+                        configurationService.getAwsRegion(),
+                        configurationService.getPendingEmailCheckQueueUri(),
                         configurationService.getSqsEndpointUri());
         this.codeGeneratorService = new CodeGeneratorService();
         this.codeStorageService =
@@ -111,8 +125,11 @@ public class SendOtpNotificationHandler
 
     public APIGatewayProxyResponseEvent sendOtpRequestHandler(
             APIGatewayProxyRequestEvent input, Context context) {
-        String sessionId =
-                RequestHeaderHelper.getHeaderValueOrElse(input.getHeaders(), SESSION_ID_HEADER, "");
+        Map<String, String> headers = input.getHeaders();
+        String sessionId = RequestHeaderHelper.getHeaderValueOrElse(headers, SESSION_ID_HEADER, "");
+        String clientSessionId =
+                RequestHeaderHelper.getHeaderValueOrElse(headers, CLIENT_SESSION_ID_HEADER, "");
+        String persistentSessionId = PersistentIdHelper.extractPersistentIdFromHeaders(headers);
         attachSessionIdToLogs(sessionId);
         LOG.info("Request received in SendOtp Lambda");
 
@@ -151,24 +168,41 @@ public class SendOtpNotificationHandler
 
         SupportedLanguage userLanguage =
                 matchSupportedLanguage(
-                        getUserLanguageFromRequestHeaders(
-                                input.getHeaders(), configurationService));
+                        getUserLanguageFromRequestHeaders(headers, configurationService));
         try {
+            String email = sendNotificationRequest.getEmail();
             switch (sendNotificationRequest.getNotificationType()) {
                 case VERIFY_EMAIL:
                     LOG.info("NotificationType is VERIFY_EMAIL");
                     Optional<ErrorResponse> emailErrorResponse =
-                            ValidationHelper.validateEmailAddress(
-                                    sendNotificationRequest.getEmail());
+                            ValidationHelper.validateEmailAddress(email);
                     if (emailErrorResponse.isPresent()) {
                         return generateApiGatewayProxyErrorResponse(400, emailErrorResponse.get());
                     }
-                    if (dynamoService.userExists(sendNotificationRequest.getEmail())) {
+                    if (dynamoService.userExists(email)) {
                         return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1009);
                     }
+
+                    if (configurationService.isEmailCheckEnabled()) {
+                        pendingEmailCheckSqsClient.send(
+                                objectMapper.writeValueAsString(
+                                        new PendingEmailCheckRequest(
+                                                UUID.randomUUID(),
+                                                email,
+                                                sessionId,
+                                                clientSessionId,
+                                                persistentSessionId,
+                                                IpAddressHelper.extractIpAddress(input),
+                                                JourneyType.ACCOUNT_MANAGEMENT,
+                                                String.valueOf(
+                                                        NowHelper.now()
+                                                                .toInstant()
+                                                                .getEpochSecond()))));
+                    }
+
                     return handleNotificationRequest(
                             isTestUserRequest,
-                            sendNotificationRequest.getEmail(),
+                            email,
                             sendNotificationRequest,
                             input,
                             context,
@@ -177,7 +211,7 @@ public class SendOtpNotificationHandler
                     LOG.info("NotificationType is VERIFY_PHONE_NUMBER");
                     var existingPhoneNumber =
                             dynamoService
-                                    .getUserProfileByEmailMaybe(sendNotificationRequest.getEmail())
+                                    .getUserProfileByEmailMaybe(email)
                                     .map(UserProfile::getPhoneNumber)
                                     .orElse(null);
                     var phoneNumberValidationError =
@@ -238,7 +272,7 @@ public class SendOtpNotificationHandler
             LOG.info(
                     "Sending message to SQS queue for notificationType: {}",
                     sendNotificationRequest.getNotificationType());
-            sqsClient.send(serialiseRequest(notifyRequest));
+            emailSqsClient.send(serialiseRequest(notifyRequest));
         }
 
         auditService.submitAuditEvent(
