@@ -351,10 +351,10 @@ class AuthenticationCallbackHandlerTest {
 
             @Test
             void shouldRedirectToRpWhenAccountStatusIsNoIntervention() {
-                AccountInterventionState accountStatus =
+                AccountInterventionState accountState =
                         new AccountInterventionState(false, false, false, false);
                 when(accountInterventionService.getAccountState(anyString(), any()))
-                        .thenReturn(accountStatus);
+                        .thenReturn(accountState);
 
                 var event = new APIGatewayProxyRequestEvent();
                 setValidHeadersAndQueryParameters(event);
@@ -375,10 +375,10 @@ class AuthenticationCallbackHandlerTest {
 
             @Test
             void shouldLogoutWhenAccountStatusIsBlocked() {
-                AccountInterventionState accountStatus =
+                AccountInterventionState accountState =
                         new AccountInterventionState(true, false, false, false);
                 when(accountInterventionService.getAccountState(anyString(), any()))
-                        .thenReturn(accountStatus);
+                        .thenReturn(accountState);
 
                 var event = new APIGatewayProxyRequestEvent();
                 setValidHeadersAndQueryParameters(event);
@@ -387,15 +387,15 @@ class AuthenticationCallbackHandlerTest {
 
                 verify(logoutService)
                         .handleAccountInterventionLogout(
-                                session, event, CLIENT_ID.toString(), accountStatus);
+                                session, event, CLIENT_ID.toString(), accountState);
             }
 
             @Test
             void shouldLogoutWhenAccountStatusIsSuspendedNoAction() {
-                AccountInterventionState accountStatus =
+                AccountInterventionState accountState =
                         new AccountInterventionState(false, true, false, false);
                 when(accountInterventionService.getAccountState(anyString(), any()))
-                        .thenReturn(accountStatus);
+                        .thenReturn(accountState);
 
                 var event = new APIGatewayProxyRequestEvent();
                 setValidHeadersAndQueryParameters(event);
@@ -404,15 +404,15 @@ class AuthenticationCallbackHandlerTest {
 
                 verify(logoutService)
                         .handleAccountInterventionLogout(
-                                session, event, CLIENT_ID.toString(), accountStatus);
+                                session, event, CLIENT_ID.toString(), accountState);
             }
 
             @Test
             void shouldLogoutWhenAccountStatusIsSuspendedResetPassword() {
-                AccountInterventionState accountStatus =
+                AccountInterventionState accountState =
                         new AccountInterventionState(false, true, false, true);
                 when(accountInterventionService.getAccountState(anyString(), any()))
-                        .thenReturn(accountStatus);
+                        .thenReturn(accountState);
 
                 var event = new APIGatewayProxyRequestEvent();
                 setValidHeadersAndQueryParameters(event);
@@ -421,15 +421,15 @@ class AuthenticationCallbackHandlerTest {
 
                 verify(logoutService)
                         .handleAccountInterventionLogout(
-                                session, event, CLIENT_ID.toString(), accountStatus);
+                                session, event, CLIENT_ID.toString(), accountState);
             }
 
             @Test
             void shouldRedirectToRpWhenAccountStatusIsSuspendedReproveIdentity() {
-                AccountInterventionState accountStatus =
+                AccountInterventionState accountState =
                         new AccountInterventionState(false, true, true, false);
                 when(accountInterventionService.getAccountState(anyString(), any()))
-                        .thenReturn(accountStatus);
+                        .thenReturn(accountState);
 
                 var event = new APIGatewayProxyRequestEvent();
                 setValidHeadersAndQueryParameters(event);
@@ -450,10 +450,10 @@ class AuthenticationCallbackHandlerTest {
 
             @Test
             void shouldLogoutWhenAccountStatusIsSuspendedResetPasswordReproveIdentity() {
-                AccountInterventionState accountStatus =
+                AccountInterventionState accountState =
                         new AccountInterventionState(false, true, true, true);
                 when(accountInterventionService.getAccountState(anyString(), any()))
-                        .thenReturn(accountStatus);
+                        .thenReturn(accountState);
 
                 var event = new APIGatewayProxyRequestEvent();
                 setValidHeadersAndQueryParameters(event);
@@ -462,7 +462,7 @@ class AuthenticationCallbackHandlerTest {
 
                 verify(logoutService)
                         .handleAccountInterventionLogout(
-                                session, event, CLIENT_ID.getValue(), accountStatus);
+                                session, event, CLIENT_ID.getValue(), accountState);
             }
         }
 

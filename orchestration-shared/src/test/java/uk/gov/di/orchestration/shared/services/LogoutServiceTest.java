@@ -265,10 +265,10 @@ public class LogoutServiceTest {
 
     @Test
     void destroysSessionsAndReturnsAccountInterventionLogoutResponseWhenAccountIsBlocked() {
-        var accountStatus = new AccountInterventionState(true, false, false, false);
+        var accountState = new AccountInterventionState(true, false, false, false);
         APIGatewayProxyResponseEvent response =
                 logoutService.handleAccountInterventionLogout(
-                        session, event, CLIENT_ID, accountStatus);
+                        session, event, CLIENT_ID, accountState);
 
         verify(clientSessionService)
                 .deleteClientSessionFromRedis(session.getClientSessions().get(0));
@@ -285,7 +285,7 @@ public class LogoutServiceTest {
                         AuditService.UNKNOWN,
                         PERSISTENT_SESSION_ID);
         verify(cloudwatchMetricsService)
-                .incrementLogout(Optional.of(CLIENT_ID), Optional.of(accountStatus));
+                .incrementLogout(Optional.of(CLIENT_ID), Optional.of(accountState));
 
         assertThat(response, hasStatus(302));
         assertThat(
@@ -295,10 +295,10 @@ public class LogoutServiceTest {
 
     @Test
     void destroysSessionsAndReturnsAccountInterventionLogoutResponseWhenAccountIsSuspended() {
-        var accountStatus = new AccountInterventionState(false, true, false, false);
+        var accountState = new AccountInterventionState(false, true, false, false);
         APIGatewayProxyResponseEvent response =
                 logoutService.handleAccountInterventionLogout(
-                        session, event, CLIENT_ID, accountStatus);
+                        session, event, CLIENT_ID, accountState);
 
         verify(clientSessionService)
                 .deleteClientSessionFromRedis(session.getClientSessions().get(0));
@@ -315,7 +315,7 @@ public class LogoutServiceTest {
                         AuditService.UNKNOWN,
                         PERSISTENT_SESSION_ID);
         verify(cloudwatchMetricsService)
-                .incrementLogout(Optional.of(CLIENT_ID), Optional.of(accountStatus));
+                .incrementLogout(Optional.of(CLIENT_ID), Optional.of(accountState));
 
         assertThat(response, hasStatus(302));
         assertThat(

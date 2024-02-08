@@ -63,10 +63,10 @@ public class LogoutService {
             Session session,
             APIGatewayProxyRequestEvent input,
             String clientId,
-            AccountInterventionState accountStatus) {
+            AccountInterventionState accountState) {
         destroySessions(session);
         return generateAccountInterventionLogoutResponse(
-                input, clientId, session.getSessionId(), accountStatus);
+                input, clientId, session.getSessionId(), accountState);
     }
 
     public void destroySessions(Session session) {
@@ -165,19 +165,19 @@ public class LogoutService {
             APIGatewayProxyRequestEvent input,
             String clientId,
             String sessionId,
-            AccountInterventionStatus accountStatus) {
+            AccountInterventionState accountState) {
         URI redirectURI;
-        if (accountStatus.blocked()) {
+        if (accountState.blocked()) {
             redirectURI = configurationService.getAccountStatusBlockedURI();
             LOG.info("Generating Account Intervention blocked logout response");
-        } else if (accountStatus.suspended()) {
+        } else if (accountState.suspended()) {
             redirectURI = configurationService.getAccountStatusSuspendedURI();
             LOG.info("Generating Account Intervention suspended logout response");
         } else {
             throw new RuntimeException("Account status must be blocked or suspended");
         }
 
-        cloudwatchMetricsService.incrementLogout(Optional.of(clientId), Optional.of(accountStatus));
+        cloudwatchMetricsService.incrementLogout(Optional.of(clientId), Optional.of(accountState));
         return generateLogoutResponse(
                 redirectURI,
                 Optional.empty(),
