@@ -127,6 +127,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
                     accountInterventionsService.sendAccountInterventionsOutboundRequest(
                             accountInterventionsInboundRequest);
 
+            logAisResponse(accountInterventionsInboundResponse);
             submitAuditEvents(
                     accountInterventionsInboundResponse, input, userContext, persistentSessionID);
 
@@ -188,6 +189,18 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
             LOG.error(
                     "Unhandled account interventions state combination to calculate audit event: {}",
                     requiredInterventionsState);
+        }
+    }
+
+    private void logAisResponse(
+            AccountInterventionsInboundResponse accountInterventionsInboundResponse) {
+        if (configurationService.isAisDetailedLoggingEnabled()) {
+            LOG.info(
+                    "AIS Response: blocked: {} suspended: {} resetPassword: {} reproveIdentity: {}",
+                    accountInterventionsInboundResponse.state().blocked(),
+                    accountInterventionsInboundResponse.state().suspended(),
+                    accountInterventionsInboundResponse.state().resetPassword(),
+                    accountInterventionsInboundResponse.state().reproveIdentity());
         }
     }
 }

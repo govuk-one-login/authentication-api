@@ -10,6 +10,7 @@ import software.amazon.awssdk.services.ssm.model.GetParameterRequest;
 import software.amazon.awssdk.services.ssm.model.GetParametersRequest;
 import software.amazon.awssdk.services.ssm.model.Parameter;
 import software.amazon.awssdk.services.ssm.model.ParameterNotFoundException;
+import uk.gov.di.authentication.entity.Environment;
 import uk.gov.di.authentication.shared.configuration.AuditPublisherConfiguration;
 import uk.gov.di.authentication.shared.configuration.BaseLambdaConfiguration;
 import uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType;
@@ -155,6 +156,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public int getAuthAppCodeAllowedWindows() {
         return Integer.parseInt(System.getenv().getOrDefault("CODE_AUTH_APP_ALLOWED_WINDOWS", "9"));
+    }
+
+    public boolean isAisDetailedLoggingEnabled() {
+        return !List.of(Environment.PRODUCTION, Environment.INTEGRATION).contains(getEnvironment());
     }
 
     public boolean isAuthOrchSplitEnabled() {
