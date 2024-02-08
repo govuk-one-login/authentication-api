@@ -9,6 +9,14 @@ resource "aws_s3_bucket_versioning" "source_bucket_versioning" {
   }
 }
 
+resource "aws_s3_bucket_public_access_block" "private_source_bucket" {
+  bucket                  = aws_s3_bucket.source_bucket.id
+  block_public_acls       = true
+  ignore_public_acls      = true
+  block_public_policy     = true
+  restrict_public_buckets = true
+}
+
 resource "aws_s3_object" "oidc_api_release_zip" {
   bucket = aws_s3_bucket.source_bucket.bucket
   key    = "oidc-api-release.zip"
