@@ -14,7 +14,6 @@ custom_doc_app_claim_enabled     = true
 doc_app_cri_data_endpoint        = "userinfo"
 doc_app_cri_data_v2_endpoint     = "userinfo/v2"
 doc_app_use_cri_data_v2_endpoint = true
-doc_app_decouple_enabled         = true
 
 doc_app_backend_uri                = "https://api-backend-api.review-b.account.gov.uk"
 doc_app_domain                     = "https://api.review-b.account.gov.uk"

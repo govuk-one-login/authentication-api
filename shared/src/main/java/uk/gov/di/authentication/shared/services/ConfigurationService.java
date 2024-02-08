@@ -247,10 +247,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 .equals("true");
     }
 
-    public boolean isDocAppDecoupleEnabled() {
-        return System.getenv().getOrDefault("DOC_APP_DECOUPLE_ENABLED", "false").equals("true");
-    }
-
     public URI getDocAppDomain() {
         return URI.create(System.getenv("DOC_APP_DOMAIN"));
     }

@@ -54,6 +54,7 @@ import static org.hamcrest.Matchers.endsWith;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.AUTH_CODE_ISSUED;
 import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.DOC_APP_AUTHORISATION_RESPONSE_RECEIVED;
 import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.DOC_APP_SUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED;
 import static uk.gov.di.authentication.app.domain.DocAppAuditableEvent.DOC_APP_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED;
@@ -132,7 +133,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
     }
 
     @Test
-    void shouldRedirectToLoginWhenSuccessfullyProcessedDocAppResponse() throws Json.JsonException {
+    void shouldRedirectToRpWhenSuccessfullyProcessedDocAppResponse() throws Json.JsonException {
         setupSession();
 
         var response =
@@ -143,16 +144,15 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                         constructQueryStringParameters());
 
         assertThat(response, hasStatus(302));
-        assertThat(
-                response.getHeaders().get(ResponseHeaders.LOCATION),
-                startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+        assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), startsWith(REDIRECT_URI));
 
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
                 List.of(
                         DOC_APP_AUTHORISATION_RESPONSE_RECEIVED,
                         DOC_APP_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
-                        DOC_APP_SUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED));
+                        DOC_APP_SUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED,
+                        AUTH_CODE_ISSUED));
 
         var docAppCredential = documentAppCredentialStore.getCredential(docAppSubjectId.getValue());
         assertTrue(docAppCredential.isPresent());
@@ -160,7 +160,7 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
     }
 
     @Test
-    void shouldRedirectToLoginWhenSuccessfullyProcessedDocAppResponseUsingUserinfoV2Endpoint()
+    void shouldRedirectToRpWhenSuccessfullyProcessedDocAppResponseUsingUserinfoV2Endpoint()
             throws Json.JsonException {
         var configurationService =
                 new DocAppCallbackHandlerIntegrationTest.TestConfigurationService(
@@ -184,16 +184,15 @@ class DocAppCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationT
                         constructQueryStringParameters());
 
         assertThat(response, hasStatus(302));
-        assertThat(
-                response.getHeaders().get(ResponseHeaders.LOCATION),
-                startsWith(TEST_CONFIGURATION_SERVICE.getLoginURI().toString()));
+        assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), startsWith(REDIRECT_URI));
 
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
                 List.of(
                         DOC_APP_AUTHORISATION_RESPONSE_RECEIVED,
                         DOC_APP_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
-                        DOC_APP_SUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED));
+                        DOC_APP_SUCCESSFUL_CREDENTIAL_RESPONSE_RECEIVED,
+                        AUTH_CODE_ISSUED));
 
         var docAppCredential = documentAppCredentialStore.getCredential(docAppSubjectId.getValue());
         assertTrue(docAppCredential.isPresent());

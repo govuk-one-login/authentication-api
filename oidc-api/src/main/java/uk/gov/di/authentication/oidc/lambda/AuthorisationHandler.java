@@ -309,9 +309,8 @@ public class AuthorisationHandler
                         LocalDateTime.now(),
                         orchestrationAuthorizationService.getEffectiveVectorOfTrust(authRequest),
                         client.getClientName());
-        if (configurationService.isDocAppDecoupleEnabled()
-                && DocAppUserHelper.isDocCheckingAppUser(
-                        authRequest.toParameters(), Optional.of(client))) {
+        if (DocAppUserHelper.isDocCheckingAppUser(
+                authRequest.toParameters(), Optional.of(client))) {
             return handleDocAppJourney(
                     session,
                     clientSession,

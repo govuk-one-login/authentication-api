@@ -1513,7 +1513,6 @@ class AuthorisationHandlerTest {
 
         @BeforeEach()
         void docAppSetup() throws ParseException, JOSEException {
-            when(configService.isDocAppDecoupleEnabled()).thenReturn(true);
 
             var clientRegistry = generateClientRegistry().withClientType(ClientType.APP.getValue());
 
@@ -1597,20 +1596,6 @@ class AuthorisationHandlerTest {
                             OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED,
                             DocAppAuditableEvent.DOC_APP_AUTHORISATION_REQUESTED),
                     auditService);
-        }
-
-        @Test
-        void shouldNotLogWhenTheDocAppDecoupleFeatureFlagIsOffAndTheRequestIsADocAppRequest()
-                throws JOSEException {
-            when(configService.isDocAppDecoupleEnabled()).thenReturn(false);
-
-            makeDocAppHandlerRequest();
-
-            assertFalse(
-                    logging.events().stream()
-                            .map(event -> event.getMessage().getFormattedMessage())
-                            .toList()
-                            .contains("Doc app request received"));
         }
     }
 

@@ -22,7 +22,6 @@ test_clients_enabled                        = "true"
 ipv_no_session_response_enabled             = true
 doc_app_cri_data_v2_endpoint                = "userinfo/v2"
 doc_app_use_cri_data_v2_endpoint            = true
-doc_app_decouple_enabled                    = true
 orch_client_id                              = "orchestrationAuth"
 auth_audience                               = "https://auth.staging.account.gov.uk"
 account_intervention_service_call_enabled   = true
