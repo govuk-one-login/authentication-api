@@ -99,6 +99,7 @@ public class AuthenticationAuthCodeHandler extends BaseFrontendHandler<AuthCodeR
             return generateApiGatewayProxyResponse(
                     200, new AuthCodeResponse(authorizationResponse.toURI().toString()));
         } catch (JsonException ex) {
+            LOG.warn("Exception generating authcode. Returning 1001: ", ex);
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
     }
