@@ -27,6 +27,46 @@ stub_rp_clients = [
     one_login_service = false
     service_type      = "MANDATORY"
   },
+  {
+    client_name = "relying-party-stub-sandpit"
+    callback_urls = [
+      "https://rp-sandpit.build.stubs.account.gov.uk/oidc/authorization-code/callback",
+    ]
+    logout_urls = [
+      "https://rp-sandpit.build.stubs.account.gov.uk/signed-out",
+    ]
+    test_client                     = "0"
+    consent_required                = "0"
+    client_type                     = "web"
+    identity_verification_supported = "0"
+    scopes = [
+      "openid",
+      "email",
+      "phone",
+    ]
+    one_login_service = false
+    service_type      = "MANDATORY"
+  },
+  {
+    client_name = "relying-party-stub-sandpit-app"
+    callback_urls = [
+      "https://doc-app-rp-sandpit.build.stubs.account.gov.uk/oidc/authorization-code/callback",
+    ]
+    logout_urls = [
+      "https://doc-app-rp-sandpit.build.stubs.account.gov.uk/signed-out",
+    ]
+    test_client                     = "1"
+    consent_required                = "0"
+    client_type                     = "app"
+    identity_verification_supported = "1"
+    scopes = [
+      "openid",
+      "email",
+      "phone",
+    ]
+    one_login_service = false
+    service_type      = "MANDATORY"
+  },
 ]
 
 logging_endpoint_enabled = false
