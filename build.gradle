@@ -162,7 +162,7 @@ subprojects {
                 "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-v2:${dependencyVersions.xray}",
                 "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-v2-instrumentor:${dependencyVersions.xray}"
 
-        pact_consumer "au.com.dius.pact.consumer:junit5:4.6.4"
+        pact_consumer "au.com.dius.pact.consumer:junit5:4.6.6"
     }
 }
 
