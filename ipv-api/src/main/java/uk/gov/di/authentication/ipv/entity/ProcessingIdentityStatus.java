@@ -5,4 +5,5 @@ public enum ProcessingIdentityStatus {
     PROCESSING,
     ERROR,
     NO_ENTRY,
+    INTERVENTION
 }

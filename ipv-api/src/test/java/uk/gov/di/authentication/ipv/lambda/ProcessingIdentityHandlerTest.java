@@ -10,6 +10,8 @@ import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.core.SdkBytes;
+import uk.gov.di.authentication.ipv.entity.ProcessingIdentityInterventionResponse;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityResponse;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityStatus;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
@@ -17,9 +19,11 @@ import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.IdentityCredentials;
+import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AccountInterventionService;
@@ -51,12 +55,14 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.orchestration.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.orchestration.shared.domain.RequestHeaders.SESSION_ID_HEADER;
+import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -69,13 +75,19 @@ class ProcessingIdentityHandlerTest {
     private static final String CLIENT_ID = "test-client-id";
     private static final String CLIENT_NAME = "test-client-name";
     private static final String PHONE_NUMBER = "01234567890";
-    private static final Subject PAIRWISE_SUBJECT = new Subject();
     private static final Date CREATED_DATE_TIME = NowHelper.nowMinus(30, ChronoUnit.SECONDS);
     private static final Date UPDATED_DATE_TIME = NowHelper.now();
     private static final String PUBLIC_SUBJECT_ID = new Subject("public-subject-id-2").getValue();
     private static final String SUBJECT_ID = new Subject("subject-id-3").getValue();
     private static final ByteBuffer SALT =
             ByteBuffer.wrap("a-test-salt".getBytes(StandardCharsets.UTF_8));
+    private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
+    private static final String PAIRWISE_SUBJECT =
+            ClientSubjectHelper.calculatePairwiseIdentifier(
+                    SUBJECT_ID,
+                    URI.create(INTERNAL_SECTOR_URI),
+                    SdkBytes.fromByteBuffer(SALT).asByteArray());
+
     private static final URI REDIRECT_URI = URI.create("http://localhost/oidc/redirect");
     private static final String ENVIRONMENT = "test-environment";
 
@@ -106,7 +118,7 @@ class ProcessingIdentityHandlerTest {
                 .thenReturn(Optional.of(userProfile));
         when(dynamoService.getOrGenerateSalt(userProfile)).thenReturn(SALT.array());
         when(configurationService.getEnvironment()).thenReturn(ENVIRONMENT);
-        when(configurationService.getInternalSectorUri()).thenReturn("https://test.account.gov.uk");
+        when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         Map<String, String> headers = new HashMap<>();
         headers.put(CLIENT_SESSION_ID_HEADER, CLIENT_SESSION_ID);
         headers.put(SESSION_ID_HEADER, SESSION_ID);
@@ -141,7 +153,7 @@ class ProcessingIdentityHandlerTest {
         usingValidSession();
         var identityCredentials =
                 new IdentityCredentials()
-                        .withSubjectID(PAIRWISE_SUBJECT.getValue())
+                        .withSubjectID(PAIRWISE_SUBJECT)
                         .withAdditionalClaims(Collections.emptyMap())
                         .withCoreIdentityJWT("a-core-identity");
         when(dynamoIdentityService.getIdentityCredentials(anyString()))
@@ -169,13 +181,11 @@ class ProcessingIdentityHandlerTest {
     }
 
     @Test
-    void
-            shouldActionAISCallIfAccountInterventionServiceActionIsEnabledAndProcessingStatusIsCOMPLETED()
-                    throws Json.JsonException {
+    void shouldCallAISIfProcessingStatusIsCOMPLETED() throws Json.JsonException {
         usingValidSession();
         var identityCredentials =
                 new IdentityCredentials()
-                        .withSubjectID(PAIRWISE_SUBJECT.getValue())
+                        .withSubjectID(PAIRWISE_SUBJECT)
                         .withAdditionalClaims(Collections.emptyMap())
                         .withCoreIdentityJWT("a-core-identity");
         when(dynamoIdentityService.getIdentityCredentials(anyString()))
@@ -187,7 +197,7 @@ class ProcessingIdentityHandlerTest {
                 .thenReturn(new AccountInterventionStatus(false, false, false, false));
 
         var result = handler.handleRequest(event, context);
-
+        verify(accountInterventionService).getAccountStatus(eq(PAIRWISE_SUBJECT), any());
         assertThat(result, hasStatus(200));
         assertThat(
                 result,
@@ -195,43 +205,40 @@ class ProcessingIdentityHandlerTest {
                         objectMapper.writeValueAsString(
                                 new ProcessingIdentityResponse(
                                         ProcessingIdentityStatus.COMPLETED))));
-        verify(cloudwatchMetricsService)
-                .incrementCounter(
-                        "ProcessingIdentity",
-                        Map.of(
-                                "Environment",
-                                ENVIRONMENT,
-                                "Status",
-                                ProcessingIdentityStatus.COMPLETED.toString()));
     }
 
     @Test
-    void shouldInterveneIfAccountInterventionServiceAuditIsEnabledAndProcessingStatusIsCOMPLETED()
+    void shouldInterveneIfAccountInterventionServiceActionIsEnabledAndProcessingStatusIsCOMPLETED()
             throws Json.JsonException {
         usingValidSession();
         var identityCredentials =
                 new IdentityCredentials()
-                        .withSubjectID(PAIRWISE_SUBJECT.getValue())
+                        .withSubjectID(PAIRWISE_SUBJECT)
                         .withAdditionalClaims(Collections.emptyMap())
                         .withCoreIdentityJWT("a-core-identity");
-        var aisResult = new AccountInterventionStatus(false, false, false, false);
+        var aisResult = new AccountInterventionStatus(false, true, false, false);
         when(dynamoIdentityService.getIdentityCredentials(anyString()))
                 .thenReturn(Optional.of(identityCredentials));
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(getClientSession()));
         when(configurationService.isAccountInterventionServiceActionEnabled()).thenReturn(true);
-        when(configurationService.isAccountInterventionServiceCallEnabled()).thenReturn(true);
         when(accountInterventionService.getAccountStatus(anyString(), any())).thenReturn(aisResult);
+        String redirectUrl = "https://example.com/intervention";
+        when(logoutService.handleAccountInterventionLogout(any(), any(), any(), any()))
+                .thenReturn(
+                        generateApiGatewayProxyResponse(
+                                302, "", Map.of(ResponseHeaders.LOCATION, redirectUrl), null));
 
         var result = handler.handleRequest(event, context);
 
+        verify(logoutService).handleAccountInterventionLogout(session, event, CLIENT_ID, aisResult);
         assertThat(result, hasStatus(200));
         assertThat(
                 result,
                 hasBody(
                         objectMapper.writeValueAsString(
-                                new ProcessingIdentityResponse(
-                                        ProcessingIdentityStatus.COMPLETED))));
+                                new ProcessingIdentityInterventionResponse(
+                                        ProcessingIdentityStatus.INTERVENTION, redirectUrl))));
         verify(cloudwatchMetricsService)
                 .incrementCounter(
                         "ProcessingIdentity",
@@ -248,7 +255,7 @@ class ProcessingIdentityHandlerTest {
         usingValidSession();
         var identityCredentials =
                 new IdentityCredentials()
-                        .withSubjectID(PAIRWISE_SUBJECT.getValue())
+                        .withSubjectID(PAIRWISE_SUBJECT)
                         .withAdditionalClaims(Collections.emptyMap());
         when(dynamoIdentityService.getIdentityCredentials(anyString()))
                 .thenReturn(Optional.of(identityCredentials));
@@ -279,7 +286,7 @@ class ProcessingIdentityHandlerTest {
             throws Json.JsonException {
         session.incrementProcessingIdentityAttempts();
         usingValidSession();
-        when(dynamoIdentityService.getIdentityCredentials(PAIRWISE_SUBJECT.getValue()))
+        when(dynamoIdentityService.getIdentityCredentials(PAIRWISE_SUBJECT))
                 .thenReturn(Optional.empty());
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(getClientSession()));
@@ -306,7 +313,7 @@ class ProcessingIdentityHandlerTest {
     void shouldReturnNO_ENTRYStatusWhenNoEntryIsFoundInDynamoOnFirstAttempt()
             throws Json.JsonException {
         usingValidSession();
-        when(dynamoIdentityService.getIdentityCredentials(PAIRWISE_SUBJECT.getValue()))
+        when(dynamoIdentityService.getIdentityCredentials(PAIRWISE_SUBJECT))
                 .thenReturn(Optional.empty());
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(getClientSession()));

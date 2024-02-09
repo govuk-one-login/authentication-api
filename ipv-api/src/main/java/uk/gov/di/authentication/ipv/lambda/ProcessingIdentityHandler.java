@@ -6,11 +6,14 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
+import uk.gov.di.authentication.ipv.entity.ProcessingIdentityInterventionResponse;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityRequest;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityResponse;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityStatus;
 import uk.gov.di.orchestration.audit.AuditContext;
+import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
+import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
@@ -168,8 +171,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                                                 internalPairwiseSubjectId, auditContext));
                 if (configurationService.isAccountInterventionServiceActionEnabled()
                         && (aisResult.suspended() || aisResult.blocked())) {
-                    return logoutService.handleAccountInterventionLogout(
-                            userContext.getSession(), input, client.getClientID(), aisResult);
+                    return performIntervention(input, userContext, client, aisResult);
                 }
             }
             return generateApiGatewayProxyResponse(
@@ -184,5 +186,21 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
                     userContext.getClient().isPresent());
             throw new RuntimeException();
         }
+    }
+
+    private APIGatewayProxyResponseEvent performIntervention(
+            APIGatewayProxyRequestEvent input,
+            UserContext userContext,
+            ClientRegistry client,
+            AccountInterventionStatus aisResult)
+            throws Json.JsonException {
+        var logoutResult =
+                logoutService.handleAccountInterventionLogout(
+                        userContext.getSession(), input, client.getClientID(), aisResult);
+        var redirectUrl = logoutResult.getHeaders().get(ResponseHeaders.LOCATION);
+        return generateApiGatewayProxyResponse(
+                200,
+                new ProcessingIdentityInterventionResponse(
+                        ProcessingIdentityStatus.INTERVENTION, redirectUrl));
     }
 }
