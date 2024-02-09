@@ -1,0 +1,34 @@
+[
+  {
+    "ParameterKey": "Environment",
+    "ParameterValue": "build"
+  },
+  {
+    "ParameterKey": "OneLoginRepositoryName",
+    "ParameterValue": "authentication-api"
+  },
+  {
+    "ParameterKey": "SAMStackName",
+    "ParameterValue": "build-orch-be-deploy"
+  },
+  {
+    "ParameterKey": "IncludePromotion",
+    "ParameterValue": "Yes"
+  },
+  {
+    "ParameterKey": "AllowedAccounts",
+    "ParameterValue": "590183975515"
+  },
+  {
+    "ParameterKey": "RequireManualApproval",
+    "ParameterValue": "No"
+  },
+  {
+    "ParameterKey": "SigningProfileArn",
+    "ParameterValue": "arn:aws:signer:eu-west-2:767397776536:/signing-profiles/SigningProfile_Lne9jMArpvlM"
+  },
+  {
+    "ParameterKey": "SigningProfileVersionArn",
+    "ParameterValue": "arn:aws:signer:eu-west-2:767397776536:/signing-profiles/SigningProfile_Lne9jMArpvlM/wnCsZmp8mO"
+  }
+]

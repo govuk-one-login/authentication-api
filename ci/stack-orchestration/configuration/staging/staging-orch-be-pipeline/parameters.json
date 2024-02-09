@@ -1,0 +1,34 @@
+[
+  {
+    "ParameterKey": "Environment",
+    "ParameterValue": "staging"
+  },
+  {
+    "ParameterKey": "SAMStackName",
+    "ParameterValue": "staging-orch-be-deploy"
+  },
+  {
+    "ParameterKey": "ArtifactSourceBucketArn",
+    "ParameterValue": "arn:aws:s3:::build-orch-be-pipeline-artifactpromotionbucket-hyjm3nfhx7tg "
+  },
+  {
+    "ParameterKey": "ArtifactSourceBucketEventTriggerRoleArn",
+    "ParameterValue": "arn:aws:iam::767397776536:role/PL-build-orch-be-pipeline-PromoTrigRole-069c01797277"
+  },
+  {
+    "ParameterKey": "IncludePromotion",
+    "ParameterValue": "No"
+  },
+  {
+    "ParameterKey": "RequireManualApproval",
+    "ParameterValue": "No"
+  },
+  {
+    "ParameterKey": "SigningProfileArn",
+    "ParameterValue": "arn:aws:signer:eu-west-2:767397776536:/signing-profiles/SigningProfile_Lne9jMArpvlM"
+  },
+  {
+    "ParameterKey": "SigningProfileVersionArn",
+    "ParameterValue": "arn:aws:signer:eu-west-2:767397776536:/signing-profiles/SigningProfile_Lne9jMArpvlM/wnCsZmp8mO"
+  }
+]
