@@ -242,9 +242,9 @@ resource "aws_iam_role_policy_attachment" "lambda_env_vars_encryption_kms_policy
 resource "aws_kms_key" "events_topic_encryption" {
   description = "alias/${var.environment}/events-encryption-key"
 
-  policy = data.aws_iam_policy_document.events_encryption_key_permissions.json
-  enable_key_rotation      = true
-  tags = local.default_tags
+  policy              = data.aws_iam_policy_document.events_encryption_key_permissions.json
+  enable_key_rotation = true
+  tags                = local.default_tags
 }
 
 resource "aws_kms_alias" "events_topic_encryption_alias" {
