@@ -22,6 +22,7 @@ import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.validation.AuthAppCodeProcessor;
+import uk.gov.di.authentication.frontendapi.validation.EmailCodeProcessor;
 import uk.gov.di.authentication.frontendapi.validation.MfaCodeProcessorFactory;
 import uk.gov.di.authentication.frontendapi.validation.PhoneNumberCodeProcessor;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -107,6 +108,8 @@ class VerifyMfaCodeHandlerTest {
     private final MfaCodeProcessorFactory mfaCodeProcessorFactory =
             mock(MfaCodeProcessorFactory.class);
     private final AuthAppCodeProcessor authAppCodeProcessor = mock(AuthAppCodeProcessor.class);
+
+    private final EmailCodeProcessor emailCodeProcessor = mock(EmailCodeProcessor.class);
     private final PhoneNumberCodeProcessor phoneNumberCodeProcessor =
             mock(PhoneNumberCodeProcessor.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
@@ -784,6 +787,10 @@ class VerifyMfaCodeHandlerTest {
         when(configurationService.getTestClientVerifyEmailOTP())
                 .thenReturn(Optional.of(TEST_CLIENT_CODE));
         when(codeStorageService.getOtpCode(email, VERIFY_EMAIL)).thenReturn(Optional.of(CODE));
+
+        when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
+                .thenReturn(Optional.of(emailCodeProcessor));
+
         session.setEmailAddress(email);
         session.setInternalCommonSubjectIdentifier(expectedCommonSubject);
 
