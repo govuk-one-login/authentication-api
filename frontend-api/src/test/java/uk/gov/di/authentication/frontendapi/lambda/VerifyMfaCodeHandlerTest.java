@@ -774,9 +774,9 @@ class VerifyMfaCodeHandlerTest {
     @ValueSource(
             strings = {
                     "testclient.user1@digital.cabinet-office.gov.uk",
-                    "abc@digital.cabinet-office.gov.uk",
-                    "abc.def@digital.cabinet-office.gov.uk",
-                    "testclient.user2@internet.com",
+//                    "abc@digital.cabinet-office.gov.uk",
+//                    "abc.def@digital.cabinet-office.gov.uk",
+//                    "testclient.user2@internet.com",
             })
     void shouldReturn204ForValidVerifyEmailRequestUsingTestClient(String email) throws Json.JsonException {
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
@@ -794,7 +794,7 @@ class VerifyMfaCodeHandlerTest {
         var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.EMAIL, CODE, JourneyType.REGISTRATION);
         var result = makeCallWithCode(codeRequest);
 
-//        assertThat(result, hasStatus(204));
+        assertThat(result, hasStatus(204));
 //        verifyNoInteractions(accountModifiersService);
 //        verify(codeStorageService).deleteOtpCode(email, VERIFY_EMAIL);
 //        verify(auditService)

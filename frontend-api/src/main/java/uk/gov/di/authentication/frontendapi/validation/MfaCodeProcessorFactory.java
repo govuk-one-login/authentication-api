@@ -67,6 +67,15 @@ public class MfaCodeProcessorFactory {
                                 authenticationService,
                                 auditService,
                                 accountModifiersService));
+            case EMAIL:
+                return Optional.of(
+                        new EmailCodeProcessor(
+                                codeStorageService,
+                                userContext,
+                                configurationService,
+                                authenticationService,
+                                auditService,
+                                accountModifiersService));
             default:
                 return Optional.empty();
         }
