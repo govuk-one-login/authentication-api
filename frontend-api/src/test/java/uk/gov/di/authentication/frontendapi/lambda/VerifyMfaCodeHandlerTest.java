@@ -786,10 +786,6 @@ class VerifyMfaCodeHandlerTest {
         when(codeStorageService.getOtpCode(email, VERIFY_EMAIL)).thenReturn(Optional.of(CODE));
         session.setEmailAddress(email);
         session.setInternalCommonSubjectIdentifier(expectedCommonSubject);
-        String body =
-                format(
-                        "{ \"code\": \"%s\", \"notificationType\": \"%s\"  }",
-                        TEST_CLIENT_CODE, VERIFY_EMAIL);
 
         var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.EMAIL, CODE, JourneyType.REGISTRATION);
         var result = makeCallWithCode(codeRequest);
