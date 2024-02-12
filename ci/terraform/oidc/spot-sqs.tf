@@ -146,6 +146,7 @@ resource "aws_kms_key" "spot_request_sqs_key" {
 
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
   key_usage                = "ENCRYPT_DECRYPT"
+  enable_key_rotation      = true
 
   tags = local.default_tags
 }
