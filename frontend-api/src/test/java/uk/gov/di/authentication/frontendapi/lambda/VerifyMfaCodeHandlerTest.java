@@ -798,8 +798,6 @@ class VerifyMfaCodeHandlerTest {
         var result = makeCallWithCode(codeRequest);
 
         assertThat(result, hasStatus(204));
-//        verifyNoInteractions(accountModifiersService);
-//        verify(codeStorageService).deleteOtpCode(email, VERIFY_EMAIL);
 //        verify(auditService)
 //                .submitAuditEvent(
 //                        FrontendAuditableEvent.CODE_VERIFIED,
