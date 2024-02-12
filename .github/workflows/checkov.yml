@@ -42,3 +42,26 @@ jobs:
         with:
           sarif_file: results.sarif
           category: ${{ matrix.module }}
+
+  scan-orch:
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkov GitHub Action
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          file: template.yaml
+          framework: cloudformation
+          quiet: true
+          output_format: cli,sarif
+          output_file_path: console,results.sarif
+
+      - name: Upload SARIF file
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results.sarif
+          category: orch-sam

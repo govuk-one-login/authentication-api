@@ -1,0 +1,35 @@
+name: Pre-merge checks for SAM
+on:
+  pull_request:
+    paths: ['template.yaml']
+    types:
+      - opened
+      - reopened
+      - ready_for_review
+      - synchronize
+
+jobs:
+  sam-checks:
+    name: SAM validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up SAM cli
+        uses: aws-actions/setup-sam@v2
+        with:
+          use-installer: true
+
+      - name: Set up AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.ORCH_SAM_APP_VALIDATE_ROLE_ARN }}
+          aws-region: eu-west-2
+
+      - name: SAM validate
+        run: sam validate
