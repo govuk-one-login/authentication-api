@@ -52,6 +52,12 @@ variable "doc_app_p1_alarm_error_time_period" {
   default     = 600
 }
 
+variable "account_interventions_error_metric_name" {
+  type        = string
+  description = "The name of the CloudWatch metric which counts Account Intervention Service errors"
+  default     = "AISException"
+}
+
 variable "account_interventions_p1_alarm_error_threshold" {
   type        = number
   description = "The number of Account Intervention Service errors raised before generating a Cloudwatch alarm"

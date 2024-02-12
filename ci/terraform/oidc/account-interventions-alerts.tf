@@ -6,7 +6,7 @@ data "aws_cloudwatch_log_group" "orchestration_redirect_lambda_log_group" {
 resource "aws_cloudwatch_log_metric_filter" "account_interventions_metric_filter" {
   count          = var.use_localstack ? 0 : 1
   name           = replace("${var.environment}-account-interventions-p1-errors", ".", "")
-  pattern        = "{($.AISException = 1)}"
+  pattern        = "{($.${var.account_interventions_error_metric_name} = 1)}"
   log_group_name = data.aws_cloudwatch_log_group.orchestration_redirect_lambda_log_group[0].name
 
   metric_transformation {

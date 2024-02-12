@@ -174,6 +174,7 @@ class AccountInterventionServiceTest {
 
         when(config.isAccountInterventionServiceActionEnabled()).thenReturn(true);
         when(config.abortOnAccountInterventionsErrorResponse()).thenReturn(true);
+        when(config.getAccountInterventionsErrorMetricName()).thenReturn("AISException");
 
         var internalPairwiseSubjectId = "some-internal-subject-id";
         var accountInterventionService =

@@ -133,7 +133,8 @@ public class AccountInterventionService {
 
     private AccountInterventionStatus handleException(Exception e) {
         cloudwatchMetricsService.incrementCounter(
-                "AISException", Map.of("Environment", configurationService.getEnvironment()));
+                configurationService.getAccountInterventionsErrorMetricName(),
+                Map.of("Environment", configurationService.getEnvironment()));
         if (accountInterventionsActionEnabled && acountInterventionsAbortOnError) {
             throw new AccountInterventionException(
                     "Problem communicating with Account Intervention Service", e);
