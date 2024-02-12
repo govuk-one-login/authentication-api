@@ -602,7 +602,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         assertThat(
                 redirectLocationHeader.toString(),
-                containsString(configurationService.getAccountStatusSuspendedURI()));
+                containsString(configurationService.getAccountStatusSuspendedURI().toString()));
 
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
@@ -625,7 +625,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
 
         assertThat(
                 redirectLocationHeader.toString(),
-                containsString(configurationService.getAccountStatusBlockedURI()));
+                containsString(configurationService.getAccountStatusBlockedURI().toString()));
 
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
