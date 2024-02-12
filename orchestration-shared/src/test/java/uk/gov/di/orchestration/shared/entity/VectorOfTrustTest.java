@@ -13,6 +13,7 @@ import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -26,38 +27,32 @@ class VectorOfTrustTest {
     @Test
     void shouldParseValidStringWithSingleVector() {
         var jsonArray = jsonArrayOf("Cl.Cm");
-        VectorOfTrust vectorOfTrust =
+        List<VectorOfTrust> vectorsOfTrust =
                 VectorOfTrust.parseFromAuthRequestAttribute(Collections.singletonList(jsonArray));
-        assertThat(vectorOfTrust.getCredentialTrustLevel(), equalTo(MEDIUM_LEVEL));
-        assertNull(vectorOfTrust.getLevelOfConfidence());
+        assertThat(vectorsOfTrust.get(0).getCredentialTrustLevel(), equalTo(MEDIUM_LEVEL));
+        assertNull(vectorsOfTrust.get(0).getLevelOfConfidence());
+        assertThat(vectorsOfTrust.size(), equalTo(1));
     }
 
     @Test
     void shouldReturnDefaultVectorWhenEmptyListIsPassedIn() {
-        VectorOfTrust vectorOfTrust =
+        List<VectorOfTrust> vectorsOfTrust =
                 VectorOfTrust.parseFromAuthRequestAttribute(new ArrayList<>());
         MatcherAssert.assertThat(
-                vectorOfTrust.getCredentialTrustLevel(),
+                vectorsOfTrust.get(0).getCredentialTrustLevel(),
                 equalTo(CredentialTrustLevel.getDefault()));
-        assertNull(vectorOfTrust.getLevelOfConfidence());
-    }
-
-    @Test
-    void shouldParseValidStringWithMultipleVectors() {
-        var jsonArray = jsonArrayOf("Cl");
-        VectorOfTrust vectorOfTrust =
-                VectorOfTrust.parseFromAuthRequestAttribute(Collections.singletonList(jsonArray));
-        assertThat(vectorOfTrust.getCredentialTrustLevel(), equalTo(LOW_LEVEL));
-        assertNull(vectorOfTrust.getLevelOfConfidence());
+        assertNull(vectorsOfTrust.get(0).getLevelOfConfidence());
     }
 
     @Test
     void shouldParseValidStringWithSingleIdentityVector() {
         var jsonArray = jsonArrayOf("P2.Cl.Cm");
-        VectorOfTrust vectorOfTrust =
+        List<VectorOfTrust> vectorsOfTrust =
                 VectorOfTrust.parseFromAuthRequestAttribute(Collections.singletonList(jsonArray));
-        assertThat(vectorOfTrust.getCredentialTrustLevel(), equalTo(MEDIUM_LEVEL));
-        assertThat(vectorOfTrust.getLevelOfConfidence(), equalTo(LevelOfConfidence.MEDIUM_LEVEL));
+        assertThat(vectorsOfTrust.get(0).getCredentialTrustLevel(), equalTo(MEDIUM_LEVEL));
+        assertThat(
+                vectorsOfTrust.get(0).getLevelOfConfidence(),
+                equalTo(LevelOfConfidence.MEDIUM_LEVEL));
     }
 
     @Test
@@ -196,7 +191,8 @@ class VectorOfTrustTest {
 
         VectorOfTrust vectorOfTrust =
                 VectorOfTrust.parseFromAuthRequestAttribute(
-                        Collections.singletonList(jsonArrayOf(vectorString)));
+                                Collections.singletonList(jsonArrayOf(vectorString)))
+                        .get(0);
         assertThat(vectorOfTrust.retrieveVectorOfTrustForToken(), equalTo("Cl.Cm"));
     }
 
@@ -205,7 +201,8 @@ class VectorOfTrustTest {
         String vectorString = "Cl.Cm";
         VectorOfTrust vectorOfTrust =
                 VectorOfTrust.parseFromAuthRequestAttribute(
-                        Collections.singletonList(jsonArrayOf(vectorString)));
+                                Collections.singletonList(jsonArrayOf(vectorString)))
+                        .get(0);
         assertThat(vectorOfTrust.retrieveVectorOfTrustForToken(), equalTo(vectorString));
     }
 
@@ -214,7 +211,8 @@ class VectorOfTrustTest {
         String vectorString = "P2.Cl.Cm";
         VectorOfTrust vectorOfTrust =
                 VectorOfTrust.parseFromAuthRequestAttribute(
-                        Collections.singletonList(jsonArrayOf(vectorString)));
+                                Collections.singletonList(jsonArrayOf(vectorString)))
+                        .get(0);
         assertTrue(vectorOfTrust.containsLevelOfConfidence());
     }
 
@@ -223,7 +221,8 @@ class VectorOfTrustTest {
         String vectorString = "Cl.Cm";
         VectorOfTrust vectorOfTrust =
                 VectorOfTrust.parseFromAuthRequestAttribute(
-                        Collections.singletonList(jsonArrayOf(vectorString)));
+                                Collections.singletonList(jsonArrayOf(vectorString)))
+                        .get(0);
         assertFalse(vectorOfTrust.containsLevelOfConfidence());
     }
 
@@ -232,8 +231,21 @@ class VectorOfTrustTest {
         String vectorString = "P0.Cl.Cm";
         VectorOfTrust vectorOfTrust =
                 VectorOfTrust.parseFromAuthRequestAttribute(
-                        Collections.singletonList(jsonArrayOf(vectorString)));
+                                Collections.singletonList(jsonArrayOf(vectorString)))
+                        .get(0);
         assertFalse(vectorOfTrust.containsLevelOfConfidence());
+    }
+
+    @Test
+    void shouldThrowExceptionForEmptyVtrList() {
+        List<VectorOfTrust> vtrList = Collections.emptyList();
+
+        IllegalArgumentException exception =
+                assertThrows(
+                        IllegalArgumentException.class,
+                        () -> VectorOfTrust.getLowestCredentialTrustLevel(vtrList));
+
+        assertEquals("Invalid VTR attribute", exception.getMessage());
     }
 
     @ParameterizedTest

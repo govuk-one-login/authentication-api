@@ -45,6 +45,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -351,7 +352,7 @@ class ProcessingIdentityHandlerTest {
                         .build();
 
         return new ClientSession(
-                authRequest.toParameters(), null, mock(VectorOfTrust.class), CLIENT_NAME);
+                authRequest.toParameters(), null, List.of(mock(VectorOfTrust.class)), CLIENT_NAME);
     }
 
     private void usingValidSession() {

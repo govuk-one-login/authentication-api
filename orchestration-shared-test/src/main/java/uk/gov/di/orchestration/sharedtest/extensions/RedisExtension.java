@@ -121,7 +121,7 @@ public class RedisExtension
                         new ClientSession(
                                 authRequest,
                                 LocalDateTime.now(),
-                                VectorOfTrust.getDefaults(),
+                                List.of(VectorOfTrust.getDefaults()),
                                 clientName)),
                 3600);
     }
@@ -177,10 +177,11 @@ public class RedisExtension
             String clientSessionId,
             String email,
             Map<String, List<String>> authRequest,
-            VectorOfTrust vtr,
+            List<VectorOfTrust> vtrList,
             String clientName)
             throws Json.JsonException {
-        var clientSession = new ClientSession(authRequest, LocalDateTime.now(), vtr, clientName);
+        var clientSession =
+                new ClientSession(authRequest, LocalDateTime.now(), vtrList, clientName);
         redis.saveWithExpiry(
                 AUTH_CODE_PREFIX.concat(authCode),
                 objectMapper.writeValueAsString(
@@ -204,7 +205,7 @@ public class RedisExtension
                         new ClientSession(
                                 authRequest,
                                 LocalDateTime.now(),
-                                VectorOfTrust.getDefaults(),
+                                List.of(VectorOfTrust.getDefaults()),
                                 clientName)),
                 300);
     }

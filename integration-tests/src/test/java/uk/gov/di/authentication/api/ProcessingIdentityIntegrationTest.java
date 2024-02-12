@@ -187,7 +187,7 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
                 new ClientSession(
                         authRequestBuilder.build().toParameters(),
                         LocalDateTime.now(),
-                        VectorOfTrust.getDefaults(),
+                        List.of(VectorOfTrust.getDefaults()),
                         CLIENT_NAME);
         redis.createClientSession(CLIENT_SESSION_ID, clientSession);
         redis.addStateToRedis(STATE, SESSION_ID);

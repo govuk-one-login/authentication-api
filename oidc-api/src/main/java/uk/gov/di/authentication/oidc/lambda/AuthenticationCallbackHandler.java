@@ -25,6 +25,7 @@ import uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService
 import uk.gov.di.authentication.oidc.services.AuthenticationTokenService;
 import uk.gov.di.authentication.oidc.services.InitiateIPVAuthorisationService;
 import uk.gov.di.orchestration.audit.AuditContext;
+import uk.gov.di.orchestration.shared.conditions.MfaHelper;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
@@ -486,11 +487,8 @@ public class AuthenticationCallbackHandler
                     "No mfa method to set. User is either authenticated or signing in from a low level service");
         }
         var orderedVtrList = VectorOfTrust.orderVtrList(clientSession.getVtrList());
-        var mfaRequired =
-                !orderedVtrList
-                        .get(0)
-                        .getCredentialTrustLevel()
-                        .equals(CredentialTrustLevel.LOW_LEVEL);
+        var mfaRequired = MfaHelper.mfaRequired(orderedVtrList);
+
         var levelOfConfidence = LevelOfConfidence.NONE.getValue();
         // Assumption: Requested vectors of trust will either all be for identity or none, and so we
         // can check just the first
