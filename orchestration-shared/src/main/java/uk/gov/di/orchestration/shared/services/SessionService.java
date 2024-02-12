@@ -8,7 +8,6 @@ import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.serialization.Json;
 
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 
 import static uk.gov.di.orchestration.shared.domain.RequestHeaders.SESSION_ID_HEADER;
@@ -112,14 +111,8 @@ public class SessionService {
     }
 
     public Optional<Session> readSessionFromRedis(String sessionId) {
-        try {
-            String serializedSession = redisConnectionService.getValue(sessionId);
-            return Objects.isNull(serializedSession)
-                    ? Optional.empty()
-                    : Optional.of(OBJECT_MAPPER.readValue(serializedSession, Session.class));
-
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        String serializedSession = redisConnectionService.getValue(sessionId);
+        return Optional.ofNullable(serializedSession)
+                .map(s -> OBJECT_MAPPER.readValueUnchecked(s, Session.class));
     }
 }

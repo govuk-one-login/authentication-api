@@ -41,6 +41,15 @@ public class SerializationService implements Json {
     }
 
     @Override
+    public <T> T readValueUnchecked(String jsonString, Class<T> clazz) {
+        try {
+            return readValue(jsonString, clazz);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
     public <T> T readValue(String body, Class<T> klass) throws JsonException {
         return readValue(body, klass, defaultValidator);
     }

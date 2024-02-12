@@ -3,6 +3,8 @@ package uk.gov.di.authentication.shared.serialization;
 import uk.gov.di.authentication.shared.validation.Validator;
 
 public interface Json {
+    <T> T readValueUnchecked(String body, Class<T> klass);
+
     <T> T readValue(String body, Class<T> klass) throws JsonException;
 
     <T> T readValue(String body, Class<T> klass, Validator validator) throws JsonException;
