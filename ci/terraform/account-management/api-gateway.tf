@@ -139,9 +139,10 @@ resource "aws_api_gateway_deployment" "deployment" {
       module.update_phone_number.method_trigger_value,
       module.send_otp_notification.integration_trigger_value,
       module.send_otp_notification.method_trigger_value,
-      local.deploy_get_mfa_methods_count == 1 ? module.get-mfa-methods.integration_trigger_value : null,
-      local.deploy_get_mfa_methods_count == 1 ? module.get-mfa-methods[0].integration_trigger_value : null,
-      local.deploy_retrieve_mfa_methods_count == 1 ? module.retrieve-mfa-methods[0].integration_trigger_value : null,
+      local.deploy_mfa_methods_count == 1 ? module.retrieve-mfa-methods[0].integration_trigger_value : null,
+      local.deploy_mfa_methods_count == 1 ? module.delete-mfa-methods[0].integration_trigger_value : null,
+      local.deploy_mfa_methods_count == 1 ? module.update-mfa-method[0].integration_trigger_value : null,
+      local.deploy_mfa_methods_count == 1 ? module.create-mfa-method[0].integration_trigger_value : null,
       aws_lambda_alias.authorizer_alias.function_version
     ]))
   }

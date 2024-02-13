@@ -34,7 +34,6 @@ public class DeleteMfaMethodHandler
                             input.getHeaders(), SESSION_ID_HEADER, "");
             attachSessionIdToLogs(sessionId);
 
-            // String clientId = input.getPathParameters().get("mfaIdentifier");
             var deleteMfaMethod =
                     objectMapper.readValue(input.getBody(), DeleteMfaMethodRequest.class);
 

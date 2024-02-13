@@ -3,7 +3,7 @@ package uk.gov.di.accountmanagement.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.accountmanagement.entity.MFAMethod;
+import uk.gov.di.accountmanagement.entity.DeleteMfaMethodRequest;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
@@ -26,9 +26,12 @@ public class DeleteMfaMethodsHandlerTest {
         var context = mock(Context.class);
         var event = new APIGatewayProxyRequestEvent();
 
-        MFAMethod mfaMethod = new MFAMethod("1000", "Secondary", "SMS", "Test 1", true);
+        // MFAMethod mfaMethod = new MFAMethod("1000", "Secondary", "SMS", "Test 1", true);
+
+        DeleteMfaMethodRequest mfaDeleteReq =
+                new DeleteMfaMethodRequest("test@domain.co.uk", "12345", "12345");
         try {
-            event.setBody(objectMapper.writeValueAsString(getStringObjectMap(mfaMethod)));
+            event.setBody(objectMapper.writeValueAsString(getStringObjectMap(mfaDeleteReq)));
         } catch (Json.JsonException e) {
             throw new RuntimeException(e);
         }
@@ -48,19 +51,12 @@ public class DeleteMfaMethodsHandlerTest {
         assertEquals(400, result.getStatusCode());
     }
 
-    private static Map<String, Object> getStringObjectMap(MFAMethod mfaMethod) {
-        Map<String, Object> mfaMethodMap = new HashMap<>();
-        mfaMethodMap.put("mfaidentifier", mfaMethod.mfaIdentifier());
-        mfaMethodMap.put("priorityidentifier", mfaMethod.priorityIdentifier());
-        mfaMethodMap.put("mfamethodtype", mfaMethod.mfaMethodType());
-        mfaMethodMap.put("endpoint", mfaMethod.endpoint());
-        mfaMethodMap.put("methodverified", mfaMethod.methodVerified());
+    private static Map<String, Object> getStringObjectMap(DeleteMfaMethodRequest mfaDelete) {
 
         Map<String, Object> requestBodyMap = new HashMap<>();
         requestBodyMap.put("email", EMAIL);
-        requestBodyMap.put("credential", CREDENTIAL);
         requestBodyMap.put("otp", OTP);
-        requestBodyMap.put("mfaMethod", mfaMethodMap);
+        requestBodyMap.put("mfaIdentifier", mfaDelete.mfaIdentifier());
         return requestBodyMap;
     }
 }
