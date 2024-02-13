@@ -40,6 +40,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -119,12 +120,12 @@ public class IpvUserIdentityTest {
 
     private final ClientSession clientSession =
             new ClientSession(
-                            generateAuthRequest(new OIDCClaimsRequest()).toParameters(),
-                            null,
+                    generateAuthRequest(new OIDCClaimsRequest()).toParameters(),
+                    null,
+                    List.of(
                             new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL),
-                            CLIENT_NAME)
-                    .setEffectiveVectorOfTrust(
-                            new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL));
+                            new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL)),
+                    CLIENT_NAME);
 
     private AccessToken accessToken;
 

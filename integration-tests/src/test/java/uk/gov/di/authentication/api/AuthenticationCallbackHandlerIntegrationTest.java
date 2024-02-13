@@ -55,7 +55,6 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
-import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
@@ -76,6 +75,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static uk.gov.di.orchestration.shared.entity.VectorOfTrust.parseFromAuthRequestAttribute;
 import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.orchestration.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -879,29 +879,30 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     }
 
     private void setUpClientSession() throws Json.JsonException {
-        String vtrStr =
+        String vtrStr1 =
                 LevelOfConfidence.MEDIUM_LEVEL.getValue()
                         + "."
                         + CredentialTrustLevel.MEDIUM_LEVEL.getValue();
+        String vtrStr2 =
+                LevelOfConfidence.HMRC200.getValue()
+                        + "."
+                        + CredentialTrustLevel.MEDIUM_LEVEL.getValue();
+
         List<VectorOfTrust> vtrList =
-                VectorOfTrust.parseFromAuthRequestAttribute(Arrays.asList("[\"" + vtrStr + "\"]"));
+                parseFromAuthRequestAttribute(List.of("[\"" + vtrStr1 + "\",\"" + vtrStr2 + "\"]"));
 
         var authRequestBuilder =
                 new AuthenticationRequest.Builder(
                                 ResponseType.CODE, SCOPE, new ClientID(CLIENT_ID), REDIRECT_URI)
                         .state(RP_STATE)
                         .nonce(new Nonce())
-                        .customParameter("vtr", jsonArrayOf(vtrStr));
+                        .customParameter("vtr", jsonArrayOf(vtrStr1, vtrStr2));
         var clientSession =
                 new ClientSession(
-                                authRequestBuilder.build().toParameters(),
-                                LocalDateTime.now(),
-                                vtrList,
-                                CLIENT_NAME)
-                        .setEffectiveVectorOfTrust(
-                                VectorOfTrust.of(
-                                        CredentialTrustLevel.LOW_LEVEL,
-                                        LevelOfConfidence.LOW_LEVEL));
+                        authRequestBuilder.build().toParameters(),
+                        LocalDateTime.now(),
+                        vtrList,
+                        CLIENT_NAME);
 
         redis.createClientSession(CLIENT_SESSION_ID, clientSession);
     }
@@ -957,7 +958,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         assertThat(
                 signedJWT.getJWTClaimsSet().getClaim("govuk_signin_journey_id"),
                 equalTo(CLIENT_SESSION_ID));
-        assertThat(signedJWT.getJWTClaimsSet().getClaim("vtr"), equalTo(List.of("P2", "P1")));
+        assertThat(signedJWT.getJWTClaimsSet().getClaim("vtr"), equalTo(List.of("P2", "PCL200")));
         assertThat(signedJWT.getJWTClaimsSet().getClaim("scope"), equalTo("openid"));
         assertThat(signedJWT.getHeader().getAlgorithm(), equalTo(JWSAlgorithm.ES256));
     }

@@ -49,7 +49,6 @@ import java.util.Map;
 import java.util.Optional;
 
 public class OrchestrationAuthorizationService {
-
     public static final String VTR_PARAM = "vtr";
     public static final String AUTHENTICATION_STATE_STORAGE_PREFIX = "auth-state:";
     private static final JWSAlgorithm SIGNING_ALGORITHM = JWSAlgorithm.ES256;
@@ -197,10 +196,6 @@ public class OrchestrationAuthorizationService {
             URI redirectUri, State state, ResponseMode responseMode, ErrorObject errorObject) {
         LOG.info("Generating Authentication Error Response");
         return new AuthenticationErrorResponse(redirectUri, errorObject, state, responseMode);
-    }
-
-    public VectorOfTrust getEffectiveVectorOfTrust(AuthenticationRequest authenticationRequest) {
-        return VectorOfTrust.orderVtrList(getVtrList(authenticationRequest)).get(0);
     }
 
     public List<VectorOfTrust> getVtrList(AuthenticationRequest authenticationRequest) {
