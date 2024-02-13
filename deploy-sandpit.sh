@@ -7,7 +7,7 @@ function runTerraform() {
   echo "Running ${1} Terraform..."
   pushd "${DIR}/ci/terraform/${1}" >/dev/null
   rm -rf .terraform/
-  terraform init -upgrade -backend-config=sandpit.hcl
+  terraform init -backend-config=sandpit.hcl
   if [ "${RUN_SHELL}" == "1" ]; then
     ${SHELL} -i
   else
@@ -57,7 +57,8 @@ TEST_SERVICES=0
 CLEAN=""
 RUN_SHELL=0
 TERRAFORM_OPTS="-auto-approve"
-if [[ $# == 0 ]]; then
+
+if [[ $# == 0 ]] || [[ $* == "-p" ]]; then
   AM=1
   AUTH_EXTERNAL_API=1
   BUILD=1
@@ -65,6 +66,7 @@ if [[ $# == 0 ]]; then
   INTERVENTIONS=1
   SHARED=1
 fi
+
 while [[ $# -gt 0 ]]; do
   case $1 in
   -a | --account-management)

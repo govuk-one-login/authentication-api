@@ -69,16 +69,6 @@ resource "aws_lambda_alias" "endpoint_lambda" {
   function_version = aws_lambda_function.endpoint_lambda.version
 }
 
-resource "time_sleep" "wait_for_alias_to_reassign" {
-  depends_on = [aws_lambda_alias.endpoint_lambda]
-
-  triggers = {
-    function_name    = aws_lambda_function.endpoint_lambda.arn
-    function_version = aws_lambda_function.endpoint_lambda.version
-  }
-  create_duration = "60s"
-}
-
 resource "aws_lambda_provisioned_concurrency_config" "endpoint_lambda_concurrency_config" {
   count = var.provisioned_concurrency == 0 ? 0 : 1
 
@@ -86,10 +76,6 @@ resource "aws_lambda_provisioned_concurrency_config" "endpoint_lambda_concurrenc
   qualifier     = aws_lambda_alias.endpoint_lambda.name
 
   provisioned_concurrent_executions = var.provisioned_concurrency
-
-  depends_on = [
-    time_sleep.wait_for_alias_to_reassign
-  ]
 }
 
 resource "aws_appautoscaling_target" "lambda_target" {

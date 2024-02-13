@@ -4,7 +4,6 @@ build/
 .gradle
 build
 **/.terraform/
-**/.terraform.lock.hcl
 │**/*.tfstate*
 **/out
 **/.classpath

@@ -10,7 +10,7 @@ data "terraform_remote_state" "shared" {
     sts_endpoint                = null
     skip_credentials_validation = false
     skip_metadata_api_check     = false
-    force_path_style            = false
+    use_path_style              = false
   }
 }
 

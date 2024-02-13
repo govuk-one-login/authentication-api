@@ -1,27 +1,26 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-###Export The di-Auth-devlopment account profile below 
 export AWS_PROFILE=di-auth-dev
 
-envvalue=( "authdev1" "authdev2"  )
+envvalue=("authdev1" "authdev2")
 
 select word in "${envvalue[@]}"; do
-    if [[ -z "$word" ]]; then
-        printf '"%s" is not a valid choice\n' "$REPLY" >&2
-    else
-        user_in="$(( REPLY - 1 ))"
-        break
-    fi
+  if [[ -z "$word" ]]; then
+    printf '"%s" is not a valid choice\n' "$REPLY" >&2
+  else
+    user_in="$((REPLY - 1))"
+    break
+  fi
 done
 
-for (( i = 0; i < ${#envvalue[@]}; ++i )); do
-    if (( i == user_in )); then
-        printf 'You picked "%s"\n' "${envvalue[$i]}"
-        export env=${envvalue[$i]}
-        printf "deploying in enviorment %s\n" "$env"
-        read -r -p "Press enter to continue or ctr c to abort"
-    fi
+for ((i = 0; i < ${#envvalue[@]}; ++i)); do
+  if ((i == user_in)); then
+    printf 'You picked "%s"\n' "${envvalue[$i]}"
+    export env=${envvalue[$i]}
+    printf "deploying in enviorment %s\n" "$env"
+    read -r -p "Press enter to continue or ctr c to abort"
+  fi
 done
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
@@ -30,7 +29,7 @@ function runTerraform() {
   echo "Running ${1} Terraform..."
   pushd "${DIR}/ci/terraform/${1}" >/dev/null
   rm -rf .terraform/
-  terraform init -upgrade -backend-config="$env".hcl
+  terraform init -backend-config="$env".hcl
   if [ "${RUN_SHELL}" == "1" ]; then
     ${SHELL} -i
   else
@@ -80,7 +79,8 @@ TEST_SERVICES=0
 CLEAN=""
 RUN_SHELL=0
 TERRAFORM_OPTS="-auto-approve"
-if [[ $# == 0 ]]; then
+
+if [[ $# == 0 ]] || [[ $* == "-p" ]]; then
   AM=1
   AUTH_EXTERNAL_API=1
   BUILD=1
@@ -88,6 +88,7 @@ if [[ $# == 0 ]]; then
   INTERVENTIONS=1
   SHARED=1
 fi
+
 while [[ $# -gt 0 ]]; do
   case $1 in
   -a | --account-management)
@@ -143,7 +144,6 @@ while [[ $# -gt 0 ]]; do
   esac
   shift
 done
-
 
 if [[ $BUILD == "1" ]]; then
   echo "Building deployment artefacts ... "
