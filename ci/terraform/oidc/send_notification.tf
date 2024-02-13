@@ -13,7 +13,9 @@ module "frontend_api_send_notification_role" {
     module.oidc_txma_audit.access_policy_arn,
     local.account_modifiers_encryption_policy_arn,
     local.client_registry_encryption_policy_arn,
-    local.user_credentials_encryption_policy_arn
+    local.user_credentials_encryption_policy_arn,
+    local.user_profile_encryption_policy_arn,
+    local.pending_email_check_queue_access_policy_arn
   ]
 }
 
@@ -29,6 +31,8 @@ module "send_notification" {
     ENVIRONMENT                            = var.environment
     BLOCKED_EMAIL_DURATION                 = var.blocked_email_duration
     EMAIL_QUEUE_URL                        = aws_sqs_queue.email_queue.id
+    PENDING_EMAIL_CHECK_QUEUE_URL          = local.pending_email_check_queue_id
+    SUPPORT_EMAIL_CHECK_ENABLED            = var.support_email_check_enabled
     TXMA_AUDIT_QUEUE_URL                   = module.oidc_txma_audit.queue_url
     LOCALSTACK_ENDPOINT                    = var.use_localstack ? var.localstack_endpoint : null
     REDIS_KEY                              = local.redis_key

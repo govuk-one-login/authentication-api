@@ -7,6 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.exception.SdkClientException;
+import uk.gov.di.authentication.entity.PendingEmailCheckRequest;
 import uk.gov.di.authentication.frontendapi.entity.SendNotificationRequest;
 import uk.gov.di.authentication.shared.domain.AuditableEvent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -18,6 +19,7 @@ import uk.gov.di.authentication.shared.entity.NotifyRequest;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.PhoneNumberHelper;
 import uk.gov.di.authentication.shared.helpers.ValidationHelper;
@@ -38,6 +40,7 @@ import uk.gov.di.authentication.shared.state.UserContext;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_EMAIL_CODE_SENT;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_EMAIL_CODE_SENT_FOR_TEST_CLIENT;
@@ -71,7 +74,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
     private static final List<NotificationType> CONFIRMATION_NOTIFICATION_TYPES =
             List.of(ACCOUNT_CREATED_CONFIRMATION, CHANGE_HOW_GET_SECURITY_CODES_CONFIRMATION);
 
-    private final AwsSqsClient sqsClient;
+    private final AwsSqsClient emailSqsClient;
+    private final AwsSqsClient pendingEmailCheckSqsClient;
     private final CodeGeneratorService codeGeneratorService;
     private final CodeStorageService codeStorageService;
     private final AuditService auditService;
@@ -82,7 +86,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
             ClientSessionService clientSessionService,
             ClientService clientService,
             AuthenticationService authenticationService,
-            AwsSqsClient sqsClient,
+            AwsSqsClient emailSqsClient,
+            AwsSqsClient pendingEmailCheckSqsClient,
             CodeGeneratorService codeGeneratorService,
             CodeStorageService codeStorageService,
             AuditService auditService) {
@@ -93,7 +98,8 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                 clientSessionService,
                 clientService,
                 authenticationService);
-        this.sqsClient = sqsClient;
+        this.emailSqsClient = emailSqsClient;
+        this.pendingEmailCheckSqsClient = pendingEmailCheckSqsClient;
         this.codeGeneratorService = codeGeneratorService;
         this.codeStorageService = codeStorageService;
         this.auditService = auditService;
@@ -101,10 +107,15 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
 
     public SendNotificationHandler(ConfigurationService configurationService) {
         super(SendNotificationRequest.class, configurationService);
-        this.sqsClient =
+        this.emailSqsClient =
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),
                         configurationService.getEmailQueueUri(),
+                        configurationService.getSqsEndpointUri());
+        this.pendingEmailCheckSqsClient =
+                new AwsSqsClient(
+                        configurationService.getAwsRegion(),
+                        configurationService.getPendingEmailCheckQueueUri(),
                         configurationService.getSqsEndpointUri());
         this.codeGeneratorService = new CodeGeneratorService();
         this.codeStorageService = new CodeStorageService(configurationService);
@@ -113,10 +124,15 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
 
     public SendNotificationHandler() {
         super(SendNotificationRequest.class, ConfigurationService.getInstance());
-        this.sqsClient =
+        this.emailSqsClient =
                 new AwsSqsClient(
                         configurationService.getAwsRegion(),
                         configurationService.getEmailQueueUri(),
+                        configurationService.getSqsEndpointUri());
+        this.pendingEmailCheckSqsClient =
+                new AwsSqsClient(
+                        configurationService.getAwsRegion(),
+                        configurationService.getPendingEmailCheckQueueUri(),
                         configurationService.getSqsEndpointUri());
         this.codeGeneratorService = new CodeGeneratorService();
         this.codeStorageService = new CodeStorageService(configurationService);
@@ -150,7 +166,7 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                                 request.getNotificationType(),
                                 userContext.getUserLanguage());
                 if (!isTestClientWithAllowedEmail(userContext, configurationService)) {
-                    sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
+                    emailSqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
                     LOG.info("{} email placed on queue", request.getNotificationType());
                 }
                 return generateEmptySuccessApiGatewayResponse();
@@ -262,10 +278,34 @@ public class SendNotificationHandler extends BaseFrontendHandler<SendNotificatio
                                 "Country",
                                 PhoneNumberHelper.getCountry(destination)));
             }
+
+            if (request.getJourneyType() == JourneyType.REGISTRATION) {
+                String sessionId = userContext.getSession().getSessionId();
+                String clientSessionId = userContext.getClientSessionId();
+                String persistentSessionId =
+                        PersistentIdHelper.extractPersistentIdFromHeaders(input.getHeaders());
+
+                if (configurationService.isEmailCheckEnabled()) {
+                    pendingEmailCheckSqsClient.send(
+                            objectMapper.writeValueAsString(
+                                    new PendingEmailCheckRequest(
+                                            UUID.randomUUID(),
+                                            destination,
+                                            sessionId,
+                                            clientSessionId,
+                                            persistentSessionId,
+                                            IpAddressHelper.extractIpAddress(input),
+                                            JourneyType.REGISTRATION,
+                                            String.valueOf(
+                                                    NowHelper.now()
+                                                            .toInstant()
+                                                            .getEpochSecond()))));
+                }
+            }
             var notifyRequest =
                     new NotifyRequest(
                             destination, notificationType, code, userContext.getUserLanguage());
-            sqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
+            emailSqsClient.send(objectMapper.writeValueAsString((notifyRequest)));
             LOG.info("{} placed on queue", request.getNotificationType());
             LOG.info("Successfully processed request");
         }

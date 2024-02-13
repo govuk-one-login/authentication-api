@@ -19,6 +19,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
@@ -32,6 +33,7 @@ import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.LocaleHelper.SupportedLanguage;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
@@ -48,10 +50,12 @@ import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
@@ -105,7 +109,8 @@ class SendNotificationHandlerTest {
     private static final String TEST_CLIENT_ID = "test-client-id";
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
-    private final AwsSqsClient awsSqsClient = mock(AwsSqsClient.class);
+    private final AwsSqsClient emailSqsClient = mock(AwsSqsClient.class);
+    private final AwsSqsClient pendingEmailCheckSqsClient = mock(AwsSqsClient.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final CodeGeneratorService codeGeneratorService = mock(CodeGeneratorService.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
@@ -140,7 +145,8 @@ class SendNotificationHandlerTest {
                     clientSessionService,
                     clientService,
                     authenticationService,
-                    awsSqsClient,
+                    emailSqsClient,
+                    pendingEmailCheckSqsClient,
                     codeGeneratorService,
                     codeStorageService,
                     auditService);
@@ -166,6 +172,7 @@ class SendNotificationHandlerTest {
     @BeforeEach
     void setup() {
         when(configurationService.getDefaultOtpCodeExpiry()).thenReturn(CODE_EXPIRY_TIME);
+        when(configurationService.isEmailCheckEnabled()).thenReturn(true);
         when(configurationService.getEmailAccountCreationOtpCodeExpiry())
                 .thenReturn(CODE_EXPIRY_TIME);
         when(configurationService.getBlockedEmailDuration()).thenReturn(BLOCKED_EMAIL_DURATION);
@@ -185,6 +192,84 @@ class SendNotificationHandlerTest {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
 
+        Date mockedDate = new Date();
+        UUID mockedUUID = UUID.fromString("5fc03087-d265-11e7-b8c6-83e29cd24f4c");
+        try (MockedStatic<NowHelper> mockedNowHelperClass = Mockito.mockStatic(NowHelper.class)) {
+            try (MockedStatic<UUID> mockedUUIDClass = Mockito.mockStatic(UUID.class)) {
+                mockedNowHelperClass.when(NowHelper::now).thenReturn(mockedDate);
+                mockedUUIDClass.when(UUID::randomUUID).thenReturn(mockedUUID);
+
+                var result =
+                        sendRequest(
+                                format(
+                                        "{ \"email\": \"%s\", \"notificationType\": \"%s\", \"journeyType\": \"%s\" }",
+                                        TEST_EMAIL_ADDRESS, notificationType, journeyType));
+
+                assertEquals(204, result.getStatusCode());
+                verify(emailSqsClient)
+                        .send(
+                                objectMapper.writeValueAsString(
+                                        new NotifyRequest(
+                                                TEST_EMAIL_ADDRESS,
+                                                notificationType,
+                                                TEST_SIX_DIGIT_CODE,
+                                                SupportedLanguage.EN)));
+                if (journeyType == JourneyType.REGISTRATION) {
+                    verify(pendingEmailCheckSqsClient)
+                            .send(
+                                    format(
+                                            "{\"requestReference\":\"%s\",\"emailAddress\":\"%s\",\"userSessionId\":\"%s\",\"govukSigninJourneyId\":\"%s\",\"persistentSessionId\":\"%s\",\"ipAddress\":\"%s\",\"journeyType\":\"%s\",\"timeOfInitialRequest\":\"%s\"}",
+                                            mockedUUID,
+                                            TEST_EMAIL_ADDRESS,
+                                            session.getSessionId(),
+                                            CLIENT_SESSION_ID,
+                                            PERSISTENT_ID,
+                                            "123.123.123.123",
+                                            JourneyType.REGISTRATION,
+                                            mockedDate.toInstant().getEpochSecond()));
+                } else {
+                    verifyNoInteractions(pendingEmailCheckSqsClient);
+                }
+                verify(codeGeneratorService).sixDigitCode();
+                verify(codeStorageService).getOtpCode(TEST_EMAIL_ADDRESS, notificationType);
+                verify(codeStorageService)
+                        .saveOtpCode(
+                                TEST_EMAIL_ADDRESS,
+                                TEST_SIX_DIGIT_CODE,
+                                CODE_EXPIRY_TIME,
+                                notificationType);
+                verify(codeStorageService).getOtpCode(TEST_EMAIL_ADDRESS, notificationType);
+                verify(sessionService)
+                        .save(
+                                argThat(
+                                        session ->
+                                                isSessionWithEmailSent(
+                                                        session, notificationType, journeyType)));
+                verify(auditService)
+                        .submitAuditEvent(
+                                notificationType.equals(VERIFY_EMAIL)
+                                        ? EMAIL_CODE_SENT
+                                        : ACCOUNT_RECOVERY_EMAIL_CODE_SENT,
+                                CLIENT_SESSION_ID,
+                                session.getSessionId(),
+                                CLIENT_ID,
+                                expectedCommonSubject,
+                                TEST_EMAIL_ADDRESS,
+                                "123.123.123.123",
+                                AuditService.UNKNOWN,
+                                PERSISTENT_ID);
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("notificationTypeAndJourneyTypeArgs")
+    void shouldReturn204AndNotEnqueuePendingEmailCheckWhenFeatureFlagDisabled(
+            NotificationType notificationType, JourneyType journeyType) throws Json.JsonException {
+        when(configurationService.isEmailCheckEnabled()).thenReturn(false);
+        usingValidSession();
+        usingValidClientSession(CLIENT_ID);
+
         var result =
                 sendRequest(
                         format(
@@ -192,42 +277,7 @@ class SendNotificationHandlerTest {
                                 TEST_EMAIL_ADDRESS, notificationType, journeyType));
 
         assertEquals(204, result.getStatusCode());
-        verify(awsSqsClient)
-                .send(
-                        objectMapper.writeValueAsString(
-                                new NotifyRequest(
-                                        TEST_EMAIL_ADDRESS,
-                                        notificationType,
-                                        TEST_SIX_DIGIT_CODE,
-                                        SupportedLanguage.EN)));
-        verify(codeGeneratorService).sixDigitCode();
-        verify(codeStorageService).getOtpCode(TEST_EMAIL_ADDRESS, notificationType);
-        verify(codeStorageService)
-                .saveOtpCode(
-                        TEST_EMAIL_ADDRESS,
-                        TEST_SIX_DIGIT_CODE,
-                        CODE_EXPIRY_TIME,
-                        notificationType);
-        verify(codeStorageService).getOtpCode(TEST_EMAIL_ADDRESS, notificationType);
-        verify(sessionService)
-                .save(
-                        argThat(
-                                session ->
-                                        isSessionWithEmailSent(
-                                                session, notificationType, journeyType)));
-        verify(auditService)
-                .submitAuditEvent(
-                        notificationType.equals(VERIFY_EMAIL)
-                                ? EMAIL_CODE_SENT
-                                : ACCOUNT_RECOVERY_EMAIL_CODE_SENT,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PERSISTENT_ID);
+        verifyNoInteractions(pendingEmailCheckSqsClient);
     }
 
     @ParameterizedTest
@@ -257,7 +307,7 @@ class SendNotificationHandlerTest {
                         TEST_SIX_DIGIT_CODE,
                         CODE_EXPIRY_TIME,
                         notificationType);
-        verify(awsSqsClient)
+        verify(emailSqsClient)
                 .send(
                         objectMapper.writeValueAsString(
                                 new NotifyRequest(
@@ -305,7 +355,7 @@ class SendNotificationHandlerTest {
                         any(String.class),
                         anyLong(),
                         any(NotificationType.class));
-        verify(awsSqsClient)
+        verify(emailSqsClient)
                 .send(
                         objectMapper.writeValueAsString(
                                 new NotifyRequest(
@@ -341,7 +391,7 @@ class SendNotificationHandlerTest {
                                 TEST_EMAIL_ADDRESS, notificationType, journeyType));
 
         assertEquals(204, result.getStatusCode());
-        verifyNoInteractions(awsSqsClient);
+        verifyNoInteractions(emailSqsClient);
         verify(codeStorageService).getOtpCode(TEST_EMAIL_ADDRESS, notificationType);
         verify(codeStorageService)
                 .saveOtpCode(
@@ -381,7 +431,7 @@ class SendNotificationHandlerTest {
                                 TEST_EMAIL_ADDRESS, notificationType, journeyType));
 
         assertEquals(400, result.getStatusCode());
-        verifyNoInteractions(awsSqsClient);
+        verifyNoInteractions(emailSqsClient);
         verifyNoInteractions(codeStorageService);
         verify(sessionService, never())
                 .save(
@@ -420,7 +470,7 @@ class SendNotificationHandlerTest {
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1012));
-        verifyNoInteractions(awsSqsClient);
+        verifyNoInteractions(emailSqsClient);
         verifyNoInteractions(auditService);
     }
 
@@ -433,7 +483,7 @@ class SendNotificationHandlerTest {
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
-        verifyNoInteractions(awsSqsClient);
+        verifyNoInteractions(emailSqsClient);
         verifyNoInteractions(codeStorageService);
         verifyNoInteractions(auditService);
     }
@@ -447,7 +497,7 @@ class SendNotificationHandlerTest {
         usingValidSession();
         usingValidClientSession(CLIENT_ID);
         Mockito.doThrow(SdkClientException.class)
-                .when(awsSqsClient)
+                .when(emailSqsClient)
                 .send(
                         objectMapper.writeValueAsString(
                                 new NotifyRequest(
@@ -481,7 +531,7 @@ class SendNotificationHandlerTest {
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
 
-        verifyNoInteractions(awsSqsClient);
+        verifyNoInteractions(emailSqsClient);
         verifyNoInteractions(auditService);
         verifyNoInteractions(codeStorageService);
     }
@@ -524,7 +574,7 @@ class SendNotificationHandlerTest {
                         TEST_SIX_DIGIT_CODE,
                         CODE_EXPIRY_TIME,
                         VERIFY_PHONE_NUMBER);
-        verify(awsSqsClient)
+        verify(emailSqsClient)
                 .send(
                         objectMapper.writeValueAsString(
                                 new NotifyRequest(
@@ -558,7 +608,7 @@ class SendNotificationHandlerTest {
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1011));
-        verifyNoInteractions(awsSqsClient);
+        verifyNoInteractions(emailSqsClient);
         verifyNoInteractions(auditService);
     }
 
@@ -662,7 +712,7 @@ class SendNotificationHandlerTest {
         verify(codeStorageService, never())
                 .saveOtpCode(
                         TEST_EMAIL_ADDRESS, TEST_SIX_DIGIT_CODE, CODE_EXPIRY_TIME, VERIFY_EMAIL);
-        verifyNoInteractions(awsSqsClient);
+        verifyNoInteractions(emailSqsClient);
         verify(auditService)
                 .submitAuditEvent(
                         EMAIL_INVALID_CODE_REQUEST,
@@ -703,7 +753,7 @@ class SendNotificationHandlerTest {
                         TEST_SIX_DIGIT_CODE,
                         CODE_EXPIRY_TIME,
                         VERIFY_CHANGE_HOW_GET_SECURITY_CODES);
-        verifyNoInteractions(awsSqsClient);
+        verifyNoInteractions(emailSqsClient);
         verify(auditService)
                 .submitAuditEvent(
                         ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST,
@@ -745,7 +795,7 @@ class SendNotificationHandlerTest {
                         TEST_SIX_DIGIT_CODE,
                         CODE_EXPIRY_TIME,
                         VERIFY_PHONE_NUMBER);
-        verifyNoInteractions(awsSqsClient);
+        verifyNoInteractions(emailSqsClient);
         verify(auditService)
                 .submitAuditEvent(
                         PHONE_INVALID_CODE_REQUEST,
@@ -776,7 +826,7 @@ class SendNotificationHandlerTest {
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1031));
-        verifyNoInteractions(awsSqsClient);
+        verifyNoInteractions(emailSqsClient);
         verify(auditService)
                 .submitAuditEvent(
                         EMAIL_INVALID_CODE_REQUEST,
@@ -809,7 +859,7 @@ class SendNotificationHandlerTest {
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1047));
-        verifyNoInteractions(awsSqsClient);
+        verifyNoInteractions(emailSqsClient);
         verify(auditService)
                 .submitAuditEvent(
                         ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST,
@@ -844,7 +894,7 @@ class SendNotificationHandlerTest {
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1032));
 
-        verifyNoInteractions(awsSqsClient);
+        verifyNoInteractions(emailSqsClient);
         verify(auditService)
                 .submitAuditEvent(
                         PHONE_INVALID_CODE_REQUEST,
@@ -875,7 +925,7 @@ class SendNotificationHandlerTest {
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1033));
-        verifyNoInteractions(awsSqsClient);
+        verifyNoInteractions(emailSqsClient);
         verify(auditService)
                 .submitAuditEvent(
                         EMAIL_INVALID_CODE_REQUEST,
@@ -908,7 +958,7 @@ class SendNotificationHandlerTest {
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1048));
-        verifyNoInteractions(awsSqsClient);
+        verifyNoInteractions(emailSqsClient);
         verify(auditService)
                 .submitAuditEvent(
                         ACCOUNT_RECOVERY_EMAIL_INVALID_CODE_REQUEST,
@@ -939,7 +989,7 @@ class SendNotificationHandlerTest {
 
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1034));
-        verifyNoInteractions(awsSqsClient);
+        verifyNoInteractions(emailSqsClient);
         verify(auditService)
                 .submitAuditEvent(
                         PHONE_INVALID_CODE_REQUEST,
@@ -971,7 +1021,7 @@ class SendNotificationHandlerTest {
 
         var notifyRequest =
                 new NotifyRequest(TEST_EMAIL_ADDRESS, notificationType, SupportedLanguage.EN);
-        verify(awsSqsClient).send(objectMapper.writeValueAsString(notifyRequest));
+        verify(emailSqsClient).send(objectMapper.writeValueAsString(notifyRequest));
         verifyNoInteractions(codeStorageService);
         verifyNoInteractions(auditService);
 
@@ -995,7 +1045,7 @@ class SendNotificationHandlerTest {
                                 TEST_EMAIL_ADDRESS, notificationType, JourneyType.REGISTRATION));
 
         assertEquals(204, result.getStatusCode());
-        verifyNoInteractions(awsSqsClient);
+        verifyNoInteractions(emailSqsClient);
         verifyNoInteractions(auditService);
     }
 
