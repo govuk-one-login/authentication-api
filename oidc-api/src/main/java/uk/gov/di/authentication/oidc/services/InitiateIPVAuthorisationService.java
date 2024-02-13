@@ -72,7 +72,7 @@ public class InitiateIPVAuthorisationService {
         }
 
         attachLogFieldToLogs(CLIENT_ID, rpClientID);
-        LOG.info("IPVAuthorisationHandler received request");
+        LOG.info("Received request");
         var pairwiseSubject = userInfo.getSubject();
 
         var state = new State();
@@ -116,7 +116,7 @@ public class InitiateIPVAuthorisationService {
                 pair("rpPairwiseId", rpPairwiseId));
 
         LOG.info(
-                "IPVAuthorisationHandler successfully processed request, redirect URI {}",
+                "Successfully processed request, redirect URI {}",
                 ipvAuthorisationRequest.toURI().toString());
         cloudwatchMetricsService.incrementCounter(
                 "IPVHandoff", Map.of("Environment", configurationService.getEnvironment()));
