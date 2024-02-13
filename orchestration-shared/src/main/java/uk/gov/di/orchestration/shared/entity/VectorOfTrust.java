@@ -147,6 +147,18 @@ public class VectorOfTrust {
             vtrList.add(vot);
         }
 
+        var identityVectorsCount =
+                vtrList.stream()
+                        .filter(
+                                vtr ->
+                                        Objects.nonNull(vtr.getLevelOfConfidence())
+                                                && !vtr.getLevelOfConfidence().equals(NONE))
+                        .count();
+        if (identityVectorsCount != 0 && identityVectorsCount < vtrList.size()) {
+            throw new IllegalArgumentException(
+                    "VTR cannot contain both identity and non-identity vectors");
+        }
+
         return vtrList;
     }
 

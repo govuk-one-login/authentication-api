@@ -34,6 +34,40 @@ class VectorOfTrustTest {
         assertThat(vectorsOfTrust.size(), equalTo(1));
     }
 
+    @ParameterizedTest
+    @MethodSource("validListCombinations")
+    void shouldParseValidStringWithMultipleVectors(String jsonArray, List<VectorOfTrust> expected) {
+        List<VectorOfTrust> vectorsOfTrust =
+                VectorOfTrust.parseFromAuthRequestAttribute(Collections.singletonList(jsonArray));
+        assertThat(vectorsOfTrust, equalTo(expected));
+    }
+
+    public static Stream<Arguments> validListCombinations() {
+        return Stream.of(
+                Arguments.of(jsonArrayOf("Cl.Cm"), List.of(VectorOfTrust.of(MEDIUM_LEVEL, null))),
+                Arguments.of(
+                        jsonArrayOf("PCL200.Cl.Cm", "PCL250.Cl.Cm"),
+                        List.of(
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.HMRC200),
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.HMRC250))),
+                Arguments.of(
+                        jsonArrayOf("PCL200.Cl.Cm", "P2.Cl.Cm"),
+                        List.of(
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.HMRC200),
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL))),
+                Arguments.of(
+                        jsonArrayOf("PCL250.Cl.Cm", "Cl.P2.Cm", "Cm.Cl.PCL200"),
+                        List.of(
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.HMRC250),
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.HMRC200))),
+                Arguments.of(
+                        jsonArrayOf("Cl", "Cl.Cm"),
+                        List.of(
+                                VectorOfTrust.of(LOW_LEVEL, null),
+                                VectorOfTrust.of(MEDIUM_LEVEL, null))));
+    }
+
     @Test
     void shouldReturnDefaultVectorWhenEmptyListIsPassedIn() {
         List<VectorOfTrust> vectorsOfTrust =
@@ -141,6 +175,9 @@ class VectorOfTrustTest {
                 Arguments.of(
                         "VTR must contain either 0 or 1 identity proofing components",
                         jsonArrayOf("P2.P0")),
+                Arguments.of(
+                        "VTR cannot contain both identity and non-identity vectors",
+                        jsonArrayOf("P2.Cl.Cm", "Cl.Cm")),
                 Arguments.of("Invalid CredentialTrustLevel", jsonArrayOf("Cm")),
                 Arguments.of("Invalid CredentialTrustLevel", jsonArrayOf("P2")),
                 Arguments.of("Invalid CredentialTrustLevel", jsonArrayOf("Cl.Cm.Cl")),
