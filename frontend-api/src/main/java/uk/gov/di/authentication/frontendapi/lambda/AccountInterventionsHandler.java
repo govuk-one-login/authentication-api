@@ -139,38 +139,37 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
                             accountInterventionsInboundResponse.state().suspended());
             return generateApiGatewayProxyResponse(200, accountInterventionsResponse, true);
         } catch (UnsuccessfulAccountInterventionsResponseException e) {
-            LOG.error(
-                    "Error in Account Interventions response HttpCode: {}, ErrorMessage: {}.",
-                    e.getHttpCode(),
-                    e.getMessage());
-            if (!configurationService.abortOnAccountInterventionsErrorResponse()) {
-                try {
-                    LOG.error(
-                            "Swallowing error and returning default account interventions response");
-                    AccountInterventionsResponse defaultAccountInterventionsResponse =
-                            new AccountInterventionsResponse(false, false, false);
-                    return generateApiGatewayProxyResponse(
-                            200, defaultAccountInterventionsResponse, true);
-                } catch (JsonException ex) {
-                    return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
-                }
-            }
-            if (e.getHttpCode() == 429) {
-                return generateApiGatewayProxyErrorResponse(429, ErrorResponse.ERROR_1051);
-            }
-            if (e.getHttpCode() == 500) {
-                return generateApiGatewayProxyErrorResponse(500, ErrorResponse.ERROR_1052);
-            }
-            if (e.getHttpCode() == 502) {
-                return generateApiGatewayProxyErrorResponse(502, ErrorResponse.ERROR_1053);
-            }
-            if (e.getHttpCode() == 504) {
-                return generateApiGatewayProxyErrorResponse(504, ErrorResponse.ERROR_1054);
-            }
-            return generateApiGatewayProxyErrorResponse(e.getHttpCode(), ErrorResponse.ERROR_1055);
+            return handleErrorForAIS(e);
         } catch (JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
         }
+    }
+
+    private APIGatewayProxyResponseEvent handleErrorForAIS(
+            UnsuccessfulAccountInterventionsResponseException e) {
+        LOG.error(
+                "Error in Account Interventions response HttpCode: {}, ErrorMessage: {}.",
+                e.getHttpCode(),
+                e.getMessage());
+        if (!configurationService.abortOnAccountInterventionsErrorResponse()) {
+            try {
+                LOG.error("Swallowing error and returning default account interventions response");
+                AccountInterventionsResponse defaultAccountInterventionsResponse =
+                        new AccountInterventionsResponse(false, false, false);
+                return generateApiGatewayProxyResponse(
+                        200, defaultAccountInterventionsResponse, true);
+            } catch (JsonException ex) {
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+            }
+        }
+        return switch (e.getHttpCode()) {
+            case 429 -> generateApiGatewayProxyErrorResponse(429, ErrorResponse.ERROR_1051);
+            case 500 -> generateApiGatewayProxyErrorResponse(500, ErrorResponse.ERROR_1052);
+            case 502 -> generateApiGatewayProxyErrorResponse(502, ErrorResponse.ERROR_1053);
+            case 504 -> generateApiGatewayProxyErrorResponse(504, ErrorResponse.ERROR_1054);
+            default -> generateApiGatewayProxyErrorResponse(
+                    e.getHttpCode(), ErrorResponse.ERROR_1055);
+        };
     }
 
     private void submitAuditEvents(
