@@ -1,11 +1,11 @@
 doc_app_cri_data_endpoint                   = "credentials/issue"
-doc_app_backend_uri                         = "https://dcmaw-cri.build.stubs.account.gov.uk"
-doc_app_domain                              = "https://dcmaw-cri.build.stubs.account.gov.uk"
-doc_app_authorisation_client_id             = "orch-build"
+doc_app_backend_uri                         = "https://build-doc-app-cri-stub.london.cloudapps.digital"
+doc_app_domain                              = "https://build-doc-app-cri-stub.london.cloudapps.digital"
+doc_app_authorisation_client_id             = "authOrchestratorDocApp"
 doc_app_authorisation_callback_uri          = "https://oidc.build.account.gov.uk/doc-app-callback"
-doc_app_authorisation_uri                   = "https://dcmaw-cri.build.stubs.account.gov.uk/authorize"
-doc_app_jwks_endpoint                       = "https://dcmaw-cri.build.stubs.account.gov.uk/.well-known/jwks.json"
-doc_app_encryption_key_id                   = "KUqkB4-J06g0jznBi1uAdrBZNumQ41dgXGjXNVgmuUs"
+doc_app_authorisation_uri                   = "https://build-doc-app-cri-stub.london.cloudapps.digital/authorize"
+doc_app_jwks_endpoint                       = "https://build-doc-app-cri-stub.london.cloudapps.digital/.well-known/jwks.json"
+doc_app_encryption_key_id                   = "7788bc975abd44e8b4fd7646d08ea9428476e37bff3e4365804b41cc29f8ef21"
 spot_enabled                                = false
 language_cy_enabled                         = true
 internal_sector_uri                         = "https://identity.build.account.gov.uk"
