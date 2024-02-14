@@ -137,7 +137,7 @@ class ClientSessionServiceTest {
                 new ClientSession(
                         Map.of("authparam", List.of("v1", "v2")),
                         LocalDateTime.now(),
-                        VectorOfTrust.getDefaults(),
+                        List.of(VectorOfTrust.getDefaults()),
                         "client-name"));
     }
 }

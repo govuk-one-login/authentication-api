@@ -244,11 +244,6 @@ class OrchestrationAuthorizationServiceTest {
     }
 
     private ClientRegistry generateClientRegistry(
-            String redirectURI, String clientID, List<String> scopes) {
-        return generateClientRegistry(redirectURI, clientID, scopes, false);
-    }
-
-    private ClientRegistry generateClientRegistry(
             String redirectURI, String clientID, List<String> scopes, boolean testClient) {
         return new ClientRegistry()
                 .withRedirectUrls(singletonList(redirectURI))
