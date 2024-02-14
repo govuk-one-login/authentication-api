@@ -31,11 +31,27 @@ public class TokenGeneratorHelper {
     public static SignedJWT generateIDToken(
             String clientId, Subject subject, String issuerUrl, JWK signingKey) {
         Date expiryDate = NowHelper.nowPlus(2, ChronoUnit.MINUTES);
-        return generateIDToken(clientId, subject, issuerUrl, signingKey, expiryDate);
+        return generateIDToken(clientId, subject, issuerUrl, signingKey, expiryDate, null);
     }
 
     public static SignedJWT generateIDToken(
             String clientId, Subject subject, String issuerUrl, JWK signingKey, Date expiryDate) {
+        return generateIDToken(clientId, subject, issuerUrl, signingKey, expiryDate, null);
+    }
+
+    public static SignedJWT generateIDToken(
+            String clientId, Subject subject, String issuerUrl, JWK signingKey, String vot) {
+        Date expiryDate = NowHelper.nowPlus(2, ChronoUnit.MINUTES);
+        return generateIDToken(clientId, subject, issuerUrl, signingKey, expiryDate, vot);
+    }
+
+    public static SignedJWT generateIDToken(
+            String clientId,
+            Subject subject,
+            String issuerUrl,
+            JWK signingKey,
+            Date expiryDate,
+            String vot) {
         IDTokenClaimsSet idTokenClaims =
                 new IDTokenClaimsSet(
                         new Issuer(issuerUrl),
@@ -43,6 +59,8 @@ public class TokenGeneratorHelper {
                         List.of(new Audience(clientId)),
                         expiryDate,
                         new Date());
+        if (Objects.nonNull(vot)) idTokenClaims.setClaim("vot", vot);
+
         try {
             JWSSigner signer;
             JWSHeader.Builder jwsHeaderBuilder;
