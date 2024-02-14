@@ -52,7 +52,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import static com.nimbusds.oauth2.sdk.OAuth2Error.ACCESS_DENIED_CODE;
 import static uk.gov.di.orchestration.shared.entity.ValidClaims.RETURN_CODE;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper.getSectorIdentifierForClient;
@@ -262,7 +261,8 @@ public class IPVCallbackHandler
 
                 return ipvCallbackHelper.generateAuthenticationErrorResponse(
                         authRequest,
-                        new ErrorObject(ACCESS_DENIED_CODE, errorObject.get().getDescription()),
+                        new ErrorObject(
+                                errorObject.get().getCode(), errorObject.get().getDescription()),
                         false,
                         clientSessionId,
                         session.getSessionId());
