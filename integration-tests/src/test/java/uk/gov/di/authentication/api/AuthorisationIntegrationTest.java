@@ -529,6 +529,33 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
+    void shouldReturnInvalidVtrListErrorToRPWhenVtrListContainsBothIdentityAndNonIdentityVectors()
+            throws Exception {
+        setupForAuthJourney();
+        String sessionId = givenAnExistingSession(MEDIUM_LEVEL);
+        redis.addEmailToSession(sessionId, TEST_EMAIL_ADDRESS);
+        registerUserWithConsentedScope(new Scope(OPENID));
+
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(
+                                Optional.of(
+                                        buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID))),
+                        constructQueryStringParameters(
+                                CLIENT_ID, null, "openid", "[P2.Cl.Cm,Cl.Cm]"),
+                        Optional.of("GET"));
+
+        assertThat(response, hasStatus(302));
+        var redirectUri = getLocationResponseHeader(response);
+        assertThat(redirectUri, startsWith(RP_REDIRECT_URI));
+        assertThat(URI.create(redirectUri).getQuery(), containsString("error=invalid_request"));
+        assertThat(
+                URI.create(redirectUri).getQuery(),
+                containsString("error_description=Request+vtr+not+valid"));
+    }
+
+    @Test
     void shouldRedirectToFrontendWhenPromptNoneAndUserUnauthenticated() {
         setupForAuthJourney();
         var response =
@@ -766,13 +793,13 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertTrue(authRequest.getScope().contains(CustomScopeValue.DOC_CHECKING_APP));
         assertThat(
                 authRequest.getCustomParameter("vtr"),
-                equalTo(List.of("[\"P2.Cl.Cm\",\"Cl.Cm\"]")));
+                equalTo(List.of("[\"P2.Cl.Cm\",\"PCL200.Cl.Cm\"]")));
         assertThat(
                 clientSession.getVtrList(),
                 equalTo(
                         List.of(
                                 VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
-                                new VectorOfTrust(MEDIUM_LEVEL))));
+                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.HMRC200))));
 
         JsonElement actualClaims =
                 JsonParser.parseString(String.valueOf(authRequest.getOIDCClaims()));
@@ -940,7 +967,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .claim("nonce", new Nonce().getValue())
                         .claim("client_id", CLIENT_ID)
                         .claim("state", new State().getValue())
-                        .claim("vtr", List.of("P2.Cl.Cm", "Cl.Cm"))
+                        .claim("vtr", List.of("P2.Cl.Cm", "PCL200.Cl.Cm"))
                         .claim("claims", CLAIMS)
                         .issuer(CLIENT_ID);
         if (uiLocales != null && !uiLocales.isBlank()) {
