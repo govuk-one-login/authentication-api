@@ -30,10 +30,10 @@ stub_rp_clients = [
   {
     client_name = "relying-party-stub-sandpit"
     callback_urls = [
-      "https://rp-sandpit.build.stubs.account.gov.uk/oidc/authorization-code/callback",
+      "https://rp-dev.build.stubs.account.gov.uk/oidc/authorization-code/callback",
     ]
     logout_urls = [
-      "https://rp-sandpit.build.stubs.account.gov.uk/signed-out",
+      "https://rp-dev.build.stubs.account.gov.uk/signed-out",
     ]
     test_client                     = "0"
     consent_required                = "0"
@@ -50,10 +50,10 @@ stub_rp_clients = [
   {
     client_name = "relying-party-stub-sandpit-app"
     callback_urls = [
-      "https://doc-app-rp-sandpit.build.stubs.account.gov.uk/oidc/authorization-code/callback",
+      "https://doc-app-rp-dev.build.stubs.account.gov.uk/oidc/authorization-code/callback",
     ]
     logout_urls = [
-      "https://doc-app-rp-sandpit.build.stubs.account.gov.uk/signed-out",
+      "https://doc-app-rp-dev.build.stubs.account.gov.uk/signed-out",
     ]
     test_client                     = "1"
     consent_required                = "0"
