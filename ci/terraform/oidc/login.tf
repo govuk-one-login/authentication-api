@@ -31,17 +31,15 @@ module "login" {
   environment     = var.environment
 
   handler_environment_variables = {
-    ENVIRONMENT                = var.environment
-    TXMA_AUDIT_QUEUE_URL       = module.oidc_txma_audit.queue_url
-    LOCALSTACK_ENDPOINT        = var.use_localstack ? var.localstack_endpoint : null
-    REDIS_KEY                  = local.redis_key
-    DYNAMO_ENDPOINT            = var.use_localstack ? var.lambda_dynamo_endpoint : null
-    TERMS_CONDITIONS_VERSION   = var.terms_and_conditions
-    HEADERS_CASE_INSENSITIVE   = var.use_localstack ? "true" : "false"
-    INTERNAl_SECTOR_URI        = var.internal_sector_uri
-    INCREASED_LOCKOUT_DURATION = var.increased_lockout_duration
-    LOCKOUT_DURATION           = var.lockout_duration
-    ORIGINAL_LOCKOUT_DURATION  = var.original_lockout_duration
+    ENVIRONMENT              = var.environment
+    TXMA_AUDIT_QUEUE_URL     = module.oidc_txma_audit.queue_url
+    LOCALSTACK_ENDPOINT      = var.use_localstack ? var.localstack_endpoint : null
+    REDIS_KEY                = local.redis_key
+    DYNAMO_ENDPOINT          = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    TERMS_CONDITIONS_VERSION = var.terms_and_conditions
+    HEADERS_CASE_INSENSITIVE = var.use_localstack ? "true" : "false"
+    INTERNAl_SECTOR_URI      = var.internal_sector_uri
+    LOCKOUT_DURATION         = var.lockout_duration
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.LoginHandler::handleRequest"
 

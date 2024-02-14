@@ -10,8 +10,6 @@ logging_endpoint_arns = [
 ]
 
 lockout_duration                          = 60
-original_lockout_duration                 = 30
-increased_lockout_duration                = false
 otp_code_ttl_duration                     = 120
 email_acct_creation_otp_code_ttl_duration = 60
 

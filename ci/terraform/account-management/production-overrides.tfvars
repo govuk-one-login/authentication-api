@@ -30,3 +30,5 @@ logging_endpoint_arns = [
 ]
 
 common_state_bucket = "digital-identity-prod-tfstate"
+
+lockout_duration = 900

@@ -30,9 +30,7 @@ module "verify_mfa_code" {
 
   handler_environment_variables = {
     ENVIRONMENT                         = var.environment
-    INCREASED_LOCKOUT_DURATION          = var.increased_lockout_duration
     LOCKOUT_DURATION                    = var.lockout_duration
-    ORIGINAL_LOCKOUT_DURATION           = var.original_lockout_duration
     TXMA_AUDIT_QUEUE_URL                = module.oidc_txma_audit.queue_url
     LOCALSTACK_ENDPOINT                 = var.use_localstack ? var.localstack_endpoint : null
     REDIS_KEY                           = local.redis_key

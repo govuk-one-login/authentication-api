@@ -200,16 +200,6 @@ variable "lockout_duration" {
   default = 7200
 }
 
-variable "original_lockout_duration" {
-  type    = number
-  default = 900
-}
-
-variable "increased_lockout_duration" {
-  type    = string
-  default = "false"
-}
-
 variable "otp_code_ttl_duration" {
   type    = number
   default = 900

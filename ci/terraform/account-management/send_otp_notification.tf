@@ -33,9 +33,7 @@ module "send_otp_notification" {
     LOCALSTACK_ENDPOINT                    = var.use_localstack ? var.localstack_endpoint : null
     REDIS_KEY                              = local.redis_key
     TXMA_AUDIT_QUEUE_URL                   = module.account_management_txma_audit.queue_url
-    INCREASED_LOCKOUT_DURATION             = var.increased_lockout_duration
     LOCKOUT_DURATION                       = var.lockout_duration
-    ORIGINAL_LOCKOUT_DURATION              = var.original_lockout_duration
     DEFAULT_OTP_CODE_EXPIRY                = var.otp_code_ttl_duration
     EMAIL_OTP_ACCOUNT_CREATION_CODE_EXPIRY = var.email_acct_creation_otp_code_ttl_duration
     INTERNAl_SECTOR_URI                    = var.internal_sector_uri

@@ -9,3 +9,5 @@ logging_endpoint_arns = [
 ]
 
 common_state_bucket = "di-auth-staging-tfstate"
+
+lockout_duration = 900

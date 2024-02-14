@@ -29,9 +29,7 @@ module "send_notification" {
 
   handler_environment_variables = {
     ENVIRONMENT                            = var.environment
-    INCREASED_LOCKOUT_DURATION             = var.increased_lockout_duration
     LOCKOUT_DURATION                       = var.lockout_duration
-    ORIGINAL_LOCKOUT_DURATION              = var.original_lockout_duration
     EMAIL_QUEUE_URL                        = aws_sqs_queue.email_queue.id
     PENDING_EMAIL_CHECK_QUEUE_URL          = local.pending_email_check_queue_id
     SUPPORT_EMAIL_CHECK_ENABLED            = var.support_email_check_enabled
