@@ -17,7 +17,8 @@ public class LogLineHelper {
         PERSISTENT_SESSION_ID("persistentSessionId", true),
         AWS_REQUEST_ID("awsRequestId", false),
         CLIENT_ID("clientId", true),
-        CLIENT_NAME("clientName", false);
+        CLIENT_NAME("clientName", false),
+        JOURNEY_TYPE("journeyType", false);
 
         private final String logFieldName;
         private boolean isBase64;
