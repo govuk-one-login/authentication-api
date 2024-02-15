@@ -63,6 +63,7 @@ import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
+import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.DocAppSubjectIdHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.services.AuditService;
@@ -216,6 +217,7 @@ class AuthorisationHandlerTest {
                 .thenReturn(Optional.empty());
         when(orchestrationAuthorizationService.getExistingOrCreateNewPersistentSessionId(any()))
                 .thenReturn(EXPECTED_PERSISTENT_COOKIE_VALUE_WITH_TIMESTAMP);
+        when(orchestrationAuthorizationService.getVtrList(any())).thenCallRealMethod();
         when(userContext.getClient()).thenReturn(Optional.of(generateClientRegistry()));
         when(context.getAwsRequestId()).thenReturn(AWS_REQUEST_ID);
         handler =
@@ -235,7 +237,8 @@ class AuthorisationHandlerTest {
         session = new Session("a-session-id");
         when(sessionService.createSession()).thenReturn(session);
         when(clientSessionService.generateClientSessionId()).thenReturn(CLIENT_SESSION_ID);
-        when(clientSessionService.generateClientSession(any(), any(), any(), any()))
+        when(clientSessionService.generateClientSession(
+                        any(), any(), (List<VectorOfTrust>) any(), any()))
                 .thenReturn(clientSession);
         when(clientSession.getDocAppSubjectId()).thenReturn(new Subject("test-subject-id"));
         when(clientService.getClient(anyString()))
@@ -291,7 +294,6 @@ class AuthorisationHandlerTest {
             var orchClientId = "orchestration-client-id";
             when(configService.isAuthOrchSplitEnabled()).thenReturn(true);
             when(configService.getOrchestrationClientId()).thenReturn(orchClientId);
-            when(orchestrationAuthorizationService.getVtrList(any())).thenCallRealMethod();
             when(orchestrationAuthorizationService.getSignedAndEncryptedJWT(any()))
                     .thenReturn(TEST_ENCRYPTED_JWT);
 
@@ -439,7 +441,6 @@ class AuthorisationHandlerTest {
         void shouldRetainGoogleAnalyticsParamThroughRedirectToLoginWhenClientIsFaceToFaceRp(
                 boolean isAuthOrchSplitEnabled) {
             when(configService.isAuthOrchSplitEnabled()).thenReturn(isAuthOrchSplitEnabled);
-            when(orchestrationAuthorizationService.getVtrList(any())).thenCallRealMethod();
 
             withExistingSession(session);
             when(userContext.getClientSession()).thenReturn(clientSession);
@@ -565,7 +566,7 @@ class AuthorisationHandlerTest {
 
             assertThrows(
                     RuntimeException.class,
-                    AuthorisationHandlerTest.this::makeDocAppHandlerRequest,
+                    () -> makeDocAppHandlerRequest(),
                     format("No Client found for ClientID: %s", CLIENT_ID.getValue()));
             verifyNoInteractions(configService);
             verifyNoInteractions(requestObjectAuthorizeValidator);
@@ -748,7 +749,9 @@ class AuthorisationHandlerTest {
 
             assertThrows(
                     RuntimeException.class,
-                    () -> makeHandlerRequest(withRequestEvent(requestParams)),
+                    () -> {
+                        makeHandlerRequest(withRequestEvent(requestParams));
+                    },
                     "Invalid request: Invalid prompt parameter: Unknown prompt type: unrecognised");
 
             verify(auditService)
@@ -960,7 +963,9 @@ class AuthorisationHandlerTest {
             event.setRequestContext(
                     new ProxyRequestContext()
                             .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
-            makeHandlerRequest(event);
+            APIGatewayProxyResponseEvent response = makeHandlerRequest(event);
+            URI uri = URI.create(response.getHeaders().get(ResponseHeaders.LOCATION));
+
             verifyAuthorisationRequestParsedAuditEvent(rpSid, false, false);
         }
 
@@ -1024,7 +1029,6 @@ class AuthorisationHandlerTest {
         @Test
         void shouldNotAddReauthenticateClaimForQueryParametersWithAuthOrchSplitEnabled() {
             when(configService.isAuthOrchSplitEnabled()).thenReturn(true);
-            when(orchestrationAuthorizationService.getVtrList(any())).thenCallRealMethod();
 
             Map<String, String> requestParams =
                     buildRequestParams(
@@ -1086,7 +1090,6 @@ class AuthorisationHandlerTest {
         void shouldAddReauthenticateClaimIfPromptIsLoginAndIdTokenIsValidWithAuthOrchSplitFlag()
                 throws JOSEException, ParseException {
             when(configService.isAuthOrchSplitEnabled()).thenReturn(true);
-            when(orchestrationAuthorizationService.getVtrList(any())).thenCallRealMethod();
             when(tokenValidationService.isTokenSignatureValid(any())).thenReturn(true);
 
             var jwtClaimsSet =
@@ -1168,7 +1171,6 @@ class AuthorisationHandlerTest {
                 shouldNotAddReauthenticateClaimIfPromptIsNotLoginAndIdTokenIsValidWhenAuthOrchSplitFlagTrue(
                         Prompt.Type prompt) throws JOSEException {
             when(configService.isAuthOrchSplitEnabled()).thenReturn(true);
-            when(orchestrationAuthorizationService.getVtrList(any())).thenCallRealMethod();
             when(tokenValidationService.isTokenSignatureValid(any())).thenReturn(true);
 
             var jwtClaimsSet =
@@ -1235,7 +1237,6 @@ class AuthorisationHandlerTest {
         void shouldNotAddReauthenticateClaimIfIdTokenHintIsNotPresentWhenAuthOrchSplitFlagTrue()
                 throws JOSEException {
             when(configService.isAuthOrchSplitEnabled()).thenReturn(true);
-            when(orchestrationAuthorizationService.getVtrList(any())).thenCallRealMethod();
 
             var jwtClaimsSet =
                     buildjwtClaimsSet(ID_TOKEN_AUDIENCE, Prompt.Type.LOGIN.toString(), null);
@@ -1266,46 +1267,7 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldGetVtrFromIdTokenIfNotPresentInAuthenticationRequestAndReauthRequested()
-                throws JOSEException {
-            when(configService.isAuthOrchSplitEnabled()).thenReturn(true);
-            when(tokenValidationService.isTokenSignatureValid(any())).thenReturn(true);
-            when(orchestrationAuthorizationService.getVtrList(any())).thenReturn(null);
-            var serialisedIdTokenHint =
-                    TokenGeneratorHelper.generateIDToken(
-                                    CLIENT_ID.getValue(),
-                                    SUBJECT,
-                                    "http://localhost-rp",
-                                    EC_SIGNING_KEY,
-                                    "[PCL200.Cl]")
-                            .serialize();
-            var jwtClaimsSet =
-                    buildjwtClaimsSet(
-                            ID_TOKEN_AUDIENCE, Prompt.Type.LOGIN.toString(), serialisedIdTokenHint);
-            Map<String, String> requestParams =
-                    buildRequestParams(
-                            Map.of(
-                                    "client_id",
-                                    CLIENT_ID.getValue(),
-                                    "response_type",
-                                    "code",
-                                    "scope",
-                                    "openid",
-                                    "request",
-                                    generateSignedJWT(jwtClaimsSet, RSA_KEY_PAIR).serialize()));
-
-            APIGatewayProxyResponseEvent response =
-                    makeHandlerRequest(withRequestEvent(requestParams));
-            assertThat(response.getStatusCode(), equalTo(302));
-
-            ArgumentCaptor<JWTClaimsSet> argument = ArgumentCaptor.forClass(JWTClaimsSet.class);
-            verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
-            assertThat(argument.getValue().getClaim("confidence"), equalTo("Cl"));
-        }
-
-        @Test
         void shouldErrorIfIdTokenIsInvalid() throws JOSEException {
-            when(configService.isAuthOrchSplitEnabled()).thenReturn(true);
             when(tokenValidationService.isTokenSignatureValid(any())).thenReturn(false);
 
             var jwtClaimsSet =
@@ -1363,6 +1325,7 @@ class AuthorisationHandlerTest {
 
         @Test
         void shouldErrorIfIdTokenIsInvalidWhenAuthOrchSplitFlagTrue() throws JOSEException {
+            when(configService.isAuthOrchSplitEnabled()).thenReturn(true);
             when(tokenValidationService.isTokenSignatureValid(any())).thenReturn(false);
 
             var jwtClaimsSet =
@@ -1641,15 +1604,16 @@ class AuthorisationHandlerTest {
     void shouldNotActAsAnOpenRedirector() {
         assertThrows(
                 RuntimeException.class,
-                () ->
-                        handler.handleRequest(
-                                withRequestEvent(
-                                        Map.of(
-                                                "redirect_uri",
-                                                "https://www.example.com",
-                                                "client_id",
-                                                "invalid-client")),
-                                context));
+                () -> {
+                    handler.handleRequest(
+                            withRequestEvent(
+                                    Map.of(
+                                            "redirect_uri",
+                                            "https://www.example.com",
+                                            "client_id",
+                                            "invalid-client")),
+                            context);
+                });
     }
 
     private static Stream<ErrorObject> expectedErrorObjects() {

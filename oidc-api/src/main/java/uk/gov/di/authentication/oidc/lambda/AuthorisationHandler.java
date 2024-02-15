@@ -38,7 +38,6 @@ import uk.gov.di.authentication.oidc.validators.RequestObjectAuthorizeValidator;
 import uk.gov.di.orchestration.shared.conditions.DocAppUserHelper;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
-import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
@@ -178,8 +177,7 @@ public class AuthorisationHandler
     }
 
     public APIGatewayProxyResponseEvent authoriseRequestHandler(
-            APIGatewayProxyRequestEvent input, Context context)
-            throws ClientNotFoundException, java.text.ParseException {
+            APIGatewayProxyRequestEvent input, Context context) throws ClientNotFoundException {
         ClientRegistry client;
         var persistentSessionId =
                 orchestrationAuthorizationService.getExistingOrCreateNewPersistentSessionId(
@@ -306,12 +304,11 @@ public class AuthorisationHandler
                 pair("reauthRequested", reauthRequested));
 
         Optional<Session> session = sessionService.getSessionFromSessionCookie(input.getHeaders());
-        var vtrList = getVtrList(reauthRequested, authRequest);
         ClientSession clientSession =
                 clientSessionService.generateClientSession(
                         authRequest.toParameters(),
                         LocalDateTime.now(),
-                        vtrList,
+                        orchestrationAuthorizationService.getVtrList(authRequest),
                         client.getClientName());
         if (DocAppUserHelper.isDocCheckingAppUser(
                 authRequest.toParameters(), Optional.of(client))) {
@@ -332,8 +329,7 @@ public class AuthorisationHandler
                 persistentSessionId,
                 client,
                 clientSessionId,
-                reauthRequested,
-                vtrList);
+                reauthRequested);
     }
 
     private static String getRpSid(AuthenticationRequest authRequest) {
@@ -346,29 +342,6 @@ public class AuthorisationHandler
             LOG.error("Failed to retrieve rp_sid. Passing unknown");
             return AuditService.UNKNOWN;
         }
-    }
-
-    private List<VectorOfTrust> getVtrList(
-            boolean reauthRequested, AuthenticationRequest authRequest)
-            throws java.text.ParseException {
-        if (reauthRequested && orchestrationAuthorizationService.getVtrList(authRequest) == null) {
-            var idTokenHint =
-                    SignedJWT.parse(authRequest.getCustomParameter("id_token_hint").get(0));
-            var grantedVectorOfTrust = extractVoTFromIdTokenHint(idTokenHint);
-            return List.of(grantedVectorOfTrust);
-        }
-        return orchestrationAuthorizationService.getVtrList(authRequest);
-    }
-
-    private VectorOfTrust extractVoTFromIdTokenHint(SignedJWT idTokenHint)
-            throws java.text.ParseException {
-        var votClaim = idTokenHint.getJWTClaimsSet().getClaim("vot");
-        if (votClaim == null) {
-            return new VectorOfTrust(CredentialTrustLevel.getDefault());
-        } else if (votClaim instanceof String vot) {
-            return VectorOfTrust.parseFromAuthRequestAttribute(List.of(vot)).get(0);
-        }
-        throw new java.text.ParseException("vtr is in an invalid format. Could not be parsed.", 0);
     }
 
     private APIGatewayProxyResponseEvent handleDocAppJourney(
@@ -463,8 +436,7 @@ public class AuthorisationHandler
             String persistentSessionId,
             ClientRegistry client,
             String clientSessionId,
-            boolean reauthRequested,
-            List<VectorOfTrust> vtrList) {
+            boolean reauthRequested) {
         if (Objects.nonNull(authenticationRequest.getPrompt())
                 && (authenticationRequest.getPrompt().contains(Prompt.Type.CONSENT)
                         || authenticationRequest
@@ -519,8 +491,7 @@ public class AuthorisationHandler
                 ipAddress,
                 persistentSessionId,
                 client,
-                reauthRequested,
-                vtrList);
+                reauthRequested);
     }
 
     private APIGatewayProxyResponseEvent generateAuthRedirect(
@@ -530,8 +501,7 @@ public class AuthorisationHandler
             String ipAddress,
             String persistentSessionId,
             ClientRegistry client,
-            boolean reauthRequested,
-            List<VectorOfTrust> vtrList) {
+            boolean reauthRequested) {
         LOG.info("Redirecting");
         String redirectURI;
         try {
@@ -608,7 +578,11 @@ public class AuthorisationHandler
                         clientSessionId);
             }
 
-            var confidence = VectorOfTrust.getLowestCredentialTrustLevel(vtrList).getValue();
+            var confidence =
+                    VectorOfTrust.getLowestCredentialTrustLevel(
+                                    orchestrationAuthorizationService.getVtrList(
+                                            authenticationRequest))
+                            .getValue();
             var claimsBuilder =
                     new JWTClaimsSet.Builder()
                             .issuer(configurationService.getOrchestrationClientId())
