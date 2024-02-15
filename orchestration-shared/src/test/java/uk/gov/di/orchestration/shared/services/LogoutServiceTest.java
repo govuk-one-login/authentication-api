@@ -92,6 +92,7 @@ public class LogoutServiceTest {
     private static final String EMAIL = "joe.bloggs@test.com";
 
     private static final String OIDC_API_BASE_URL = "https://oidc.test.account.gov.uk/";
+    private static final String FRONTEND_BASE_URL = "https://signin.test.account.gov.uk/";
 
     private static final String ENVIRONMENT = "test";
 
@@ -112,6 +113,9 @@ public class LogoutServiceTest {
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         when(configurationService.getOidcApiBaseURL()).thenReturn(Optional.of(OIDC_API_BASE_URL));
         when(configurationService.getEnvironment()).thenReturn(ENVIRONMENT);
+        when(configurationService.getFrontendBaseUrl()).thenReturn(FRONTEND_BASE_URL);
+        when(configurationService.getAccountStatusBlockedURI()).thenCallRealMethod();
+        when(configurationService.getAccountStatusSuspendedURI()).thenCallRealMethod();
         logoutService =
                 new LogoutService(
                         configurationService,
@@ -284,7 +288,9 @@ public class LogoutServiceTest {
                 .incrementLogout(Optional.of(CLIENT_ID), Optional.of(accountStatus));
 
         assertThat(response, hasStatus(302));
-        assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), equalTo(OIDC_API_BASE_URL));
+        assertThat(
+                response.getHeaders().get(ResponseHeaders.LOCATION),
+                equalTo(FRONTEND_BASE_URL + "unavailable-permanent"));
     }
 
     @Test
@@ -312,7 +318,9 @@ public class LogoutServiceTest {
                 .incrementLogout(Optional.of(CLIENT_ID), Optional.of(accountStatus));
 
         assertThat(response, hasStatus(302));
-        assertThat(response.getHeaders().get(ResponseHeaders.LOCATION), equalTo(OIDC_API_BASE_URL));
+        assertThat(
+                response.getHeaders().get(ResponseHeaders.LOCATION),
+                equalTo(FRONTEND_BASE_URL + "unavailable-temporary"));
     }
 
     @Test

@@ -91,12 +91,20 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv().getOrDefault("ACCOUNT_INTERVENTIONS_ERROR_METRIC_NAME", "");
     }
 
-    public String getAccountStatusBlockedURI() {
-        return "/orch-frontend/not-available";
+    public URI getAccountStatusBlockedURI() {
+        return URI.create(
+                System.getenv()
+                        .getOrDefault(
+                                "ACCOUNT_STATUS_BLOCKED_URI",
+                                getFrontendBaseUrl() + "unavailable-permanent"));
     }
 
-    public String getAccountStatusSuspendedURI() {
-        return "/orch-frontend/unavailable";
+    public URI getAccountStatusSuspendedURI() {
+        return URI.create(
+                System.getenv()
+                        .getOrDefault(
+                                "ACCOUNT_STATUS_SUSPENDED_URI",
+                                getFrontendBaseUrl() + "unavailable-temporary"));
     }
 
     public long getAuthCodeExpiry() {

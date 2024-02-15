@@ -10,7 +10,6 @@ import uk.gov.di.orchestration.shared.domain.LogoutAuditableEvent;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
-import uk.gov.di.orchestration.shared.helpers.ConstructUriHelper;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
 
@@ -167,37 +166,20 @@ public class LogoutService {
             String clientId,
             String sessionId,
             AccountInterventionStatus accountStatus) {
-        String baseRedirectUrl;
-        String redirectPath;
-        // Temporarily redirect to auth frontend (in staging and production) instead of orch
-        // frontend, while orch frontend is not deployed in these envs.
-        String env = configurationService.getEnvironment();
-        if (env.equals("staging") || env.equals("production")) {
-            baseRedirectUrl = configurationService.getFrontendBaseUrl();
-            if (accountStatus.blocked()) {
-                redirectPath = "/unavailable-permanent";
-                LOG.info("Generating Account Intervention blocked logout response");
-            } else if (accountStatus.suspended()) {
-                redirectPath = "/unavailable-temporary";
-                LOG.info("Generating Account Intervention suspended logout response");
-            } else {
-                throw new RuntimeException("Account status must be blocked or suspended");
-            }
+        URI redirectURI;
+        if (accountStatus.blocked()) {
+            redirectURI = configurationService.getAccountStatusBlockedURI();
+            LOG.info("Generating Account Intervention blocked logout response");
+        } else if (accountStatus.suspended()) {
+            redirectURI = configurationService.getAccountStatusSuspendedURI();
+            LOG.info("Generating Account Intervention suspended logout response");
         } else {
-            baseRedirectUrl = configurationService.getOidcApiBaseURL().orElseThrow();
-            if (accountStatus.blocked()) {
-                redirectPath = configurationService.getAccountStatusBlockedURI();
-                LOG.info("Generating Account Intervention blocked logout response");
-            } else if (accountStatus.suspended()) {
-                redirectPath = configurationService.getAccountStatusSuspendedURI();
-                LOG.info("Generating Account Intervention suspended logout response");
-            } else {
-                throw new RuntimeException("Account status must be blocked or suspended");
-            }
+            throw new RuntimeException("Account status must be blocked or suspended");
         }
+
         cloudwatchMetricsService.incrementLogout(Optional.of(clientId), Optional.of(accountStatus));
         return generateLogoutResponse(
-                ConstructUriHelper.buildURI(baseRedirectUrl, redirectPath),
+                redirectURI,
                 Optional.empty(),
                 Optional.empty(),
                 input,
