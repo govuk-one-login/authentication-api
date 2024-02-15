@@ -318,6 +318,23 @@ public class AuthenticationCallbackHandler
                                 clientSession,
                                 userSession);
 
+                auditService.submitAuditEvent(
+                        OidcAuditableEvent.AUTHENTICATION_COMPLETE,
+                        clientSessionId,
+                        userSession.getSessionId(),
+                        clientId,
+                        userInfo.getSubject().getValue(),
+                        Objects.isNull(userSession.getEmailAddress())
+                                ? AuditService.UNKNOWN
+                                : userSession.getEmailAddress(),
+                        IpAddressHelper.extractIpAddress(input),
+                        Objects.isNull(userInfo.getPhoneNumber())
+                                ? AuditService.UNKNOWN
+                                : userInfo.getPhoneNumber(),
+                        persistentSessionId,
+                        pair("new_account", newAccount),
+                        pair("test_user", isTestJourney));
+
                 cloudwatchMetricsService.incrementCounter("AuthenticationCallback", dimensions);
 
                 var auditContext =

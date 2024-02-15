@@ -611,6 +611,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         AccountInterventionsAuditableEvent.AIS_RESPONSE_RECEIVED,
                         OrchestrationAuditableEvent.AUTH_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                         OrchestrationAuditableEvent.AUTH_SUCCESSFUL_USERINFO_RESPONSE_RECEIVED,
+                        OidcAuditableEvent.AUTHENTICATION_COMPLETE,
                         OidcAuditableEvent.LOG_OUT_SUCCESS));
     }
 
@@ -634,6 +635,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         AccountInterventionsAuditableEvent.AIS_RESPONSE_RECEIVED,
                         OrchestrationAuditableEvent.AUTH_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                         OrchestrationAuditableEvent.AUTH_SUCCESSFUL_USERINFO_RESPONSE_RECEIVED,
+                        OidcAuditableEvent.AUTHENTICATION_COMPLETE,
                         OidcAuditableEvent.LOG_OUT_SUCCESS));
     }
 
@@ -653,6 +655,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         AccountInterventionsAuditableEvent.AIS_RESPONSE_RECEIVED,
                         OrchestrationAuditableEvent.AUTH_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                         OrchestrationAuditableEvent.AUTH_SUCCESSFUL_USERINFO_RESPONSE_RECEIVED,
+                        OidcAuditableEvent.AUTHENTICATION_COMPLETE,
                         IPVAuditableEvent.IPV_AUTHORISATION_REQUESTED));
     }
 
@@ -676,6 +679,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         OrchestrationAuditableEvent.AUTH_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                         OrchestrationAuditableEvent.AUTH_SUCCESSFUL_USERINFO_RESPONSE_RECEIVED,
                         AccountInterventionsAuditableEvent.AIS_RESPONSE_RECEIVED,
+                        OidcAuditableEvent.AUTHENTICATION_COMPLETE,
                         OidcAuditableEvent.AUTH_CODE_ISSUED));
 
         Optional<AuthenticationUserInfo> userInfoDbEntry =
