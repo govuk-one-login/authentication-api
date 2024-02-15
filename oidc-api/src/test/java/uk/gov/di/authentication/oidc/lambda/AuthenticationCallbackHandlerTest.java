@@ -186,6 +186,20 @@ class AuthenticationCallbackHandlerTest {
                         OrchestrationAuditableEvent.AUTH_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
                         OrchestrationAuditableEvent.AUTH_SUCCESSFUL_USERINFO_RESPONSE_RECEIVED),
                 auditService);
+
+        verify(auditService)
+                .submitAuditEvent(
+                        eq(OidcAuditableEvent.AUTHENTICATION_COMPLETE),
+                        eq(CLIENT_SESSION_ID),
+                        eq(SESSION_ID),
+                        eq(CLIENT_ID.getValue()),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        any(),
+                        eq(pair("new_account", true)),
+                        eq(pair("test_user", false)));
         verify(auditService)
                 .submitAuditEvent(
                         eq(OidcAuditableEvent.AUTH_CODE_ISSUED),
