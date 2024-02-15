@@ -657,6 +657,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public long getAccountInterventionServiceCallTimeout() {
         return Long.parseLong(
-                System.getenv().getOrDefault("ACCOUNT_INTERVENTION_SERVICE_CALL_TIMEOUT", "1000"));
+                System.getenv().getOrDefault("ACCOUNT_INTERVENTION_SERVICE_CALL_TIMEOUT", "3000"));
     }
 }
