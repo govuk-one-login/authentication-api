@@ -153,7 +153,7 @@ public class IPVAuthorisationService {
     public EncryptedJWT constructRequestJWT(
             State state,
             Scope scope,
-            Subject subject,
+            Subject internalPairwiseSubject,
             ClaimsSetRequest claims,
             String clientSessionId,
             String emailAddress,
@@ -164,12 +164,13 @@ public class IPVAuthorisationService {
         var jwtID = IdGenerator.generate();
         var expiryDate = nowClock.nowPlus(3, ChronoUnit.MINUTES);
         var claimsRequest = new OIDCClaimsRequest().withUserInfoClaimsRequest(claims);
+
         var claimsBuilder =
                 new JWTClaimsSet.Builder()
                         .issuer(configurationService.getIPVAuthorisationClientId())
                         .audience(configurationService.getIPVAudience())
                         .expirationTime(expiryDate)
-                        .subject(subject.getValue())
+                        .subject(internalPairwiseSubject.getValue())
                         .issueTime(nowClock.now())
                         .jwtID(jwtID)
                         .notBeforeTime(nowClock.now())

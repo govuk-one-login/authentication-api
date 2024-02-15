@@ -18,6 +18,8 @@ import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import com.nimbusds.oauth2.sdk.token.AccessToken;
+import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.claims.ClaimRequirement;
@@ -71,6 +73,8 @@ class IPVAuthorisationServiceTest {
     private static final URI IPV_URI = URI.create("http://ipv/");
     private static final URI IPV_CALLBACK_URI = URI.create("http://localhost/oidc/ipv/callback");
     private static final URI IPV_AUTHORISATION_URI = URI.create("http://localhost/ipv/authorize");
+    private static final String SERIALIZED_JWT =
+            "eyJhbGciOiJFUzI1NiJ9.e30.Ocd0zjblolysCck2LLVgenMKNDQ9GAGCSjlg1kkWVzYcK31qzcJR68bw4b1MdgIEvxZhZ_4ZxWlKIx4OOFixTw";
     private static final Json objectMapper = SerializationService.getInstance();
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -84,6 +88,8 @@ class IPVAuthorisationServiceTest {
                     kmsConnectionService,
                     TestClockHelper.getInstance());
     private PrivateKey privateKey;
+
+    private AccessToken storageToken;
 
     @BeforeEach
     void setUp() throws Json.JsonException {
@@ -213,6 +219,7 @@ class IPVAuthorisationServiceTest {
             var jwsHeader = new JWSHeader(JWSAlgorithm.ES256);
             var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSet);
             signedJWT.sign(ecdsaSigner);
+            storageToken = new BearerAccessToken(SERIALIZED_JWT, 180, null);
             byte[] signatureToDER =
                     ECDSA.transcodeSignatureToDER(signedJWT.getSignature().decode());
             var signResult =
@@ -233,6 +240,10 @@ class IPVAuthorisationServiceTest {
             var pairwise = new Subject("pairwise-identifier");
             var claims =
                     new ClaimsSetRequest()
+                            .add(
+                                    new ClaimsSetRequest.Entry(
+                                                    "https://vocab.account.gov.uk/v1/storageAccessToken")
+                                            .withValues(List.of(storageToken.getValue())))
                             .add(
                                     new ClaimsSetRequest.Entry(
                                                     "https://vocab.account.gov.uk/v1/coreIdentityJWT")

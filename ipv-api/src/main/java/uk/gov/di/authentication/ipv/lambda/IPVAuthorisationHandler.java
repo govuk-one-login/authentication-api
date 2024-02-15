@@ -4,11 +4,14 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
+import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ParseException;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
+import com.nimbusds.oauth2.sdk.id.Subject;
+import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
@@ -19,6 +22,7 @@ import uk.gov.di.authentication.ipv.entity.IPVAuthorisationRequest;
 import uk.gov.di.authentication.ipv.entity.IPVAuthorisationResponse;
 import uk.gov.di.authentication.ipv.entity.IPVCallbackNoSessionException;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
+import uk.gov.di.authentication.ipv.services.StorageTokenService;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
@@ -41,6 +45,7 @@ import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.state.UserContext;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -62,6 +67,7 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
     private final IPVAuthorisationService authorisationService;
     private final NoSessionOrchestrationService noSessionOrchestrationService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
+    private final StorageTokenService storageTokenService;
 
     public IPVAuthorisationHandler(
             ConfigurationService configurationService,
@@ -72,7 +78,8 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
             AuditService auditService,
             IPVAuthorisationService authorisationService,
             NoSessionOrchestrationService noSessionOrchestrationService,
-            CloudwatchMetricsService cloudwatchMetricsService) {
+            CloudwatchMetricsService cloudwatchMetricsService,
+            StorageTokenService storageTokenService) {
         super(
                 IPVAuthorisationRequest.class,
                 configurationService,
@@ -84,6 +91,7 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
         this.authorisationService = authorisationService;
         this.noSessionOrchestrationService = noSessionOrchestrationService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
+        this.storageTokenService = storageTokenService;
     }
 
     public IPVAuthorisationHandler() {
@@ -101,6 +109,7 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
         this.noSessionOrchestrationService =
                 new NoSessionOrchestrationService(configurationService);
         this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
+        this.storageTokenService = new StorageTokenService(configurationService);
     }
 
     @Override
@@ -134,7 +143,7 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
                             configurationService.getInternalSectorUri(),
                             authenticationService);
             var state = new State();
-            var claimsSetRequest = buildIpvClaimsRequest(authRequest).orElse(null);
+            var claimsSetRequest = buildIpvClaimsRequest(authRequest, pairwiseSubject).orElse(null);
 
             var clientSessionId =
                     getHeaderValueFromHeaders(
@@ -221,9 +230,25 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
         }
     }
 
-    private Optional<ClaimsSetRequest> buildIpvClaimsRequest(AuthenticationRequest authRequest) {
-        return Optional.ofNullable(authRequest)
-                .map(AuthenticationRequest::getOIDCClaims)
-                .map(OIDCClaimsRequest::getUserInfoClaimsRequest);
+    private Optional<ClaimsSetRequest> buildIpvClaimsRequest(
+            AuthenticationRequest authRequest, Subject internalPairwiseSubject) {
+
+        AccessToken storageToken =
+                storageTokenService.generateAndSignStorageToken(
+                        internalPairwiseSubject, JWSAlgorithm.ES256);
+
+        ClaimsSetRequest claimsSetRequest = new ClaimsSetRequest();
+        claimsSetRequest.add(
+                new ClaimsSetRequest.Entry("https://vocab.account.gov.uk/v1/storageAccessToken")
+                        .withValues(List.of(storageToken.getValue())));
+
+        if (authRequest != null) {
+            OIDCClaimsRequest oidcClaims = authRequest.getOIDCClaims();
+            if (oidcClaims != null) {
+                claimsSetRequest = oidcClaims.getUserInfoClaimsRequest();
+            }
+        }
+
+        return Optional.ofNullable(claimsSetRequest);
     }
 }

@@ -24,6 +24,8 @@ import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import com.nimbusds.oauth2.sdk.token.AccessToken;
+import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
@@ -35,6 +37,7 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.entity.IPVAuthorisationResponse;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
+import uk.gov.di.authentication.ipv.services.StorageTokenService;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
@@ -98,6 +101,7 @@ public class IPVAuthorisationHandlerTest {
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final ClientService clientService = mock(ClientService.class);
     private final AuditService auditService = mock(AuditService.class);
+    private final StorageTokenService storageTokenService = mock(StorageTokenService.class);
     private final NoSessionOrchestrationService noSessionOrchestrationService =
             mock(NoSessionOrchestrationService.class);
     private final CloudwatchMetricsService cloudwatchMetricsService =
@@ -121,8 +125,11 @@ public class IPVAuthorisationHandlerTest {
     private static final URI REDIRECT_URI = URI.create("http://localhost/oidc/redirect");
     private static final URI IPV_CALLBACK_URI = URI.create("http://localhost/oidc/ipv/callback");
     private static final URI IPV_AUTHORISATION_URI = URI.create("http://localhost/ipv/authorize");
+    private static final URI IPV_AUDIENCE = URI.create("https://identity.test.account.gov.uk");
     private static final String EMAIL_ADDRESS = "test@test.com";
     private static final String INTERNAL_SECTOR_URI = "https://ipv.account.gov.uk";
+    private static final String SERIALIZED_JWT =
+            "eyJhbGciOiJFUzI1NiJ9.e30.Ocd0zjblolysCck2LLVgenMKNDQ9GAGCSjlg1kkWVzYcK31qzcJR68bw4b1MdgIEvxZhZ_4ZxWlKIx4OOFixTw";
     private final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(
                     SUBJECT_ID, "test.account.gov.uk", SaltHelper.generateNewSalt());
@@ -156,10 +163,12 @@ public class IPVAuthorisationHandlerTest {
                         auditService,
                         authorisationService,
                         noSessionOrchestrationService,
-                        cloudwatchMetricsService);
+                        cloudwatchMetricsService,
+                        storageTokenService);
         when(configService.getIPVAuthorisationClientId()).thenReturn(IPV_CLIENT_ID);
         when(configService.getIPVAuthorisationCallbackURI()).thenReturn(IPV_CALLBACK_URI);
         when(configService.getIPVAuthorisationURI()).thenReturn(IPV_AUTHORISATION_URI);
+        when(configService.getIPVAudience()).thenReturn(IPV_AUDIENCE.toString());
         when(configService.getSessionExpiry()).thenReturn(3600L);
         when(clientService.getClient(CLIENT_ID)).thenReturn(Optional.of(generateClientRegistry()));
         when(authenticationService.getUserProfileFromEmail(EMAIL_ADDRESS))
@@ -168,6 +177,9 @@ public class IPVAuthorisationHandlerTest {
         when(configService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         when(configService.isIdentityEnabled()).thenReturn(true);
         when(configService.getEnvironment()).thenReturn(ENVIRONMENT);
+        AccessToken storageToken = new BearerAccessToken(SERIALIZED_JWT, 180, null);
+        when(storageTokenService.generateAndSignStorageToken(any(), any()))
+                .thenReturn(storageToken);
     }
 
     @Test
