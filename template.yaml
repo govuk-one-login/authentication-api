@@ -1,0 +1,56 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Globals:
+  Function:
+    PermissionsBoundary: !If
+      - UsePermissionsBoundary
+      - !Ref PermissionsBoundary
+      - !Ref AWS::NoValue
+
+Parameters:
+  Environment:
+    Type: String
+    Description: The name of the environment to deploy to
+  VpcStackName:
+    Type: String
+    Description: The name of the stack used to create the VPC
+  CodeSigningConfigArn:
+    Type: String
+    Description: The ARN of the Code Signing Config to use, provided by the deployment pipeline
+    Default: none
+  PermissionsBoundary:
+    Type: String
+    Description: The ARN of the permissions boundary to apply when creating IAM roles
+    Default: none
+
+Conditions:
+  UsePermissionsBoundary:
+    !Not [ !Equals [ none, !Ref PermissionsBoundary ] ]
+  IsProd:
+    !Equals [ production, !Ref Environment ]
+
+Resources:
+  WellKnownFunction:
+    Type: AWS::Serverless::Function
+    # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
+    # checkov:skip=CKV_AWS_117: Lambdas will migrate to our own VPC in future work
+    Properties:
+      CodeUri: oidc-api
+      Handler: lambda.WellknownHandler::handleRequest
+      Runtime: java17
+      ReservedConcurrentExecutions: 1
+      Environment:
+        Variables:
+          # checkov:skip=CKV_AWS_173: These environment variables do not require encryption.
+          OIDC_API_BASE_URL: !Sub https://oidc.${Environment}.account.gov.uk/
+          ENVIRONMENT: !Sub ${Environment}
+          FRONTEND_BASE_URL: !Sub https://signin.${Environment}.account.gov.uk/
+      Events:
+        WellKnown:
+          Type: Api
+          Properties:
+            Path: /Wellknown
+            Method: get
+      Tags:
+        CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173

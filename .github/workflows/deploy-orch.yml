@@ -1,0 +1,43 @@
+name: Deploy Orchestration
+
+env:
+  AWS_REGION: eu-west-2
+
+on:
+  workflow_run:
+    workflows: ["Build modules"]
+    types:
+      - completed
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up SAM cli
+        uses: aws-actions/setup-sam@v2
+        with:
+          use-installer: true
+
+      - name: Set up AWS creds
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.ORCH_GH_ACTIONS_ROLE_ARN }}
+          aws-region: eu-west-2
+
+      - name: SAM build
+        run: sam build
+
+      - name: Deploy SAM app
+        uses: alphagov/di-devplatform-upload-action@v3.3
+        with:
+          artifact-bucket-name: ${{ secrets.ORCH_ARTIFACT_BUCKET_NAME }}
+          signing-profile-name: ${{ secrets.ORCH_SIGNING_PROFILE_NAME }}
+          working-directory: .aws-sam/build
