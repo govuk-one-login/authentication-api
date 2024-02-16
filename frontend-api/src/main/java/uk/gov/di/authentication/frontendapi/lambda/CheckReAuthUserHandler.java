@@ -7,6 +7,8 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.CheckReauthUserRequest;
+import uk.gov.di.authentication.frontendapi.exceptions.AccountLockedException;
+import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
@@ -24,12 +26,15 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
 
     private static final Logger LOG = LogManager.getLogger(CheckReAuthUserHandler.class);
 
+    private final CodeStorageService codeStorageService;
+
     public CheckReAuthUserHandler(
             ConfigurationService configurationService,
             SessionService sessionService,
             ClientSessionService clientSessionService,
             ClientService clientService,
-            AuthenticationService authenticationService) {
+            AuthenticationService authenticationService,
+            CodeStorageService codeStorageService) {
         super(
                 CheckReauthUserRequest.class,
                 configurationService,
@@ -37,10 +42,12 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                 clientSessionService,
                 clientService,
                 authenticationService);
+        this.codeStorageService = codeStorageService;
     }
 
     public CheckReAuthUserHandler(ConfigurationService configurationService) {
         super(CheckReauthUserRequest.class, configurationService);
+        this.codeStorageService = new CodeStorageService(configurationService);
     }
 
     public CheckReAuthUserHandler() {
@@ -61,11 +68,24 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             UserContext userContext) {
         LOG.info("Processing CheckReAuthUser request for email: {}", request.email());
 
-        return authenticationService
-                .getUserProfileByEmailMaybe(request.email())
-                .flatMap(userProfile -> verifyReAuthentication(userProfile, userContext))
-                .map(rpPairwiseId -> generateSuccessResponse())
-                .orElseGet(this::generateErrorResponse);
+        try {
+            return authenticationService
+                    .getUserProfileByEmailMaybe(request.email())
+                    .flatMap(
+                            userProfile -> {
+                                if (isAccountLocked(userProfile.getEmail())) {
+                                    throw new AccountLockedException(
+                                            "Account is locked due to too many failed attempts.");
+                                }
+
+                                return verifyReAuthentication(userProfile, userContext);
+                            })
+                    .map(rpPairwiseId -> generateSuccessResponse())
+                    .orElseGet(() -> generateErrorResponse(request.email()));
+        } catch (AccountLockedException e) {
+            LOG.error("Account is locked due to too many failed attempts.");
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1057);
+        }
     }
 
     private Optional<String> verifyReAuthentication(
@@ -87,6 +107,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
 
         if (rpPairwiseId.equals(internalPairwiseId)) {
             LOG.info("Successfully verified re-authentication");
+            removeEmailCountLock(userProfile.getEmail());
             return Optional.of(rpPairwiseId);
         }
 
@@ -99,8 +120,21 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
         return generateApiGatewayProxyResponse(200, "");
     }
 
-    private APIGatewayProxyResponseEvent generateErrorResponse() {
+    private APIGatewayProxyResponseEvent generateErrorResponse(String email) {
         LOG.info("User not found or no match");
+        codeStorageService.increaseIncorrectEmailCount(email);
         return generateApiGatewayProxyErrorResponse(404, ERROR_1056);
+    }
+
+    private boolean isAccountLocked(String email) {
+        var incorrectEmailCount = codeStorageService.getIncorrectEmailCount(email);
+        return incorrectEmailCount >= configurationService.getMaxEmailReAuthRetries();
+    }
+
+    private void removeEmailCountLock(String email) {
+        var incorrectEmailCount = codeStorageService.getIncorrectEmailCount(email);
+        if (incorrectEmailCount != 0) {
+            codeStorageService.deleteIncorrectEmailCount(email);
+        }
     }
 }

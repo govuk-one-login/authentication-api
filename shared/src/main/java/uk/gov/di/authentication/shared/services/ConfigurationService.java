@@ -197,6 +197,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Integer.parseInt(System.getenv().getOrDefault("PASSWORD_MAX_RETRIES", "5"));
     }
 
+    public int getMaxEmailReAuthRetries() {
+        return Integer.parseInt(System.getenv().getOrDefault("EMAIL_MAX_RE_AUTH_RETRIES", "5"));
+    }
+
     public boolean isCustomDocAppClaimEnabled() {
         return System.getenv().getOrDefault("CUSTOM_DOC_APP_CLAIM_ENABLED", "false").equals("true");
     }

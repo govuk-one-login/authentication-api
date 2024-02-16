@@ -15,6 +15,7 @@ import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
 import uk.gov.di.authentication.shared.services.ClientService;
 import uk.gov.di.authentication.shared.services.ClientSessionService;
+import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
@@ -43,6 +44,7 @@ class CheckReAuthUserHandlerTest {
     private final Context context = mock(Context.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final ClientService clientService = mock(ClientService.class);
     private final Session session =
@@ -65,13 +67,15 @@ class CheckReAuthUserHandlerTest {
         userProfile.setSubjectID(TEST_SUBJECT_ID);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL_ADDRESS))
                 .thenReturn(Optional.of(userProfile));
+        when(configurationService.getMaxEmailReAuthRetries()).thenReturn(5);
         handler =
                 new CheckReAuthUserHandler(
                         configurationService,
                         sessionService,
                         clientSessionService,
                         clientService,
-                        authenticationService);
+                        authenticationService,
+                        codeStorageService);
     }
 
     @Test
@@ -105,6 +109,24 @@ class CheckReAuthUserHandlerTest {
                         event, context, new CheckReauthUserRequest(EMAIL_ADDRESS), userContext);
         assertEquals(404, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1056));
+    }
+
+    @Test
+    void shouldReturn400WhenUserHasEnteredEmailTooManyTimes() {
+        var context = mock(Context.class);
+        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(getHeaders());
+        event.setBody(format("{ \"email\": \"%s\" }", EMAIL_ADDRESS));
+        var userProfile = generateUserProfile();
+        when(authenticationService.getUserProfileByEmailMaybe(EMAIL_ADDRESS))
+                .thenReturn(Optional.of(userProfile));
+        when(codeStorageService.getIncorrectEmailCount(any())).thenReturn(5);
+
+        var result =
+                handler.handleRequestWithUserContext(
+                        event, context, new CheckReauthUserRequest(EMAIL_ADDRESS), userContext);
+        assertEquals(400, result.getStatusCode());
+        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1057));
     }
 
     @Test
