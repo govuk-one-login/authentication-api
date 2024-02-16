@@ -87,7 +87,7 @@ import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyRespons
 class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final String CLIENT_ID = "test-client";
-    private static final String RP_REDIRECT_URI = "https://rp-uri/redirect";
+    private static final URI RP_REDIRECT_URI = URI.create("https://rp-uri/redirect");
     private static final String AM_CLIENT_ID = "am-test-client";
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String TEST_PASSWORD = "password";
@@ -304,7 +304,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     @Test
     void shouldRedirectToLoginUriForAccountManagementClient() {
         setupForAuthJourney();
-        registerClient(AM_CLIENT_ID, "am-client-name", List.of("openid", "am"), ClientType.WEB);
+        registerClient(
+                AM_CLIENT_ID, "am-client-name", List.of("openid", "am"), ClientType.WEB, false);
         var response =
                 makeRequest(
                         Optional.empty(),
@@ -347,7 +348,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertThat(response, hasStatus(302));
         String redirectUri = getLocationResponseHeader(response);
         assertThat(redirectUri, containsString(OAuth2Error.INVALID_SCOPE.getCode()));
-        assertThat(redirectUri, startsWith(RP_REDIRECT_URI));
+        assertThat(redirectUri, startsWith(RP_REDIRECT_URI.toString()));
 
         assertTxmaAuditEventsReceived(
                 txmaAuditQueue,
@@ -548,7 +549,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         assertThat(response, hasStatus(302));
         var redirectUri = getLocationResponseHeader(response);
-        assertThat(redirectUri, startsWith(RP_REDIRECT_URI));
+        assertThat(redirectUri, startsWith(RP_REDIRECT_URI.toString()));
         assertThat(URI.create(redirectUri).getQuery(), containsString("error=invalid_request"));
         assertThat(
                 URI.create(redirectUri).getQuery(),
@@ -746,7 +747,8 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 CLIENT_ID,
                 "test-client",
                 List.of(OPENID.getValue(), CustomScopeValue.DOC_CHECKING_APP.getValue()),
-                ClientType.APP);
+                ClientType.APP,
+                false);
         handler = new AuthorisationHandler(configuration);
         txmaAuditQueue.clear();
         var signedJWT = createSignedJWT(uiLocales);
@@ -862,20 +864,87 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         DOC_APP_AUTHORISATION_REQUESTED));
     }
 
+    @Test
+    void
+            shouldRedirectToRedirectUriGivenAnInvalidRequestWhenJARIsRequiredButRequestObjectIsMissingAndRedirectUriIsNotInClientRegistry() {
+        registerClient(CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, true);
+        handler = new AuthorisationHandler(configuration);
+        txmaAuditQueue.clear();
+
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(Optional.empty()),
+                        constructQueryStringParameters(CLIENT_ID, null, "openid", "Cl.Cm"),
+                        Optional.of("GET"));
+
+        var locationHeaderUri = URI.create(response.getHeaders().get("Location"));
+        var expectedQueryStringRegex =
+                "error=access_denied&error_description=JAR[+]required[+]for[+]client[+]but[+]request[+]does[+]not[+]contain[+]Request[+]Object.*";
+        assertThat(response, hasStatus(302));
+        assertThat(locationHeaderUri.toString(), containsString(RP_REDIRECT_URI.toString()));
+        assertThat(locationHeaderUri.getQuery(), matchesPattern(expectedQueryStringRegex));
+
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTHORISATION_REQUEST_RECEIVED));
+    }
+
+    @Test
+    void
+            shouldRedirectToFrontendErrorPageGivenAnInvalidRequestWhenJARIsRequiredButRequestObjectIsMissingAndRedirectUriIsNotInClientRegistry() {
+        registerClient(CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, true);
+        handler = new AuthorisationHandler(configuration);
+        txmaAuditQueue.clear();
+
+        var response =
+                makeRequest(
+                        Optional.empty(),
+                        constructHeaders(Optional.empty()),
+                        constructQueryStringParameters(
+                                CLIENT_ID,
+                                null,
+                                "openid",
+                                "Cl.Cm",
+                                URI.create("invalid-redirect-uri")),
+                        Optional.of("GET"));
+
+        assertThat(response, hasStatus(302));
+        assertThat(
+                response.getHeaders().get(ResponseHeaders.LOCATION),
+                equalTo(TEST_CONFIGURATION_SERVICE.getLoginURI().toString() + "/error"));
+
+        assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTHORISATION_REQUEST_RECEIVED));
+    }
+
     private Map<String, String> constructQueryStringParameters(
             String clientId, String prompt, String scopes, String vtr) {
-        return constructQueryStringParameters(clientId, prompt, scopes, vtr, null);
+        return constructQueryStringParameters(clientId, prompt, scopes, vtr, null, RP_REDIRECT_URI);
     }
 
     private Map<String, String> constructQueryStringParameters(
             String clientId, String prompt, String scopes, String vtr, String uiLocales) {
+        return constructQueryStringParameters(
+                clientId, prompt, scopes, vtr, uiLocales, RP_REDIRECT_URI);
+    }
+
+    private Map<String, String> constructQueryStringParameters(
+            String clientId, String prompt, String scopes, String vtr, URI redirectUri) {
+        return constructQueryStringParameters(clientId, prompt, scopes, vtr, null, redirectUri);
+    }
+
+    private Map<String, String> constructQueryStringParameters(
+            String clientId,
+            String prompt,
+            String scopes,
+            String vtr,
+            String uiLocales,
+            URI redirectUri) {
         final Map<String, String> queryStringParameters =
                 new HashMap<>(
                         Map.of(
                                 "response_type",
                                 "code",
                                 "redirect_uri",
-                                RP_REDIRECT_URI,
+                                redirectUri.toString(),
                                 "state",
                                 "8VAVNSxHO1HwiNDhwchQKdd7eOUK3ltKfQzwPDxu9LU",
                                 "nonce",
@@ -893,14 +962,18 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     private void setupForAuthJourney() {
-        registerClient(CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB);
+        registerClient(CLIENT_ID, "test-client", singletonList("openid"), ClientType.WEB, false);
         handler = new AuthorisationHandler(configuration);
         txmaAuditQueue.clear();
     }
 
     private void setupForDocAppJourney() {
         registerClient(
-                CLIENT_ID, "test-client", List.of("openid", "doc-checking-app"), ClientType.APP);
+                CLIENT_ID,
+                "test-client",
+                List.of("openid", "doc-checking-app"),
+                ClientType.APP,
+                false);
         handler = new AuthorisationHandler(configuration);
         txmaAuditQueue.clear();
 
@@ -937,11 +1010,15 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     private void registerClient(
-            String clientId, String clientName, List<String> scopes, ClientType clientType) {
+            String clientId,
+            String clientName,
+            List<String> scopes,
+            ClientType clientType,
+            boolean jarValidationRequired) {
         clientStore.registerClient(
                 clientId,
                 clientName,
-                singletonList(RP_REDIRECT_URI),
+                singletonList(RP_REDIRECT_URI.toString()),
                 singletonList("joe.bloggs@digital.cabinet-office.gov.uk"),
                 scopes,
                 Base64.getMimeEncoder().encodeToString(KEY_PAIR.getPublic().getEncoded()),
@@ -950,8 +1027,9 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "public",
+                clientType,
                 true,
-                clientType);
+                jarValidationRequired);
     }
 
     private SignedJWT createSignedJWT(String uiLocales) throws JOSEException {
