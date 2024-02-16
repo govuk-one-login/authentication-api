@@ -43,7 +43,7 @@ variable "scaling_trigger" {
 }
 
 variable "lambda_min_concurrency" {
-  default     = 0
+  default     = 1
   type        = number
   description = "The number of lambda instance to keep 'warm'"
 }
