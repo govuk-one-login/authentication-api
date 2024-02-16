@@ -150,5 +150,4 @@ resource "aws_cloudwatch_log_subscription_filter" "auth_ext_api_access_log_subsc
 module "dashboard_auth_ext_api" {
   source           = "../modules/dashboards"
   api_gateway_name = aws_api_gateway_rest_api.di_auth_ext_api.name
-  use_localstack   = false
 }

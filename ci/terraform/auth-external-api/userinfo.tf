@@ -27,8 +27,6 @@ module "auth_userinfo" {
   handler_environment_variables = {
     ENVIRONMENT             = var.environment
     TXMA_AUDIT_QUEUE_URL    = module.auth_ext_txma_audit.queue_url
-    LOCALSTACK_ENDPOINT     = null
-    DYNAMO_ENDPOINT         = null
     INTERNAl_SECTOR_URI     = var.internal_sector_uri
     SUPPORT_AUTH_ORCH_SPLIT = var.support_auth_orch_split
   }
@@ -60,8 +58,6 @@ module "auth_userinfo" {
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
   default_tags                           = local.default_tags
-
-  use_localstack = false
 
   depends_on = [
     aws_api_gateway_rest_api.di_auth_ext_api,
