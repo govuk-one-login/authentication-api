@@ -1,8 +1,7 @@
 resource "aws_cloudwatch_log_metric_filter" "lambda_error_metric_filter" {
-  count          = var.use_localstack ? 0 : 1
   name           = replace("${var.environment}-${var.endpoint_name}-errors", ".", "")
   pattern        = "{($.level = \"ERROR\")}"
-  log_group_name = aws_cloudwatch_log_group.lambda_log_group[0].name
+  log_group_name = aws_cloudwatch_log_group.lambda_log_group.name
 
   metric_transformation {
     name      = replace("${var.environment}-${var.endpoint_name}-error-count", ".", "")
@@ -10,23 +9,30 @@ resource "aws_cloudwatch_log_metric_filter" "lambda_error_metric_filter" {
     value     = "1"
   }
 }
+moved {
+  from = aws_cloudwatch_log_metric_filter.lambda_error_metric_filter[0]
+  to   = aws_cloudwatch_log_metric_filter.lambda_error_metric_filter
+}
 
 resource "aws_cloudwatch_metric_alarm" "lambda_error_cloudwatch_alarm" {
-  count               = var.use_localstack ? 0 : 1
   alarm_name          = replace("${var.environment}-${var.endpoint_name}-alarm", ".", "")
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = "1"
-  metric_name         = aws_cloudwatch_log_metric_filter.lambda_error_metric_filter[0].metric_transformation[0].name
-  namespace           = aws_cloudwatch_log_metric_filter.lambda_error_metric_filter[0].metric_transformation[0].namespace
+  metric_name         = aws_cloudwatch_log_metric_filter.lambda_error_metric_filter.metric_transformation[0].name
+  namespace           = aws_cloudwatch_log_metric_filter.lambda_error_metric_filter.metric_transformation[0].namespace
   period              = "3600"
   statistic           = "Sum"
   threshold           = var.lambda_log_alarm_threshold
   alarm_description   = "${var.lambda_log_alarm_threshold} or more errors have occurred in the ${var.environment} ${var.endpoint_name} lambda.ACCOUNT: ${data.aws_iam_account_alias.current.account_alias}"
   alarm_actions       = [data.aws_sns_topic.slack_events.arn]
 }
+moved {
+  from = aws_cloudwatch_metric_alarm.lambda_error_cloudwatch_alarm[0]
+  to   = aws_cloudwatch_metric_alarm.lambda_error_cloudwatch_alarm
+}
 
 resource "aws_cloudwatch_metric_alarm" "lambda_error_rate_cloudwatch_alarm" {
-  count               = var.use_localstack || var.lambda_error_rate_alarm_disabled ? 0 : 1
+  count               = var.lambda_error_rate_alarm_disabled ? 0 : 1
   alarm_name          = replace("${var.environment}-${var.endpoint_name}-error-rate-alarm", ".", "")
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = "1"
