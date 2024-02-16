@@ -140,6 +140,11 @@ public class AccountInterventionsHandlerIntegrationTest extends ApiGatewayHandle
         public String getTxmaAuditQueueUrl() {
             return txmaAuditQueue.getQueueUrl();
         }
+
+        @Override
+        public boolean accountInterventionsServiceActionEnabled() {
+            return true;
+        }
     }
 
     private String setupUserAndRetrieveUserId(String emailAddress) {

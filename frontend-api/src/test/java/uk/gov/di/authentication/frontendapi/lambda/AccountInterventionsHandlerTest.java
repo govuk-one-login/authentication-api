@@ -97,6 +97,7 @@ public class AccountInterventionsHandlerTest {
         UserProfile userProfile = generateUserProfile();
         when(authenticationService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(userProfile));
+        when(configurationService.accountInterventionsServiceActionEnabled()).thenReturn(true);
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
         when(configurationService.getAccountInterventionServiceURI())
@@ -190,11 +191,51 @@ public class AccountInterventionsHandlerTest {
                                 "Any 4xx/5xx error valid here", 404));
         var result = handler.handleRequest(event, context);
         assertThat(result, hasStatus(200));
-        assertThat(
-                result,
-                hasBody(
-                        objectMapper.writeValueAsStringCamelCase(
-                                defaultAccountInterventionsResponse)));
+        assertEquals(
+                result.getBody(),
+                String.format(
+                        "{\"passwordResetRequired\":%b,\"blocked\":%b,\"temporarilySuspended\":%b}",
+                        false, false, false));
+    }
+
+    @Test
+    void
+            shouldReturn200AndDefaultAccountInterventionsResponseWhenAccountInterventionsRequestUnsuccessfulAndAccountInterventionsServiceActionDisabled()
+                    throws UnsuccessfulAccountInterventionsResponseException {
+        var event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(getHeaders());
+        event.setBody(format("{ \"email\": \"%s\" }", TEST_EMAIL_ADDRESS));
+        when(configurationService.abortOnAccountInterventionsErrorResponse()).thenReturn(true);
+        when(configurationService.accountInterventionsServiceActionEnabled()).thenReturn(false);
+        when(authenticationService.getUserProfileByEmailMaybe(anyString()))
+                .thenReturn(Optional.of(generateUserProfile()));
+        when(accountInterventionsService.sendAccountInterventionsOutboundRequest(any()))
+                .thenThrow(
+                        new UnsuccessfulAccountInterventionsResponseException(
+                                "Any 4xx/5xx error valid here", 404));
+        var result = handler.handleRequest(event, context);
+        assertThat(result, hasStatus(200));
+        assertEquals(
+                result.getBody(),
+                String.format(
+                        "{\"passwordResetRequired\":%b,\"blocked\":%b,\"temporarilySuspended\":%b}",
+                        false, false, false));
+    }
+
+    @Test
+    void
+            shouldReturn200AndDefaultAccountInterventionsResponseWhenAccountInterventionsServiceActionDisabledAndAccountHasInterventions()
+                    throws UnsuccessfulAccountInterventionsResponseException {
+        var event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(getHeaders());
+        event.setBody(format("{ \"email\": \"%s\" }", TEST_EMAIL_ADDRESS));
+        when(configurationService.accountInterventionsServiceActionEnabled()).thenReturn(false);
+        when(authenticationService.getUserProfileByEmailMaybe(anyString()))
+                .thenReturn(Optional.of(generateUserProfile()));
+        when(accountInterventionsService.sendAccountInterventionsOutboundRequest(any()))
+                .thenReturn(generateAccountInterventionResponse(true, true, true, true));
+        var result = handler.handleRequest(event, context);
+        assertThat(result, hasStatus(200));
         assertEquals(
                 result.getBody(),
                 String.format(
