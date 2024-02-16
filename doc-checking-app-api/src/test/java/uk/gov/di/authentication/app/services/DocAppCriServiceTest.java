@@ -13,6 +13,7 @@ import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.GrantType;
 import com.nimbusds.oauth2.sdk.TokenRequest;
 import com.nimbusds.oauth2.sdk.auth.JWTAuthenticationClaimsSet;
+import com.nimbusds.oauth2.sdk.auth.PrivateKeyJWT;
 import com.nimbusds.oauth2.sdk.http.HTTPRequest;
 import com.nimbusds.oauth2.sdk.http.HTTPResponse;
 import com.nimbusds.oauth2.sdk.id.Audience;
@@ -43,6 +44,7 @@ import static com.nimbusds.common.contenttype.ContentType.APPLICATION_JSON;
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -100,6 +102,22 @@ class DocAppCriServiceTest {
         assertThat(
                 tokenRequest.toHTTPRequest().getQueryParameters().get("client_id").get(0),
                 equalTo(CLIENT_ID.getValue()));
+    }
+
+    @Test
+    void shouldUseNewDocAppAud() throws JOSEException {
+        Audience newAudience = new Audience("https://www.review-b.test.account.gov.uk");
+        when(configService.isDocAppNewAudClaimEnabled()).thenReturn(true);
+        when(configService.getDocAppAudClaim()).thenReturn(newAudience);
+
+        signJWTWithKMS();
+        when(kmsService.getPublicKey(any(GetPublicKeyRequest.class)))
+                .thenReturn(GetPublicKeyResponse.builder().keyId("789789789789789").build());
+
+        TokenRequest tokenRequest = docAppCriService.constructTokenRequest(AUTH_CODE.getValue());
+
+        var clientAuth = (PrivateKeyJWT) tokenRequest.getClientAuthentication();
+        assertThat(clientAuth.getJWTAuthenticationClaimsSet().getAudience(), contains(newAudience));
     }
 
     @Test

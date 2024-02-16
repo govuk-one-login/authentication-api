@@ -16,6 +16,7 @@ import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
+import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.junit.jupiter.api.BeforeEach;
@@ -49,6 +50,7 @@ import java.util.UUID;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -212,30 +214,9 @@ class DocAppAuthorisationServiceTest {
     @ValueSource(booleans = {true, false})
     void shouldConstructASignedRequestJWT(boolean isTestClient)
             throws JOSEException, ParseException {
-        var ecSigningKey =
-                new ECKeyGenerator(Curve.P_256)
-                        .keyID(KEY_ID)
-                        .algorithm(JWSAlgorithm.ES256)
-                        .generate();
-        var ecdsaSigner = new ECDSASigner(ecSigningKey);
-        var jwtClaimsSet = new JWTClaimsSet.Builder().build();
-        var jwsHeader = new JWSHeader(JWSAlgorithm.ES256);
-        var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSet);
-        signedJWT.sign(ecdsaSigner);
-        byte[] signatureToDER = ECDSA.transcodeSignatureToDER(signedJWT.getSignature().decode());
-
-        var signResult =
-                SignResponse.builder()
-                        .signature(SdkBytes.fromByteArray(signatureToDER))
-                        .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
-                        .keyId(KEY_ID)
-                        .build();
-        when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(signResult);
+        setupSigning();
         var state = new State();
         var pairwise = new Subject("pairwise-identifier");
-
-        when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class)))
-                .thenReturn(GetPublicKeyResponse.builder().keyId("789789789789789").build());
         when(clientRegistry.isTestClient()).thenReturn(isTestClient);
 
         var encryptedJWT =
@@ -279,6 +260,49 @@ class DocAppAuthorisationServiceTest {
                             .before(NowHelper.nowPlus(3, ChronoUnit.MINUTES)),
                     equalTo(true));
         }
+    }
+
+    @Test
+    void usesNewDocAppAudClaim() throws JOSEException, ParseException {
+        when(configurationService.isDocAppNewAudClaimEnabled()).thenReturn(true);
+        String newAudience = "https://www.review-b.test.account.gov.uk";
+        when(configurationService.getDocAppAudClaim()).thenReturn(new Audience(newAudience));
+        setupSigning();
+
+        var state = new State();
+        var pairwise = new Subject("pairwise-identifier");
+
+        var encryptedJWT =
+                authorisationService.constructRequestJWT(
+                        state, pairwise, clientRegistry, "client-session-id");
+
+        var signedJwt = decryptJWT(encryptedJWT);
+        assertThat(signedJwt.getJWTClaimsSet().getAudience(), contains(newAudience));
+    }
+
+    private void setupSigning() throws JOSEException {
+        var ecSigningKey =
+                new ECKeyGenerator(Curve.P_256)
+                        .keyID(KEY_ID)
+                        .algorithm(JWSAlgorithm.ES256)
+                        .generate();
+        var ecdsaSigner = new ECDSASigner(ecSigningKey);
+        var jwtClaimsSet = new JWTClaimsSet.Builder().build();
+        var jwsHeader = new JWSHeader(JWSAlgorithm.ES256);
+        var signedJWT = new SignedJWT(jwsHeader, jwtClaimsSet);
+        signedJWT.sign(ecdsaSigner);
+        byte[] signatureToDER = ECDSA.transcodeSignatureToDER(signedJWT.getSignature().decode());
+
+        var signResult =
+                SignResponse.builder()
+                        .signature(SdkBytes.fromByteArray(signatureToDER))
+                        .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
+                        .keyId(KEY_ID)
+                        .build();
+        when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(signResult);
+
+        when(kmsConnectionService.getPublicKey(any(GetPublicKeyRequest.class)))
+                .thenReturn(GetPublicKeyResponse.builder().keyId("789789789789789").build());
     }
 
     private SignedJWT decryptJWT(EncryptedJWT encryptedJWT) throws JOSEException {
