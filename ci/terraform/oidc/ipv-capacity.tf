@@ -23,9 +23,7 @@ module "ipv-capacity" {
   handler_environment_variables = {
     ENVIRONMENT                    = var.environment
     TXMA_AUDIT_QUEUE_URL           = module.oidc_txma_audit.queue_url
-    LOCALSTACK_ENDPOINT            = var.use_localstack ? var.localstack_endpoint : null
     REDIS_KEY                      = local.redis_key
-    DYNAMO_ENDPOINT                = var.use_localstack ? var.lambda_dynamo_endpoint : null
     IPV_AUTHORISATION_URI          = var.ipv_authorisation_uri
     IPV_AUTHORISATION_CALLBACK_URI = var.ipv_authorisation_callback_uri
     IPV_AUTHORISATION_CLIENT_ID    = var.ipv_authorisation_client_id
@@ -59,8 +57,6 @@ module "ipv-capacity" {
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
   default_tags                           = local.default_tags
-
-  use_localstack = var.use_localstack
 
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_api,

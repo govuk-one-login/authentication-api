@@ -32,13 +32,10 @@ module "reset_password" {
 
   handler_environment_variables = {
     ACCOUNT_RECOVERY_BLOCK_ENABLED         = var.account_recovery_block_enabled
-    DYNAMO_ENDPOINT                        = var.use_localstack ? var.lambda_dynamo_endpoint : null
-    LOCALSTACK_ENDPOINT                    = var.use_localstack ? var.localstack_endpoint : null
     EMAIL_QUEUE_URL                        = aws_sqs_queue.email_queue.id
     ENVIRONMENT                            = var.environment
     TXMA_AUDIT_QUEUE_URL                   = module.oidc_txma_audit.queue_url
     REDIS_KEY                              = local.redis_key
-    SQS_ENDPOINT                           = var.use_localstack ? "http://localhost:45678/" : null
     TERMS_CONDITIONS_VERSION               = var.terms_and_conditions
     DEFAULT_OTP_CODE_EXPIRY                = var.otp_code_ttl_duration
     EMAIL_OTP_ACCOUNT_CREATION_CODE_EXPIRY = var.email_acct_creation_otp_code_ttl_duration
@@ -73,8 +70,6 @@ module "reset_password" {
   lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
   default_tags                           = local.default_tags
   api_key_required                       = true
-
-  use_localstack = var.use_localstack
 
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_frontend_api,

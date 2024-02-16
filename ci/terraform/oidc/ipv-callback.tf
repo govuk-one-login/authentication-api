@@ -32,7 +32,6 @@ module "ipv-callback" {
   environment     = var.environment
 
   handler_environment_variables = {
-    DYNAMO_ENDPOINT                             = var.use_localstack ? var.lambda_dynamo_endpoint : null
     ENVIRONMENT                                 = var.environment
     IDENTITY_ENABLED                            = var.ipv_api_enabled
     INTERNAl_SECTOR_URI                         = var.internal_sector_uri
@@ -48,7 +47,6 @@ module "ipv-callback" {
     IPV_BACKEND_URI                             = var.ipv_backend_uri
     IPV_NO_SESSION_RESPONSE_ENABLED             = var.ipv_no_session_response_enabled
     IPV_TOKEN_SIGNING_KEY_ALIAS                 = local.ipv_token_auth_key_alias_name
-    LOCALSTACK_ENDPOINT                         = var.use_localstack ? var.localstack_endpoint : null
     LOGIN_URI                                   = "https://${local.frontend_fqdn}/"
     OIDC_API_BASE_URL                           = local.api_base_url
     REDIS_KEY                                   = local.redis_key
@@ -85,8 +83,6 @@ module "ipv-callback" {
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
   default_tags                           = local.default_tags
-
-  use_localstack = var.use_localstack
 
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_frontend_api,

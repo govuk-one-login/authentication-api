@@ -28,13 +28,10 @@ module "logout" {
   handler_environment_variables = {
     DEFAULT_LOGOUT_URI                   = "https://${local.frontend_fqdn}/signed-out"
     TXMA_AUDIT_QUEUE_URL                 = module.oidc_txma_audit.queue_url
-    LOCALSTACK_ENDPOINT                  = var.use_localstack ? var.localstack_endpoint : null
     REDIS_KEY                            = local.redis_key
     ENVIRONMENT                          = var.environment
-    DYNAMO_ENDPOINT                      = var.use_localstack ? var.lambda_dynamo_endpoint : null
     EXTERNAL_TOKEN_SIGNING_KEY_ALIAS     = local.id_token_signing_key_alias_name
     EXTERNAL_TOKEN_SIGNING_KEY_RSA_ALIAS = aws_kms_alias.id_token_signing_key_alias.name
-    LOCALSTACK_ENDPOINT                  = var.use_localstack ? var.localstack_endpoint : null
     BACK_CHANNEL_LOGOUT_QUEUE_URI        = aws_sqs_queue.back_channel_logout_queue.id
     INTERNAl_SECTOR_URI                  = var.internal_sector_uri
     OIDC_API_BASE_URL                    = local.api_base_url
@@ -68,8 +65,6 @@ module "logout" {
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
   default_tags                           = local.default_tags
-
-  use_localstack = var.use_localstack
 
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_api,

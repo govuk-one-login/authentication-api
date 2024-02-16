@@ -111,7 +111,7 @@ data "aws_region" "current" {
 }
 
 locals {
-  api_base_url = var.use_localstack ? "${var.aws_endpoint}/restapis/${aws_api_gateway_rest_api.di_authentication_api.id}/${var.environment}/_user_request_" : "https://${local.oidc_api_fqdn}/"
+  api_base_url = "https://${local.oidc_api_fqdn}/"
 }
 
 resource "aws_api_gateway_deployment" "deployment" {
@@ -174,17 +174,19 @@ resource "aws_api_gateway_deployment" "deployment" {
 }
 
 resource "aws_cloudwatch_log_group" "oidc_stage_execution_logs" {
-  count = var.use_localstack ? 0 : 1
-
   name              = "API-Gateway-Execution-Logs_${aws_api_gateway_rest_api.di_authentication_api.id}/${var.environment}"
   retention_in_days = var.cloudwatch_log_retention
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
+}
+moved {
+  from = aws_cloudwatch_log_group.oidc_stage_execution_logs[0]
+  to   = aws_cloudwatch_log_group.oidc_stage_execution_logs
 }
 
 resource "aws_cloudwatch_log_subscription_filter" "oidc_api_execution_log_subscription" {
   count           = length(var.logging_endpoint_arns)
   name            = "${var.environment}-oidc-api-execution-log-subscription-${count.index}"
-  log_group_name  = aws_cloudwatch_log_group.oidc_stage_execution_logs[0].name
+  log_group_name  = aws_cloudwatch_log_group.oidc_stage_execution_logs.name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
 
@@ -194,17 +196,19 @@ resource "aws_cloudwatch_log_subscription_filter" "oidc_api_execution_log_subscr
 }
 
 resource "aws_cloudwatch_log_group" "oidc_stage_access_logs" {
-  count = var.use_localstack ? 0 : 1
-
   name              = "${var.environment}-oidc-api-access-logs"
   retention_in_days = var.cloudwatch_log_retention
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
+}
+moved {
+  from = aws_cloudwatch_log_group.oidc_stage_access_logs[0]
+  to   = aws_cloudwatch_log_group.oidc_stage_access_logs
 }
 
 resource "aws_cloudwatch_log_subscription_filter" "oidc_access_log_subscription" {
   count           = length(var.logging_endpoint_arns)
   name            = "${var.environment}-oidc-api-access-logs-subscription-${count.index}"
-  log_group_name  = aws_cloudwatch_log_group.oidc_stage_access_logs[0].name
+  log_group_name  = aws_cloudwatch_log_group.oidc_stage_access_logs.name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
 
@@ -214,17 +218,19 @@ resource "aws_cloudwatch_log_subscription_filter" "oidc_access_log_subscription"
 }
 
 resource "aws_cloudwatch_log_group" "oidc_waf_logs" {
-  count = var.use_localstack ? 0 : 1
-
   name              = "aws-waf-logs-oidc-${var.environment}"
   retention_in_days = var.cloudwatch_log_retention
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
+}
+moved {
+  from = aws_cloudwatch_log_group.oidc_waf_logs[0]
+  to   = aws_cloudwatch_log_group.oidc_waf_logs
 }
 
 resource "aws_cloudwatch_log_subscription_filter" "oidc_waf_log_subscription" {
   count           = length(var.logging_endpoint_arns)
   name            = "${var.environment}-oidc-api-waf-logs-subscription-${count.index}"
-  log_group_name  = aws_cloudwatch_log_group.oidc_waf_logs[0].name
+  log_group_name  = aws_cloudwatch_log_group.oidc_waf_logs.name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
 
@@ -240,13 +246,9 @@ resource "aws_api_gateway_stage" "endpoint_stage" {
 
   xray_tracing_enabled = true
 
-  dynamic "access_log_settings" {
-    for_each = var.use_localstack ? [] : aws_cloudwatch_log_group.oidc_stage_access_logs
-    iterator = log_group
-    content {
-      destination_arn = log_group.value.arn
-      format          = local.access_logging_template
-    }
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.oidc_stage_access_logs.arn
+    format          = local.access_logging_template
   }
 
   tags = local.default_tags
@@ -293,21 +295,25 @@ resource "aws_api_gateway_method_settings" "api_gateway_logging_settings" {
 }
 
 resource "aws_api_gateway_base_path_mapping" "api" {
-  count = var.use_localstack ? 0 : 1
-
   api_id      = aws_api_gateway_rest_api.di_authentication_api.id
   stage_name  = aws_api_gateway_stage.endpoint_stage.stage_name
   domain_name = local.oidc_api_fqdn
+}
+moved {
+  from = aws_api_gateway_base_path_mapping.api[0]
+  to   = aws_api_gateway_base_path_mapping.api
 }
 
 module "dashboard" {
   source           = "../modules/dashboards"
   api_gateway_name = aws_api_gateway_rest_api.di_authentication_api.name
-  use_localstack   = var.use_localstack
+}
+moved {
+  from = module.dashboard[0]
+  to   = module.dashboard
 }
 
 resource "aws_wafv2_web_acl" "wafregional_web_acl_oidc_api" {
-  count = var.use_localstack ? 0 : 1
   name  = "${var.environment}-oidc-waf-web-acl"
   scope = "REGIONAL"
 
@@ -551,22 +557,28 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_oidc_api" {
     sampled_requests_enabled   = true
   }
 }
+moved {
+  from = aws_wafv2_web_acl.wafregional_web_acl_oidc_api[0]
+  to   = aws_wafv2_web_acl.wafregional_web_acl_oidc_api
+}
 
 resource "aws_wafv2_web_acl_association" "oidc_waf_association" {
-  count        = var.use_localstack ? 0 : 1
   resource_arn = aws_api_gateway_stage.endpoint_stage.arn
-  web_acl_arn  = aws_wafv2_web_acl.wafregional_web_acl_oidc_api[count.index].arn
+  web_acl_arn  = aws_wafv2_web_acl.wafregional_web_acl_oidc_api.arn
 
   depends_on = [
     aws_api_gateway_stage.endpoint_stage,
     aws_wafv2_web_acl.wafregional_web_acl_oidc_api
   ]
 }
+moved {
+  from = aws_wafv2_web_acl_association.oidc_waf_association[0]
+  to   = aws_wafv2_web_acl_association.oidc_waf_association
+}
 
 resource "aws_wafv2_web_acl_logging_configuration" "waf_logging_config_oidc_api" {
-  count                   = var.use_localstack ? 0 : 1
-  log_destination_configs = [aws_cloudwatch_log_group.oidc_waf_logs[count.index].arn]
-  resource_arn            = aws_wafv2_web_acl.wafregional_web_acl_oidc_api[count.index].arn
+  log_destination_configs = [aws_cloudwatch_log_group.oidc_waf_logs.arn]
+  resource_arn            = aws_wafv2_web_acl.wafregional_web_acl_oidc_api.arn
   logging_filter {
     default_behavior = "DROP"
 
@@ -585,6 +597,10 @@ resource "aws_wafv2_web_acl_logging_configuration" "waf_logging_config_oidc_api"
   depends_on = [
     aws_cloudwatch_log_group.oidc_waf_logs
   ]
+}
+moved {
+  from = aws_wafv2_web_acl_logging_configuration.waf_logging_config_oidc_api[0]
+  to   = aws_wafv2_web_acl_logging_configuration.waf_logging_config_oidc_api
 }
 
 resource "aws_api_gateway_resource" "robots_txt_resource" {

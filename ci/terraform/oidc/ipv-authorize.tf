@@ -53,7 +53,6 @@ module "ipv-authorize" {
   environment     = var.environment
 
   handler_environment_variables = {
-    DYNAMO_ENDPOINT                = var.use_localstack ? var.lambda_dynamo_endpoint : null
     ENVIRONMENT                    = var.environment
     IDENTITY_ENABLED               = var.ipv_api_enabled
     INTERNAl_SECTOR_URI            = var.internal_sector_uri
@@ -62,7 +61,6 @@ module "ipv-authorize" {
     IPV_AUTHORISATION_CLIENT_ID    = var.ipv_authorisation_client_id
     IPV_AUTHORISATION_URI          = var.ipv_authorisation_uri
     IPV_TOKEN_SIGNING_KEY_ALIAS    = local.ipv_token_auth_key_alias_name
-    LOCALSTACK_ENDPOINT            = var.use_localstack ? var.localstack_endpoint : null
     REDIS_KEY                      = local.redis_key
     TXMA_AUDIT_QUEUE_URL           = module.oidc_txma_audit.queue_url
   }
@@ -96,8 +94,6 @@ module "ipv-authorize" {
   lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
   default_tags                           = local.default_tags
   api_key_required                       = true
-
-  use_localstack = var.use_localstack
 
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_frontend_api,

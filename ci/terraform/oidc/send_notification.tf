@@ -34,7 +34,6 @@ module "send_notification" {
     PENDING_EMAIL_CHECK_QUEUE_URL          = local.pending_email_check_queue_id
     SUPPORT_EMAIL_CHECK_ENABLED            = var.support_email_check_enabled
     TXMA_AUDIT_QUEUE_URL                   = module.oidc_txma_audit.queue_url
-    LOCALSTACK_ENDPOINT                    = var.use_localstack ? var.localstack_endpoint : null
     REDIS_KEY                              = local.redis_key
     TEST_CLIENTS_ENABLED                   = var.test_clients_enabled
     DEFAULT_OTP_CODE_EXPIRY                = var.otp_code_ttl_duration
@@ -70,8 +69,6 @@ module "send_notification" {
   lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
   default_tags                           = local.default_tags
   api_key_required                       = true
-
-  use_localstack = var.use_localstack
 
   depends_on = [
     aws_api_gateway_rest_api.di_authentication_frontend_api,
