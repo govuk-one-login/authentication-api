@@ -137,4 +137,24 @@ stub_rp_clients = [
     one_login_service = false
     service_type      = "MANDATORY"
   },
+  {
+    client_name = "relying-party-stub-build-acceptance-test"
+    callback_urls = [
+      "https://acceptance-test-rp-build.build.stubs.account.gov.uk/oidc/authorization-code/callback",
+    ]
+    logout_urls = [
+      "https://acceptance-test-rp-build.build.stubs.account.gov.uk/signed-out",
+    ]
+    test_client                     = "1"
+    consent_required                = "0"
+    identity_verification_supported = "1"
+    client_type                     = "web"
+    scopes = [
+      "openid",
+      "email",
+      "phone",
+    ]
+    one_login_service = false
+    service_type      = "MANDATORY"
+  },
 ]
