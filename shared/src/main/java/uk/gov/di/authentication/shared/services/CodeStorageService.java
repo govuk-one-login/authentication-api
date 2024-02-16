@@ -28,6 +28,8 @@ public class CodeStorageService {
     private static final String RESET_PASSWORD_KEY_PREFIX = "reset-password-code:";
     private static final String MULTIPLE_INCORRECT_PASSWORDS_PREFIX =
             "multiple-incorrect-passwords:";
+    private static final String MULTIPLE_INCORRECT_REAUTH_EMAIL_PREFIX =
+            "multiple-incorrect-reauth-email:";
     private static final String MULTIPLE_INCORRECT_PASSWORDS_REAUTH_PREFIX =
             "multiple-incorrect-passwords-reauth:";
 
@@ -74,6 +76,10 @@ public class CodeStorageService {
         increaseCount(email, MULTIPLE_INCORRECT_PASSWORDS_PREFIX);
     }
 
+    public void increaseIncorrectEmailCount(String email) {
+        increaseCount(email, MULTIPLE_INCORRECT_REAUTH_EMAIL_PREFIX);
+    }
+
     public void increaseIncorrectPasswordCountReauthJourney(String email) {
         increaseCount(email, MULTIPLE_INCORRECT_PASSWORDS_REAUTH_PREFIX);
     }
@@ -95,6 +101,10 @@ public class CodeStorageService {
         return getIncorrectCount(email, MULTIPLE_INCORRECT_PASSWORDS_PREFIX);
     }
 
+    public int getIncorrectEmailCount(String email) {
+        return getIncorrectCount(email, MULTIPLE_INCORRECT_REAUTH_EMAIL_PREFIX);
+    }
+
     public int getIncorrectPasswordCountReauthJourney(String email) {
         return getIncorrectCount(email, MULTIPLE_INCORRECT_PASSWORDS_REAUTH_PREFIX);
     }
@@ -109,6 +119,10 @@ public class CodeStorageService {
 
     public void deleteIncorrectPasswordCount(String email) {
         deleteCount(email, MULTIPLE_INCORRECT_PASSWORDS_PREFIX);
+    }
+
+    public void deleteIncorrectEmailCount(String email) {
+        deleteCount(email, MULTIPLE_INCORRECT_REAUTH_EMAIL_PREFIX);
     }
 
     public void deleteIncorrectPasswordCountReauthJourney(String email) {

@@ -110,6 +110,33 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
         assertThat(response, hasStatus(404));
     }
 
+    @Test
+    void shouldReturn400WhenUserEnteredInvalidEmailTooManyTimes() {
+        userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
+        registerClient("https://randomSectorIDuRI.COM");
+
+        redis.incrementEmailCount(TEST_EMAIL);
+        redis.incrementEmailCount(TEST_EMAIL);
+        redis.incrementEmailCount(TEST_EMAIL);
+        redis.incrementEmailCount(TEST_EMAIL);
+        redis.incrementEmailCount(TEST_EMAIL);
+
+        var request = new CheckReauthUserRequest(TEST_EMAIL);
+        byte[] salt = userStore.addSalt(TEST_EMAIL);
+        var internalCommonSubjectId =
+                ClientSubjectHelper.calculatePairwiseIdentifier(
+                        SUBJECT.getValue(), INTERNAl_SECTOR_HOST, salt);
+        var response =
+                makeRequest(
+                        Optional.of(request),
+                        headers,
+                        Collections.emptyMap(),
+                        Collections.emptyMap(),
+                        Map.of("principalId", internalCommonSubjectId));
+
+        assertThat(response, hasStatus(400));
+    }
+
     private ClientSession createClientSession() {
         var authRequestBuilder =
                 new AuthenticationRequest.Builder(
