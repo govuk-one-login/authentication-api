@@ -12,21 +12,6 @@ variable "environment" {
   type = string
 }
 
-variable "aws_endpoint" {
-  type    = string
-  default = null
-}
-
-variable "aws_dynamodb_endpoint" {
-  type    = string
-  default = null
-}
-
-variable "use_localstack" {
-  type    = bool
-  default = false
-}
-
 variable "allow_bulk_test_users" {
   type    = bool
   default = false
