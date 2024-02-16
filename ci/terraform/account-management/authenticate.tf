@@ -20,9 +20,7 @@ module "authenticate" {
   endpoint_method = ["POST"]
   handler_environment_variables = {
     ENVIRONMENT          = var.environment
-    DYNAMO_ENDPOINT      = var.use_localstack ? var.lambda_dynamo_endpoint : null
     INTERNAl_SECTOR_URI  = var.internal_sector_uri
-    LOCALSTACK_ENDPOINT  = var.use_localstack ? var.localstack_endpoint : null
     TXMA_AUDIT_QUEUE_URL = module.account_management_txma_audit.queue_url
     REDIS_KEY            = local.redis_key
   }
@@ -56,6 +54,4 @@ module "authenticate" {
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
   default_tags                           = local.default_tags
-
-  use_localstack = var.use_localstack
 }

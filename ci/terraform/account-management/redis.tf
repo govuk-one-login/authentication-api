@@ -21,8 +21,6 @@ resource "random_password" "redis_password" {
 }
 
 resource "aws_elasticache_replication_group" "account_management_sessions_store" {
-  count = var.use_localstack ? 0 : 1
-
   automatic_failover_enabled  = true
   preferred_cache_cluster_azs = data.aws_availability_zones.available.names
   replication_group_id        = "${var.environment}-acct-mgmt-session-store"
@@ -55,4 +53,8 @@ resource "aws_elasticache_replication_group" "account_management_sessions_store"
   }
 
   tags = local.default_tags
+}
+moved {
+  from = aws_elasticache_replication_group.account_management_sessions_store[0]
+  to   = aws_elasticache_replication_group.account_management_sessions_store
 }

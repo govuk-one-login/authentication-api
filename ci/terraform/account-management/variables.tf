@@ -43,27 +43,6 @@ variable "aws_region" {
   default = "eu-west-2"
 }
 
-variable "use_localstack" {
-  type    = bool
-  default = false
-}
-
-variable "aws_endpoint" {
-  type    = string
-  default = null
-}
-
-variable "aws_dynamodb_endpoint" {
-  type    = string
-  default = null
-}
-
-variable "lambda_dynamo_endpoint" {
-  type        = string
-  default     = "http://dynamodb:8000"
-  description = "The endpoint that the Lambda must use to connect to DynamoDB API. This may or may not be the same as aws_dynamodb_endpoint"
-}
-
 variable "enable_api_gateway_execution_logging" {
   default     = true
   description = "Whether to enable logging of API gateway runs"
@@ -96,26 +75,6 @@ variable "logging_endpoint_arns" {
   type        = list(string)
   default     = []
   description = "Amazon Resource Name (ARN) for the CSLS endpoints to ship logs to"
-}
-
-variable "external_redis_host" {
-  type    = string
-  default = "redis"
-}
-
-variable "external_redis_port" {
-  type    = number
-  default = 6379
-}
-
-variable "external_redis_password" {
-  type    = string
-  default = null
-}
-
-variable "redis_use_tls" {
-  type    = string
-  default = "true"
 }
 
 variable "redis_node_size" {
@@ -154,11 +113,6 @@ variable "lambda_min_concurrency" {
 variable "contact_us_link_route" {
   type    = string
   default = "contact-gov-uk-one-login"
-}
-
-variable "localstack_endpoint" {
-  type    = string
-  default = "http://localhost:45678/"
 }
 
 variable "endpoint_memory_size" {

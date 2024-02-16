@@ -38,7 +38,6 @@ test {
     environment "OIDC_API_BASE_URL", "http://localhost"
     environment "DYNAMO_ENDPOINT", "http://localhost:8000"
     environment "ENVIRONMENT", "local"
-    environment "HEADERS_CASE_INSENSITIVE", "true"
     environment "LOCALSTACK_ENDPOINT", "http://localhost:45678"
     environment "REDIS_KEY", "account-management"
     environment "SQS_ENDPOINT", "http://localhost:45678"
