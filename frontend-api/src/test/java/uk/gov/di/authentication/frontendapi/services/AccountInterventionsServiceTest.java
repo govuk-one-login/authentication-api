@@ -8,10 +8,11 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import uk.gov.di.authentication.frontendapi.entity.State;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountInterventionsResponseException;
+import uk.gov.di.authentication.shared.services.ConfigurationService;
 
 import java.io.IOException;
+import java.net.URI;
 import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -27,18 +28,19 @@ class AccountInterventionsServiceTest {
     private static final String FIELD_INTERVENTION = "intervention";
     private static final String FIELD_STATE = "state";
 
-    @Mock private HttpRequest mockRequest;
-
     @Mock private HttpResponse mockResponse;
 
     @Mock private HttpClient httpClient;
+    @Mock private ConfigurationService configurationService;
 
     private AccountInterventionsService service;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        service = new AccountInterventionsService(httpClient);
+        service = new AccountInterventionsService(httpClient, configurationService);
+        when(configurationService.getAccountInterventionServiceURI())
+                .thenReturn(URI.create("https://example.com"));
     }
 
     @Test
@@ -68,7 +70,7 @@ class AccountInterventionsServiceTest {
 
         var expectedState = new State(true, false, true, false);
 
-        var result = service.sendAccountInterventionsOutboundRequest(mockRequest);
+        var result = service.sendAccountInterventionsOutboundRequest("123456");
         assertEquals(expectedState, result.state());
     }
 
@@ -78,7 +80,7 @@ class AccountInterventionsServiceTest {
         when(mockResponse.statusCode()).thenReturn(500);
         assertThrows(
                 UnsuccessfulAccountInterventionsResponseException.class,
-                () -> service.sendAccountInterventionsOutboundRequest(mockRequest));
+                () -> service.sendAccountInterventionsOutboundRequest("123456"));
     }
 
     @Test
@@ -86,14 +88,13 @@ class AccountInterventionsServiceTest {
         when(httpClient.send(any(), any())).thenThrow(new IOException());
         assertThrows(
                 UnsuccessfulAccountInterventionsResponseException.class,
-                () -> service.sendAccountInterventionsOutboundRequest(mockRequest));
+                () -> service.sendAccountInterventionsOutboundRequest("123456"));
     }
 
     @Test
     void testSendAccountInterventionsOutboundRequestInterruptedException() throws Exception {
         when(httpClient.send(any(), any()))
                 .thenThrow(new InterruptedException("thread interrupted"));
-        when(configurationService.getAccountInterventionServiceCallTimeout()).thenReturn(1000L);
         var exception =
                 assertThrows(
                         UnsuccessfulAccountInterventionsResponseException.class,
@@ -110,7 +111,7 @@ class AccountInterventionsServiceTest {
         when(mockResponse.body()).thenThrow(new JsonParseException("parse-exception-message"));
         assertThrows(
                 UnsuccessfulAccountInterventionsResponseException.class,
-                () -> service.sendAccountInterventionsOutboundRequest(mockRequest));
+                () -> service.sendAccountInterventionsOutboundRequest("123456"));
     }
 
     @Test
@@ -132,6 +133,6 @@ class AccountInterventionsServiceTest {
 
         assertThrows(
                 UnsuccessfulAccountInterventionsResponseException.class,
-                () -> service.sendAccountInterventionsOutboundRequest(mockRequest));
+                () -> service.sendAccountInterventionsOutboundRequest("123456"));
     }
 }

@@ -12,9 +12,11 @@ import uk.gov.di.authentication.shared.services.SerializationService;
 import java.io.IOException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
+import java.time.Duration;
 import java.net.http.HttpResponse;
 
 import static java.lang.String.format;
+import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 
 public class AccountInterventionsService {
 
@@ -27,18 +29,30 @@ public class AccountInterventionsService {
 
     public AccountInterventionsService() {
         httpClient = HttpClient.newHttpClient();
+        configurationService = new ConfigurationService();
     }
 
-    public AccountInterventionsService(HttpClient client) {
+    public AccountInterventionsService(ConfigurationService configService) {
+        configurationService = configService;
+        httpClient =
+                HttpClient.newBuilder()
+                        .connectTimeout(
+                                Duration.ofMillis(
+                                        configurationService
+                                                .getAccountInterventionServiceCallTimeout()))
+                        .build();
+    }
+
+    public AccountInterventionsService(HttpClient client, ConfigurationService configService) {
         httpClient = client;
+        configurationService = configService;
     }
 
     public AccountInterventionsInboundResponse sendAccountInterventionsOutboundRequest(
-            HttpRequest request) throws UnsuccessfulAccountInterventionsResponseException {
-
+            String internalPairwiseId) throws UnsuccessfulAccountInterventionsResponseException {
         try {
             LOG.info("Sending account interventions outbound request");
-            var response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            var response = sendAccountInterventionsRequest(internalPairwiseId);
             if (response.statusCode() < 200 || response.statusCode() > 299) {
                 throw new UnsuccessfulAccountInterventionsResponseException(
                         format(
@@ -60,6 +74,16 @@ public class AccountInterventionsService {
                     "Interrupted exception when attempting to call Account Interventions outbound endpoint",
                     e);
         }
+    }
+
+    private HttpResponse sendAccountInterventionsRequest(String internalPairwiseId)
+            throws IOException, InterruptedException {
+        var accountInterventionsEndpoint =
+                configurationService.getAccountInterventionServiceURI().toString();
+        var accountInterventionsURI =
+                buildURI(accountInterventionsEndpoint, "/v1/ais/" + internalPairwiseId);
+        var request = HttpRequest.newBuilder(accountInterventionsURI).build();
+        return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
     }
 
     private AccountInterventionsInboundResponse parseResponse(HttpResponse response)
