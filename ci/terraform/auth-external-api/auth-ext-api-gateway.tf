@@ -18,35 +18,7 @@ data "aws_vpc_endpoint" "auth_api_vpc_endpoint" {
 resource "aws_api_gateway_rest_api" "di_auth_ext_api" {
   name = "${var.environment}-di-auth-ext-api"
 
-  tags   = local.default_tags
-  policy = <<EOF
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Principal": "*",
-            "Action": "execute-api:Invoke",
-            "Resource": [
-                "execute-api:/*"
-            ]
-        },
-        {
-            "Effect": "Deny",
-            "Principal": "*",
-            "Action": "execute-api:Invoke",
-            "Resource": [
-                "execute-api:/*"
-            ],
-            "Condition" : {
-                "StringNotEquals": {
-                    "aws:SourceVpce": "${data.aws_vpc_endpoint.auth_api_vpc_endpoint.id}"
-                }
-            }
-        }
-    ]
-}
-EOF
+  tags = local.default_tags
   endpoint_configuration {
     types            = ["PRIVATE"]
     vpc_endpoint_ids = [data.aws_vpc_endpoint.auth_api_vpc_endpoint.id]
@@ -54,6 +26,46 @@ EOF
   lifecycle {
     create_before_destroy = true
   }
+}
+
+data "aws_iam_policy_document" "di_auth_ext_api_policy" {
+  statement {
+    effect = "Allow"
+    principals {
+      type        = "*"
+      identifiers = ["*"]
+    }
+    actions = [
+      "execute-api:Invoke"
+    ]
+    resources = [
+      "${aws_api_gateway_rest_api.di_auth_ext_api.execution_arn}/*"
+    ]
+  }
+  statement {
+    effect = "Deny"
+    principals {
+      type        = "*"
+      identifiers = ["*"]
+    }
+    actions = [
+      "execute-api:Invoke"
+    ]
+    resources = [
+      "${aws_api_gateway_rest_api.di_auth_ext_api.execution_arn}/*"
+    ]
+    condition {
+      test     = "StringNotEquals"
+      variable = "aws:SourceVpce"
+      values   = [data.aws_vpc_endpoint.auth_api_vpc_endpoint.id]
+    }
+  }
+
+}
+
+resource "aws_api_gateway_rest_api_policy" "di_auth_ext_api_policy" {
+  rest_api_id = aws_api_gateway_rest_api.di_auth_ext_api.id
+  policy      = data.aws_iam_policy_document.di_auth_ext_api_policy.json
 }
 
 resource "aws_api_gateway_usage_plan" "di_auth_ext_api_usage_plan" {
