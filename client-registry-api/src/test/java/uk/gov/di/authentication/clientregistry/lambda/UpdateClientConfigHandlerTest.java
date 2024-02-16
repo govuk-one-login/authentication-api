@@ -99,6 +99,7 @@ class UpdateClientConfigHandlerTest {
         assertThat(clientRegistrationResponse.getTokenAuthMethod(), equalTo("private_key_jwt"));
         assertThat(clientRegistrationResponse.getScopes(), equalTo(SCOPES));
         assertThat(clientRegistrationResponse.getServiceType(), equalTo(SERVICE_TYPE));
+        assertThat(clientRegistrationResponse.getJarValidationRequired(), equalTo(false));
         assertThat(clientRegistrationResponse.getClientType(), equalTo(ClientType.WEB.getValue()));
         assertThat(clientRegistrationResponse.getClaims(), equalTo(List.of("claim")));
     }

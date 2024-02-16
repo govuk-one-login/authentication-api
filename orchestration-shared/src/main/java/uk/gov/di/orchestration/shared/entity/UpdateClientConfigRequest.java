@@ -39,6 +39,10 @@ public class UpdateClientConfigRequest {
     @Expose
     private String serviceType;
 
+    @SerializedName("jar_validation_required")
+    @Expose
+    private boolean jarValidationRequired;
+
     @SerializedName("claims")
     @Expose
     private List<String> claims;
@@ -87,6 +91,10 @@ public class UpdateClientConfigRequest {
 
     public String getServiceType() {
         return serviceType;
+    }
+
+    public boolean getJarValidationRequired() {
+        return jarValidationRequired;
     }
 
     public List<String> getClaims() {
@@ -143,6 +151,11 @@ public class UpdateClientConfigRequest {
 
     public UpdateClientConfigRequest setServiceType(String serviceType) {
         this.serviceType = serviceType;
+        return this;
+    }
+
+    public UpdateClientConfigRequest setJarValidationRequired(boolean jarValidationRequired) {
+        this.jarValidationRequired = jarValidationRequired;
         return this;
     }
 

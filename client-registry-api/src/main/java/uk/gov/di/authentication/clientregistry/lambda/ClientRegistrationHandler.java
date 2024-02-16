@@ -140,6 +140,7 @@ public class ClientRegistrationHandler
                             clientRegistrationRequest.getBackChannelLogoutUri(),
                             clientRegistrationRequest.getServiceType(),
                             clientRegistrationRequest.getSubjectType(),
+                            clientRegistrationRequest.isJarValidationRequired(),
                             clientRegistrationRequest.getClaims(),
                             clientRegistrationRequest.getSectorIdentifierUri(),
                             clientRegistrationRequest.getClientType());

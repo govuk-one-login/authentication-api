@@ -136,6 +136,7 @@ public class UpdateClientConfigHandler
                             clientRegistry.getBackChannelLogoutUri(),
                             clientRegistry.getServiceType(),
                             clientRegistry.getSubjectType(),
+                            clientRegistry.isJarValidationRequired(),
                             clientRegistry.getClaims(),
                             clientRegistry.getSectorIdentifierUri(),
                             clientRegistry.getClientType());

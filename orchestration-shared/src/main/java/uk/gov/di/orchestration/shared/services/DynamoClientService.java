@@ -111,6 +111,8 @@ public class DynamoClientService implements ClientService {
                 .ifPresent(clientRegistry::withServiceType);
         Optional.ofNullable(updateRequest.getSectorIdentifierUri())
                 .ifPresent(clientRegistry::withSectorIdentifierUri);
+        Optional.of(updateRequest.getJarValidationRequired())
+                .ifPresent(clientRegistry::withJarValidationRequired);
         Optional.ofNullable(updateRequest.getClaims()).ifPresent(clientRegistry::withClaims);
         Optional.ofNullable(updateRequest.getClientLoCs())
                 .ifPresent(clientRegistry::withClientLoCs);
