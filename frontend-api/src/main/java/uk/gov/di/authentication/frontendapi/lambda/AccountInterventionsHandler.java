@@ -3,7 +3,6 @@ package uk.gov.di.authentication.frontendapi.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.nimbusds.oauth2.sdk.http.HTTPRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
@@ -28,9 +27,9 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SessionService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import java.net.http.HttpRequest;
 import java.util.Map;
 
-import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.GET;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
@@ -122,7 +121,8 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
                     configurationService.getAccountInterventionServiceURI().toString();
             var accountInterventionsURI =
                     buildURI(accountInterventionsEndpoint, "/v1/ais/" + internalPairwiseId);
-            var accountInterventionsInboundRequest = new HTTPRequest(GET, accountInterventionsURI);
+            var accountInterventionsInboundRequest =
+                    HttpRequest.newBuilder(accountInterventionsURI).build();
             var accountInterventionsInboundResponse =
                     accountInterventionsService.sendAccountInterventionsOutboundRequest(
                             accountInterventionsInboundRequest);
