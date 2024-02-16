@@ -242,9 +242,9 @@ resource "aws_iam_role_policy_attachment" "lambda_env_vars_encryption_kms_policy
 resource "aws_kms_key" "events_topic_encryption" {
   description = "alias/${var.environment}/events-encryption-key"
 
-  policy = data.aws_iam_policy_document.events_encryption_key_permissions.json
-
-  tags = local.default_tags
+  policy              = data.aws_iam_policy_document.events_encryption_key_permissions.json
+  enable_key_rotation = true
+  tags                = local.default_tags
 }
 
 resource "aws_kms_alias" "events_topic_encryption_alias" {
@@ -342,6 +342,7 @@ resource "aws_kms_key" "auth_code_store_signing_key" {
   deletion_window_in_days  = 30
   key_usage                = "ENCRYPT_DECRYPT"
   customer_master_key_spec = "SYMMETRIC_DEFAULT"
+  enable_key_rotation      = true
   policy = jsonencode({
     Version = "2012-10-17"
     Id      = "key-policy-dynamodb",
