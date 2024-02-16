@@ -507,7 +507,7 @@ variable "account_intervention_service_uri" {
 }
 
 variable "account_intervention_service_call_timeout" {
-  default     = 1000
+  default     = 3000
   type        = number
   description = "The HTTP Client connection timeout for requests to Account Intervention Service (in milliseconds)."
 }
