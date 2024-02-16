@@ -44,6 +44,8 @@ import static uk.gov.di.authentication.shared.conditions.MfaHelper.getUserMFADet
 import static uk.gov.di.authentication.shared.entity.Session.AccountState.EXISTING;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.JOURNEY_TYPE;
+import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 
@@ -139,11 +141,9 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             UserProfile userProfile = userProfileMaybe.get();
             UserCredentials userCredentials = userContext.getUserCredentials().get();
             var isReauthJourney = request.getJourneyType() == JourneyType.REAUTHENTICATION;
-            int incorrectPasswordCount =
-                    isReauthJourney
-                            ? codeStorageService.getIncorrectPasswordCountReauthJourney(
-                                    request.getEmail())
-                            : codeStorageService.getIncorrectPasswordCount(request.getEmail());
+            attachLogFieldToLogs(
+                    JOURNEY_TYPE,
+                    request.getJourneyType() != null ? request.getJourneyType().getValue() : "");
 
             LOG.info("Calculating internal common subject identifier");
             var internalCommonSubjectIdentifier =
@@ -151,6 +151,13 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                             userProfile,
                             configurationService.getInternalSectorUri(),
                             authenticationService);
+
+            int incorrectPasswordCount =
+                    isReauthJourney
+                            ? codeStorageService.getIncorrectPasswordCountReauthJourney(
+                                    request.getEmail())
+                            : codeStorageService.getIncorrectPasswordCount(request.getEmail());
+            LOG.info("incorrectPasswordCount: {}", incorrectPasswordCount);
 
             if (incorrectPasswordCount >= configurationService.getMaxPasswordRetries()) {
                 LOG.info("User has exceeded max password retries");
@@ -172,6 +179,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             }
 
             if (!credentialsAreValid(request, userProfile)) {
+                LOG.info("credentials are invalid");
                 if (isReauthJourney) {
                     codeStorageService.increaseIncorrectPasswordCountReauthJourney(
                             request.getEmail());
@@ -199,6 +207,7 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
             }
 
             if (incorrectPasswordCount != 0) {
+                LOG.info("deleting incorrectPasswordCount");
                 if (isReauthJourney) {
                     codeStorageService.deleteIncorrectPasswordCountReauthJourney(
                             request.getEmail());

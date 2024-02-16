@@ -86,6 +86,7 @@ public class CodeStorageService {
         try {
             redisConnectionService.saveWithExpiry(
                     key, String.valueOf(newCount), TIME_TO_LIVE_SECONDS);
+            LOG.info("count increased from: {} to: {}", count, newCount);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
