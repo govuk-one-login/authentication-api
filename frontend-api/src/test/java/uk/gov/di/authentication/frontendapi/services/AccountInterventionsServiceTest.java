@@ -13,6 +13,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
+import java.net.http.HttpConnectTimeoutException;
 import java.net.http.HttpResponse;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -29,7 +30,6 @@ class AccountInterventionsServiceTest {
     private static final String FIELD_STATE = "state";
 
     @Mock private HttpResponse mockResponse;
-
     @Mock private HttpClient httpClient;
     @Mock private ConfigurationService configurationService;
 
@@ -41,6 +41,7 @@ class AccountInterventionsServiceTest {
         service = new AccountInterventionsService(httpClient, configurationService);
         when(configurationService.getAccountInterventionServiceURI())
                 .thenReturn(URI.create("https://example.com"));
+        when(configurationService.getAccountInterventionServiceCallTimeout()).thenReturn(1000L);
     }
 
     @Test
@@ -101,6 +102,20 @@ class AccountInterventionsServiceTest {
                         () -> service.sendAccountInterventionsOutboundRequest("123456"));
         assertEquals(
                 "Interrupted exception when attempting to call Account Interventions outbound endpoint",
+                exception.getMessage());
+    }
+
+    @Test
+    void testSendAccountInterventionsOutboundRequestTimeoutException() throws Exception {
+        when(httpClient.send(any(), any()))
+                .thenThrow(new HttpConnectTimeoutException("request timed out"));
+        when(configurationService.getAccountInterventionServiceCallTimeout()).thenReturn(1000L);
+        var exception =
+                assertThrows(
+                        UnsuccessfulAccountInterventionsResponseException.class,
+                        () -> service.sendAccountInterventionsOutboundRequest("123456"));
+        assertEquals(
+                "Timeout when calling Account Interventions endpoint with timeout of 1000",
                 exception.getMessage());
     }
 
