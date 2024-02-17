@@ -16,7 +16,11 @@ import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 
-import static java.lang.String.format;
+import static uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountInterventionsResponseException.httpResponseCodeException;
+import static uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountInterventionsResponseException.interruptedException;
+import static uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountInterventionsResponseException.ioException;
+import static uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountInterventionsResponseException.parseException;
+import static uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountInterventionsResponseException.timeoutException;
 import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 
 public class AccountInterventionsService {
@@ -45,22 +49,13 @@ public class AccountInterventionsService {
 
     public AccountInterventionsInboundResponse sendAccountInterventionsOutboundRequest(
             String internalPairwiseId) throws UnsuccessfulAccountInterventionsResponseException {
-        try {
-            LOG.info("Sending account interventions outbound request");
-            var response = sendAccountInterventionsRequest(internalPairwiseId);
-            if (response.statusCode() < 200 || response.statusCode() > 299) {
-                throw new UnsuccessfulAccountInterventionsResponseException(
-                        format(
-                                "Error %s when attempting to call Account Interventions outbound endpoint: %s",
-                                response.statusCode(), response.body()),
-                        response.statusCode());
-            }
-            LOG.info("Received successful account interventions outbound response");
-            return parseResponse(response);
-        } catch (Json.JsonException | JsonParseException e) {
-            throw new UnsuccessfulAccountInterventionsResponseException(
-                    "Error parsing HTTP response", e);
+        LOG.info("Sending account interventions outbound request");
+        var response = sendAccountInterventionsRequest(internalPairwiseId);
+        if (response.statusCode() < 200 || response.statusCode() > 299) {
+            throw httpResponseCodeException(response.statusCode(), response.body());
         }
+        LOG.info("Received successful account interventions outbound response");
+        return parseResponse(response);
     }
 
     private HttpResponse sendAccountInterventionsRequest(String internalPairwiseId)
@@ -79,25 +74,23 @@ public class AccountInterventionsService {
         try {
             return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
         } catch (HttpTimeoutException e) {
-            throw new UnsuccessfulAccountInterventionsResponseException(
-                    format(
-                            "Timeout when calling Account Interventions endpoint with timeout of %d",
-                            configurationService.getAccountInterventionServiceCallTimeout()),
-                    e);
+            throw timeoutException(
+                    configurationService.getAccountInterventionServiceCallTimeout(), e);
         } catch (IOException e) {
-            throw new UnsuccessfulAccountInterventionsResponseException(
-                    "Error when attempting to call Account Interventions outbound endpoint", e);
+            throw ioException(e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new UnsuccessfulAccountInterventionsResponseException(
-                    "Interrupted exception when attempting to call Account Interventions outbound endpoint",
-                    e);
+            throw interruptedException(e);
         }
     }
 
     private AccountInterventionsInboundResponse parseResponse(HttpResponse response)
-            throws Json.JsonException, JsonParseException {
-        return objectMapper.readValue(
-                response.body().toString(), AccountInterventionsInboundResponse.class, true);
+            throws UnsuccessfulAccountInterventionsResponseException {
+        try {
+            return objectMapper.readValue(
+                    response.body().toString(), AccountInterventionsInboundResponse.class, true);
+        } catch (Json.JsonException | JsonParseException e) {
+            throw parseException(e);
+        }
     }
 }
