@@ -29,13 +29,7 @@ import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountInterventio
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
-import uk.gov.di.authentication.shared.services.AuditService;
-import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.ClientService;
-import uk.gov.di.authentication.shared.services.ClientSessionService;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.SerializationService;
-import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.shared.services.*;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.net.URI;
@@ -69,6 +63,7 @@ public class AccountInterventionsHandlerTest {
     private static final String TEST_EMAIL_ADDRESS = "test@test.com";
     private static final String TEST_SUBJECT_ID = "subject-id";
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
+    private static final String TEST_ENVIRONMENT = "test-environment";
     private static final byte[] SALT = SaltHelper.generateNewSalt();
 
     private AccountInterventionsHandler handler;
@@ -82,6 +77,8 @@ public class AccountInterventionsHandlerTest {
     private final AccountInterventionsService accountInterventionsService =
             mock(AccountInterventionsService.class);
     private final ClientService clientService = mock(ClientService.class);
+    private final CloudwatchMetricsService cloudwatchMetricsService =
+            mock(CloudwatchMetricsService.class);
     private static final ClientSession clientSession = getClientSession();
     private final Session session =
             new Session(IdGenerator.generate())
@@ -108,6 +105,9 @@ public class AccountInterventionsHandlerTest {
         when(userContext.getClientSession()).thenReturn(clientSession);
         when(userContext.getClientId()).thenReturn(TEST_CLIENT_ID);
         when(userContext.getClientSessionId()).thenReturn(TEST_CLIENT_SESSION_ID);
+        when(configurationService.getAccountInterventionsErrorMetricName())
+                .thenReturn("AISException");
+        when(configurationService.getEnvironment()).thenReturn(TEST_ENVIRONMENT);
         handler =
                 new AccountInterventionsHandler(
                         configurationService,
@@ -116,7 +116,8 @@ public class AccountInterventionsHandlerTest {
                         clientService,
                         authenticationService,
                         accountInterventionsService,
-                        auditService);
+                        auditService,
+                        cloudwatchMetricsService);
     }
 
     @Test
