@@ -75,6 +75,10 @@ public class ClientRegistrationRequest {
     @Expose
     private List<String> clientLoCs = new ArrayList<>();
 
+    @SerializedName("jar_validation_required")
+    @Expose
+    private boolean jarValidationRequired;
+
     public ClientRegistrationRequest() {}
 
     public ClientRegistrationRequest(
@@ -205,5 +209,9 @@ public class ClientRegistrationRequest {
 
     public List<String> getClientLoCs() {
         return clientLoCs;
+    }
+
+    public boolean isJarValidationRequired() {
+        return jarValidationRequired;
     }
 }

@@ -24,6 +24,7 @@ public interface ClientService {
             String sectorIdentifierUri,
             String subjectType,
             boolean consentRequired,
+            boolean jarValidationRequired,
             List<String> claims,
             String clientType,
             boolean identityVerificationSupported,
