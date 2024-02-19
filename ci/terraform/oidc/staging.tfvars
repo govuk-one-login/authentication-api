@@ -10,3 +10,4 @@ test_clients_enabled                 = true
 internal_sector_uri                  = "https://identity.staging.account.gov.uk"
 orch_redirect_uri                    = "https://oidc.staging.account.gov.uk/orchestration-redirect"
 authorize_protected_subnet_enabled   = true
+storage_token_to_ipv_enabled         = true

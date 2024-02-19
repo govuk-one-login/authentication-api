@@ -177,6 +177,9 @@ public class IPVAuthorisationHandlerTest {
         when(configService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         when(configService.isIdentityEnabled()).thenReturn(true);
         when(configService.getEnvironment()).thenReturn(ENVIRONMENT);
+        when(configService.isStorageTokenToIpvEnabled()).thenReturn(true);
+        when(configService.getStorageTokenClaimName())
+                .thenReturn("https://vocab.account.gov.uk/v1/storageAccessToken");
         AccessToken storageToken = new BearerAccessToken(SERIALIZED_JWT, 180, null);
         when(storageTokenService.generateAndSignStorageToken(any(), any()))
                 .thenReturn(storageToken);
@@ -231,6 +234,7 @@ public class IPVAuthorisationHandlerTest {
         var expectedRpPairwiseId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         SUBJECT_ID, "sector-identifier", SALT.array());
+        verify(storageTokenService).generateAndSignStorageToken(any(), eq(JWSAlgorithm.ES256));
         verify(authorisationService)
                 .constructRequestJWT(
                         any(State.class),

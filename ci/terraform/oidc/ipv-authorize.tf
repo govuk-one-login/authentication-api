@@ -65,6 +65,7 @@ module "ipv-authorize" {
     LOCALSTACK_ENDPOINT            = var.use_localstack ? var.localstack_endpoint : null
     REDIS_KEY                      = local.redis_key
     TXMA_AUDIT_QUEUE_URL           = module.oidc_txma_audit.queue_url
+    STORAGE_TOKEN_TO_IPV_ENABLED   = var.storage_token_to_ipv_enabled
   }
   handler_function_name = "uk.gov.di.authentication.ipv.lambda.IPVAuthorisationHandler::handleRequest"
 

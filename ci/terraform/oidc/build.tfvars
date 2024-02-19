@@ -8,6 +8,7 @@ logging_endpoint_arns                = []
 shared_state_bucket                  = "digital-identity-dev-tfstate"
 test_clients_enabled                 = true
 internal_sector_uri                  = "https://identity.build.account.gov.uk"
+storage_token_to_ipv_enabled         = true
 
 
 auth_frontend_public_encryption_key = <<-EOT
