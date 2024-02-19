@@ -15,7 +15,7 @@
 
 ## TODO
 - Create a separate test that verifies no interactions with account modifiers service
-- Ditto verify code storage service deletes OTP code?
+- Verify code storage service gets and deletes OTP code
 
 - Make sure EmailCodeProcessor class contains audit service logic, checks for TestClient
 - Make sure EmailCodeProcessorTest test for both test client and regular client

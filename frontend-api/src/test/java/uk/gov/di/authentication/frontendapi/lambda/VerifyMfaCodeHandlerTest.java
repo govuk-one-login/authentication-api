@@ -782,12 +782,6 @@ class VerifyMfaCodeHandlerTest {
 //                    "testclient.user2@internet.com",
             })
     void shouldReturn204ForValidVerifyEmailRequestUsingTestClient(String email) throws Json.JsonException {
-        when(configurationService.isTestClientsEnabled()).thenReturn(true);
-        when(configurationService.getCodeMaxRetries()).thenReturn(5);
-        when(configurationService.getTestClientVerifyEmailOTP())
-                .thenReturn(Optional.of(TEST_CLIENT_CODE));
-        when(codeStorageService.getOtpCode(email, VERIFY_EMAIL)).thenReturn(Optional.of(CODE));
-
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(emailCodeProcessor));
 
