@@ -16,17 +16,6 @@ resource "aws_sqs_queue" "pending_email_check_queue" {
   tags = local.default_tags
 }
 
-resource "aws_sqs_queue" "pending_email_check_dead_letter_queue" {
-  name = "${var.environment}-pending-email-check-dlq"
-
-  kms_master_key_id                 = var.use_localstack ? null : aws_kms_key.pending_email_check_queue_encryption_key.arn
-  kms_data_key_reuse_period_seconds = var.use_localstack ? null : 300
-
-  message_retention_seconds = 1209600
-
-  tags = local.default_tags
-}
-
 data "aws_iam_policy_document" "pending_email_queue_access_policy_document" {
   version   = "2012-10-17"
   policy_id = "${var.environment}-pending-email-check-queue-access-policy"
@@ -57,4 +46,32 @@ resource "aws_iam_policy" "pending_email_check_queue_access_policy" {
   description = "IAM Policy for write access to the pending email queue"
 
   policy = data.aws_iam_policy_document.pending_email_queue_access_policy_document.json
+}
+
+resource "aws_sqs_queue" "pending_email_check_dead_letter_queue" {
+  name = "${var.environment}-pending-email-check-dlq"
+
+  kms_master_key_id                 = var.use_localstack ? null : aws_kms_key.pending_email_check_queue_encryption_key.arn
+  kms_data_key_reuse_period_seconds = var.use_localstack ? null : 300
+
+  message_retention_seconds = 1209600
+
+  tags = local.default_tags
+}
+
+resource "aws_cloudwatch_metric_alarm" "pending_email_check_dlq_cloudwatch_alarm" {
+  alarm_name          = replace("${var.environment}-pending-email-check-dlq-alarm", ".", "")
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = "1"
+  metric_name         = "ApproximateNumberOfMessagesVisible"
+  namespace           = "AWS/SQS"
+  period              = "300"
+  statistic           = "Sum"
+  threshold           = var.dlq_alarm_threshold
+
+  dimensions = {
+    QueueName = aws_sqs_queue.pending_email_check_dead_letter_queue.name
+  }
+  alarm_description = "${var.dlq_alarm_threshold} or more messages have appeared on the ${aws_sqs_queue.pending_email_check_dead_letter_queue.name}"
+  alarm_actions     = [aws_sns_topic.slack_events.arn]
 }

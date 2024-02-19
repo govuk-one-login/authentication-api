@@ -161,3 +161,9 @@ variable "auth_check_account_id" {
   type        = string
   description = "Account id of the auth check aws account"
 }
+
+variable "dlq_alarm_threshold" {
+  default     = 1
+  type        = number
+  description = "The number of messages on a DLQ before a Cloudwatch alarm is generated"
+}
