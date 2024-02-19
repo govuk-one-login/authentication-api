@@ -10,6 +10,7 @@
 ## People present
 - Mark
 - Michael
+- Ayo
 
 ## TODO
 - Create a separate test that verifies no interactions with account modifiers service
