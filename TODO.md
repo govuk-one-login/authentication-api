@@ -17,7 +17,7 @@
 - Create a separate test that verifies no interactions with account modifiers service
 - Ditto verify code storage service deletes OTP code?
 
-- Verify audit service? Do we need this bit?
+- Make sure EmailCodeProcessor class contains audit service logic
 - Add unit tests against EmailCodeProcessor
 - Rename VerifyMfaCodeHandler
 
