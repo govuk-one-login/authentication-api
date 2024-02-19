@@ -21,7 +21,6 @@ import uk.gov.di.authentication.app.services.DynamoDocAppService;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
-import uk.gov.di.orchestration.shared.helpers.ConstructUriHelper;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
@@ -35,6 +34,7 @@ import uk.gov.di.orchestration.shared.services.DocAppAuthorisationService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
+import uk.gov.di.orchestration.shared.services.RedirectService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
@@ -245,7 +245,8 @@ public class DocAppCallbackHandler
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN);
-                return redirectToFrontendErrorPage();
+                return RedirectService.redirectToFrontendErrorPage(
+                        configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
             }
 
             try {
@@ -349,15 +350,19 @@ public class DocAppCallbackHandler
                             AuditService.UNKNOWN,
                             AuditService.UNKNOWN);
                     LOG.warn("Doc App sendCriDataRequest was not successful: {}", e.getMessage());
-                    return redirectToFrontendErrorPage();
+                    return RedirectService.redirectToFrontendErrorPage(
+                            configurationService.getLoginURI().toString(),
+                            ERROR_PAGE_REDIRECT_PATH);
                 }
             }
         } catch (DocAppCallbackException | NoSessionException e) {
             LOG.warn(e.getMessage());
-            return redirectToFrontendErrorPage();
+            return RedirectService.redirectToFrontendErrorPage(
+                    configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
         } catch (ParseException e) {
             LOG.info("Cannot retrieve auth request params from client session id");
-            return redirectToFrontendErrorPage();
+            return RedirectService.redirectToFrontendErrorPage(
+                    configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
         }
     }
 
@@ -392,20 +397,6 @@ public class DocAppCallbackHandler
                         authenticationRequest.getResponseMode());
         return generateApiGatewayProxyResponse(
                 302, "", Map.of(ResponseHeaders.LOCATION, errorResponse.toURI().toString()), null);
-    }
-
-    private APIGatewayProxyResponseEvent redirectToFrontendErrorPage() {
-        LOG.info("Redirecting to frontend error page");
-        return generateApiGatewayProxyResponse(
-                302,
-                "",
-                Map.of(
-                        ResponseHeaders.LOCATION,
-                        ConstructUriHelper.buildURI(
-                                        configurationService.getLoginURI().toString(),
-                                        ERROR_PAGE_REDIRECT_PATH)
-                                .toString()),
-                null);
     }
 
     private void incrementDocAppCallbackErrorCounter(boolean noSessionError, String error) {

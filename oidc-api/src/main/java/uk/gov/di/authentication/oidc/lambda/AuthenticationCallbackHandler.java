@@ -36,7 +36,6 @@ import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.Session.AccountState;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
-import uk.gov.di.orchestration.shared.helpers.ConstructUriHelper;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
@@ -52,6 +51,7 @@ import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
+import uk.gov.di.orchestration.shared.services.RedirectService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 
@@ -259,7 +259,8 @@ public class AuthenticationCallbackHandler
                         AuditService.UNKNOWN,
                         AuditService.UNKNOWN,
                         persistentSessionId);
-                return redirectToFrontendErrorPage();
+                return RedirectService.redirectToFrontendErrorPage(
+                        configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
             }
 
             try {
@@ -463,14 +464,17 @@ public class AuthenticationCallbackHandler
                 LOG.error(
                         "Orchestration to Authentication userinfo request was not successful: {}",
                         e.getMessage());
-                return redirectToFrontendErrorPage();
+                return RedirectService.redirectToFrontendErrorPage(
+                        configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
             }
         } catch (AuthenticationCallbackException e) {
             LOG.warn(e.getMessage());
-            return redirectToFrontendErrorPage();
+            return RedirectService.redirectToFrontendErrorPage(
+                    configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
         } catch (ParseException e) {
             LOG.info("Cannot retrieve auth request params from client session id");
-            return redirectToFrontendErrorPage();
+            return RedirectService.redirectToFrontendErrorPage(
+                    configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
         }
     }
 
@@ -545,19 +549,5 @@ public class AuthenticationCallbackHandler
                         authenticationRequest.getResponseMode());
         return generateApiGatewayProxyResponse(
                 302, "", Map.of(ResponseHeaders.LOCATION, errorResponse.toURI().toString()), null);
-    }
-
-    private APIGatewayProxyResponseEvent redirectToFrontendErrorPage() {
-        LOG.info("Redirecting to frontend error page");
-        return generateApiGatewayProxyResponse(
-                302,
-                "",
-                Map.of(
-                        ResponseHeaders.LOCATION,
-                        ConstructUriHelper.buildURI(
-                                        configurationService.getLoginURI().toString(),
-                                        ERROR_PAGE_REDIRECT_PATH)
-                                .toString()),
-                null);
     }
 }

@@ -45,7 +45,6 @@ import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
-import uk.gov.di.orchestration.shared.helpers.ConstructUriHelper;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.DocAppSubjectIdHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
@@ -61,6 +60,7 @@ import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
+import uk.gov.di.orchestration.shared.services.RedirectService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
@@ -277,7 +277,8 @@ public class AuthorisationHandler
                         null);
             } else {
                 LOG.warn("Redirect URI not found in client registry");
-                return redirectToFrontendErrorPage(ERROR_PAGE_REDIRECT_PATH);
+                return RedirectService.redirectToFrontendErrorPage(
+                        configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
             }
         }
         if (authRequest.getRequestObject() == null) {
@@ -708,20 +709,6 @@ public class AuthorisationHandler
 
         return generateApiGatewayProxyResponse(
                 302, "", Map.of(ResponseHeaders.LOCATION, error.toURI().toString()), null);
-    }
-
-    private APIGatewayProxyResponseEvent redirectToFrontendErrorPage(String errorPagePath) {
-        LOG.info("Redirecting to frontend error page");
-        return generateApiGatewayProxyResponse(
-                302,
-                "",
-                Map.of(
-                        ResponseHeaders.LOCATION,
-                        ConstructUriHelper.buildURI(
-                                        configurationService.getLoginURI().toString(),
-                                        errorPagePath)
-                                .toString()),
-                null);
     }
 
     private void throwError(

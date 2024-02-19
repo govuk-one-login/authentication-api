@@ -887,8 +887,7 @@ class AuthorisationHandlerTest {
                     hasItems(
                             withMessage(
                                     "JAR required for client but request does not contain Request Object"),
-                            withMessage("Redirect URI not found in client registry"),
-                            withMessage("Redirecting to frontend error page")));
+                            withMessage("Redirect URI not found in client registry")));
         }
 
         @Test
