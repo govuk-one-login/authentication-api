@@ -106,6 +106,16 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
         attachLogFieldToLogs(PERSISTENT_SESSION_ID, persistentSessionID);
         LOG.info("Request received to the AccountInterventionsHandler");
 
+        if (!configurationService.isAccountInterventionServiceCallEnabled()) {
+            LOG.info(
+                    "Account interventions service call is disabled, returning default no interventions response");
+            try {
+                return generateApiGatewayProxyResponse(200, noAccountInterventions, true);
+            } catch (JsonException e) {
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+            }
+        }
+
         var userProfile = authenticationService.getUserProfileByEmailMaybe(request.email());
         if (userProfile.isEmpty()) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1049);

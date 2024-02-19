@@ -52,6 +52,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
@@ -98,6 +99,7 @@ public class AccountInterventionsHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(userProfile));
         when(configurationService.accountInterventionsServiceActionEnabled()).thenReturn(true);
+        when(configurationService.isAccountInterventionServiceCallEnabled()).thenReturn(true);
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
         when(configurationService.getAccountInterventionServiceURI())
@@ -215,6 +217,21 @@ public class AccountInterventionsHandlerTest {
         when(accountInterventionsService.sendAccountInterventionsOutboundRequest(any()))
                 .thenReturn(generateAccountInterventionResponse(true, true, true, true));
         var result = handler.handleRequest(apiRequestEventWithEmail(TEST_EMAIL_ADDRESS), context);
+        assertThat(result, hasStatus(200));
+        assertEquals(
+                result.getBody(),
+                String.format(
+                        "{\"passwordResetRequired\":%b,\"blocked\":%b,\"temporarilySuspended\":%b}",
+                        false, false, false));
+    }
+
+    @Test
+    void shouldReturn200NotCallAccountInterventionsServiceWhenCallIsDiabled()
+            throws UnsuccessfulAccountInterventionsResponseException {
+        when(configurationService.isAccountInterventionServiceCallEnabled()).thenReturn(false);
+        var result = handler.handleRequest(apiRequestEventWithEmail(TEST_EMAIL_ADDRESS), context);
+
+        verify(accountInterventionsService, never()).sendAccountInterventionsOutboundRequest(any());
         assertThat(result, hasStatus(200));
         assertEquals(
                 result.getBody(),

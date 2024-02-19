@@ -145,6 +145,10 @@ public class AccountInterventionsHandlerIntegrationTest extends ApiGatewayHandle
         public boolean accountInterventionsServiceActionEnabled() {
             return true;
         }
+
+        public boolean isAccountInterventionServiceCallEnabled() {
+            return true;
+        }
     }
 
     private String setupUserAndRetrieveUserId(String emailAddress) {
