@@ -142,6 +142,13 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return URI.create(System.getenv().getOrDefault("AUTHENTICATION_BACKEND_URI", ""));
     }
 
+    public URI getCredentialStoreURI() {
+        return URI.create(
+                System.getenv()
+                        .getOrDefault(
+                                "CREDENTIAL_STORE_URI", "https://credential-store.account.gov.uk"));
+    }
+
     public boolean isCustomDocAppClaimEnabled() {
         return System.getenv().getOrDefault("CUSTOM_DOC_APP_CLAIM_ENABLED", "false").equals("true");
     }
@@ -399,6 +406,13 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
 
     public long getSessionExpiry() {
         return Long.parseLong(System.getenv().getOrDefault("SESSION_EXPIRY", "3600"));
+    }
+
+    public String getStorageTokenClaimName() {
+        return System.getenv()
+                .getOrDefault(
+                        "STORAGE_TOKEN_CLAIM_NAME",
+                        "https://vocab.account.gov.uk/v1/storageAccessToken");
     }
 
     public Optional<String> getSqsEndpointUri() {

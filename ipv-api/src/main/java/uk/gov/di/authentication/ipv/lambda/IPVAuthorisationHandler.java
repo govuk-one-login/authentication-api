@@ -239,7 +239,7 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
 
         ClaimsSetRequest claimsSetRequest = new ClaimsSetRequest();
         claimsSetRequest.add(
-                new ClaimsSetRequest.Entry("https://vocab.account.gov.uk/v1/storageAccessToken")
+                new ClaimsSetRequest.Entry(configurationService.getStorageTokenClaimName())
                         .withValues(List.of(storageToken.getValue())));
 
         if (authRequest != null) {

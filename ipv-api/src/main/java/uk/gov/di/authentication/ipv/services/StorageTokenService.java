@@ -58,7 +58,7 @@ public class StorageTokenService {
 
         List<String> aud =
                 List.of(
-                        "https://credential-store.account.gov.uk",
+                        configurationService.getCredentialStoreURI().toString(),
                         configurationService.getIPVAudience());
 
         JWTClaimsSet.Builder claimSetBuilder =
