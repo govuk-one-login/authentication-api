@@ -239,7 +239,7 @@ public class ClientRegistry {
 
     @DynamoDbAttribute("ConsentRequired")
     public boolean isConsentRequired() {
-        return consentRequired;
+        return false;
     }
 
     public void setConsentRequired(boolean consentRequired) {

@@ -177,14 +177,14 @@ public class TokenHandlerTest {
 
     private static Stream<Arguments> validVectorValues() {
         return Stream.of(
-                Arguments.of("Cl.Cm", true, true, true),
-                Arguments.of("Cl", true, true, true),
+                Arguments.of("Cl.Cm", true, false, true),
+                Arguments.of("Cl", true, false, true),
                 Arguments.of("P2.Cl.Cm", true, false, true),
                 Arguments.of("Cl.Cm", false, false, true),
                 Arguments.of("Cl", false, false, true),
                 Arguments.of("P2.Cl.Cm", false, false, true),
-                Arguments.of("Cl.Cm", true, true, false),
-                Arguments.of("Cl", true, true, false),
+                Arguments.of("Cl.Cm", true, false, false),
+                Arguments.of("Cl", true, false, false),
                 Arguments.of("P2.Cl.Cm", true, false, false),
                 Arguments.of("Cl.Cm", false, false, false),
                 Arguments.of("Cl", false, false, false),

@@ -334,7 +334,7 @@ class StartIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private void verifyStandardUserInformationSetOnResponse(
             UserStartInfo userStartInfo, Boolean consentRequired) {
-        assertThat(userStartInfo.isConsentRequired(), equalTo(consentRequired));
+        assertFalse(userStartInfo.isConsentRequired());
         assertThat(userStartInfo.isUpliftRequired(), equalTo(false));
         assertThat(userStartInfo.getCookieConsent(), equalTo(null));
         assertThat(userStartInfo.getGaCrossDomainTrackingId(), equalTo(null));
