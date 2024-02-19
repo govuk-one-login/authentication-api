@@ -222,6 +222,7 @@ public class OrchestrationAuthorizationService {
     }
 
     public boolean isJarValidationRequired(ClientRegistry client) {
-        return client.getScopes().contains(CustomScopeValue.DOC_CHECKING_APP.getValue());
+        return client.getScopes().contains(CustomScopeValue.DOC_CHECKING_APP.getValue())
+                || client.isJarValidationRequired();
     }
 }

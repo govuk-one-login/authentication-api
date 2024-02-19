@@ -239,6 +239,19 @@ class OrchestrationAuthorizationServiceTest {
                 .saveWithExpiry("auth-state:" + sessionId, state.getValue(), 3600);
     }
 
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void shouldIdentifyIfJarValidationIsRequired(boolean isJarValidationRequired) {
+        var clientReg =
+                generateClientRegistry(REDIRECT_URI.toString(), CLIENT_ID.toString())
+                        .withJarValidationRequired(isJarValidationRequired);
+        when(dynamoClientService.getClient(CLIENT_ID.toString()))
+                .thenReturn(Optional.of(clientReg));
+
+        var response = orchestrationAuthorizationService.isJarValidationRequired(clientReg);
+        assertThat(response, equalTo(isJarValidationRequired));
+    }
+
     private ClientRegistry generateClientRegistry(String redirectURI, String clientID) {
         return generateClientRegistry(redirectURI, clientID, singletonList("openid"), false);
     }
