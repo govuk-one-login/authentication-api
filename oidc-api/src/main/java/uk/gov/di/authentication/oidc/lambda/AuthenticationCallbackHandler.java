@@ -18,6 +18,7 @@ import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
+import uk.gov.di.authentication.ipv.services.StorageTokenService;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent;
 import uk.gov.di.authentication.oidc.exceptions.AuthenticationCallbackException;
@@ -125,7 +126,8 @@ public class AuthenticationCallbackHandler
                         new IPVAuthorisationService(
                                 configurationService, redisConnectionService, kmsConnectionService),
                         cloudwatchMetricsService,
-                        new NoSessionOrchestrationService(configurationService));
+                        new NoSessionOrchestrationService(configurationService),
+                        new StorageTokenService(configurationService));
         this.accountInterventionService =
                 new AccountInterventionService(
                         configurationService, cloudwatchMetricsService, auditService);

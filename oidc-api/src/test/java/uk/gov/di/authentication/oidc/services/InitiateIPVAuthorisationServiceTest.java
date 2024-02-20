@@ -22,6 +22,8 @@ import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import com.nimbusds.oauth2.sdk.token.AccessToken;
+import com.nimbusds.oauth2.sdk.token.BearerAccessToken;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
@@ -33,6 +35,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
+import uk.gov.di.authentication.ipv.services.StorageTokenService;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
@@ -81,6 +84,8 @@ public class InitiateIPVAuthorisationServiceTest {
     private static final String RP_PAIRWISE_ID = "urn:fdc:gov.uk:2022:dkjfshsdkjh";
     private static final String IP_ADDRESS = "123.123.123.123";
     private static final Boolean REPROVE_IDENTITY = true;
+    private static final String SERIALIZED_JWT =
+            "eyJhbGciOiJFUzI1NiJ9.e30.Ocd0zjblolysCck2LLVgenMKNDQ9GAGCSjlg1kkWVzYcK31qzcJR68bw4b1MdgIEvxZhZ_4ZxWlKIx4OOFixTw";
 
     private final ConfigurationService configService = mock(ConfigurationService.class);
     private final AuditService auditService = mock(AuditService.class);
@@ -91,6 +96,7 @@ public class InitiateIPVAuthorisationServiceTest {
     private final NoSessionOrchestrationService noSessionOrchestrationService =
             mock(NoSessionOrchestrationService.class);
     private InitiateIPVAuthorisationService initiateAuthorisationService;
+    private final StorageTokenService storageTokenService = mock(StorageTokenService.class);
     private APIGatewayProxyRequestEvent event;
     private final ClaimsSetRequest.Entry nameEntry =
             new ClaimsSetRequest.Entry("name").withClaimRequirement(ClaimRequirement.ESSENTIAL);
@@ -120,7 +126,8 @@ public class InitiateIPVAuthorisationServiceTest {
                         auditService,
                         authorisationService,
                         cloudwatchMetricsService,
-                        noSessionOrchestrationService);
+                        noSessionOrchestrationService,
+                        storageTokenService);
 
         event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
@@ -130,6 +137,12 @@ public class InitiateIPVAuthorisationServiceTest {
         when(configService.isIdentityEnabled()).thenReturn(true);
         when(configService.getIPVAuthorisationURI()).thenReturn(IPV_AUTHORISATION_URI);
         when(configService.getEnvironment()).thenReturn(ENVIRONMENT);
+        when(configService.isStorageTokenToIpvEnabled()).thenReturn(true);
+        when(configService.getStorageTokenClaimName())
+                .thenReturn("https://vocab.account.gov.uk/v1/storageAccessToken");
+        AccessToken storageToken = new BearerAccessToken(SERIALIZED_JWT, 180, null);
+        when(storageTokenService.generateAndSignStorageToken(any(), any()))
+                .thenReturn(storageToken);
     }
 
     @Test
