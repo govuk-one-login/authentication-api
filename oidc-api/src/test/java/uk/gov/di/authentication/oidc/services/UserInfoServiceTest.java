@@ -91,6 +91,7 @@ class UserInfoServiceTest {
                     .add(ValidClaims.PASSPORT.getValue())
                     .add(ValidClaims.DRIVING_PERMIT.getValue())
                     .add(ValidClaims.SOCIAL_SECURITY_RECORD.getValue())
+                    .add(ValidClaims.WALLET_SUBJECT_ID.getValue())
                     .add(ValidClaims.RETURN_CODE.getValue());
     private final OIDCClaimsRequest oidcValidClaimsRequest =
             new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest);
@@ -151,6 +152,7 @@ class UserInfoServiceTest {
         assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
         assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
         assertNull(userInfo.getClaim(ValidClaims.SOCIAL_SECURITY_RECORD.getValue()));
+        assertNull(userInfo.getClaim(ValidClaims.WALLET_SUBJECT_ID.getValue()));
         assertNull(userInfo.getClaim(ValidClaims.RETURN_CODE.getValue()));
     }
 
@@ -180,6 +182,7 @@ class UserInfoServiceTest {
         assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
         assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
         assertNull(userInfo.getClaim(ValidClaims.SOCIAL_SECURITY_RECORD.getValue()));
+        assertNull(userInfo.getClaim(ValidClaims.WALLET_SUBJECT_ID.getValue()));
         assertNull(userInfo.getClaim(ValidClaims.RETURN_CODE.getValue()));
     }
 
@@ -212,6 +215,7 @@ class UserInfoServiceTest {
             assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.SOCIAL_SECURITY_RECORD.getValue()));
+            assertNull(userInfo.getClaim(ValidClaims.WALLET_SUBJECT_ID.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.RETURN_CODE.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
         }
@@ -243,6 +247,7 @@ class UserInfoServiceTest {
             assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.SOCIAL_SECURITY_RECORD.getValue()));
+            assertNull(userInfo.getClaim(ValidClaims.WALLET_SUBJECT_ID.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.RETURN_CODE.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
         }
@@ -418,6 +423,7 @@ class UserInfoServiceTest {
             assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.SOCIAL_SECURITY_RECORD.getValue()));
+            assertNull(userInfo.getClaim(ValidClaims.WALLET_SUBJECT_ID.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.RETURN_CODE.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
         }
@@ -451,6 +457,7 @@ class UserInfoServiceTest {
             assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.SOCIAL_SECURITY_RECORD.getValue()));
+            assertNull(userInfo.getClaim(ValidClaims.WALLET_SUBJECT_ID.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.RETURN_CODE.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
         }
@@ -496,6 +503,7 @@ class UserInfoServiceTest {
             assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.SOCIAL_SECURITY_RECORD.getValue()));
+            assertNull(userInfo.getClaim(ValidClaims.WALLET_SUBJECT_ID.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.RETURN_CODE.getValue()));
 
             assertClaimMetricPublished("https://vocab.account.gov.uk/v1/coreIdentityJWT");
@@ -545,6 +553,7 @@ class UserInfoServiceTest {
             assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.SOCIAL_SECURITY_RECORD.getValue()));
+            assertNull(userInfo.getClaim(ValidClaims.WALLET_SUBJECT_ID.getValue()));
             assertNull(userInfo.getClaim(ValidClaims.RETURN_CODE.getValue()));
 
             assertClaimMetricPublished("https://vocab.account.gov.uk/v1/coreIdentityJWT");
