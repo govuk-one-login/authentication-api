@@ -67,10 +67,14 @@ public class DocAppCriService {
                         configurationService.getDocAppAuthorisationCallbackURI());
         var backendURI = configurationService.getDocAppBackendURI();
         var tokenURI = buildURI(backendURI.toString(), "token");
+        var audience =
+                configurationService.isDocAppNewAudClaimEnabled()
+                        ? configurationService.getDocAppAudClaim()
+                        : new Audience(tokenURI);
         var claimsSet =
                 new JWTAuthenticationClaimsSet(
                         new ClientID(configurationService.getDocAppAuthorisationClientId()),
-                        singletonList(new Audience(tokenURI)),
+                        singletonList(audience),
                         NowHelper.nowPlus(PRIVATE_KEY_JWT_EXPIRY, ChronoUnit.MINUTES),
                         NowHelper.now(),
                         NowHelper.now(),

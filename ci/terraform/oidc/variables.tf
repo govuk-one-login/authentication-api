@@ -376,6 +376,18 @@ variable "doc_app_domain" {
   default = "undefined"
 }
 
+variable "doc_app_aud" {
+  type        = string
+  default     = ""
+  description = "Audience to use in calls to DCMAW when doc_app_new_aud_claim_enabled is true"
+}
+
+variable "doc_app_new_aud_claim_enabled" {
+  type        = bool
+  default     = false
+  description = "When enabled, use new aud claim to docapp for consistency with IPV Core"
+}
+
 variable "doc_app_backend_uri" {
   type        = string
   default     = ""

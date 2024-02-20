@@ -18,6 +18,7 @@ import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.ErrorObject;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.ResponseType;
+import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import org.apache.logging.log4j.LogManager;
@@ -159,10 +160,14 @@ public class DocAppAuthorisationService {
                 clientRegistry.isTestClient()
                         ? NowHelper.nowPlus(5, ChronoUnit.DAYS)
                         : NowHelper.nowPlus(3, ChronoUnit.MINUTES);
+        var audience =
+                configurationService.isDocAppNewAudClaimEnabled()
+                        ? configurationService.getDocAppAudClaim()
+                        : new Audience(configurationService.getDocAppAuthorisationURI());
         var claimsBuilder =
                 new JWTClaimsSet.Builder()
                         .issuer(configurationService.getDocAppAuthorisationClientId())
-                        .audience(configurationService.getDocAppAuthorisationURI().toString())
+                        .audience(audience.getValue())
                         .expirationTime(expiryDate)
                         .subject(subject.getValue())
                         .issueTime(NowHelper.now())

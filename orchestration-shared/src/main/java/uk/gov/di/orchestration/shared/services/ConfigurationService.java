@@ -1,5 +1,6 @@
 package uk.gov.di.orchestration.shared.services;
 
+import com.nimbusds.oauth2.sdk.id.Audience;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
@@ -190,6 +191,16 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return System.getenv()
                 .getOrDefault("DOC_APP_V2_DATA_ENDPOINT_ENABLED", "false")
                 .equals("true");
+    }
+
+    public boolean isDocAppNewAudClaimEnabled() {
+        return System.getenv()
+                .getOrDefault("DOC_APP_NEW_AUD_CLAIM_ENABLED", "false")
+                .equals("true");
+    }
+
+    public Audience getDocAppAudClaim() {
+        return new Audience(System.getenv("DOC_APP_AUD"));
     }
 
     public URI getDocAppDomain() {
