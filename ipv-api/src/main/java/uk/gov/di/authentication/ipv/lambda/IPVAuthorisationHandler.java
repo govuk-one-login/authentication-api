@@ -232,25 +232,23 @@ public class IPVAuthorisationHandler extends BaseFrontendHandler<IPVAuthorisatio
 
     private Optional<ClaimsSetRequest> buildIpvClaimsRequest(
             AuthenticationRequest authRequest, Subject internalPairwiseSubject) {
-        ClaimsSetRequest claimsSetRequest = new ClaimsSetRequest();
+
+        Optional<ClaimsSetRequest> claimsSetRequest =
+                Optional.ofNullable(authRequest)
+                        .map(AuthenticationRequest::getOIDCClaims)
+                        .map(OIDCClaimsRequest::getUserInfoClaimsRequest);
 
         if (configurationService.isStorageTokenToIpvEnabled()) {
             AccessToken storageToken =
                     storageTokenService.generateAndSignStorageToken(
                             internalPairwiseSubject, JWSAlgorithm.ES256);
-
-            claimsSetRequest.add(
-                    new ClaimsSetRequest.Entry(configurationService.getStorageTokenClaimName())
-                            .withValues(List.of(storageToken.getValue())));
+            claimsSetRequest.ifPresent(
+                    csr ->
+                            csr.add(
+                                    new ClaimsSetRequest.Entry(
+                                                    configurationService.getStorageTokenClaimName())
+                                            .withValues(List.of(storageToken.getValue()))));
         }
-
-        if (authRequest != null) {
-            OIDCClaimsRequest oidcClaims = authRequest.getOIDCClaims();
-            if (oidcClaims != null) {
-                claimsSetRequest = oidcClaims.getUserInfoClaimsRequest();
-            }
-        }
-
-        return Optional.ofNullable(claimsSetRequest);
+        return claimsSetRequest;
     }
 }
