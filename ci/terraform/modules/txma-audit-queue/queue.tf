@@ -1,6 +1,7 @@
 resource "aws_sqs_queue" "txma_audit_queue" {
-  name                      = "${var.environment}-${var.service_name}-txma-audit-queue"
-  message_retention_seconds = 1209600
+  name                       = "${var.environment}-${var.service_name}-txma-audit-queue"
+  message_retention_seconds  = 1209600
+  visibility_timeout_seconds = 70
 
   kms_master_key_id                 = aws_kms_key.txma_audit_queue_encryption_key.arn
   kms_data_key_reuse_period_seconds = 300
@@ -30,23 +31,25 @@ resource "aws_sqs_queue_policy" "txma_audit_queue_subscription" {
   policy = jsonencode({
     Version = "2012-10-17"
 
-    Statement = [{
-      Effect = "Allow"
+    Statement = [
+      {
+        Effect = "Allow"
 
-      Principal = {
-        AWS = ["arn:aws:iam::${var.txma_account_id}:root"]
+        Principal = {
+          AWS = ["arn:aws:iam::${var.txma_account_id}:root"]
+        }
+
+        Action = [
+          "sqs:ChangeMessageVisibility",
+          "sqs:DeleteMessage",
+          "sqs:GetQueueAttributes",
+          "sqs:ReceiveMessage",
+        ]
+
+        Resource = [
+          aws_sqs_queue.txma_audit_queue.arn,
+        ]
       }
-
-      Action = [
-        "sqs:ChangeMessageVisibility",
-        "sqs:DeleteMessage",
-        "sqs:GetQueueAttributes",
-        "sqs:ReceiveMessage",
-      ]
-
-      Resource = [
-        aws_sqs_queue.txma_audit_queue.arn,
-      ]
-    }]
+    ]
   })
 }
