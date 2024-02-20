@@ -3,7 +3,6 @@ package uk.gov.di.authentication.frontendapi.lambda;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.nimbusds.oauth2.sdk.http.HTTPRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
@@ -30,10 +29,8 @@ import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Map;
 
-import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.GET;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
-import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.AWS_REQUEST_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.LogFieldName.PERSISTENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachLogFieldToLogs;
@@ -84,7 +81,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
 
     public AccountInterventionsHandler(ConfigurationService configurationService) {
         super(AccountInterventionsRequest.class, configurationService);
-        accountInterventionsService = new AccountInterventionsService();
+        accountInterventionsService = new AccountInterventionsService(configurationService);
         this.auditService = new AuditService(configurationService);
     }
 
@@ -118,14 +115,9 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
                                     configurationService.getInternalSectorUri(),
                                     authenticationService)
                             .getValue();
-            var accountInterventionsEndpoint =
-                    configurationService.getAccountInterventionServiceURI().toString();
-            var accountInterventionsURI =
-                    buildURI(accountInterventionsEndpoint, "/v1/ais/" + internalPairwiseId);
-            var accountInterventionsInboundRequest = new HTTPRequest(GET, accountInterventionsURI);
             var accountInterventionsInboundResponse =
                     accountInterventionsService.sendAccountInterventionsOutboundRequest(
-                            accountInterventionsInboundRequest);
+                            internalPairwiseId);
 
             logAisResponse(accountInterventionsInboundResponse);
             submitAuditEvents(

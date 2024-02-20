@@ -1,9 +1,6 @@
 package uk.gov.di.authentication.frontendapi.services;
 
 import com.google.gson.JsonParseException;
-import com.nimbusds.oauth2.sdk.ParseException;
-import com.nimbusds.oauth2.sdk.http.HTTPRequest;
-import com.nimbusds.oauth2.sdk.http.HTTPResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsInboundResponse;
@@ -13,49 +10,87 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.SerializationService;
 
 import java.io.IOException;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.net.http.HttpTimeoutException;
+import java.time.Duration;
 
-import static java.lang.String.format;
+import static uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountInterventionsResponseException.httpResponseCodeException;
+import static uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountInterventionsResponseException.interruptedException;
+import static uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountInterventionsResponseException.ioException;
+import static uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountInterventionsResponseException.parseException;
+import static uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountInterventionsResponseException.timeoutException;
+import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 
 public class AccountInterventionsService {
 
     private static final Logger LOG = LogManager.getLogger(AccountInterventionsService.class);
     private final Json objectMapper = SerializationService.getInstance();
 
-    private ConfigurationService configurationService = new ConfigurationService();
+    private static HttpClient httpClient;
+
+    private ConfigurationService configurationService;
+
+    public AccountInterventionsService() {
+        httpClient = HttpClient.newHttpClient();
+        configurationService = new ConfigurationService();
+    }
+
+    public AccountInterventionsService(ConfigurationService configService) {
+        configurationService = configService;
+        httpClient = HttpClient.newHttpClient();
+    }
+
+    public AccountInterventionsService(HttpClient client, ConfigurationService configService) {
+        httpClient = client;
+        configurationService = configService;
+    }
 
     public AccountInterventionsInboundResponse sendAccountInterventionsOutboundRequest(
-            HTTPRequest request) throws UnsuccessfulAccountInterventionsResponseException {
+            String internalPairwiseId) throws UnsuccessfulAccountInterventionsResponseException {
+        LOG.info("Sending account interventions outbound request");
+        var response = sendAccountInterventionsRequest(internalPairwiseId);
+        if (response.statusCode() < 200 || response.statusCode() > 299) {
+            throw httpResponseCodeException(response.statusCode(), response.body());
+        }
+        LOG.info("Received successful account interventions outbound response");
+        return parseResponse(response);
+    }
 
+    private HttpResponse sendAccountInterventionsRequest(String internalPairwiseId)
+            throws UnsuccessfulAccountInterventionsResponseException {
+        var accountInterventionsEndpoint =
+                configurationService.getAccountInterventionServiceURI().toString();
+        var accountInterventionsURI =
+                buildURI(accountInterventionsEndpoint, "/v1/ais/" + internalPairwiseId);
+        var request =
+                HttpRequest.newBuilder(accountInterventionsURI)
+                        .timeout(
+                                Duration.ofMillis(
+                                        configurationService
+                                                .getAccountInterventionServiceCallTimeout()))
+                        .build();
         try {
-            LOG.info("Sending account interventions outbound request");
-            int timeoutMillis =
-                    (int) configurationService.getAccountInterventionServiceCallTimeout();
-            request.setConnectTimeout(timeoutMillis);
-            request.setReadTimeout(timeoutMillis);
-            var response = request.send();
-            if (!response.indicatesSuccess()) {
-                throw new UnsuccessfulAccountInterventionsResponseException(
-                        format(
-                                "Error %s when attempting to call Account Interventions outbound endpoint: %s",
-                                response.getStatusCode(), response.getContent()),
-                        response.getStatusCode());
-            }
-            LOG.info("Received successful account interventions outbound response");
-            return parseResponse(response);
+            return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        } catch (HttpTimeoutException e) {
+            throw timeoutException(
+                    configurationService.getAccountInterventionServiceCallTimeout(), e);
         } catch (IOException e) {
-            throw new UnsuccessfulAccountInterventionsResponseException(
-                    "Error when attempting to call Account Interventions outbound endpoint", e);
-        } catch (ParseException | Json.JsonException | JsonParseException e) {
-            throw new UnsuccessfulAccountInterventionsResponseException(
-                    "Error parsing HTTP response", e);
+            throw ioException(e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw interruptedException(e);
         }
     }
 
-    private AccountInterventionsInboundResponse parseResponse(HTTPResponse response)
-            throws Json.JsonException, ParseException, JsonParseException {
-        return objectMapper.readValue(
-                response.getContentAsJSONObject().toString(),
-                AccountInterventionsInboundResponse.class,
-                true);
+    private AccountInterventionsInboundResponse parseResponse(HttpResponse response)
+            throws UnsuccessfulAccountInterventionsResponseException {
+        try {
+            return objectMapper.readValue(
+                    response.body().toString(), AccountInterventionsInboundResponse.class, true);
+        } catch (Json.JsonException | JsonParseException e) {
+            throw parseException(e);
+        }
     }
 }
