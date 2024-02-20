@@ -23,8 +23,8 @@ module "jwks" {
     ENVIRONMENT                     = var.environment
     DOC_APP_TOKEN_SIGNING_KEY_ALIAS = local.doc_app_auth_key_alias_name
     LOCALSTACK_ENDPOINT             = var.use_localstack ? var.localstack_endpoint : null
-    TOKEN_SIGNING_KEY_ALIAS         = local.id_token_signing_key_alias_name
-    TOKEN_SIGNING_KEY_RSA_ALIAS     = aws_kms_alias.id_token_signing_key_alias.name
+    ID_TOKEN_SIGNING_KEY_ALIAS      = local.id_token_signing_key_alias_name
+    ID_TOKEN_SIGNING_KEY_RSA_ALIAS  = aws_kms_alias.id_token_signing_key_alias.name
     HEADERS_CASE_INSENSITIVE        = var.use_localstack ? "true" : "false"
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.JwksHandler::handleRequest"

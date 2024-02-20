@@ -270,7 +270,7 @@ public abstract class HandlerIntegrationTest<Q, S> {
         }
 
         @Override
-        public String getTokenSigningKeyAlias() {
+        public String getIdTokenSigningKeyAlias() {
             return tokenSigningKey.getKeyAlias();
         }
 

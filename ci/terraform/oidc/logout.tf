@@ -26,19 +26,19 @@ module "logout" {
   environment     = var.environment
 
   handler_environment_variables = {
-    DEFAULT_LOGOUT_URI            = "https://${local.frontend_fqdn}/signed-out"
-    TXMA_AUDIT_QUEUE_URL          = module.oidc_txma_audit.queue_url
-    LOCALSTACK_ENDPOINT           = var.use_localstack ? var.localstack_endpoint : null
-    REDIS_KEY                     = local.redis_key
-    ENVIRONMENT                   = var.environment
-    DYNAMO_ENDPOINT               = var.use_localstack ? var.lambda_dynamo_endpoint : null
-    TOKEN_SIGNING_KEY_ALIAS       = local.id_token_signing_key_alias_name
-    TOKEN_SIGNING_KEY_RSA_ALIAS   = aws_kms_alias.id_token_signing_key_alias.name
-    LOCALSTACK_ENDPOINT           = var.use_localstack ? var.localstack_endpoint : null
-    BACK_CHANNEL_LOGOUT_QUEUE_URI = aws_sqs_queue.back_channel_logout_queue.id
-    INTERNAl_SECTOR_URI           = var.internal_sector_uri
-    OIDC_API_BASE_URL             = local.api_base_url
-    FRONTEND_BASE_URL             = "https://${local.frontend_fqdn}/"
+    DEFAULT_LOGOUT_URI             = "https://${local.frontend_fqdn}/signed-out"
+    TXMA_AUDIT_QUEUE_URL           = module.oidc_txma_audit.queue_url
+    LOCALSTACK_ENDPOINT            = var.use_localstack ? var.localstack_endpoint : null
+    REDIS_KEY                      = local.redis_key
+    ENVIRONMENT                    = var.environment
+    DYNAMO_ENDPOINT                = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    ID_TOKEN_SIGNING_KEY_ALIAS     = local.id_token_signing_key_alias_name
+    ID_TOKEN_SIGNING_KEY_RSA_ALIAS = aws_kms_alias.id_token_signing_key_alias.name
+    LOCALSTACK_ENDPOINT            = var.use_localstack ? var.localstack_endpoint : null
+    BACK_CHANNEL_LOGOUT_QUEUE_URI  = aws_sqs_queue.back_channel_logout_queue.id
+    INTERNAl_SECTOR_URI            = var.internal_sector_uri
+    OIDC_API_BASE_URL              = local.api_base_url
+    FRONTEND_BASE_URL              = "https://${local.frontend_fqdn}/"
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.LogoutHandler::handleRequest"
 

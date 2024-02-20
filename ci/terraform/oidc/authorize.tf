@@ -56,7 +56,7 @@ module "authorize" {
     DYNAMO_ENDPOINT                      = var.use_localstack ? var.lambda_dynamo_endpoint : null
     CUSTOM_DOC_APP_CLAIM_ENABLED         = var.custom_doc_app_claim_enabled
     ORCH_REDIRECT_URI                    = var.orch_redirect_uri
-    TOKEN_SIGNING_KEY_ALIAS              = local.id_token_signing_key_alias_name
+    ID_TOKEN_SIGNING_KEY_ALIAS           = local.id_token_signing_key_alias_name
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.AuthorisationHandler::handleRequest"
   rest_api_id           = aws_api_gateway_rest_api.di_authentication_api.id

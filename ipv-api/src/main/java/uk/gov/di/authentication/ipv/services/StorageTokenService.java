@@ -125,8 +125,8 @@ public class StorageTokenService {
     private String getSigningKeyId(JWSAlgorithm algorithm) {
         var signingKey =
                 algorithm == JWSAlgorithm.ES256
-                        ? configurationService.getTokenSigningKeyAlias()
-                        : configurationService.getTokenSigningKeyRsaAlias();
+                        ? configurationService.getIdTokenSigningKeyAlias()
+                        : configurationService.getIdTokenSigningKeyRsaAlias();
         return kmsConnectionService
                 .getPublicKey(GetPublicKeyRequest.builder().keyId(signingKey).build())
                 .keyId();

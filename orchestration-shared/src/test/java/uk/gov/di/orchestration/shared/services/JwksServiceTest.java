@@ -33,7 +33,7 @@ class JwksServiceTest {
                         .decode(
                                 "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEpRm+QZsh2IkUWcqXUhBI9ulOzO8dz0Z8HIS6m77tI4eWoZgKYUcbByshDtN4gWPql7E5mN4uCLsg5+6SDXlQcA==");
 
-        when(configurationService.getTokenSigningKeyAlias()).thenReturn("14342354354353");
+        when(configurationService.getIdTokenSigningKeyAlias()).thenReturn("14342354354353");
 
         var result =
                 GetPublicKeyResponse.builder()
@@ -61,7 +61,7 @@ class JwksServiceTest {
                         .decode(
                                 "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCKFDNUYzkMs+SY+SPqN+o+37hFVVF/CP3CRDsQB0Fxyn0gSY/UW0rJ5a4x8XyyD44PJhSfRt5ZmXe+lm+nD2iILIw/yOJDPW6T65eGmW5b4ewj8nH2ZcE1YhHybmY6hD/VMzPWbQKOR9xepIFO57EzLHyhEMvL6ONonQ1QFpon+QIDAQAB");
 
-        when(configurationService.getTokenSigningKeyRsaAlias()).thenReturn("25252525252525");
+        when(configurationService.getIdTokenSigningKeyRsaAlias()).thenReturn("25252525252525");
 
         var result =
                 GetPublicKeyResponse.builder()

@@ -14,7 +14,7 @@ output "frontend_api_gateway_root_id" {
   value = aws_api_gateway_rest_api.di_authentication_frontend_api.id
 }
 
-output "token_signing_key_alias" {
+output "id_token_signing_key_alias" {
   value = local.id_token_signing_key_alias_name
 }
 

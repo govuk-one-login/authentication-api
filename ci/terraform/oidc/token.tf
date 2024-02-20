@@ -51,17 +51,17 @@ module "token" {
   environment     = var.environment
 
   handler_environment_variables = {
-    ENVIRONMENT                 = var.environment
-    OIDC_API_BASE_URL           = local.api_base_url
-    DYNAMO_ENDPOINT             = var.use_localstack ? var.lambda_dynamo_endpoint : null
-    TXMA_AUDIT_QUEUE_URL        = module.oidc_txma_audit.queue_url
-    LOCALSTACK_ENDPOINT         = var.use_localstack ? var.localstack_endpoint : null
-    REDIS_KEY                   = local.redis_key
-    TOKEN_SIGNING_KEY_ALIAS     = local.id_token_signing_key_alias_name
-    TOKEN_SIGNING_KEY_RSA_ALIAS = aws_kms_alias.id_token_signing_key_alias.name
-    LOCALSTACK_ENDPOINT         = var.use_localstack ? var.localstack_endpoint : null
-    HEADERS_CASE_INSENSITIVE    = var.use_localstack ? "true" : "false"
-    INTERNAl_SECTOR_URI         = var.internal_sector_uri
+    ENVIRONMENT                    = var.environment
+    OIDC_API_BASE_URL              = local.api_base_url
+    DYNAMO_ENDPOINT                = var.use_localstack ? var.lambda_dynamo_endpoint : null
+    TXMA_AUDIT_QUEUE_URL           = module.oidc_txma_audit.queue_url
+    LOCALSTACK_ENDPOINT            = var.use_localstack ? var.localstack_endpoint : null
+    REDIS_KEY                      = local.redis_key
+    ID_TOKEN_SIGNING_KEY_ALIAS     = local.id_token_signing_key_alias_name
+    ID_TOKEN_SIGNING_KEY_RSA_ALIAS = aws_kms_alias.id_token_signing_key_alias.name
+    LOCALSTACK_ENDPOINT            = var.use_localstack ? var.localstack_endpoint : null
+    HEADERS_CASE_INSENSITIVE       = var.use_localstack ? "true" : "false"
+    INTERNAl_SECTOR_URI            = var.internal_sector_uri
   }
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.TokenHandler::handleRequest"
 
