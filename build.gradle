@@ -366,24 +366,7 @@ reporting {
 }
 
 dependencies {
-    jacocoAggregation project(':account-management-api')
-    jacocoAggregation project(':client-registry-api')
-    jacocoAggregation project(':frontend-api')
-    jacocoAggregation project(':integration-tests')
-    jacocoAggregation project(':account-management-integration-tests')
-    jacocoAggregation project(':oidc-api')
-    jacocoAggregation project(':shared')
-    jacocoAggregation project(':orchestration-shared')
-    jacocoAggregation project(':orchestration-shared-test')
-    jacocoAggregation project(':shared-test')
-    jacocoAggregation project(':delivery-receipts-api')
-    jacocoAggregation project(':ipv-api')
-    jacocoAggregation project(':delivery-receipts-integration-tests')
-    jacocoAggregation project(':doc-checking-app-api')
-    jacocoAggregation project(':utils')
-    jacocoAggregation project(':test-services-api')
-    jacocoAggregation project(':auth-external-api')
-    jacocoAggregation project(':interventions-api-stub')
+    jacocoAggregation subprojects
 }
 
 jacocoTestReport {
