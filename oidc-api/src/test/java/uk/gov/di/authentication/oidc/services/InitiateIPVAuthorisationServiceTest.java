@@ -136,6 +136,7 @@ public class InitiateIPVAuthorisationServiceTest {
         when(configService.isIdentityEnabled()).thenReturn(true);
         when(configService.getIPVAuthorisationURI()).thenReturn(IPV_AUTHORISATION_URI);
         when(configService.getEnvironment()).thenReturn(ENVIRONMENT);
+        when(configService.sendStorageTokenToIpvEnabled()).thenReturn(true);
         when(configService.getStorageTokenClaimName())
                 .thenReturn("https://vocab.account.gov.uk/v1/storageAccessToken");
         AccessToken storageToken = new BearerAccessToken(SERIALIZED_JWT, 180, null);
