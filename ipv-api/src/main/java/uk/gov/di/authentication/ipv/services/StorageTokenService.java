@@ -80,17 +80,12 @@ public class StorageTokenService {
     public SignedJWT generateSignedJWT(
             JWTClaimsSet claimsSet, Optional<String> type, JWSAlgorithm algorithm) {
 
-        var signingKeyId = getSigningKeyId(algorithm);
+        var signingKeyId = getSigningKeyId();
 
         try {
             var jwsHeader = new JWSHeader.Builder(algorithm).keyID(hashSha256String(signingKeyId));
 
             type.map(JOSEObjectType::new).ifPresent(jwsHeader::type);
-
-            var signingAlgorithm =
-                    algorithm == JWSAlgorithm.ES256
-                            ? SigningAlgorithmSpec.ECDSA_SHA_256
-                            : SigningAlgorithmSpec.RSASSA_PKCS1_V1_5_SHA_256;
 
             Base64URL encodedHeader = jwsHeader.build().toBase64URL();
             Base64URL encodedClaims = Base64URL.encode(claimsSet.toString());
@@ -99,15 +94,10 @@ public class StorageTokenService {
                     SignRequest.builder()
                             .message(SdkBytes.fromByteArray(message.getBytes()))
                             .keyId(signingKeyId)
-                            .signingAlgorithm(signingAlgorithm)
+                            .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
                             .build();
             SignResponse signResult = kmsConnectionService.sign(signRequest);
             LOG.info("Storage token has been signed successfully using {}", algorithm.getName());
-
-            if (algorithm == JWSAlgorithm.RS256) {
-                return SignedJWT.parse(
-                        message + "." + Base64URL.encode(signResult.signature().asByteArray()));
-            }
 
             String signature =
                     Base64URL.encode(
@@ -122,11 +112,8 @@ public class StorageTokenService {
         }
     }
 
-    private String getSigningKeyId(JWSAlgorithm algorithm) {
-        var signingKey =
-                algorithm == JWSAlgorithm.ES256
-                        ? configurationService.getIdTokenSigningKeyAlias()
-                        : configurationService.getIdTokenSigningKeyRsaAlias();
+    private String getSigningKeyId() {
+        var signingKey = configurationService.getStorageTokenSigningKeyAlias();
         return kmsConnectionService
                 .getPublicKey(GetPublicKeyRequest.builder().keyId(signingKey).build())
                 .keyId();

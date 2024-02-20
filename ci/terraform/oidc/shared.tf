@@ -44,7 +44,6 @@ locals {
   id_token_signing_key_arn                            = data.terraform_remote_state.shared.outputs.id_token_signing_key_arn
   ipv_token_auth_key_alias_name                       = data.terraform_remote_state.shared.outputs.ipv_token_auth_signing_key_alias_name
   ipv_token_auth_signing_key_arn                      = data.terraform_remote_state.shared.outputs.ipv_token_auth_signing_key_arn
-  storage_token_signing_key_alias_name                = data.terraform_remote_state.shared.outputs.storage_token_signing_key_alias_name
   orch_to_auth_signing_key_alias_name                 = data.terraform_remote_state.shared.outputs.orch_to_auth_signing_key_alias_name
   orch_to_auth_signing_key_arn                        = data.terraform_remote_state.shared.outputs.orch_to_auth_signing_key_arn
   doc_app_auth_key_alias_name                         = data.terraform_remote_state.shared.outputs.doc_app_auth_signing_key_alias_name

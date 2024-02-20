@@ -19,7 +19,7 @@ output "id_token_signing_key_alias" {
 }
 
 output "storage_token_signing_key_alias" {
-  value = local.storage_token_signing_key_alias_name
+  value = aws_kms_alias.storage_token_signing_key_alias.name
 }
 
 output "ipv_token_auth_key_alias" {
