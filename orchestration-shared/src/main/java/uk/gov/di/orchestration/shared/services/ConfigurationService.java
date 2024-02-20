@@ -419,6 +419,13 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Long.parseLong(System.getenv().getOrDefault("SESSION_EXPIRY", "3600"));
     }
 
+    public String getStorageTokenClaimName() {
+        return System.getenv()
+                .getOrDefault(
+                        "STORAGE_TOKEN_CLAIM_NAME",
+                        "https://vocab.account.gov.uk/v1/storageAccessToken");
+    }
+
     public Optional<String> getSqsEndpointUri() {
         return Optional.ofNullable(System.getenv("SQS_ENDPOINT"));
     }
