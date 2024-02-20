@@ -432,6 +432,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return List.of("build", "staging", "integration", "production").contains(getEnvironment());
     }
 
+    public String getStorageTokenSigningKeyAlias() {
+        return System.getenv("STORAGE_TOKEN_SIGNING_KEY_ALIAS");
+    }
+
     public Optional<String> getIPVCapacity() {
         try {
             var request =
