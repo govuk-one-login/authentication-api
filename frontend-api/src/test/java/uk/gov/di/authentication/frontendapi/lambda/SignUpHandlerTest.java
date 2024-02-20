@@ -169,7 +169,7 @@ class SignUpHandlerTest {
 
         assertThat(result, hasStatus(200));
         var signUpResponse = objectMapper.readValue(result.getBody(), SignUpResponse.class);
-        assertThat(signUpResponse.isConsentRequired(), equalTo(consentRequired));
+        assertThat(signUpResponse.isConsentRequired(), equalTo(false));
         verify(authenticationService)
                 .signUp(
                         eq(EMAIL),
