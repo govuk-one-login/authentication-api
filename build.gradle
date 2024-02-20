@@ -311,15 +311,6 @@ task oidcTerraform (type: Terraform) {
     dependsOn "sharedTerraform"
 }
 
-task auditTerraform (type: Terraform) {
-    terraformDirectory = layout.projectDirectory.dir("ci/terraform/audit-processors")
-    environmentName = project.properties["terraformEnvironment"] ?: "localstack"
-    environmentVars = awsCredentialsEnvironment
-
-    dependsOn ":audit-processors:buildZip"
-    dependsOn "oidcTerraform"
-}
-
 task acctMgmtTerraform (type: Terraform) {
     terraformDirectory = layout.projectDirectory.dir("ci/terraform/account-management")
     environmentName = project.properties["terraformEnvironment"] ?: "localstack"
