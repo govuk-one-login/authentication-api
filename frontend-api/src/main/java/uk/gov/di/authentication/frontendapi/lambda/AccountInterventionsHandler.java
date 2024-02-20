@@ -40,6 +40,9 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
     private final AccountInterventionsService accountInterventionsService;
     private final AuditService auditService;
 
+    private final AccountInterventionsResponse noAccountInterventions =
+            new AccountInterventionsResponse(false, false, false);
+
     private static final Map<State, FrontendAuditableEvent>
             ACCOUNT_INTERVENTIONS_STATE_TO_AUDIT_EVENT =
                     Map.of(
@@ -103,6 +106,16 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
         attachLogFieldToLogs(PERSISTENT_SESSION_ID, persistentSessionID);
         LOG.info("Request received to the AccountInterventionsHandler");
 
+        if (!configurationService.isAccountInterventionServiceCallEnabled()) {
+            LOG.info(
+                    "Account interventions service call is disabled, returning default no interventions response");
+            try {
+                return generateApiGatewayProxyResponse(200, noAccountInterventions, true);
+            } catch (JsonException e) {
+                return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+            }
+        }
+
         var userProfile = authenticationService.getUserProfileByEmailMaybe(request.email());
         if (userProfile.isEmpty()) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1049);
@@ -125,15 +138,30 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
 
             LOG.info("Generating Account Interventions outbound response for frontend");
             var accountInterventionsResponse =
-                    new AccountInterventionsResponse(
-                            accountInterventionsInboundResponse.state().resetPassword(),
-                            accountInterventionsInboundResponse.state().blocked(),
-                            accountInterventionsInboundResponse.state().suspended());
+                    getAccountInterventionsResponse(accountInterventionsInboundResponse);
             return generateApiGatewayProxyResponse(200, accountInterventionsResponse, true);
         } catch (UnsuccessfulAccountInterventionsResponseException e) {
             return handleErrorForAIS(e);
         } catch (JsonException e) {
             return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
+        }
+    }
+
+    private AccountInterventionsResponse getAccountInterventionsResponse(
+            AccountInterventionsInboundResponse response) {
+        var responseFromApi =
+                new AccountInterventionsResponse(
+                        response.state().resetPassword(),
+                        response.state().blocked(),
+                        response.state().suspended());
+        if (!configurationService.accountInterventionsServiceActionEnabled()) {
+            LOG.info(
+                    String.format(
+                            "Account interventions action disabled, discarding response %s from api and returning no interventions",
+                            responseFromApi));
+            return noAccountInterventions;
+        } else {
+            return responseFromApi;
         }
     }
 
@@ -143,13 +171,11 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
                 "Error in Account Interventions response HttpCode: {}, ErrorMessage: {}.",
                 e.getHttpCode(),
                 e.getMessage());
-        if (!configurationService.abortOnAccountInterventionsErrorResponse()) {
+        if (!configurationService.abortOnAccountInterventionsErrorResponse()
+                || !configurationService.accountInterventionsServiceActionEnabled()) {
             try {
                 LOG.error("Swallowing error and returning default account interventions response");
-                AccountInterventionsResponse defaultAccountInterventionsResponse =
-                        new AccountInterventionsResponse(false, false, false);
-                return generateApiGatewayProxyResponse(
-                        200, defaultAccountInterventionsResponse, true);
+                return generateApiGatewayProxyResponse(200, noAccountInterventions, true);
             } catch (JsonException ex) {
                 return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1001);
             }

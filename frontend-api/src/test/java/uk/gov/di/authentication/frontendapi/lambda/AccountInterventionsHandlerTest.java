@@ -52,6 +52,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasBody;
@@ -97,6 +98,8 @@ public class AccountInterventionsHandlerTest {
         UserProfile userProfile = generateUserProfile();
         when(authenticationService.getUserProfileByEmailMaybe(TEST_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(userProfile));
+        when(configurationService.accountInterventionsServiceActionEnabled()).thenReturn(true);
+        when(configurationService.isAccountInterventionServiceCallEnabled()).thenReturn(true);
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         when(authenticationService.getOrGenerateSalt(any(UserProfile.class))).thenReturn(SALT);
         when(configurationService.getAccountInterventionServiceURI())
@@ -119,7 +122,6 @@ public class AccountInterventionsHandlerTest {
     @Test
     void shouldReturnError400ResponseWhenAccountInterventionsRequestHasNoValidSessionId()
             throws Json.JsonException {
-        var context = mock(Context.class);
         var event = new APIGatewayProxyRequestEvent();
         var result = handler.handleRequest(event, context);
         assertThat(result, hasStatus(400));
@@ -129,7 +131,6 @@ public class AccountInterventionsHandlerTest {
     @Test
     void shouldReturnError400ResponseWhenAccountInterventionsRequestHasNoEmail()
             throws Json.JsonException {
-        var context = mock(Context.class);
         var event = new APIGatewayProxyRequestEvent();
         event.setHeaders(getHeaders());
         var result = handler.handleRequest(event, context);
@@ -139,13 +140,9 @@ public class AccountInterventionsHandlerTest {
 
     @Test
     void shouldReturnErrorResponseWhenUserDoesNotExists() throws Json.JsonException {
-        var context = mock(Context.class);
-        var event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(getHeaders());
-        event.setBody(format("{ \"email\": \"%s\" }", TEST_EMAIL_ADDRESS));
         when(authenticationService.getUserProfileByEmailMaybe(anyString()))
                 .thenReturn(Optional.empty());
-        var result = handler.handleRequest(event, context);
+        var result = handler.handleRequest(apiRequestEventWithEmail(TEST_EMAIL_ADDRESS), context);
         assertThat(result, hasStatus(400));
         assertThat(result, hasBody(objectMapper.writeValueAsString(ErrorResponse.ERROR_1049)));
     }
@@ -156,17 +153,13 @@ public class AccountInterventionsHandlerTest {
             int httpCode, ErrorResponse expectedErrorResponse)
             throws Json.JsonException, UnsuccessfulAccountInterventionsResponseException {
         when(configurationService.abortOnAccountInterventionsErrorResponse()).thenReturn(true);
-        var context = mock(Context.class);
-        var event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(getHeaders());
-        event.setBody(format("{ \"email\": \"%s\" }", TEST_EMAIL_ADDRESS));
         when(authenticationService.getUserProfileByEmailMaybe(anyString()))
                 .thenReturn(Optional.of(generateUserProfile()));
         when(accountInterventionsService.sendAccountInterventionsOutboundRequest(any()))
                 .thenThrow(
                         new UnsuccessfulAccountInterventionsResponseException(
                                 "Unspecified Error", httpCode));
-        var result = handler.handleRequest(event, context);
+        var result = handler.handleRequest(apiRequestEventWithEmail(TEST_EMAIL_ADDRESS), context);
         assertThat(result, hasStatus(httpCode));
         assertThat(result, hasBody(objectMapper.writeValueAsString(expectedErrorResponse)));
     }
@@ -175,12 +168,8 @@ public class AccountInterventionsHandlerTest {
     void
             shouldReturn200AndDefaultAccountInterventionsResponseWhenAccountInterventionsRequestUnsuccessfulAndAbortOnErrorIsFalse()
                     throws Json.JsonException, UnsuccessfulAccountInterventionsResponseException {
-        var context = mock(Context.class);
-        var event = new APIGatewayProxyRequestEvent();
         AccountInterventionsResponse defaultAccountInterventionsResponse =
                 new AccountInterventionsResponse(false, false, false);
-        event.setHeaders(getHeaders());
-        event.setBody(format("{ \"email\": \"%s\" }", TEST_EMAIL_ADDRESS));
         when(configurationService.abortOnAccountInterventionsErrorResponse()).thenReturn(false);
         when(authenticationService.getUserProfileByEmailMaybe(anyString()))
                 .thenReturn(Optional.of(generateUserProfile()));
@@ -188,13 +177,62 @@ public class AccountInterventionsHandlerTest {
                 .thenThrow(
                         new UnsuccessfulAccountInterventionsResponseException(
                                 "Any 4xx/5xx error valid here", 404));
-        var result = handler.handleRequest(event, context);
+        var result = handler.handleRequest(apiRequestEventWithEmail(TEST_EMAIL_ADDRESS), context);
         assertThat(result, hasStatus(200));
-        assertThat(
-                result,
-                hasBody(
-                        objectMapper.writeValueAsStringCamelCase(
-                                defaultAccountInterventionsResponse)));
+        assertEquals(
+                result.getBody(),
+                String.format(
+                        "{\"passwordResetRequired\":%b,\"blocked\":%b,\"temporarilySuspended\":%b}",
+                        false, false, false));
+    }
+
+    @Test
+    void
+            shouldReturn200AndDefaultAccountInterventionsResponseWhenAccountInterventionsRequestUnsuccessfulAndAccountInterventionsServiceActionDisabled()
+                    throws UnsuccessfulAccountInterventionsResponseException {
+        when(configurationService.abortOnAccountInterventionsErrorResponse()).thenReturn(true);
+        when(configurationService.accountInterventionsServiceActionEnabled()).thenReturn(false);
+        when(authenticationService.getUserProfileByEmailMaybe(anyString()))
+                .thenReturn(Optional.of(generateUserProfile()));
+        when(accountInterventionsService.sendAccountInterventionsOutboundRequest(any()))
+                .thenThrow(
+                        new UnsuccessfulAccountInterventionsResponseException(
+                                "Any 4xx/5xx error valid here", 404));
+        var result = handler.handleRequest(apiRequestEventWithEmail(TEST_EMAIL_ADDRESS), context);
+        assertThat(result, hasStatus(200));
+        assertEquals(
+                result.getBody(),
+                String.format(
+                        "{\"passwordResetRequired\":%b,\"blocked\":%b,\"temporarilySuspended\":%b}",
+                        false, false, false));
+    }
+
+    @Test
+    void
+            shouldReturn200AndDefaultAccountInterventionsResponseWhenAccountInterventionsServiceActionDisabledAndAccountHasInterventions()
+                    throws UnsuccessfulAccountInterventionsResponseException {
+        when(configurationService.accountInterventionsServiceActionEnabled()).thenReturn(false);
+        when(authenticationService.getUserProfileByEmailMaybe(anyString()))
+                .thenReturn(Optional.of(generateUserProfile()));
+        when(accountInterventionsService.sendAccountInterventionsOutboundRequest(any()))
+                .thenReturn(generateAccountInterventionResponse(true, true, true, true));
+        var result = handler.handleRequest(apiRequestEventWithEmail(TEST_EMAIL_ADDRESS), context);
+        assertThat(result, hasStatus(200));
+        assertEquals(
+                result.getBody(),
+                String.format(
+                        "{\"passwordResetRequired\":%b,\"blocked\":%b,\"temporarilySuspended\":%b}",
+                        false, false, false));
+    }
+
+    @Test
+    void shouldReturn200NotCallAccountInterventionsServiceWhenCallIsDiabled()
+            throws UnsuccessfulAccountInterventionsResponseException {
+        when(configurationService.isAccountInterventionServiceCallEnabled()).thenReturn(false);
+        var result = handler.handleRequest(apiRequestEventWithEmail(TEST_EMAIL_ADDRESS), context);
+
+        verify(accountInterventionsService, never()).sendAccountInterventionsOutboundRequest(any());
+        assertThat(result, hasStatus(200));
         assertEquals(
                 result.getBody(),
                 String.format(
@@ -241,10 +279,7 @@ public class AccountInterventionsHandlerTest {
             boolean resetPassword,
             FrontendAuditableEvent expectedEvent)
             throws UnsuccessfulAccountInterventionsResponseException, Json.JsonException {
-        var context = mock(Context.class);
-        var event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(getHeaders());
-        event.setBody(format("{ \"email\": \"%s\" }", TEST_EMAIL_ADDRESS));
+        var event = apiRequestEventWithEmail(TEST_EMAIL_ADDRESS);
         when(authenticationService.getUserProfileByEmailMaybe(anyString()))
                 .thenReturn(Optional.of(generateUserProfile()));
         when(accountInterventionsService.sendAccountInterventionsOutboundRequest(any()))
@@ -331,5 +366,12 @@ public class AccountInterventionsHandlerTest {
                 Arguments.of(502, ErrorResponse.ERROR_1053),
                 Arguments.of(504, ErrorResponse.ERROR_1054),
                 Arguments.of(404, ErrorResponse.ERROR_1055));
+    }
+
+    private APIGatewayProxyRequestEvent apiRequestEventWithEmail(String email) {
+        var event = new APIGatewayProxyRequestEvent();
+        event.setHeaders(getHeaders());
+        event.setBody(format("{ \"email\": \"%s\" }", email));
+        return event;
     }
 }

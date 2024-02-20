@@ -659,6 +659,18 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 .equals("true");
     }
 
+    public boolean accountInterventionsServiceActionEnabled() {
+        return System.getenv()
+                .getOrDefault("ACCOUNT_INTERVENTION_SERVICE_ACTION_ENABLED", "false")
+                .equals("true");
+    }
+
+    public boolean isAccountInterventionServiceCallEnabled() {
+        return System.getenv()
+                .getOrDefault("ACCOUNT_INTERVENTION_SERVICE_CALL_ENABLED", "false")
+                .equals("true");
+    }
+
     public long getAccountInterventionServiceCallTimeout() {
         return Long.parseLong(
                 System.getenv().getOrDefault("ACCOUNT_INTERVENTION_SERVICE_CALL_TIMEOUT", "3000"));
