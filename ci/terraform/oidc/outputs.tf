@@ -18,6 +18,10 @@ output "id_token_signing_key_alias" {
   value = local.id_token_signing_key_alias_name
 }
 
+output "storage_token_signing_key_alias" {
+  value = local.storage_token_signing_key_alias_name
+}
+
 output "ipv_token_auth_key_alias" {
   value = local.ipv_token_auth_key_alias_name
 }

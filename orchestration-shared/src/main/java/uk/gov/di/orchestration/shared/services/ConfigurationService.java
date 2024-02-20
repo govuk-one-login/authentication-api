@@ -415,6 +415,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                         "https://vocab.account.gov.uk/v1/storageAccessToken");
     }
 
+    public String getStorageTokenSigningKeyAlias() {
+        return System.getenv("STORAGE_TOKEN_SIGNING_KEY_ALIAS");
+    }
+
     public boolean isStorageTokenToIpvEnabled() {
         return System.getenv().getOrDefault("STORAGE_TOKEN_TO_IPV_ENABLED", "false").equals("true");
     }
