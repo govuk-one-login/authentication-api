@@ -422,6 +422,12 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                         "https://vocab.account.gov.uk/v1/storageAccessToken");
     }
 
+    public boolean sendStorageTokenToIpvEnabled() {
+        return System.getenv()
+                .getOrDefault("SEND_STORAGE_TOKEN_TO_IPV_ENABLED", "false")
+                .equals("true");
+    }
+
     public Optional<String> getSqsEndpointUri() {
         return Optional.ofNullable(System.getenv("SQS_ENDPOINT"));
     }
