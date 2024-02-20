@@ -143,6 +143,13 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return URI.create(System.getenv().getOrDefault("AUTHENTICATION_BACKEND_URI", ""));
     }
 
+    public URI getCredentialStoreURI() {
+        return URI.create(
+                System.getenv()
+                        .getOrDefault(
+                                "CREDENTIAL_STORE_URI", "https://credential-store.account.gov.uk"));
+    }
+
     public boolean isCustomDocAppClaimEnabled() {
         return System.getenv().getOrDefault("CUSTOM_DOC_APP_CLAIM_ENABLED", "false").equals("true");
     }
