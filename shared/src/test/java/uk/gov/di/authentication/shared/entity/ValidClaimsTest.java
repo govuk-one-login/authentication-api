@@ -20,6 +20,7 @@ class ValidClaimsTest {
                 "https://vocab.account.gov.uk/v1/coreIdentityJWT",
                 "https://vocab.account.gov.uk/v1/drivingPermit",
                 "https://vocab.account.gov.uk/v1/socialSecurityRecord",
+                "https://vocab.account.gov.uk/v1/walletSubjectID",
                 "https://vocab.account.gov.uk/v1/returnCode",
                 "https://vocab.account.gov.uk/v1/inheritedIdentityJWT");
     }
@@ -32,7 +33,7 @@ class ValidClaimsTest {
 
     @Test
     void shouldReturnCorrectNumberOfClaimsSupported() {
-        assertThat(ValidClaims.getAllValidClaims().size(), equalTo(7));
+        assertThat(ValidClaims.getAllValidClaims().size(), equalTo(8));
     }
 
     @ParameterizedTest
