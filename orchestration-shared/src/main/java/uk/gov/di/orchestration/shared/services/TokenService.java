@@ -285,8 +285,7 @@ public class TokenService {
         }
     }
 
-    public AccessToken generateAndSignStorageToken(
-            Subject internalPairwiseSubject, JWSAlgorithm signingAlgorithm) {
+    public AccessToken generateStorageToken(Subject internalPairwiseSubject) {
 
         LOG.info("Generating storage token");
         Date expiryDate = NowHelper.nowPlus(configService.getSessionExpiry(), ChronoUnit.SECONDS);
@@ -309,7 +308,7 @@ public class TokenService {
                         .jwtID(jwtID);
 
         SignedJWT signedJWT =
-                generateSignedJWT(claimSetBuilder.build(), Optional.empty(), signingAlgorithm);
+                generateSignedJWT(claimSetBuilder.build(), Optional.empty(), JWSAlgorithm.ES256);
 
         return new BearerAccessToken(
                 signedJWT.serialize(), configService.getAccessTokenExpiry(), null);
