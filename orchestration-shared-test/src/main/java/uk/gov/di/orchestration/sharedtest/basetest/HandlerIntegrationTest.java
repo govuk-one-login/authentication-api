@@ -89,7 +89,7 @@ public abstract class HandlerIntegrationTest<Q, S> {
             new KmsKeyExtension("ipv-encryption-key", KeyUsageType.ENCRYPT_DECRYPT);
 
     @RegisterExtension
-    protected static final TokenSigningExtension tokenSigner = new TokenSigningExtension();
+    protected static final TokenSigningExtension externalTokenSigner = new TokenSigningExtension();
 
     @RegisterExtension
     protected static final TokenSigningExtension ipvPrivateKeyJwtSigner =
@@ -133,7 +133,7 @@ public abstract class HandlerIntegrationTest<Q, S> {
 
     protected static final ConfigurationService TEST_CONFIGURATION_SERVICE =
             new IntegrationTestConfigurationService(
-                    tokenSigner,
+                    externalTokenSigner,
                     ipvPrivateKeyJwtSigner,
                     spotQueue,
                     docAppPrivateKeyJwtSigner,
@@ -141,7 +141,7 @@ public abstract class HandlerIntegrationTest<Q, S> {
 
     protected static final ConfigurationService TXMA_ENABLED_CONFIGURATION_SERVICE =
             new IntegrationTestConfigurationService(
-                    tokenSigner,
+                    externalTokenSigner,
                     ipvPrivateKeyJwtSigner,
                     spotQueue,
                     docAppPrivateKeyJwtSigner,
@@ -155,7 +155,7 @@ public abstract class HandlerIntegrationTest<Q, S> {
 
     protected static final ConfigurationService TXMA_AND_AIS_ENABLED_CONFIGURATION_SERVICE =
             new IntegrationTestConfigurationService(
-                    tokenSigner,
+                    externalTokenSigner,
                     ipvPrivateKeyJwtSigner,
                     spotQueue,
                     docAppPrivateKeyJwtSigner,
@@ -236,33 +236,33 @@ public abstract class HandlerIntegrationTest<Q, S> {
 
     public static class IntegrationTestConfigurationService extends ConfigurationService {
 
-        private final TokenSigningExtension tokenSigningKey;
+        private final TokenSigningExtension externalTokenSigningKey;
         private final TokenSigningExtension ipvPrivateKeyJwtSigner;
         private final SqsQueueExtension spotQueue;
         private final TokenSigningExtension docAppPrivateKeyJwtSigner;
 
         public IntegrationTestConfigurationService(
-                TokenSigningExtension tokenSigningKey,
+                TokenSigningExtension externalTokenSigningKey,
                 TokenSigningExtension ipvPrivateKeyJwtSigner,
                 SqsQueueExtension spotQueue,
                 TokenSigningExtension docAppPrivateKeyJwtSigner,
                 ParameterStoreExtension parameterStoreExtension) {
             super(parameterStoreExtension.getClient());
-            this.tokenSigningKey = tokenSigningKey;
+            this.externalTokenSigningKey = externalTokenSigningKey;
             this.ipvPrivateKeyJwtSigner = ipvPrivateKeyJwtSigner;
             this.spotQueue = spotQueue;
             this.docAppPrivateKeyJwtSigner = docAppPrivateKeyJwtSigner;
         }
 
         public IntegrationTestConfigurationService(
-                TokenSigningExtension tokenSigningKey,
+                TokenSigningExtension externalTokenSigningKey,
                 TokenSigningExtension ipvPrivateKeyJwtSigner,
                 SqsQueueExtension spotQueue,
                 TokenSigningExtension docAppPrivateKeyJwtSigner,
                 ParameterStoreExtension parameterStoreExtension,
                 SystemService systemService) {
             super(parameterStoreExtension.getClient());
-            this.tokenSigningKey = tokenSigningKey;
+            this.externalTokenSigningKey = externalTokenSigningKey;
             this.ipvPrivateKeyJwtSigner = ipvPrivateKeyJwtSigner;
             this.spotQueue = spotQueue;
             this.docAppPrivateKeyJwtSigner = docAppPrivateKeyJwtSigner;
@@ -270,8 +270,8 @@ public abstract class HandlerIntegrationTest<Q, S> {
         }
 
         @Override
-        public String getTokenSigningKeyAlias() {
-            return tokenSigningKey.getKeyAlias();
+        public String getExternalTokenSigningKeyAlias() {
+            return externalTokenSigningKey.getKeyAlias();
         }
 
         @Override

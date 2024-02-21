@@ -157,7 +157,7 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
 
         public IPVTestConfigurationService(IPVStubExtension ipvStub) {
             super(
-                    tokenSigner,
+                    externalTokenSigner,
                     ipvPrivateKeyJwtSigner,
                     spotQueue,
                     docAppPrivateKeyJwtSigner,

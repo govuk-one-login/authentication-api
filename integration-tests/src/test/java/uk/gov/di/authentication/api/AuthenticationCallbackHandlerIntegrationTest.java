@@ -730,7 +730,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                         auditTopic,
                         notificationsQueue,
                         auditSigningKey,
-                        tokenSigner,
+                        externalTokenSigner,
                         ipvPrivateKeyJwtSigner,
                         spotQueue,
                         docAppPrivateKeyJwtSigner,

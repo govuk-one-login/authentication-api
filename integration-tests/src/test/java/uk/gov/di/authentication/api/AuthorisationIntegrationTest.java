@@ -111,7 +111,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     private static final IntegrationTestConfigurationService configuration =
             new IntegrationTestConfigurationService(
-                    tokenSigner,
+                    externalTokenSigner,
                     ipvPrivateKeyJwtSigner,
                     spotQueue,
                     docAppPrivateKeyJwtSigner,

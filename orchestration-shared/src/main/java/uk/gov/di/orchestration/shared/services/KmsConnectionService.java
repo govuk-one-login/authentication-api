@@ -22,7 +22,7 @@ public class KmsConnectionService {
         this(
                 configurationService.getLocalstackEndpointUri(),
                 configurationService.getAwsRegion(),
-                configurationService.getTokenSigningKeyAlias());
+                configurationService.getExternalTokenSigningKeyAlias());
     }
 
     public KmsConnectionService(

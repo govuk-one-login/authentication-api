@@ -20,7 +20,7 @@ public class JwksIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void shouldReturn200AndClientInfoResponseForValidClient() throws ParseException {
         var configurationService =
                 new IntegrationTestConfigurationService(
-                        tokenSigner,
+                        externalTokenSigner,
                         ipvPrivateKeyJwtSigner,
                         spotQueue,
                         docAppPrivateKeyJwtSigner,

@@ -42,7 +42,7 @@ class IPVCapacityHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
 
     public ConfigurationService capacityAwareConfiguration(String value) {
         return new IntegrationTestConfigurationService(
-                tokenSigner,
+                externalTokenSigner,
                 ipvPrivateKeyJwtSigner,
                 spotQueue,
                 docAppPrivateKeyJwtSigner,

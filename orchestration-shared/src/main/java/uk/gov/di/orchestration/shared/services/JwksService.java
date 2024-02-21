@@ -48,12 +48,12 @@ public class JwksService {
 
     public JWK getPublicTokenJwkWithOpaqueId() {
         LOG.info("Retrieving EC public key");
-        return getPublicJWKWithKeyId(configurationService.getTokenSigningKeyAlias());
+        return getPublicJWKWithKeyId(configurationService.getExternalTokenSigningKeyAlias());
     }
 
     public JWK getPublicTokenRsaJwkWithOpaqueId() {
         LOG.info("Retrieving RSA public key");
-        return getPublicJWKWithKeyId(configurationService.getTokenSigningKeyRsaAlias());
+        return getPublicJWKWithKeyId(configurationService.getExternalTokenSigningKeyRsaAlias());
     }
 
     public JWK getPublicDocAppSigningJwkWithOpaqueId() {

@@ -102,7 +102,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     void setup() throws JOSEException, NoSuchAlgorithmException {
         var configuration =
                 new IntegrationTestConfigurationService(
-                        tokenSigner,
+                        externalTokenSigner,
                         ipvPrivateKeyJwtSigner,
                         spotQueue,
                         docAppPrivateKeyJwtSigner,
@@ -132,7 +132,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .subject(PUBLIC_SUBJECT.getValue())
                         .jwtID(UUID.randomUUID().toString())
                         .build();
-        var signedJWT = tokenSigner.signJwt(claimsSet);
+        var signedJWT = externalTokenSigner.signJwt(claimsSet);
         var accessToken = new BearerAccessToken(signedJWT.serialize());
         var accessTokenStore =
                 new AccessTokenStore(
@@ -379,7 +379,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                             .subject(PUBLIC_SUBJECT.getValue())
                             .jwtID(UUID.randomUUID().toString())
                             .build();
-            var signedJWT = tokenSigner.signJwt(claimsSet);
+            var signedJWT = externalTokenSigner.signJwt(claimsSet);
             var accessToken = new BearerAccessToken(signedJWT.serialize());
             var accessTokenStore =
                     new AccessTokenStore(
@@ -453,7 +453,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                         .map(ClaimsSetRequest.Entry::getClaimName)
                                         .collect(Collectors.toList()))
                         .build();
-        var signedJWT = tokenSigner.signJwt(claimsSet);
+        var signedJWT = externalTokenSigner.signJwt(claimsSet);
         var accessToken = new BearerAccessToken(signedJWT.serialize());
         var accessTokenStore =
                 new AccessTokenStore(
@@ -482,7 +482,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .subject(DOC_APP_PUBLIC_SUBJECT.getValue())
                         .jwtID(UUID.randomUUID().toString())
                         .build();
-        var signedJWT = tokenSigner.signJwt(claimsSet);
+        var signedJWT = externalTokenSigner.signJwt(claimsSet);
         var accessToken = new BearerAccessToken(signedJWT.serialize());
         var accessTokenStore =
                 new AccessTokenStore(
@@ -558,7 +558,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
         public UserInfoConfigurationService() {
             super(
-                    tokenSigner,
+                    externalTokenSigner,
                     ipvPrivateKeyJwtSigner,
                     spotQueue,
                     docAppPrivateKeyJwtSigner,
