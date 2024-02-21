@@ -60,5 +60,50 @@ resource "aws_cloudwatch_metric_alarm" "auth_account_interventions_cloudwatch_al
   threshold           = var.account_interventions_p1_alarm_error_threshold
   alarm_description   = "${var.account_interventions_p1_alarm_error_threshold} or more Account Interventions errors have occurred in ${var.environment}.ACCOUNT: ${data.aws_iam_account_alias.current.account_alias}"
   alarm_actions       = [var.environment == "production" ? data.aws_sns_topic.slack_events.arn : null]
+}
 
+resource "aws_cloudwatch_metric_alarm" "account_interventions_error_rate_p1_cloudwatch_alarm" {
+  count               = var.use_localstack ? 0 : 1
+  alarm_name          = replace("${var.environment}-P1-auth-account-interventions-alarm", ".", "")
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = "1"
+  threshold           = var.account_interventions_p1_alarm_error_threshold
+  alarm_description   = "Lambda error rate of ${var.account_interventions_p1_alarm_error_threshold} has been reached in the ${var.environment}-account-interventions-lambda lambda. ACCOUNT: ${data.aws_iam_account_alias.current.account_alias}"
+
+  metric_query {
+    id          = "e1"
+    return_data = true
+    expression  = "m2/m1*100"
+    label       = "Error Rate"
+  }
+
+  metric_query {
+    id = "m1"
+    metric {
+      namespace   = "AWS/Lambda"
+      metric_name = "Invocations"
+      period      = 60
+      stat        = "Sum"
+      unit        = "Count"
+
+      dimensions = {
+        FunctionName = replace("${var.environment}-account-interventions-lambda", ".", "")
+      }
+    }
+  }
+  metric_query {
+    id = "m2"
+    metric {
+      namespace   = "AWS/Lambda"
+      metric_name = "Errors"
+      period      = 60
+      stat        = "Sum"
+      unit        = "Count"
+
+      dimensions = {
+        FunctionName = replace("${var.environment}-account-interventions-lambda", ".", "")
+      }
+    }
+  }
+  alarm_actions = [var.environment == "production" && var.account_intervention_service_abort_on_error ? data.aws_sns_topic.pagerduty_p1_alerts[0].arn : data.aws_sns_topic.slack_events.arn]
 }
