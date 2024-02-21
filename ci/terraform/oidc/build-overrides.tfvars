@@ -33,7 +33,7 @@ dqhoDR3/THktb4KThc+U5EOWCWpH4OIAetYtjFChnkR8kU05Ol9zfdR08uO0RxMk
 -----END PUBLIC KEY-----
 EOT
 
-blocked_email_duration = 30
+blocked_email_duration = 60
 otp_code_ttl_duration  = 120
 
 logging_endpoint_arns = [
