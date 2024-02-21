@@ -247,7 +247,7 @@ jobs:
       - name: Cache Test Reports
         uses: actions/cache@v3
         with:
-          key: ${{ runner.os }}-integration-test-reports-${{ github.sha }}
+          key: ${{ runner.os }}-am-dr-integration-test-reports-${{ github.sha }}
           path: |
             account-management-integration-tests/build/jacoco/
             account-management-integration-tests/build/reports/
@@ -295,7 +295,7 @@ jobs:
             !account-management-integration-tests/build/reports/
             !delivery-receipts-integration-tests/build/jacoco/
             !delivery-receipts-integration-tests/build/reports/
-      - name: Cache Test Reports
+      - name: Cache Integration Test Reports
         if: github.event_name != 'merge_group'
         uses: actions/cache@v3
         with:
@@ -303,6 +303,12 @@ jobs:
           path: |
             integration-tests/build/jacoco/
             integration-tests/build/reports/
+      - name: Cache AM DR Integration Test Reports
+        if: github.event_name != 'merge_group'
+        uses: actions/cache@v3
+        with:
+          key: ${{ runner.os }}-am-dr-integration-test-reports-${{ github.sha }}
+          path: |
             account-management-integration-tests/build/jacoco/
             account-management-integration-tests/build/reports/
             delivery-receipts-integration-tests/build/jacoco/
@@ -312,4 +318,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: ./gradlew sonarqube -x test -x account-management-integration-tests:test -x spotlessApply -x spotlessCheck
+        run: ./gradlew testCodeCoverageReport sonarqube -x test -x account-management-integration-tests:test -x spotlessApply -x spotlessCheck
