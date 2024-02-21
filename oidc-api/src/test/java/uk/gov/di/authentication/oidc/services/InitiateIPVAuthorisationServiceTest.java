@@ -141,7 +141,7 @@ public class InitiateIPVAuthorisationServiceTest {
         when(configService.getStorageTokenClaimName())
                 .thenReturn("https://vocab.account.gov.uk/v1/storageAccessToken");
         AccessToken storageToken = new BearerAccessToken(SERIALIZED_JWT, 180, null);
-        when(tokenService.generateAndSignStorageToken(any(), any())).thenReturn(storageToken);
+        when(tokenService.generateStorageToken(any())).thenReturn(storageToken);
     }
 
     @Test
@@ -204,7 +204,7 @@ public class InitiateIPVAuthorisationServiceTest {
         verify(authorisationService).storeState(eq(session.getSessionId()), any(State.class));
         verify(noSessionOrchestrationService)
                 .storeClientSessionIdAgainstState(eq(CLIENT_SESSION_ID), any(State.class));
-        verify(tokenService).generateAndSignStorageToken(any(), eq(JWSAlgorithm.ES256));
+        verify(tokenService).generateStorageToken(any());
         verify(authorisationService)
                 .constructRequestJWT(
                         any(State.class),

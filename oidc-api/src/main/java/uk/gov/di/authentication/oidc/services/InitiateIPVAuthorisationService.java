@@ -2,7 +2,6 @@ package uk.gov.di.authentication.oidc.services;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -145,9 +144,7 @@ public class InitiateIPVAuthorisationService {
 
         if (configurationService.sendStorageTokenToIpvEnabled()) {
             LOG.info("Adding storageAccessToken claim to IPV claims request");
-            AccessToken storageToken =
-                    tokenService.generateAndSignStorageToken(
-                            internalPairwiseSubject, JWSAlgorithm.ES256);
+            AccessToken storageToken = tokenService.generateStorageToken(internalPairwiseSubject);
 
             claimsSetRequest.add(
                     new ClaimsSetRequest.Entry(configurationService.getStorageTokenClaimName())
