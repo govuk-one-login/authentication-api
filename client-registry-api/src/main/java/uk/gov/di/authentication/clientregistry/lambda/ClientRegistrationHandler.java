@@ -121,6 +121,7 @@ public class ClientRegistrationHandler
                     sanitiseUrl(clientRegistrationRequest.getSectorIdentifierUri()),
                     clientRegistrationRequest.getSubjectType(),
                     false,
+                    clientRegistrationRequest.isJarValidationRequired(),
                     clientRegistrationRequest.getClaims(),
                     clientRegistrationRequest.getClientType(),
                     clientRegistrationRequest.isIdentityVerificationRequired(),
@@ -139,6 +140,7 @@ public class ClientRegistrationHandler
                             clientRegistrationRequest.getBackChannelLogoutUri(),
                             clientRegistrationRequest.getServiceType(),
                             clientRegistrationRequest.getSubjectType(),
+                            clientRegistrationRequest.isJarValidationRequired(),
                             clientRegistrationRequest.getClaims(),
                             clientRegistrationRequest.getSectorIdentifierUri(),
                             clientRegistrationRequest.getClientType());

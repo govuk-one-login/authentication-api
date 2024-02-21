@@ -62,6 +62,11 @@ public class ClientRegistrationResponse {
     @Required
     private String serviceType;
 
+    @SerializedName("jar_validation_required")
+    @Expose
+    @Required
+    private boolean jarValidationRequired;
+
     @SerializedName("claims")
     @Expose
     private List<String> claims;
@@ -84,6 +89,7 @@ public class ClientRegistrationResponse {
             String backChannelLogoutUri,
             String serviceType,
             String subjectType,
+            boolean jarValidationRequired,
             List<String> claims,
             String sectorIdentifierUri,
             String clientType) {
@@ -96,6 +102,7 @@ public class ClientRegistrationResponse {
         this.backChannelLogoutUri = backChannelLogoutUri;
         this.serviceType = serviceType;
         this.subjectType = subjectType;
+        this.jarValidationRequired = jarValidationRequired;
         this.claims = claims;
         this.sectorIdentifierUri = sectorIdentifierUri;
         this.clientType = clientType;
@@ -151,6 +158,10 @@ public class ClientRegistrationResponse {
 
     public String getServiceType() {
         return serviceType;
+    }
+
+    public boolean getJarValidationRequired() {
+        return jarValidationRequired;
     }
 
     public List<String> getClaims() {

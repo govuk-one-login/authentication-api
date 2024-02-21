@@ -60,6 +60,7 @@ import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
+import uk.gov.di.orchestration.shared.services.RedirectService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
 import uk.gov.di.orchestration.shared.services.TokenValidationService;
@@ -75,6 +76,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import static com.nimbusds.oauth2.sdk.OAuth2Error.ACCESS_DENIED_CODE;
 import static uk.gov.di.orchestration.shared.conditions.IdentityHelper.identityRequired;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
@@ -96,6 +98,7 @@ public class AuthorisationHandler
 
     private static final Logger LOG = LogManager.getLogger(AuthorisationHandler.class);
     public static final String GOOGLE_ANALYTICS_QUERY_PARAMETER_KEY = "result";
+    private static final String ERROR_PAGE_REDIRECT_PATH = "error";
 
     private final SessionService sessionService;
     private final ConfigurationService configurationService;
@@ -259,7 +262,24 @@ public class AuthorisationHandler
         if (isJarValidationRequired && authRequest.getRequestObject() == null) {
             String errorMsg = "JAR required for client but request does not contain Request Object";
             LOG.warn(errorMsg);
-            throw new RuntimeException(errorMsg);
+            var errorResponse =
+                    new AuthenticationErrorResponse(
+                            authRequest.getRedirectionURI(),
+                            new ErrorObject(ACCESS_DENIED_CODE, errorMsg),
+                            authRequest.getState(),
+                            authRequest.getResponseMode());
+            if (client.getRedirectUrls().contains(authRequest.getRedirectionURI().toString())) {
+                LOG.warn("Redirecting");
+                return generateApiGatewayProxyResponse(
+                        302,
+                        "",
+                        Map.of(ResponseHeaders.LOCATION, errorResponse.toURI().toString()),
+                        null);
+            } else {
+                LOG.warn("Redirect URI not found in client registry");
+                return RedirectService.redirectToFrontendErrorPage(
+                        configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
+            }
         }
         if (authRequest.getRequestObject() == null) {
             LOG.info("Validating request query params");

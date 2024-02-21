@@ -24,6 +24,7 @@ public class ClientRegistry {
     private String subjectType;
     private boolean cookieConsentShared = false;
     private boolean consentRequired = false;
+    private boolean jarValidationRequired = false;
     private boolean testClient = false;
     private List<String> testClientEmailAllowlist = new ArrayList<>();
     private List<String> claims = new ArrayList<>();
@@ -249,6 +250,20 @@ public class ClientRegistry {
 
     public ClientRegistry withConsentRequired(boolean consentRequired) {
         this.consentRequired = consentRequired;
+        return this;
+    }
+
+    @DynamoDbAttribute("JarValidationRequired")
+    public boolean isJarValidationRequired() {
+        return jarValidationRequired;
+    }
+
+    public void setJarValidationRequired(boolean jarValidationRequired) {
+        this.jarValidationRequired = jarValidationRequired;
+    }
+
+    public ClientRegistry withJarValidationRequired(boolean jarValidationRequired) {
+        this.jarValidationRequired = jarValidationRequired;
         return this;
     }
 

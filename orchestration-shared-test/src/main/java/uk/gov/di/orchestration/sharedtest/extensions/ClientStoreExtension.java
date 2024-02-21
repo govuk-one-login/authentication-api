@@ -54,7 +54,9 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 sectorIdentifierUri,
                 subjectType,
                 consentRequired,
-                ClientType.WEB);
+                ClientType.WEB,
+                emptyList(),
+                false);
     }
 
     public void registerClient(
@@ -85,6 +87,7 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 subjectType,
                 consentRequired,
                 clientType,
+                emptyList(),
                 false);
     }
 
@@ -116,7 +119,40 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 subjectType,
                 consentRequired,
                 ClientType.WEB,
-                claims);
+                claims,
+                false);
+    }
+
+    public void registerClient(
+            String clientID,
+            String clientName,
+            List<String> redirectUris,
+            List<String> contacts,
+            List<String> scopes,
+            String publicKey,
+            List<String> postLogoutRedirectUris,
+            String backChannelLogoutUri,
+            String serviceType,
+            String sectorIdentifierUri,
+            String subjectType,
+            boolean consentRequired,
+            boolean jarValidationRequired) {
+        registerClient(
+                clientID,
+                clientName,
+                redirectUris,
+                contacts,
+                scopes,
+                publicKey,
+                postLogoutRedirectUris,
+                backChannelLogoutUri,
+                serviceType,
+                sectorIdentifierUri,
+                subjectType,
+                consentRequired,
+                ClientType.WEB,
+                emptyList(),
+                jarValidationRequired);
     }
 
     public void registerClient(
@@ -148,8 +184,112 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 subjectType,
                 consentRequired,
                 clientType,
+                claims,
+                false);
+    }
+
+    public void registerClient(
+            String clientID,
+            String clientName,
+            List<String> redirectUris,
+            List<String> contacts,
+            List<String> scopes,
+            String publicKey,
+            List<String> postLogoutRedirectUris,
+            String backChannelLogoutUri,
+            String serviceType,
+            String sectorIdentifierUri,
+            String subjectType,
+            ClientType clientType,
+            boolean consentRequired,
+            boolean jarValidationRequired) {
+        registerClient(
+                clientID,
+                clientName,
+                redirectUris,
+                contacts,
+                scopes,
+                publicKey,
+                postLogoutRedirectUris,
+                backChannelLogoutUri,
+                serviceType,
+                sectorIdentifierUri,
+                subjectType,
+                consentRequired,
+                clientType,
+                emptyList(),
+                jarValidationRequired);
+    }
+
+    public void registerClient(
+            String clientID,
+            String clientName,
+            List<String> redirectUris,
+            List<String> contacts,
+            List<String> scopes,
+            String publicKey,
+            List<String> postLogoutRedirectUris,
+            String backChannelLogoutUri,
+            String serviceType,
+            String sectorIdentifierUri,
+            String subjectType,
+            boolean consentRequired,
+            boolean jarValidationRequired,
+            List<String> claims) {
+        registerClient(
+                clientID,
+                clientName,
+                redirectUris,
+                contacts,
+                scopes,
+                publicKey,
+                postLogoutRedirectUris,
+                backChannelLogoutUri,
+                serviceType,
+                sectorIdentifierUri,
+                subjectType,
+                consentRequired,
+                ClientType.WEB,
+                claims,
+                jarValidationRequired);
+    }
+
+    public void registerClient(
+            String clientID,
+            String clientName,
+            List<String> redirectUris,
+            List<String> contacts,
+            List<String> scopes,
+            String publicKey,
+            List<String> postLogoutRedirectUris,
+            String backChannelLogoutUri,
+            String serviceType,
+            String sectorIdentifierUri,
+            String subjectType,
+            boolean consentRequired,
+            ClientType clientType,
+            List<String> claims,
+            boolean jarValidationRequired) {
+        dynamoClientService.addClient(
+                clientID,
+                clientName,
+                redirectUris,
+                contacts,
+                scopes,
+                publicKey,
+                postLogoutRedirectUris,
+                backChannelLogoutUri,
+                serviceType,
+                sectorIdentifierUri,
+                subjectType,
+                consentRequired,
+                jarValidationRequired,
+                claims,
+                clientType.getValue(),
                 false,
-                claims);
+                null,
+                ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue(),
+                emptyList());
     }
 
     public void registerClient(
@@ -182,6 +322,7 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 sectorIdentifierUri,
                 subjectType,
                 consentRequired,
+                false,
                 emptyList(),
                 clientType.getValue(),
                 identityVerificationSupported,
@@ -218,6 +359,7 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 sectorIdentifierUri,
                 subjectType,
                 consentRequired,
+                false,
                 emptyList(),
                 clientType.getValue(),
                 identityVerificationSupported,
@@ -255,6 +397,7 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
                 sectorIdentifierUri,
                 subjectType,
                 consentRequired,
+                false,
                 claims,
                 clientType.getValue(),
                 identityVerificationSupported,

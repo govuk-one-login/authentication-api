@@ -98,6 +98,7 @@ import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -121,6 +122,7 @@ import static uk.gov.di.orchestration.shared.helpers.PersistentIdHelper.isValidP
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.orchestration.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.hasContextData;
+import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessage;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class AuthorisationHandlerTest {
@@ -158,6 +160,7 @@ class AuthorisationHandlerTest {
     private static final String EXPECTED_LANGUAGE_COOKIE_STRING =
             "lng=en; Max-Age=31536000; Domain=auth.ida.digital.cabinet-office.gov.uk; Secure; HttpOnly;";
     private static final URI LOGIN_URL = URI.create("https://example.com");
+    private static final String ERROR_PAGE_REDIRECT_PATH = "error";
     private static final String AWS_REQUEST_ID = "aws-request-id";
     private static final ClientID CLIENT_ID = new ClientID("test-id");
     private static final String SESSION_ID = "a-session-id";
@@ -817,7 +820,8 @@ class AuthorisationHandlerTest {
         }
 
         @Test
-        void shouldThrowErrorWhenJARIsRequiredButRequestObjectIsMissing() {
+        void
+                shouldRedirectToProvidedRedirectUriWhenJARIsRequiredButRequestObjectIsMissingAndRedirectUriIsInClientRegistry() {
             when(orchestrationAuthorizationService.isJarValidationRequired(any())).thenReturn(true);
             var event = new APIGatewayProxyRequestEvent();
             event.setQueryStringParameters(
@@ -827,7 +831,7 @@ class AuthorisationHandlerTest {
                             "scope",
                             SCOPE,
                             "redirect_uri",
-                            "some-redirect-uri",
+                            REDIRECT_URI,
                             "response_type",
                             "code"));
             event.setRequestContext(
@@ -835,15 +839,55 @@ class AuthorisationHandlerTest {
                             .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
             event.setHttpMethod("GET");
 
-            RuntimeException expectedException =
-                    assertThrows(
-                            RuntimeException.class,
-                            () -> makeHandlerRequest(event),
-                            "Expected to throw AccessTokenException");
+            var response = makeHandlerRequest(event);
+
+            assertThat(response.getStatusCode(), equalTo(302));
+            assertThat(
+                    response.getHeaders().get(ResponseHeaders.LOCATION),
+                    equalTo(
+                            "https://localhost:8080?error=access_denied&error_description=JAR+required+for+client+but+request+does+not+contain+Request+Object"));
 
             assertThat(
-                    expectedException.getMessage(),
-                    equalTo("JAR required for client but request does not contain Request Object"));
+                    logging.events(),
+                    hasItems(
+                            withMessage(
+                                    "JAR required for client but request does not contain Request Object"),
+                            withMessage("Redirecting")));
+        }
+
+        @Test
+        void
+                shouldRedirectToFrontendErrorPageWhenJARIsRequiredButRequestObjectIsMissingAndRedirectUriIsNotInClientRegistry() {
+            when(orchestrationAuthorizationService.isJarValidationRequired(any())).thenReturn(true);
+            var event = new APIGatewayProxyRequestEvent();
+            event.setQueryStringParameters(
+                    Map.of(
+                            "client_id",
+                            CLIENT_ID.getValue(),
+                            "scope",
+                            SCOPE,
+                            "redirect_uri",
+                            "invalid-redirect-uri",
+                            "response_type",
+                            "code"));
+            event.setRequestContext(
+                    new ProxyRequestContext()
+                            .withIdentity(new RequestIdentity().withSourceIp("123.123.123.123")));
+            event.setHttpMethod("GET");
+
+            var response = makeHandlerRequest(event);
+
+            assertThat(response.getStatusCode(), equalTo(302));
+            assertThat(
+                    response.getHeaders().get(ResponseHeaders.LOCATION),
+                    equalTo(LOGIN_URL + "/" + ERROR_PAGE_REDIRECT_PATH));
+
+            assertThat(
+                    logging.events(),
+                    hasItems(
+                            withMessage(
+                                    "JAR required for client but request does not contain Request Object"),
+                            withMessage("Redirect URI not found in client registry")));
         }
 
         @Test
@@ -1839,6 +1883,7 @@ class AuthorisationHandlerTest {
                 .withConsentRequired(IS_COOKIE_CONSENT_SHARED)
                 .withClientName(RP_CLIENT_NAME)
                 .withSectorIdentifierUri("https://test.com")
+                .withRedirectUrls(List.of(REDIRECT_URI))
                 .withOneLoginService(IS_ONE_LOGIN)
                 .withServiceType(RP_SERVICE_TYPE)
                 .withConsentRequired(IS_CONSENT_REQUIRED)

@@ -43,6 +43,7 @@ import uk.gov.di.orchestration.shared.services.DynamoService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.LogoutService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
+import uk.gov.di.orchestration.shared.services.RedirectService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 import uk.gov.di.orchestration.shared.services.SessionService;
@@ -303,7 +304,8 @@ public class IPVCallbackHandler
                         AuditService.UNKNOWN,
                         userProfile.getPhoneNumber(),
                         persistentId);
-                return redirectToFrontendErrorPage();
+                return RedirectService.redirectToFrontendErrorPage(
+                        configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
             }
             auditService.submitAuditEvent(
                     IPVAuditableEvent.IPV_SUCCESSFUL_TOKEN_RESPONSE_RECEIVED,
@@ -447,16 +449,21 @@ public class IPVCallbackHandler
                     302, "", Map.of(ResponseHeaders.LOCATION, redirectURI.toString()), null);
         } catch (NoSessionException e) {
             LOG.warn(e.getMessage());
-            return redirectToFrontendErrorPage(ERROR_PAGE_REDIRECT_PATH_NO_SESSION);
+            return RedirectService.redirectToFrontendErrorPage(
+                    configurationService.getLoginURI().toString(),
+                    ERROR_PAGE_REDIRECT_PATH_NO_SESSION);
         } catch (IpvCallbackException | UnsuccessfulCredentialResponseException e) {
             LOG.warn(e.getMessage());
-            return redirectToFrontendErrorPage();
+            return RedirectService.redirectToFrontendErrorPage(
+                    configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
         } catch (ParseException e) {
             LOG.info("Cannot retrieve auth request params from client session id");
-            return redirectToFrontendErrorPage();
+            return RedirectService.redirectToFrontendErrorPage(
+                    configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
         } catch (JsonException e) {
             LOG.error("Unable to serialize SPOTRequest when placing on queue");
-            return redirectToFrontendErrorPage();
+            return RedirectService.redirectToFrontendErrorPage(
+                    configurationService.getLoginURI().toString(), ERROR_PAGE_REDIRECT_PATH);
         } catch (UserNotFoundException e) {
             LOG.error(e.getMessage());
             throw new RuntimeException(e);
@@ -465,24 +472,6 @@ public class IPVCallbackHandler
 
     private static boolean returnCodePresentInIPVResponse(Object returnCode) {
         return returnCode instanceof List<?> returnCodeList && !returnCodeList.isEmpty();
-    }
-
-    private APIGatewayProxyResponseEvent redirectToFrontendErrorPage() {
-        return redirectToFrontendErrorPage(ERROR_PAGE_REDIRECT_PATH);
-    }
-
-    private APIGatewayProxyResponseEvent redirectToFrontendErrorPage(String errorPagePath) {
-        LOG.info("Redirecting to frontend error page: {}", errorPagePath);
-        return generateApiGatewayProxyResponse(
-                302,
-                "",
-                Map.of(
-                        ResponseHeaders.LOCATION,
-                        ConstructUriHelper.buildURI(
-                                        configurationService.getLoginURI().toString(),
-                                        errorPagePath)
-                                .toString()),
-                null);
     }
 
     private boolean rpRequestedReturnCode(

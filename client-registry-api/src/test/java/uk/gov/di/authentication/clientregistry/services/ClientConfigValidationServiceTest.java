@@ -272,6 +272,7 @@ class ClientConfigValidationServiceTest {
                                 singletonList("openid"),
                                 singletonList("http://localhost/post-redirect-logout"),
                                 String.valueOf(MANDATORY),
+                                false,
                                 "http://localhost/sector-id",
                                 ClientType.WEB.getValue(),
                                 List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
@@ -295,6 +296,7 @@ class ClientConfigValidationServiceTest {
                                 singletonList("openid"),
                                 singletonList("invalid-logout-uri"),
                                 String.valueOf(MANDATORY),
+                                false,
                                 null,
                                 ClientType.WEB.getValue(),
                                 List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
@@ -311,6 +313,7 @@ class ClientConfigValidationServiceTest {
                                 singletonList("openid"),
                                 singletonList("http://localhost/post-redirect-logout"),
                                 String.valueOf(MANDATORY),
+                                false,
                                 null,
                                 ClientType.WEB.getValue(),
                                 List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
@@ -327,6 +330,7 @@ class ClientConfigValidationServiceTest {
                                 singletonList("openid"),
                                 singletonList("http://localhost/post-redirect-logout"),
                                 String.valueOf(MANDATORY),
+                                false,
                                 null,
                                 ClientType.WEB.getValue(),
                                 List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
@@ -343,6 +347,7 @@ class ClientConfigValidationServiceTest {
                                 List.of("openid", "email", "fax"),
                                 singletonList("http://localhost/post-redirect-logout"),
                                 String.valueOf(MANDATORY),
+                                false,
                                 null,
                                 ClientType.WEB.getValue(),
                                 List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
@@ -359,6 +364,7 @@ class ClientConfigValidationServiceTest {
                                 List.of("openid", "email"),
                                 singletonList("http://localhost/post-redirect-logout"),
                                 String.valueOf(MANDATORY),
+                                false,
                                 null,
                                 "rubbish-client-type",
                                 List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
@@ -375,6 +381,7 @@ class ClientConfigValidationServiceTest {
                                 List.of("openid", "email", "fax"),
                                 singletonList("http://localhost/post-redirect-logout"),
                                 String.valueOf(MANDATORY),
+                                false,
                                 null,
                                 ClientType.WEB.getValue(),
                                 List.of("Unsupported_LoC")));
@@ -414,6 +421,7 @@ class ClientConfigValidationServiceTest {
             List<String> scopes,
             List<String> postLogoutUris,
             String serviceType,
+            boolean jarValidationRequired,
             String sectorURI,
             String clientType,
             List<String> clientLoCs) {
@@ -423,6 +431,7 @@ class ClientConfigValidationServiceTest {
         configRequest.setPublicKey(publicCert);
         configRequest.setPostLogoutRedirectUris(postLogoutUris);
         configRequest.setServiceType(serviceType);
+        configRequest.setJarValidationRequired(jarValidationRequired);
         configRequest.setSectorIdentifierUri(sectorURI);
         configRequest.setClientType(clientType);
         configRequest.setClientLoCs(clientLoCs);
