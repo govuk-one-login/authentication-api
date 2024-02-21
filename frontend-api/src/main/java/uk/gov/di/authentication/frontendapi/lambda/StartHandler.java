@@ -133,6 +133,10 @@ public class StartHandler
                             configurationService.getHeadersCaseInsensitive());
             var reauthenticate =
                     reauthenticateHeader != null && reauthenticateHeader.equals("true");
+            LOG.info(
+                    "reauthenticateHeader: {} reauthenticate: {}",
+                    reauthenticateHeader,
+                    reauthenticate);
             var userStartInfo =
                     startService.buildUserStartInfo(
                             userContext,
