@@ -43,6 +43,7 @@ import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
+import uk.gov.di.orchestration.shared.services.TokenService;
 
 import java.net.URI;
 import java.net.URLDecoder;
@@ -95,7 +96,7 @@ public class InitiateIPVAuthorisationServiceTest {
     private final NoSessionOrchestrationService noSessionOrchestrationService =
             mock(NoSessionOrchestrationService.class);
     private InitiateIPVAuthorisationService initiateAuthorisationService;
-    private final StorageTokenService storageTokenService = mock(StorageTokenService.class);
+    private final TokenService tokenService = mock(TokenService.class);
     private APIGatewayProxyRequestEvent event;
     private final ClaimsSetRequest.Entry nameEntry =
             new ClaimsSetRequest.Entry("name").withClaimRequirement(ClaimRequirement.ESSENTIAL);
@@ -126,7 +127,7 @@ public class InitiateIPVAuthorisationServiceTest {
                         authorisationService,
                         cloudwatchMetricsService,
                         noSessionOrchestrationService,
-                        storageTokenService);
+                        tokenService);
 
         event = new APIGatewayProxyRequestEvent();
         event.setRequestContext(contextWithSourceIp(IP_ADDRESS));
@@ -140,8 +141,7 @@ public class InitiateIPVAuthorisationServiceTest {
         when(configService.getStorageTokenClaimName())
                 .thenReturn("https://vocab.account.gov.uk/v1/storageAccessToken");
         AccessToken storageToken = new BearerAccessToken(SERIALIZED_JWT, 180, null);
-        when(storageTokenService.generateAndSignStorageToken(any(), any()))
-                .thenReturn(storageToken);
+        when(tokenService.generateAndSignStorageToken(any(), any())).thenReturn(storageToken);
     }
 
     @Test
@@ -204,7 +204,7 @@ public class InitiateIPVAuthorisationServiceTest {
         verify(authorisationService).storeState(eq(session.getSessionId()), any(State.class));
         verify(noSessionOrchestrationService)
                 .storeClientSessionIdAgainstState(eq(CLIENT_SESSION_ID), any(State.class));
-        verify(storageTokenService).generateAndSignStorageToken(any(), eq(JWSAlgorithm.ES256));
+        verify(tokenService).generateAndSignStorageToken(any(), eq(JWSAlgorithm.ES256));
         verify(authorisationService)
                 .constructRequestJWT(
                         any(State.class),
