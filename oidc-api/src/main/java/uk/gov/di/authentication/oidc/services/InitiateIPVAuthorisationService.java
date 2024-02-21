@@ -25,6 +25,7 @@ import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
+import uk.gov.di.orchestration.shared.services.TokenService;
 
 import java.util.List;
 import java.util.Map;
@@ -44,7 +45,7 @@ public class InitiateIPVAuthorisationService {
     private final IPVAuthorisationService authorisationService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final NoSessionOrchestrationService noSessionOrchestrationService;
-    private final StorageTokenService storageTokenService;
+    private final TokenService tokenService;
 
     public InitiateIPVAuthorisationService(
             ConfigurationService configurationService,
@@ -52,13 +53,13 @@ public class InitiateIPVAuthorisationService {
             IPVAuthorisationService authorisationService,
             CloudwatchMetricsService cloudwatchMetricsService,
             NoSessionOrchestrationService noSessionOrchestrationService,
-            StorageTokenService storageTokenService) {
+            TokenService tokenService) {
         this.configurationService = configurationService;
         this.auditService = auditService;
         this.authorisationService = authorisationService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.noSessionOrchestrationService = noSessionOrchestrationService;
-        this.storageTokenService = storageTokenService;
+        this.tokenService = tokenService;
     }
 
     public APIGatewayProxyResponseEvent sendRequestToIPV(
@@ -145,7 +146,7 @@ public class InitiateIPVAuthorisationService {
         if (configurationService.sendStorageTokenToIpvEnabled()) {
             LOG.info("Adding storageAccessToken claim to IPV claims request");
             AccessToken storageToken =
-                    storageTokenService.generateAndSignStorageToken(
+                    tokenService.generateAndSignStorageToken(
                             internalPairwiseSubject, JWSAlgorithm.ES256);
 
             claimsSetRequest.add(

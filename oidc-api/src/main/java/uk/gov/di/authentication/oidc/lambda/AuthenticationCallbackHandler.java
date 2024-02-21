@@ -25,7 +25,6 @@ import uk.gov.di.authentication.oidc.exceptions.AuthenticationCallbackException;
 import uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService;
 import uk.gov.di.authentication.oidc.services.AuthenticationTokenService;
 import uk.gov.di.authentication.oidc.services.InitiateIPVAuthorisationService;
-import uk.gov.di.authentication.oidc.services.StorageTokenService;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.shared.conditions.MfaHelper;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
@@ -56,6 +55,7 @@ import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.orchestration.shared.services.RedirectService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
+import uk.gov.di.orchestration.shared.services.TokenService;
 
 import java.net.URI;
 import java.util.HashMap;
@@ -128,7 +128,10 @@ public class AuthenticationCallbackHandler
                                 configurationService, redisConnectionService, kmsConnectionService),
                         cloudwatchMetricsService,
                         new NoSessionOrchestrationService(configurationService),
-                        new StorageTokenService(configurationService));
+                        new TokenService(
+                                configurationService,
+                                redisConnectionService,
+                                kmsConnectionService));
         this.accountInterventionService =
                 new AccountInterventionService(
                         configurationService, cloudwatchMetricsService, auditService);
