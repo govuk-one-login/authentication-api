@@ -15,6 +15,11 @@
   "scope": "openid",
   "claims": {
     "userinfo": {
+      "https://vocab.account.gov.uk/v1/storageAccessToken": {
+        "values": [
+          "eyJhbGciOiJFUzI1NiJ9.e30.Ocd0zjblolysCck2LLVgenMKNDQ9GAGCSjlg1kkWVzYcK31qzcJR68bw4b1MdgIEvxZhZ_4ZxWlKIx4OOFixTw"
+        ]
+      },
       "https://vocab.account.gov.uk/v1/coreIdentityJWT": {
         "essential": true
       },
