@@ -53,6 +53,7 @@ module "authentication_callback" {
     FRONTEND_BASE_URL                           = "https://${local.frontend_fqdn}/"
     ACCOUNT_INTERVENTION_SERVICE_ABORT_ON_ERROR = var.account_intervention_service_abort_on_error
     ACCOUNT_INTERVENTION_SERVICE_CALL_TIMEOUT   = var.account_intervention_service_call_timeout
+    STORAGE_TOKEN_SIGNING_KEY_ALIAS             = aws_kms_alias.storage_token_signing_key_alias.name
   }
 
   handler_function_name = "uk.gov.di.authentication.oidc.lambda.AuthenticationCallbackHandler::handleRequest"

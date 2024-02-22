@@ -157,7 +157,7 @@ class DocAppAuthorizeHandlerIntegrationTest extends ApiGatewayHandlerIntegration
 
         public DocAppTestConfigurationService(DocAppJwksExtension jwksExtension) {
             super(
-                    tokenSigner,
+                    externalTokenSigner,
                     ipvPrivateKeyJwtSigner,
                     spotQueue,
                     docAppPrivateKeyJwtSigner,

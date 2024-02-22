@@ -500,7 +500,7 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         .subject(publicSubject.getValue())
                         .jwtID(IdGenerator.generate())
                         .build();
-        return tokenSigner.signJwt(claimsSet);
+        return externalTokenSigner.signJwt(claimsSet);
     }
 
     private void registerClientWithPrivateKeyJwtAuthentication(

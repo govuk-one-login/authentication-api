@@ -80,7 +80,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                     auditTopic,
                     notificationsQueue,
                     auditSigningKey,
-                    tokenSigner,
+                    externalTokenSigner,
                     ipvPrivateKeyJwtSigner,
                     spotQueue);
 
