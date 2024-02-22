@@ -71,6 +71,9 @@ class IPVAuthorisationServiceTest {
     private static final URI IPV_URI = URI.create("http://ipv/");
     private static final URI IPV_CALLBACK_URI = URI.create("http://localhost/oidc/ipv/callback");
     private static final URI IPV_AUTHORISATION_URI = URI.create("http://localhost/ipv/authorize");
+    private static final String SERIALIZED_JWT =
+            "eyJhbGciOiJFUzI1NiJ9.e30.Ocd0zjblolysCck2LLVgenMKNDQ9GAGCSjlg1kkWVzYcK31qzcJR68bw4b1MdgIEvxZhZ_4ZxWlKIx4OOFixTw";
+
     private static final Json objectMapper = SerializationService.getInstance();
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -243,7 +246,11 @@ class IPVAuthorisationServiceTest {
                             .add(
                                     new ClaimsSetRequest.Entry(
                                                     "https://vocab.account.gov.uk/v1/inheritedIdentityJWT")
-                                            .withValues(List.of("jwt")));
+                                            .withValues(List.of("jwt")))
+                            .add(
+                                    new ClaimsSetRequest.Entry(
+                                                    "https://vocab.account.gov.uk/v1/storageAccessToken")
+                                            .withValues(List.of(SERIALIZED_JWT)));
 
             EncryptedJWT encryptedJWT;
             try (var mockIdGenerator = mockStatic(IdGenerator.class)) {
