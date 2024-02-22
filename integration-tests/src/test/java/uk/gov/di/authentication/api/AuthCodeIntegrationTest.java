@@ -84,8 +84,7 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var authCodeResponse = objectMapper.readValue(response.getBody(), AuthCodeResponse.class);
         assertThat(
                 authCodeResponse.getLocation(),
-                startsWith(
-                        "https://di-auth-stub-relying-party-build.london.cloudapps.digital/?code="));
+                startsWith("https://rp-build.build.stubs.account.gov.uk/?code="));
 
         assertTrue(redis.getSession(sessionID).isAuthenticated());
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CODE_ISSUED));
@@ -120,8 +119,7 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var authCodeResponse = objectMapper.readValue(response.getBody(), AuthCodeResponse.class);
         assertThat(
                 authCodeResponse.getLocation(),
-                startsWith(
-                        "https://di-auth-stub-relying-party-build.london.cloudapps.digital/?code="));
+                startsWith("https://rp-build.build.stubs.account.gov.uk/?code="));
 
         assertFalse(redis.getSession(sessionID).isAuthenticated());
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(AUTH_CODE_ISSUED));
