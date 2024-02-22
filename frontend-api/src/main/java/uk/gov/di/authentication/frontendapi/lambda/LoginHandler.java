@@ -186,7 +186,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                 } else {
                     codeStorageService.increaseIncorrectPasswordCount(request.getEmail());
                 }
-
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.INVALID_CREDENTIALS,
                         userContext.getClientSessionId(),
@@ -202,6 +201,27 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                                 "incorrectPasswordCount",
                                 codeStorageService.getIncorrectPasswordCount(request.getEmail())),
                         pair("attemptNoFailedAt", configurationService.getMaxPasswordRetries()));
+
+                if (incorrectPasswordCount + 1 >= configurationService.getMaxPasswordRetries()) {
+                    LOG.info("User has now exceeded max password retries");
+
+                    auditService.submitAuditEvent(
+                            FrontendAuditableEvent.ACCOUNT_TEMPORARILY_LOCKED,
+                            userContext.getClientSessionId(),
+                            userContext.getSession().getSessionId(),
+                            clientId,
+                            internalCommonSubjectIdentifier.getValue(),
+                            userProfile.getEmail(),
+                            IpAddressHelper.extractIpAddress(input),
+                            userProfile.getPhoneNumber(),
+                            persistentSessionId,
+                            pair("internalSubjectId", userProfile.getSubjectID()),
+                            pair(
+                                    "attemptNoFailedAt",
+                                    configurationService.getMaxPasswordRetries()));
+
+                    return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1028);
+                }
 
                 return generateApiGatewayProxyErrorResponse(401, ErrorResponse.ERROR_1008);
             }
