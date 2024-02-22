@@ -146,8 +146,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public int getCodeMaxRetriesRegistration() {
-        return Integer.parseInt(
-                System.getenv().getOrDefault("CODE_MAX_RETRIES_REGISTRATION", "999999"));
+        return Integer.parseInt(System.getenv().getOrDefault("CODE_MAX_RETRIES_REGISTRATION", "5"));
     }
 
     public int getAuthAppCodeWindowLength() {
