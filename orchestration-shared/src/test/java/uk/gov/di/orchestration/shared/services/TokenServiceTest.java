@@ -16,6 +16,7 @@ import com.nimbusds.oauth2.sdk.GrantType;
 import com.nimbusds.oauth2.sdk.OAuth2Error;
 import com.nimbusds.oauth2.sdk.Scope;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.RefreshToken;
 import com.nimbusds.oauth2.sdk.util.JSONArrayUtils;
 import com.nimbusds.oauth2.sdk.util.URLUtils;
@@ -48,6 +49,7 @@ import uk.gov.di.orchestration.sharedtest.helper.SubjectHelper;
 import uk.gov.di.orchestration.sharedtest.helper.TokenGeneratorHelper;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
+import java.net.URI;
 import java.text.ParseException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -66,6 +68,7 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.startsWith;
 import static org.hamcrest.core.Is.is;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -106,6 +109,10 @@ class TokenServiceTest {
     private static final String KEY_ID = "14342354354353";
     private static final String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN:";
     private static final String ACCESS_TOKEN_PREFIX = "ACCESS_TOKEN:";
+    private static final String STORAGE_TOKEN_PREFIX =
+            "eyJraWQiOiIxZDUwNGFlY2UyOThhMTRkNzRlZTBhMDJiNjc0MGI0MzcyYTFmYWI0MjA2Nzc4ZTQ4NmJhNzI3NzBmZjRiZWI4IiwiYWxnIjoiRVMyNTYifQ.";
+    private static final String CREDENTIAL_STORE_URI = "https://credential-store.account.gov.uk";
+    private static final String IPV_AUDIENCE = "https://identity.test.account.gov.uk";
 
     private static final Json objectMapper = SerializationService.getInstance();
 
@@ -181,6 +188,20 @@ class TokenServiceTest {
         var jti = refreshToken.getJWTClaimsSet().getJWTID();
         assertThat(redisKey.getValue(), startsWith(REFRESH_TOKEN_PREFIX));
         assertThat(redisKey.getValue().split(":")[1], equalTo(jti));
+    }
+
+    @Test
+    void shouldGenerateWellFormedStorageToken() throws JOSEException {
+        when(configurationService.getCredentialStoreURI())
+                .thenReturn(URI.create(CREDENTIAL_STORE_URI));
+        when(configurationService.getIPVAudience()).thenReturn(IPV_AUDIENCE);
+        createSignedStorageToken();
+
+        AccessToken token = tokenService.generateStorageToken(new Subject());
+        String[] splitToken = token.toString().split("\\.");
+
+        assertEquals(3, splitToken.length);
+        assertThat(token.toString(), startsWith(STORAGE_TOKEN_PREFIX));
     }
 
     @Test
@@ -459,6 +480,25 @@ class TokenServiceTest {
     }
 
     private void createSignedIdToken() throws JOSEException {
+        ECKey ecSigningKey =
+                new ECKeyGenerator(Curve.P_256)
+                        .keyID(KEY_ID)
+                        .algorithm(JWSAlgorithm.ES256)
+                        .generate();
+        SignedJWT signedIdToken = createSignedIdToken(ecSigningKey);
+        byte[] idTokenSignatureDer =
+                ECDSA.transcodeSignatureToDER(signedIdToken.getSignature().decode());
+        SignResponse idTokenSignedResult =
+                SignResponse.builder()
+                        .signature(SdkBytes.fromByteArray(idTokenSignatureDer))
+                        .keyId(KEY_ID)
+                        .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
+                        .build();
+
+        when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(idTokenSignedResult);
+    }
+
+    private void createSignedStorageToken() throws JOSEException {
         ECKey ecSigningKey =
                 new ECKeyGenerator(Curve.P_256)
                         .keyID(KEY_ID)
