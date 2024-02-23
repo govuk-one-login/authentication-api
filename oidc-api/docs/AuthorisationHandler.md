@@ -40,11 +40,11 @@ The lambda performs the following functions, although not all functions take pla
 ```json
 {
 "queryStringParams": {
-  "vtr": ["Cl"]
+  "vtr": ["Cl"],
   "scope": "openid email phone",
   "claims": {"userinfo":{"https:\/\/vocab.account.gov.uk\/v1\/passport":{"essential":true},"https:\/\/vocab.account.gov.uk\/v1\/coreIdentityJWT":{"essential":true},"https:\/\/vocab.account.gov.uk\/v1\/address":{"essential":true}}},
   "response_type": "code",
-  "redirect_uri": "https://di-auth-stub-relying-party-production.london.cloudapps.digital/oidc/authorization-code/callback",
+  "redirect_uri": "https://rp.stubs.account.gov.uk/oidc/authorization-code/callback",
   "state": "D9fDA1Y_s8WwjJ2NOA_UDKY0wpV53NFNG4k8bLkyKDM",
   "prompt": "none",
   "nonce": "ZVOt6pvwZZDQzboS7Rzrd_16vZ"
