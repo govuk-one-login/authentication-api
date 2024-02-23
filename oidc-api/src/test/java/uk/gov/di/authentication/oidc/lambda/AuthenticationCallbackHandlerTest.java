@@ -89,7 +89,7 @@ class AuthenticationCallbackHandlerTest {
                     generateRPAuthRequestForClientSession().toParameters(),
                     null,
                     List.of(
-                            VectorOfTrust.of(
+                            VectorOfTrustLegacy.of(
                                     CredentialTrustLevel.LOW_LEVEL, LevelOfConfidence.LOW_LEVEL)),
                     CLIENT_NAME);
     private static final String COOKIE_HEADER_NAME = "Cookie";

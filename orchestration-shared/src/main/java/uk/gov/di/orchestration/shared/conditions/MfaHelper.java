@@ -2,7 +2,7 @@ package uk.gov.di.orchestration.shared.conditions;
 
 import uk.gov.di.orchestration.shared.entity.MFAMethod;
 import uk.gov.di.orchestration.shared.entity.UserCredentials;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.VectorOfTrustLegacy;
 
 import java.util.List;
 import java.util.Optional;
@@ -13,7 +13,7 @@ public class MfaHelper {
 
     private MfaHelper() {}
 
-    public static boolean mfaRequired(List<VectorOfTrust> vtrList) {
+    public static boolean mfaRequired(List<VectorOfTrustLegacy> vtrList) {
         return vtrList.stream().allMatch(vtr -> vtr.getCredentialTrustLevel().equals(MEDIUM_LEVEL));
     }
 

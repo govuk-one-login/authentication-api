@@ -1,10 +1,20 @@
 plugins {
     id "java-library"
     id "jacoco"
+    id "systems.manifold.manifold-gradle-plugin" version "0.0.2-alpha"
 }
 
 group "uk.gov.di"
 version "unspecified"
+
+manifold {
+    manifoldVersion = '2024.1.1'
+}
+
+configurations {
+    // give tests access to annotationProcessor dependencies
+    testImplementation.extendsFrom annotationProcessor
+}
 
 dependencies {
 
@@ -30,6 +40,18 @@ dependencies {
             configurations.lambda_tests,
             project(":orchestration-shared-test")
     testRuntimeOnly configurations.test_runtime
+
+    implementation "systems.manifold:manifold-ext-rt:${manifold.manifoldVersion.get()}"
+    //    implementation "systems.manifold:manifold-props-rt:${manifold.manifoldVersion.get()}"
+    implementation "systems.manifold:manifold-delegation-rt:${manifold.manifoldVersion.get()}"
+    //    implementation "systems.manifold:manifold-strings:${manifold.manifoldVersion.get()}"
+    //    implementation "systems.manifold:manifold-collections:${manifold.manifoldVersion.get()}"
+
+    annotationProcessor "systems.manifold:manifold-ext:${manifold.manifoldVersion.get()}"
+    //    annotationProcessor "systems.manifold:manifold-props:${manifold.manifoldVersion.get()}"
+    annotationProcessor "systems.manifold:manifold-delegation:${manifold.manifoldVersion.get()}"
+    //    annotationProcessor "systems.manifold:manifold-strings:${manifold.manifoldVersion.get()}"
+    //    annotationProcessor "systems.manifold:manifold-collections:${manifold.manifoldVersion.get()}"
 }
 
 test {

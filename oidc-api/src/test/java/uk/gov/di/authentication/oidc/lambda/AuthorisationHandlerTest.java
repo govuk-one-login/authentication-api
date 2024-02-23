@@ -294,7 +294,7 @@ class AuthorisationHandlerTest {
             var orchClientId = "orchestration-client-id";
             when(configService.isAuthOrchSplitEnabled()).thenReturn(true);
             when(configService.getOrchestrationClientId()).thenReturn(orchClientId);
-            when(orchestrationAuthorizationService.getVtrList(any())).thenCallRealMethod();
+            when(orchestrationAuthorizationService.getVtrRequest(any())).thenCallRealMethod();
             when(orchestrationAuthorizationService.getSignedAndEncryptedJWT(any()))
                     .thenReturn(TEST_ENCRYPTED_JWT);
 
@@ -442,7 +442,7 @@ class AuthorisationHandlerTest {
         void shouldRetainGoogleAnalyticsParamThroughRedirectToLoginWhenClientIsFaceToFaceRp(
                 boolean isAuthOrchSplitEnabled) {
             when(configService.isAuthOrchSplitEnabled()).thenReturn(isAuthOrchSplitEnabled);
-            when(orchestrationAuthorizationService.getVtrList(any())).thenCallRealMethod();
+            when(orchestrationAuthorizationService.getVtrRequest(any())).thenCallRealMethod();
 
             withExistingSession(session);
             when(userContext.getClientSession()).thenReturn(clientSession);
@@ -1068,7 +1068,7 @@ class AuthorisationHandlerTest {
         @Test
         void shouldNotAddReauthenticateClaimForQueryParametersWithAuthOrchSplitEnabled() {
             when(configService.isAuthOrchSplitEnabled()).thenReturn(true);
-            when(orchestrationAuthorizationService.getVtrList(any())).thenCallRealMethod();
+            when(orchestrationAuthorizationService.getVtrRequest(any())).thenCallRealMethod();
 
             Map<String, String> requestParams =
                     buildRequestParams(

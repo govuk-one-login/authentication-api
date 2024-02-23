@@ -38,11 +38,14 @@ import uk.gov.di.authentication.oidc.validators.RequestObjectAuthorizeValidator;
 import uk.gov.di.orchestration.shared.conditions.DocAppUserHelper;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
-import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VotConstants;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VotVocabVersion;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VtrRequest;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VtrSummary;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
@@ -325,13 +328,16 @@ public class AuthorisationHandler
                 pair("identityRequested", identityRequested),
                 pair("reauthRequested", reauthRequested));
 
+        var vtrSummary = orchestrationAuthorizationService
+                .getVtrRequest(authRequest).chooseLevel(VotConstants.VOT_VER_1_2);
+
         Optional<Session> session = sessionService.getSessionFromSessionCookie(input.getHeaders());
-        var vtrList = getVtrList(reauthRequested, authRequest);
+        var vtrList = getVtrRequest(reauthRequested, authRequest);
         ClientSession clientSession =
                 clientSessionService.generateClientSession(
                         authRequest.toParameters(),
                         LocalDateTime.now(),
-                        vtrList,
+                        vtrSummary,
                         client.getClientName());
         if (DocAppUserHelper.isDocCheckingAppUser(
                 authRequest.toParameters(), Optional.of(client))) {
@@ -353,7 +359,7 @@ public class AuthorisationHandler
                 client,
                 clientSessionId,
                 reauthRequested,
-                vtrList);
+                vtrSummary);
     }
 
     private static String getRpSid(AuthenticationRequest authRequest) {
@@ -368,25 +374,24 @@ public class AuthorisationHandler
         }
     }
 
-    private List<VectorOfTrust> getVtrList(
+    private VtrRequest getVtrRequest(
             boolean reauthRequested, AuthenticationRequest authRequest)
             throws java.text.ParseException {
-        if (reauthRequested && orchestrationAuthorizationService.getVtrList(authRequest) == null) {
-            var idTokenHint =
-                    SignedJWT.parse(authRequest.getCustomParameter("id_token_hint").get(0));
+        if (reauthRequested && orchestrationAuthorizationService.getVtrRequest(authRequest) == null) {
+            var idTokenHint = SignedJWT.parse(authRequest.getCustomParameter("id_token_hint").get(0));
             var grantedVectorOfTrust = extractVoTFromIdTokenHint(idTokenHint);
-            return List.of(grantedVectorOfTrust);
+            return VtrRequest.of(grantedVectorOfTrust);
         }
-        return orchestrationAuthorizationService.getVtrList(authRequest);
+        return orchestrationAuthorizationService.getVtrRequest(authRequest);
     }
 
     private VectorOfTrust extractVoTFromIdTokenHint(SignedJWT idTokenHint)
             throws java.text.ParseException {
         var votClaim = idTokenHint.getJWTClaimsSet().getClaim("vot");
         if (votClaim == null) {
-            return new VectorOfTrust(CredentialTrustLevel.getDefault());
+            return VectorOfTrust.empty();
         } else if (votClaim instanceof String vot) {
-            return VectorOfTrust.parseFromAuthRequestAttribute(List.of(vot)).get(0);
+            return VectorOfTrust.parse(vot);
         }
         throw new java.text.ParseException("vtr is in an invalid format. Could not be parsed.", 0);
     }
@@ -484,7 +489,7 @@ public class AuthorisationHandler
             ClientRegistry client,
             String clientSessionId,
             boolean reauthRequested,
-            List<VectorOfTrust> vtrList) {
+            VtrSummary vtrSummary) {
         if (Objects.nonNull(authenticationRequest.getPrompt())
                 && (authenticationRequest.getPrompt().contains(Prompt.Type.CONSENT)
                         || authenticationRequest
@@ -540,7 +545,7 @@ public class AuthorisationHandler
                 persistentSessionId,
                 client,
                 reauthRequested,
-                vtrList);
+                vtrSummary);
     }
 
     private APIGatewayProxyResponseEvent generateAuthRedirect(
@@ -551,7 +556,7 @@ public class AuthorisationHandler
             String persistentSessionId,
             ClientRegistry client,
             boolean reauthRequested,
-            List<VectorOfTrust> vtrList) {
+            VtrSummary vtrSummary) {
         LOG.info("Redirecting");
         String redirectURI;
         try {
@@ -628,7 +633,8 @@ public class AuthorisationHandler
                         clientSessionId);
             }
 
-            var confidence = VectorOfTrust.getLowestCredentialTrustLevel(vtrList).getValue();
+
+            var effectiveVot = VotVocabVersion.V1.normaliseVector(vtrSummary.effectiveVector());
             var claimsBuilder =
                     new JWTClaimsSet.Builder()
                             .issuer(configurationService.getOrchestrationClientId())
@@ -646,7 +652,7 @@ public class AuthorisationHandler
                             .claim("is_one_login_service", client.isOneLoginService())
                             .claim("service_type", client.getServiceType())
                             .claim("govuk_signin_journey_id", clientSessionId)
-                            .claim("confidence", confidence)
+                            .claim("confidence", effectiveVot.authComponent().toString())
                             .claim("state", state.getValue())
                             .claim("client_id", configurationService.getOrchestrationClientId())
                             .claim(

@@ -8,34 +8,43 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static net.minidev.json.parser.JSONParser.DEFAULT_PERMISSIVE_MODE;
 import static uk.gov.di.orchestration.shared.entity.LevelOfConfidence.NONE;
 
-public class VectorOfTrust {
+public class VectorOfTrustLegacy {
 
-    private static final Logger LOG = LogManager.getLogger(VectorOfTrust.class);
+    private static final Logger LOG = LogManager.getLogger(VectorOfTrustLegacy.class);
 
     @Expose private CredentialTrustLevel credentialTrustLevel;
 
     @Expose private LevelOfConfidence levelOfConfidence;
 
-    public VectorOfTrust(CredentialTrustLevel credentialTrustLevel) {
+    public VectorOfTrustLegacy(CredentialTrustLevel credentialTrustLevel) {
         this(credentialTrustLevel, Optional.empty());
     }
 
-    private VectorOfTrust(
+    private VectorOfTrustLegacy(
             CredentialTrustLevel credentialTrustLevel,
             Optional<LevelOfConfidence> levelOfConfidence) {
         this.credentialTrustLevel = credentialTrustLevel;
         this.levelOfConfidence = levelOfConfidence.orElse(null);
+    }
+
+    public static <T, U> String format(
+            Collection<T> collection, String delimiter, Function<T, U> formatter) {
+        return collection.stream()
+                .map(formatter)
+                .map(U::toString)
+                .collect(Collectors.joining(delimiter));
     }
 
     public CredentialTrustLevel getCredentialTrustLevel() {
@@ -50,12 +59,12 @@ public class VectorOfTrust {
         return levelOfConfidence != null && !levelOfConfidence.equals(NONE);
     }
 
-    public static List<VectorOfTrust> parseFromAuthRequestAttribute(List<String> vtr) {
-        if (isNull(vtr) || vtr.isEmpty()) {
+    public static List<VectorOfTrustLegacy> parseFromAuthRequestAttribute(List<String> vtr) {
+        if (vtr == null || vtr.isEmpty()) {
             LOG.info(
                     "VTR attribute is not present so defaulting to {}",
                     CredentialTrustLevel.getDefault().getValue());
-            return List.of(new VectorOfTrust(CredentialTrustLevel.getDefault()));
+            return List.of(new VectorOfTrustLegacy(CredentialTrustLevel.getDefault()));
         }
         JSONParser parser = new JSONParser(DEFAULT_PERMISSIVE_MODE);
         JSONArray vtrJsonArray;
@@ -69,34 +78,36 @@ public class VectorOfTrust {
             LOG.warn("Error when parsing vtr attribute", e);
             throw new IllegalArgumentException("Invalid VTR attribute", e);
         }
-        List<VectorOfTrust> vtrList = parseVtrSet(vtrJsonArray);
+        List<VectorOfTrustLegacy> vtrList = parseVtrSet(vtrJsonArray);
         String vtrs = stringifyVtrList(vtrList);
         LOG.info("VTR list has been processed as vectorOfTrust list: [{}]", vtrs);
         return vtrList;
     }
 
-    public static CredentialTrustLevel getLowestCredentialTrustLevel(List<VectorOfTrust> vtrList) {
-        List<VectorOfTrust> orderedVtrList = orderVtrList(vtrList);
+    public static CredentialTrustLevel getLowestCredentialTrustLevel(
+            List<VectorOfTrustLegacy> vtrList) {
+        List<VectorOfTrustLegacy> orderedVtrList = orderVtrList(vtrList);
         if (orderedVtrList.isEmpty()) {
             throw new IllegalArgumentException("Invalid VTR attribute");
         }
         return orderedVtrList.get(0).getCredentialTrustLevel();
     }
 
-    public static List<VectorOfTrust> orderVtrList(List<VectorOfTrust> vtrList) {
+    public static List<VectorOfTrustLegacy> orderVtrList(List<VectorOfTrustLegacy> vtrList) {
         return vtrList.stream()
                 .sorted(
                         Comparator.comparing(
-                                        VectorOfTrust::getLevelOfConfidence,
+                                        VectorOfTrustLegacy::getLevelOfConfidence,
                                         Comparator.nullsFirst(Comparator.naturalOrder()))
                                 .thenComparing(
-                                        VectorOfTrust::getCredentialTrustLevel,
+                                        VectorOfTrustLegacy::getCredentialTrustLevel,
                                         Comparator.nullsFirst(Comparator.naturalOrder())))
                 .toList();
     }
 
-    public static VectorOfTrust getDefaults() {
-        return VectorOfTrust.of(CredentialTrustLevel.getDefault(), LevelOfConfidence.getDefault());
+    public static VectorOfTrustLegacy getDefaults() {
+        return VectorOfTrustLegacy.of(
+                CredentialTrustLevel.getDefault(), LevelOfConfidence.getDefault());
     }
 
     public String retrieveVectorOfTrustForToken() {
@@ -110,8 +121,8 @@ public class VectorOfTrust {
                                 getCredentialTrustLevel(), CredentialTrustLevel.LOW_LEVEL));
     }
 
-    private static List<VectorOfTrust> parseVtrSet(JSONArray vtrJsonArray) {
-        List<VectorOfTrust> vtrList = new ArrayList<>();
+    private static List<VectorOfTrustLegacy> parseVtrSet(JSONArray vtrJsonArray) {
+        List<VectorOfTrustLegacy> vtrList = new ArrayList<>();
         for (Object obj : vtrJsonArray) {
             String vtr = (String) obj;
             var splitVtr = vtr.split("\\.");
@@ -139,7 +150,7 @@ public class VectorOfTrust {
                                     .filter(a -> a.startsWith("C"))
                                     .sorted()
                                     .collect(Collectors.joining(".")));
-            var vot = new VectorOfTrust(credentialTrustLevel, levelOfConfidence);
+            var vot = new VectorOfTrustLegacy(credentialTrustLevel, levelOfConfidence);
             if (!vot.isValid()) {
                 throw new IllegalArgumentException(
                         "P2 identity confidence must require at least Cl.Cm credential trust");
@@ -147,30 +158,18 @@ public class VectorOfTrust {
             vtrList.add(vot);
         }
 
-        var identityVectorsCount =
-                vtrList.stream()
-                        .filter(
-                                vtr ->
-                                        Objects.nonNull(vtr.getLevelOfConfidence())
-                                                && !vtr.getLevelOfConfidence().equals(NONE))
-                        .count();
-        if (identityVectorsCount != 0 && identityVectorsCount < vtrList.size()) {
-            throw new IllegalArgumentException(
-                    "VTR cannot contain both identity and non-identity vectors");
-        }
-
         return vtrList;
     }
 
-    public static List<String> getRequestedLevelsOfConfidence(List<VectorOfTrust> vtrList) {
+    public static List<String> getRequestedLevelsOfConfidence(List<VectorOfTrustLegacy> vtrList) {
         return vtrList.stream()
-                .map(VectorOfTrust::getLevelOfConfidence)
+                .map(VectorOfTrustLegacy::getLevelOfConfidence)
                 .map(LevelOfConfidence::getValue)
                 .toList();
     }
 
-    public static String stringifyVtrList(List<VectorOfTrust> vtrList) {
-        return vtrList.stream().map(VectorOfTrust::toString).collect(Collectors.joining(","));
+    public static String stringifyVtrList(List<VectorOfTrustLegacy> vtrList) {
+        return vtrList.stream().map(VectorOfTrustLegacy::toString).collect(Collectors.joining(","));
     }
 
     @Override
@@ -183,9 +182,9 @@ public class VectorOfTrust {
                 + '}';
     }
 
-    public static String stringifyLevelsOfConfidence(List<VectorOfTrust> votList) {
+    public static String stringifyLevelsOfConfidence(List<VectorOfTrustLegacy> votList) {
         return votList.stream()
-                .map(VectorOfTrust::getLevelOfConfidence)
+                .map(VectorOfTrustLegacy::getLevelOfConfidence)
                 .map(LevelOfConfidence::getValue)
                 .collect(Collectors.joining(","));
     }
@@ -194,7 +193,7 @@ public class VectorOfTrust {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        VectorOfTrust that = (VectorOfTrust) o;
+        VectorOfTrustLegacy that = (VectorOfTrustLegacy) o;
         return credentialTrustLevel == that.credentialTrustLevel
                 && levelOfConfidence == that.levelOfConfidence;
     }
@@ -204,8 +203,9 @@ public class VectorOfTrust {
         return Objects.hash(credentialTrustLevel, levelOfConfidence);
     }
 
-    public static VectorOfTrust of(
+    public static VectorOfTrustLegacy of(
             CredentialTrustLevel credentialTrustLevel, LevelOfConfidence levelOfConfidence) {
-        return new VectorOfTrust(credentialTrustLevel, Optional.ofNullable(levelOfConfidence));
+        return new VectorOfTrustLegacy(
+                credentialTrustLevel, Optional.ofNullable(levelOfConfidence));
     }
 }

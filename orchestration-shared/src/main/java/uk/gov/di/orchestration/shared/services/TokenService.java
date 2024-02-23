@@ -37,6 +37,7 @@ import uk.gov.di.orchestration.shared.entity.AccessTokenStore;
 import uk.gov.di.orchestration.shared.entity.ClientConsent;
 import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
 import uk.gov.di.orchestration.shared.entity.ValidScopes;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.helpers.RequestBodyHelper;
@@ -94,7 +95,7 @@ public class TokenService {
             boolean isDocAppJourney,
             JWSAlgorithm signingAlgorithm,
             String journeyId,
-            String vot) {
+            VectorOfTrust vot) {
         List<String> scopesForToken;
         if (isConsentRequired) {
             scopesForToken = calculateScopesForToken(clientConsents, clientID, authRequestScopes);
@@ -127,7 +128,7 @@ public class TokenService {
                                         rpPairwiseSubject,
                                         additionalTokenClaims,
                                         accessTokenHash,
-                                        vot,
+                                        vot.toString(),
                                         isDocAppJourney,
                                         signingAlgorithm,
                                         journeyId));

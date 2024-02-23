@@ -2,6 +2,9 @@ package uk.gov.di.orchestration.shared.entity;
 
 import com.google.gson.annotations.Expose;
 import com.nimbusds.oauth2.sdk.id.Subject;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VotVocabVersion;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VtrSummary;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -15,6 +18,7 @@ public class ClientSession {
 
     @Expose private LocalDateTime creationDate;
 
+
     /**
      * @deprecated ClientSession is to use vtrList and no longer use effectiveVectorOfTrust. Must be
      *     retained until Authentication no longer depend on this field.
@@ -23,7 +27,7 @@ public class ClientSession {
     @Expose
     private VectorOfTrust effectiveVectorOfTrust;
 
-    @Expose private List<VectorOfTrust> vtrList;
+    @Expose private VtrSummary vtrSummary;
 
     @Expose private Subject docAppSubjectId;
 
@@ -32,14 +36,24 @@ public class ClientSession {
     public ClientSession(
             Map<String, List<String>> authRequestParams,
             LocalDateTime creationDate,
-            List<VectorOfTrust> vtrList,
+            VtrSummary vtrSummary,
+            VectorOfTrust effectiveVectorOfTrust,
             String clientName) {
         this.authRequestParams = authRequestParams;
         this.creationDate = creationDate;
-        this.vtrList = vtrList;
-        if (!vtrList.isEmpty()) {
-            this.effectiveVectorOfTrust = VectorOfTrust.orderVtrList(vtrList).get(0);
-        }
+        this.effectiveVectorOfTrust = effectiveVectorOfTrust;
+        this.clientName = clientName;
+    }
+
+    public ClientSession(
+            Map<String, List<String>> authRequestParams,
+            LocalDateTime creationDate,
+            VtrSummary vtrSummary,
+            String clientName) {
+        this.authRequestParams = authRequestParams;
+        this.creationDate = creationDate;
+        this.vtrSummary = vtrSummary;
+        this.effectiveVectorOfTrust = VotVocabVersion.V1.normaliseVector(vtrSummary.effectiveVector());
         this.clientName = clientName;
     }
 
@@ -60,10 +74,6 @@ public class ClientSession {
         return creationDate;
     }
 
-    public List<VectorOfTrust> getVtrList() {
-        return vtrList;
-    }
-
     public Subject getDocAppSubjectId() {
         return docAppSubjectId;
     }
@@ -77,10 +87,14 @@ public class ClientSession {
         return clientName;
     }
 
+    public VtrSummary getVtrSummary() {
+        return vtrSummary;
+    }
+
     public String getVtrLocsAsCommaSeparatedString() {
-        List<VectorOfTrust> orderedVtrList = VectorOfTrust.orderVtrList(this.vtrList);
+        List<VectorOfTrustLegacy> orderedVtrList = VectorOfTrustLegacy.orderVtrList(this.vtrList);
         StringBuilder strBuilder = new StringBuilder();
-        for (VectorOfTrust vtr : orderedVtrList) {
+        for (VectorOfTrustLegacy vtr : orderedVtrList) {
             String loc =
                     vtr.containsLevelOfConfidence()
                             ? vtr.getLevelOfConfidence().getValue()

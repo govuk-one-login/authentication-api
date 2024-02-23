@@ -22,7 +22,7 @@ import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.Session;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.VectorOfTrustLegacy;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
@@ -41,7 +41,6 @@ import uk.gov.di.orchestration.shared.services.SessionService;
 import java.net.URI;
 import java.util.Objects;
 
-import static java.util.Objects.isNull;
 import static uk.gov.di.orchestration.shared.conditions.DocAppUserHelper.isDocCheckingAppUserWithSubjectId;
 import static uk.gov.di.orchestration.shared.domain.RequestHeaders.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
@@ -325,8 +324,8 @@ public class AuthCodeHandler
             throw new ProcessAuthRequestException(400, ErrorResponse.ERROR_1016);
         }
         CredentialTrustLevel lowestRequestedCredentialTrustLevel =
-                VectorOfTrust.getLowestCredentialTrustLevel(clientSession.getVtrList());
-        if (isNull(session.getCurrentCredentialStrength())
+                VectorOfTrustLegacy.getLowestCredentialTrustLevel(clientSession.getVtrList());
+        if (Objects.isNull(session.getCurrentCredentialStrength())
                 || lowestRequestedCredentialTrustLevel.compareTo(
                                 session.getCurrentCredentialStrength())
                         > 0) {

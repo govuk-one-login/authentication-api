@@ -86,7 +86,7 @@ public class SerializationService implements Json {
     }
 
     public static SerializationService getInstance() {
-        if (isNull(INSTANCE)) {
+        if (INSTANCE.isNull()) {
             INSTANCE = new SerializationService();
         }
         return INSTANCE;

@@ -16,7 +16,7 @@ public class RequiredFieldValidator implements Validator {
 
     @Override
     public List<String> validate(Object object) {
-        if (isNull(object)) throw new IllegalArgumentException("Cannot validate a null object");
+        if (object.isNull()) throw new IllegalArgumentException("Cannot validate a null object");
         List<String> violations = new ArrayList<>();
         Class clazz = object.getClass();
         while (nonNull(clazz)) {
@@ -34,7 +34,7 @@ public class RequiredFieldValidator implements Validator {
                 var accessible = field.canAccess(object);
                 try {
                     if (!accessible) field.trySetAccessible();
-                    if (field.isAnnotationPresent(Required.class) && isNull(field.get(object))) {
+                    if (field.isAnnotationPresent(Required.class) && field.get(object).isNull()) {
                         violations.add(field.getName());
                     }
                 } catch (IllegalAccessException e) {

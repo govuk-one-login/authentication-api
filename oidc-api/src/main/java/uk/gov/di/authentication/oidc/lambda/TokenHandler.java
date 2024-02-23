@@ -23,7 +23,11 @@ import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.VectorOfTrustLegacy;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VotConstants;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VtrRequest;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VtrSummary;
 import uk.gov.di.orchestration.shared.exceptions.InvalidRedirectUriException;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthInvalidException;
 import uk.gov.di.orchestration.shared.exceptions.TokenAuthUnsupportedMethodException;
@@ -332,7 +336,7 @@ public class TokenHandler
     }
 
     private OIDCClaimsRequest getClaimsRequest(
-            VectorOfTrust vtr, AuthenticationRequest authRequest) {
+            VectorOfTrustLegacy vtr, AuthenticationRequest authRequest) {
         OIDCClaimsRequest claimsRequest = null;
         if (Objects.nonNull(vtr.getLevelOfConfidence())
                 && Objects.nonNull(authRequest.getOIDCClaims())) {
@@ -352,13 +356,13 @@ public class TokenHandler
             additionalTokenClaims.put("nonce", authRequest.getNonce());
         }
 
-        VectorOfTrust vtr = VectorOfTrust.orderVtrList(clientSession.getVtrList()).get(0);
-        String vot = vtr.retrieveVectorOfTrustForToken();
+        VtrSummary vtrSummary = clientSession.getVtrSummary();
 
+        // chosen or normalised ?
         final OIDCClaimsRequest finalClaimsRequest = getClaimsRequest(vtr, authRequest);
 
         var isConsentRequired =
-                clientRegistry.isConsentRequired() && !vtr.containsLevelOfConfidence();
+                clientRegistry.isConsentRequired() && vtrSummary.requestVersion().requiresIdentityCheck(vtrSummary.effectiveVector());
         OIDCTokenResponse tokenResponse;
         if (isDocCheckingAppUserWithSubjectId(clientSession)) {
             tokenResponse =
@@ -378,7 +382,7 @@ public class TokenHandler
                                             true,
                                             signingAlgorithm,
                                             authCodeExchangeData.getClientSessionId(),
-                                            vot));
+                                            vtrSummary.chosenVector()));
         } else {
             UserProfile userProfile =
                     dynamoService.getUserProfileByEmail(authCodeExchangeData.getEmail());
@@ -410,7 +414,7 @@ public class TokenHandler
                                             false,
                                             signingAlgorithm,
                                             authCodeExchangeData.getClientSessionId(),
-                                            vot));
+                                            vtrSummary.effectiveVector()));
         }
         return tokenResponse;
     }

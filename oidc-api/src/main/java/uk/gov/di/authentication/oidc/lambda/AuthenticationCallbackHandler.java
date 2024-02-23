@@ -34,7 +34,7 @@ import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.Session.AccountState;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.VectorOfTrustLegacy;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
@@ -62,7 +62,6 @@ import java.util.Objects;
 
 import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.GET;
 import static java.lang.String.format;
-import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static uk.gov.di.orchestration.shared.conditions.DocAppUserHelper.isDocCheckingAppUserWithSubjectId;
 import static uk.gov.di.orchestration.shared.conditions.IdentityHelper.identityRequired;
@@ -389,7 +388,7 @@ public class AuthenticationCallbackHandler
                             clientSessionId,
                             persistentSessionId,
                             reproveIdentity,
-                            VectorOfTrust.getRequestedLevelsOfConfidence(
+                            VectorOfTrustLegacy.getRequestedLevelsOfConfidence(
                                     clientSession.getVtrList()));
                 }
 
@@ -400,8 +399,8 @@ public class AuthenticationCallbackHandler
                 LOG.info("Redirecting to: {} with state: {}", clientRedirectURI, state);
 
                 CredentialTrustLevel lowestRequestedCredentialTrustLevel =
-                        VectorOfTrust.getLowestCredentialTrustLevel(clientSession.getVtrList());
-                if (isNull(userSession.getCurrentCredentialStrength())
+                        VectorOfTrustLegacy.getLowestCredentialTrustLevel(clientSession.getVtrList());
+                if (Objects.isNull(userSession.getCurrentCredentialStrength())
                         || lowestRequestedCredentialTrustLevel.compareTo(
                                         userSession.getCurrentCredentialStrength())
                                 > 0) {
@@ -507,14 +506,14 @@ public class AuthenticationCallbackHandler
             LOG.info(
                     "No mfa method to set. User is either authenticated or signing in from a low level service");
         }
-        var orderedVtrList = VectorOfTrust.orderVtrList(clientSession.getVtrList());
+        var orderedVtrList = VectorOfTrustLegacy.orderVtrList(clientSession.getVtrList());
         var mfaRequired = MfaHelper.mfaRequired(orderedVtrList);
 
         var levelOfConfidence = LevelOfConfidence.NONE.getValue();
         // Assumption: Requested vectors of trust will either all be for identity or none, and so we
         // can check just the first
         if (orderedVtrList.get(0).containsLevelOfConfidence()) {
-            levelOfConfidence = VectorOfTrust.stringifyLevelsOfConfidence(orderedVtrList);
+            levelOfConfidence = VectorOfTrustLegacy.stringifyLevelsOfConfidence(orderedVtrList);
         }
         dimensions.put("MfaRequired", mfaRequired ? "Yes" : "No");
         dimensions.put("RequestedLevelOfConfidence", format("%s", levelOfConfidence));

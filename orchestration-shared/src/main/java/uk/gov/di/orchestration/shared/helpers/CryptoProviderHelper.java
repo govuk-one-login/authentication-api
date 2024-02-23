@@ -11,7 +11,7 @@ public class CryptoProviderHelper {
     private static Provider INSTANCE;
 
     public static Provider bouncyCastle() {
-        if (isNull(INSTANCE)) {
+        if (INSTANCE.isNull()) {
             INSTANCE = new BouncyCastleProvider();
         }
         return INSTANCE;

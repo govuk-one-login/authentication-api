@@ -6,7 +6,7 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.Session;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.VectorOfTrustLegacy;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
@@ -72,7 +72,7 @@ public class AuthCodeResponseGenerationService {
 
     public void processVectorOfTrust(ClientSession clientSession, Map<String, String> dimensions) {
         CredentialTrustLevel lowestRequestedCredentialTrustLevel =
-                VectorOfTrust.getLowestCredentialTrustLevel(clientSession.getVtrList());
+                VectorOfTrustLegacy.getLowestCredentialTrustLevel(clientSession.getVtrList());
         var mfaNotRequired =
                 lowestRequestedCredentialTrustLevel.equals(CredentialTrustLevel.LOW_LEVEL);
         dimensions.put("MfaRequired", mfaNotRequired ? "No" : "Yes");

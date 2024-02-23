@@ -23,7 +23,8 @@ import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.Session;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.VectorOfTrustLegacy;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VtrSummary;
 import uk.gov.di.orchestration.shared.state.UserContext;
 
 import java.net.URI;
@@ -178,7 +179,7 @@ class DocAppUserHelperTest {
                 new ClientSession(
                         authRequest.toParameters(),
                         LocalDateTime.now(),
-                        List.of(VectorOfTrust.getDefaults()),
+                        new VtrSummary(/*TODO*/),
                         CLIENT_NAME);
         subject.ifPresent(clientSession::setDocAppSubjectId);
         var clientRegistry =

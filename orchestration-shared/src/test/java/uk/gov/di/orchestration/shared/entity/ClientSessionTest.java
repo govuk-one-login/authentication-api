@@ -33,7 +33,7 @@ class ClientSessionTest {
     @ParameterizedTest
     @MethodSource("lowestCtrTestCases")
     void shouldCorrectlyFindVtrWithLowestCredentialTrustLevelFromList(
-            List<VectorOfTrust> vtrList, CredentialTrustLevel expectedCtl) {
+            List<VectorOfTrustLegacy> vtrList, CredentialTrustLevel expectedCtl) {
 
         ClientSession clientSession =
                 new ClientSession(
@@ -42,7 +42,7 @@ class ClientSessionTest {
                         vtrList,
                         CLIENT_NAME);
 
-        var lowestVtr = VectorOfTrust.getLowestCredentialTrustLevel(clientSession.getVtrList());
+        var lowestVtr = VectorOfTrustLegacy.getLowestCredentialTrustLevel(clientSession.getVtrList());
 
         assertThat(lowestVtr.getValue(), equalTo(expectedCtl.getValue()));
     }
@@ -50,7 +50,7 @@ class ClientSessionTest {
     @ParameterizedTest
     @MethodSource("locsCssTestCases")
     void shouldCorrectlyCreateVtrLevelsOfConfidenceAsCommaSeparatedString(
-            List<VectorOfTrust> vtrList, String expectedCss) {
+            List<VectorOfTrustLegacy> vtrList, String expectedCss) {
 
         ClientSession clientSession =
                 new ClientSession(
@@ -77,7 +77,7 @@ class ClientSessionTest {
                 assertThrows(
                         IllegalArgumentException.class,
                         () ->
-                                VectorOfTrust.getLowestCredentialTrustLevel(
+                                VectorOfTrustLegacy.getLowestCredentialTrustLevel(
                                         clientSession.getVtrList()));
 
         assertEquals("Invalid VTR attribute", exception.getMessage());
@@ -99,58 +99,58 @@ class ClientSessionTest {
         return Stream.of(
                 arguments(
                         List.of(
-                                VectorOfTrust.of(
+                                VectorOfTrustLegacy.of(
                                         CredentialTrustLevel.LOW_LEVEL,
                                         LevelOfConfidence.getDefault()),
-                                VectorOfTrust.of(
+                                VectorOfTrustLegacy.of(
                                         CredentialTrustLevel.MEDIUM_LEVEL,
                                         LevelOfConfidence.getDefault())),
                         CredentialTrustLevel.LOW_LEVEL),
                 arguments(
                         List.of(
-                                VectorOfTrust.of(
+                                VectorOfTrustLegacy.of(
                                         CredentialTrustLevel.LOW_LEVEL,
                                         LevelOfConfidence.getDefault()),
-                                VectorOfTrust.of(
+                                VectorOfTrustLegacy.of(
                                         CredentialTrustLevel.LOW_LEVEL,
                                         LevelOfConfidence.getDefault())),
                         CredentialTrustLevel.LOW_LEVEL),
                 arguments(
                         List.of(
-                                VectorOfTrust.of(
+                                VectorOfTrustLegacy.of(
                                         CredentialTrustLevel.MEDIUM_LEVEL,
                                         LevelOfConfidence.getDefault()),
-                                VectorOfTrust.of(
+                                VectorOfTrustLegacy.of(
                                         CredentialTrustLevel.MEDIUM_LEVEL,
                                         LevelOfConfidence.getDefault())),
                         CredentialTrustLevel.MEDIUM_LEVEL),
                 arguments(
                         List.of(
-                                VectorOfTrust.of(
+                                VectorOfTrustLegacy.of(
                                         CredentialTrustLevel.MEDIUM_LEVEL,
                                         LevelOfConfidence.getDefault()),
-                                VectorOfTrust.of(
+                                VectorOfTrustLegacy.of(
                                         CredentialTrustLevel.LOW_LEVEL,
                                         LevelOfConfidence.getDefault()),
-                                VectorOfTrust.of(
+                                VectorOfTrustLegacy.of(
                                         CredentialTrustLevel.MEDIUM_LEVEL,
                                         LevelOfConfidence.getDefault()),
-                                VectorOfTrust.of(
+                                VectorOfTrustLegacy.of(
                                         CredentialTrustLevel.MEDIUM_LEVEL,
                                         LevelOfConfidence.getDefault())),
                         CredentialTrustLevel.LOW_LEVEL),
                 arguments(
                         List.of(
-                                VectorOfTrust.of(
+                                VectorOfTrustLegacy.of(
                                         CredentialTrustLevel.MEDIUM_LEVEL,
                                         LevelOfConfidence.getDefault()),
-                                VectorOfTrust.of(
+                                VectorOfTrustLegacy.of(
                                         CredentialTrustLevel.LOW_LEVEL,
                                         LevelOfConfidence.getDefault()),
-                                VectorOfTrust.of(
+                                VectorOfTrustLegacy.of(
                                         CredentialTrustLevel.LOW_LEVEL,
                                         LevelOfConfidence.getDefault()),
-                                VectorOfTrust.of(
+                                VectorOfTrustLegacy.of(
                                         CredentialTrustLevel.LOW_LEVEL,
                                         LevelOfConfidence.getDefault())),
                         CredentialTrustLevel.LOW_LEVEL));
@@ -160,31 +160,31 @@ class ClientSessionTest {
         return Stream.of(
                 arguments(
                         List.of(
-                                VectorOfTrust.of(
+                                VectorOfTrustLegacy.of(
                                         CredentialTrustLevel.getDefault(),
                                         LevelOfConfidence.HIGH_LEVEL)),
                         "P3"),
                 arguments(
                         List.of(
-                                VectorOfTrust.of(
+                                VectorOfTrustLegacy.of(
                                         CredentialTrustLevel.getDefault(),
                                         LevelOfConfidence.getDefault()),
-                                VectorOfTrust.of(
+                                VectorOfTrustLegacy.of(
                                         CredentialTrustLevel.getDefault(),
                                         LevelOfConfidence.getDefault())),
                         "P2,P2"),
                 arguments(
                         List.of(
-                                VectorOfTrust.of(
+                                VectorOfTrustLegacy.of(
                                         CredentialTrustLevel.getDefault(),
                                         LevelOfConfidence.VERY_HIGH_LEVEL),
-                                VectorOfTrust.of(
+                                VectorOfTrustLegacy.of(
                                         CredentialTrustLevel.getDefault(),
                                         LevelOfConfidence.LOW_LEVEL),
-                                VectorOfTrust.of(
+                                VectorOfTrustLegacy.of(
                                         CredentialTrustLevel.getDefault(),
                                         LevelOfConfidence.MEDIUM_LEVEL),
-                                VectorOfTrust.of(
+                                VectorOfTrustLegacy.of(
                                         CredentialTrustLevel.getDefault(),
                                         LevelOfConfidence.LOW_LEVEL)),
                         "P1,P1,P2,P4"));

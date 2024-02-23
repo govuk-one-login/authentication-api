@@ -3,7 +3,8 @@ package uk.gov.di.orchestration.shared.services;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.VectorOfTrustLegacy;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VtrSummary;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
@@ -48,12 +49,22 @@ public class ClientSessionService {
         objectMapper = SerializationService.getInstance();
     }
 
-    public ClientSession generateClientSession(
+    /*public ClientSession generateClientSession(
             Map<String, List<String>> authRequestParams,
             LocalDateTime creationDate,
             List<VectorOfTrust> vtrList,
+            VectorOfTrustLegacy effectiveVectorOfTrust,
             String clientName) {
-        return new ClientSession(authRequestParams, creationDate, vtrList, clientName);
+        return new ClientSession(
+                authRequestParams, creationDate, List.of(effectiveVectorOfTrust), clientName);
+    }*/
+
+    public ClientSession generateClientSession(
+            Map<String, List<String>> authRequestParams,
+            LocalDateTime creationDate,
+            VtrSummary vtrSummary,
+            String clientName) {
+        return new ClientSession(authRequestParams, creationDate, vtrSummary, clientName);
     }
 
     public void storeClientSession(String clientSessionId, ClientSession clientSession) {

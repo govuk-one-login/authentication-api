@@ -5,301 +5,189 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.AuthId;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.IdentId;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VotComponent;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevel.LOW_LEVEL;
-import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
-import static uk.gov.di.orchestration.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 
-class VectorOfTrustTest {
+import static uk.gov.di.orchestration.shared.entity.vectoroftrust.VotConstants.C_EMPTY;
+import static uk.gov.di.orchestration.shared.entity.vectoroftrust.VotConstants.C_LOW;
+import static uk.gov.di.orchestration.shared.entity.vectoroftrust.VotConstants.C_LOW_LEGACY;
+import static uk.gov.di.orchestration.shared.entity.vectoroftrust.VotConstants.C_MEDIUM;
+import static uk.gov.di.orchestration.shared.entity.vectoroftrust.VotConstants.C_MEDIUM_LEGACY;
+import static uk.gov.di.orchestration.shared.entity.vectoroftrust.VotConstants.P_EMPTY;
+import static uk.gov.di.orchestration.shared.entity.vectoroftrust.VotConstants.P_HMRC250;
+import static uk.gov.di.orchestration.shared.entity.vectoroftrust.VotConstants.P_MEDIUM;
+import static uk.gov.di.orchestration.shared.entity.vectoroftrust.VotConstants.P_NONE;
+
+public class VectorOfTrustTest {
+    @Test
+    void emptyShouldReturnAVectorWithEmptyComponents() {
+        var vector = VectorOfTrust.empty();
+        assertThat(vector.authComponent(), is(empty()));
+        assertThat(vector.identComponent(), is(empty()));
+    }
 
     @Test
-    void shouldParseValidStringWithSingleVector() {
-        var jsonArray = jsonArrayOf("Cl.Cm");
-        List<VectorOfTrust> vectorsOfTrust =
-                VectorOfTrust.parseFromAuthRequestAttribute(Collections.singletonList(jsonArray));
-        assertThat(vectorsOfTrust.get(0).getCredentialTrustLevel(), equalTo(MEDIUM_LEVEL));
-        assertNull(vectorsOfTrust.get(0).getLevelOfConfidence());
-        assertThat(vectorsOfTrust.size(), equalTo(1));
+    void ofAuthComponentShouldReturnAVectorWithOnlyTheGivenCredentialComponent() {
+        var vector = VectorOfTrust.ofAuthComponent(C_MEDIUM_LEGACY);
+        assertThat(vector.authComponent(), is(equalTo(C_MEDIUM_LEGACY)));
+        assertThat(vector.identComponent(), is(empty()));
+    }
+
+    @Test
+    void ofIdentComponentShouldReturnAVectorWithOnlyTheGivenCredentialComponent() {
+        var vector = VectorOfTrust.ofIdentComponent(P_MEDIUM);
+        assertThat(vector.authComponent(), is(empty()));
+        assertThat(vector.identComponent(), is(equalTo(P_MEDIUM)));
     }
 
     @ParameterizedTest
-    @MethodSource("validListCombinations")
-    void shouldParseValidStringWithMultipleVectors(String jsonArray, List<VectorOfTrust> expected) {
-        List<VectorOfTrust> vectorsOfTrust =
-                VectorOfTrust.parseFromAuthRequestAttribute(Collections.singletonList(jsonArray));
-        assertThat(vectorsOfTrust, equalTo(expected));
+    @MethodSource("equalsAndHashCodeTestCases")
+    void equalsAndHashCodeShouldBehaveCorrectly(VectorOfTrust vector1, VectorOfTrust vector2, boolean areEqual) {
+        assertThat(vector1.equals(vector2), is(equalTo(areEqual)));
+        assertThat(vector2.equals(vector1), is(equalTo(areEqual)));
+
+        if (areEqual) {
+            assertThat(vector1.hashCode(), is(equalTo(vector1.hashCode())));
+        }
     }
 
-    public static Stream<Arguments> validListCombinations() {
+    static Stream<Arguments> equalsAndHashCodeTestCases() {
+        var vectorClCmP0A = new VectorOfTrust(C_MEDIUM_LEGACY, P_NONE);
+        var vectorClCmP0B = new VectorOfTrust(C_MEDIUM_LEGACY, P_NONE);
+        var vectorC1P0A = new VectorOfTrust(C_LOW, P_NONE);
+        var vectorC1P0B = new VectorOfTrust(C_LOW, P_NONE);
+        var vectorClCmP2A = new VectorOfTrust(C_MEDIUM_LEGACY, P_MEDIUM);
+        var vectorClCmP2B = new VectorOfTrust(C_MEDIUM_LEGACY, P_MEDIUM);
+        var vectorC1P2A = new VectorOfTrust(C_LOW, P_MEDIUM);
+        var vectorC1P2B = new VectorOfTrust(C_LOW, P_MEDIUM);
+        var vectorClCmEmptyA = new VectorOfTrust(C_MEDIUM_LEGACY, P_EMPTY);
+        var vectorClCmEmptyB = new VectorOfTrust(C_MEDIUM_LEGACY, P_EMPTY);
+        var vectorEmptyP0A = new VectorOfTrust(C_EMPTY, P_NONE);
+        var vectorEmptyP0B = new VectorOfTrust(C_EMPTY, P_NONE);
+        var vectorEmptyEmptyA = new VectorOfTrust(C_EMPTY, P_EMPTY);
+        var vectorEmptyEmptyB = new VectorOfTrust(C_EMPTY, P_EMPTY);
+
         return Stream.of(
-                Arguments.of(jsonArrayOf("Cl.Cm"), List.of(VectorOfTrust.of(MEDIUM_LEVEL, null))),
-                Arguments.of(
-                        jsonArrayOf("PCL200.Cl.Cm", "PCL250.Cl.Cm"),
-                        List.of(
-                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.HMRC200),
-                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.HMRC250))),
-                Arguments.of(
-                        jsonArrayOf("PCL200.Cl.Cm", "P2.Cl.Cm"),
-                        List.of(
-                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.HMRC200),
-                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL))),
-                Arguments.of(
-                        jsonArrayOf("PCL250.Cl.Cm", "Cl.P2.Cm", "Cm.Cl.PCL200"),
-                        List.of(
-                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.HMRC250),
-                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
-                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.HMRC200))),
-                Arguments.of(
-                        jsonArrayOf("Cl", "Cl.Cm"),
-                        List.of(
-                                VectorOfTrust.of(LOW_LEVEL, null),
-                                VectorOfTrust.of(MEDIUM_LEVEL, null))));
-    }
-
-    @Test
-    void shouldReturnDefaultVectorWhenEmptyListIsPassedIn() {
-        List<VectorOfTrust> vectorsOfTrust =
-                VectorOfTrust.parseFromAuthRequestAttribute(new ArrayList<>());
-        MatcherAssert.assertThat(
-                vectorsOfTrust.get(0).getCredentialTrustLevel(),
-                equalTo(CredentialTrustLevel.getDefault()));
-        assertNull(vectorsOfTrust.get(0).getLevelOfConfidence());
-    }
-
-    @Test
-    void shouldParseValidStringWithSingleIdentityVector() {
-        var jsonArray = jsonArrayOf("P2.Cl.Cm");
-        List<VectorOfTrust> vectorsOfTrust =
-                VectorOfTrust.parseFromAuthRequestAttribute(Collections.singletonList(jsonArray));
-        assertThat(vectorsOfTrust.get(0).getCredentialTrustLevel(), equalTo(MEDIUM_LEVEL));
-        assertThat(
-                vectorsOfTrust.get(0).getLevelOfConfidence(),
-                equalTo(LevelOfConfidence.MEDIUM_LEVEL));
-    }
-
-    @Test
-    void shouldReturnOnlyLevelsOfConfidenceWhenRequested() {
-        var vtrList =
-                List.of(
-                        VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
-                        VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.LOW_LEVEL));
-        var levelsOfConfidence = VectorOfTrust.getRequestedLevelsOfConfidence(vtrList);
-        assertThat(levelsOfConfidence, equalTo(List.of("P2", "P1")));
+                arguments(vectorClCmP0A, vectorClCmP0B, true),
+                arguments(vectorC1P0A, vectorC1P0B, true),
+                arguments(vectorClCmP2A, vectorClCmP2B, true),
+                arguments(vectorC1P2A, vectorC1P2B, true),
+                arguments(vectorClCmEmptyA, vectorClCmEmptyB, true),
+                arguments(vectorEmptyP0A, vectorEmptyP0B, true),
+                arguments(vectorEmptyEmptyA, vectorEmptyEmptyB, true),
+                arguments(vectorClCmP0A, vectorC1P0A, false),
+                arguments(vectorClCmP0A, vectorClCmP2A, false),
+                arguments(vectorClCmP0A, vectorC1P2A, false),
+                arguments(vectorClCmP0A, vectorClCmEmptyA, false),
+                arguments(vectorClCmP0A, vectorEmptyP0A, false),
+                arguments(vectorClCmP0A, vectorEmptyEmptyA, false),
+                arguments(vectorC1P0A, vectorClCmP2A, false),
+                arguments(vectorC1P0A, vectorC1P2A, false),
+                arguments(vectorC1P0A, vectorClCmEmptyA, false),
+                arguments(vectorC1P0A, vectorEmptyP0A, false),
+                arguments(vectorC1P0A, vectorEmptyEmptyA, false),
+                arguments(vectorClCmP2A, vectorC1P2A, false),
+                arguments(vectorClCmP2A, vectorClCmEmptyA, false),
+                arguments(vectorClCmP2A, vectorEmptyP0A, false),
+                arguments(vectorClCmP2A, vectorEmptyEmptyA, false),
+                arguments(vectorC1P2A, vectorClCmEmptyA, false),
+                arguments(vectorC1P2A, vectorEmptyP0A, false),
+                arguments(vectorC1P2A, vectorEmptyEmptyA, false),
+                arguments(vectorClCmEmptyA, vectorEmptyP0A, false),
+                arguments(vectorClCmEmptyA, vectorEmptyEmptyA, false));
     }
 
     @ParameterizedTest
-    @MethodSource("vtrListsWithLowestCredentialTrustVtrs")
-    void shouldReturnCredentialTrustLevelOfLowestVot(
-            List<VectorOfTrust> vtrList, CredentialTrustLevel expected) {
-        var lowestCredentialLevel = VectorOfTrust.getLowestCredentialTrustLevel(vtrList);
-        assertThat(lowestCredentialLevel, equalTo(expected));
+    @MethodSource("parseTestCases")
+    void parseShouldReturnCorrectVectorOfTrust(String input, VectorOfTrust expected) {
+        MatcherAssert.assertThat(VectorOfTrust.parse(input), is(equalTo(expected)));
     }
 
-    private static Stream<Arguments> vtrListsWithLowestCredentialTrustVtrs() {
+    static Stream<Arguments> parseTestCases() {
         return Stream.of(
-                Arguments.of(
-                        List.of(
-                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
-                                VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.LOW_LEVEL)),
-                        LOW_LEVEL),
-                Arguments.of(
-                        List.of(
-                                VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.LOW_LEVEL),
-                                VectorOfTrust.of(MEDIUM_LEVEL, null)),
-                        MEDIUM_LEVEL),
-                Arguments.of(
-                        List.of(VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.NONE)), LOW_LEVEL));
+                arguments(
+                        "",
+                        new VectorOfTrust(
+                                VotComponent.empty(AuthId.class),
+                                VotComponent.empty(IdentId.class))),
+                arguments(
+                        "Cl",
+                        new VectorOfTrust(
+                                VotComponent.of(AuthId.CL),
+                                VotComponent.empty(IdentId.class))),
+                arguments(
+                        "Cl.Cm",
+                        new VectorOfTrust(
+                                VotComponent.of(AuthId.CL, AuthId.CM),
+                                VotComponent.empty(IdentId.class))),
+                arguments(
+                        "P0",
+                        new VectorOfTrust(
+                                VotComponent.empty(AuthId.class),
+                                VotComponent.of(IdentId.P0))),
+                arguments(
+                        "Cl.Cm.P2",
+                        new VectorOfTrust(
+                                VotComponent.of(AuthId.CL, AuthId.CM),
+                                VotComponent.of(IdentId.P2))),
+                arguments(
+                        "Cm.P2.Cl",
+                        new VectorOfTrust(
+                                VotComponent.of(AuthId.CL, AuthId.CM),
+                                VotComponent.of(IdentId.P2))),
+                arguments(
+                        "PCL250.C2",
+                        new VectorOfTrust(
+                                VotComponent.of(AuthId.C2),
+                                VotComponent.of(IdentId.PCL250))));
     }
 
     @ParameterizedTest
-    @MethodSource("vtrListsToOrder")
-    void shouldOrderVtrListsBasedOnLocThenCtl(
-            List<VectorOfTrust> vtrList, List<VectorOfTrust> expected) {
-        var orderedList = VectorOfTrust.orderVtrList(vtrList);
-        assertThat(orderedList, equalTo(expected));
+    @MethodSource("throwUnknownId")
+    void parseShouldThrowWhenUnknownIdIsProvided(String invalid) {
+        assertThrows(IllegalArgumentException.class, () -> VectorOfTrust.parse(invalid));
     }
 
-    private static Stream<Arguments> vtrListsToOrder() {
+    static Stream<Arguments> throwUnknownId() {
         return Stream.of(
-                Arguments.of(
-                        List.of(
-                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
-                                VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.LOW_LEVEL)),
-                        List.of(
-                                VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.LOW_LEVEL),
-                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL))),
-                Arguments.of(
-                        List.of(
-                                VectorOfTrust.of(MEDIUM_LEVEL, null),
-                                VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.LOW_LEVEL)),
-                        List.of(
-                                VectorOfTrust.of(MEDIUM_LEVEL, null),
-                                VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.LOW_LEVEL))),
-                Arguments.of(
-                        List.of(
-                                VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
-                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.LOW_LEVEL),
-                                VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.NONE)),
-                        List.of(
-                                VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.NONE),
-                                VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.LOW_LEVEL),
-                                VectorOfTrust.of(LOW_LEVEL, LevelOfConfidence.MEDIUM_LEVEL))));
+                arguments(" "), // unexpected whitespace
+                arguments(" Cl"), // ...
+                arguments("Cl "), // ...
+                arguments("CL"), // wrong case
+                arguments("ClCm"), // bad formatting
+                arguments("Cl Cm"), // ...
+                arguments("Cl..P0"), // ...
+                arguments("."), // ...
+                arguments(".P0"), // ...
+                arguments("P0."), // ...
+                arguments("Clm"), // bad id
+                arguments("HMRC200")); // ...
     }
 
     @ParameterizedTest
-    @MethodSource("invalidVtrValues")
-    void shouldThrowWhenInvalidVtrPassed(String errorMessage, String jsonArray) {
-        var exception =
-                assertThrows(
-                        IllegalArgumentException.class,
-                        () ->
-                                VectorOfTrust.parseFromAuthRequestAttribute(
-                                        Collections.singletonList(jsonArray)));
-        assertThat(exception.getMessage(), equalTo(errorMessage));
+    @MethodSource("toStringTestCases")
+    public void toStringShouldReturnCorrectStringValue(VectorOfTrust input, String expected) {
+        assertThat(input.toString(), is(equalTo(expected)));
     }
 
-    private static Stream<Arguments> invalidVtrValues() {
+    static Stream<Arguments> toStringTestCases() {
         return Stream.of(
-                Arguments.of(
-                        "VTR must contain either 0 or 1 identity proofing components",
-                        jsonArrayOf("P2.P0")),
-                Arguments.of(
-                        "VTR cannot contain both identity and non-identity vectors",
-                        jsonArrayOf("P2.Cl.Cm", "Cl.Cm")),
-                Arguments.of("Invalid CredentialTrustLevel", jsonArrayOf("Cm")),
-                Arguments.of("Invalid CredentialTrustLevel", jsonArrayOf("P2")),
-                Arguments.of("Invalid CredentialTrustLevel", jsonArrayOf("Cl.Cm.Cl")),
-                Arguments.of(
-                        "Invalid LevelOfConfidence provided", jsonArrayOf("P2.Cl.Cm", "P3.Cl")),
-                Arguments.of("Invalid CredentialTrustLevel", jsonArrayOf("Cm")),
-                Arguments.of("Invalid CredentialTrustLevel", jsonArrayOf("")),
-                Arguments.of(
-                        "P2 identity confidence must require at least Cl.Cm credential trust",
-                        jsonArrayOf("P2.Cl")));
-    }
-
-    @ParameterizedTest
-    @MethodSource("validCombinations")
-    void isValidShouldReturnTrueForValidCombinations(
-            CredentialTrustLevel credentialTrustLevel, LevelOfConfidence levelOfConfidence) {
-        var vectorOfTrust = VectorOfTrust.of(credentialTrustLevel, levelOfConfidence);
-
-        assertTrue(vectorOfTrust.isValid());
-    }
-
-    public static Stream<Arguments> validCombinations() {
-        return Stream.of(
-                Arguments.of(LOW_LEVEL, null),
-                Arguments.of(MEDIUM_LEVEL, null),
-                Arguments.of(LOW_LEVEL, LevelOfConfidence.NONE),
-                Arguments.of(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL));
-    }
-
-    @ParameterizedTest
-    @MethodSource("invalidCombinations")
-    void isValidShouldReturnFalseForInvalidCombinations(
-            CredentialTrustLevel credentialTrustLevel, LevelOfConfidence levelOfConfidence) {
-        var vectorOfTrust = VectorOfTrust.of(credentialTrustLevel, levelOfConfidence);
-
-        assertFalse(vectorOfTrust.isValid());
-    }
-
-    public static Stream<Arguments> invalidCombinations() {
-        return Stream.of(
-                Arguments.of(LOW_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
-                Arguments.of(null, LevelOfConfidence.MEDIUM_LEVEL));
-    }
-
-    @Test
-    void shouldNotIncludeIdentityValuesInTokenWhenTheyArePresent() {
-        String vectorString = "P2.Cl.Cm";
-
-        VectorOfTrust vectorOfTrust =
-                VectorOfTrust.parseFromAuthRequestAttribute(
-                                Collections.singletonList(jsonArrayOf(vectorString)))
-                        .get(0);
-        assertThat(vectorOfTrust.retrieveVectorOfTrustForToken(), equalTo("Cl.Cm"));
-    }
-
-    @Test
-    void shouldReturnCorrectCredentialTrustLevelInToken() {
-        String vectorString = "Cl.Cm";
-        VectorOfTrust vectorOfTrust =
-                VectorOfTrust.parseFromAuthRequestAttribute(
-                                Collections.singletonList(jsonArrayOf(vectorString)))
-                        .get(0);
-        assertThat(vectorOfTrust.retrieveVectorOfTrustForToken(), equalTo(vectorString));
-    }
-
-    @Test
-    void shouldReturnTrueWhenIdentityLevelOfConfidenceIsPresent() {
-        String vectorString = "P2.Cl.Cm";
-        VectorOfTrust vectorOfTrust =
-                VectorOfTrust.parseFromAuthRequestAttribute(
-                                Collections.singletonList(jsonArrayOf(vectorString)))
-                        .get(0);
-        assertTrue(vectorOfTrust.containsLevelOfConfidence());
-    }
-
-    @Test
-    void shouldReturnFalseWhenIdentityLevelOfConfidenceIsNotPresent() {
-        String vectorString = "Cl.Cm";
-        VectorOfTrust vectorOfTrust =
-                VectorOfTrust.parseFromAuthRequestAttribute(
-                                Collections.singletonList(jsonArrayOf(vectorString)))
-                        .get(0);
-        assertFalse(vectorOfTrust.containsLevelOfConfidence());
-    }
-
-    @Test
-    void shouldReturnFalseWhenIdentityLevelOfConfidenceIsP0() {
-        String vectorString = "P0.Cl.Cm";
-        VectorOfTrust vectorOfTrust =
-                VectorOfTrust.parseFromAuthRequestAttribute(
-                                Collections.singletonList(jsonArrayOf(vectorString)))
-                        .get(0);
-        assertFalse(vectorOfTrust.containsLevelOfConfidence());
-    }
-
-    @Test
-    void shouldThrowExceptionForEmptyVtrList() {
-        List<VectorOfTrust> vtrList = Collections.emptyList();
-
-        IllegalArgumentException exception =
-                assertThrows(
-                        IllegalArgumentException.class,
-                        () -> VectorOfTrust.getLowestCredentialTrustLevel(vtrList));
-
-        assertEquals("Invalid VTR attribute", exception.getMessage());
-    }
-
-    @ParameterizedTest
-    @MethodSource("equalityTests")
-    void shouldReturnCorrectEquality(String one, String two, boolean areEqual) {
-        var vtrOne = VectorOfTrust.parseFromAuthRequestAttribute(List.of(one));
-        var vtrTwo = VectorOfTrust.parseFromAuthRequestAttribute(List.of(two));
-
-        assertThat(vtrOne.equals(vtrTwo), equalTo(areEqual));
-    }
-
-    public static Stream<Arguments> equalityTests() {
-        return Stream.of(
-                Arguments.of("[\"P2.Cl.Cm\"]", "[\"Cl.Cm.P2\"]", true),
-                Arguments.of("[\"P2.Cm.Cl\"]", "[\"Cl.Cm.P2\"]", true),
-                Arguments.of("[\"Cm.Cl\"]", "[\"Cl.Cm\"]", true),
-                Arguments.of("[\"Cl.Cm\"]", "[\"Cl.Cm.P2\"]", false),
-                Arguments.of("[\"Cl.Cm\"]", "[\"P2.Cl.Cm\"]", false));
+                arguments(new VectorOfTrust(C_EMPTY, P_EMPTY), ""),
+                arguments(new VectorOfTrust(C_LOW_LEGACY, P_EMPTY), "Cl"),
+                arguments(new VectorOfTrust(C_MEDIUM_LEGACY, P_EMPTY), "Cl.Cm"),
+                arguments(new VectorOfTrust(C_EMPTY, P_NONE), "P0"),
+                arguments(new VectorOfTrust(C_MEDIUM_LEGACY, P_MEDIUM), "Cl.Cm.P2"),
+                arguments(new VectorOfTrust(C_MEDIUM, P_HMRC250), "C2.PCL250"));
     }
 }
