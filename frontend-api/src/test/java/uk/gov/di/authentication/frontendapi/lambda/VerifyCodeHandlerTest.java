@@ -239,8 +239,12 @@ class VerifyCodeHandlerTest {
                         pair("notification-type", emailNotificationType.name()),
                         pair(
                                 "account-recovery",
-                                emailNotificationType.equals(
-                                        VERIFY_CHANGE_HOW_GET_SECURITY_CODES)));
+                                emailNotificationType.equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES)),
+                        pair(
+                                "journey-type",
+                                emailNotificationType.equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES)
+                                        ? "ACCOUNT_RECOVERY"
+                                        : "REGISTRATION"));
     }
 
     @ParameterizedTest
@@ -253,6 +257,13 @@ class VerifyCodeHandlerTest {
 
         APIGatewayProxyResponseEvent result =
                 makeCallWithCode(INVALID_CODE, emailNotificationType.toString());
+
+        String expectedJourneyType =
+                switch (emailNotificationType) {
+                    case VERIFY_CHANGE_HOW_GET_SECURITY_CODES -> "ACCOUNT_RECOVERY";
+                    case VERIFY_EMAIL -> "REGISTRATION";
+                    default -> null;
+                };
 
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1036));
@@ -271,8 +282,8 @@ class VerifyCodeHandlerTest {
                         pair("notification-type", emailNotificationType.name()),
                         pair(
                                 "account-recovery",
-                                emailNotificationType.equals(
-                                        VERIFY_CHANGE_HOW_GET_SECURITY_CODES)));
+                                emailNotificationType.equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES)),
+                        pair("journey-type", expectedJourneyType));
     }
 
     @ParameterizedTest
@@ -312,7 +323,8 @@ class VerifyCodeHandlerTest {
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("notification-type", VERIFY_EMAIL.name()),
-                        pair("account-recovery", false));
+                        pair("account-recovery", false),
+                        pair("journey-type", "REGISTRATION"));
     }
 
     @ParameterizedTest
@@ -352,7 +364,8 @@ class VerifyCodeHandlerTest {
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("notification-type", VERIFY_EMAIL.name()),
-                        pair("account-recovery", false));
+                        pair("account-recovery", false),
+                        pair("journey-type", "REGISTRATION"));
     }
 
     @Test
@@ -384,7 +397,8 @@ class VerifyCodeHandlerTest {
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("notification-type", VERIFY_EMAIL.name()),
-                        pair("account-recovery", false));
+                        pair("account-recovery", false),
+                        pair("journey-type", "REGISTRATION"));
     }
 
     @Test
@@ -463,7 +477,8 @@ class VerifyCodeHandlerTest {
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("notification-type", VERIFY_CHANGE_HOW_GET_SECURITY_CODES.name()),
-                        pair("account-recovery", true));
+                        pair("account-recovery", true),
+                        pair("journey-type", "ACCOUNT_RECOVERY"));
     }
 
     @ParameterizedTest
@@ -502,7 +517,10 @@ class VerifyCodeHandlerTest {
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
                         pair("account-recovery", false),
                         pair("loginFailureCount", 0),
-                        pair("MFACodeEntered", "123456"));
+                        pair("MFACodeEntered", "123456"),
+                        pair(
+                                "journey-type",
+                                journeyType != null ? String.valueOf(journeyType) : "SIGN_IN"));
         verify(auditService)
                 .submitAuditEvent(
                         FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_REMOVED,
@@ -551,7 +569,8 @@ class VerifyCodeHandlerTest {
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
                         pair("account-recovery", false),
                         pair("loginFailureCount", 0),
-                        pair("MFACodeEntered", "123456"));
+                        pair("MFACodeEntered", "123456"),
+                        pair("journey-type", "SIGN_IN"));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
                         Session.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false, true);
@@ -584,7 +603,8 @@ class VerifyCodeHandlerTest {
                         pair("account-recovery", false),
                         pair("loginFailureCount", 0),
                         pair("MFACodeEntered", "6543221"),
-                        pair("MaxSmsCount", configurationService.getCodeMaxRetries()));
+                        pair("MaxSmsCount", configurationService.getCodeMaxRetries()),
+                        pair("journey-type", "SIGN_IN"));
     }
 
     @ParameterizedTest
@@ -625,7 +645,10 @@ class VerifyCodeHandlerTest {
                         pair("account-recovery", false),
                         pair("loginFailureCount", 0),
                         pair("MFACodeEntered", "6543221"),
-                        pair("MaxSmsCount", configurationService.getCodeMaxRetries()));
+                        pair("MaxSmsCount", configurationService.getCodeMaxRetries()),
+                        pair(
+                                "journey-type",
+                                journeyType != null ? String.valueOf(journeyType) : "SIGN_IN"));
     }
 
     @Test
@@ -660,7 +683,8 @@ class VerifyCodeHandlerTest {
                         AuditService.UNKNOWN,
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("notification-type", RESET_PASSWORD_WITH_CODE.name()),
-                        pair("account-recovery", false));
+                        pair("account-recovery", false),
+                        pair("journey-type", "PASSWORD_RESET"));
     }
 
     @Test
