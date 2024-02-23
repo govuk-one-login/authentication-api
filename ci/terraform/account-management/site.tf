@@ -40,8 +40,7 @@ locals {
     application = "account-management-api"
   }
 
-  request_tracing_allowed  = contains(["build", "sandpit"], var.environment)
-  deploy_mfa_methods_count = contains(["build", "sandpit"], var.environment) ? 1 : 0
+  request_tracing_allowed = contains(["build", "sandpit"], var.environment)
 
   access_logging_template = jsonencode({
     requestId                    = "$context.requestId"

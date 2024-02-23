@@ -68,7 +68,7 @@ EOF
 resource "aws_cloudwatch_log_subscription_filter" "authorizer_log_subscription" {
   count           = length(var.logging_endpoint_arns)
   name            = "authorizer-log-subscription"
-  log_group_name  = aws_cloudwatch_log_group.lambda_log_group[0].name
+  log_group_name  = aws_cloudwatch_log_group.lambda_log_group.name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
 
@@ -85,7 +85,6 @@ resource "aws_iam_role" "invocation_role" {
 }
 
 resource "aws_cloudwatch_log_group" "lambda_log_group" {
-  count             = var.use_localstack ? 0 : 1
   name              = "/aws/lambda/${aws_lambda_function.authorizer.function_name}"
   tags              = local.default_tags
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
@@ -94,6 +93,11 @@ resource "aws_cloudwatch_log_group" "lambda_log_group" {
   depends_on = [
     aws_lambda_function.authorizer
   ]
+}
+moved {
+  from = aws_cloudwatch_log_group.lambda_log_group[0]
+  to   = aws_cloudwatch_log_group.lambda_log_group
+
 }
 
 resource "aws_iam_policy" "api_gateway_logging_policy" {
@@ -109,65 +113,79 @@ resource "aws_iam_role_policy_attachment" "api_gateway_logging_logs" {
   policy_arn = aws_iam_policy.api_gateway_logging_policy.arn
 }
 
+# Define the modules that will be used to create the API
+# The names of the modules are used to refer to the integration_uri in the openapi.yaml
+locals {
+  endpoint_modules = {
+    authenticate_module          = module.authenticate
+    update-password_module       = module.update_password
+    update-email_module          = module.update_email
+    send-otp-notification_module = module.send_otp_notification
+    delete-account_module        = module.delete_account
+    update-phone-number_module   = module.update_phone_number
+    create-mfa-methods_module    = module.create-mfa-methods
+    delete-mfa-methods_module    = module.delete-mfa-methods
+    update-mfa-method_module     = module.update-mfa-method
+    retrieve-mfa-methods_module  = module.retrieve-mfa-methods
+  }
+}
+locals {
+  template_vars = merge({
+    environment            = var.environment
+    authorizer_uri         = aws_lambda_alias.authorizer_alias.invoke_arn
+    authorizer_credentials = aws_iam_role.invocation_role.arn
+  }, local.endpoint_modules)
+}
+
 resource "aws_api_gateway_rest_api" "di_account_management_api" {
   name = "${var.environment}-di-account-management-api"
 
+  body = templatefile(
+    "${path.module}/openapi.yaml",
+    merge({
+      environment            = var.environment
+      authorizer_uri         = aws_lambda_alias.authorizer_alias.invoke_arn
+      authorizer_credentials = aws_iam_role.invocation_role.arn
+    }, local.endpoint_modules)
+  )
+
   tags = local.default_tags
-}
-
-data "aws_region" "current" {
-}
-
-locals {
-  oidc_api_base_url = var.use_localstack ? "${var.aws_endpoint}/restapis/${aws_api_gateway_rest_api.di_account_management_api.id}/${var.environment}/_user_request_" : "https://${local.oidc_api_fqdn}/"
-}
-
-resource "aws_api_gateway_deployment" "deployment" {
-  rest_api_id = aws_api_gateway_rest_api.di_account_management_api.id
-
-  triggers = {
-    redeployment = sha1(jsonencode([
-      module.authenticate.integration_trigger_value,
-      module.authenticate.method_trigger_value,
-      module.delete_account.integration_trigger_value,
-      module.delete_account.method_trigger_value,
-      module.update_email.integration_trigger_value,
-      module.update_email.method_trigger_value,
-      module.update_password.integration_trigger_value,
-      module.update_password.method_trigger_value,
-      module.update_phone_number.integration_trigger_value,
-      module.update_phone_number.method_trigger_value,
-      module.send_otp_notification.integration_trigger_value,
-      module.send_otp_notification.method_trigger_value,
-      local.deploy_mfa_methods_count == 1 ? module.retrieve-mfa-methods[0].integration_trigger_value : null,
-      local.deploy_mfa_methods_count == 1 ? module.delete-mfa-methods[0].integration_trigger_value : null,
-      local.deploy_mfa_methods_count == 1 ? module.update-mfa-method[0].integration_trigger_value : null,
-      local.deploy_mfa_methods_count == 1 ? module.create-mfa-method[0].integration_trigger_value : null,
-      aws_lambda_alias.authorizer_alias.function_version
-    ]))
-  }
 
   lifecycle {
     create_before_destroy = true
   }
-  depends_on = [
-    module.update_email,
-    module.authenticate,
-  ]
+}
+
+
+resource "aws_lambda_permission" "endpoint_execution_permission" {
+  for_each = local.endpoint_modules
+
+  statement_id  = "AllowInvokeFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = each.value.endpoint_lambda_function.function_name
+  principal     = "apigateway.amazonaws.com"
+  qualifier     = each.value.endpoint_lambda_alias.name
+  source_arn    = "${aws_api_gateway_rest_api.di_account_management_api.execution_arn}/*/*"
+}
+
+locals {
+  oidc_api_base_url = "https://${local.oidc_api_fqdn}/"
 }
 
 resource "aws_cloudwatch_log_group" "account_management_stage_execution_logs" {
-  count = var.use_localstack ? 0 : 1
-
   name              = "API-Gateway-Execution-Logs_${aws_api_gateway_rest_api.di_account_management_api.id}/${var.environment}"
   retention_in_days = var.cloudwatch_log_retention
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
+}
+moved {
+  from = aws_cloudwatch_log_group.account_management_stage_execution_logs[0]
+  to   = aws_cloudwatch_log_group.account_management_stage_execution_logs
 }
 
 resource "aws_cloudwatch_log_subscription_filter" "account_management_execution_log_subscription" {
   count           = length(var.logging_endpoint_arns)
   name            = "${var.environment}-oidc-api-execution-log-subscription"
-  log_group_name  = aws_cloudwatch_log_group.account_management_stage_execution_logs[0].name
+  log_group_name  = aws_cloudwatch_log_group.account_management_stage_execution_logs.name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
 
@@ -177,17 +195,19 @@ resource "aws_cloudwatch_log_subscription_filter" "account_management_execution_
 }
 
 resource "aws_cloudwatch_log_group" "account_management_access_logs" {
-  count = var.use_localstack ? 0 : 1
-
   name              = "${var.environment}-account-management_-api-access-logs"
   retention_in_days = var.cloudwatch_log_retention
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
+}
+moved {
+  from = aws_cloudwatch_log_group.account_management_access_logs[0]
+  to   = aws_cloudwatch_log_group.account_management_access_logs
 }
 
 resource "aws_cloudwatch_log_subscription_filter" "account_management_access_log_subscription" {
   count           = length(var.logging_endpoint_arns)
   name            = "${var.environment}-account-management_-api-access-logs-subscription"
-  log_group_name  = aws_cloudwatch_log_group.account_management_access_logs[0].name
+  log_group_name  = aws_cloudwatch_log_group.account_management_access_logs.name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
 
@@ -197,17 +217,19 @@ resource "aws_cloudwatch_log_subscription_filter" "account_management_access_log
 }
 
 resource "aws_cloudwatch_log_group" "account_management_waf_logs" {
-  count = var.use_localstack ? 0 : 1
-
   name              = "aws-waf-logs-account-management-${var.environment}"
   retention_in_days = var.cloudwatch_log_retention
   kms_key_id        = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
+}
+moved {
+  from = aws_cloudwatch_log_group.account_management_waf_logs[0]
+  to   = aws_cloudwatch_log_group.account_management_waf_logs
 }
 
 resource "aws_cloudwatch_log_subscription_filter" "account_management_waf_log_subscription" {
   count           = length(var.logging_endpoint_arns)
   name            = "${var.environment}-account-management-api-waf-logs-subscription"
-  log_group_name  = aws_cloudwatch_log_group.account_management_waf_logs[0].name
+  log_group_name  = aws_cloudwatch_log_group.account_management_waf_logs.name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
 
@@ -223,22 +245,16 @@ resource "aws_api_gateway_stage" "stage" {
 
   xray_tracing_enabled = true
 
-  dynamic "access_log_settings" {
-    for_each = var.use_localstack ? [] : aws_cloudwatch_log_group.account_management_access_logs
-    iterator = log_group
-    content {
-      destination_arn = log_group.value.arn
-      format          = local.access_logging_template
-    }
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.account_management_access_logs.arn
+    format          = local.access_logging_template
   }
 
   tags = local.default_tags
 
-  depends_on = [
-    module.update_email,
-    module.authenticate,
-    aws_api_gateway_deployment.deployment,
-  ]
+  lifecycle {
+    replace_triggered_by = [aws_api_gateway_deployment.deployment.id]
+  }
 }
 
 resource "aws_api_gateway_account" "api_gateway_logging_role" {
@@ -250,7 +266,7 @@ resource "aws_api_gateway_method_settings" "api_gateway_logging_settings" {
   count = var.enable_api_gateway_execution_logging ? 1 : 0
 
   rest_api_id = aws_api_gateway_rest_api.di_account_management_api.id
-  stage_name  = var.environment
+  stage_name  = aws_api_gateway_stage.stage.stage_name
   method_path = "*/*"
 
   settings {
@@ -258,28 +274,40 @@ resource "aws_api_gateway_method_settings" "api_gateway_logging_settings" {
     data_trace_enabled = var.enable_api_gateway_execution_request_tracing && local.request_tracing_allowed
     logging_level      = "INFO"
   }
-  depends_on = [
-    aws_api_gateway_stage.stage
-  ]
+  lifecycle {
+    replace_triggered_by = [aws_api_gateway_stage.stage.id]
+  }
+}
+
+resource "aws_api_gateway_deployment" "deployment" {
+  rest_api_id = aws_api_gateway_rest_api.di_account_management_api.id
+
+  triggers = {
+    redeployment = sha1(jsonencode(aws_api_gateway_rest_api.di_account_management_api.body))
+  }
 }
 
 resource "aws_api_gateway_base_path_mapping" "api" {
-  count = var.use_localstack ? 0 : 1
-
   api_id      = aws_api_gateway_rest_api.di_account_management_api.id
   stage_name  = aws_api_gateway_stage.stage.stage_name
   domain_name = local.account_management_api_fqdn
+
+  lifecycle {
+    replace_triggered_by = [aws_api_gateway_stage.stage.id]
+  }
+}
+moved {
+  from = aws_api_gateway_base_path_mapping.api[0]
+  to   = aws_api_gateway_base_path_mapping.api
 }
 
 module "dashboard" {
   source           = "../modules/dashboards"
   api_gateway_name = aws_api_gateway_rest_api.di_account_management_api.name
-  use_localstack   = var.use_localstack
+  use_localstack   = false
 }
 
-
 resource "aws_wafv2_web_acl" "wafregional_web_acl_am_api" {
-  count = var.use_localstack ? 0 : 1
   name  = "${var.environment}-am-waf-web-acl"
   scope = "REGIONAL"
 
@@ -354,22 +382,27 @@ resource "aws_wafv2_web_acl" "wafregional_web_acl_am_api" {
     sampled_requests_enabled   = true
   }
 }
+moved {
+  from = aws_wafv2_web_acl.wafregional_web_acl_am_api[0]
+  to   = aws_wafv2_web_acl.wafregional_web_acl_am_api
+}
 
 resource "aws_wafv2_web_acl_association" "waf_association_am_api" {
-  count        = var.use_localstack ? 0 : 1
   resource_arn = aws_api_gateway_stage.stage.arn
-  web_acl_arn  = aws_wafv2_web_acl.wafregional_web_acl_am_api[count.index].arn
+  web_acl_arn  = aws_wafv2_web_acl.wafregional_web_acl_am_api.arn
 
-  depends_on = [
-    aws_api_gateway_stage.stage,
-    aws_wafv2_web_acl.wafregional_web_acl_am_api
-  ]
+  lifecycle {
+    replace_triggered_by = [aws_api_gateway_stage.stage.id]
+  }
+}
+moved {
+  from = aws_wafv2_web_acl_association.waf_association_am_api[0]
+  to   = aws_wafv2_web_acl_association.waf_association_am_api
 }
 
 resource "aws_wafv2_web_acl_logging_configuration" "waf_logging_config_am_api" {
-  count                   = var.use_localstack ? 0 : 1
-  log_destination_configs = [aws_cloudwatch_log_group.account_management_waf_logs[count.index].arn]
-  resource_arn            = aws_wafv2_web_acl.wafregional_web_acl_am_api[count.index].arn
+  log_destination_configs = [aws_cloudwatch_log_group.account_management_waf_logs.arn]
+  resource_arn            = aws_wafv2_web_acl.wafregional_web_acl_am_api.arn
 
   logging_filter {
     default_behavior = "DROP"
@@ -386,8 +419,8 @@ resource "aws_wafv2_web_acl_logging_configuration" "waf_logging_config_am_api" {
       requirement = "MEETS_ANY"
     }
   }
-
-  depends_on = [
-    aws_cloudwatch_log_group.account_management_waf_logs
-  ]
+}
+moved {
+  from = aws_wafv2_web_acl_logging_configuration.waf_logging_config_am_api[0]
+  to   = aws_wafv2_web_acl_logging_configuration.waf_logging_config_am_api
 }

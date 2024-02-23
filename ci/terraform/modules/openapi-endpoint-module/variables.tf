@@ -19,7 +19,8 @@ variable "handler_function_name" {
 }
 
 variable "handler_environment_variables" {
-  type = map(string)
+  type    = map(string)
+  default = {}
 }
 
 variable "handler_runtime" {
@@ -68,19 +69,10 @@ variable "logging_endpoint_arns" {
   description = "Amazon Resource Name (ARN) for the CSLS endpoints to ship logs to"
 }
 
-variable "use_localstack" {
-  type = bool
-}
-
 variable "default_tags" {
   default     = {}
   type        = map(string)
   description = "Default tags to apply to all resources"
-}
-
-variable "authorizer_id" {
-  type    = string
-  default = null
 }
 
 variable "cloudwatch_key_arn" {

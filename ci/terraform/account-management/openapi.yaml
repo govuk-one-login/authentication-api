@@ -1,0 +1,158 @@
+openapi: 3.0.1
+info:
+  title: "${environment}-di-account-management-api"
+  version: 0.1.0
+  description: Auth Account Management API
+
+components:
+  securitySchemes:
+    "${environment}-authorise-access-token":
+      type: "apiKey"
+      name: "Authorization"
+      in: "header"
+      x-amazon-apigateway-authtype: "custom"
+      x-amazon-apigateway-authorizer:
+        authorizerUri: "${authorizer_uri}"
+        authorizerCredentials: "${authorizer_credentials}"
+        authorizerResultTtlInSeconds: 0
+        type: "token"
+paths:
+  /authenticate:
+    post:
+      summary: "Authenticate"
+      description: "Authenticate"
+      operationId: "authenticate"
+      security:
+        - "${environment}-authorise-access-token": []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST" # THIS SHOULD ALWAYS BE "POST" regardless of the actual method
+        uri: "${authenticate_module.integration_uri}"
+        passthroughBehavior: "when_no_match"
+        timeoutInMillis: 29000
+
+  /update-password:
+    post:
+      summary: "Update password"
+      description: "Update password"
+      operationId: "updatePassword"
+      security:
+        - "${environment}-authorise-access-token": []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST" # THIS SHOULD ALWAYS BE "POST" regardless of the actual method
+        uri: "${update-password_module.integration_uri}"
+        timeoutInMillis: 29000
+
+  /update-email:
+    post:
+      summary: "Update email"
+      description: "Update email"
+      operationId: "updateEmail"
+      security:
+        - "${environment}-authorise-access-token": []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST" # THIS SHOULD ALWAYS BE "POST" regardless of the actual method
+        uri: "${update-email_module.integration_uri}"
+        timeoutInMillis: 29000
+
+  /send-otp-notification:
+    post:
+      summary: "Send OTP notification"
+      description: "Send OTP notification"
+      operationId: "sendOtpNotification"
+      security:
+        - "${environment}-authorise-access-token": []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST" # THIS SHOULD ALWAYS BE "POST" regardless of the actual method
+        uri: "${send-otp-notification_module.integration_uri}"
+        timeoutInMillis: 29000
+
+  /delete-account:
+    post:
+      summary: "Delete account"
+      description: "Delete account"
+      operationId: "deleteAccount"
+      security:
+        - "${environment}-authorise-access-token": []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST" # THIS SHOULD ALWAYS BE "POST" regardless of the actual method
+        uri: "${delete-account_module.integration_uri}"
+        timeoutInMillis: 29000
+
+  /update-phone-number:
+    post:
+      summary: "Update phone number"
+      description: "Update phone number"
+      operationId: "updatePhoneNumber"
+      security:
+        - "${environment}-authorise-access-token": []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST" # THIS SHOULD ALWAYS BE "POST" regardless of the actual method
+        uri: "${update-phone-number_module.integration_uri}"
+        timeoutInMillis: 29000
+
+  /mfa-methods:
+    post:
+      summary: "Create MFA method"
+      description: "Create MFA method"
+      operationId: "createMfaMethod"
+      security:
+        - "${environment}-authorise-access-token": []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST" # THIS SHOULD ALWAYS BE "POST" regardless of the actual method
+        uri: "${create-mfa-methods_module.integration_uri}"
+        timeoutInMillis: 29000
+    delete:
+      summary: "Delete MFA methods"
+      description: "Delete MFA methods"
+      operationId: "deleteMfaMethods"
+      security:
+        - "${environment}-authorise-access-token": []
+      # parameters:
+      #   - name: "mfaIdentifier"
+      #     in: "query"
+      #     required: true
+      #     schema:
+      #       type: "string"
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "DELETE" # THIS SHOULD ALWAYS BE "DELETE" regardless of the actual method
+        uri: "${delete-mfa-methods_module.integration_uri}"
+        timeoutInMillis: 29000
+
+  /mfa-methods/{mfaIdentifier}:
+    put:
+      summary: "Update MFA method"
+      description: "Update MFA method"
+      operationId: "updateMfaMethod"
+      security:
+        - "${environment}-authorise-access-token": []
+      parameters:
+        - name: "mfaIdentifier"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "PUT" # THIS SHOULD ALWAYS BE "PUT" regardless of the actual method
+        uri: "${update-mfa-method_module.integration_uri}"
+        timeoutInMillis: 29000
+  /mfa-methods/retrieve:
+    post:
+      summary: "Retrieve MFA methods"
+      description: "Retrieve MFA methods"
+      operationId: "retrieveMfaMethods"
+      security:
+        - "${environment}-authorise-access-token": []
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST" # THIS SHOULD ALWAYS BE "POST" regardless of the actual method
+        uri: "${retrieve-mfa-methods_module.integration_uri}"
+        timeoutInMillis: 29000

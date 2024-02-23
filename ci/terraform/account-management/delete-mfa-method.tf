@@ -1,9 +1,8 @@
-module "account_management_api_delete_mfa_methods" {
+module "account_management_api_delete_mfa_methods_role" {
   source      = "../modules/lambda-role"
   environment = var.environment
   role_name   = "account-management-api-delete_mfa_method"
   vpc_arn     = local.vpc_arn
-  count       = local.deploy_mfa_methods_count
 
   policies_to_attach = [
     aws_iam_policy.dynamo_am_user_read_access_policy.arn,
@@ -15,11 +14,9 @@ module "account_management_api_delete_mfa_methods" {
 }
 
 module "delete-mfa-methods" {
-  source = "../modules/endpoint-module"
+  source = "../modules/openapi-endpoint-module"
 
-  endpoint_name   = "mfa-method"
-  path_part       = "mfa-method"
-  endpoint_method = ["DELETE"]
+  endpoint_name = "delete-mfa-methods"
   handler_environment_variables = {
     ENVIRONMENT          = var.environment
     DYNAMO_ENDPOINT      = var.use_localstack ? var.lambda_dynamo_endpoint : null
@@ -30,11 +27,6 @@ module "delete-mfa-methods" {
     INTERNAl_SECTOR_URI  = var.internal_sector_uri
   }
   handler_function_name = "uk.gov.di.accountmanagement.lambda.GetMfaMethodsHandler::handleRequest"
-
-  authorizer_id    = aws_api_gateway_authorizer.di_account_management_api.id
-  rest_api_id      = aws_api_gateway_rest_api.di_account_management_api.id
-  root_resource_id = aws_api_gateway_rest_api.di_account_management_api.root_resource_id
-  execution_arn    = aws_api_gateway_rest_api.di_account_management_api.execution_arn
 
   memory_size                 = lookup(var.performance_tuning, "delete-mfa-methods", local.default_performance_parameters).memory
   provisioned_concurrency     = lookup(var.performance_tuning, "delete-mfa-methods", local.default_performance_parameters).concurrency
@@ -53,12 +45,10 @@ module "delete-mfa-methods" {
   ]
   subnet_id                              = local.private_subnet_ids
   environment                            = var.environment
-  lambda_role_arn                        = module.account_management_api_update_phone_number_role.arn
-  use_localstack                         = var.use_localstack
+  lambda_role_arn                        = module.account_management_api_delete_mfa_methods_role.arn
   default_tags                           = local.default_tags
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
-  count                                  = local.deploy_mfa_methods_count
 }
