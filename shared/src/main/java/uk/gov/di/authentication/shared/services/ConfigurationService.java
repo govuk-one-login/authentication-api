@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.shared.services;
 
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
@@ -27,6 +28,7 @@ import java.util.stream.Collectors;
 
 import static java.text.MessageFormat.format;
 import static java.util.Objects.isNull;
+import static uk.gov.di.authentication.shared.helpers.ConstructUriHelper.buildURI;
 
 public class ConfigurationService implements BaseLambdaConfiguration, AuditPublisherConfiguration {
 
@@ -185,8 +187,11 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 System.getenv().getOrDefault("AUTHENTICATION_AUTHORIZATION_CALLBACK_URI", ""));
     }
 
-    public URI getAuthenticationBackendURI() {
-        return URI.create(System.getenv().getOrDefault("AUTHENTICATION_BACKEND_URI", ""));
+    public URI getAuthenticationBackendURI(
+            APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext) {
+        return buildURI(
+                String.format("https://%s", proxyRequestContext.getDomainName()),
+                proxyRequestContext.getPath());
     }
 
     public String getContactUsLinkRoute() {

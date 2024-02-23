@@ -1,5 +1,6 @@
 package uk.gov.di.orchestration.shared.services;
 
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.nimbusds.oauth2.sdk.id.Audience;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -26,6 +27,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static java.text.MessageFormat.format;
+import static uk.gov.di.orchestration.shared.helpers.ConstructUriHelper.buildURI;
 
 public class ConfigurationService implements BaseLambdaConfiguration, AuditPublisherConfiguration {
 
@@ -118,7 +120,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         if (configurationValue == null || configurationValue.isEmpty()) {
             return List.of();
         } else {
-            return Arrays.stream(configurationValue.split(",")).toList();
+            return Arrays.stream(configurationValue.split(",")).collect(Collectors.toList());
         }
     }
 
@@ -139,8 +141,11 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
                 System.getenv().getOrDefault("AUTHENTICATION_AUTHORIZATION_CALLBACK_URI", ""));
     }
 
-    public URI getAuthenticationBackendURI() {
-        return URI.create(System.getenv().getOrDefault("AUTHENTICATION_BACKEND_URI", ""));
+    public URI getAuthenticationBackendURI(
+            APIGatewayProxyRequestEvent.ProxyRequestContext proxyRequestContext) {
+        return buildURI(
+                String.format("https://%s", proxyRequestContext.getDomainName()),
+                proxyRequestContext.getPath());
     }
 
     public boolean isCustomDocAppClaimEnabled() {

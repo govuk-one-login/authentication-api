@@ -231,7 +231,9 @@ public class AuthenticationCallbackHandler
 
             var tokenRequest =
                     tokenService.constructTokenRequest(
-                            input.getQueryStringParameters().get("code"));
+                            input.getQueryStringParameters().get("code"),
+                            configurationService.getAuthenticationBackendURI(
+                                    input.getRequestContext()));
             TokenResponse tokenResponse = tokenService.sendTokenRequest(tokenRequest);
             if (tokenResponse.indicatesSuccess()) {
                 LOG.info("TokenResponse was successful");
@@ -266,7 +268,8 @@ public class AuthenticationCallbackHandler
             try {
                 URI userInfoURI =
                         buildURI(
-                                configurationService.getAuthenticationBackendURI().toString(),
+                                configurationService.getAuthenticationBackendURI(
+                                        input.getRequestContext()),
                                 "userinfo");
 
                 HTTPRequest authorizationRequest = new HTTPRequest(GET, userInfoURI);

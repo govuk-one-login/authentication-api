@@ -31,6 +31,8 @@ public abstract class HandlerIntegrationTest<Q, S> {
     private static final String REDIS_PASSWORD = null;
     private static final boolean DOES_REDIS_USE_TLS = false;
     private static final String BEARER_TOKEN = "notify-test-@bearer-token";
+    protected static String API_GATEWAY_DOMAIN = "test-domain.com";
+    protected static String API_GATEWAY_STAGE_PATH = "/test/";
     protected static final String LOCAL_ENDPOINT_FORMAT =
             "http://localhost:45678/restapis/%s/local/_user_request_";
     protected static final String LOCAL_API_GATEWAY_ID =

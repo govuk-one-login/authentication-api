@@ -20,8 +20,7 @@ import java.util.Optional;
 import static uk.gov.di.orchestration.shared.services.AuthorisationCodeService.AUTH_CODE_PREFIX;
 import static uk.gov.di.orchestration.shared.services.ClientSessionService.CLIENT_SESSION_PREFIX;
 
-public class RedisExtension
-        implements Extension, BeforeAllCallback, AfterAllCallback, AfterEachCallback {
+public class RedisExtension implements Extension, BeforeAllCallback, AfterEachCallback {
     private final ConfigurationService configurationService;
 
     private final Json objectMapper;
@@ -228,12 +227,6 @@ public class RedisExtension
     }
 
     @Override
-    public void afterAll(ExtensionContext context) {
-        redis.close();
-        client.shutdown();
-    }
-
-    @Override
     public void beforeAll(ExtensionContext context) throws Exception {
         redis = new RedisConnectionService(configurationService);
         RedisURI.Builder builder =
@@ -251,5 +244,9 @@ public class RedisExtension
     @Override
     public void afterEach(ExtensionContext context) throws Exception {
         flushData();
+    }
+
+    public void close() {
+        redis.close();
     }
 }

@@ -76,4 +76,17 @@ class ConstructUriHelperTest {
 
         assertThat(uri.toString(), equalTo("https://GOV.UK/?referer=emailConfirmationEmail"));
     }
+
+    @Test
+    void shouldAppendPathToBaseUrlWhenBaseURLIsAURI() {
+        var baseUrl = ConstructUriHelper.buildURI("https://test.com");
+        var path = "/path1";
+
+        var uri = ConstructUriHelper.buildURI(baseUrl, path);
+
+        assertThat(uri.toString(), equalTo("https://test.com/path1"));
+
+        uri = ConstructUriHelper.buildURI(uri, "/path2");
+        assertThat(uri.toString(), equalTo("https://test.com/path1/path2"));
+    }
 }

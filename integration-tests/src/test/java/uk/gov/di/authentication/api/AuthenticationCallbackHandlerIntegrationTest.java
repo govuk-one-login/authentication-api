@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.api;
 
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
@@ -801,19 +802,6 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
         }
 
         @Override
-        public URI getAuthenticationBackendURI() {
-            try {
-                return new URIBuilder()
-                        .setHost("localhost")
-                        .setPort(authExternalApiStub.getHttpPort())
-                        .setScheme("http")
-                        .build();
-            } catch (URISyntaxException e) {
-                throw new RuntimeException(e);
-            }
-        }
-
-        @Override
         public String getOrchestrationClientId() {
             return CLIENT_ID;
         }
@@ -859,6 +847,20 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                 return new URIBuilder()
                         .setHost("localhost")
                         .setPort(accountInterventionApiStub.getHttpPort())
+                        .setScheme("http")
+                        .build();
+            } catch (URISyntaxException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        @Override
+        public URI getAuthenticationBackendURI(
+                APIGatewayProxyRequestEvent.ProxyRequestContext context) {
+            try {
+                return new URIBuilder()
+                        .setHost("localhost")
+                        .setPort(authExternalApiStub.getHttpPort())
                         .setScheme("http")
                         .build();
             } catch (URISyntaxException e) {

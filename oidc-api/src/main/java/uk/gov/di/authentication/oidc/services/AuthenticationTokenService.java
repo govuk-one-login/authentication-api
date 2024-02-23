@@ -34,6 +34,7 @@ import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.ByteBuffer;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
@@ -56,13 +57,12 @@ public class AuthenticationTokenService {
         this.kmsService = kmsService;
     }
 
-    public TokenRequest constructTokenRequest(String authCode) {
+    public TokenRequest constructTokenRequest(String authCode, URI authenticationBackendURI) {
         LOG.info("Constructing token request");
         var codeGrant =
                 new AuthorizationCodeGrant(
                         new AuthorizationCode(authCode),
                         configurationService.getAuthenticationAuthCallbackURI());
-        var authenticationBackendURI = configurationService.getAuthenticationBackendURI();
         var tokenURI = buildURI(authenticationBackendURI.toString(), "token");
         var claimsSet =
                 new JWTAuthenticationClaimsSet(

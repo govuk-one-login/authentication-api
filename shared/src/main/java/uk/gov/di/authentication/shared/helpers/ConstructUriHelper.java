@@ -34,6 +34,10 @@ public class ConstructUriHelper {
         return buildURI(baseUrl, path, null);
     }
 
+    public static URI buildURI(URI baseUrl, String path) {
+        return buildURI(baseUrl.toString(), path, null);
+    }
+
     public static URI buildURI(String baseUrl) {
         return buildURI(baseUrl, null, null);
     }

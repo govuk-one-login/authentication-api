@@ -71,7 +71,9 @@ public abstract class ApiGatewayHandlerIntegrationTest
                 .withHttpMethod(httpMethod.orElse(null))
                 .withRequestContext(
                         new APIGatewayProxyRequestEvent.ProxyRequestContext()
-                                .withRequestId(requestId));
+                                .withRequestId(requestId)
+                                .withDomainName(API_GATEWAY_DOMAIN)
+                                .withPath(API_GATEWAY_STAGE_PATH));
         request.getRequestContext().setAuthorizer(authorizerParams);
         body.ifPresent(
                 o -> {

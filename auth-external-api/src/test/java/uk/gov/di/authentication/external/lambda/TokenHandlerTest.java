@@ -84,6 +84,10 @@ class TokenHandlerTest {
                     .withHasBeenUsed(false)
                     .withTimeToExist(0L);
 
+    private static final String AuthenticationBackendDomain = "test-backend.com";
+    private static final URI AuthenticationBackendUri =
+            URI.create(String.format("https://%s", AuthenticationBackendDomain));
+
     @BeforeAll
     public static void init() {
         when(authCodeService.getAuthCodeStore(VALID_AUTH_CODE))
@@ -105,9 +109,10 @@ class TokenHandlerTest {
         configurationService = mock(ConfigurationService.class);
         when(configurationService.getAuthenticationAuthCallbackURI())
                 .thenReturn(URI.create("https://test-callback.com"));
-        when(configurationService.getAuthenticationBackendURI())
-                .thenReturn(URI.create("https://test-backend.com"));
-        when(configurationService.getInternalSectorUri()).thenReturn("https://test-backend.com");
+        when(configurationService.getInternalSectorUri())
+                .thenReturn(AuthenticationBackendUri.toString());
+        when(configurationService.getAuthenticationBackendURI(any()))
+                .thenReturn(AuthenticationBackendUri);
 
         accessTokenService = mock(AccessTokenService.class);
         tokenRequestValidator = mock(TokenRequestValidator.class);
@@ -206,11 +211,11 @@ class TokenHandlerTest {
         String internalPairwiseId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         SUBJECT_ID,
-                        "test-backend.com",
+                        AuthenticationBackendDomain,
                         SdkBytes.fromByteBuffer(ByteBuffer.allocateDirect(12345)).asByteArray());
-        APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
         String formData = "code=" + VALID_AUTH_CODE + "&client_id=" + CLIENT_ID;
-        request.setBody(formData);
+        APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
+        request.withBody(formData);
 
         APIGatewayProxyResponseEvent response = tokenHandler.tokenRequestHandler(request);
 
