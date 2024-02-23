@@ -75,6 +75,7 @@ class AccountInterventionServiceTest {
         when(config.isAccountInterventionServiceCallEnabled()).thenReturn(true);
         when(config.isAccountInterventionServiceActionEnabled()).thenReturn(false);
         when(config.getEnvironment()).thenReturn(ENVIRONMENT);
+        when(config.getAccountInterventionServiceCallTimeout()).thenReturn(3000L);
     }
 
     @Test
