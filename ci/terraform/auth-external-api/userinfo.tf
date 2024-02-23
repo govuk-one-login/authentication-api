@@ -17,12 +17,10 @@ module "auth_userinfo_role" {
 }
 
 module "auth_userinfo" {
-  source = "../modules/endpoint-module"
+  source = "../modules/openapi-endpoint-module"
 
-  endpoint_name   = "auth-userinfo"
-  path_part       = "userinfo"
-  endpoint_method = ["GET"]
-  environment     = var.environment
+  endpoint_name = "auth-userinfo"
+  environment   = var.environment
 
   handler_environment_variables = {
     ENVIRONMENT             = var.environment
@@ -34,10 +32,6 @@ module "auth_userinfo" {
   }
   handler_function_name = "uk.gov.di.authentication.external.lambda.UserInfoHandler::handleRequest"
   handler_runtime       = "java17"
-
-  rest_api_id      = aws_api_gateway_rest_api.di_auth_ext_api.id
-  root_resource_id = aws_api_gateway_rest_api.di_auth_ext_api.root_resource_id
-  execution_arn    = aws_api_gateway_rest_api.di_auth_ext_api.execution_arn
 
   memory_size                 = lookup(var.performance_tuning, "auth-userinfo", local.default_performance_parameters).memory
   provisioned_concurrency     = lookup(var.performance_tuning, "auth-userinfo", local.default_performance_parameters).concurrency
@@ -62,8 +56,4 @@ module "auth_userinfo" {
   default_tags                           = local.default_tags
 
   use_localstack = false
-
-  depends_on = [
-    aws_api_gateway_rest_api.di_auth_ext_api,
-  ]
 }

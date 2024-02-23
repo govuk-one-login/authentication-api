@@ -1,0 +1,56 @@
+openapi: 3.0.1
+info:
+  title: "${environment}-di-auth-ext-api"
+  version: 0.1.0
+  description: Auth External API
+
+components:
+  schemas:
+    TokenResponse:
+      type: "object"
+      properties:
+        access_token:
+          type: "string"
+          description: "Token"
+        token_type:
+          type: "string"
+          description: "Token type"
+        expires_in:
+          type: "integer"
+          description: "Token expiration time"
+        refresh_token:
+          type: "string"
+          description: "Refresh token"
+      required:
+        - token
+        - token_type
+        - expires_in
+        - refresh_token
+paths:
+  /token:
+    post:
+      summary: "Get token"
+      description: "Get token"
+      operationId: "getToken"
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST" # THIS SHOULD ALWAYS BE "POST" regardless of the actual method
+        uri: "${auth_token_module.integration_uri}"
+        timeoutInMillis: 29000
+      responses:
+        "200":
+          description: "200 response"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+  /userinfo:
+    get:
+      summary: "Get userinfo"
+      description: "Get userinfo"
+      operationId: "getUserInfo"
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "POST" # THIS SHOULD ALWAYS BE "POST" regardless of the actual method
+        uri: "${auth_userinfo_module.integration_uri}"
+        timeoutInMillis: 29000
