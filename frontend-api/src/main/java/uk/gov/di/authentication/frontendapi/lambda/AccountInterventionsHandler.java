@@ -19,12 +19,7 @@ import uk.gov.di.authentication.shared.helpers.IpAddressHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
 import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
-import uk.gov.di.authentication.shared.services.AuditService;
-import uk.gov.di.authentication.shared.services.AuthenticationService;
-import uk.gov.di.authentication.shared.services.ClientService;
-import uk.gov.di.authentication.shared.services.ClientSessionService;
-import uk.gov.di.authentication.shared.services.ConfigurationService;
-import uk.gov.di.authentication.shared.services.SessionService;
+import uk.gov.di.authentication.shared.services.*;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Map;
@@ -39,6 +34,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
     private static final Logger LOG = LogManager.getLogger(AccountInterventionsHandler.class);
     private final AccountInterventionsService accountInterventionsService;
     private final AuditService auditService;
+    private final CloudwatchMetricsService cloudwatchMetricsService;
 
     private final AccountInterventionsResponse noAccountInterventions =
             new AccountInterventionsResponse(false, false, false);
@@ -66,7 +62,8 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
             ClientService clientService,
             AuthenticationService authenticationService,
             AccountInterventionsService accountInterventionsService,
-            AuditService auditService) {
+            AuditService auditService,
+            CloudwatchMetricsService cloudwatchMetricsService) {
         super(
                 AccountInterventionsRequest.class,
                 configurationService,
@@ -76,6 +73,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
                 authenticationService);
         this.accountInterventionsService = accountInterventionsService;
         this.auditService = auditService;
+        this.cloudwatchMetricsService = cloudwatchMetricsService;
     }
 
     public AccountInterventionsHandler() {
@@ -86,6 +84,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
         super(AccountInterventionsRequest.class, configurationService);
         accountInterventionsService = new AccountInterventionsService(configurationService);
         this.auditService = new AuditService(configurationService);
+        this.cloudwatchMetricsService = new CloudwatchMetricsService(configurationService);
     }
 
     @Override
@@ -167,6 +166,9 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
 
     private APIGatewayProxyResponseEvent handleErrorForAIS(
             UnsuccessfulAccountInterventionsResponseException e) {
+        cloudwatchMetricsService.incrementCounter(
+                configurationService.getAccountInterventionsErrorMetricName(),
+                Map.of("Environment", configurationService.getEnvironment()));
         LOG.error(
                 "Error in Account Interventions response HttpCode: {}, ErrorMessage: {}.",
                 e.getHttpCode(),
