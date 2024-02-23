@@ -24,6 +24,6 @@ if [ -z "${secrets}" ]; then
 fi
 
 while IFS=$'\t' read -r arn name; do
-  value=$(aws secretsmanager get-secret-value --secret-id "${arn}" | jq -r '.SecretString')
+  value=$(aws secretsmanager get-secret-value --region eu-west-2 --secret-id "${arn}" | jq -r '.SecretString')
   export "TF_VAR_${name}"="${value}"
 done <<<"${secrets}"

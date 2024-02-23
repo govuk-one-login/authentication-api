@@ -52,14 +52,6 @@ resource "aws_lambda_function" "authorizer" {
   tags = local.default_tags
 }
 
-resource "aws_api_gateway_authorizer" "di_account_management_api" {
-  name                             = "${var.environment}-authorise-access-token"
-  rest_api_id                      = aws_api_gateway_rest_api.di_account_management_api.id
-  authorizer_uri                   = aws_lambda_alias.authorizer_alias.invoke_arn
-  authorizer_credentials           = aws_iam_role.invocation_role.arn
-  authorizer_result_ttl_in_seconds = 0
-}
-
 resource "aws_lambda_alias" "authorizer_alias" {
   name             = "${var.environment}-authorizer-alias-lambda-active"
   description      = "Alias pointing at active version of Lambda"

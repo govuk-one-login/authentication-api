@@ -123,10 +123,11 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
-if [[ -z "${AWS_ACCESS_KEY_ID:-}" || -z "${AWS_SECRET_ACCESS_KEY:-}" ]]; then
-  echo "!! AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY must be set in the environment." >&2
-  echo "!! Perhaps you meant: gds aws digital-identity-dev -- ${0}" >&2
-  exit 1
+if [[ -n "${AWS_ACCESS_KEY_ID:-}" && -n "${AWS_SECRET_ACCESS_KEY:-}" ]]; then
+  echo "Using AWS credentials from environment variables"
+else
+  echo "Exporting credentials from AWS CLI profile gds-di-development-admin"
+  eval "$(aws configure export-credentials --profile gds-di-development-admin --format env)"
 fi
 
 if [[ $BUILD == "1" ]]; then

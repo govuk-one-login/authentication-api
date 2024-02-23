@@ -11,11 +11,7 @@ module "account_interventions_stub_lambda" {
 
   endpoint_name = "account-interventions-stub"
 
-  environment = var.environment
-
-  handler_environment_variables = {
-    ENVIRONMENT = var.environment
-  }
+  environment           = var.environment
   handler_function_name = "uk.gov.di.authentication.interventions.api.stub.lambda.AccountInterventionsApiStubHandler::handleRequest"
   handler_runtime       = "java17"
 
@@ -40,6 +36,4 @@ module "account_interventions_stub_lambda" {
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = local.lambda_env_vars_encryption_kms_key_arn
   default_tags                           = local.default_tags
-
-  use_localstack = false
 }
