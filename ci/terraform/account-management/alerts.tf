@@ -1,5 +1,4 @@
 resource "aws_cloudwatch_metric_alarm" "sqs_deadletter_cloudwatch_alarm" {
-  count               = var.use_localstack ? 0 : 1
   alarm_name          = replace("${var.environment}-account-managament-dlq-alarm", ".", "")
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = "1"
@@ -15,10 +14,13 @@ resource "aws_cloudwatch_metric_alarm" "sqs_deadletter_cloudwatch_alarm" {
   alarm_description = "${var.dlq_alarm_threshold} or more messages have appeared on the ${aws_sqs_queue.email_dead_letter_queue.name}"
   alarm_actions     = [data.aws_sns_topic.slack_events.arn]
 }
+moved {
+  from = aws_cloudwatch_metric_alarm.sqs_deadletter_cloudwatch_alarm[0]
+  to   = aws_cloudwatch_metric_alarm.sqs_deadletter_cloudwatch_alarm
+}
 
 # Turning WAF blocked alerts off until we figure out how best to utilise them
 #resource "aws_cloudwatch_metric_alarm" "waf_am_blocked_request_cloudwatch_alarm" {
-#  count               = var.use_localstack ? 0 : 1
 #  alarm_name          = replace("${var.environment}-account-management-waf-blocked-requests-alarm", ".", "")
 #  comparison_operator = "GreaterThanOrEqualToThreshold"
 #  evaluation_periods  = "1"

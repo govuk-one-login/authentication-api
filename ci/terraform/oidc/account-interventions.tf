@@ -24,8 +24,6 @@ module "account_interventions" {
   environment     = var.environment
 
   handler_environment_variables = {
-    DYNAMO_ENDPOINT                             = var.use_localstack ? var.lambda_dynamo_endpoint : null
-    LOCALSTACK_ENDPOINT                         = var.use_localstack ? var.localstack_endpoint : null
     ENVIRONMENT                                 = var.environment
     TXMA_AUDIT_QUEUE_URL                        = module.oidc_txma_audit.queue_url
     INTERNAl_SECTOR_URI                         = var.internal_sector_uri
@@ -67,6 +65,5 @@ module "account_interventions" {
   default_tags                           = local.default_tags
   api_key_required                       = true
 
-  use_localstack = var.use_localstack
-  count          = local.deploy_account_interventions_count
+  count = local.deploy_account_interventions_count
 }

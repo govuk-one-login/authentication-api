@@ -25,31 +25,6 @@ variable "environment" {
   type = string
 }
 
-variable "aws_endpoint" {
-  type    = string
-  default = null
-}
-
-variable "aws_dynamodb_endpoint" {
-  type    = string
-  default = null
-}
-
-variable "use_localstack" {
-  type    = bool
-  default = false
-}
-
-variable "localstack_endpoint" {
-  type    = string
-  default = "http://localhost:45678/"
-}
-
-variable "redis_use_tls" {
-  type    = string
-  default = "true"
-}
-
 variable "enable_api_gateway_execution_logging" {
   default     = true
   description = "Whether to enable logging of API gateway runs"

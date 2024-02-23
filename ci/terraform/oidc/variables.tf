@@ -127,44 +127,13 @@ variable "support_auth_orch_split_user_info" {
   default = false
 }
 
-variable "aws_endpoint" {
-  type    = string
-  default = null
-}
-
-variable "aws_dynamodb_endpoint" {
-  type    = string
-  default = null
-}
-
 variable "custom_doc_app_claim_enabled" {
-  default = false
-}
-
-variable "lambda_dynamo_endpoint" {
-  type        = string
-  default     = "http://dynamodb:8000"
-  description = "The endpoint that the Lambda must use to connect to DynamoDB API. This may or may not be the same as aws_dynamodb_endpoint"
-}
-
-variable "use_localstack" {
-  type    = bool
   default = false
 }
 
 variable "terms_and_conditions" {
   type    = string
   default = "1.10"
-}
-
-variable "localstack_endpoint" {
-  type    = string
-  default = "http://localhost:45678/"
-}
-
-variable "redis_use_tls" {
-  type    = string
-  default = "true"
 }
 
 variable "enable_api_gateway_execution_logging" {

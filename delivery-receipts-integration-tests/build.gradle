@@ -30,7 +30,6 @@ test {
     environment "AWS_SECRET_ACCESS_KEY", "mock-secret-key "
     environment "DYNAMO_ENDPOINT", "http://localhost:8000"
     environment "ENVIRONMENT", "local"
-    environment "HEADERS_CASE_INSENSITIVE", "true"
     environment "LOCALSTACK_ENDPOINT", "http://localhost:45678"
     environment "REDIS_KEY", "session"
     environment "TRACING_ENABLED", "false"
