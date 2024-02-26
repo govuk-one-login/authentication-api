@@ -31,6 +31,7 @@ resource "aws_cloudwatch_metric_alarm" "account_interventions_p1_cloudwatch_alar
 }
 
 data "aws_cloudwatch_log_group" "auth_account_interventions_lambda_log_group" {
+  depends_on = [ module.account_interventions ]
   count = var.environment == "production" || var.environment == "integration" ? 0 : 1
   name  = replace("/aws/lambda/${var.environment}-account-interventions-lambda", ".", "")
 }
