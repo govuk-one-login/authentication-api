@@ -24,7 +24,6 @@ import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
-import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
@@ -54,10 +53,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -176,29 +173,6 @@ class VerifyCodeHandlerEmailTest {
 
     private static Stream<NotificationType> emailNotificationTypes() {
         return Stream.of(VERIFY_EMAIL, VERIFY_CHANGE_HOW_GET_SECURITY_CODES);
-    }
-
-    @Test
-    void shouldReturn400IfRequestIsMissingNotificationType() {
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", "a-session-id"));
-        event.setBody(format("{ \"code\": \"%s\"}", CODE));
-        when(sessionService.getSessionFromRequestHeaders(event.getHeaders()))
-                .thenReturn(Optional.of(session));
-
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
-        verifyNoInteractions(accountModifiersService);
-    }
-
-    @Test
-    void shouldReturn400IfNotificationTypeIsNotValid() {
-        APIGatewayProxyResponseEvent result = makeCallWithCode(CODE, "VERIFY_TEXT");
-
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
-        verifyNoInteractions(accountModifiersService);
     }
 
     @ParameterizedTest
@@ -453,168 +427,6 @@ class VerifyCodeHandlerEmailTest {
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("notification-type", VERIFY_CHANGE_HOW_GET_SECURITY_CODES.name()),
                         pair("account-recovery", true));
-    }
-
-    @ParameterizedTest
-    @MethodSource("codeRequestTypes")
-    void shouldReturn204ForValidMfaSmsRequestAndRemoveAccountRecoveryBlockWhenPresent(
-            CodeRequestType codeRequestType, JourneyType journeyType) {
-        when(configurationService.getCodeMaxRetries()).thenReturn(5);
-        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS))
-                .thenReturn(Optional.of(CODE));
-        when(accountModifiersService.isAccountRecoveryBlockPresent(anyString())).thenReturn(true);
-        session.setNewAccount(Session.AccountState.EXISTING);
-
-        when(configurationService.getInternalSectorUri()).thenReturn("http://" + SECTOR_HOST);
-        when(authenticationService.getOrGenerateSalt(userProfile)).thenReturn(SALT);
-
-        var result = makeCallWithCode(CODE, MFA_SMS.toString(), journeyType);
-
-        assertThat(result, hasStatus(204));
-        assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
-        verify(codeStorageService).deleteOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS);
-        verify(accountModifiersService).removeAccountRecoveryBlockIfPresent(expectedCommonSubject);
-        var saveSessionCount = journeyType == JourneyType.PASSWORD_RESET_MFA ? 3 : 2;
-        verify(sessionService, times(saveSessionCount)).save(session);
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.CODE_VERIFIED,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("notification-type", MFA_SMS.name()),
-                        pair("mfa-type", MFAMethodType.SMS.getValue()),
-                        pair("account-recovery", false),
-                        pair("loginFailureCount", 0),
-                        pair("MFACodeEntered", "123456"));
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_REMOVED,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("mfa-type", MFAMethodType.SMS.getValue()));
-        verify(cloudwatchMetricsService)
-                .incrementAuthenticationSuccess(
-                        Session.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false, true);
-    }
-
-    @Test
-    void shouldReturn204ForValidMfaSmsRequestAndNotRemoveAccountRecoveryBlockWhenNotPresent() {
-        when(configurationService.getCodeMaxRetries()).thenReturn(5);
-        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS))
-                .thenReturn(Optional.of(CODE));
-        when(accountModifiersService.isAccountRecoveryBlockPresent(expectedCommonSubject))
-                .thenReturn(false);
-        session.setNewAccount(Session.AccountState.EXISTING);
-
-        var result = makeCallWithCode(CODE, MFA_SMS.toString());
-
-        assertThat(result, hasStatus(204));
-        assertThat(session.getVerifiedMfaMethodType(), equalTo(MFAMethodType.SMS));
-        verify(codeStorageService).deleteOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS);
-        verify(accountModifiersService, never()).removeAccountRecoveryBlockIfPresent(anyString());
-        verify(sessionService, times(2)).save(session);
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.CODE_VERIFIED,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("notification-type", MFA_SMS.name()),
-                        pair("mfa-type", MFAMethodType.SMS.getValue()),
-                        pair("account-recovery", false),
-                        pair("loginFailureCount", 0),
-                        pair("MFACodeEntered", "123456"));
-        verify(cloudwatchMetricsService)
-                .incrementAuthenticationSuccess(
-                        Session.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false, true);
-    }
-
-    @Test
-    void shouldReturnMfaCodeNotValidWhenCodeIsInvalid() {
-        when(configurationService.getCodeMaxRetries()).thenReturn(5);
-        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS))
-                .thenReturn(Optional.of(CODE));
-
-        APIGatewayProxyResponseEvent result = makeCallWithCode(INVALID_CODE, MFA_SMS.toString());
-
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1035));
-        verifyNoInteractions(accountModifiersService);
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.INVALID_CODE_SENT,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("notification-type", MFA_SMS.name()),
-                        pair("mfa-type", MFAMethodType.SMS.getValue()),
-                        pair("account-recovery", false),
-                        pair("loginFailureCount", 0),
-                        pair("MFACodeEntered", "6543221"),
-                        pair("MaxSmsCount", configurationService.getCodeMaxRetries()));
-    }
-
-    @ParameterizedTest
-    @MethodSource("codeRequestTypes")
-    void shouldReturnMaxReachedAndSetBlockedMfaCodeAttemptsWhenSignInExceedMaxRetryCount(
-            CodeRequestType codeRequestType, JourneyType journeyType) {
-        when(configurationService.getCodeMaxRetries()).thenReturn(0);
-        when(configurationService.getBlockedEmailDuration()).thenReturn(BLOCKED_EMAIL_DURATION);
-        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS))
-                .thenReturn(Optional.of(CODE));
-        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS)).thenReturn(1);
-
-        var result = makeCallWithCode(INVALID_CODE, MFA_SMS.toString(), journeyType);
-
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1027));
-        assertThat(session.getRetryCount(), equalTo(0));
-        verify(codeStorageService)
-                .saveBlockedForEmail(
-                        TEST_EMAIL_ADDRESS,
-                        CODE_BLOCKED_KEY_PREFIX + codeRequestType,
-                        BLOCKED_EMAIL_DURATION);
-        verifyNoInteractions(accountModifiersService);
-        verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("notification-type", MFA_SMS.name()),
-                        pair("mfa-type", MFAMethodType.SMS.getValue()),
-                        pair("account-recovery", false),
-                        pair("loginFailureCount", 0),
-                        pair("MFACodeEntered", "6543221"),
-                        pair("MaxSmsCount", configurationService.getCodeMaxRetries()));
     }
 
     @Test

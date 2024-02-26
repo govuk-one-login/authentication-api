@@ -30,4 +30,7 @@
 - Add unit tests against EmailCodeProcessor
 - Rename VerifyMfaCodeHandler
 - Identify the test in the VerifyCodeHandler that are email related
+- 
+  uk/gov/di/authentication/frontendapi/lambda/VerifyCodeHandlerEmailTest.java:182
+- Check that email notification journey types can be accepted in the new processor
 
