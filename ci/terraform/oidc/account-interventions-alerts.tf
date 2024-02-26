@@ -59,7 +59,7 @@ resource "aws_cloudwatch_metric_alarm" "auth_account_interventions_cloudwatch_al
   statistic           = "Sum"
   threshold           = var.account_interventions_p1_alarm_error_threshold
   alarm_description   = "${var.account_interventions_p1_alarm_error_threshold} or more Account Interventions errors have occurred in ${var.environment}.ACCOUNT: ${data.aws_iam_account_alias.current.account_alias}"
-  alarm_actions       = [var.environment == "production" ? data.aws_sns_topic.slack_events.arn : null]
+  alarm_actions       = var.environment == "production" ? [data.aws_sns_topic.slack_events.arn] : []
 }
 
 resource "aws_cloudwatch_metric_alarm" "account_interventions_error_rate_p1_cloudwatch_alarm" {
