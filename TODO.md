@@ -29,4 +29,5 @@
 - Make sure EmailCodeProcessorTest test for both test client and regular client
 - Add unit tests against EmailCodeProcessor
 - Rename VerifyMfaCodeHandler
+- Identify the test in the VerifyCodeHandler that are email related
 
