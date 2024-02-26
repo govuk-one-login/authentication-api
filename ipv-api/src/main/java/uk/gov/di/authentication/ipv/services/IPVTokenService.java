@@ -50,6 +50,11 @@ public class IPVTokenService {
         this.kmsService = kmsService;
     }
 
+    public TokenResponse getToken(String authCode) {
+        var tokenRequest = constructTokenRequest(authCode);
+        return sendTokenRequest(tokenRequest);
+    }
+
     public TokenRequest constructTokenRequest(String authCode) {
         LOG.info("Constructing IPV token request");
         var codeGrant =

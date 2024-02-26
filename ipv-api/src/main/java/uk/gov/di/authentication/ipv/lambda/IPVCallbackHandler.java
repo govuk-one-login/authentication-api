@@ -280,16 +280,12 @@ public class IPVCallbackHandler
                     userProfile.getPhoneNumber(),
                     persistentId);
 
-            var tokenRequest =
-                    segmentedFunctionCall(
-                            "constructTokenRequest",
-                            () ->
-                                    ipvTokenService.constructTokenRequest(
-                                            input.getQueryStringParameters().get("code")));
             var tokenResponse =
                     segmentedFunctionCall(
-                            "sendIpvTokenRequest",
-                            () -> ipvTokenService.sendTokenRequest(tokenRequest));
+                            "getIpvToken",
+                            () ->
+                                    ipvTokenService.getToken(
+                                            input.getQueryStringParameters().get("code")));
             if (!tokenResponse.indicatesSuccess()) {
                 LOG.error(
                         "IPV TokenResponse was not successful: {}",
