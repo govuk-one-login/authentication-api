@@ -170,3 +170,17 @@ variable "internal_sector_uri" {
   type    = string
   default = "undefined"
 }
+
+variable "email_check_results_writer_provisioned_concurrency" {
+  description = "Provisioned concurrency for the email check results writer"
+  type        = number
+  default     = 1
+}
+
+variable "email_check_results_sqs_queue_arn" {
+  description = "ARN of the SQS email results check queue. Note: there is no AWS email check account called Sandpit; Build should not normally be used as a substitute here as - whilst this will work - SQS operates 1 write : 1 read, so using the build ARNs will break deployed Build behaviour"
+}
+
+variable "email_check_results_sqs_queue_encryption_key_arn" {
+  description = "ARN of the CMK used for server side encryption on the SQS email results check queue. Note: there is no AWS email check account called Sandpit; Build should not normally be used as a substitute here as - whilst this will work - SQS operates 1 write : 1 read, so using the build ARNs will break deployed Build behaviour"
+}

@@ -15,3 +15,6 @@ performance_tuning = {
     timeout = 300
   }
 }
+
+email_check_results_sqs_queue_arn                = ""
+email_check_results_sqs_queue_encryption_key_arn = ""
