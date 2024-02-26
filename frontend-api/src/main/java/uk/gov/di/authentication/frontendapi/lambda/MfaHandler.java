@@ -45,6 +45,7 @@ import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHO
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.authentication.shared.helpers.ApiGatewayResponseHelper.generateEmptySuccessApiGatewayResponse;
 import static uk.gov.di.authentication.shared.helpers.LogLineHelper.attachSessionIdToLogs;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 
@@ -155,14 +156,14 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                         email,
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
-                        persistentSessionId);
+                        persistentSessionId,
+                        pair("journey-type", journeyType));
 
                 return generateApiGatewayProxyErrorResponse(400, codeRequestValid.get());
             }
 
             if (!userContext.getSession().validateSession(email)) {
                 LOG.warn("Email does not match Email in Request");
-
                 auditService.submitAuditEvent(
                         FrontendAuditableEvent.MFA_MISMATCHED_EMAIL,
                         userContext.getClientSessionId(),
@@ -175,7 +176,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                         email,
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
-                        persistentSessionId);
+                        persistentSessionId,
+                        pair("journey-type", journeyType));
 
                 return generateApiGatewayProxyErrorResponse(400, ERROR_1000);
             }
@@ -194,7 +196,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                         email,
                         IpAddressHelper.extractIpAddress(input),
                         AuditService.UNKNOWN,
-                        persistentSessionId);
+                        persistentSessionId,
+                        pair("journey-type", journeyType));
 
                 return generateApiGatewayProxyErrorResponse(400, ERROR_1014);
             }
@@ -247,7 +250,8 @@ public class MfaHandler extends BaseFrontendHandler<MfaRequest>
                     email,
                     IpAddressHelper.extractIpAddress(input),
                     phoneNumber,
-                    persistentSessionId);
+                    persistentSessionId,
+                    pair("journey-type", journeyType));
             LOG.info("Successfully processed request");
 
             return generateEmptySuccessApiGatewayResponse();

@@ -230,6 +230,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                 input,
                 codeRequest.getMfaMethodType(),
                 codeRequest.getCode(),
+                codeRequest.getJourneyType(),
                 codeRequest.getJourneyType().equals(JourneyType.ACCOUNT_RECOVERY));
 
         if (errorResponse.isEmpty()) {
@@ -273,6 +274,7 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
             APIGatewayProxyRequestEvent input,
             MFAMethodType mfaMethodType,
             String code,
+            JourneyType journeyType,
             boolean isAccountRecovery) {
 
         switch (auditableEvent) {
@@ -292,7 +294,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         extractPersistentIdFromHeaders(input.getHeaders()),
                         pair("mfa-type", mfaMethodType.getValue()),
                         pair("account-recovery", isAccountRecovery),
-                        pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()));
+                        pair("attemptNoFailedAt", configurationService.getCodeMaxRetries()),
+                        pair("journey-type", journeyType));
                 break;
             case INVALID_CODE_SENT:
                 auditService.submitAuditEvent(
@@ -311,7 +314,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         pair("mfa-type", mfaMethodType.getValue()),
                         pair("account-recovery", isAccountRecovery),
                         pair("loginFailureCount", session.getRetryCount()),
-                        pair("MFACodeEntered", MFACode(input)));
+                        pair("MFACodeEntered", code),
+                        pair("journey-type", journeyType));
                 break;
             case CODE_VERIFIED:
                 auditService.submitAuditEvent(
@@ -329,7 +333,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         extractPersistentIdFromHeaders(input.getHeaders()),
                         pair("mfa-type", mfaMethodType.getValue()),
                         pair("account-recovery", isAccountRecovery),
-                        pair("MFACodeEntered", code));
+                        pair("MFACodeEntered", code),
+                        pair("journey-type", journeyType));
                 break;
             default:
                 auditService.submitAuditEvent(
@@ -346,24 +351,8 @@ public class VerifyMfaCodeHandler extends BaseFrontendHandler<VerifyMfaCodeReque
                         AuditService.UNKNOWN,
                         extractPersistentIdFromHeaders(input.getHeaders()),
                         pair("mfa-type", mfaMethodType.getValue()),
-                        pair("account-recovery", isAccountRecovery));
+                        pair("account-recovery", isAccountRecovery),
+                        pair("journey-type", journeyType));
         }
-    }
-
-    private String MFACode(APIGatewayProxyRequestEvent input) {
-        String body = input.getBody();
-        int startIndex = body.indexOf("{\"mfaMethodType\"");
-        int endIndex = body.lastIndexOf("}") + 1;
-        String jsonPart = body.substring(startIndex, endIndex);
-
-        String code = null;
-        String[] parts = jsonPart.split(",");
-        for (String part : parts) {
-            if (part.contains("\"code\"")) {
-                code = part.split(":")[1].replaceAll("\"", "").trim();
-                break;
-            }
-        }
-        return code;
     }
 }

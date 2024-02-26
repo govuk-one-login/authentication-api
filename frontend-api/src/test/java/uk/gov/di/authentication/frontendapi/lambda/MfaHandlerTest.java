@@ -71,6 +71,7 @@ import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIEN
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_PHONE_NUMBER;
+import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_REQUEST_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
@@ -180,7 +181,8 @@ public class MfaHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         PHONE_NUMBER,
-                        persistentId);
+                        persistentId,
+                        pair("journey-type", JourneyType.SIGN_IN));
     }
 
     @Test
@@ -227,7 +229,8 @@ public class MfaHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         PHONE_NUMBER,
-                        persistentId);
+                        persistentId,
+                        pair("journey-type", JourneyType.SIGN_IN));
     }
 
     @Test
@@ -265,7 +268,8 @@ public class MfaHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         PHONE_NUMBER,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        pair("journey-type", JourneyType.SIGN_IN));
     }
 
     @Test
@@ -341,7 +345,8 @@ public class MfaHandlerTest {
                         "wrong.email@gov.uk",
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        pair("journey-type", JourneyType.SIGN_IN));
     }
 
     @Test
@@ -373,7 +378,8 @@ public class MfaHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        pair("journey-type", JourneyType.SIGN_IN));
     }
 
     @Test
@@ -483,7 +489,8 @@ public class MfaHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        pair("journey-type", journeyType));
     }
 
     @ParameterizedTest
@@ -523,7 +530,8 @@ public class MfaHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        pair("journey-type", journeyType));
     }
 
     @ParameterizedTest
@@ -564,7 +572,8 @@ public class MfaHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        pair("journey-type", journeyType));
     }
 
     @Test
@@ -604,7 +613,8 @@ public class MfaHandlerTest {
                         TEST_EMAIL_ADDRESS,
                         "123.123.123.123",
                         PHONE_NUMBER,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE);
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        pair("journey-type", JourneyType.SIGN_IN));
     }
 
     @Test
