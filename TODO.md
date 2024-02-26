@@ -19,6 +19,7 @@
 - Ayo
 - Alex
 - Mark
+- Michael
 
 ## TODO
 - Create a separate test that verifies no interactions with account modifiers service
