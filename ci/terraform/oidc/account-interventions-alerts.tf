@@ -31,12 +31,12 @@ resource "aws_cloudwatch_metric_alarm" "account_interventions_p1_cloudwatch_alar
 }
 
 data "aws_cloudwatch_log_group" "auth_account_interventions_lambda_log_group" {
-  count = var.use_localstack ? 0 : 1
+  count = var.environment == "production" || var.environment == "integration" ? 0 : 1
   name  = replace("/aws/lambda/${var.environment}-account-interventions-lambda", ".", "")
 }
 
 resource "aws_cloudwatch_log_metric_filter" "auth_account_interventions_metric_filter" {
-  count          = var.use_localstack ? 0 : 1
+  count          = var.environment == "production" || var.environment == "integration" ? 0 : 1
   name           = replace("${var.environment}-auth-account-interventions-errors-responses", ".", "")
   pattern        = "{($.${var.account_interventions_error_metric_name} = 1)}"
   log_group_name = data.aws_cloudwatch_log_group.auth_account_interventions_lambda_log_group[0].name
@@ -49,7 +49,7 @@ resource "aws_cloudwatch_log_metric_filter" "auth_account_interventions_metric_f
 }
 
 resource "aws_cloudwatch_metric_alarm" "auth_account_interventions_cloudwatch_alarm" {
-  count               = var.use_localstack ? 0 : 1
+  count               = var.environment == "production" || var.environment == "integration" ? 0 : 1
   alarm_name          = replace("${var.environment}-auth-account-interventions-cloudwatch-alarm", ".", "")
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = "1"
@@ -63,7 +63,7 @@ resource "aws_cloudwatch_metric_alarm" "auth_account_interventions_cloudwatch_al
 }
 
 resource "aws_cloudwatch_metric_alarm" "account_interventions_error_rate_p1_cloudwatch_alarm" {
-  count               = var.use_localstack ? 0 : 1
+  count               = var.environment == "production" || var.environment == "integration" ? 0 : 1
   alarm_name          = replace("${var.environment}-P1-auth-account-interventions-alarm", ".", "")
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = "1"
