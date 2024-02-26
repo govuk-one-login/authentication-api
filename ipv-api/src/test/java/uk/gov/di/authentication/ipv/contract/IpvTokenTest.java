@@ -33,7 +33,6 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-
 @PactConsumerTest
 @MockServerConfig(hostInterface = "localHost", port = "1234")
 public class IpvTokenTest {
@@ -139,14 +138,18 @@ public class IpvTokenTest {
     @BeforeEach
     void setUp() {
         ipvTokenService = new IPVTokenService(configService, kmsConnectionService);
+        when(configService.getIPVAuthorisationClientId()).thenReturn(CLIENT_ID.getValue());
+        when(configService.getIPVAudience()).thenReturn(IPV_URI.toString());
+        when(configService.getIPVTokenSigningKeyAlias()).thenReturn(KEY_ID);
+        when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(mockKmsReturn());
     }
 
-    @Pact(consumer = "IPV-orch-token-consumer")
-    RequestResponsePact success(PactDslWithProvider builder) {
+    @Pact(consumer = "OrchConsumer")
+    RequestResponsePact validRequestReturnsValidAccessToken(PactDslWithProvider builder) {
         return builder.given("dummyAuthCode is a valid authorization code")
                 .given("localHost is a valid resource URI")
                 .given("the JWT is signed with " + PRIVATE_JWT_KEY)
-                .uponReceiving("token request")
+                .uponReceiving("Valid auth code")
                 .path("/" + IPV_TOKEN_PATH)
                 .method("POST")
                 .body(
@@ -179,18 +182,13 @@ public class IpvTokenTest {
 
     @Test
     @PactTestFor(
-            providerName = "IPV-orch-token-provider",
-            pactMethod = "success",
+            providerName = "IpvCoreBackTokenProvider",
+            pactMethod = "validRequestReturnsValidAccessToken",
             pactVersion = PactSpecVersion.V3)
-    void getIPVResponse(MockServer mockServer) {
-        when(configService.getIPVAuthorisationClientId()).thenReturn(CLIENT_ID.getValue());
+    void getIPVTokenResponse(MockServer mockServer) {
         when(configService.getIPVBackendURI()).thenReturn(URI.create(mockServer.getUrl()));
-        when(configService.getIPVAudience()).thenReturn(IPV_URI.toString());
-        when(configService.getIPVTokenSigningKeyAlias()).thenReturn(KEY_ID);
-        when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(mockKmsReturn());
 
         TokenResponse tokenResponse;
-
         try (MockedStatic<NowHelper> mockedNowHelperClass = Mockito.mockStatic(NowHelper.class)) {
             mockedNowHelperClass
                     .when(NowHelper::now)
@@ -204,12 +202,14 @@ public class IpvTokenTest {
                             (mock, context) -> {
                                 when(mock.getValue()).thenReturn("1");
                             })) {
-                   tokenResponse = ipvTokenService.getToken("dummyAuthCode");
+                tokenResponse = ipvTokenService.getToken("dummyAuthCode");
             }
         }
 
         assertThat(tokenResponse.indicatesSuccess(), equalTo(true));
-        assertThat(tokenResponse.toSuccessResponse().getTokens().toString(), equalTo(getSuccessfulTokenHttpResponse()));
+        assertThat(
+                tokenResponse.toSuccessResponse().getTokens().toString(),
+                equalTo(getSuccessfulTokenHttpResponse()));
     }
 
     private SignResponse mockKmsReturn() {
@@ -222,20 +222,20 @@ public class IpvTokenTest {
 
     public String getSuccessfulTokenHttpResponse() {
         return "{"
-                        + "\""
-                        + ACCESS_TOKEN_FIELD
-                        + "\":\""
-                        + ACCESS_TOKEN_VALUE
-                        + "\","
-                        + "\""
-                        + TOKEN_TYPE_FIELD
-                        + "\":\""
-                        + TOKEN_TYPE_VALUE
-                        + "\","
-                        + "\""
-                        + EXPIRES_IN_FIELD
-                        + "\":"
-                        + EXPIRES_IN_VALUE
-                        + "}";
+                + "\""
+                + ACCESS_TOKEN_FIELD
+                + "\":\""
+                + ACCESS_TOKEN_VALUE
+                + "\","
+                + "\""
+                + TOKEN_TYPE_FIELD
+                + "\":\""
+                + TOKEN_TYPE_VALUE
+                + "\","
+                + "\""
+                + EXPIRES_IN_FIELD
+                + "\":"
+                + EXPIRES_IN_VALUE
+                + "}";
     }
 }
