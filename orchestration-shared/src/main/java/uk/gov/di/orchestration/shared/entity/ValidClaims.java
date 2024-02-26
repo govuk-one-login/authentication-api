@@ -34,7 +34,13 @@ public enum ValidClaims {
 
     public static List<String> allOneLoginClaims() {
         var claims =
-                Stream.of("sub", "email", "email_verified", "phone_number", "phone_number_verified")
+                Stream.of(
+                                "sub",
+                                "email",
+                                "email_verified",
+                                "phone_number",
+                                "phone_number_verified",
+                                "wallet_subject_id")
                         .collect(toList());
 
         claims.addAll(getAllValidClaims());

@@ -114,12 +114,13 @@ class ValidScopesTest {
                         "offline_access",
                         "am",
                         "govuk-account",
-                        "doc-checking-app"));
+                        "doc-checking-app",
+                        "wallet-subject-id"));
     }
 
     @Test
     void shouldReturnCorrectNumberOfValidScopes() {
-        assertThat(ValidScopes.getAllValidScopes().size(), equalTo(7));
+        assertThat(ValidScopes.getAllValidScopes().size(), equalTo(8));
     }
 
     @Test
@@ -151,7 +152,7 @@ class ValidScopesTest {
                         "read",
                         "write");
 
-        assertThat(ValidScopes.getScopesForListOfClaims(claims).size(), equalTo(6));
+        assertThat(ValidScopes.getScopesForListOfClaims(claims).size(), equalTo(7));
     }
 
     @Test
@@ -159,7 +160,7 @@ class ValidScopesTest {
         var claims =
                 Set.of("sub", "email", "phone_number", "phone_number_verified", "read", "write");
 
-        assertThat(ValidScopes.getScopesForListOfClaims(claims).size(), equalTo(5));
+        assertThat(ValidScopes.getScopesForListOfClaims(claims).size(), equalTo(6));
         assertFalse(
                 ValidScopes.getScopesForListOfClaims(claims)
                         .contains(OIDCScopeValue.EMAIL.getValue()));

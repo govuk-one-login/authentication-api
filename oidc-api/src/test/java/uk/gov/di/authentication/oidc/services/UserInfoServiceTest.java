@@ -183,6 +183,96 @@ class UserInfoServiceTest {
         assertNull(userInfo.getClaim(ValidClaims.RETURN_CODE.getValue()));
     }
 
+    @Test
+    void
+            shouldJustPopulateWalletSubjectIdClaimWhenWalletSubjectIdScopeIsPresentAndOrchSplitNotEnabled()
+                    throws JOSEException, AccessTokenException {
+        when(dynamoClientService.getClient(any()))
+                .thenReturn(
+                        Optional.of(
+                                new ClientRegistry()
+                                        .withClientID("test-client")
+                                        .withSectorIdentifierUri("https://test.com")));
+        var walletSubjectId =
+                ClientSubjectHelper.calculateWalletSubjectIdentifier(
+                        "test.com", INTERNAL_PAIRWISE_SUBJECT.getValue());
+        accessToken = createSignedAccessToken(null);
+        var scopes =
+                List.of(
+                        OIDCScopeValue.OPENID.getValue(),
+                        CustomScopeValue.WALLET_SUBJECT_ID.getValue());
+        when(authenticationService.getUserProfileFromSubject(INTERNAL_SUBJECT.getValue()))
+                .thenReturn(generateUserprofile());
+
+        var accessTokenStore =
+                new AccessTokenStore(
+                        accessToken.getValue(),
+                        INTERNAL_SUBJECT.getValue(),
+                        INTERNAL_PAIRWISE_SUBJECT.getValue());
+        var accessTokenInfo =
+                new AccessTokenInfo(accessTokenStore, SUBJECT.getValue(), scopes, null, CLIENT_ID);
+
+        var userInfo = userInfoService.populateUserInfo(accessTokenInfo);
+
+        assertThat(userInfo.getClaim("wallet_subject_id"), equalTo(walletSubjectId));
+        assertNull(userInfo.getEmailAddress());
+        assertNull(userInfo.getEmailVerified());
+        assertNull(userInfo.getPhoneNumber());
+        assertNull(userInfo.getPhoneNumberVerified());
+        assertNull(userInfo.getClaim(ValidClaims.ADDRESS.getValue()));
+        assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
+        assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
+        assertNull(userInfo.getClaim(ValidClaims.SOCIAL_SECURITY_RECORD.getValue()));
+        assertNull(userInfo.getClaim(ValidClaims.RETURN_CODE.getValue()));
+        assertNull(userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
+    }
+
+    @Test
+    void
+            shouldJustPopulateWalletSubjectIdClaimWhenWalletSubjectIdScopeIsPresentAndOrchSplitEnabled()
+                    throws JOSEException, AccessTokenException {
+        when(configurationService.isAuthOrchSplitEnabled()).thenReturn(true);
+        givenThereIsUserInfo();
+        when(dynamoClientService.getClient(any()))
+                .thenReturn(
+                        Optional.of(
+                                new ClientRegistry()
+                                        .withClientID("test-client")
+                                        .withSectorIdentifierUri("https://test.com")));
+        var walletSubjectId =
+                ClientSubjectHelper.calculateWalletSubjectIdentifier(
+                        "test.com", INTERNAL_PAIRWISE_SUBJECT.getValue());
+        accessToken = createSignedAccessToken(null);
+        var scopes =
+                List.of(
+                        OIDCScopeValue.OPENID.getValue(),
+                        CustomScopeValue.WALLET_SUBJECT_ID.getValue());
+        when(authenticationService.getUserProfileFromSubject(INTERNAL_SUBJECT.getValue()))
+                .thenReturn(generateUserprofile());
+
+        var accessTokenStore =
+                new AccessTokenStore(
+                        accessToken.getValue(),
+                        INTERNAL_SUBJECT.getValue(),
+                        INTERNAL_PAIRWISE_SUBJECT.getValue());
+        var accessTokenInfo =
+                new AccessTokenInfo(accessTokenStore, SUBJECT.getValue(), scopes, null, CLIENT_ID);
+
+        var userInfo = userInfoService.populateUserInfo(accessTokenInfo);
+
+        assertThat(userInfo.getClaim("wallet_subject_id"), equalTo(walletSubjectId));
+        assertNull(userInfo.getEmailAddress());
+        assertNull(userInfo.getEmailVerified());
+        assertNull(userInfo.getPhoneNumber());
+        assertNull(userInfo.getPhoneNumberVerified());
+        assertNull(userInfo.getClaim(ValidClaims.ADDRESS.getValue()));
+        assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
+        assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
+        assertNull(userInfo.getClaim(ValidClaims.SOCIAL_SECURITY_RECORD.getValue()));
+        assertNull(userInfo.getClaim(ValidClaims.RETURN_CODE.getValue()));
+        assertNull(userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
+    }
+
     @Nested
     class userInfoClaimsTests {
         @Test

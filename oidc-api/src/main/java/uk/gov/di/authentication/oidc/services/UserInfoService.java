@@ -129,6 +129,10 @@ public class UserInfoService {
                     AuthUserInfoClaims.PUBLIC_SUBJECT_ID.getValue(),
                     tmpUserInfo.getClaim(AuthUserInfoClaims.PUBLIC_SUBJECT_ID.getValue()));
         }
+        if (accessTokenInfo.getScopes().contains(CustomScopeValue.WALLET_SUBJECT_ID.getValue())) {
+            var walletSubjectID = calculateWalletSubjectID(accessTokenInfo);
+            userInfo.setClaim("wallet_subject_id", walletSubjectID);
+        }
     }
 
     private void populateInfo(UserInfo userInfo, AccessTokenInfo accessTokenInfo) {
@@ -149,6 +153,10 @@ public class UserInfoService {
         }
         if (accessTokenInfo.getScopes().contains(CustomScopeValue.ACCOUNT_MANAGEMENT.getValue())) {
             userInfo.setClaim("public_subject_id", userProfile.getPublicSubjectID());
+        }
+        if (accessTokenInfo.getScopes().contains(CustomScopeValue.WALLET_SUBJECT_ID.getValue())) {
+            var walletSubjectID = calculateWalletSubjectID(accessTokenInfo);
+            userInfo.setClaim("wallet_subject_id", walletSubjectID);
         }
     }
 
