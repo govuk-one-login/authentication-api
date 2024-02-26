@@ -17,6 +17,7 @@
 ## People present
 - Aidan
 - Ayo
+- Alex
 
 ## TODO
 - Create a separate test that verifies no interactions with account modifiers service
