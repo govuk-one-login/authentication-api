@@ -119,6 +119,16 @@ public class VotComponentTest {
     }
 
     @Test
+    void compareToShouldThrowWhenComparingEmptyComponents() {
+        var componentEmpty = VotComponent.empty(IdentId.class);
+        var componentP0 = VotComponent.of(IdentId.P0);
+
+        assertThrows(IllegalArgumentException.class, () -> componentEmpty.compareTo(componentP0));
+        assertThrows(IllegalArgumentException.class, () -> componentP0.compareTo(componentEmpty));
+        assertThrows(IllegalArgumentException.class, () -> componentEmpty.compareTo(componentEmpty));
+    }
+
+    @Test
     void shouldThrowWhenTryingToEditContents() {
         var component1 = VotComponent.empty(AuthId.class);
         assertThrows(UnsupportedOperationException.class, () -> component1.add(AuthId.C1));

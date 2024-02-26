@@ -15,11 +15,6 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 public class IdentIdTest {
 
-    @Test
-    public void test() {
-
-    }
-
     @ParameterizedTest
     @MethodSource("toStringTestCases")
     void toStringShouldReturnCorrectStringValue(IdentId input, String expected) {

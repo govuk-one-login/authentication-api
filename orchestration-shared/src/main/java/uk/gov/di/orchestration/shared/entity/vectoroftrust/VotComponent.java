@@ -3,6 +3,7 @@ package uk.gov.di.orchestration.shared.entity.vectoroftrust;
 import manifold.ext.delegation.rt.api.link;
 import org.jetbrains.annotations.NotNull;
 
+import java.text.MessageFormat;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Optional;
@@ -43,22 +44,25 @@ public class VotComponent<E extends Enum<E>> implements Set<E>, Comparable<VotCo
                 }
 
                 throw new IllegalArgumentException(
-                        "Unknown ID \""
-                                + componentId
-                                + "\" in Vector-Of-Trust Component"
-                                + " \""
-                                + component
-                                + "\".");
+                        MessageFormat.format("Unknown ID \"{0}\" in VoT Component \"{1}\".", componentId, component));
             }
         }
 
         return new VotComponent(componentIds);
     }
 
+    /**
+     * Lexicographical comparison like in a dictionary, but the components are read backwards e.g. Cl.Cm is read Cm.Cl.
+     * Comparison of individual IDs uses the Enum ordinal.
+     * @throws IllegalArgumentException If either component is empty as it doesn't make sense to compare un-normalised
+     * components.
+     * @see VectorOfTrust#getNormalised()
+     */
     @Override
     public int compareTo(@NotNull VotComponent<E> other) {
         if (this.isEmpty() || other.isEmpty()) {
-            throw new IllegalArgumentException("Can't compare empty components as their default values are not yet known. Components should be normalised before comparison.");
+            throw new IllegalArgumentException(
+                    "Can't compare empty components. Components should be normalised before comparison.");
         }
 
         var arr1 = this.stream().mapToInt(Enum::ordinal).toArray();

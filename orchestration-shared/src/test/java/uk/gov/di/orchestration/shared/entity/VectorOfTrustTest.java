@@ -1,14 +1,12 @@
 package uk.gov.di.orchestration.shared.entity;
 
 import org.hamcrest.MatcherAssert;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import uk.gov.di.orchestration.shared.entity.vectoroftrust.AuthId;
-import uk.gov.di.orchestration.shared.entity.vectoroftrust.IdentId;
 import uk.gov.di.orchestration.shared.entity.vectoroftrust.VectorOfTrust;
-import uk.gov.di.orchestration.shared.entity.vectoroftrust.VotComponent;
 
 import java.util.stream.Stream;
 
@@ -19,147 +17,99 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
-import static uk.gov.di.orchestration.shared.entity.vectoroftrust.VotConstants.C_EMPTY;
-import static uk.gov.di.orchestration.shared.entity.vectoroftrust.VotConstants.C_LOW;
-import static uk.gov.di.orchestration.shared.entity.vectoroftrust.VotConstants.C_LOW_LEGACY;
-import static uk.gov.di.orchestration.shared.entity.vectoroftrust.VotConstants.C_MEDIUM;
-import static uk.gov.di.orchestration.shared.entity.vectoroftrust.VotConstants.C_MEDIUM_LEGACY;
-import static uk.gov.di.orchestration.shared.entity.vectoroftrust.VotConstants.P_EMPTY;
-import static uk.gov.di.orchestration.shared.entity.vectoroftrust.VotConstants.P_HMRC250;
-import static uk.gov.di.orchestration.shared.entity.vectoroftrust.VotConstants.P_MEDIUM;
-import static uk.gov.di.orchestration.shared.entity.vectoroftrust.VotConstants.P_NONE;
+import static uk.gov.di.orchestration.shared.entity.vectoroftrust.VotConstants.AUTH_LOW;
+import static uk.gov.di.orchestration.shared.entity.vectoroftrust.VotConstants.AUTH_LOW_LEGACY;
+import static uk.gov.di.orchestration.shared.entity.vectoroftrust.VotConstants.AUTH_MEDIUM;
+import static uk.gov.di.orchestration.shared.entity.vectoroftrust.VotConstants.AUTH_MEDIUM_LEGACY;
+import static uk.gov.di.orchestration.shared.entity.vectoroftrust.VotConstants.IDENT_HMRC250;
+import static uk.gov.di.orchestration.shared.entity.vectoroftrust.VotConstants.IDENT_LOW;
+import static uk.gov.di.orchestration.shared.entity.vectoroftrust.VotConstants.IDENT_MEDIUM;
+import static uk.gov.di.orchestration.shared.entity.vectoroftrust.VotConstants.IDENT_NONE;
 
 public class VectorOfTrustTest {
+
+    private static VectorOfTrust votEmpty;
+    private static VectorOfTrust votCl;
+    private static VectorOfTrust votC1;
+    private static VectorOfTrust votClCm;
+    private static VectorOfTrust votC2;
+    private static VectorOfTrust votClP0;
+    private static VectorOfTrust votC1P0;
+    private static VectorOfTrust votClCmP0;
+    private static VectorOfTrust votC2P0;
+    private static VectorOfTrust votP0;
+    private static VectorOfTrust votP2;
+    private static VectorOfTrust votClCmP2;
+    private static VectorOfTrust votC2P2;
+    private static VectorOfTrust votC2PCL250;
+
+    @BeforeAll
+    public static void Setup()
+    {
+        votEmpty = VectorOfTrust.empty();
+        votCl = VectorOfTrust.ofAuthComponent(AUTH_LOW_LEGACY);
+        votC1 = VectorOfTrust.ofAuthComponent(AUTH_LOW);
+        votClCm = VectorOfTrust.ofAuthComponent(AUTH_MEDIUM_LEGACY);
+        votC2 = VectorOfTrust.ofAuthComponent(AUTH_MEDIUM);
+        votClP0 = new VectorOfTrust(AUTH_LOW_LEGACY, IDENT_LOW);
+        votC1P0 = new VectorOfTrust(AUTH_LOW, IDENT_LOW);
+        votClCmP0 = new VectorOfTrust(AUTH_MEDIUM_LEGACY, IDENT_LOW);
+        votC2P0 = new VectorOfTrust(AUTH_MEDIUM, IDENT_LOW);
+        votP0 = VectorOfTrust.ofIdentComponent(IDENT_NONE);
+        votP2 = VectorOfTrust.ofIdentComponent(IDENT_NONE);
+        votClCmP2 = new VectorOfTrust(AUTH_MEDIUM_LEGACY, IDENT_MEDIUM);
+        votC2P2 = new VectorOfTrust(AUTH_MEDIUM, IDENT_MEDIUM);
+        votC2PCL250 = new VectorOfTrust(AUTH_MEDIUM, IDENT_HMRC250);
+    }
+
     @Test
     void emptyShouldReturnAVectorWithEmptyComponents() {
-        var vector = VectorOfTrust.empty();
-        assertThat(vector.authComponent(), is(empty()));
-        assertThat(vector.identComponent(), is(empty()));
+        var vot = VectorOfTrust.empty();
+        assertThat(vot.getAuthComponent(), is(empty()));
+        assertThat(vot.getIdentComponent(), is(empty()));
     }
 
     @Test
     void ofAuthComponentShouldReturnAVectorWithOnlyTheGivenCredentialComponent() {
-        var vector = VectorOfTrust.ofAuthComponent(C_MEDIUM_LEGACY);
-        assertThat(vector.authComponent(), is(equalTo(C_MEDIUM_LEGACY)));
-        assertThat(vector.identComponent(), is(empty()));
+        var vot = VectorOfTrust.ofAuthComponent(AUTH_MEDIUM_LEGACY);
+        assertThat(vot.getAuthComponent(), is(equalTo(AUTH_MEDIUM_LEGACY)));
+        assertThat(vot.getIdentComponent(), is(empty()));
     }
 
     @Test
     void ofIdentComponentShouldReturnAVectorWithOnlyTheGivenCredentialComponent() {
-        var vector = VectorOfTrust.ofIdentComponent(P_MEDIUM);
-        assertThat(vector.authComponent(), is(empty()));
-        assertThat(vector.identComponent(), is(equalTo(P_MEDIUM)));
-    }
-
-    @ParameterizedTest
-    @MethodSource("equalsAndHashCodeTestCases")
-    void equalsAndHashCodeShouldBehaveCorrectly(VectorOfTrust vector1, VectorOfTrust vector2, boolean areEqual) {
-        assertThat(vector1.equals(vector2), is(equalTo(areEqual)));
-        assertThat(vector2.equals(vector1), is(equalTo(areEqual)));
-
-        if (areEqual) {
-            assertThat(vector1.hashCode(), is(equalTo(vector1.hashCode())));
-        }
-    }
-
-    static Stream<Arguments> equalsAndHashCodeTestCases() {
-        var vectorClCmP0A = new VectorOfTrust(C_MEDIUM_LEGACY, P_NONE);
-        var vectorClCmP0B = new VectorOfTrust(C_MEDIUM_LEGACY, P_NONE);
-        var vectorC1P0A = new VectorOfTrust(C_LOW, P_NONE);
-        var vectorC1P0B = new VectorOfTrust(C_LOW, P_NONE);
-        var vectorClCmP2A = new VectorOfTrust(C_MEDIUM_LEGACY, P_MEDIUM);
-        var vectorClCmP2B = new VectorOfTrust(C_MEDIUM_LEGACY, P_MEDIUM);
-        var vectorC1P2A = new VectorOfTrust(C_LOW, P_MEDIUM);
-        var vectorC1P2B = new VectorOfTrust(C_LOW, P_MEDIUM);
-        var vectorClCmEmptyA = new VectorOfTrust(C_MEDIUM_LEGACY, P_EMPTY);
-        var vectorClCmEmptyB = new VectorOfTrust(C_MEDIUM_LEGACY, P_EMPTY);
-        var vectorEmptyP0A = new VectorOfTrust(C_EMPTY, P_NONE);
-        var vectorEmptyP0B = new VectorOfTrust(C_EMPTY, P_NONE);
-        var vectorEmptyEmptyA = new VectorOfTrust(C_EMPTY, P_EMPTY);
-        var vectorEmptyEmptyB = new VectorOfTrust(C_EMPTY, P_EMPTY);
-
-        return Stream.of(
-                arguments(vectorClCmP0A, vectorClCmP0B, true),
-                arguments(vectorC1P0A, vectorC1P0B, true),
-                arguments(vectorClCmP2A, vectorClCmP2B, true),
-                arguments(vectorC1P2A, vectorC1P2B, true),
-                arguments(vectorClCmEmptyA, vectorClCmEmptyB, true),
-                arguments(vectorEmptyP0A, vectorEmptyP0B, true),
-                arguments(vectorEmptyEmptyA, vectorEmptyEmptyB, true),
-                arguments(vectorClCmP0A, vectorC1P0A, false),
-                arguments(vectorClCmP0A, vectorClCmP2A, false),
-                arguments(vectorClCmP0A, vectorC1P2A, false),
-                arguments(vectorClCmP0A, vectorClCmEmptyA, false),
-                arguments(vectorClCmP0A, vectorEmptyP0A, false),
-                arguments(vectorClCmP0A, vectorEmptyEmptyA, false),
-                arguments(vectorC1P0A, vectorClCmP2A, false),
-                arguments(vectorC1P0A, vectorC1P2A, false),
-                arguments(vectorC1P0A, vectorClCmEmptyA, false),
-                arguments(vectorC1P0A, vectorEmptyP0A, false),
-                arguments(vectorC1P0A, vectorEmptyEmptyA, false),
-                arguments(vectorClCmP2A, vectorC1P2A, false),
-                arguments(vectorClCmP2A, vectorClCmEmptyA, false),
-                arguments(vectorClCmP2A, vectorEmptyP0A, false),
-                arguments(vectorClCmP2A, vectorEmptyEmptyA, false),
-                arguments(vectorC1P2A, vectorClCmEmptyA, false),
-                arguments(vectorC1P2A, vectorEmptyP0A, false),
-                arguments(vectorC1P2A, vectorEmptyEmptyA, false),
-                arguments(vectorClCmEmptyA, vectorEmptyP0A, false),
-                arguments(vectorClCmEmptyA, vectorEmptyEmptyA, false));
+        var vot = VectorOfTrust.ofIdentComponent(IDENT_MEDIUM);
+        assertThat(vot.getAuthComponent(), is(empty()));
+        assertThat(vot.getIdentComponent(), is(equalTo(IDENT_MEDIUM)));
     }
 
     @ParameterizedTest
     @MethodSource("parseTestCases")
-    void parseShouldReturnCorrectVectorOfTrust(String input, VectorOfTrust expected) {
-        MatcherAssert.assertThat(VectorOfTrust.parse(input), is(equalTo(expected)));
+    void parseShouldReturnCorrectVectorOfTrust(String input, VectorOfTrust expectedVot) {
+        var actualVot = VectorOfTrust.parse(input);
+        MatcherAssert.assertThat(actualVot.getAuthComponent(), is(equalTo(expectedVot.getAuthComponent())));
+        MatcherAssert.assertThat(actualVot.getIdentComponent(), is(equalTo(expectedVot.getIdentComponent())));
     }
 
     static Stream<Arguments> parseTestCases() {
         return Stream.of(
-                arguments(
-                        "",
-                        new VectorOfTrust(
-                                VotComponent.empty(AuthId.class),
-                                VotComponent.empty(IdentId.class))),
-                arguments(
-                        "Cl",
-                        new VectorOfTrust(
-                                VotComponent.of(AuthId.CL),
-                                VotComponent.empty(IdentId.class))),
-                arguments(
-                        "Cl.Cm",
-                        new VectorOfTrust(
-                                VotComponent.of(AuthId.CL, AuthId.CM),
-                                VotComponent.empty(IdentId.class))),
-                arguments(
-                        "P0",
-                        new VectorOfTrust(
-                                VotComponent.empty(AuthId.class),
-                                VotComponent.of(IdentId.P0))),
-                arguments(
-                        "Cl.Cm.P2",
-                        new VectorOfTrust(
-                                VotComponent.of(AuthId.CL, AuthId.CM),
-                                VotComponent.of(IdentId.P2))),
-                arguments(
-                        "Cm.P2.Cl",
-                        new VectorOfTrust(
-                                VotComponent.of(AuthId.CL, AuthId.CM),
-                                VotComponent.of(IdentId.P2))),
-                arguments(
-                        "PCL250.C2",
-                        new VectorOfTrust(
-                                VotComponent.of(AuthId.C2),
-                                VotComponent.of(IdentId.PCL250))));
+                arguments("", votEmpty),
+                arguments("Cl", votCl),
+                arguments("Cl.Cm", votClCm),
+                arguments("P0", votP0),
+                arguments("Cl.Cm.P2", votClCmP2),
+                arguments("Cm.P2.Cl", votClCmP2), // note we support arbitrary ordering if ids
+                arguments("PCL250.C2", votC2PCL250)
+        );
     }
 
     @ParameterizedTest
-    @MethodSource("throwUnknownId")
+    @MethodSource("throwUnknownIdTestCases")
     void parseShouldThrowWhenUnknownIdIsProvided(String invalid) {
         assertThrows(IllegalArgumentException.class, () -> VectorOfTrust.parse(invalid));
     }
 
-    static Stream<Arguments> throwUnknownId() {
+    static Stream<Arguments> throwUnknownIdTestCases() {
         return Stream.of(
                 arguments(" "), // unexpected whitespace
                 arguments(" Cl"), // ...
@@ -176,6 +126,36 @@ public class VectorOfTrustTest {
     }
 
     @ParameterizedTest
+    @MethodSource("getNormalisedTestCases")
+    public void getNormalisedShouldReturnNormalisedVot(VectorOfTrust vot, VectorOfTrust expectedNormaliseVot) {
+        var actualNormalisedVot = vot.getNormalised();
+        assertThat(actualNormalisedVot.getAuthComponent(), is(equalTo(expectedNormaliseVot)));
+        assertThat(actualNormalisedVot.getIdentComponent(), is(equalTo(expectedNormaliseVot.getIdentComponent())));
+        assertThat(actualNormalisedVot.getNormalised() == actualNormalisedVot, is(true));
+    }
+
+    static Stream<Arguments> getNormalisedTestCases() {
+        return Stream.of(
+                // equivalent group 1
+                arguments(votCl, votClP0),
+                arguments(votC1, votClP0),
+                arguments(votClP0, votClP0),
+                arguments(votC1P0, votClP0),
+                // equivalent group 2
+                arguments(votEmpty, votClCmP0),
+                arguments(votP0, votClCmP0),
+                arguments(votClCm, votClCmP0),
+                arguments(votC2, votClCmP0),
+                arguments(votClCmP0, votClCmP0),
+                arguments(votC2P0, votClCmP0),
+                // equivalent group 3
+                arguments(votP2, votClCmP2),
+                arguments(votClCmP2, votClCmP2),
+                arguments(votC2P2, votClCmP2)
+        );
+    }
+
+    @ParameterizedTest
     @MethodSource("toStringTestCases")
     public void toStringShouldReturnCorrectStringValue(VectorOfTrust input, String expected) {
         assertThat(input.toString(), is(equalTo(expected)));
@@ -183,11 +163,55 @@ public class VectorOfTrustTest {
 
     static Stream<Arguments> toStringTestCases() {
         return Stream.of(
-                arguments(new VectorOfTrust(C_EMPTY, P_EMPTY), ""),
-                arguments(new VectorOfTrust(C_LOW_LEGACY, P_EMPTY), "Cl"),
-                arguments(new VectorOfTrust(C_MEDIUM_LEGACY, P_EMPTY), "Cl.Cm"),
-                arguments(new VectorOfTrust(C_EMPTY, P_NONE), "P0"),
-                arguments(new VectorOfTrust(C_MEDIUM_LEGACY, P_MEDIUM), "Cl.Cm.P2"),
-                arguments(new VectorOfTrust(C_MEDIUM, P_HMRC250), "C2.PCL250"));
+                arguments(votEmpty, ""),
+                arguments(votCl, "Cl"),
+                arguments(votClCm, "Cl.Cm"),
+                arguments(votP0, "P0"),
+                arguments(votClCmP2, "Cl.Cm.P2"),
+                arguments(votC2PCL250, "C2.PCL250")
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("equalsAndHashCodeAnCompareToTestCases")
+    void equalsAndHashCodeAndCompareToShouldBehaveCorrectly(VectorOfTrust vot1,
+                                                            VectorOfTrust vot2,
+                                                            int expectedCompareToSignum) {
+        // test compareTo
+        assertThat(Math.signum(vot1.compareTo(vot2)), is(equalTo(expectedCompareToSignum)));
+        assertThat(Math.signum(vot2.compareTo(vot1)), is(equalTo(-expectedCompareToSignum)));
+
+        var expectedEquals = expectedCompareToSignum == 0;
+
+        // test equals
+        assertThat(vot1.equals(vot2), is(equalTo(expectedEquals)));
+        assertThat(vot2.equals(vot1), is(equalTo(expectedEquals)));
+
+        if (expectedEquals) {
+            // test hashCode
+            assertThat(vot1.hashCode(), is(equalTo(vot2.hashCode())));
+        }
+    }
+
+    static Stream<Arguments> equalsAndHashCodeAnCompareToTestCases() {
+        return Stream.of(
+                // equivalent group 1
+                arguments(votCl, votC1, 0),
+                arguments(votCl, votClP0, 0),
+                arguments(votCl, votC1P0, 0),
+                // equivalent group 2
+                arguments(votEmpty, votP0, 0),
+                arguments(votEmpty, votClCm, 0),
+                arguments(votEmpty, votC2, 0),
+                arguments(votEmpty, votClCmP0, 0),
+                arguments(votEmpty, votC2P0, 0),
+                // equivalent group 3
+                arguments(votP2, votClCmP2, 0),
+                arguments(votP2, votC2P2, 0),
+                // different
+                arguments(votC1P0, votC2P0, -1),
+                arguments(votC2P2, votC2P0, 1),
+                arguments(votC1P0, votC2P2, -1)
+        );
     }
 }
