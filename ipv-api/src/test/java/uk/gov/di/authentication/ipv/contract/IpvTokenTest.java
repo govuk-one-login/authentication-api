@@ -168,7 +168,7 @@ public class IpvTokenTest {
                                 + "&"
                                 + "client_id="
                                 + CLIENT_ID.getValue())
-                .headers("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
+                .matchHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
                 .willRespondWith()
                 .status(200)
                 .body(
@@ -185,7 +185,7 @@ public class IpvTokenTest {
             providerName = "IpvCoreBackTokenProvider",
             pactMethod = "validRequestReturnsValidAccessToken",
             pactVersion = PactSpecVersion.V3)
-    void getIPVTokenResponse(MockServer mockServer) {
+    void getIPVTokenSuccessResponse(MockServer mockServer) {
         when(configService.getIPVBackendURI()).thenReturn(URI.create(mockServer.getUrl()));
 
         TokenResponse tokenResponse;
@@ -210,6 +210,66 @@ public class IpvTokenTest {
         assertThat(
                 tokenResponse.toSuccessResponse().getTokens().toString(),
                 equalTo(getSuccessfulTokenHttpResponse()));
+    }
+
+    @Pact(consumer = "OrchConsumer")
+    RequestResponsePact invalidAuthCodeReturnsInvalidRequest(PactDslWithProvider builder) {
+        return builder.given("dummyInvalidAuthCode is a invalid authorization code")
+                .given("localHost is a valid resource URI")
+                .given("the JWT is signed with " + PRIVATE_JWT_KEY)
+                .uponReceiving("Invalid auth code")
+                .path("/" + IPV_TOKEN_PATH)
+                .method("POST")
+                .body(
+                        "client_assertion_type=urn%3Aietf%3Aparams%3Aoauth%3Aclient-assertion-type%3Ajwt-bearer&"
+                                + "code=dummyInvalidAuthCode&"
+                                + "grant_type=authorization_code&"
+                                + "resource="
+                                + "http://localhost:1234/token"
+                                + "&"
+                                + "client_assertion="
+                                + CLIENT_ASSERTION_HEADER
+                                + "."
+                                + CLIENT_ASSERTION_BODY
+                                + "."
+                                + CLIENT_ASSERTION_SIGNATURE
+                                + "&"
+                                + "client_id="
+                                + CLIENT_ID.getValue())
+                .matchHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
+                .willRespondWith()
+                .status(400)
+                .toPact();
+    }
+
+    @Test
+    @PactTestFor(
+            providerName = "IpvCoreBackTokenProvider",
+            pactMethod = "invalidAuthCodeReturnsInvalidRequest",
+            pactVersion = PactSpecVersion.V3)
+    void getIPVTokenErrorResponse(MockServer mockServer) {
+        when(configService.getIPVBackendURI()).thenReturn(URI.create(mockServer.getUrl()));
+
+        TokenResponse tokenResponse;
+        try (MockedStatic<NowHelper> mockedNowHelperClass = Mockito.mockStatic(NowHelper.class)) {
+            mockedNowHelperClass
+                    .when(NowHelper::now)
+                    .thenReturn(Date.from(Instant.parse("2000-01-01T00:00:00.00Z")));
+            mockedNowHelperClass
+                    .when(() -> NowHelper.nowPlus(5L, ChronoUnit.MINUTES))
+                    .thenReturn(Date.from(Instant.parse("2099-01-01T00:00:00.00Z")));
+            try (var mockJwtId =
+                    mockConstruction(
+                            JWTID.class,
+                            (mock, context) -> {
+                                when(mock.getValue()).thenReturn("1");
+                            })) {
+                tokenResponse = ipvTokenService.getToken("dummyInvalidAuthCode");
+            }
+        }
+
+        assertThat(tokenResponse.indicatesSuccess(), equalTo(false));
+        assertThat(tokenResponse.toHTTPResponse().getStatusCode(), equalTo(400));
     }
 
     private SignResponse mockKmsReturn() {
