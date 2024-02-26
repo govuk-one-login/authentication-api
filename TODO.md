@@ -13,6 +13,10 @@
 - Ayo
 - Aidan
 
+# 26/02/2024
+## People present
+- Aidan
+
 ## TODO
 - Create a separate test that verifies no interactions with account modifiers service
 - Verify code storage service gets and deletes OTP code
