@@ -781,7 +781,7 @@ class VerifyMfaCodeHandlerTest {
 //                    "abc.def@digital.cabinet-office.gov.uk",
 //                    "testclient.user2@internet.com",
             })
-    void shouldReturn204ForValidVerifyEmailRequestUsingTestClient(String email) throws Json.JsonException {
+    void shouldReturn204ForValidVerifyEmailRequest(String email) throws Json.JsonException {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
                 .thenReturn(Optional.of(emailCodeProcessor));
 
