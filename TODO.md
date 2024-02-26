@@ -16,6 +16,7 @@
 # 26/02/2024
 ## People present
 - Aidan
+- Ayo
 
 ## TODO
 - Create a separate test that verifies no interactions with account modifiers service
