@@ -144,7 +144,7 @@ public class IpvTokenTest {
         when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(mockKmsReturn());
     }
 
-    @Pact(consumer = "OrchConsumer")
+    @Pact(consumer = "OrchTokenConsumer")
     RequestResponsePact validRequestReturnsValidAccessToken(PactDslWithProvider builder) {
         return builder.given("dummyAuthCode is a valid authorization code")
                 .given("localHost is a valid resource URI")
@@ -212,7 +212,7 @@ public class IpvTokenTest {
                 equalTo(getSuccessfulTokenHttpResponse()));
     }
 
-    @Pact(consumer = "OrchConsumer")
+    @Pact(consumer = "OrchTokenConsumer")
     RequestResponsePact invalidAuthCodeReturnsInvalidRequest(PactDslWithProvider builder) {
         return builder.given("dummyInvalidAuthCode is a invalid authorization code")
                 .given("localHost is a valid resource URI")
