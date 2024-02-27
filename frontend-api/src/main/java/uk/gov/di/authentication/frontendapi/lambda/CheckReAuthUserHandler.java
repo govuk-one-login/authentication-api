@@ -98,13 +98,14 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                                 authenticationService,
                                 configurationService.getInternalSectorUri())
                         .getValue();
+        LOG.info("rpPairwiseId {}", rpPairwiseId);
         var internalPairwiseId =
                 ClientSubjectHelper.getSubjectWithSectorIdentifier(
                                 userProfile,
                                 configurationService.getInternalSectorUri(),
                                 authenticationService)
                         .getValue();
-
+        LOG.info("internalPairwiseId {}", rpPairwiseId);
         if (rpPairwiseId.equals(internalPairwiseId)) {
             LOG.info("Successfully verified re-authentication");
             removeEmailCountLock(userProfile.getEmail());
