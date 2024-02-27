@@ -791,6 +791,7 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
                 boolean abortOnAisErrorResponse) {
             super(
                     tokenSigningKey,
+                    storageTokenSigner,
                     ipvPrivateKeyJwtSigner,
                     spotQueue,
                     docAppPrivateKeyJwtSigner,
