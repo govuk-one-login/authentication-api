@@ -60,7 +60,7 @@ public class IpvUserIdentityTest {
                 .uponReceiving("Valid access token")
                 .path("/" + IPV_USER_IDENTITY_PATH)
                 .method("GET")
-                .matchHeader("Authorization", tokens.getAccessToken().toAuthorizationHeader())
+                .matchHeader("Authorization", "^(?i)Bearer (.*)(?-i)", tokens.getAccessToken().toAuthorizationHeader())
                 .willRespondWith()
                 .status(200)
                 .body(
