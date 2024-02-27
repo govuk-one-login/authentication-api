@@ -1121,9 +1121,7 @@ class AuthorisationHandlerTest {
 
             verifyAuthorisationRequestParsedAuditEvent(AuditService.UNKNOWN, false, true);
 
-            assertThat(
-                    uri.getQuery(),
-                    containsString(String.format("reauthenticate=%s", ID_TOKEN_AUDIENCE)));
+            assertThat(uri.getQuery(), containsString(String.format("reauthenticate=%s", SUBJECT)));
         }
 
         @Test
@@ -1163,7 +1161,7 @@ class AuthorisationHandlerTest {
             verify(orchestrationAuthorizationService).getSignedAndEncryptedJWT(argument.capture());
             assertThat(
                     argument.getValue().getStringClaim("reauthenticate"),
-                    equalTo(ID_TOKEN_AUDIENCE));
+                    equalTo(SUBJECT.getValue()));
         }
 
         private static Stream<Prompt.Type> prompts() {
