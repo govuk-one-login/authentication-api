@@ -842,22 +842,24 @@ public class AuthorisationHandler
             throw new RuntimeException("Unable to validate id_token_hint");
         }
 
-        String audience;
+        String aud;
+        String sub;
         try {
             SignedJWT idToken =
                     SignedJWT.parse(
                             authenticationRequest.getCustomParameter("id_token_hint").get(0));
-            audience = idToken.getJWTClaimsSet().getAudience().stream().findFirst().orElse(null);
+            aud = idToken.getJWTClaimsSet().getAudience().stream().findFirst().orElse(null);
+            sub = idToken.getJWTClaimsSet().getSubject();
         } catch (java.text.ParseException e) {
             LOG.warn("Unable to parse id_token_hint into SignedJWT");
             throw new RuntimeException("Invalid id_token_hint");
         }
 
-        if (audience == null || !audience.equals(authenticationRequest.getClientID().getValue())) {
+        if (aud == null || !aud.equals(authenticationRequest.getClientID().getValue())) {
             LOG.warn("Audience on id_token_hint does not match client ID");
             throw new RuntimeException("Invalid id_token_hint for client");
         }
 
-        return audience;
+        return sub;
     }
 }
