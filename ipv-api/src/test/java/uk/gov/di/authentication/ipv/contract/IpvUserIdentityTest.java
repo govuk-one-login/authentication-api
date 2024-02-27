@@ -1,7 +1,6 @@
 package uk.gov.di.authentication.ipv.contract;
 
 import au.com.dius.pact.consumer.MockServer;
-import au.com.dius.pact.consumer.dsl.PactDslJsonBody;
 import au.com.dius.pact.consumer.dsl.PactDslWithProvider;
 import au.com.dius.pact.consumer.junit5.PactConsumerTest;
 import au.com.dius.pact.consumer.junit5.PactTestFor;
@@ -21,6 +20,7 @@ import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseE
 import uk.gov.di.orchestration.shared.helpers.*;
 import uk.gov.di.orchestration.shared.services.*;
 
+import static au.com.dius.pact.consumer.dsl.LambdaDsl.newJsonBody;
 import static com.nimbusds.common.contenttype.ContentType.APPLICATION_JSON;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -61,30 +61,56 @@ public class IpvUserIdentityTest {
                 .uponReceiving("Valid access token")
                 .path("/" + IPV_USER_IDENTITY_PATH)
                 .method("GET")
-                .matchHeader("Authorization", "^(?i)Bearer (.*)(?-i)", tokens.getAccessToken().toAuthorizationHeader())
+                .matchHeader(
+                        "Authorization",
+                        "^(?i)Bearer (.*)(?-i)",
+                        tokens.getAccessToken().toAuthorizationHeader())
                 .willRespondWith()
                 .status(200)
                 .body(
-                        new PactDslJsonBody()
-                                .stringType(SUB_FIELD, SUB_VALUE)
-                                .stringType(VOT_FIELD, VOT_VALUE)
-                                .stringType(VTM_FIELD, VTM_VALUE)
-                                .unorderedMaxArray(CREDENTIALS_JWT_FIELD, 1)
-                                .stringType(CREDENTIALS_JWT_VALUE)
-                                .closeArray()
-                                .object(CORE_IDENTITY_FIELD)
-                                .maxArrayLike(CORE_IDENTITY_NAME_FIELD, 1)
-                                .eachLike(CORE_IDENTITY_NAME_PARTS_FIELD, 2)
-                                .stringType("type", "Name")
-                                .stringType("value", "Kenneth")
-                                .closeObject()
-                                .closeArray()
-                                .closeObject()
-                                .closeArray()
-                                .maxArrayLike(CORE_IDENTITY_BIRTH_FIELD, 1)
-                                .stringType("value", CORE_IDENTITY_BIRTH_VALUE)
-                                .closeArray()
-                                .closeObject())
+                        newJsonBody(
+                                        (body) -> {
+                                            body.stringType(SUB_FIELD, SUB_VALUE);
+                                            body.stringType(VOT_FIELD, VOT_VALUE);
+                                            body.stringType(VTM_FIELD, VTM_VALUE);
+                                            body.unorderedMinArray(
+                                                    CREDENTIALS_JWT_FIELD,
+                                                    1,
+                                                    (jwt) -> {
+                                                        jwt.stringType(CREDENTIALS_JWT_VALUE);
+                                                    });
+                                            body.object(
+                                                    CORE_IDENTITY_FIELD,
+                                                    (core) -> {
+                                                        core.minArrayLike(
+                                                                CORE_IDENTITY_NAME_FIELD,
+                                                                1,
+                                                                (name) -> {
+                                                                    name.eachLike(
+                                                                            CORE_IDENTITY_NAME_PARTS_FIELD,
+                                                                            2,
+                                                                            (nameParts) -> {
+                                                                                nameParts
+                                                                                        .stringType(
+                                                                                                "type",
+                                                                                                "Name");
+                                                                                nameParts
+                                                                                        .stringType(
+                                                                                                "value",
+                                                                                                "Kenneth");
+                                                                            });
+                                                                });
+                                                        core.minArrayLike(
+                                                                CORE_IDENTITY_BIRTH_FIELD,
+                                                                1,
+                                                                (birthDate) -> {
+                                                                    birthDate.stringType(
+                                                                            "value",
+                                                                            CORE_IDENTITY_BIRTH_VALUE);
+                                                                });
+                                                    });
+                                        })
+                                .build())
                 .toPact();
     }
 
@@ -112,8 +138,12 @@ public class IpvUserIdentityTest {
                 .uponReceiving("Invalid access token")
                 .path("/" + IPV_USER_IDENTITY_PATH)
                 .method("GET")
-                .matchHeader("Authorization", "^(?i)Bearer (.*)(?-i)", tokens.getAccessToken().toAuthorizationHeader())
-                .willRespondWith().comment("test")
+                .matchHeader(
+                        "Authorization",
+                        "^(?i)Bearer (.*)(?-i)",
+                        tokens.getAccessToken().toAuthorizationHeader())
+                .willRespondWith()
+                .comment("test")
                 .status(400)
                 .toPact();
     }

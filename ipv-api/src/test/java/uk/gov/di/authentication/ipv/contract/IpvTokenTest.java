@@ -1,7 +1,6 @@
 package uk.gov.di.authentication.ipv.contract;
 
 import au.com.dius.pact.consumer.MockServer;
-import au.com.dius.pact.consumer.dsl.PactDslJsonBody;
 import au.com.dius.pact.consumer.dsl.PactDslWithProvider;
 import au.com.dius.pact.consumer.junit.MockServerConfig;
 import au.com.dius.pact.consumer.junit5.PactConsumerTest;
@@ -28,6 +27,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 
+import static au.com.dius.pact.consumer.dsl.LambdaDsl.newJsonBody;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
@@ -49,7 +49,7 @@ public class IpvTokenTest {
     private final String URI_FIELD = "uri";
     private final String ACCESS_TOKEN_VALUE = "740e5834-3a29-46b4-9a6f-16142fde533a";
     private final String TOKEN_TYPE_VALUE = "Bearer";
-    private final String EXPIRES_IN_VALUE = "3600";
+    private final Integer EXPIRES_IN_VALUE = 3600;
     private final String URI_VALUE = "https://localhost";
     private static final String KEY_ID = "14342354354353";
 
@@ -172,11 +172,14 @@ public class IpvTokenTest {
                 .willRespondWith()
                 .status(200)
                 .body(
-                        new PactDslJsonBody()
-                                .stringType(ACCESS_TOKEN_FIELD, ACCESS_TOKEN_VALUE)
-                                .stringType(TOKEN_TYPE_FIELD, TOKEN_TYPE_VALUE)
-                                .stringType(EXPIRES_IN_FIELD, EXPIRES_IN_VALUE)
-                                .stringType(URI_FIELD, URI_VALUE))
+                        newJsonBody(
+                                        (body) -> {
+                                            body.stringType(ACCESS_TOKEN_FIELD, ACCESS_TOKEN_VALUE);
+                                            body.stringType(TOKEN_TYPE_FIELD, TOKEN_TYPE_VALUE);
+                                            body.integerType(EXPIRES_IN_FIELD, EXPIRES_IN_VALUE);
+                                            body.stringType(URI_FIELD, URI_VALUE);
+                                        })
+                                .build())
                 .toPact();
     }
 
