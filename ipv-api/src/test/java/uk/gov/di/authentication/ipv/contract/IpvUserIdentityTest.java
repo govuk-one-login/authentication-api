@@ -24,6 +24,7 @@ import uk.gov.di.orchestration.shared.services.*;
 import static com.nimbusds.common.contenttype.ContentType.APPLICATION_JSON;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 @PactConsumerTest
@@ -51,10 +52,10 @@ public class IpvUserIdentityTest {
     @BeforeEach
     void setUp() {
         ipvTokenService = new IPVTokenService(configService, kmsConnectionService);
-        tokens = new Tokens(new BearerAccessToken(), null);
+        tokens = new Tokens(new BearerAccessToken("accessToken"), null);
     }
 
-    @Pact(consumer = "OrchConsumer")
+    @Pact(consumer = "OrchUserIdentityConsumer")
     RequestResponsePact validRequestReturnsValidUserInfo(PactDslWithProvider builder) {
         return builder.given("accessToken is a valid access token")
                 .uponReceiving("Valid access token")
@@ -89,7 +90,7 @@ public class IpvUserIdentityTest {
 
     @Test
     @PactTestFor(
-            providerName = "IpvCoreBackTokenProvider",
+            providerName = "IpvCoreBackUserIdentityProvider",
             pactMethod = "validRequestReturnsValidUserInfo",
             pactVersion = PactSpecVersion.V3)
     void getIPVUserInfoSuccessResponse(MockServer mockServer)
@@ -103,6 +104,39 @@ public class IpvUserIdentityTest {
                                 tokens.getBearerAccessToken()));
 
         assertThat(userInfo, equalTo(getUserInfoFromSuccessfulUserIdentityHttpResponse()));
+    }
+
+    @Pact(consumer = "OrchUserIdentityConsumer")
+    RequestResponsePact invalidTokenReturnErrorResponse(PactDslWithProvider builder) {
+        return builder.given("accessToken is a invalid access token")
+                .uponReceiving("Invalid access token")
+                .path("/" + IPV_USER_IDENTITY_PATH)
+                .method("GET")
+                .matchHeader("Authorization", "^(?i)Bearer (.*)(?-i)", tokens.getAccessToken().toAuthorizationHeader())
+                .willRespondWith().comment("test")
+                .status(400)
+                .toPact();
+    }
+
+    @Test
+    @PactTestFor(
+            providerName = "IpvCoreBackUserIdentityProvider",
+            pactMethod = "invalidTokenReturnErrorResponse",
+            pactVersion = PactSpecVersion.V3)
+    void getIPVUserInfoErrorResponse(MockServer mockServer) {
+
+        UnsuccessfulCredentialResponseException exception =
+                assertThrows(
+                        UnsuccessfulCredentialResponseException.class,
+                        () -> {
+                            ipvTokenService.sendIpvUserIdentityRequest(
+                                    new UserInfoRequest(
+                                            ConstructUriHelper.buildURI(
+                                                    mockServer.getUrl(), IPV_USER_IDENTITY_PATH),
+                                            tokens.getBearerAccessToken()));
+                        });
+
+        assertThat(exception.getHttpCode(), equalTo(0));
     }
 
     private UserInfo getUserInfoFromSuccessfulUserIdentityHttpResponse() throws ParseException {
