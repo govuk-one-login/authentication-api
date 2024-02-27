@@ -31,10 +31,9 @@ public class IpvUserIdentityTest {
     private final ConfigurationService configService = mock(ConfigurationService.class);
     private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
     private IPVTokenService ipvTokenService;
-    private static final String IPV_USER_IDENTITY_PATH = "user-identity";
-
     private Tokens tokens;
 
+    private final String IPV_USER_IDENTITY_PATH = "user-identity";
     private final String SUB_FIELD = "sub";
     private final String VOT_FIELD = "vot";
     private final String VTM_FIELD = "vtm";
@@ -43,7 +42,6 @@ public class IpvUserIdentityTest {
     private final String CORE_IDENTITY_NAME_FIELD = "name";
     private final String CORE_IDENTITY_NAME_PARTS_FIELD = "nameParts";
     private final String CORE_IDENTITY_BIRTH_FIELD = "birthDate";
-
     private final String SUB_VALUE = "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6";
     private final String VOT_VALUE = "P2";
     private final String VTM_VALUE = "http://localhost/trustmark";
@@ -56,10 +54,10 @@ public class IpvUserIdentityTest {
         tokens = new Tokens(new BearerAccessToken(), null);
     }
 
-    @Pact(consumer = "IPV-orch-user-identity-consumer")
-    RequestResponsePact success(PactDslWithProvider builder) {
-        return builder.given("send user identity request to IPV")
-                .uponReceiving("user identity request")
+    @Pact(consumer = "OrchConsumer")
+    RequestResponsePact validRequestReturnsValidUserInfo(PactDslWithProvider builder) {
+        return builder.given("accessToken is a valid access token")
+                .uponReceiving("Valid access token")
                 .path("/" + IPV_USER_IDENTITY_PATH)
                 .method("GET")
                 .matchHeader("Authorization", tokens.getAccessToken().toAuthorizationHeader())
@@ -91,10 +89,10 @@ public class IpvUserIdentityTest {
 
     @Test
     @PactTestFor(
-            providerName = "IPV-orch-user-identity-provider",
-            pactMethod = "success",
+            providerName = "IpvCoreBackTokenProvider",
+            pactMethod = "validRequestReturnsValidUserInfo",
             pactVersion = PactSpecVersion.V3)
-    void getIPVResponse(MockServer mockServer)
+    void getIPVUserInfoSuccessResponse(MockServer mockServer)
             throws UnsuccessfulCredentialResponseException, ParseException {
 
         var userInfo =
