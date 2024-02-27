@@ -41,7 +41,7 @@ jobs:
         run: sam build
 
       - name: Deploy SAM app
-        uses: govuk-one-login/di-devplatform-upload-action@v3.5
+        uses: govuk-one-login/devplatform-upload-action@v3.5
         with:
           artifact-bucket-name: ${{ secrets.ORCH_ARTIFACT_BUCKET_NAME }}
           signing-profile-name: ${{ secrets.ORCH_SIGNING_PROFILE_NAME }}
