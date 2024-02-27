@@ -35,7 +35,7 @@ jobs:
           distribution: 'temurin'
           cache: 'gradle'
       - name: Build Cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             .gradle/
@@ -60,7 +60,7 @@ jobs:
           distribution: 'temurin'
           cache: 'gradle'
       - name: Build Cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             .gradle/
@@ -85,7 +85,7 @@ jobs:
 
           retention-days: 5
       - name: Cache Unit Test Reports
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           key: ${{ runner.os }}-unit-test-reports-${{ github.sha }}
           path: |
@@ -143,7 +143,7 @@ jobs:
           distribution: 'temurin'
           cache: 'gradle'
       - name: Build Cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             .gradle/
@@ -162,7 +162,7 @@ jobs:
           path: integration-tests/build/reports/tests/test/
           retention-days: 5
       - name: Cache Test Reports
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           key: ${{ runner.os }}-integration-test-reports-${{ github.sha }}
           path: |
@@ -216,7 +216,7 @@ jobs:
           distribution: 'temurin'
           cache: 'gradle'
       - name: Build Cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             .gradle/
@@ -245,7 +245,7 @@ jobs:
           path: delivery-receipts-integration-tests/build/reports/tests/test/
           retention-days: 5
       - name: Cache Test Reports
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           key: ${{ runner.os }}-am-dr-integration-test-reports-${{ github.sha }}
           path: |
@@ -273,7 +273,7 @@ jobs:
           cache: 'gradle'
       - name: Build Cache
         if: github.event_name != 'merge_group'
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             .gradle/
@@ -283,7 +283,7 @@ jobs:
           key: ${{ runner.os }}-build-${{ github.sha }}
       - name: Cache Unit Test Reports
         if: github.event_name != 'merge_group'
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           key: ${{ runner.os }}-unit-test-reports-${{ github.sha }}
           path: |
@@ -297,7 +297,7 @@ jobs:
             !delivery-receipts-integration-tests/build/reports/
       - name: Cache Integration Test Reports
         if: github.event_name != 'merge_group'
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           key: ${{ runner.os }}-integration-test-reports-${{ github.sha }}
           path: |
@@ -305,7 +305,7 @@ jobs:
             integration-tests/build/reports/
       - name: Cache AM DR Integration Test Reports
         if: github.event_name != 'merge_group'
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           key: ${{ runner.os }}-am-dr-integration-test-reports-${{ github.sha }}
           path: |
