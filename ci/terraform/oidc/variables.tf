@@ -324,6 +324,11 @@ variable "internal_sector_uri" {
   default = "undefined"
 }
 
+variable "remove_retry_limit_registration_email_code" {
+  type    = bool
+  default = false
+}
+
 variable "endpoint_memory_size" {
   default = 1536
   type    = number
