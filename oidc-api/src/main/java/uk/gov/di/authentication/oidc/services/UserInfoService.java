@@ -15,12 +15,14 @@ import uk.gov.di.authentication.oidc.exceptions.UserInfoException;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.exceptions.AccessTokenException;
+import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AuthenticationService;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 
@@ -31,6 +33,7 @@ public class UserInfoService {
     private final AuthenticationUserInfoStorageService userInfoStorageService;
     private final AuthenticationService authenticationService;
     private final DynamoIdentityService identityService;
+    private final DynamoClientService dynamoClientService;
     private final DynamoDocAppService dynamoDocAppService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final ConfigurationService configurationService;
@@ -40,12 +43,14 @@ public class UserInfoService {
     public UserInfoService(
             AuthenticationService authenticationService,
             DynamoIdentityService identityService,
+            DynamoClientService dynamoClientService,
             DynamoDocAppService dynamoDocAppService,
             CloudwatchMetricsService cloudwatchMetricsService,
             ConfigurationService configurationService,
             AuthenticationUserInfoStorageService userInfoStorageService) {
         this.authenticationService = authenticationService;
         this.identityService = identityService;
+        this.dynamoClientService = dynamoClientService;
         this.dynamoDocAppService = dynamoDocAppService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.configurationService = configurationService;
@@ -70,7 +75,8 @@ public class UserInfoService {
         }
     }
 
-    public UserInfo populateUserInfo(AccessTokenInfo accessTokenInfo) throws AccessTokenException {
+    public UserInfo populateUserInfo(AccessTokenInfo accessTokenInfo)
+            throws AccessTokenException, ClientNotFoundException {
         LOG.info("Populating UserInfo");
         UserInfo userInfo = new UserInfo(new Subject(accessTokenInfo.getSubject()));
         if (accessTokenInfo.getScopes().contains(CustomScopeValue.DOC_CHECKING_APP.getValue())) {
@@ -93,7 +99,7 @@ public class UserInfoService {
     }
 
     private void populateInfoOrchSplitEnabled(UserInfo userInfo, AccessTokenInfo accessTokenInfo)
-            throws AccessTokenException {
+            throws AccessTokenException, ClientNotFoundException {
         UserInfo tmpUserInfo;
         try {
             var authUserInfo =
@@ -135,7 +141,8 @@ public class UserInfoService {
         }
     }
 
-    private void populateInfo(UserInfo userInfo, AccessTokenInfo accessTokenInfo) {
+    private void populateInfo(UserInfo userInfo, AccessTokenInfo accessTokenInfo)
+            throws ClientNotFoundException {
         var userProfile =
                 authenticationService.getUserProfileFromSubject(
                         accessTokenInfo.getAccessTokenStore().getInternalSubjectId());
@@ -231,5 +238,19 @@ public class UserInfoService {
                         clientID,
                         "Claim",
                         claimName));
+    }
+
+    private String calculateWalletSubjectID(AccessTokenInfo accessTokenInfo)
+            throws ClientNotFoundException {
+        var client =
+                dynamoClientService
+                        .getClient(accessTokenInfo.getClientID())
+                        .orElseThrow(
+                                () -> new ClientNotFoundException(accessTokenInfo.getClientID()));
+        var sectorID =
+                ClientSubjectHelper.getSectorIdentifierForClient(
+                        client, configurationService.getInternalSectorUri());
+        var commonSubjectID = accessTokenInfo.getAccessTokenStore().getInternalPairwiseSubjectId();
+        return ClientSubjectHelper.calculateWalletSubjectIdentifier(sectorID, commonSubjectID);
     }
 }
