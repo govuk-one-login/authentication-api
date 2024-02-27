@@ -38,11 +38,7 @@ public class AccountInterventionService {
     public AccountInterventionService(ConfigurationService configService) {
         this(
                 configService,
-                HttpClient.newBuilder()
-                        .connectTimeout(
-                                Duration.ofMillis(
-                                        configService.getAccountInterventionServiceCallTimeout()))
-                        .build(),
+                HttpClient.newHttpClient(),
                 new CloudwatchMetricsService(),
                 new AuditService(configService));
     }
@@ -147,6 +143,7 @@ public class AccountInterventionService {
 
     private AccountInterventionStatus retrieveAccountStatus(String internalPairwiseSubjectId)
             throws IOException, InterruptedException, Json.JsonException {
+
         HttpRequest request =
                 HttpRequest.newBuilder()
                         .uri(
@@ -154,6 +151,10 @@ public class AccountInterventionService {
                                         accountInterventionServiceURI.getPath()
                                                 + "/v1/ais/"
                                                 + internalPairwiseSubjectId))
+                        .timeout(
+                                Duration.ofMillis(
+                                        configurationService
+                                                .getAccountInterventionServiceCallTimeout()))
                         .GET()
                         .build();
 
