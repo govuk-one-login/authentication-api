@@ -22,3 +22,11 @@ updates:
       - dependency-name: localstack/localstack
         versions:
           - ">= 0.13"
+  - package-ecosystem: github-actions
+    directory: /
+    open-pull-requests-limit: 100
+    target-branch: main
+    labels:
+    - dependabot
+    schedule:
+      interval: daily
