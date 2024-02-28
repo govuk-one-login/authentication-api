@@ -52,7 +52,7 @@ task contractTest (type: Test) {
 pact {
     publish {
         pactDirectory = pactDir
-        pactBrokerUrl = "$System.env.PACT_URL?testSource=$System.env.PACT_BROKER_SOURCE_HEADER"
+        pactBrokerUrl = "$System.env.PACT_URL" + "?testSource=" + "$System.env.PACT_BROKER_SOURCE_HEADER"
         pactBrokerUsername = "$System.env.PACT_USER"
         pactBrokerPassword = "$System.env.PACT_PASSWORD"
         consumerVersion = "$System.env.CONSUMER_APP_VERSION"
