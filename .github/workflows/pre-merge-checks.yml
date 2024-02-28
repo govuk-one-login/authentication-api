@@ -73,7 +73,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ./gradlew --parallel test jacocoTestReport -x integration-tests:test -x account-management-integration-tests:test -x delivery-receipts-integration-tests:test -x spotlessApply -x spotlessCheck
       - name: Upload Unit Test Reports
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: unit-test-reports
@@ -155,7 +155,7 @@ jobs:
         run: |
           ./gradlew :integration-tests:test :integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck -x composeUp
       - name: Upload Integration Test Reports
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: integration-test-reports
@@ -228,7 +228,7 @@ jobs:
         run: |
           ./gradlew :account-management-integration-tests:test :account-management-integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck -x composeUp
       - name: Upload Account Management Integration Test Reports
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: account-management-integration-test-reports
@@ -238,7 +238,7 @@ jobs:
         run: |
           ./gradlew :delivery-receipts-integration-tests:test :delivery-receipts-integration-tests:jacocoTestReport -x spotlessApply -x spotlessCheck -x composeUp
       - name: Upload Account Management Integration Test Reports
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: delivery-receipts-integration-test-reports
