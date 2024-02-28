@@ -59,6 +59,9 @@ public class IPVTest {
     private final IPVCallbackHelper ipvCallbackHelper = mock(IPVCallbackHelper.class);
     private final SessionService sessionService = mock(SessionService.class);
     private final DynamoService dynamoService = mock(DynamoService.class);
+    private final LogoutService logoutService = mock(LogoutService.class);
+    private final AccountInterventionService accountInterventionService =
+            mock(AccountInterventionService.class);
     private final CookieHelper cookieHelper = mock(CookieHelper.class);
     private final ClientSessionService clientSessionService = mock(ClientSessionService.class);
     private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
@@ -123,6 +126,8 @@ public class IPVTest {
                         clientSessionService,
                         dynamoClientService,
                         auditService,
+                        logoutService,
+                        accountInterventionService,
                         cookieHelper,
                         noSessionOrchestrationService,
                         ipvCallbackHelper);

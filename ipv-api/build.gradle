@@ -56,6 +56,7 @@ pact {
         pactBrokerUsername = "$System.env.PACT_USER"
         pactBrokerPassword = "$System.env.PACT_PASSWORD"
         consumerVersion = "$System.env.CONSUMER_APP_VERSION"
+        pactBrokerAuthenticationHeader = "$System.env.PACT_BROKER_SOURCE_HEADER"
         tags = ["$System.env.GIT_BRANCH"]
     }
 }
