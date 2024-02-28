@@ -235,6 +235,7 @@ public class ResetPasswordHandler extends BaseFrontendHandler<ResetPasswordCompl
             Subject internalCommonSubjectId,
             UserContext userContext,
             APIGatewayProxyRequestEvent input) {
+
         LOG.info("AccountRecoveryBlock enabled: {}", accountRecoveryBlockEnabled);
         var authAppVerified =
                 Optional.ofNullable(userCredentials.getMfaMethods())
