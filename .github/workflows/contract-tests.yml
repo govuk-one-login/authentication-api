@@ -6,6 +6,7 @@ env:
   PACT_URL: ${{ secrets.PACT_URL }}
   GIT_BRANCH: ${{ github.head_ref }}
   CONSUMER_APP_VERSION: ${{ github.event.pull_request.head.sha }}
+  PACT_BROKER_SOURCE_HEADER: ${{ secrets.PACT_BROKER_SOURCE_HEADER }}
 
 on:
   pull_request:
