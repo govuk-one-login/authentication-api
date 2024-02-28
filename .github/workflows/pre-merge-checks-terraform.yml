@@ -19,7 +19,7 @@ jobs:
         id: getterraformversion
         run: echo "::set-output name=version::$(cat ci/terraform/.terraform-version)"
 
-      - uses: hashicorp/setup-terraform@v1
+      - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ steps.getterraformversion.outputs.version }}
 
