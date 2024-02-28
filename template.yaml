@@ -27,6 +27,8 @@ Conditions:
 
 Globals:
   Function:
+    MemorySize: 1536
+    Timeout: 30
     PermissionsBoundary: !If
       - UsePermissionsBoundary
       - !Ref PermissionsBoundary
@@ -56,7 +58,7 @@ Resources:
         WellKnown:
           Type: Api
           Properties:
-            Path: /Wellknown
+            Path: /.well-known/openid-configuration
             Method: get
       Tags:
         CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
