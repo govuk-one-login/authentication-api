@@ -1,13 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 
-Globals:
-  Function:
-    PermissionsBoundary: !If
-      - UsePermissionsBoundary
-      - !Ref PermissionsBoundary
-      - !Ref AWS::NoValue
-
 Parameters:
   Environment:
     Type: String
@@ -29,6 +22,19 @@ Conditions:
     !Not [ !Equals [ none, !Ref PermissionsBoundary ] ]
   IsProd:
     !Equals [ production, !Ref Environment ]
+  UseCodeSigning:
+    !Not [ !Equals [ none, !Ref CodeSigningConfigArn ] ]
+
+Globals:
+  Function:
+    PermissionsBoundary: !If
+      - UsePermissionsBoundary
+      - !Ref PermissionsBoundary
+      - !Ref AWS::NoValue
+    CodeSigningConfigArn: !If
+      - UseCodeSigning
+      - !Ref CodeSigningConfigArn
+      - !Ref AWS::NoValue
 
 Resources:
   WellKnownFunction:
