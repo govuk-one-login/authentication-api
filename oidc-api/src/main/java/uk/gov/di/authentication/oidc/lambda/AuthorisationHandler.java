@@ -30,6 +30,7 @@ import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.app.domain.DocAppAuditableEvent;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AuthRequestError;
+import uk.gov.di.authentication.oidc.entity.AuthUserInfoClaims;
 import uk.gov.di.authentication.oidc.exceptions.InvalidHttpMethodException;
 import uk.gov.di.authentication.oidc.helpers.RequestObjectToAuthRequestHelper;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
@@ -70,6 +71,7 @@ import java.net.URISyntaxException;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -750,36 +752,49 @@ public class AuthorisationHandler
         var phoneScopePresent = requestedScopesContain(OIDCScopeValue.PHONE, authenticationRequest);
         var emailScopePresent = requestedScopesContain(OIDCScopeValue.EMAIL, authenticationRequest);
 
-        var claimsSetRequest = new ClaimsSetRequest();
+        var claimsSet = new HashSet<AuthUserInfoClaims>();
         if (identityRequired) {
             LOG.info("Identity is required. Adding the local_account_id and salt claims");
-            claimsSetRequest = claimsSetRequest.add("local_account_id").add("salt");
+            claimsSet.add(AuthUserInfoClaims.LOCAL_ACCOUNT_ID);
+            claimsSet.add(AuthUserInfoClaims.SALT);
+            // Email required for ID journeys for use in Face-to-Face flows
+            claimsSet.add(AuthUserInfoClaims.EMAIL);
+            claimsSet.add(AuthUserInfoClaims.EMAIL_VERIFIED);
         }
-        if (Boolean.TRUE.equals(amScopePresent)) {
+        if (amScopePresent) {
             LOG.info("am scope is present. Adding the public_subject_id claim");
-            claimsSetRequest = claimsSetRequest.add("public_subject_id");
+            claimsSet.add(AuthUserInfoClaims.PUBLIC_SUBJECT_ID);
         }
-        if (Boolean.TRUE.equals(govukAccountScopePresent)) {
+        if (govukAccountScopePresent) {
             LOG.info("govuk-account scope is present. Adding the legacy_subject_id claim");
-            claimsSetRequest = claimsSetRequest.add("legacy_subject_id");
+            claimsSet.add(AuthUserInfoClaims.LEGACY_SUBJECT_ID);
         }
-        if (Boolean.TRUE.equals(phoneScopePresent)) {
+        if (phoneScopePresent) {
             LOG.info(
                     "phone scope is present. Adding the phone_number and phone_number_verified claim");
-            claimsSetRequest = claimsSetRequest.add("phone_number").add("phone_number_verified");
+            claimsSet.add(AuthUserInfoClaims.PHONE_NUMBER);
+            claimsSet.add(AuthUserInfoClaims.PHONE_VERIFIED);
         }
-        if (Boolean.TRUE.equals(emailScopePresent)) {
+        if (emailScopePresent) {
             LOG.info("email scope is present. Adding the email and email_verified claim");
-            claimsSetRequest = claimsSetRequest.add("email").add("email_verified");
+            claimsSet.add(AuthUserInfoClaims.EMAIL);
+            claimsSet.add(AuthUserInfoClaims.EMAIL_VERIFIED);
         }
-        if (claimsSetRequest.getEntries().isEmpty()) {
+
+        var claimSetEntries =
+                claimsSet.stream()
+                        .map(claim -> new ClaimsSetRequest.Entry(claim.getValue()))
+                        .toList();
+
+        if (claimSetEntries.isEmpty()) {
             LOG.info("No additional claims to add to request");
             return Optional.empty();
         }
+        var claimsSetRequest = new ClaimsSetRequest(claimSetEntries);
         return Optional.of(new OIDCClaimsRequest().withUserInfoClaimsRequest(claimsSetRequest));
     }
 
-    private Boolean requestedScopesContain(
+    private boolean requestedScopesContain(
             Scope.Value scope, AuthenticationRequest authenticationRequest) {
         return authenticationRequest.getScope().toStringList().contains(scope.getValue());
     }
