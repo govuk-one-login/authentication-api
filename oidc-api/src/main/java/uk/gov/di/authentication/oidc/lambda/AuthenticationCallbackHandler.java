@@ -17,6 +17,7 @@ import com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse;
 import com.nimbusds.openid.connect.sdk.claims.UserInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.ThreadContext;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.domain.OrchestrationAuditableEvent;
@@ -165,6 +166,7 @@ public class AuthenticationCallbackHandler
 
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
+        ThreadContext.clearMap();
         LOG.info("Request received to AuthenticationCallbackHandler");
         try {
             CookieHelper.SessionCookieIds sessionCookiesIds =
