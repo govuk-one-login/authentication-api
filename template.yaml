@@ -29,6 +29,11 @@ Globals:
   Function:
     MemorySize: 1536
     Timeout: 30
+    SnapStart:
+      ApplyOn: PublishedVersions
+    Runtime: java17
+    Architectures:
+      - x86_64
     PermissionsBoundary: !If
       - UsePermissionsBoundary
       - !Ref PermissionsBoundary
@@ -44,9 +49,9 @@ Resources:
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     # checkov:skip=CKV_AWS_117: Lambdas will migrate to our own VPC in future work
     Properties:
+      AutoPublishAlias: latest
       CodeUri: ./oidc-api
       Handler: uk.gov.di.authentication.oidc.lambda.WellknownHandler::handleRequest
-      Runtime: java17
       ReservedConcurrentExecutions: 1
       Environment:
         Variables:
