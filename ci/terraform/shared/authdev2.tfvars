@@ -23,6 +23,7 @@ stub_rp_clients = [
       "openid",
       "email",
       "phone",
+      "wallet-subject-id",
     ]
     one_login_service = false
     service_type      = "MANDATORY"
