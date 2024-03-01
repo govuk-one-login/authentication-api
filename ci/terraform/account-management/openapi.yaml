@@ -3,19 +3,6 @@ info:
   title: "${environment}-di-account-management-api"
   version: 0.1.0
   description: Auth Account Management API
-
-components:
-  securitySchemes:
-    "${environment}-authorise-access-token":
-      type: "apiKey"
-      name: "Authorization"
-      in: "header"
-      x-amazon-apigateway-authtype: "custom"
-      x-amazon-apigateway-authorizer:
-        authorizerUri: "${authorizer_uri}"
-        authorizerCredentials: "${authorizer_credentials}"
-        authorizerResultTtlInSeconds: 0
-        type: "token"
 paths:
   /authenticate:
     post:
@@ -98,8 +85,9 @@ paths:
 
   /mfa-methods:
     post:
-      summary: "Create MFA method"
-      description: "Create MFA method"
+      tags:
+        - 2FAManagement
+      description: Creates an mfa method. A new MFA Method cannot be created as PRIMARY, it must be SECONDARY and promoted at a later stage
       operationId: "createMfaMethod"
       security:
         - "${environment}-authorise-access-token": []
@@ -108,28 +96,33 @@ paths:
         httpMethod: "POST" # THIS SHOULD ALWAYS BE "POST" regardless of the actual method
         uri: "${create-mfa-methods_module.integration_uri}"
         timeoutInMillis: 29000
-    delete:
-      summary: "Delete MFA methods"
-      description: "Delete MFA methods"
-      operationId: "deleteMfaMethods"
-      security:
-        - "${environment}-authorise-access-token": []
-      # parameters:
-      #   - name: "mfaIdentifier"
-      #     in: "query"
-      #     required: true
-      #     schema:
-      #       type: "string"
-      x-amazon-apigateway-integration:
-        type: "aws_proxy"
-        httpMethod: "DELETE" # THIS SHOULD ALWAYS BE "DELETE" regardless of the actual method
-        uri: "${delete-mfa-methods_module.integration_uri}"
-        timeoutInMillis: 29000
+      responses:
+        '200':
+          description: MFA Method Updated
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '404':
+          description: MFA Method not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '500':
+          description: MFA Method could not be created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
 
   /mfa-methods/{mfaIdentifier}:
     put:
-      summary: "Update MFA method"
-      description: "Update MFA method"
+      tags:
+        - 2FAManagement
+      description: Updates an mfa method. If the MFA method is updated to 'PRIMARY', the current 'PRIMARY' gets relegated to secondary.
       operationId: "updateMfaMethod"
       security:
         - "${environment}-authorise-access-token": []
@@ -144,10 +137,80 @@ paths:
         httpMethod: "PUT" # THIS SHOULD ALWAYS BE "PUT" regardless of the actual method
         uri: "${update-mfa-method_module.integration_uri}"
         timeoutInMillis: 29000
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MfaMethodCreateOrUpdateRequest'
+        required: true
+      responses:
+        '200':
+          description: MFA Method Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MfaMethod'
+        '404':
+          description: MFA Method not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '500':
+          description: MFA Method could not be updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+    delete:
+      tags:
+        - 2FAManagement
+      description: Deletes the mfa method identified by the mfa identifier. Cannot delete an identifier that is 'PRIMARY'.
+      operationId: "mfa-method-delete"
+      security:
+        - "${environment}-authorise-access-token": [ ]
+      parameters:
+        - name: mfaIdentifier
+          in: path
+          required: true
+          schema:
+            type: string
+      x-amazon-apigateway-integration:
+        type: "aws_proxy"
+        httpMethod: "PUT" # THIS SHOULD ALWAYS BE "PUT" regardless of the actual method
+        uri: "${update-mfa-method_module.integration_uri}"
+        timeoutInMillis: 29000
+      responses:
+        '200':
+          description: MFA Method Deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MfaMethod'
+        '404':
+          description: MFA Method Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '409':
+          description: Cannot delete a Primary MFA Method
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '500':
+          description: MFA Method could not be deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
   /mfa-methods/retrieve:
     post:
-      summary: "Retrieve MFA methods"
-      description: "Retrieve MFA methods"
+      description: "Retrieve mfaMethods that match criteria in the MFASearchRequest in the request body"
+      tags:
+        - 2FAManagement
+      summary: Retrieves the list of MFA Methods for a user
       operationId: "retrieveMfaMethods"
       security:
         - "${environment}-authorise-access-token": []
@@ -156,3 +219,179 @@ paths:
         httpMethod: "POST" # THIS SHOULD ALWAYS BE "POST" regardless of the actual method
         uri: "${retrieve-mfa-methods_module.integration_uri}"
         timeoutInMillis: 29000
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MfaSearchRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Operation.  The retrieve query was accepted and the response contains all matching MFAMethods.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MfaMethod'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationProblem'
+              example:
+                default:
+                  value:
+                    type: "https://account.gov.uk/validation-error"
+                    title: "email is malformed"
+                    error:
+                      'len': "Too short"
+                      'pointer': '#/email'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '500':
+          description: Search not available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+components:
+  schemas:
+    MfaMethod:
+      type: object
+      properties:
+        mfaIdentifier:
+          type: integer
+        priorityIdentifier:
+          type: string
+          enum:
+            - PRIMARY
+            - SECONDARY
+        mfaMethodType:
+          type: string
+          enum:
+            - SMS
+            - AUTH_APP
+        endPoint:
+          type: string
+        methodVerified:
+          type: boolean
+      example:
+        mfaIdentifier: 1213
+        priorityIdentifier: SECONDARY
+        mfaMethodType : SMS
+        endPoint : PHONE
+        methodVerfied : true
+    MfaSearchRequest:
+      required:
+        - email
+      type: object
+      properties:
+        email:
+          type: string
+      example:
+        email: "testusersearching@searchersexampledomain.co.uk"
+    MfaDeleteRequest:
+      required:
+        - email
+        - otp
+        - mfaMethodIdentifier
+      type: object
+      properties:
+        email:
+          type: string
+        otp:
+          type: string
+        mfaMethodIdentifier:
+          type: string
+      example:
+        email: "testdeleter@deleterdomain.com"
+        otp: "12345"
+        mfaMethodIdentifier: "123456789"
+
+    MfaMethodCreateOrUpdateRequest:
+      required:
+        - email
+        - credential
+        - otp
+        - mfaMethod
+      type: object
+      properties:
+        email:
+          type: string
+        credential:
+          type: string
+        otp:
+          type: string
+        mfaMethod:
+          $ref: '#/components/schemas/MfaMethod'
+      example:
+        email: "testuser@testexampledomain.co.uk"
+        credential : "SMS"
+        otp: "123456"
+        mfaMethod :
+          mfaIdentifier: 1213
+          priorityIdentifier: SECONDARY
+          mfaMethodType : SMS
+          endPoint : PHONE
+          methodVerfied : true
+    ProblemDetail:
+      type: object
+      properties:
+        type:
+          type: string
+          format: uri
+          example: 'https://account.gov.uk/problems/mfa-method-not-updated'
+        title:
+          type: string
+          example: "MFA Method could not be updated."
+        status:
+          type: string
+        detail:
+          example: "Database error"
+          type: string
+        resource:
+          example: "/mfa-methods/{mfaIdentifier}"
+          type: string
+        extension:
+          type: object
+          properties:
+            error:
+              type: object
+              properties:
+                code:
+                  enum: [1056, 1057, 1058]
+    ValidationProblem:
+      type: object
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/Error"
+    Error:
+      type: object
+      properties:
+        detail:
+          type: string
+        pointer:
+          type: string
+  securitySchemes:
+    "${environment}-authorise-access-token":
+      type: "apiKey"
+      name: "Authorization"
+      in: "header"
+      x-amazon-apigateway-authtype: "custom"
+      x-amazon-apigateway-authorizer:
+        authorizerUri: "${authorizer_uri}"
+        authorizerCredentials: "${authorizer_credentials}"
+        authorizerResultTtlInSeconds: 0
+        type: "token"
