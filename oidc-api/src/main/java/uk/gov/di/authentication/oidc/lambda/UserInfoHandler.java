@@ -14,8 +14,10 @@ import uk.gov.di.authentication.oidc.domain.OidcAuditableEvent;
 import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
 import uk.gov.di.authentication.oidc.services.AccessTokenService;
 import uk.gov.di.authentication.oidc.services.UserInfoService;
+import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.exceptions.AccessTokenException;
+import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
@@ -30,6 +32,7 @@ import uk.gov.di.orchestration.shared.services.TokenValidationService;
 
 import static com.nimbusds.oauth2.sdk.token.BearerTokenError.MISSING_TOKEN;
 import static uk.gov.di.orchestration.shared.domain.RequestHeaders.AUTHORIZATION_HEADER;
+import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyErrorResponse;
 import static uk.gov.di.orchestration.shared.helpers.ApiGatewayResponseHelper.generateApiGatewayProxyResponse;
 import static uk.gov.di.orchestration.shared.helpers.InstrumentationHelper.segmentedFunctionCall;
 import static uk.gov.di.orchestration.shared.helpers.RequestHeaderHelper.getHeaderValueFromHeaders;
@@ -66,6 +69,7 @@ public class UserInfoHandler
                 new UserInfoService(
                         new DynamoService(configurationService),
                         new DynamoIdentityService(configurationService),
+                        new DynamoClientService(configurationService),
                         new DynamoDocAppService(configurationService),
                         new CloudwatchMetricsService(),
                         configurationService,
@@ -121,6 +125,9 @@ public class UserInfoHandler
                     401,
                     "",
                     new UserInfoErrorResponse(e.getError()).toHTTPResponse().getHeaderMap());
+        } catch (ClientNotFoundException e) {
+            LOG.warn("Client not found");
+            return generateApiGatewayProxyErrorResponse(400, ErrorResponse.ERROR_1015);
         }
         var subjectForAudit = userInfoService.calculateSubjectForAudit(accessTokenInfo);
 

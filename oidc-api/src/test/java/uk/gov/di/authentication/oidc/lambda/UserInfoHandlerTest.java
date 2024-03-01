@@ -17,6 +17,7 @@ import uk.gov.di.authentication.oidc.services.AccessTokenService;
 import uk.gov.di.authentication.oidc.services.UserInfoService;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.exceptions.AccessTokenException;
+import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 
@@ -64,7 +65,7 @@ class UserInfoHandlerTest {
 
     @Test
     void shouldReturn200WithUserInfoBasedOnScopesForSuccessfulRequest()
-            throws ParseException, AccessTokenException {
+            throws ParseException, AccessTokenException, ClientNotFoundException {
         AccessToken accessToken = new BearerAccessToken();
         UserInfo userInfo = new UserInfo(SUBJECT);
         userInfo.setEmailVerified(true);
@@ -103,7 +104,8 @@ class UserInfoHandlerTest {
     }
 
     @Test
-    void shouldAuditReturnCodeWhenReturnCodeClaimIsPresent() throws AccessTokenException {
+    void shouldAuditReturnCodeWhenReturnCodeClaimIsPresent()
+            throws AccessTokenException, ClientNotFoundException {
         AccessToken accessToken = new BearerAccessToken();
         UserInfo userInfo = new UserInfo(SUBJECT);
         userInfo.setClaim(ValidClaims.RETURN_CODE.getValue(), RETURN_CODE);

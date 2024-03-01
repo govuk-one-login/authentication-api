@@ -24,7 +24,8 @@ public class ValidScopes {
             List.of(
                     CustomScopeValue.ACCOUNT_MANAGEMENT,
                     CustomScopeValue.GOVUK_ACCOUNT,
-                    CustomScopeValue.DOC_CHECKING_APP);
+                    CustomScopeValue.DOC_CHECKING_APP,
+                    CustomScopeValue.WALLET_SUBJECT_ID);
 
     private ValidScopes() {}
 

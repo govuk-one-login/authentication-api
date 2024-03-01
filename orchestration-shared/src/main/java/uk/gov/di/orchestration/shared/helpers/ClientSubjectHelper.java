@@ -20,6 +20,7 @@ public class ClientSubjectHelper {
 
     private static final Logger LOG = LogManager.getLogger(ClientSubjectHelper.class);
     private static final String PAIRWISE_PREFIX = "urn:fdc:gov.uk:2022:";
+    private static final String WALLET_PAIRWISE_PREFIX = "urn:fdc:wallet.account.gov.uk:2024:";
 
     public static Subject getSubject(
             UserProfile userProfile,
@@ -95,17 +96,27 @@ public class ClientSubjectHelper {
 
     public static String calculatePairwiseIdentifier(
             String subjectID, String sectorHost, byte[] salt) {
+        var md = getMessageDigest(sectorHost, subjectID);
+        byte[] bytes = md.digest(salt);
+        var sb = Base64Url.encode(bytes);
+        return PAIRWISE_PREFIX + sb;
+    }
+
+    public static String calculateWalletSubjectIdentifier(String sectorID, String commonSubjectID) {
+        var md = getMessageDigest(sectorID, commonSubjectID);
+        byte[] bytes = md.digest();
+        var sb = Base64Url.encode(bytes);
+        return WALLET_PAIRWISE_PREFIX + sb;
+    }
+
+    private static MessageDigest getMessageDigest(String sectorHost, String subjectID) {
         try {
             var md = MessageDigest.getInstance("SHA-256");
 
             md.update(sectorHost.getBytes(StandardCharsets.UTF_8));
             md.update(subjectID.getBytes(StandardCharsets.UTF_8));
 
-            byte[] bytes = md.digest(salt);
-
-            var sb = Base64Url.encode(bytes);
-
-            return PAIRWISE_PREFIX + sb;
+            return md;
         } catch (NoSuchAlgorithmException e) {
             LOG.error("Failed to hash", e);
             throw new RuntimeException(e);

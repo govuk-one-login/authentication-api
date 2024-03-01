@@ -24,11 +24,13 @@ import uk.gov.di.authentication.app.services.DynamoDocAppService;
 import uk.gov.di.authentication.oidc.entity.AccessTokenInfo;
 import uk.gov.di.orchestration.shared.entity.AccessTokenStore;
 import uk.gov.di.orchestration.shared.entity.AuthenticationUserInfo;
+import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.IdentityCredentials;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.exceptions.AccessTokenException;
+import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.helpers.SaltHelper;
@@ -36,6 +38,7 @@ import uk.gov.di.orchestration.shared.services.AuthenticationService;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
+import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.shared.services.DynamoIdentityService;
 import uk.gov.di.orchestration.sharedtest.helper.SignedCredentialHelper;
 import uk.gov.di.orchestration.sharedtest.helper.TokenGeneratorHelper;
@@ -53,6 +56,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -64,6 +68,7 @@ class UserInfoServiceTest {
             mock(AuthenticationUserInfoStorageService.class);
     private UserInfoService userInfoService;
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
+    private final DynamoClientService dynamoClientService = mock(DynamoClientService.class);
     private final DynamoIdentityService identityService = mock(DynamoIdentityService.class);
     private final DynamoDocAppService dynamoDocAppService = mock(DynamoDocAppService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -71,7 +76,7 @@ class UserInfoServiceTest {
             mock(CloudwatchMetricsService.class);
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final Subject INTERNAL_SUBJECT = new Subject("internal-subject");
-    private static final Subject INTERNAL_PAIRWISE_SUBJECT = new Subject();
+    private static final Subject INTERNAL_PAIRWISE_SUBJECT = new Subject("test-subject");
     private static final Subject SUBJECT = new Subject("some-subject");
     private static final Subject DOC_APP_SUBJECT = new Subject("some-subject");
     private static final List<String> SCOPES =
@@ -109,6 +114,7 @@ class UserInfoServiceTest {
                 new UserInfoService(
                         authenticationService,
                         identityService,
+                        dynamoClientService,
                         dynamoDocAppService,
                         cloudwatchMetricsService,
                         configurationService,
@@ -126,7 +132,7 @@ class UserInfoServiceTest {
 
     @Test
     void shouldJustPopulateUserInfoWhenIdentityNotEnabled()
-            throws JOSEException, AccessTokenException {
+            throws JOSEException, AccessTokenException, ClientNotFoundException {
         when(configurationService.isIdentityEnabled()).thenReturn(false);
         accessToken = createSignedAccessToken(null);
         when(authenticationService.getUserProfileFromSubject(INTERNAL_SUBJECT.getValue()))
@@ -156,7 +162,7 @@ class UserInfoServiceTest {
 
     @Test
     void shouldJustPopulateUserInfoWhenIdentityNotEnabledOrchSplitEnabled()
-            throws JOSEException, AccessTokenException {
+            throws JOSEException, AccessTokenException, ClientNotFoundException {
         when(configurationService.isIdentityEnabled()).thenReturn(false);
         when(configurationService.isAuthOrchSplitEnabled()).thenReturn(true);
         accessToken = createSignedAccessToken(null);
@@ -183,11 +189,101 @@ class UserInfoServiceTest {
         assertNull(userInfo.getClaim(ValidClaims.RETURN_CODE.getValue()));
     }
 
+    @Test
+    void
+            shouldJustPopulateWalletSubjectIdClaimWhenWalletSubjectIdScopeIsPresentAndOrchSplitNotEnabled()
+                    throws JOSEException, AccessTokenException, ClientNotFoundException {
+        when(dynamoClientService.getClient(any()))
+                .thenReturn(
+                        Optional.of(
+                                new ClientRegistry()
+                                        .withClientID("test-client")
+                                        .withSectorIdentifierUri("https://test.com")));
+        var walletSubjectId =
+                ClientSubjectHelper.calculateWalletSubjectIdentifier(
+                        "test.com", INTERNAL_PAIRWISE_SUBJECT.getValue());
+        accessToken = createSignedAccessToken(null);
+        var scopes =
+                List.of(
+                        OIDCScopeValue.OPENID.getValue(),
+                        CustomScopeValue.WALLET_SUBJECT_ID.getValue());
+        when(authenticationService.getUserProfileFromSubject(INTERNAL_SUBJECT.getValue()))
+                .thenReturn(generateUserprofile());
+
+        var accessTokenStore =
+                new AccessTokenStore(
+                        accessToken.getValue(),
+                        INTERNAL_SUBJECT.getValue(),
+                        INTERNAL_PAIRWISE_SUBJECT.getValue());
+        var accessTokenInfo =
+                new AccessTokenInfo(accessTokenStore, SUBJECT.getValue(), scopes, null, CLIENT_ID);
+
+        var userInfo = userInfoService.populateUserInfo(accessTokenInfo);
+
+        assertThat(userInfo.getClaim("wallet_subject_id"), equalTo(walletSubjectId));
+        assertNull(userInfo.getEmailAddress());
+        assertNull(userInfo.getEmailVerified());
+        assertNull(userInfo.getPhoneNumber());
+        assertNull(userInfo.getPhoneNumberVerified());
+        assertNull(userInfo.getClaim(ValidClaims.ADDRESS.getValue()));
+        assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
+        assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
+        assertNull(userInfo.getClaim(ValidClaims.SOCIAL_SECURITY_RECORD.getValue()));
+        assertNull(userInfo.getClaim(ValidClaims.RETURN_CODE.getValue()));
+        assertNull(userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
+    }
+
+    @Test
+    void
+            shouldJustPopulateWalletSubjectIdClaimWhenWalletSubjectIdScopeIsPresentAndOrchSplitEnabled()
+                    throws JOSEException, AccessTokenException, ClientNotFoundException {
+        when(configurationService.isAuthOrchSplitEnabled()).thenReturn(true);
+        givenThereIsUserInfo();
+        when(dynamoClientService.getClient(any()))
+                .thenReturn(
+                        Optional.of(
+                                new ClientRegistry()
+                                        .withClientID("test-client")
+                                        .withSectorIdentifierUri("https://test.com")));
+        var walletSubjectId =
+                ClientSubjectHelper.calculateWalletSubjectIdentifier(
+                        "test.com", INTERNAL_PAIRWISE_SUBJECT.getValue());
+        accessToken = createSignedAccessToken(null);
+        var scopes =
+                List.of(
+                        OIDCScopeValue.OPENID.getValue(),
+                        CustomScopeValue.WALLET_SUBJECT_ID.getValue());
+        when(authenticationService.getUserProfileFromSubject(INTERNAL_SUBJECT.getValue()))
+                .thenReturn(generateUserprofile());
+
+        var accessTokenStore =
+                new AccessTokenStore(
+                        accessToken.getValue(),
+                        INTERNAL_SUBJECT.getValue(),
+                        INTERNAL_PAIRWISE_SUBJECT.getValue());
+        var accessTokenInfo =
+                new AccessTokenInfo(accessTokenStore, SUBJECT.getValue(), scopes, null, CLIENT_ID);
+
+        var userInfo = userInfoService.populateUserInfo(accessTokenInfo);
+
+        assertThat(userInfo.getClaim("wallet_subject_id"), equalTo(walletSubjectId));
+        assertNull(userInfo.getEmailAddress());
+        assertNull(userInfo.getEmailVerified());
+        assertNull(userInfo.getPhoneNumber());
+        assertNull(userInfo.getPhoneNumberVerified());
+        assertNull(userInfo.getClaim(ValidClaims.ADDRESS.getValue()));
+        assertNull(userInfo.getClaim(ValidClaims.PASSPORT.getValue()));
+        assertNull(userInfo.getClaim(ValidClaims.DRIVING_PERMIT.getValue()));
+        assertNull(userInfo.getClaim(ValidClaims.SOCIAL_SECURITY_RECORD.getValue()));
+        assertNull(userInfo.getClaim(ValidClaims.RETURN_CODE.getValue()));
+        assertNull(userInfo.getClaim(ValidClaims.CORE_IDENTITY_JWT.getValue()));
+    }
+
     @Nested
     class userInfoClaimsTests {
         @Test
         void shouldJustPopulateUserInfoWhenIdentityEnabledButNoIdentityClaimsPresent()
-                throws JOSEException, AccessTokenException {
+                throws JOSEException, AccessTokenException, ClientNotFoundException {
             when(configurationService.isIdentityEnabled()).thenReturn(true);
             accessToken = createSignedAccessToken(null);
             when(authenticationService.getUserProfileFromSubject(INTERNAL_SUBJECT.getValue()))
@@ -219,7 +315,7 @@ class UserInfoServiceTest {
         @Test
         void
                 shouldJustPopulateUserInfoWhenIdentityEnabledButNoIdentityClaimsPresentOrchSplitEnabled()
-                        throws JOSEException, AccessTokenException {
+                        throws JOSEException, AccessTokenException, ClientNotFoundException {
             when(configurationService.isIdentityEnabled()).thenReturn(true);
             when(configurationService.isAuthOrchSplitEnabled()).thenReturn(true);
             accessToken = createSignedAccessToken(null);
@@ -249,7 +345,7 @@ class UserInfoServiceTest {
 
         @Test
         void shouldPopulateIdentityClaimsWhenClaimsArePresentAndIdentityIsEnabled()
-                throws JOSEException, AccessTokenException {
+                throws JOSEException, AccessTokenException, ClientNotFoundException {
             when(configurationService.isIdentityEnabled()).thenReturn(true);
             var identityCredentials =
                     new IdentityCredentials()
@@ -320,7 +416,7 @@ class UserInfoServiceTest {
 
         @Test
         void shouldPopulateIdentityClaimsWhenClaimsArePresentAndIdentityIsEnabledOrchSplitEnabled()
-                throws JOSEException, AccessTokenException {
+                throws JOSEException, AccessTokenException, ClientNotFoundException {
             when(configurationService.isIdentityEnabled()).thenReturn(true);
             when(configurationService.isAuthOrchSplitEnabled()).thenReturn(true);
             var identityCredentials =
@@ -392,7 +488,7 @@ class UserInfoServiceTest {
 
         @Test
         void shouldJustPopulateEmailClaimWhenOnlyEmailScopeIsPresentAndIdentityNotEnabled()
-                throws JOSEException, AccessTokenException {
+                throws JOSEException, AccessTokenException, ClientNotFoundException {
             when(configurationService.isIdentityEnabled()).thenReturn(false);
             accessToken = createSignedAccessToken(null);
             var scopes = List.of(OIDCScopeValue.OPENID.getValue(), OIDCScopeValue.EMAIL.getValue());
@@ -425,7 +521,7 @@ class UserInfoServiceTest {
         @Test
         void
                 shouldJustPopulateEmailClaimWhenOnlyEmailScopeIsPresentAndIdentityNotEnabledOrchSplitEnabled()
-                        throws JOSEException, AccessTokenException {
+                        throws JOSEException, AccessTokenException, ClientNotFoundException {
             when(configurationService.isIdentityEnabled()).thenReturn(false);
             when(configurationService.isAuthOrchSplitEnabled()).thenReturn(true);
             accessToken = createSignedAccessToken(null);
@@ -457,7 +553,7 @@ class UserInfoServiceTest {
 
         @Test
         void shouldPopulateIdentityClaimsWhenClaimsArePresentButNoAdditionalClaimsArePresent()
-                throws JOSEException, AccessTokenException {
+                throws JOSEException, AccessTokenException, ClientNotFoundException {
             when(configurationService.isIdentityEnabled()).thenReturn(true);
             var identityCredentials =
                     new IdentityCredentials()
@@ -504,7 +600,7 @@ class UserInfoServiceTest {
         @Test
         void
                 shouldPopulateIdentityClaimsWhenClaimsArePresentButNoAdditionalClaimsArePresentOrchSplitEnabled()
-                        throws JOSEException, AccessTokenException {
+                        throws JOSEException, AccessTokenException, ClientNotFoundException {
             when(configurationService.isIdentityEnabled()).thenReturn(true);
             when(configurationService.isAuthOrchSplitEnabled()).thenReturn(true);
             var identityCredentials =
@@ -555,7 +651,7 @@ class UserInfoServiceTest {
     class docAppTests {
         @Test
         void shouldPopulateUserInfoWithDocAppCredentialWhenDocAppScopeIsPresent()
-                throws JOSEException, AccessTokenException {
+                throws JOSEException, AccessTokenException, ClientNotFoundException {
             var docAppScope =
                     List.of(
                             OIDCScopeValue.OPENID.getValue(),
@@ -586,7 +682,7 @@ class UserInfoServiceTest {
 
         @Test
         void shouldPopulateUserInfoWithDocAppCredentialWhenDocAppScopeIsPresentOrchSplitEnabled()
-                throws JOSEException, AccessTokenException {
+                throws JOSEException, AccessTokenException, ClientNotFoundException {
             when(configurationService.isAuthOrchSplitEnabled()).thenReturn(true);
             var docAppScope =
                     List.of(
