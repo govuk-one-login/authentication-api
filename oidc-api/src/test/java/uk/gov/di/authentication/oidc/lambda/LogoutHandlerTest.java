@@ -302,7 +302,7 @@ class LogoutHandlerTest {
         verify(logoutService)
                 .generateErrorLogoutResponse(
                         Optional.empty(),
-                        new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "invalid session"),
+                        new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "unable to validate id_token_hint"),
                         event,
                         Optional.empty(),
                         Optional.of(session.getSessionId()));
@@ -333,7 +333,7 @@ class LogoutHandlerTest {
         verify(logoutService)
                 .generateErrorLogoutResponse(
                         Optional.empty(),
-                        new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "invalid session"),
+                        new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "unable to validate id_token_hint"),
                         event,
                         Optional.empty(),
                         Optional.of(session.getSessionId()));
