@@ -52,9 +52,10 @@ task contractTest (type: Test) {
 pact {
     publish {
         pactDirectory = pactDir
-        pactBrokerUrl = "$System.env.PACT_URL".toString() + "?testSource=" +"$System.env.PACT_BROKER_SOURCE_HEADER".toString()
+        pactBrokerUrl = "$System.env.PACT_URL".toString()
         pactBrokerUsername = "$System.env.PACT_USER".toString()
         pactBrokerPassword = "$System.env.PACT_PASSWORD".toString()
+        pactBrokerAuthenticationHeader = "$System.env.PACT_BROKER_SOURCE_HEADER".toString()
         consumerVersion = "$System.env.CONSUMER_APP_VERSION".toString()
         tags = [
             "$System.env.GIT_BRANCH".toString()
