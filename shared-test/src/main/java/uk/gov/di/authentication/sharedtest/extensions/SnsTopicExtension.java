@@ -56,7 +56,7 @@ public class SnsTopicExtension extends HttpStubExtension implements BeforeEachCa
         subscribeToTopic(topicArn);
 
         // Wait for topic subscription message to be received, so that it doesn't pollute the tests.
-        await().atMost(1, SECONDS)
+        await().atMost(2, SECONDS)
                 .untilAsserted(() -> assertThat(getCountOfRequests(), greaterThan(0)));
         clearRequests();
     }
