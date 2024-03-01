@@ -18,6 +18,7 @@ doc_app_use_cri_data_v2_endpoint = true
 doc_app_backend_uri                = "https://api-backend-api.review-b.account.gov.uk"
 doc_app_domain                     = "https://api.review-b.account.gov.uk"
 doc_app_aud                        = "https://www.review-b.account.gov.uk"
+doc_app_new_aud_claim_enabled      = true
 doc_app_authorisation_client_id    = "authOrchestratorDocApp"
 doc_app_authorisation_callback_uri = "https://oidc.account.gov.uk/doc-app-callback"
 doc_app_authorisation_uri          = "https://www.review-b.account.gov.uk/dca/oauth2/authorize"
