@@ -5,7 +5,9 @@ import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
+import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 
@@ -131,7 +133,8 @@ public class ValidationHelper {
     }
 
     public static Optional<ErrorResponse> validateVerificationCode(
-            NotificationType type,
+            NotificationType notificationType,
+            JourneyType journeyType,
             Optional<String> code,
             String input,
             CodeStorageService codeStorageService,
@@ -141,7 +144,7 @@ public class ValidationHelper {
         if (code.filter(input::equals).isPresent()) {
             codeStorageService.deleteIncorrectMfaCodeAttemptsCount(emailAddress);
 
-            switch (type) {
+            switch (notificationType) {
                 case MFA_SMS:
                 case VERIFY_EMAIL:
                 case VERIFY_CHANGE_HOW_GET_SECURITY_CODES:
@@ -152,10 +155,14 @@ public class ValidationHelper {
             return Optional.of(ErrorResponse.ERROR_1002);
         }
 
-        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(emailAddress);
+        boolean reducedLockout =
+                List.of(CodeRequestType.SMS_REGISTRATION, CodeRequestType.SMS_ACCOUNT_RECOVERY)
+                        .contains(
+                                CodeRequestType.getCodeRequestType(notificationType, journeyType));
+        codeStorageService.increaseIncorrectMfaCodeAttemptsCount(emailAddress, reducedLockout);
 
         if (codeStorageService.getIncorrectMfaCodeAttemptsCount(emailAddress) > maxRetries) {
-            switch (type) {
+            switch (notificationType) {
                 case MFA_SMS:
                     return Optional.of(ErrorResponse.ERROR_1027);
                 case VERIFY_EMAIL:
@@ -169,7 +176,7 @@ public class ValidationHelper {
             }
         }
 
-        switch (type) {
+        switch (notificationType) {
             case MFA_SMS:
                 return Optional.of(ErrorResponse.ERROR_1035);
             case VERIFY_EMAIL:
