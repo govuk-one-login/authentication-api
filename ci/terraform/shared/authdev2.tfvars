@@ -8,7 +8,8 @@ di_tools_signing_profile_version_arn         = "arn:aws:signer:eu-west-2:7066156
 
 stub_rp_clients = [
   {
-    client_name = "di-auth-stub-relying-party-authdev2"
+    client_name           = "di-auth-stub-relying-party-authdev2"
+    sector_identifier_uri = "https://di-auth-stub-relying-party-authdev2.london.cloudapps.digital"
     callback_urls = [
       "https://di-auth-stub-relying-party-authdev2.london.cloudapps.digital/oidc/authorization-code/callback",
     ]

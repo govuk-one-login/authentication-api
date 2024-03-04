@@ -1,6 +1,7 @@
 stub_rp_clients = [
   {
-    client_name = "di-auth-stub-relying-party-dev"
+    client_name           = "di-auth-stub-relying-party-dev"
+    sector_identifier_uri = "https://di-auth-stub-relying-party-build-dev.london.cloudapps.digital"
     callback_urls = [
       "https://di-auth-stub-relying-party-build-dev.london.cloudapps.digital/oidc/authorization-code/callback",
     ]

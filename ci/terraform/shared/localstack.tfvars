@@ -4,7 +4,8 @@ aws_dynamodb_endpoint = "http://localhost:8000"
 use_localstack        = true
 stub_rp_clients = [
   {
-    client_name = "di-auth-stub-relying-party-local"
+    client_name           = "di-auth-stub-relying-party-local"
+    sector_identifier_uri = "https://di-auth-stub-relying-party-build.london.cloudapps.digital"
     callback_urls = [
       "http://localhost:8081/oidc/authorization-code/callback",
       "https://di-auth-stub-relying-party-build.london.cloudapps.digital/oidc/authorization-code/callback",

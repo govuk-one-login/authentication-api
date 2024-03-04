@@ -1,6 +1,7 @@
 stub_rp_clients = [
   {
-    client_name = "di-auth-stub-relying-party-production"
+    client_name           = "di-auth-stub-relying-party-production"
+    sector_identifier_uri = "https://di-auth-stub-relying-party-production.london.cloudapps.digital"
     callback_urls = [
       "https://di-auth-stub-relying-party-production.london.cloudapps.digital/oidc/authorization-code/callback",
     ]
@@ -21,7 +22,8 @@ stub_rp_clients = [
     service_type      = "MANDATORY"
   },
   {
-    client_name = "di-auth-stub-relying-party-production-app"
+    client_name           = "di-auth-stub-relying-party-production-app"
+    sector_identifier_uri = "https://di-auth-stub-relying-party-production-app.london.cloudapps.digital"
     callback_urls = [
       "https://di-auth-stub-relying-party-production-app.london.cloudapps.digital/oidc/authorization-code/callback",
     ]
@@ -40,7 +42,8 @@ stub_rp_clients = [
     service_type      = "MANDATORY"
   },
   {
-    client_name = "relying-party-stub-production"
+    client_name           = "relying-party-stub-production"
+    sector_identifier_uri = "https://rp.stubs.account.gov.uk"
     callback_urls = [
       "https://rp.stubs.account.gov.uk/oidc/authorization-code/callback",
     ]
@@ -61,7 +64,8 @@ stub_rp_clients = [
     service_type      = "MANDATORY"
   },
   {
-    client_name = "relying-party-stub-production-app"
+    client_name           = "relying-party-stub-production-app"
+    sector_identifier_uri = "https://doc-app-rp.stubs.account.gov.uk"
     callback_urls = [
       "https://doc-app-rp.stubs.account.gov.uk/oidc/authorization-code/callback",
     ]

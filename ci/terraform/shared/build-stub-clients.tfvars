@@ -1,6 +1,7 @@
 stub_rp_clients = [
   {
-    client_name = "di-auth-stub-relying-party-build"
+    client_name           = "di-auth-stub-relying-party-build"
+    sector_identifier_uri = "https://di-auth-stub-relying-party-build.london.cloudapps.digital"
     callback_urls = [
       "https://di-auth-stub-relying-party-build.london.cloudapps.digital/oidc/authorization-code/callback",
     ]
@@ -21,7 +22,8 @@ stub_rp_clients = [
     service_type      = "MANDATORY"
   },
   {
-    client_name = "di-auth-stub-relying-party-build-s2"
+    client_name           = "di-auth-stub-relying-party-build-s2"
+    sector_identifier_uri = "https://di-auth-stub-relying-party-build-s2.london.cloudapps.digital"
     callback_urls = [
       "https://di-auth-stub-relying-party-build-s2.london.cloudapps.digital/oidc/authorization-code/callback",
     ]
@@ -42,7 +44,8 @@ stub_rp_clients = [
     service_type      = "MANDATORY"
   },
   {
-    client_name = "di-auth-stub-relying-party-build-app"
+    client_name           = "di-auth-stub-relying-party-build-app"
+    sector_identifier_uri = "https://di-auth-stub-relying-party-build-app.london.cloudapps.digital"
     callback_urls = [
       "https://di-auth-stub-relying-party-build-app.london.cloudapps.digital/oidc/authorization-code/callback",
     ]
@@ -61,7 +64,8 @@ stub_rp_clients = [
     service_type      = "MANDATORY"
   },
   {
-    client_name = "di-auth-stub-relying-party-build-optional"
+    client_name           = "di-auth-stub-relying-party-build-optional"
+    sector_identifier_uri = "https://di-auth-stub-relying-party-build-optional.london.cloudapps.digital"
     callback_urls = [
       "https://di-auth-stub-relying-party-build-optional.london.cloudapps.digital/oidc/authorization-code/callback",
     ]
@@ -82,7 +86,8 @@ stub_rp_clients = [
     service_type      = "OPTIONAL"
   },
   {
-    client_name = "di-auth-stub-relying-party-dev"
+    client_name           = "di-auth-stub-relying-party-dev"
+    sector_identifier_uri = "https://di-auth-stub-relying-party-build-dev.london.cloudapps.digital"
     callback_urls = [
       "https://di-auth-stub-relying-party-build-dev.london.cloudapps.digital/oidc/authorization-code/callback",
     ]
@@ -103,9 +108,11 @@ stub_rp_clients = [
     service_type      = "MANDATORY"
   },
   {
-    client_name = "relying-party-stub-build"
+    client_name           = "relying-party-stub-build"
+    sector_identifier_uri = "https://rp-build.build.stubs.account.gov.uk"
     callback_urls = [
       "https://rp-build.build.stubs.account.gov.uk/oidc/authorization-code/callback",
+      "http://localhost:8080/oidc/authorization-code/callback",
     ]
     logout_urls = [
       "https://rp-build.build.stubs.account.gov.uk/signed-out",
@@ -124,9 +131,11 @@ stub_rp_clients = [
     service_type      = "MANDATORY"
   },
   {
-    client_name = "relying-party-stub-build-app"
+    client_name           = "relying-party-stub-build-app"
+    sector_identifier_uri = "https://doc-app-rp-build.build.stubs.account.gov.uk"
     callback_urls = [
       "https://doc-app-rp-build.build.stubs.account.gov.uk/oidc/authorization-code/callback",
+      "http://localhost:8080/oidc/authorization-code/callback",
     ]
     logout_urls = [
       "https://doc-app-rp-build.build.stubs.account.gov.uk/signed-out",
@@ -143,9 +152,11 @@ stub_rp_clients = [
     service_type      = "MANDATORY"
   },
   {
-    client_name = "relying-party-stub-build-acceptance-test"
+    client_name           = "relying-party-stub-build-acceptance-test"
+    sector_identifier_uri = "https://acceptance-test-rp-build.build.stubs.account.gov.uk"
     callback_urls = [
       "https://acceptance-test-rp-build.build.stubs.account.gov.uk/oidc/authorization-code/callback",
+      "http://localhost:8080/oidc/authorization-code/callback",
     ]
     logout_urls = [
       "https://acceptance-test-rp-build.build.stubs.account.gov.uk/signed-out",
