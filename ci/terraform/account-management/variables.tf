@@ -195,7 +195,7 @@ variable "txma_account_id" {
   type    = string
 }
 
-variable "blocked_email_duration" {
+variable "lockout_duration" {
   type    = number
   default = 900
 }

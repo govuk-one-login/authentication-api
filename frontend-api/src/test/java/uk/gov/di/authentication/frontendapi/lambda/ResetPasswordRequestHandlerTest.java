@@ -84,7 +84,7 @@ class ResetPasswordRequestHandlerTest {
     private static final String PERSISTENT_ID = "some-persistent-id-value";
     private static final long CODE_EXPIRY_TIME = 900;
     private static final String TEST_CLIENT_ID = "test-client-id";
-    private static final long BLOCKED_EMAIL_DURATION = 799;
+    private static final long LOCKOUT_DURATION = 799;
     private static final Json objectMapper = SerializationService.getInstance();
     private static final String PHONE_NUMBER = "01234567890";
     private static final AuditService.MetadataPair PASSWORD_RESET_COUNTER =
@@ -336,7 +336,7 @@ class ResetPasswordRequestHandlerTest {
         Subject subject = new Subject("subject_1");
         String sessionId = "1233455677";
         when(authenticationService.getSubjectFromEmail(TEST_EMAIL_ADDRESS)).thenReturn(subject);
-        when(configurationService.getBlockedEmailDuration()).thenReturn(BLOCKED_EMAIL_DURATION);
+        when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
         Session session = mock(Session.class);
         when(session.getEmailAddress()).thenReturn(TEST_EMAIL_ADDRESS);
         when(session.getSessionId()).thenReturn(sessionId);
@@ -359,7 +359,7 @@ class ResetPasswordRequestHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1022));
         verify(codeStorageService)
                 .saveBlockedForEmail(
-                        TEST_EMAIL_ADDRESS, codeRequestBlockedKeyPrefix, BLOCKED_EMAIL_DURATION);
+                        TEST_EMAIL_ADDRESS, codeRequestBlockedKeyPrefix, LOCKOUT_DURATION);
         verify(session).resetPasswordResetCount();
         verifyNoInteractions(awsSqsClient);
     }

@@ -132,7 +132,7 @@ class VerifyMfaCodeHandlerTest {
                 .thenReturn(withAuthenticationRequest().toParameters());
 
         when(userProfile.getSubjectID()).thenReturn(SUBJECT_ID);
-        when(configurationService.getBlockedEmailDuration()).thenReturn(900L);
+        when(configurationService.getLockoutDuration()).thenReturn(900L);
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(clientSession));

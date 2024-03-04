@@ -1,6 +1,7 @@
 package uk.gov.di.authentication.shared.services;
 
 import com.nimbusds.oauth2.sdk.AuthorizationCode;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -25,10 +26,16 @@ class CodeStorageServiceTest {
             "f660ab912ec121d1b1e928a0bb4bc61b15f5ad44d5efdc4e1c92a25e99b8e44a";
     private static final String CODE = "123456";
     private static final String SUBJECT = "some-subject";
+    private static final long CODE_EXPIRY_TIME = 900;
+    private static final long AUTH_CODE_EXPIRY_TIME = 300;
+    private static final String CODE_BLOCKED_VALUE = "blocked";
     private final RedisConnectionService redisConnectionService =
             mock(RedisConnectionService.class);
+
+    private static final ConfigurationService configurationService =
+            mock(ConfigurationService.class);
     private final CodeStorageService codeStorageService =
-            new CodeStorageService(redisConnectionService);
+            new CodeStorageService(configurationService, redisConnectionService);
 
     enum RedisKeys {
         INCORRECT_MFA_COUNTER("multiple-incorrect-mfa-codes:"),
@@ -60,9 +67,10 @@ class CodeStorageServiceTest {
         }
     }
 
-    private static final long CODE_EXPIRY_TIME = 900;
-    private static final long AUTH_CODE_EXPIRY_TIME = 300;
-    private static final String CODE_BLOCKED_VALUE = "blocked";
+    @BeforeAll
+    static void init() {
+        when(configurationService.getLockoutDuration()).thenReturn(CODE_EXPIRY_TIME);
+    }
 
     @Test
     void shouldCallRedisWithValidEmailCodeAndHashedEmail() {

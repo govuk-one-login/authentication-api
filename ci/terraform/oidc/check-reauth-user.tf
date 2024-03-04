@@ -29,6 +29,7 @@ module "check_reauth_user" {
     TXMA_AUDIT_QUEUE_URL = module.oidc_txma_audit.queue_url
     INTERNAl_SECTOR_URI  = var.internal_sector_uri
     REDIS_KEY            = local.redis_key
+    LOCKOUT_DURATION     = var.lockout_duration
   }
 
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.CheckReAuthUserHandler::handleRequest"
