@@ -116,6 +116,7 @@ stub_rp_clients = [
     ]
     logout_urls = [
       "https://rp-build.build.stubs.account.gov.uk/signed-out",
+      "http://localhost:8080/signed-out",
     ]
     test_client                     = "0"
     consent_required                = "0"
@@ -139,6 +140,7 @@ stub_rp_clients = [
     ]
     logout_urls = [
       "https://doc-app-rp-build.build.stubs.account.gov.uk/signed-out",
+      "http://localhost:8080/signed-out",
     ]
     test_client                     = "1"
     consent_required                = "0"
@@ -160,6 +162,7 @@ stub_rp_clients = [
     ]
     logout_urls = [
       "https://acceptance-test-rp-build.build.stubs.account.gov.uk/signed-out",
+      "http://localhost:8080/signed-out",
     ]
     test_client                     = "1"
     consent_required                = "0"
