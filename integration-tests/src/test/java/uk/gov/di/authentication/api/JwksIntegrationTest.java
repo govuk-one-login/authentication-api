@@ -21,7 +21,6 @@ public class JwksIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var configurationService =
                 new IntegrationTestConfigurationService(
                         externalTokenSigner,
-                        storageTokenSigner,
                         ipvPrivateKeyJwtSigner,
                         spotQueue,
                         docAppPrivateKeyJwtSigner,
