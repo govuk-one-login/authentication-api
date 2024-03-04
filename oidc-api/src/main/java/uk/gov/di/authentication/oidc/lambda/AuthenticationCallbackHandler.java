@@ -25,6 +25,7 @@ import uk.gov.di.authentication.oidc.exceptions.AuthenticationCallbackException;
 import uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService;
 import uk.gov.di.authentication.oidc.services.AuthenticationTokenService;
 import uk.gov.di.authentication.oidc.services.InitiateIPVAuthorisationService;
+import uk.gov.di.authentication.oidc.services.StorageTokenService;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.shared.conditions.MfaHelper;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
@@ -126,7 +127,8 @@ public class AuthenticationCallbackHandler
                         new IPVAuthorisationService(
                                 configurationService, redisConnectionService, kmsConnectionService),
                         cloudwatchMetricsService,
-                        new NoSessionOrchestrationService(configurationService));
+                        new NoSessionOrchestrationService(configurationService),
+                        new StorageTokenService(configurationService));
         this.accountInterventionService =
                 new AccountInterventionService(
                         configurationService, cloudwatchMetricsService, auditService);
