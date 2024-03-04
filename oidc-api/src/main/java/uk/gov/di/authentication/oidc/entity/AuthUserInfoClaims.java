@@ -12,6 +12,7 @@ public enum AuthUserInfoClaims {
     EMAIL_VERIFIED("email_verified"),
     PHONE_NUMBER("phone_number"),
     PHONE_VERIFIED("phone_number_verified"),
+    WALLET_SUBJECT_ID("wallet_subject_id"),
     SALT("salt");
 
     private final String value;

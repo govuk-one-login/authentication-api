@@ -751,6 +751,8 @@ public class AuthorisationHandler
                 requestedScopesContain(CustomScopeValue.GOVUK_ACCOUNT, authenticationRequest);
         var phoneScopePresent = requestedScopesContain(OIDCScopeValue.PHONE, authenticationRequest);
         var emailScopePresent = requestedScopesContain(OIDCScopeValue.EMAIL, authenticationRequest);
+        var walletSubjectIdScopePresent =
+                requestedScopesContain(CustomScopeValue.WALLET_SUBJECT_ID, authenticationRequest);
 
         var claimsSet = new HashSet<AuthUserInfoClaims>();
         if (identityRequired) {
@@ -779,6 +781,10 @@ public class AuthorisationHandler
             LOG.info("email scope is present. Adding the email and email_verified claim");
             claimsSet.add(AuthUserInfoClaims.EMAIL);
             claimsSet.add(AuthUserInfoClaims.EMAIL_VERIFIED);
+        }
+        if (walletSubjectIdScopePresent) {
+            LOG.info("wallet-subject-id scope is present. Adding the wallet-subject-id claim");
+            claimsSet.add(AuthUserInfoClaims.WALLET_SUBJECT_ID);
         }
 
         var claimSetEntries =
