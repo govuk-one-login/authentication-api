@@ -36,6 +36,7 @@
 - Parametrize shouldReturnNullWhenCorrectEmailCodeProcessed test to test for different notification types (VERIFY_CHANGE_HOW_GET_SECURITY_CODES, RESET_PASSWORD_WITH_CODE)
 - Make sure EmailCodeProcessorTest test for both test client and regular client
 - Add unit tests against EmailCodeProcessor
+- Investigate second metadata pair "account-recovery" shouldReturnNullWhenCorrectEmailCodeProcessed
 - Identify the test in the VerifyCodeHandler that are email related
 - 
 - 
