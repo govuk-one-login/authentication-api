@@ -56,7 +56,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
@@ -68,7 +67,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.shared.entity.NotificationType.VERIFY_EMAIL;
 import static uk.gov.di.authentication.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.authentication.shared.services.CodeStorageService.CODE_BLOCKED_KEY_PREFIX;
 import static uk.gov.di.authentication.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
@@ -776,10 +774,10 @@ class VerifyMfaCodeHandlerTest {
     @ParameterizedTest
     @ValueSource(
             strings = {
-                    "testclient.user1@digital.cabinet-office.gov.uk",
-//                    "abc@digital.cabinet-office.gov.uk",
-//                    "abc.def@digital.cabinet-office.gov.uk",
-//                    "testclient.user2@internet.com",
+                "testclient.user1@digital.cabinet-office.gov.uk",
+                //                    "abc@digital.cabinet-office.gov.uk",
+                //                    "abc.def@digital.cabinet-office.gov.uk",
+                //                    "testclient.user2@internet.com",
             })
     void shouldReturn204ForValidVerifyEmailRequest(String email) throws Json.JsonException {
         when(mfaCodeProcessorFactory.getMfaCodeProcessor(any(), any(CodeRequest.class), any()))
@@ -788,12 +786,12 @@ class VerifyMfaCodeHandlerTest {
         session.setEmailAddress(email);
         session.setInternalCommonSubjectIdentifier(expectedCommonSubject);
 
-        var codeRequest = new VerifyMfaCodeRequest(MFAMethodType.EMAIL, CODE, JourneyType.REGISTRATION);
+        var codeRequest =
+                new VerifyMfaCodeRequest(MFAMethodType.EMAIL, CODE, JourneyType.REGISTRATION);
         var result = makeCallWithCode(codeRequest);
 
         assertThat(result, hasStatus(204));
     }
-
 
     private APIGatewayProxyResponseEvent makeCallWithCode(CodeRequest mfaCodeRequest)
             throws Json.JsonException {

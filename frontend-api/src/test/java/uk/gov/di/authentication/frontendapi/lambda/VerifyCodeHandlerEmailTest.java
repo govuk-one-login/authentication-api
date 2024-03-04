@@ -241,10 +241,10 @@ class VerifyCodeHandlerEmailTest {
     @ParameterizedTest
     @ValueSource(
             strings = {
-                    "testclient.user1@digital.cabinet-office.gov.uk",
-                    "abc@digital.cabinet-office.gov.uk",
-                    "abc.def@digital.cabinet-office.gov.uk",
-                    "testclient.user2@internet.com",
+                "testclient.user1@digital.cabinet-office.gov.uk",
+                "abc@digital.cabinet-office.gov.uk",
+                "abc.def@digital.cabinet-office.gov.uk",
+                "testclient.user2@internet.com",
             })
     void shouldReturn204ForValidVerifyEmailRequestUsingTestClient(String email) {
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
@@ -281,14 +281,14 @@ class VerifyCodeHandlerEmailTest {
     @ParameterizedTest
     @ValueSource(
             strings = {
-                    "testclient.user1@digital1.cabinet-office.gov.uk",
-                    "abc@digital1.cabinet-office.gov.uk",
-                    "abc.def@digital1.cabinet-office.gov.uk",
-                    "testclient.user3@internet.com",
+                "testclient.user1@digital1.cabinet-office.gov.uk",
+                "abc@digital1.cabinet-office.gov.uk",
+                "abc.def@digital1.cabinet-office.gov.uk",
+                "testclient.user3@internet.com",
             })
     void
-    shouldReturn200AndUseDefaultCodeForVerifyEmailRequestUsingTestClientWhenEmailDoesNotMatchAllowlist(
-            String email) {
+            shouldReturn200AndUseDefaultCodeForVerifyEmailRequestUsingTestClientWhenEmailDoesNotMatchAllowlist(
+                    String email) {
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(configurationService.getTestClientVerifyEmailOTP())
@@ -320,7 +320,7 @@ class VerifyCodeHandlerEmailTest {
 
     @Test
     void
-    shouldReturnMaxReachedAndNotSetBlockWhenRegistrationEmailCodeAttemptsExceedMaxRetryCount() {
+            shouldReturnMaxReachedAndNotSetBlockWhenRegistrationEmailCodeAttemptsExceedMaxRetryCount() {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS)).thenReturn(6);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
@@ -396,7 +396,7 @@ class VerifyCodeHandlerEmailTest {
 
     @Test
     void
-    shouldReturnMaxReachedAndSetBlockWhenAccountRecoveryEmailCodeAttemptsExceedMaxRetryCount() {
+            shouldReturnMaxReachedAndSetBlockWhenAccountRecoveryEmailCodeAttemptsExceedMaxRetryCount() {
         when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(configurationService.getBlockedEmailDuration()).thenReturn(BLOCKED_EMAIL_DURATION);
 
@@ -535,10 +535,10 @@ class VerifyCodeHandlerEmailTest {
         Scope scope = new Scope();
         scope.add(OIDCScopeValue.OPENID);
         return new AuthenticationRequest.Builder(
-                new ResponseType(ResponseType.Value.CODE),
-                scope,
-                new ClientID(clientId),
-                REDIRECT_URI)
+                        new ResponseType(ResponseType.Value.CODE),
+                        scope,
+                        new ClientID(clientId),
+                        REDIRECT_URI)
                 .state(new State())
                 .nonce(new Nonce())
                 .build();

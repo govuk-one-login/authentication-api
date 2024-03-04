@@ -32,6 +32,7 @@
 - Create a separate test that verifies no interactions with account modifiers service
 - Verify code storage service gets and deletes OTP code
 
+- NEXT SESSION RESUME POINT: Add submitAuditEvent to EmailCodeProcessor and update test with values instead of unknown
 - Make sure EmailCodeProcessor class contains audit service logic, checks for TestClient
 - Parametrize shouldReturnNullWhenCorrectEmailCodeProcessed test to test for different notification types (VERIFY_CHANGE_HOW_GET_SECURITY_CODES, RESET_PASSWORD_WITH_CODE)
 - Make sure EmailCodeProcessorTest test for both test client and regular client
