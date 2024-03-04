@@ -8,7 +8,8 @@ di_tools_signing_profile_version_arn         = "arn:aws:signer:eu-west-2:7066156
 
 stub_rp_clients = [
   {
-    client_name = "di-auth-stub-relying-party-sandpit"
+    client_name           = "di-auth-stub-relying-party-sandpit"
+    sector_identifier_uri = "https://di-auth-stub-relying-party-sandpit.london.cloudapps.digital"
     callback_urls = [
       "https://di-auth-stub-relying-party-sandpit.london.cloudapps.digital/oidc/authorization-code/callback",
     ]
@@ -29,7 +30,8 @@ stub_rp_clients = [
     service_type      = "MANDATORY"
   },
   {
-    client_name = "relying-party-stub-sandpit"
+    client_name           = "relying-party-stub-sandpit"
+    sector_identifier_uri = "https://rp-dev.build.stubs.account.gov.uk"
     callback_urls = [
       "https://rp-dev.build.stubs.account.gov.uk/oidc/authorization-code/callback",
     ]
@@ -50,7 +52,8 @@ stub_rp_clients = [
     service_type      = "MANDATORY"
   },
   {
-    client_name = "relying-party-stub-sandpit-app"
+    client_name           = "relying-party-stub-sandpit-app"
+    sector_identifier_uri = "https://doc-app-rp-dev.build.stubs.account.gov.uk"
     callback_urls = [
       "https://doc-app-rp-dev.build.stubs.account.gov.uk/oidc/authorization-code/callback",
     ]

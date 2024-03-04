@@ -34,6 +34,9 @@ resource "aws_dynamodb_table_item" "stub_rp_client" {
         S = "contact+${var.stub_rp_clients[count.index].client_name}@example.com"
       }]
     }
+    SectorIdentifierUri = {
+      S = var.stub_rp_clients[count.index].sector_identifier_uri
+    }
     PostLogoutRedirectUrls = {
       L = [for url in var.stub_rp_clients[count.index].logout_urls : {
         S = url

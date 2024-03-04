@@ -1,6 +1,7 @@
 stub_rp_clients = [
   {
-    client_name = "di-auth-stub-relying-party-integration"
+    client_name           = "di-auth-stub-relying-party-integration"
+    sector_identifier_uri = "https://di-auth-stub-relying-party-integration.london.cloudapps.digital"
     callback_urls = [
       "https://di-auth-stub-relying-party-integration.london.cloudapps.digital/oidc/authorization-code/callback",
     ]
@@ -21,7 +22,8 @@ stub_rp_clients = [
     service_type      = "MANDATORY"
   },
   {
-    client_name = "di-auth-stub-relying-party-integration-app"
+    client_name           = "di-auth-stub-relying-party-integration-app"
+    sector_identifier_uri = "https://di-auth-stub-relying-party-integration-app.london.cloudapps.digital"
     callback_urls = [
       "https://di-auth-stub-relying-party-integration-app.london.cloudapps.digital/oidc/authorization-code/callback",
     ]
@@ -40,7 +42,8 @@ stub_rp_clients = [
     service_type      = "MANDATORY"
   },
   {
-    client_name = "relying-party-stub-integration"
+    client_name           = "relying-party-stub-integration"
+    sector_identifier_uri = "https://rp-integration.build.stubs.account.gov.uk"
     callback_urls = [
       "https://rp-integration.build.stubs.account.gov.uk/oidc/authorization-code/callback",
     ]
@@ -61,7 +64,8 @@ stub_rp_clients = [
     service_type      = "MANDATORY"
   },
   {
-    client_name = "relying-party-stub-integration-app"
+    client_name           = "relying-party-stub-integration-app"
+    sector_identifier_uri = "https://doc-app-rp-integration.build.stubs.account.gov.uk"
     callback_urls = [
       "https://doc-app-rp-integration.build.stubs.account.gov.uk/oidc/authorization-code/callback",
     ]

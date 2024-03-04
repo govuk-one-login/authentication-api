@@ -1,6 +1,7 @@
 stub_rp_clients = [
   {
-    client_name = "di-auth-stub-relying-party-staging"
+    client_name           = "di-auth-stub-relying-party-staging"
+    sector_identifier_uri = "https://di-auth-stub-relying-party-staging.london.cloudapps.digital"
     callback_urls = [
       "https://di-auth-stub-relying-party-staging.london.cloudapps.digital/oidc/authorization-code/callback",
     ]
@@ -21,7 +22,8 @@ stub_rp_clients = [
     service_type      = "MANDATORY"
   },
   {
-    client_name = "di-auth-stub-relying-party-staging-app"
+    client_name           = "di-auth-stub-relying-party-staging-app"
+    sector_identifier_uri = "https://di-auth-stub-relying-party-staging-app.london.cloudapps.digital"
     callback_urls = [
       "https://di-auth-stub-relying-party-staging-app.london.cloudapps.digital/oidc/authorization-code/callback",
     ]
@@ -40,7 +42,8 @@ stub_rp_clients = [
     service_type      = "MANDATORY"
   },
   {
-    client_name = "di-auth-stub-relying-party-staging-t1"
+    client_name           = "di-auth-stub-relying-party-staging-t1"
+    sector_identifier_uri = "https://di-auth-stub-relying-party-staging-t1.london.cloudapps.digital"
     callback_urls = [
       "https://di-auth-stub-relying-party-staging-t1.london.cloudapps.digital/oidc/authorization-code/callback",
     ]
@@ -61,7 +64,8 @@ stub_rp_clients = [
     service_type      = "MANDATORY"
   },
   {
-    client_name = "relying-party-stub-staging"
+    client_name           = "relying-party-stub-staging"
+    sector_identifier_uri = "https://rp-staging.build.stubs.account.gov.uk"
     callback_urls = [
       "https://rp-staging.build.stubs.account.gov.uk/oidc/authorization-code/callback",
     ]
@@ -82,7 +86,8 @@ stub_rp_clients = [
     service_type      = "MANDATORY"
   },
   {
-    client_name = "relying-party-stub-staging-app"
+    client_name           = "relying-party-stub-staging-app"
+    sector_identifier_uri = "https://doc-app-rp-staging.build.stubs.account.gov.uk"
     callback_urls = [
       "https://doc-app-rp-staging.build.stubs.account.gov.uk/oidc/authorization-code/callback",
     ]
@@ -101,7 +106,8 @@ stub_rp_clients = [
     service_type      = "MANDATORY"
   },
   {
-    client_name = "relying-party-stub-staging-perf-test"
+    client_name           = "relying-party-stub-staging-perf-test"
+    sector_identifier_uri = "https://perf-test-rp-staging.build.stubs.account.gov.uk"
     callback_urls = [
       "https://perf-test-rp-staging.build.stubs.account.gov.uk/oidc/authorization-code/callback",
     ]
