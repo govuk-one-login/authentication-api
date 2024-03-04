@@ -23,7 +23,6 @@ public class TokenClientAuthValidatorFactory {
     public Optional<TokenClientAuthValidator> getTokenAuthenticationValidator(
             Map<String, String> requestBody) {
         LOG.info("Getting ClientAuthenticationMethod from request");
-        LOG.info("ClientSecretSupport: {}", configurationService.isClientSecretSupported());
 
         if (requestBody.containsKey("client_assertion")
                 && requestBody.containsKey("client_assertion_type")) {
@@ -34,9 +33,7 @@ public class TokenClientAuthValidatorFactory {
                             dynamoClientService, configurationService));
         }
 
-        if (requestBody.containsKey("client_secret")
-                && requestBody.containsKey("client_id")
-                && configurationService.isClientSecretSupported()) {
+        if (requestBody.containsKey("client_secret") && requestBody.containsKey("client_id")) {
             LOG.info("Client auth method is: client_secret_post");
             return Optional.of(new ClientSecretPostClientAuthValidator(dynamoClientService));
         }

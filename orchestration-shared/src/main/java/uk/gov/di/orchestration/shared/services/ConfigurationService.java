@@ -252,10 +252,6 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return false;
     }
 
-    public boolean isClientSecretSupported() {
-        return List.of("build", "staging", "local", "integration").contains(getEnvironment());
-    }
-
     public boolean isIdentityEnabled() {
         return System.getenv().getOrDefault("IDENTITY_ENABLED", "false").equals("true");
     }
