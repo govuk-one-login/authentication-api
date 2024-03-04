@@ -109,5 +109,8 @@ resource "aws_dynamodb_table_item" "stub_rp_client" {
     OneLoginService = {
       BOOL = var.stub_rp_clients[count.index].one_login_service
     }
+    SectorIdentifierUri = {
+      S = coalesce(var.stub_rp_clients[count.index].sector_identifier_uri, var.stub_rp_clients[count.index].callback_urls[0])
+    }
   })
 }
