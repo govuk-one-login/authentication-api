@@ -18,6 +18,8 @@ locals {
   authorizer_max_provisioned_concurrency = lookup(var.performance_tuning, "authorizer", local.default_performance_parameters).max_concurrency
   authorizer_scaling_trigger             = lookup(var.performance_tuning, "authorizer", local.default_performance_parameters).scaling_trigger
 
+  alert_error_threshold      = 5
+  alert_error_rate_threshold = 10
 }
 
 resource "aws_lambda_function" "authorizer" {
@@ -102,4 +104,74 @@ resource "aws_appautoscaling_policy" "provisioned-concurrency-policy" {
       predefined_metric_type = "LambdaProvisionedConcurrencyUtilization"
     }
   }
+}
+
+resource "aws_cloudwatch_log_metric_filter" "lambda_authorizer_error_metric_filter" {
+  name           = replace("${var.environment}-${aws_lambda_function.authorizer.function_name}-errors", ".", "")
+  pattern        = "{($.level = \"ERROR\")}"
+  log_group_name = aws_cloudwatch_log_group.lambda_log_group[0].name
+
+  metric_transformation {
+    name      = replace("${var.environment}-${aws_lambda_function.authorizer.function_name}-error-count", ".", "")
+    namespace = "LambdaErrorsNamespace"
+    value     = "1"
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "lambda_authorizer_error_cloudwatch_alarm" {
+  alarm_name          = replace("${var.environment}-${aws_lambda_function.authorizer.function_name}-alarm", ".", "")
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = "1"
+  metric_name         = aws_cloudwatch_log_metric_filter.lambda_authorizer_error_metric_filter.metric_transformation[0].name
+  namespace           = aws_cloudwatch_log_metric_filter.lambda_authorizer_error_metric_filter.metric_transformation[0].namespace
+  period              = "3600"
+  statistic           = "Sum"
+  threshold           = local.alert_error_threshold
+  alarm_description   = "${local.alert_error_threshold} or more errors have occurred in the ${var.environment} ${aws_lambda_function.authorizer.function_name} lambda. ACCOUNT: ${data.aws_iam_account_alias.current.account_alias}"
+  alarm_actions       = [data.aws_sns_topic.slack_events.arn]
+}
+
+resource "aws_cloudwatch_metric_alarm" "lambda_authorizer_error_rate_cloudwatch_alarm" {
+  alarm_name          = replace("${var.environment}-${aws_lambda_function.authorizer.function_name}-error-rate-alarm", ".", "")
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = "1"
+  threshold           = local.alert_error_rate_threshold
+  alarm_description   = "Lambda error rate of ${local.alert_error_rate_threshold} has been reached in the ${var.environment} ${aws_lambda_function.authorizer.function_name} lambda.ACCOUNT: ${data.aws_iam_account_alias.current.account_alias}"
+
+  metric_query {
+    id          = "e1"
+    return_data = true
+    expression  = "m2/m1*100"
+    label       = "Error Rate"
+  }
+
+  metric_query {
+    id = "m1"
+    metric {
+      namespace   = "AWS/Lambda"
+      metric_name = "Invocations"
+      period      = 60
+      stat        = "Sum"
+      unit        = "Count"
+
+      dimensions = {
+        FunctionName = aws_lambda_function.authorizer.function_name
+      }
+    }
+  }
+  metric_query {
+    id = "m2"
+    metric {
+      namespace   = "AWS/Lambda"
+      metric_name = "Errors"
+      period      = 60
+      stat        = "Sum"
+      unit        = "Count"
+
+      dimensions = {
+        FunctionName = aws_lambda_function.authorizer.function_name
+      }
+    }
+  }
+  alarm_actions = [data.aws_sns_topic.slack_events.arn]
 }
