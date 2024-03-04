@@ -24,8 +24,6 @@
 # 04/03/2024
 ## People present
 - Aidan
-- Ayo
-- Mark
 - Becka
 
 ## TODO
