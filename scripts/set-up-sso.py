@@ -2,17 +2,39 @@
 import configparser
 import json
 import logging
+import os
+import re
 import shutil
-import subprocess
 import sys
+import webbrowser
 from datetime import datetime
 from pathlib import Path
+from time import sleep
 
 try:
     import boto3
 except ImportError:
     print("boto3 is not installed. Please install it using `pip3 install boto3`")
     sys.exit(1)
+
+StrAnyDict = dict[str, object()]
+
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+)
+
+INCLUDE_PROD = os.getenv("INCLUDE_PROD", "false") == "YES I AM SURE"
+if INCLUDE_PROD:
+    logging.warning(
+        "You have enabled production account profiles. This is not recommended"
+        " unless you are about to perform a production operation."
+    )
+    logging.warning(
+        "Run again without setting `INCLUDE_PROD` environment variable once you are"
+        " done."
+    )
 
 # Global constants
 AWS_CONFIG_DIR: Path = Path.home() / ".aws"
@@ -22,10 +44,8 @@ SESSION_NAME = "di-sso"
 SESSION_START_URL = "https://uk-digital-identity.awsapps.com/start"
 SESSION_REGISTRATION_SCOPES = "sso:account:access"
 
-# Set up logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
+oidc_client_cache: Path = (
+    Path.home() / ".aws" / "sso" / "cache" / "di-auth_set-up-sso.json"
 )
 
 
@@ -62,30 +82,75 @@ def setup_aws_config():
         config.write(f)
 
 
-def login_to_sso():
-    # Login to AWS SSO
+def login_to_sso() -> StrAnyDict:
+    sso_session = boto3.Session()
+    sso_client = sso_session.client(
+        "sso-oidc",
+        region_name=DEFAULT_REGION,
+        aws_access_key_id="",
+        aws_secret_access_key="",
+    )
+
+    # Load or register SSO OIDC client
     try:
-        subprocess.run(["aws", "sso", "login", "--sso-session", SESSION_NAME])
-    except subprocess.CalledProcessError as e:
-        logging.error(f"Failed to log in to SSO: {e}")
+        oidc_client_cache.parent.mkdir(parents=True, exist_ok=True)
+        client_creds = json.loads(oidc_client_cache.read_text())
+        assert (
+            client_creds["clientSecretExpiresAt"] > datetime.now().timestamp()
+        ), "Client has expired."
+    except (FileNotFoundError, json.JSONDecodeError, AssertionError, KeyError) as e:
+        logging.debug(f"Error loading cached client: {e}")
+        logging.debug("Registering new client.")
+        client_creds = sso_client.register_client(
+            clientName="set-up-sso.py",
+            clientType="public",
+            scopes=["sso:account:access"],
+        )
+        del client_creds["ResponseMetadata"]
+        oidc_client_cache.write_text(json.dumps(client_creds))
+
+    device_auth = sso_client.start_device_authorization(
+        clientId=client_creds["clientId"],
+        clientSecret=client_creds["clientSecret"],
+        startUrl=SESSION_START_URL,
+    )
+
+    try:
+        webbrowser.open(device_auth["verificationUriComplete"], autoraise=True)
+    except webbrowser.Error:
+        pass
+
+    print(
+        "Please grant access to the application. Your browser should open "
+        f"automatically, with the user code '{device_auth['userCode']}'."
+    )
+    print(
+        "If it does not, please approve at the following URL: ",
+        device_auth["verificationUriComplete"],
+        "\n",
+    )
+
+    for _ in range(1, device_auth["expiresIn"] // device_auth["interval"] + 1):
+        try:
+            return sso_client.create_token(
+                clientId=client_creds["clientId"],
+                clientSecret=client_creds["clientSecret"],
+                grantType="urn:ietf:params:oauth:grant-type:device_code",
+                deviceCode=device_auth["deviceCode"],
+            )
+        except sso_client.exceptions.AuthorizationPendingException:
+            pass
+        sleep(device_auth["interval"])
+    else:
+        print("Device code expired. Please try again.")
         sys.exit(1)
 
 
-def fetch_sso_credentials():
-    # Fetch SSO credentials from cache
-    sso_cache_dir = Path.home() / ".aws" / "sso" / "cache"
-    sso_caches = list(sso_cache_dir.glob("*.json"))
-    sso_caches.sort(key=lambda x: x.stat().st_mtime, reverse=True)
-    with open(sso_caches[0]) as f:
-        sso_cache = json.load(f)
-    return sso_cache
-
-
-def get_aws_accounts_and_roles(sso_cache):
+def get_aws_accounts_and_roles(sso_token: StrAnyDict) -> list[StrAnyDict]:
     # Get AWS accounts and roles
     client = boto3.client("sso", region_name=DEFAULT_REGION)
     paginator = client.get_paginator("list_accounts")
-    iterator = paginator.paginate(accessToken=sso_cache["accessToken"])
+    iterator = paginator.paginate(accessToken=sso_token["accessToken"])
     accounts = []
     for page in iterator:
         accounts.extend(page["accountList"])
@@ -93,7 +158,7 @@ def get_aws_accounts_and_roles(sso_cache):
     for i, account in enumerate(accounts):
         paginator = client.get_paginator("list_account_roles")
         iterator = paginator.paginate(
-            accessToken=sso_cache["accessToken"], accountId=account["accountId"]
+            accessToken=sso_token["accessToken"], accountId=account["accountId"]
         )
         account["roleList"] = []
         for page in iterator:
@@ -101,7 +166,56 @@ def get_aws_accounts_and_roles(sso_cache):
     return accounts
 
 
-def create_aws_profiles(accounts):
+def account_is_prod(account: StrAnyDict) -> bool:
+    """
+    Checks if the given AWS account is a production account.
+
+    This function checks if the name of the account contains the word "prod" or
+    "production", ignoring case. The word must be a whole word, i.e. "nonprod"
+    will not match.
+
+    Args:
+        account (StrAnyDict): A dictionary representing an AWS account. The dictionary
+            must contain a key "accountName" with a string value representing the name
+            of the account.
+
+    Returns:
+        bool: True if the account is a production account, False otherwise.
+    """
+    return (
+        re.search(r"\bprod(?:uction)?\b", account["accountName"], re.IGNORECASE)
+        is not None
+    )
+
+
+def role_ends_with(role: StrAnyDict, test_string: str) -> bool:
+    """
+    Checks if the given AWS role contains a specific string.
+
+    This function checks if the name of the role contains a specific string, ignoring
+    case. The string must be a whole word, i.e. "admin" will not match "administrator".
+
+    Args:
+        role (StrAnyDict): A dictionary representing an AWS role. The dictionary must
+            contain a key "roleName" with a string value representing the name of the
+            role.
+        test_string (str): The string to test for.
+
+    Returns:
+        bool: True if the role contains the string, False otherwise.
+    """
+    return re.search(rf"\b{test_string}$", role["roleName"], re.IGNORECASE) is not None
+
+
+def role_is_admin(role: StrAnyDict) -> bool:
+    return role_ends_with(role, "admin") or role_ends_with(role, "administrator")
+
+
+def role_is_readonly(role: StrAnyDict) -> bool:
+    return role_ends_with(role, "readonly") or role_ends_with(role, "read-only")
+
+
+def create_aws_profiles(accounts: list[StrAnyDict]):
     # Create AWS profiles
     config = configparser.ConfigParser()
     config.read(AWS_CONFIG_FILE)
@@ -113,15 +227,12 @@ def create_aws_profiles(accounts):
             role_name: str = role["roleName"]
             profile_name = None
 
-            if "-admin" in role_name.lower():
+            if role_is_admin(role):
                 _name = f"{account_name}-admin"
                 if _name not in created_profiles:
                     # Skip if profile already exists, we'll use a generic name later
                     profile_name = _name
-            elif any(
-                substring in role_name.lower()
-                for substring in ["-readonly", "-read-only"]
-            ):
+            elif role_is_readonly(role):
                 _name = f"{account_name}-readonly"
                 if _name not in created_profiles:
                     # Skip if profile already exists, we'll use a generic name later
@@ -135,6 +246,18 @@ def create_aws_profiles(accounts):
                 profile_name = f"{account_name}-{role_name}"
 
             profile_section_title = f"profile {profile_name}"
+            if account_is_prod(account) and not INCLUDE_PROD:
+                if profile_section_title in config:
+                    config.remove_section(profile_section_title)
+                    logging.warning(
+                        f"Removed profile {profile_name} as it is a production account."
+                    )
+                else:
+                    logging.warning(
+                        f"Not adding profile {profile_name} as it is a production"
+                        " account."
+                    )
+                continue
             if profile_section_title in config:
                 logging.info(
                     f"Updating profile {profile_name}: {account['accountId']}:"
@@ -163,9 +286,8 @@ def create_aws_profiles(accounts):
 
 def main():
     setup_aws_config()
-    login_to_sso()
-    sso_cache = fetch_sso_credentials()
-    accounts = get_aws_accounts_and_roles(sso_cache)
+    token = login_to_sso()
+    accounts = get_aws_accounts_and_roles(token)
     create_aws_profiles(accounts)
 
 
