@@ -15,6 +15,7 @@ import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.*;
 import uk.gov.di.authentication.shared.state.UserContext;
 
+import java.util.List;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1056;
@@ -66,7 +67,7 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
             Context context,
             CheckReauthUserRequest request,
             UserContext userContext) {
-        LOG.info("Processing CheckReAuthUser request for email: {}", request.email());
+        LOG.info("Processing CheckReAuthUser request");
 
         try {
             return authenticationService
@@ -78,7 +79,8 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                                             "Account is locked due to too many failed attempts.");
                                 }
 
-                                return verifyReAuthentication(userProfile, userContext);
+                                return verifyReAuthentication(
+                                        userProfile, userContext, request.rpPairwiseId());
                             })
                     .map(rpPairwiseId -> generateSuccessResponse())
                     .orElseGet(() -> generateErrorResponse(request.email()));
@@ -89,26 +91,28 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
     }
 
     private Optional<String> verifyReAuthentication(
-            UserProfile userProfile, UserContext userContext) {
+            UserProfile userProfile, UserContext userContext, String rpPairwiseId) {
         var client = userContext.getClient().orElseThrow();
-        var rpPairwiseId =
+        var calculatedPairwiseId =
                 ClientSubjectHelper.getSubject(
                                 userProfile,
                                 client,
                                 authenticationService,
                                 configurationService.getInternalSectorUri())
                         .getValue();
-        var internalPairwiseId =
-                ClientSubjectHelper.getSubjectWithSectorIdentifier(
-                                userProfile,
-                                configurationService.getInternalSectorUri(),
-                                authenticationService)
-                        .getValue();
 
-        if (rpPairwiseId.equals(internalPairwiseId)) {
+        if (List.of("build", "sandpit", "authdev1", "authdev2")
+                .contains(configurationService.getEnvironment())) {
+            LOG.info("calculatedPairwiseId {}", calculatedPairwiseId);
+            LOG.info("rpPairwiseId {}", rpPairwiseId);
+        }
+
+        if (calculatedPairwiseId != null && calculatedPairwiseId.equals(rpPairwiseId)) {
             LOG.info("Successfully verified re-authentication");
             removeEmailCountLock(userProfile.getEmail());
             return Optional.of(rpPairwiseId);
+        } else {
+            LOG.info("Could not calculate rp pairwise ID");
         }
 
         LOG.info("User re-authentication verification failed");
