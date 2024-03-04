@@ -28,7 +28,6 @@ public class TokenClientAuthValidatorFactory {
     public Optional<TokenClientAuthValidator> getTokenAuthenticationValidator(
             String inputBody, Map<String, String> requestHeaders) {
         LOG.info("Getting ClientAuthenticationMethod from request");
-        LOG.info("ClientSecretSupport: {}", configurationService.isClientSecretSupported());
         var requestBody = parseRequestBody(inputBody);
         if (requestBody.containsKey("client_assertion")
                 && requestBody.containsKey("client_assertion_type")) {
@@ -37,9 +36,7 @@ public class TokenClientAuthValidatorFactory {
                     new PrivateKeyJwtClientAuthValidator(
                             dynamoClientService, configurationService));
         }
-        if (requestBody.containsKey("client_secret")
-                && requestBody.containsKey("client_id")
-                && configurationService.isClientSecretSupported()) {
+        if (requestBody.containsKey("client_secret") && requestBody.containsKey("client_id")) {
             LOG.info("Client auth method is: client_secret_post");
             return Optional.of(new ClientSecretPostClientAuthValidator(dynamoClientService));
         }
@@ -48,9 +45,7 @@ public class TokenClientAuthValidatorFactory {
                         requestHeaders,
                         AUTHORIZATION_HEADER,
                         configurationService.getHeadersCaseInsensitive());
-        if (Objects.nonNull(authorizationHeader)
-                && authorizationHeader.startsWith("Basic")
-                && configurationService.isClientSecretSupported()) {
+        if (Objects.nonNull(authorizationHeader) && authorizationHeader.startsWith("Basic")) {
             LOG.info("Client auth method is: client_secret_basic");
             return Optional.of(
                     new ClientSecretBasicClientAuthValidator(
