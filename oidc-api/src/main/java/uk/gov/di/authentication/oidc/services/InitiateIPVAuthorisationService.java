@@ -2,13 +2,10 @@ package uk.gov.di.authentication.oidc.services;
 
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
-import com.nimbusds.oauth2.sdk.id.Subject;
-import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
@@ -44,21 +41,18 @@ public class InitiateIPVAuthorisationService {
     private final IPVAuthorisationService authorisationService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final NoSessionOrchestrationService noSessionOrchestrationService;
-    private final StorageTokenService storageTokenService;
 
     public InitiateIPVAuthorisationService(
             ConfigurationService configurationService,
             AuditService auditService,
             IPVAuthorisationService authorisationService,
             CloudwatchMetricsService cloudwatchMetricsService,
-            NoSessionOrchestrationService noSessionOrchestrationService,
-            StorageTokenService storageTokenService) {
+            NoSessionOrchestrationService noSessionOrchestrationService) {
         this.configurationService = configurationService;
         this.auditService = auditService;
         this.authorisationService = authorisationService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.noSessionOrchestrationService = noSessionOrchestrationService;
-        this.storageTokenService = storageTokenService;
     }
 
     public APIGatewayProxyResponseEvent sendRequestToIPV(
@@ -82,7 +76,7 @@ public class InitiateIPVAuthorisationService {
         var pairwiseSubject = userInfo.getSubject();
 
         var state = new State();
-        var claimsSetRequest = buildIpvClaimsRequest(authRequest, pairwiseSubject);
+        var claimsSetRequest = buildIpvClaimsRequest(authRequest).orElse(null);
 
         var encryptedJWT =
                 authorisationService.constructRequestJWT(
@@ -133,26 +127,9 @@ public class InitiateIPVAuthorisationService {
                 null);
     }
 
-    private ClaimsSetRequest buildIpvClaimsRequest(
-            AuthenticationRequest authRequest, Subject internalPairwiseSubject) {
-
-        ClaimsSetRequest claimsSetRequest =
-                Optional.ofNullable(authRequest)
-                        .map(AuthenticationRequest::getOIDCClaims)
-                        .map(OIDCClaimsRequest::getUserInfoClaimsRequest)
-                        .orElse(new ClaimsSetRequest());
-
-        if (configurationService.sendStorageTokenToIpvEnabled()) {
-            LOG.info("Adding storageAccessToken claim to IPV claims request");
-            AccessToken storageToken =
-                    storageTokenService.generateAndSignStorageToken(
-                            internalPairwiseSubject, JWSAlgorithm.ES256);
-
-            claimsSetRequest.add(
-                    new ClaimsSetRequest.Entry(configurationService.getStorageTokenClaimName())
-                            .withValues(List.of(storageToken.getValue())));
-        }
-
-        return claimsSetRequest;
+    private Optional<ClaimsSetRequest> buildIpvClaimsRequest(AuthenticationRequest authRequest) {
+        return Optional.ofNullable(authRequest)
+                .map(AuthenticationRequest::getOIDCClaims)
+                .map(OIDCClaimsRequest::getUserInfoClaimsRequest);
     }
 }

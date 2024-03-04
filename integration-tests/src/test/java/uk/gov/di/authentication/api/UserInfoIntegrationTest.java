@@ -103,7 +103,6 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var configuration =
                 new IntegrationTestConfigurationService(
                         externalTokenSigner,
-                        storageTokenSigner,
                         ipvPrivateKeyJwtSigner,
                         spotQueue,
                         docAppPrivateKeyJwtSigner,
@@ -560,7 +559,6 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         public UserInfoConfigurationService() {
             super(
                     externalTokenSigner,
-                    storageTokenSigner,
                     ipvPrivateKeyJwtSigner,
                     spotQueue,
                     docAppPrivateKeyJwtSigner,
