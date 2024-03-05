@@ -44,6 +44,7 @@ import java.time.Clock;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 public class IPVAuthorisationService {
@@ -186,8 +187,9 @@ public class IPVAuthorisationService {
                 && reproveIdentity != null) {
             claimsBuilder.claim("reprove_identity", reproveIdentity);
         }
-        claimsBuilder.claim("claims", claimsRequest.toJSONObject());
-
+        if (Objects.nonNull(claims)) {
+            claimsBuilder.claim("claims", claimsRequest.toJSONObject());
+        }
         var encodedHeader = jwsHeader.toBase64URL();
         var encodedClaims = Base64URL.encode(claimsBuilder.build().toString());
         var message = encodedHeader + "." + encodedClaims;

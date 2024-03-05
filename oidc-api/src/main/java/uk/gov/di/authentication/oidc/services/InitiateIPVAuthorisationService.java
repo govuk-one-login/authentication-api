@@ -6,8 +6,6 @@ import com.nimbusds.oauth2.sdk.AuthorizationRequest;
 import com.nimbusds.oauth2.sdk.ResponseType;
 import com.nimbusds.oauth2.sdk.id.ClientID;
 import com.nimbusds.oauth2.sdk.id.State;
-import com.nimbusds.oauth2.sdk.id.Subject;
-import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
@@ -24,7 +22,6 @@ import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
-import uk.gov.di.orchestration.shared.services.TokenService;
 
 import java.util.List;
 import java.util.Map;
@@ -44,21 +41,18 @@ public class InitiateIPVAuthorisationService {
     private final IPVAuthorisationService authorisationService;
     private final CloudwatchMetricsService cloudwatchMetricsService;
     private final NoSessionOrchestrationService noSessionOrchestrationService;
-    private final TokenService tokenService;
 
     public InitiateIPVAuthorisationService(
             ConfigurationService configurationService,
             AuditService auditService,
             IPVAuthorisationService authorisationService,
             CloudwatchMetricsService cloudwatchMetricsService,
-            NoSessionOrchestrationService noSessionOrchestrationService,
-            TokenService tokenService) {
+            NoSessionOrchestrationService noSessionOrchestrationService) {
         this.configurationService = configurationService;
         this.auditService = auditService;
         this.authorisationService = authorisationService;
         this.cloudwatchMetricsService = cloudwatchMetricsService;
         this.noSessionOrchestrationService = noSessionOrchestrationService;
-        this.tokenService = tokenService;
     }
 
     public APIGatewayProxyResponseEvent sendRequestToIPV(
@@ -82,7 +76,7 @@ public class InitiateIPVAuthorisationService {
         var pairwiseSubject = userInfo.getSubject();
 
         var state = new State();
-        var claimsSetRequest = buildIpvClaimsRequest(authRequest, pairwiseSubject);
+        var claimsSetRequest = buildIpvClaimsRequest(authRequest).orElse(null);
 
         var encryptedJWT =
                 authorisationService.constructRequestJWT(
@@ -133,24 +127,9 @@ public class InitiateIPVAuthorisationService {
                 null);
     }
 
-    private ClaimsSetRequest buildIpvClaimsRequest(
-            AuthenticationRequest authRequest, Subject internalPairwiseSubject) {
-
-        ClaimsSetRequest claimsSetRequest =
-                Optional.ofNullable(authRequest)
-                        .map(AuthenticationRequest::getOIDCClaims)
-                        .map(OIDCClaimsRequest::getUserInfoClaimsRequest)
-                        .orElse(new ClaimsSetRequest());
-
-        if (configurationService.sendStorageTokenToIpvEnabled()) {
-            LOG.info("Adding storageAccessToken claim to IPV claims request");
-            AccessToken storageToken = tokenService.generateStorageToken(internalPairwiseSubject);
-
-            claimsSetRequest.add(
-                    new ClaimsSetRequest.Entry(configurationService.getStorageTokenClaimName())
-                            .withValues(List.of(storageToken.getValue())));
-        }
-
-        return claimsSetRequest;
+    private Optional<ClaimsSetRequest> buildIpvClaimsRequest(AuthenticationRequest authRequest) {
+        return Optional.ofNullable(authRequest)
+                .map(AuthenticationRequest::getOIDCClaims)
+                .map(OIDCClaimsRequest::getUserInfoClaimsRequest);
     }
 }
