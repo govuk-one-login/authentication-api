@@ -10,6 +10,7 @@ import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
+import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
@@ -39,6 +40,7 @@ class CheckReAuthUserHandlerTest {
     private static final String EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String TEST_SUBJECT_ID = "subject-id";
     private static final String INTERNAL_SECTOR_URI = "http://www.example.com";
+    private static final String TEST_RP_PAIRWISE_ID = "TEST_RP_PAIRWISE_ID";
 
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final Context context = mock(Context.class);
@@ -85,12 +87,25 @@ class CheckReAuthUserHandlerTest {
         event.setHeaders(getHeaders());
         event.setBody(format("{ \"email\": \"%s\" }", EMAIL_ADDRESS));
 
+        when(configurationService.getEnvironment()).thenReturn("build");
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
         when(clientRegistry.getRedirectUrls()).thenReturn(List.of(INTERNAL_SECTOR_URI));
 
+        var userProfile = generateUserProfile();
+        var expectedRpPairwiseSub =
+                ClientSubjectHelper.getSubject(
+                                userProfile,
+                                clientRegistry,
+                                authenticationService,
+                                INTERNAL_SECTOR_URI)
+                        .getValue();
+
         var result =
                 handler.handleRequestWithUserContext(
-                        event, context, new CheckReauthUserRequest(EMAIL_ADDRESS), userContext);
+                        event,
+                        context,
+                        new CheckReauthUserRequest(EMAIL_ADDRESS, expectedRpPairwiseSub),
+                        userContext);
         assertEquals(200, result.getStatusCode());
     }
 
@@ -106,7 +121,10 @@ class CheckReAuthUserHandlerTest {
 
         var result =
                 handler.handleRequestWithUserContext(
-                        event, context, new CheckReauthUserRequest(EMAIL_ADDRESS), userContext);
+                        event,
+                        context,
+                        new CheckReauthUserRequest(EMAIL_ADDRESS, TEST_RP_PAIRWISE_ID),
+                        userContext);
         assertEquals(404, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1056));
     }
@@ -124,7 +142,10 @@ class CheckReAuthUserHandlerTest {
 
         var result =
                 handler.handleRequestWithUserContext(
-                        event, context, new CheckReauthUserRequest(EMAIL_ADDRESS), userContext);
+                        event,
+                        context,
+                        new CheckReauthUserRequest(EMAIL_ADDRESS, TEST_RP_PAIRWISE_ID),
+                        userContext);
         assertEquals(400, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1057));
     }
@@ -137,11 +158,15 @@ class CheckReAuthUserHandlerTest {
         event.setBody(format("{ \"email\": \"%s\" }", EMAIL_ADDRESS));
 
         when(configurationService.getInternalSectorUri()).thenReturn(INTERNAL_SECTOR_URI);
+        when(configurationService.getEnvironment()).thenReturn("build");
         when(clientRegistry.getRedirectUrls()).thenReturn(List.of("http://test.example.com"));
 
         var result =
                 handler.handleRequestWithUserContext(
-                        event, context, new CheckReauthUserRequest(EMAIL_ADDRESS), userContext);
+                        event,
+                        context,
+                        new CheckReauthUserRequest(EMAIL_ADDRESS, TEST_RP_PAIRWISE_ID),
+                        userContext);
         assertEquals(404, result.getStatusCode());
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1056));
     }

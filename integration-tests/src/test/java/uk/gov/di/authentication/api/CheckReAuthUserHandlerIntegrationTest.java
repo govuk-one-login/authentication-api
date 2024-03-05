@@ -58,26 +58,25 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
     void shouldReturn200WithSuccessfulCheckReAuthUserRequest() {
         userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
         registerClient("https://" + INTERNAl_SECTOR_HOST);
-
-        var request = new CheckReauthUserRequest(TEST_EMAIL);
         byte[] salt = userStore.addSalt(TEST_EMAIL);
-        var internalCommonSubjectId =
+        var expectedPairwiseId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         SUBJECT.getValue(), INTERNAl_SECTOR_HOST, salt);
+        var request = new CheckReauthUserRequest(TEST_EMAIL, expectedPairwiseId);
         var response =
                 makeRequest(
                         Optional.of(request),
                         headers,
                         Collections.emptyMap(),
                         Collections.emptyMap(),
-                        Map.of("principalId", internalCommonSubjectId));
+                        Map.of("principalId", expectedPairwiseId));
 
         assertThat(response, hasStatus(200));
     }
 
     @Test
     void shouldReturn404WhenUserNotFound() {
-        var request = new CheckReauthUserRequest(TEST_EMAIL);
+        var request = new CheckReauthUserRequest(TEST_EMAIL, "random-pairwise-id");
         var response =
                 makeRequest(
                         Optional.of(request),
@@ -93,19 +92,18 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
     void shouldReturn404WhenUserNotMatched() {
         userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
         registerClient("https://randomSectorIDuRI.COM");
-
-        var request = new CheckReauthUserRequest(TEST_EMAIL);
         byte[] salt = userStore.addSalt(TEST_EMAIL);
-        var internalCommonSubjectId =
+        var expectedPairwiseId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         SUBJECT.getValue(), INTERNAl_SECTOR_HOST, salt);
+        var request = new CheckReauthUserRequest(TEST_EMAIL, expectedPairwiseId);
         var response =
                 makeRequest(
                         Optional.of(request),
                         headers,
                         Collections.emptyMap(),
                         Collections.emptyMap(),
-                        Map.of("principalId", internalCommonSubjectId));
+                        Map.of("principalId", expectedPairwiseId));
 
         assertThat(response, hasStatus(404));
     }
@@ -121,18 +119,18 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
         redis.incrementEmailCount(TEST_EMAIL);
         redis.incrementEmailCount(TEST_EMAIL);
 
-        var request = new CheckReauthUserRequest(TEST_EMAIL);
         byte[] salt = userStore.addSalt(TEST_EMAIL);
-        var internalCommonSubjectId =
+        var expectedPairwiseId =
                 ClientSubjectHelper.calculatePairwiseIdentifier(
                         SUBJECT.getValue(), INTERNAl_SECTOR_HOST, salt);
+        var request = new CheckReauthUserRequest(TEST_EMAIL, expectedPairwiseId);
         var response =
                 makeRequest(
                         Optional.of(request),
                         headers,
                         Collections.emptyMap(),
                         Collections.emptyMap(),
-                        Map.of("principalId", internalCommonSubjectId));
+                        Map.of("principalId", expectedPairwiseId));
 
         assertThat(response, hasStatus(400));
     }
