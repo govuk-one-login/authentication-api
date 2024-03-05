@@ -191,7 +191,7 @@ public class LogoutHandler
 
         if (sessionFromSessionCookie.isPresent()) {
             return segmentedFunctionCall(
-                    "processLogoutRequest",
+                    "logoutWithSession",
                     () ->
                             logoutWithSession(
                                     idTokenHint.get(),
