@@ -20,6 +20,7 @@ if os.getenv("FROM_WRAPPER", "false") != "true":
 
 try:
     import boto3
+    from botocore.config import Config
 except ImportError:
     print(
         "boto3 is not installed. Please refer to "
@@ -152,14 +153,16 @@ def login_to_sso() -> StrAnyDict:
         except sso_client.exceptions.AuthorizationPendingException:
             pass
         sleep(device_auth["interval"])
-    else:
-        print("Device code expired. Please try again.")
-        sys.exit(1)
+
+    print("Device code expired. Please try again.")
+    sys.exit(1)
 
 
 def get_aws_accounts_and_roles(sso_token: StrAnyDict) -> list[StrAnyDict]:
     # Get AWS accounts and roles
-    client = boto3.client("sso", region_name=DEFAULT_REGION)
+    client_config = Config(retries={"max_attempts": 10, "mode": "adaptive"})
+    client = boto3.client("sso", region_name=DEFAULT_REGION, config=client_config)
+
     paginator = client.get_paginator("list_accounts")
     iterator = paginator.paginate(accessToken=sso_token["accessToken"])
     accounts = []
