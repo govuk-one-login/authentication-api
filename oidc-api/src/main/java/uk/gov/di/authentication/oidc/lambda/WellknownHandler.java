@@ -72,7 +72,9 @@ public class WellknownHandler
             oidcMetadata.setAuthorizationEndpointURI(buildURI(baseUrl, "/authorize"));
             oidcMetadata.setRegistrationEndpointURI(buildURI(baseUrl, "/connect/register"));
             oidcMetadata.setTokenEndpointAuthMethods(
-                    List.of(ClientAuthenticationMethod.PRIVATE_KEY_JWT));
+                    List.of(
+                            ClientAuthenticationMethod.PRIVATE_KEY_JWT,
+                            ClientAuthenticationMethod.CLIENT_SECRET_POST));
             oidcMetadata.setScopes(new Scope(ValidScopes.getScopesForWellKnownHandler()));
             oidcMetadata.setResponseTypes(List.of(new ResponseType("code")));
             oidcMetadata.setGrantTypes(List.of(GrantType.AUTHORIZATION_CODE));
