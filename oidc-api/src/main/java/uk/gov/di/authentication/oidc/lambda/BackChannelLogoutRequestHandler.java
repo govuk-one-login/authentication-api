@@ -85,7 +85,7 @@ public class BackChannelLogoutRequestHandler implements RequestHandler<SQSEvent,
 
             var body =
                     tokenService
-                            .generateSignedJWT(
+                            .generateSignedJwtUsingExternalKey(
                                     claims, Optional.of("logout+jwt"), JWSAlgorithm.ES256)
                             .serialize();
 

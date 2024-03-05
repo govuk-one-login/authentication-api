@@ -200,6 +200,7 @@ class TokenServiceTest {
         AccessToken token = tokenService.generateStorageToken(new Subject());
         String[] splitToken = token.toString().split("\\.");
 
+        verify(configurationService).getStorageTokenSigningKeyAlias();
         assertEquals(3, splitToken.length);
         assertThat(token.toString(), startsWith(STORAGE_TOKEN_PREFIX));
     }
