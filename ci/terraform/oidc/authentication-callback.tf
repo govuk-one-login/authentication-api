@@ -5,6 +5,7 @@ module "oidc_api_authentication_callback_role" {
   vpc_arn     = local.authentication_vpc_arn
 
   policies_to_attach = [
+    aws_iam_policy.storage_token_kms_signing_policy.arn,
     aws_iam_policy.dynamo_client_registry_read_access_policy.arn,
     aws_iam_policy.dynamo_authentication_callback_userinfo_read_policy.arn,
     aws_iam_policy.dynamo_authentication_callback_userinfo_write_access_policy.arn,
@@ -17,6 +18,29 @@ module "oidc_api_authentication_callback_role" {
     local.client_registry_encryption_policy_arn,
     aws_iam_policy.dynamo_user_read_access_policy.arn
   ]
+}
+
+data "aws_iam_policy_document" "storage_token_kms_signing_policy_document" {
+  statement {
+    sid    = "AllowAccessToVcTokenKmsSigningKey"
+    effect = "Allow"
+
+    actions = [
+      "kms:Sign",
+      "kms:GetPublicKey",
+    ]
+    resources = [
+      aws_kms_key.storage_token_signing_key_ecc.arn
+    ]
+  }
+}
+
+resource "aws_iam_policy" "storage_token_kms_signing_policy" {
+  name_prefix = "kms-signing-policy"
+  path        = "/${var.environment}/storage-token/"
+  description = "IAM policy for managing KMS connection for a lambda which allows signing of storage token payloads"
+
+  policy = data.aws_iam_policy_document.storage_token_kms_signing_policy_document.json
 }
 
 module "authentication_callback" {
