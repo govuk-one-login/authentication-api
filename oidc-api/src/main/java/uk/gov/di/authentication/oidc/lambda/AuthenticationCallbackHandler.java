@@ -55,7 +55,6 @@ import uk.gov.di.orchestration.shared.services.NoSessionOrchestrationService;
 import uk.gov.di.orchestration.shared.services.RedirectService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 import uk.gov.di.orchestration.shared.services.SessionService;
-import uk.gov.di.orchestration.shared.services.TokenService;
 
 import java.net.URI;
 import java.util.HashMap;
@@ -127,11 +126,7 @@ public class AuthenticationCallbackHandler
                         new IPVAuthorisationService(
                                 configurationService, redisConnectionService, kmsConnectionService),
                         cloudwatchMetricsService,
-                        new NoSessionOrchestrationService(configurationService),
-                        new TokenService(
-                                configurationService,
-                                redisConnectionService,
-                                kmsConnectionService));
+                        new NoSessionOrchestrationService(configurationService));
         this.accountInterventionService =
                 new AccountInterventionService(
                         configurationService, cloudwatchMetricsService, auditService);
