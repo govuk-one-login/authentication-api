@@ -285,6 +285,35 @@ public class TokenService {
         }
     }
 
+    public AccessToken generateStorageToken(Subject internalPairwiseSubject) {
+
+        LOG.info("Generating storage token");
+        Date expiryDate = NowHelper.nowPlus(configService.getSessionExpiry(), ChronoUnit.SECONDS);
+        var jwtID = UUID.randomUUID().toString();
+
+        LOG.info("Storage token being created with JWTID: {}", jwtID);
+
+        List<String> aud =
+                List.of(
+                        configService.getCredentialStoreURI().toString(),
+                        configService.getIPVAudience());
+
+        JWTClaimsSet.Builder claimSetBuilder =
+                new JWTClaimsSet.Builder()
+                        .issuer(configService.getOidcApiBaseURL().get())
+                        .audience(aud)
+                        .expirationTime(expiryDate)
+                        .issueTime(NowHelper.now())
+                        .subject(internalPairwiseSubject.getValue())
+                        .jwtID(jwtID);
+
+        SignedJWT signedJWT =
+                generateSignedJWT(claimSetBuilder.build(), Optional.empty(), JWSAlgorithm.ES256);
+
+        return new BearerAccessToken(
+                signedJWT.serialize(), configService.getAccessTokenExpiry(), null);
+    }
+
     private AccessToken generateAndStoreAccessToken(
             String clientId,
             Subject internalSubject,

@@ -71,6 +71,9 @@ class IPVAuthorisationServiceTest {
     private static final URI IPV_URI = URI.create("http://ipv/");
     private static final URI IPV_CALLBACK_URI = URI.create("http://localhost/oidc/ipv/callback");
     private static final URI IPV_AUTHORISATION_URI = URI.create("http://localhost/ipv/authorize");
+    private static final String SERIALIZED_JWT =
+            "eyJraWQiOiIwOWRkYjY1ZWIzY2U0MWEzYjczYTJhOTM0ZTM5NDg4NmQyYTIyYjU0ZmQwMzVmYWJlZWM3YWMxYzllYzliNzBiIiwiYWxnIjoiRVMyNTYifQ.eyJhdWQiOlsiaHR0cHM6Ly9jcmVkZW50aWFsLXN0b3JlLnRlc3QuYWNjb3VudC5nb3YudWsiLCJodHRwczovL2lkZW50aXR5LnRlc3QuYWNjb3VudC5nb3YudWsiXSwic3ViIjoia3NFUjVWcDRuZU1ONWM2WHJlSV9uUDhGNFZuc2VqS2x1b3BOX05mZjlfNCIsImlzcyI6Imh0dHBzOi8vb2lkYy50ZXN0LmFjY291bnQuZ292LnVrLyIsImV4cCI6MTcwOTA1MTE2MywiaWF0IjoxNzA5MDQ3NTYzLCJqdGkiOiJkZmNjZjc1MS1iZTU1LTRkZjQtYWEzZi1hOTkzMTkzZDUyMTYifQ.rpZ2IqMwlFLbZ8a7En-EuQ480zcorvNd-GZcwjlxlK3Twq9J1GNiuj9teSLINP_zmeirx7Y8p3DUYWk_hyRhww";
+
     private static final Json objectMapper = SerializationService.getInstance();
 
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -243,7 +246,11 @@ class IPVAuthorisationServiceTest {
                             .add(
                                     new ClaimsSetRequest.Entry(
                                                     "https://vocab.account.gov.uk/v1/inheritedIdentityJWT")
-                                            .withValues(List.of("jwt")));
+                                            .withValues(List.of("jwt")))
+                            .add(
+                                    new ClaimsSetRequest.Entry(
+                                                    "https://vocab.account.gov.uk/v1/storageAccessToken")
+                                            .withValues(List.of(SERIALIZED_JWT)));
 
             EncryptedJWT encryptedJWT;
             try (var mockIdGenerator = mockStatic(IdGenerator.class)) {
