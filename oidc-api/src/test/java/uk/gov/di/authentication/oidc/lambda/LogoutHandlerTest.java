@@ -203,8 +203,7 @@ class LogoutHandlerTest {
         handler.handleRequest(event, context);
 
         verify(logoutService)
-                .generateDefaultLogoutResponse(
-                        Optional.empty(), event, audience, Optional.empty());
+                .generateDefaultLogoutResponse(Optional.empty(), event, audience, Optional.empty());
     }
 
     @Test
@@ -254,7 +253,8 @@ class LogoutHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(
                 Map.of(
-                        "id_token_hint", idTokenHint,
+                        "id_token_hint",
+                        idTokenHint,
                         "post_logout_redirect_uri",
                         CLIENT_LOGOUT_URI.toString(),
                         "state",
@@ -265,7 +265,12 @@ class LogoutHandlerTest {
         verify(logoutService, times(0)).destroySessions(session);
         verify(logoutService)
                 .generateLogoutResponse(
-                        CLIENT_LOGOUT_URI ,Optional.of(STATE.getValue()), Optional.empty(), event, audience, Optional.empty());
+                        CLIENT_LOGOUT_URI,
+                        Optional.of(STATE.getValue()),
+                        Optional.empty(),
+                        event,
+                        audience,
+                        Optional.empty());
         verifyNoInteractions(cloudwatchMetricsService);
     }
 
@@ -280,7 +285,8 @@ class LogoutHandlerTest {
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(
                 Map.of(
-                        "id_token_hint", idTokenHint,
+                        "id_token_hint",
+                        idTokenHint,
                         "post_logout_redirect_uri",
                         CLIENT_LOGOUT_URI.toString(),
                         "state",
@@ -312,8 +318,10 @@ class LogoutHandlerTest {
         APIGatewayProxyRequestEvent event =
                 generateRequestEvent(
                         Map.of(
-                                "id_token_hint", idTokenHint,
-                                "post_logout_redirect_uri", CLIENT_LOGOUT_URI.toString()));
+                                "id_token_hint",
+                                idTokenHint,
+                                "post_logout_redirect_uri",
+                                CLIENT_LOGOUT_URI.toString()));
         generateSessionFromCookie(session);
 
         handler.handleRequest(event, context);
@@ -321,7 +329,9 @@ class LogoutHandlerTest {
         verify(logoutService)
                 .generateErrorLogoutResponse(
                         Optional.empty(),
-                        new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "id_token_hint does not exist in session"),
+                        new ErrorObject(
+                                OAuth2Error.INVALID_REQUEST_CODE,
+                                "id_token_hint does not exist in session"),
                         event,
                         Optional.empty(),
                         Optional.of(session.getSessionId()));
@@ -352,7 +362,9 @@ class LogoutHandlerTest {
         verify(logoutService)
                 .generateErrorLogoutResponse(
                         Optional.empty(),
-                        new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "unable to validate id_token_hint"),
+                        new ErrorObject(
+                                OAuth2Error.INVALID_REQUEST_CODE,
+                                "unable to validate id_token_hint"),
                         event,
                         Optional.empty(),
                         Optional.empty());

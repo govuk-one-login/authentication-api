@@ -92,7 +92,8 @@ public class LogoutHandler
                 "oidc-api::" + getClass().getSimpleName(), () -> logoutRequestHandler(input));
     }
 
-    public APIGatewayProxyResponseEvent logoutRequestHandler(APIGatewayProxyRequestEvent input) throws ParseException {
+    public APIGatewayProxyResponseEvent logoutRequestHandler(APIGatewayProxyRequestEvent input)
+            throws ParseException {
         LOG.info("Logout request received");
         Optional<Session> sessionFromSessionCookie =
                 segmentedFunctionCall(
@@ -100,8 +101,7 @@ public class LogoutHandler
                         () -> sessionService.getSessionFromSessionCookie(input.getHeaders()));
         Map<String, String> queryStringParameters = input.getQueryStringParameters();
         Optional<String> state;
-        if (queryStringParameters == null
-                || queryStringParameters.isEmpty()) {
+        if (queryStringParameters == null || queryStringParameters.isEmpty()) {
             LOG.info("Returning default logout as no input parameters");
             return defaultLogoutWithSessionCheck(sessionFromSessionCookie, input, Optional.empty());
         } else {
@@ -154,26 +154,34 @@ public class LogoutHandler
             }
 
             if (postLogoutRedirectUri.isEmpty()) {
-                LOG.info("post_logout_redirect_uri is NOT present in logout request. Generating default logout response");
-                return logoutService.generateDefaultLogoutResponse(state, input, Optional.of(clientID), Optional.empty());
+                LOG.info(
+                        "post_logout_redirect_uri is NOT present in logout request. Generating default logout response");
+                return logoutService.generateDefaultLogoutResponse(
+                        state, input, Optional.of(clientID), Optional.empty());
             } else {
-                var validatedPostLogoutRedirectUi = postLogoutRedirectUri
-                        .map(
-                                uri -> {
-                                    if (!clientRegistry.get().getPostLogoutRedirectUrls().contains(uri)) {
-                                        LOG.warn(
-                                                "Client registry does not contain PostLogoutRedirectUri which was sent in the logout request. Value is {}",
-                                                uri);
-                                        return false;
-                                    } else {
-                                        LOG.info(
-                                                "The post_logout_redirect_uri is present in logout request and client registry. Value is {}",
-                                                uri);
-                                        return true;
-                                    }
-                                }).orElseGet(() -> false);
-                if(!validatedPostLogoutRedirectUi) {
-                    return errorLogoutWithSessionCheck(sessionFromSessionCookie, input, state, clientID);
+                var validatedPostLogoutRedirectUi =
+                        postLogoutRedirectUri
+                                .map(
+                                        uri -> {
+                                            if (!clientRegistry
+                                                    .get()
+                                                    .getPostLogoutRedirectUrls()
+                                                    .contains(uri)) {
+                                                LOG.warn(
+                                                        "Client registry does not contain PostLogoutRedirectUri which was sent in the logout request. Value is {}",
+                                                        uri);
+                                                return false;
+                                            } else {
+                                                LOG.info(
+                                                        "The post_logout_redirect_uri is present in logout request and client registry. Value is {}",
+                                                        uri);
+                                                return true;
+                                            }
+                                        })
+                                .orElseGet(() -> false);
+                if (!validatedPostLogoutRedirectUi) {
+                    return errorLogoutWithSessionCheck(
+                            sessionFromSessionCookie, input, state, clientID);
                 }
             }
         } else {
@@ -184,21 +192,32 @@ public class LogoutHandler
         if (sessionFromSessionCookie.isPresent()) {
             return segmentedFunctionCall(
                     "processLogoutRequest",
-                    () -> logoutRequest(idTokenHint.get(), sessionFromSessionCookie.get(), clientID, postLogoutRedirectUri.get(), state, input));
+                    () ->
+                            logoutWithSession(
+                                    idTokenHint.get(),
+                                    sessionFromSessionCookie.get(),
+                                    clientID,
+                                    postLogoutRedirectUri.get(),
+                                    state,
+                                    input));
         } else {
             return segmentedFunctionCall(
                     "generateDefaultLogoutResponse",
-                    () ->  logoutService.generateLogoutResponse(
-                    URI.create(postLogoutRedirectUri.get()),
-                    state,
-                    Optional.empty(),
-                    input,
-                    Optional.of(clientID),
-                    Optional.empty()));
+                    () ->
+                            logoutService.generateLogoutResponse(
+                                    URI.create(postLogoutRedirectUri.get()),
+                                    state,
+                                    Optional.empty(),
+                                    input,
+                                    Optional.of(clientID),
+                                    Optional.empty()));
         }
     }
 
-    private APIGatewayProxyResponseEvent defaultLogoutWithSessionCheck(Optional<Session> sessionFromSessionCookie, APIGatewayProxyRequestEvent input, Optional<String> state) {
+    private APIGatewayProxyResponseEvent defaultLogoutWithSessionCheck(
+            Optional<Session> sessionFromSessionCookie,
+            APIGatewayProxyRequestEvent input,
+            Optional<String> state) {
         Session session;
         Optional<String> sessionResponse;
         if (sessionFromSessionCookie.isPresent()) {
@@ -212,7 +231,11 @@ public class LogoutHandler
                 state, input, Optional.empty(), sessionResponse);
     }
 
-    private APIGatewayProxyResponseEvent errorLogoutWithSessionCheck(Optional<Session> sessionFromSessionCookie, APIGatewayProxyRequestEvent input, Optional<String> state, String clientID) {
+    private APIGatewayProxyResponseEvent errorLogoutWithSessionCheck(
+            Optional<Session> sessionFromSessionCookie,
+            APIGatewayProxyRequestEvent input,
+            Optional<String> state,
+            String clientID) {
         Session session;
         Optional<String> sessionResponse;
         if (sessionFromSessionCookie.isPresent()) {
@@ -232,7 +255,13 @@ public class LogoutHandler
                 sessionResponse);
     }
 
-    private APIGatewayProxyResponseEvent logoutRequest(String idTokenHint, Session session, String clientID, String uri, Optional<String> state,APIGatewayProxyRequestEvent input) {
+    private APIGatewayProxyResponseEvent logoutWithSession(
+            String idTokenHint,
+            Session session,
+            String clientID,
+            String uri,
+            Optional<String> state,
+            APIGatewayProxyRequestEvent input) {
         CookieHelper.SessionCookieIds sessionCookieIds =
                 cookieHelper.parseSessionCookie(input.getHeaders()).orElseThrow();
 
