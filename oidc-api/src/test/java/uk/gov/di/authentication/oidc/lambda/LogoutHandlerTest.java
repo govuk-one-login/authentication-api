@@ -387,6 +387,30 @@ class LogoutHandlerTest {
         }
 
         @Test
+        void shouldRedirectToDefaultUriWhenLogoutRedirectUriIsMissing() {
+            var idTokenHint = signedIDToken.serialize();
+
+            when(dynamoClientService.getClient("client-id"))
+                    .thenReturn(Optional.of(createClientRegistry()));
+            when(tokenValidationService.isTokenSignatureValid(idTokenHint)).thenReturn(true);
+
+            APIGatewayProxyRequestEvent event =
+                    generateRequestEvent(
+                            Map.of(
+                                    "id_token_hint", idTokenHint,
+                                    "state", STATE.toString()));
+
+            handler.handleRequest(event, context);
+
+            verify(logoutService)
+                    .generateDefaultLogoutResponse(
+                            Optional.of(STATE.toString()),
+                            event,
+                            audience,
+                            Optional.empty());
+        }
+
+        @Test
         void
                 shouldRedirectToDefaultLogoutUriWithErrorMessageWhenLogoutUriInRequestDoesNotMatchClientRegistry()
                         throws JOSEException, ParseException {
