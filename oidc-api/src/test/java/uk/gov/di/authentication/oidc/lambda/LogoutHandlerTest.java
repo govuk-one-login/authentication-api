@@ -238,10 +238,9 @@ class LogoutHandlerTest {
 
         handler.handleRequest(event, context);
 
-        verify(logoutService, times(1)).destroySessions(session);
         verify(logoutService)
                 .generateDefaultLogoutResponse(
-                        Optional.empty(), event, Optional.empty(), Optional.of(SESSION_ID));
+                        Optional.empty(), event, Optional.empty(), Optional.empty());
     }
 
     @Test

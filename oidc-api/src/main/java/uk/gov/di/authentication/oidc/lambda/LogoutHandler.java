@@ -98,8 +98,9 @@ public class LogoutHandler
         Optional<String> state;
         if (queryStringParameters == null
                 || queryStringParameters.isEmpty()) {
-            LOG.info("No query string parameters in request");
-            state = Optional.empty();
+            LOG.info("Returning default logout as no input parameters");
+            return logoutService.generateDefaultLogoutResponse(
+                    Optional.empty(), input, Optional.empty(), Optional.empty());
         } else {
             state = Optional.ofNullable(queryStringParameters.get("state"));
         }
@@ -193,7 +194,7 @@ public class LogoutHandler
         if (sessionFromSessionCookie.isPresent()) {
             return segmentedFunctionCall(
                     "processLogoutRequest",
-                    () -> logoutRequest(queryStringParameters, idTokenHint.get(), sessionFromSessionCookie.get(), clientID, postLogoutRedirectUri.get(), state, input));
+                    () -> logoutRequest(idTokenHint.get(), sessionFromSessionCookie.get(), clientID, postLogoutRedirectUri.get(), state, input));
         } else {
             return segmentedFunctionCall(
                     "generateDefaultLogoutResponse",
@@ -207,13 +208,7 @@ public class LogoutHandler
         }
     }
 
-    private APIGatewayProxyResponseEvent logoutRequest(Map<String, String> queryStringParameters, String idTokenHint, Session session, String clientID, String uri, Optional<String> state,APIGatewayProxyRequestEvent input) {
-        if (queryStringParameters == null || queryStringParameters.isEmpty()) {
-            LOG.info("Deleting session and returning default logout as no input parameters");
-            segmentedFunctionCall("destroySessions", () -> logoutService.destroySessions(session));
-            return logoutService.generateDefaultLogoutResponse(
-                    state, input, Optional.empty(), Optional.of(session.getSessionId()));
-        }
+    private APIGatewayProxyResponseEvent logoutRequest(String idTokenHint, Session session, String clientID, String uri, Optional<String> state,APIGatewayProxyRequestEvent input) {
         if (!doesIDTokenExistInSession(idTokenHint, session)) {
             LOG.warn("ID token does not exist");
             return logoutService.generateErrorLogoutResponse(
