@@ -202,10 +202,9 @@ class LogoutHandlerTest {
 
         handler.handleRequest(event, context);
 
-        verify(logoutService, times(1)).destroySessions(session);
         verify(logoutService)
                 .generateDefaultLogoutResponse(
-                        Optional.empty(), event, audience, Optional.of(SESSION_ID));
+                        Optional.empty(), event, audience, Optional.empty());
     }
 
     @Test
@@ -238,16 +237,24 @@ class LogoutHandlerTest {
 
         handler.handleRequest(event, context);
 
+        verify(logoutService, times(1)).destroySessions(session);
         verify(logoutService)
                 .generateDefaultLogoutResponse(
-                        Optional.empty(), event, Optional.empty(), Optional.empty());
+                        Optional.empty(), event, Optional.empty(), Optional.of(SESSION_ID));
     }
 
     @Test
-    void shouldRedirectToDefaultLogoutUriWhenNoCookieExists() {
+    void shouldRedirectToClientLogoutUriWhenNoCookieExists() {
+        var idTokenHint = signedIDToken.serialize();
+
+        when(dynamoClientService.getClient("client-id"))
+                .thenReturn(Optional.of(createClientRegistry()));
+        when(tokenValidationService.isTokenSignatureValid(idTokenHint)).thenReturn(true);
+
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(
                 Map.of(
+                        "id_token_hint", idTokenHint,
                         "post_logout_redirect_uri",
                         CLIENT_LOGOUT_URI.toString(),
                         "state",
@@ -257,16 +264,23 @@ class LogoutHandlerTest {
 
         verify(logoutService, times(0)).destroySessions(session);
         verify(logoutService)
-                .generateDefaultLogoutResponse(
-                        Optional.of(STATE.getValue()), event, Optional.empty(), Optional.empty());
+                .generateLogoutResponse(
+                        CLIENT_LOGOUT_URI ,Optional.of(STATE.getValue()), Optional.empty(), event, audience, Optional.empty());
         verifyNoInteractions(cloudwatchMetricsService);
     }
 
     @Test
     void shouldRedirectToDefaultLogoutUriWithErrorMessageWhenClientSessionIdIsNotFoundInSession() {
+        var idTokenHint = signedIDToken.serialize();
+
+        when(dynamoClientService.getClient("client-id"))
+                .thenReturn(Optional.of(createClientRegistry()));
+        when(tokenValidationService.isTokenSignatureValid(idTokenHint)).thenReturn(true);
+
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setQueryStringParameters(
                 Map.of(
+                        "id_token_hint", idTokenHint,
                         "post_logout_redirect_uri",
                         CLIENT_LOGOUT_URI.toString(),
                         "state",
@@ -289,10 +303,16 @@ class LogoutHandlerTest {
 
     @Test
     void shouldRedirectToDefaultLogoutUriWithErrorMessageWhenIDTokenHintIsNotFoundInSession() {
+        var idTokenHint = signedIDToken.serialize();
+
+        when(dynamoClientService.getClient("client-id"))
+                .thenReturn(Optional.of(createClientRegistry()));
+        when(tokenValidationService.isTokenSignatureValid(idTokenHint)).thenReturn(true);
+
         APIGatewayProxyRequestEvent event =
                 generateRequestEvent(
                         Map.of(
-                                "id_token_hint", signedIDToken.serialize(),
+                                "id_token_hint", idTokenHint,
                                 "post_logout_redirect_uri", CLIENT_LOGOUT_URI.toString()));
         generateSessionFromCookie(session);
 
@@ -301,7 +321,7 @@ class LogoutHandlerTest {
         verify(logoutService)
                 .generateErrorLogoutResponse(
                         Optional.empty(),
-                        new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "unable to validate id_token_hint"),
+                        new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "id_token_hint does not exist in session"),
                         event,
                         Optional.empty(),
                         Optional.of(session.getSessionId()));
@@ -335,7 +355,7 @@ class LogoutHandlerTest {
                         new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "unable to validate id_token_hint"),
                         event,
                         Optional.empty(),
-                        Optional.of(session.getSessionId()));
+                        Optional.empty());
         verifyNoInteractions(cloudwatchMetricsService);
     }
 
@@ -366,7 +386,7 @@ class LogoutHandlerTest {
                         new ErrorObject(OAuth2Error.UNAUTHORIZED_CLIENT_CODE, "client not found"),
                         event,
                         signedJWT.getJWTClaimsSet().getAudience().stream().findFirst(),
-                        Optional.of(session.getSessionId()));
+                        Optional.empty());
         verifyNoInteractions(cloudwatchMetricsService);
     }
 

@@ -94,13 +94,16 @@ public class LogoutHandler
 
     public APIGatewayProxyResponseEvent logoutRequestHandler(APIGatewayProxyRequestEvent input) throws ParseException {
         LOG.info("Logout request received");
+        Optional<Session> sessionFromSessionCookie =
+                segmentedFunctionCall(
+                        "getSessionFromSessionCookie",
+                        () -> sessionService.getSessionFromSessionCookie(input.getHeaders()));
         Map<String, String> queryStringParameters = input.getQueryStringParameters();
         Optional<String> state;
         if (queryStringParameters == null
                 || queryStringParameters.isEmpty()) {
             LOG.info("Returning default logout as no input parameters");
-            return logoutService.generateDefaultLogoutResponse(
-                    Optional.empty(), input, Optional.empty(), Optional.empty());
+            return defaultLogoutWithSessionCheck(sessionFromSessionCookie, input, Optional.empty());
         } else {
             state = Optional.ofNullable(queryStringParameters.get("state"));
         }
@@ -131,8 +134,7 @@ public class LogoutHandler
                 audience = idToken.getJWTClaimsSet().getAudience().stream().findFirst();
             }
         } else {
-            return logoutService.generateDefaultLogoutResponse(
-                    state, input, Optional.empty(), Optional.empty());
+            return defaultLogoutWithSessionCheck(sessionFromSessionCookie, input, state);
         }
 
         final String clientID;
@@ -155,7 +157,7 @@ public class LogoutHandler
                 LOG.info("post_logout_redirect_uri is NOT present in logout request. Generating default logout response");
                 return logoutService.generateDefaultLogoutResponse(state, input, Optional.of(clientID), Optional.empty());
             } else {
-                var result = postLogoutRedirectUri
+                var validatedPostLogoutRedirectUi = postLogoutRedirectUri
                         .map(
                                 uri -> {
                                     if (!clientRegistry.get().getPostLogoutRedirectUrls().contains(uri)) {
@@ -170,27 +172,15 @@ public class LogoutHandler
                                         return true;
                                     }
                                 }).orElseGet(() -> false);
-                if(!result) {
-                    return logoutService.generateErrorLogoutResponse(
-                        state,
-                        new ErrorObject(
-                                OAuth2Error.INVALID_REQUEST_CODE,
-                                "client registry does not contain post_logout_redirect_uri"),
-                        input,
-                        Optional.of(clientID),
-                        Optional.empty());
+                if(!validatedPostLogoutRedirectUi) {
+                    return errorLogoutWithSessionCheck(sessionFromSessionCookie, input, state, clientID);
                 }
             }
-
         } else {
             return logoutService.generateDefaultLogoutResponse(
                     state, input, audience, Optional.empty());
         }
 
-        Optional<Session> sessionFromSessionCookie =
-                segmentedFunctionCall(
-                        "getSessionFromSessionCookie",
-                        () -> sessionService.getSessionFromSessionCookie(input.getHeaders()));
         if (sessionFromSessionCookie.isPresent()) {
             return segmentedFunctionCall(
                     "processLogoutRequest",
@@ -208,7 +198,58 @@ public class LogoutHandler
         }
     }
 
+    private APIGatewayProxyResponseEvent defaultLogoutWithSessionCheck(Optional<Session> sessionFromSessionCookie, APIGatewayProxyRequestEvent input, Optional<String> state) {
+        Session session;
+        Optional<String> sessionResponse;
+        if (sessionFromSessionCookie.isPresent()) {
+            session = sessionFromSessionCookie.get();
+            segmentedFunctionCall("destroySessions", () -> logoutService.destroySessions(session));
+            sessionResponse = Optional.of(session.getSessionId());
+        } else {
+            sessionResponse = Optional.empty();
+        }
+        return logoutService.generateDefaultLogoutResponse(
+                state, input, Optional.empty(), sessionResponse);
+    }
+
+    private APIGatewayProxyResponseEvent errorLogoutWithSessionCheck(Optional<Session> sessionFromSessionCookie, APIGatewayProxyRequestEvent input, Optional<String> state, String clientID) {
+        Session session;
+        Optional<String> sessionResponse;
+        if (sessionFromSessionCookie.isPresent()) {
+            session = sessionFromSessionCookie.get();
+            segmentedFunctionCall("destroySessions", () -> logoutService.destroySessions(session));
+            sessionResponse = Optional.of(session.getSessionId());
+        } else {
+            sessionResponse = Optional.empty();
+        }
+        return logoutService.generateErrorLogoutResponse(
+                state,
+                new ErrorObject(
+                        OAuth2Error.INVALID_REQUEST_CODE,
+                        "client registry does not contain post_logout_redirect_uri"),
+                input,
+                Optional.of(clientID),
+                sessionResponse);
+    }
+
     private APIGatewayProxyResponseEvent logoutRequest(String idTokenHint, Session session, String clientID, String uri, Optional<String> state,APIGatewayProxyRequestEvent input) {
+        CookieHelper.SessionCookieIds sessionCookieIds =
+                cookieHelper.parseSessionCookie(input.getHeaders()).orElseThrow();
+
+        attachSessionIdToLogs(session);
+        attachLogFieldToLogs(CLIENT_SESSION_ID, sessionCookieIds.getClientSessionId());
+        attachLogFieldToLogs(GOVUK_SIGNIN_JOURNEY_ID, sessionCookieIds.getClientSessionId());
+
+        if (!session.getClientSessions().contains(sessionCookieIds.getClientSessionId())) {
+            LOG.warn("Client Session ID does not exist");
+            return logoutService.generateErrorLogoutResponse(
+                    Optional.empty(),
+                    new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "invalid session"),
+                    input,
+                    Optional.empty(),
+                    Optional.of(session.getSessionId()));
+        }
+
         if (!doesIDTokenExistInSession(idTokenHint, session)) {
             LOG.warn("ID token does not exist");
             return logoutService.generateErrorLogoutResponse(
@@ -220,6 +261,7 @@ public class LogoutHandler
                     Optional.empty(),
                     Optional.of(session.getSessionId()));
         }
+
         segmentedFunctionCall("destroySessions", () -> logoutService.destroySessions(session));
         cloudwatchMetricsService.incrementLogout(Optional.of(clientID));
         return logoutService.generateLogoutResponse(
