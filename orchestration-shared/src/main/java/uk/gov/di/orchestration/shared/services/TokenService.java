@@ -44,6 +44,7 @@ import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 
 import java.net.URI;
+import java.nio.charset.Charset;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
@@ -405,7 +406,9 @@ public class TokenService {
             String message = encodedHeader + "." + encodedClaims;
             SignRequest signRequest =
                     SignRequest.builder()
-                            .message(SdkBytes.fromByteArray(message.getBytes()))
+                            .message(
+                                    SdkBytes.fromByteArray(
+                                            message.getBytes(Charset.forName("UTF-8"))))
                             .keyId(signingKeyId)
                             .signingAlgorithm(signingAlgorithm)
                             .build();

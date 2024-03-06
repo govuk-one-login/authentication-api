@@ -42,6 +42,7 @@ import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 import uk.gov.di.orchestration.shared.services.RedisConnectionService;
 
 import java.net.URI;
+import java.nio.charset.Charset;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 import java.util.List;
@@ -121,7 +122,7 @@ public class OrchestrationAuthorizationService {
         var message = encodedHeader + "." + encodedClaims;
         var signRequest =
                 SignRequest.builder()
-                        .message(SdkBytes.fromByteArray(message.getBytes()))
+                        .message(SdkBytes.fromByteArray(message.getBytes(Charset.forName("UTF-8"))))
                         .keyId(
                                 configurationService
                                         .getOrchestrationToAuthenticationTokenSigningKeyAlias())
