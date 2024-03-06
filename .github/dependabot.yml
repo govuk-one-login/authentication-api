@@ -17,7 +17,7 @@ updates:
     open-pull-requests-limit: 100
     target-branch: main
     labels:
-    - dependabot
+      - dependabot
     ignore:
       - dependency-name: localstack/localstack
         versions:
@@ -27,6 +27,15 @@ updates:
     open-pull-requests-limit: 100
     target-branch: main
     labels:
-    - dependabot
+      - dependabot
     schedule:
       interval: daily
+
+  - package-ecosystem: pip
+    directory: /scripts
+    open-pull-requests-limit: 5
+    target-branch: main
+    labels:
+      - dependabot
+    schedule:
+      interval: monthly
