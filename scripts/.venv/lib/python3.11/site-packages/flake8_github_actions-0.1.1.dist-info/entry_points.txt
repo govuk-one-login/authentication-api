@@ -1,0 +1,3 @@
+[flake8.report]
+github = flake8_github_actions:GitHubFormatter
+

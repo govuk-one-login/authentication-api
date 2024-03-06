@@ -1,0 +1,58 @@
+Metadata-Version: 2.1
+Name: pylint-actions
+Version: 0.5.0
+Summary: Pylint plugin for GitHub Actions
+Home-page: https://github.com/skhomuti/pylint-actions
+License: MIT
+Keywords: pylint,github,actions,linter,static code analysis,python
+Author: skhomuti
+Author-email: skhomuti@gmail.com
+Requires-Python: >=3.8,<4.0
+Classifier: Development Status :: 4 - Beta
+Classifier: Environment :: Console
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: Implementation :: CPython
+Classifier: Programming Language :: Python :: Implementation :: PyPy
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Topic :: Software Development :: Quality Assurance
+Classifier: Topic :: Software Development :: Testing
+Requires-Dist: pylint (>=3.0.3,<4.0.0)
+Project-URL: Repository, https://github.com/skhomuti/pylint-actions
+Description-Content-Type: text/markdown
+
+# Pylint plugin for GitHub Actions annotations
+This is a plugin for [Pylint](https://www.pylint.org/) that allows it to output annotations 
+in the format that GitHub Actions understands. 
+See annotations from [examples](https://github.com/skhomuti/pylint-actions/actions/workflows/example.yml) workflows.
+Also these annotations will be displayed in your pull requests changes
+
+# Installation
+So simple:
+```bash
+pip install pylint-actions
+```
+
+# Usage
+Add the following to your `pyproject.toml` file:
+```toml
+[tool.pylint.main]
+load-plugins = "pylint_actions"
+```
+Or load the plugin with any available pylint configuration variants except command line arguments.
+
+Next, run pylint with the `--output-format=actions` option, or shorted `-f actions`.
+
+In your GitHub Actions workflow, use it like this:
+```yaml
+- name: Run pylint
+  run: poetry run pylint -f actions src
+```

@@ -17,12 +17,10 @@ module "account_management_api_send_notification_role" {
 }
 
 module "send_otp_notification" {
-  source = "../modules/endpoint-module"
+  source = "../modules/openapi-endpoint-module"
 
-  endpoint_name   = "send-otp-notification"
-  path_part       = "send-otp-notification"
-  endpoint_method = ["POST"]
-  environment     = var.environment
+  endpoint_name = "send-otp-notification"
+  environment   = var.environment
 
   handler_environment_variables = {
     ENVIRONMENT                            = var.environment
@@ -42,10 +40,6 @@ module "send_otp_notification" {
     TEST_CLIENTS_ENABLED                   = var.test_clients_enabled
   }
   handler_function_name = "uk.gov.di.accountmanagement.lambda.SendOtpNotificationHandler::handleRequest"
-
-  rest_api_id      = aws_api_gateway_rest_api.di_account_management_api.id
-  root_resource_id = aws_api_gateway_rest_api.di_account_management_api.root_resource_id
-  execution_arn    = aws_api_gateway_rest_api.di_account_management_api.execution_arn
 
   memory_size                 = lookup(var.performance_tuning, "send-otp-notification", local.default_performance_parameters).memory
   provisioned_concurrency     = lookup(var.performance_tuning, "send-otp-notification", local.default_performance_parameters).concurrency
@@ -69,12 +63,4 @@ module "send_otp_notification" {
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
   default_tags                           = local.default_tags
-  authorizer_id                          = aws_api_gateway_authorizer.di_account_management_api.id
-  use_localstack                         = var.use_localstack
-
-  depends_on = [
-    aws_api_gateway_rest_api.di_account_management_api,
-    aws_sqs_queue.email_queue,
-    aws_elasticache_replication_group.account_management_sessions_store,
-  ]
 }

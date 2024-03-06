@@ -13,25 +13,16 @@ module "account_management_api_authenticate_role" {
 }
 
 module "authenticate" {
-  source = "../modules/endpoint-module"
+  source = "../modules/openapi-endpoint-module"
 
-  endpoint_name   = "authenticate"
-  path_part       = "authenticate"
-  endpoint_method = ["POST"]
+  endpoint_name = "authenticate"
   handler_environment_variables = {
     ENVIRONMENT          = var.environment
-    DYNAMO_ENDPOINT      = var.use_localstack ? var.lambda_dynamo_endpoint : null
     INTERNAl_SECTOR_URI  = var.internal_sector_uri
-    LOCALSTACK_ENDPOINT  = var.use_localstack ? var.localstack_endpoint : null
     TXMA_AUDIT_QUEUE_URL = module.account_management_txma_audit.queue_url
     REDIS_KEY            = local.redis_key
   }
   handler_function_name = "uk.gov.di.accountmanagement.lambda.AuthenticateHandler::handleRequest"
-
-  authorizer_id    = aws_api_gateway_authorizer.di_account_management_api.id
-  rest_api_id      = aws_api_gateway_rest_api.di_account_management_api.id
-  root_resource_id = aws_api_gateway_rest_api.di_account_management_api.root_resource_id
-  execution_arn    = aws_api_gateway_rest_api.di_account_management_api.execution_arn
 
   memory_size                 = lookup(var.performance_tuning, "authenticate", local.default_performance_parameters).memory
   provisioned_concurrency     = lookup(var.performance_tuning, "authenticate", local.default_performance_parameters).concurrency
@@ -56,6 +47,4 @@ module "authenticate" {
   cloudwatch_log_retention               = var.cloudwatch_log_retention
   lambda_env_vars_encryption_kms_key_arn = data.terraform_remote_state.shared.outputs.lambda_env_vars_encryption_kms_key_arn
   default_tags                           = local.default_tags
-
-  use_localstack = var.use_localstack
 }

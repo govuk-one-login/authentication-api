@@ -16,11 +16,9 @@ module "account_management_api_remove_account_role" {
 }
 
 module "delete_account" {
-  source = "../modules/endpoint-module"
+  source = "../modules/openapi-endpoint-module"
 
-  endpoint_name   = "delete-account"
-  path_part       = "delete-account"
-  endpoint_method = ["POST"]
+  endpoint_name = "delete-account"
   handler_environment_variables = {
     ENVIRONMENT          = var.environment
     DYNAMO_ENDPOINT      = var.use_localstack ? var.lambda_dynamo_endpoint : null
@@ -30,11 +28,6 @@ module "delete_account" {
     INTERNAl_SECTOR_URI  = var.internal_sector_uri
   }
   handler_function_name = "uk.gov.di.accountmanagement.lambda.RemoveAccountHandler::handleRequest"
-
-  authorizer_id    = aws_api_gateway_authorizer.di_account_management_api.id
-  rest_api_id      = aws_api_gateway_rest_api.di_account_management_api.id
-  root_resource_id = aws_api_gateway_rest_api.di_account_management_api.root_resource_id
-  execution_arn    = aws_api_gateway_rest_api.di_account_management_api.execution_arn
 
   memory_size                 = lookup(var.performance_tuning, "delete-account", local.default_performance_parameters).memory
   provisioned_concurrency     = lookup(var.performance_tuning, "delete-account", local.default_performance_parameters).concurrency
@@ -54,7 +47,6 @@ module "delete_account" {
   subnet_id                              = local.private_subnet_ids
   environment                            = var.environment
   lambda_role_arn                        = module.account_management_api_remove_account_role.arn
-  use_localstack                         = var.use_localstack
   default_tags                           = local.default_tags
   logging_endpoint_arns                  = var.logging_endpoint_arns
   cloudwatch_key_arn                     = data.terraform_remote_state.shared.outputs.cloudwatch_encryption_key_arn
