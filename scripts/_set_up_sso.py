@@ -76,21 +76,21 @@ def setup_aws_config():
     config = configparser.ConfigParser()
     config.read(AWS_CONFIG_FILE)
 
-    SSO_SESSION_SECTION_TITLE = f"sso-session {SESSION_NAME}"
+    sso_session_section_title = f"sso-session {SESSION_NAME}"
 
     # Remove existing SSO session
-    if SSO_SESSION_SECTION_TITLE in config:
-        del config[SSO_SESSION_SECTION_TITLE]
+    if sso_session_section_title in config:
+        del config[sso_session_section_title]
 
     # Add new SSO session
-    config[SSO_SESSION_SECTION_TITLE] = {
+    config[sso_session_section_title] = {
         "sso_start_url": SESSION_START_URL,
         "sso_region": DEFAULT_REGION,
         "sso_registration_scopes": SESSION_REGISTRATION_SCOPES,
     }
 
     # Write config file
-    with open(AWS_CONFIG_FILE, "w") as f:
+    with AWS_CONFIG_FILE.open("w", encoding="utf-8") as f:
         config.write(f)
 
 
@@ -111,7 +111,7 @@ def login_to_sso() -> StrAnyDict:
             client_creds["clientSecretExpiresAt"] > datetime.now().timestamp()
         ), "Client has expired."
     except (FileNotFoundError, json.JSONDecodeError, AssertionError, KeyError) as e:
-        logging.debug(f"Error loading cached client: {e}")
+        logging.debug("Error loading cached client: %s", e)
         logging.debug("Registering new client.")
         client_creds = sso_client.register_client(
             clientName="set-up-sso.py",
@@ -169,7 +169,7 @@ def get_aws_accounts_and_roles(sso_token: StrAnyDict) -> list[StrAnyDict]:
     for page in iterator:
         accounts.extend(page["accountList"])
 
-    for i, account in enumerate(accounts):
+    for _, account in enumerate(accounts):
         paginator = client.get_paginator("list_account_roles")
         iterator = paginator.paginate(
             accessToken=sso_token["accessToken"], accountId=account["accountId"]
@@ -254,8 +254,11 @@ def create_aws_profiles(accounts: list[StrAnyDict]):
 
             if profile_name is None:
                 logging.warning(
-                    f"Role name {role_name} does not match any known patterns or is"
-                    f" already in use. Using {account_name}-{role_name} instead."
+                    "Role name %s does not match any known patterns or is"
+                    " already in use. Using %s-%s instead.",
+                    role_name,
+                    account_name,
+                    role_name,
                 )
                 profile_name = f"{account_name}-{role_name}"
 
@@ -264,23 +267,29 @@ def create_aws_profiles(accounts: list[StrAnyDict]):
                 if profile_section_title in config:
                     config.remove_section(profile_section_title)
                     logging.warning(
-                        f"Removed profile {profile_name} as it is a production account."
+                        "Removed profile %s as it is a production account.",
+                        profile_name,
                     )
                 else:
                     logging.warning(
-                        f"Not adding profile {profile_name} as it is a production"
-                        " account."
+                        "Not adding profile %s as it is a production account.",
+                        profile_name,
                     )
                 continue
             if profile_section_title in config:
                 logging.info(
-                    f"Updating profile {profile_name}: {account['accountId']}:"
-                    f"{role_name}"
+                    "Updating profile %s: %s:%s",
+                    profile_name,
+                    account["accountId"],
+                    role_name,
                 )
                 config.remove_section(profile_section_title)
             else:
                 logging.info(
-                    f"Adding profile {profile_name}: {account['accountId']}:{role_name}"
+                    "Adding profile %s: %s:%s",
+                    profile_name,
+                    account["accountId"],
+                    role_name,
                 )
 
             config[profile_section_title] = {
@@ -294,7 +303,7 @@ def create_aws_profiles(accounts: list[StrAnyDict]):
             created_profiles.append(profile_name)
 
     # Write config file
-    with open(AWS_CONFIG_FILE, "w") as f:
+    with AWS_CONFIG_FILE.open("w", encoding="utf-8") as f:
         config.write(f)
 
 

@@ -31,4 +31,4 @@ pip3 install -r "${DIR}/requirements.txt"
 echo
 echo
 
-FROM_WRAPPER=true python3 "${DIR}/_set-up-sso.py"
+FROM_WRAPPER=true python3 "${DIR}/_set_up_sso.py"
