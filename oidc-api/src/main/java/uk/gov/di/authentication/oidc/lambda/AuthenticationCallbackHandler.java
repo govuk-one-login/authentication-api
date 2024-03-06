@@ -26,16 +26,14 @@ import uk.gov.di.authentication.oidc.services.AuthenticationAuthorizationService
 import uk.gov.di.authentication.oidc.services.AuthenticationTokenService;
 import uk.gov.di.authentication.oidc.services.InitiateIPVAuthorisationService;
 import uk.gov.di.orchestration.audit.AuditContext;
-import uk.gov.di.orchestration.shared.conditions.MfaHelper;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
-import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
-import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.Session.AccountState;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.CredentialTrustLevel;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
@@ -60,6 +58,7 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import static com.nimbusds.oauth2.sdk.http.HTTPRequest.Method.GET;
 import static java.lang.String.format;
@@ -391,8 +390,7 @@ public class AuthenticationCallbackHandler
                             clientSessionId,
                             persistentSessionId,
                             reproveIdentity,
-                            VectorOfTrust.getRequestedLevelsOfConfidence(
-                                    clientSession.getVtrList()));
+                            clientSession.getVtrList().getSelectedLevelOfConfidences());
                 }
 
                 URI clientRedirectURI = authenticationRequest.getRedirectionURI();
@@ -401,8 +399,9 @@ public class AuthenticationCallbackHandler
 
                 LOG.info("Redirecting to: {} with state: {}", clientRedirectURI, state);
 
+                var vtrList = clientSession.getVtrList();
                 CredentialTrustLevel lowestRequestedCredentialTrustLevel =
-                        VectorOfTrust.getLowestCredentialTrustLevel(clientSession.getVtrList());
+                        vtrList.getSelectedCredentialTrustLevel();
                 if (isNull(userSession.getCurrentCredentialStrength())
                         || lowestRequestedCredentialTrustLevel.compareTo(
                                         userSession.getCurrentCredentialStrength())
@@ -509,15 +508,14 @@ public class AuthenticationCallbackHandler
             LOG.info(
                     "No mfa method to set. User is either authenticated or signing in from a low level service");
         }
-        var orderedVtrList = VectorOfTrust.orderVtrList(clientSession.getVtrList());
-        var mfaRequired = MfaHelper.mfaRequired(orderedVtrList);
+        var vtrList = clientSession.getVtrList();
+        var mfaRequired = vtrList.requiresMfa();
 
-        var levelOfConfidence = LevelOfConfidence.NONE.getValue();
-        // Assumption: Requested vectors of trust will either all be for identity or none, and so we
-        // can check just the first
-        if (orderedVtrList.get(0).containsLevelOfConfidence()) {
-            levelOfConfidence = VectorOfTrust.stringifyLevelsOfConfidence(orderedVtrList);
-        }
+        var levelOfConfidence =
+                vtrList.getSelectedLevelOfConfidences().stream()
+                        .map(LevelOfConfidence::toString)
+                        .collect(Collectors.joining(","));
+
         dimensions.put("MfaRequired", mfaRequired ? "Yes" : "No");
         dimensions.put("RequestedLevelOfConfidence", format("%s", levelOfConfidence));
         return dimensions;

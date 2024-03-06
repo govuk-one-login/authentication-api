@@ -10,8 +10,8 @@ import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.lambda.SPOTResponseHandler;
 import uk.gov.di.orchestration.shared.entity.IdentityCredentials;
-import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.LevelOfConfidence;
 import uk.gov.di.orchestration.sharedtest.basetest.HandlerIntegrationTest;
 
 import java.util.Arrays;
@@ -59,7 +59,7 @@ public class SpotResponseIntegrationTest extends HandlerIntegrationTest<SQSEvent
                         ADDRESS_CLAIM,
                         ValidClaims.PASSPORT.getValue(),
                         PASSPORT_CLAIM),
-                LevelOfConfidence.MEDIUM_LEVEL.getValue(),
+                LevelOfConfidence.MEDIUM_LEVEL.toString(),
                 CORE_IDENTITY_CLAIM);
         var signedCredential = "some-signed-credential";
         var spotResponse =
@@ -80,7 +80,7 @@ public class SpotResponseIntegrationTest extends HandlerIntegrationTest<SQSEvent
         assertTrue(identityCredentials.isPresent());
         assertThat(
                 identityCredentials.get().getIpvVot(),
-                equalTo(LevelOfConfidence.MEDIUM_LEVEL.getValue()));
+                equalTo(LevelOfConfidence.MEDIUM_LEVEL.toString()));
         assertThat(identityCredentials.get().getAdditionalClaims().size(), equalTo(2));
         assertThat(identityCredentials.get().getIpvCoreIdentity(), equalTo(CORE_IDENTITY_CLAIM));
         assertThat(identityCredentials.get().getCoreIdentityJWT(), equalTo(signedCredential));
@@ -136,7 +136,7 @@ public class SpotResponseIntegrationTest extends HandlerIntegrationTest<SQSEvent
         identityStore.saveIdentityClaims(
                 pairwiseIdentifier.getValue(),
                 emptyMap(),
-                LevelOfConfidence.MEDIUM_LEVEL.getValue(),
+                LevelOfConfidence.MEDIUM_LEVEL.toString(),
                 CORE_IDENTITY_CLAIM);
         handler.handleRequest(createSqsEvent(spotResponse), mock(Context.class));
 

@@ -1,6 +1,7 @@
 package uk.gov.di.orchestration.shared.entity;
 
 import org.junit.jupiter.api.Test;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.LevelOfConfidence;
 
 import java.util.List;
 
@@ -18,7 +19,7 @@ class ClientRegistryTest {
         clientRegistry.setIdentityVerificationSupported(true);
         assertThat(
                 clientRegistry.getClientLoCs(),
-                equalTo(List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
+                equalTo(List.of(LevelOfConfidence.MEDIUM_LEVEL.toString())));
     }
 
     @Test
@@ -27,6 +28,6 @@ class ClientRegistryTest {
         clientRegistry.setIdentityVerificationSupported(false);
         assertThat(
                 clientRegistry.getClientLoCs(),
-                equalTo(List.of(LevelOfConfidence.NONE.getValue())));
+                equalTo(List.of(LevelOfConfidence.NONE.toString())));
     }
 }

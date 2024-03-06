@@ -39,9 +39,9 @@ import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.orchestration.shared.entity.AccessTokenStore;
 import uk.gov.di.orchestration.shared.entity.ClientConsent;
-import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
 import uk.gov.di.orchestration.shared.entity.ValidScopes;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.CredentialTrustLevelCode;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.sharedtest.helper.SubjectHelper;
@@ -91,7 +91,7 @@ class TokenServiceTest {
     private static final Subject INTERNAL_PAIRWISE_SUBJECT = SubjectHelper.govUkSignInSubject();
     private static final Scope SCOPES =
             new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.PHONE);
-    private static final String VOT = CredentialTrustLevel.MEDIUM_LEVEL.getValue();
+    private static final CredentialTrustLevelCode VOT = CredentialTrustLevelCode.C2;
     private static final Scope SCOPES_OFFLINE_ACCESS =
             new Scope(
                     OIDCScopeValue.OPENID,

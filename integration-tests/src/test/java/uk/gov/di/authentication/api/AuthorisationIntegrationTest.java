@@ -29,13 +29,13 @@ import org.junit.jupiter.params.provider.ValueSource;
 import uk.gov.di.authentication.oidc.lambda.AuthorisationHandler;
 import uk.gov.di.orchestration.shared.entity.ClientConsent;
 import uk.gov.di.orchestration.shared.entity.ClientType;
-import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
-import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.ValidScopes;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.CredentialTrustLevel;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.LevelOfConfidence;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.LocaleHelper;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
@@ -75,9 +75,9 @@ import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISAT
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISATION_REQUEST_ERROR;
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISATION_REQUEST_PARSED;
 import static uk.gov.di.authentication.oidc.domain.OidcAuditableEvent.AUTHORISATION_REQUEST_RECEIVED;
-import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevel.LOW_LEVEL;
-import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.orchestration.shared.entity.ValidClaims.CORE_IDENTITY_JWT;
+import static uk.gov.di.orchestration.shared.entity.vectoroftrust.CredentialTrustLevel.LOW_LEVEL;
+import static uk.gov.di.orchestration.shared.entity.vectoroftrust.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.orchestration.shared.helpers.CookieHelper.getHttpCookieFromMultiValueResponseHeaders;
 import static uk.gov.di.orchestration.shared.helpers.PersistentIdHelper.isValidPersistentSessionCookieWithDoubleDashedTimestamp;
 import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
@@ -673,7 +673,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                                 Optional.of(
                                         buildSessionCookie(sessionId, DUMMY_CLIENT_SESSION_ID))),
                         constructQueryStringParameters(
-                                CLIENT_ID, null, OPENID.getValue(), MEDIUM_LEVEL.getValue()),
+                                CLIENT_ID, null, OPENID.getValue(), MEDIUM_LEVEL.toString()),
                         Optional.of("GET"));
 
         assertThat(response, hasStatus(302));
@@ -797,7 +797,7 @@ class AuthorisationIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 authRequest.getCustomParameter("vtr"),
                 equalTo(List.of("[\"P2.Cl.Cm\",\"PCL200.Cl.Cm\"]")));
         assertThat(
-                clientSession.getVtrList(),
+                clientSession.getVtrList().getVtr(),
                 equalTo(
                         List.of(
                                 VectorOfTrust.of(MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
