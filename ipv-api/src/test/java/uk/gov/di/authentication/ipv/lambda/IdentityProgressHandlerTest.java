@@ -20,7 +20,8 @@ import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.IdentityCredentials;
 import uk.gov.di.orchestration.shared.entity.Session;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VtrList;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.AuthenticationUserInfoStorageService;
@@ -34,7 +35,6 @@ import uk.gov.di.orchestration.shared.services.SessionService;
 import java.net.URI;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -279,7 +279,7 @@ public class IdentityProgressHandlerTest {
                         .build();
 
         return new ClientSession(
-                authRequest.toParameters(), null, List.of(mock(VectorOfTrust.class)), CLIENT_NAME);
+                authRequest.toParameters(), null, VtrList.of(VectorOfTrust.DEFAULT), CLIENT_NAME);
     }
 
     private void usingValidSession() {

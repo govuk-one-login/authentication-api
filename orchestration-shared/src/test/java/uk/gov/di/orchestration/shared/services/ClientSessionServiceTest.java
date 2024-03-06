@@ -4,7 +4,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VtrList;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
@@ -121,14 +122,14 @@ class ClientSessionServiceTest {
                 clientSessionService.generateClientSession(
                         Map.of("authparam", List.of("v1", "v2")),
                         LocalDateTime.now(),
-                        List.of(VectorOfTrust.getDefaults()),
+                        VtrList.of(VectorOfTrust.DEFAULT),
                         "client-name");
 
         assertEquals(
                 Map.of("authparam", List.of("v1", "v2")), clientSession.getAuthRequestParams());
         assertEquals(
-                VectorOfTrust.getDefaults().getCredentialTrustLevel(),
-                VectorOfTrust.getLowestCredentialTrustLevel(clientSession.getVtrList()));
+                VectorOfTrust.DEFAULT.getCredentialTrustLevel(),
+                clientSession.getVtrList().getSelectedCredentialTrustLevel());
         assertEquals("client-name", clientSession.getClientName());
     }
 
@@ -137,7 +138,7 @@ class ClientSessionServiceTest {
                 new ClientSession(
                         Map.of("authparam", List.of("v1", "v2")),
                         LocalDateTime.now(),
-                        List.of(VectorOfTrust.getDefaults()),
+                        VtrList.of(VectorOfTrust.DEFAULT),
                         "client-name"));
     }
 }

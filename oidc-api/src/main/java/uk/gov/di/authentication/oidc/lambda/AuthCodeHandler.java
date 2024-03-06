@@ -19,10 +19,9 @@ import uk.gov.di.authentication.oidc.entity.AuthCodeResponse;
 import uk.gov.di.authentication.oidc.exceptions.ProcessAuthRequestException;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
-import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.Session;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
@@ -324,8 +323,9 @@ public class AuthCodeHandler
         if (!orchestrationAuthorizationService.isClientRedirectUriValid(clientID, redirectUri)) {
             throw new ProcessAuthRequestException(400, ErrorResponse.ERROR_1016);
         }
+        var vtrList = clientSession.getVtrList();
         CredentialTrustLevel lowestRequestedCredentialTrustLevel =
-                VectorOfTrust.getLowestCredentialTrustLevel(clientSession.getVtrList());
+                vtrList.getSelectedCredentialTrustLevel();
         if (isNull(session.getCurrentCredentialStrength())
                 || lowestRequestedCredentialTrustLevel.compareTo(
                                 session.getCurrentCredentialStrength())

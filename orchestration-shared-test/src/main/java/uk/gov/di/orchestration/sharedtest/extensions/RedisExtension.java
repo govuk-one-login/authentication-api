@@ -7,6 +7,10 @@ import io.lettuce.core.RedisURI;
 import io.lettuce.core.api.StatefulRedisConnection;
 import org.junit.jupiter.api.extension.*;
 import uk.gov.di.orchestration.shared.entity.*;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.CredentialTrustLevel;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.LevelOfConfidence;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VtrList;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -121,7 +125,7 @@ public class RedisExtension
                         new ClientSession(
                                 authRequest,
                                 LocalDateTime.now(),
-                                List.of(VectorOfTrust.getDefaults()),
+                                VtrList.of(VectorOfTrust.DEFAULT),
                                 clientName)),
                 3600);
     }
@@ -177,7 +181,7 @@ public class RedisExtension
             String clientSessionId,
             String email,
             Map<String, List<String>> authRequest,
-            List<VectorOfTrust> vtrList,
+            VtrList vtrList,
             String clientName)
             throws Json.JsonException {
         var clientSession =
@@ -205,7 +209,10 @@ public class RedisExtension
                         new ClientSession(
                                 authRequest,
                                 LocalDateTime.now(),
-                                List.of(VectorOfTrust.getDefaults()),
+                                VtrList.of(
+                                        VectorOfTrust.of(
+                                                CredentialTrustLevel.MEDIUM_LEVEL,
+                                                LevelOfConfidence.MEDIUM_LEVEL)),
                                 clientName)),
                 300);
     }

@@ -37,6 +37,7 @@ import uk.gov.di.orchestration.shared.entity.AccessTokenStore;
 import uk.gov.di.orchestration.shared.entity.ClientConsent;
 import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
 import uk.gov.di.orchestration.shared.entity.ValidScopes;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.CredentialTrustLevelCode;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.helpers.RequestBodyHelper;
@@ -94,7 +95,7 @@ public class TokenService {
             boolean isDocAppJourney,
             JWSAlgorithm signingAlgorithm,
             String journeyId,
-            String vot) {
+            CredentialTrustLevelCode vot) {
         List<String> scopesForToken;
         if (isConsentRequired) {
             scopesForToken = calculateScopesForToken(clientConsents, clientID, authRequestScopes);
@@ -251,7 +252,7 @@ public class TokenService {
             Subject subject,
             Map<String, Object> additionalTokenClaims,
             AccessTokenHash accessTokenHash,
-            String vot,
+            CredentialTrustLevelCode vot,
             boolean isDocAppJourney,
             JWSAlgorithm signingAlgorithm,
             String journeyId) {
@@ -272,7 +273,7 @@ public class TokenService {
 
         idTokenClaims.putAll(additionalTokenClaims);
         if (!isDocAppJourney) {
-            idTokenClaims.setClaim("vot", vot);
+            idTokenClaims.setClaim("vot", vot.toString());
         }
         idTokenClaims.setClaim("vtm", trustMarkUri.toString());
 

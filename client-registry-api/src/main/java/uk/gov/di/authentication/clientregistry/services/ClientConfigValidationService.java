@@ -5,10 +5,10 @@ import com.nimbusds.oauth2.sdk.client.RegistrationError;
 import com.nimbusds.openid.connect.sdk.SubjectType;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
 import uk.gov.di.orchestration.shared.entity.ClientType;
-import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.UpdateClientConfigRequest;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.entity.ValidScopes;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.LevelOfConfidence;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -189,11 +189,13 @@ public class ClientConfigValidationService {
 
     private boolean areClientLoCsValid(List<String> clientLoCs) {
         for (String clientLoC : clientLoCs) {
-            if (LevelOfConfidence.getAllSupportedLevelOfConfidenceValues().stream()
-                    .noneMatch(t -> t.equals(clientLoC))) {
+            try {
+                LevelOfConfidence.parse(clientLoC);
+            } catch (Exception ignored) {
                 return false;
             }
         }
+
         return true;
     }
 }

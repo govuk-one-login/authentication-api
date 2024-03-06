@@ -35,6 +35,7 @@ import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.Session;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.SaltHelper;
 import uk.gov.di.orchestration.shared.services.AuditService;
@@ -60,6 +61,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.orchestration.shared.entity.vectoroftrust.LevelOfConfidence.HMRC200;
+import static uk.gov.di.orchestration.shared.entity.vectoroftrust.LevelOfConfidence.MEDIUM_LEVEL;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.orchestration.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -68,7 +71,8 @@ public class InitiateIPVAuthorisationServiceTest {
     private static final String CLIENT_SESSION_ID = "client-session-v1";
     private static final String PERSISTENT_SESSION_ID = "a-persistent-session-id";
     private static final String CLIENT_ID = "test-client-id";
-    private static final List<String> LEVELS_OF_CONFIDENCE = List.of("P0", "P2");
+    private static final List<LevelOfConfidence> LEVELS_OF_CONFIDENCE =
+            List.of(HMRC200, MEDIUM_LEVEL);
     private static final String INTERNAL_SECTOR_URI = "https://ipv.account.gov.uk";
     private static final String SESSION_ID = "a-session-id";
     private static final String IPV_CLIENT_ID = "ipv-client-id";
@@ -167,7 +171,7 @@ public class InitiateIPVAuthorisationServiceTest {
                         any(),
                         eq(CLIENT_SESSION_ID),
                         anyString(),
-                        eq(List.of("P0", "P2")),
+                        eq(List.of(HMRC200, MEDIUM_LEVEL)),
                         anyBoolean()))
                 .thenReturn(encryptedJWT);
 
@@ -201,7 +205,7 @@ public class InitiateIPVAuthorisationServiceTest {
                         any(),
                         eq(CLIENT_SESSION_ID),
                         eq(EMAIL_ADDRESS),
-                        eq(List.of("P0", "P2")),
+                        eq(List.of(HMRC200, MEDIUM_LEVEL)),
                         eq(REPROVE_IDENTITY));
         verify(auditService)
                 .submitAuditEvent(
