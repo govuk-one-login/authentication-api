@@ -19,6 +19,7 @@ import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.helpers.IpAddressHelper;
 import uk.gov.di.orchestration.shared.services.AuditService;
 import uk.gov.di.orchestration.shared.services.CloudwatchMetricsService;
@@ -71,7 +72,7 @@ public class InitiateIPVAuthorisationService {
             String clientSessionId,
             String persistentSessionCookieId,
             Boolean reproveIdentity,
-            List<String> levelsOfConfidence) {
+            List<LevelOfConfidence> levelsOfConfidence) {
         if (!configurationService.isIdentityEnabled()) {
             LOG.error("Identity is not enabled");
             throw new RuntimeException("Identity is not enabled");

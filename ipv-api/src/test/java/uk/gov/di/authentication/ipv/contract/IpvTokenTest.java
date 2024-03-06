@@ -47,6 +47,7 @@ public class IpvTokenTest {
     private static final URI IPV_URI = URI.create(IPV_AUD);
     private static final ClientID CLIENT_ID = new ClientID("authOrchestrator");
     private static final String IPV_TOKEN_PATH = "token";
+
     private final String ACCESS_TOKEN_FIELD = "access_token";
     private final String TOKEN_TYPE_FIELD = "token_type";
     private final String EXPIRES_IN_FIELD = "expires_in";

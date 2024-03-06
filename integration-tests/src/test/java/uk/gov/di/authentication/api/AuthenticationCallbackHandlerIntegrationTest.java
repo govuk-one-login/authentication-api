@@ -33,11 +33,11 @@ import uk.gov.di.orchestration.shared.domain.AccountInterventionsAuditableEvent;
 import uk.gov.di.orchestration.shared.entity.AuthenticationUserInfo;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ClientType;
-import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
-import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.CredentialTrustLevel;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.LevelOfConfidence;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VtrList;
 import uk.gov.di.orchestration.shared.exceptions.AccountInterventionException;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -75,7 +75,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static uk.gov.di.orchestration.shared.entity.VectorOfTrust.parseFromAuthRequestAttribute;
 import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
 import static uk.gov.di.orchestration.sharedtest.helper.JsonArrayHelper.jsonArrayOf;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -978,17 +977,12 @@ public class AuthenticationCallbackHandlerIntegrationTest extends ApiGatewayHand
     }
 
     private void setUpClientSession() throws Json.JsonException {
-        String vtrStr1 =
-                LevelOfConfidence.MEDIUM_LEVEL.getValue()
-                        + "."
-                        + CredentialTrustLevel.MEDIUM_LEVEL.getValue();
-        String vtrStr2 =
-                LevelOfConfidence.HMRC200.getValue()
-                        + "."
-                        + CredentialTrustLevel.MEDIUM_LEVEL.getValue();
+        String vtrStr1 = LevelOfConfidence.MEDIUM_LEVEL + "." + CredentialTrustLevel.MEDIUM_LEVEL;
+        String vtrStr2 = LevelOfConfidence.HMRC200 + "." + CredentialTrustLevel.MEDIUM_LEVEL;
 
-        List<VectorOfTrust> vtrList =
-                parseFromAuthRequestAttribute(List.of("[\"" + vtrStr1 + "\",\"" + vtrStr2 + "\"]"));
+        VtrList vtrList =
+                VtrList.parseFromAuthRequestAttribute(
+                        List.of("[\"" + vtrStr1 + "\",\"" + vtrStr2 + "\"]"));
 
         var authRequestBuilder =
                 new AuthenticationRequest.Builder(

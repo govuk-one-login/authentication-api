@@ -23,7 +23,8 @@ import uk.gov.di.orchestration.shared.entity.IdentityCredentials;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VtrList;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
@@ -46,7 +47,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -358,7 +358,7 @@ class ProcessingIdentityHandlerTest {
                         .build();
 
         return new ClientSession(
-                authRequest.toParameters(), null, List.of(mock(VectorOfTrust.class)), CLIENT_NAME);
+                authRequest.toParameters(), null, VtrList.of(VectorOfTrust.DEFAULT), CLIENT_NAME);
     }
 
     private void usingValidSession() {

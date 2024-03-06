@@ -25,6 +25,10 @@ import uk.gov.di.orchestration.audit.TxmaAuditUser;
 import uk.gov.di.orchestration.shared.conditions.IdentityHelper;
 import uk.gov.di.orchestration.shared.domain.AuditableEvent;
 import uk.gov.di.orchestration.shared.entity.*;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.CredentialTrustLevel;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.LevelOfConfidence;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VtrList;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.services.*;
@@ -90,7 +94,7 @@ class AuthenticationCallbackHandlerTest {
             new ClientSession(
                     generateRPAuthRequestForClientSession().toParameters(),
                     null,
-                    List.of(
+                    VtrList.of(
                             VectorOfTrust.of(
                                     CredentialTrustLevel.LOW_LEVEL, LevelOfConfidence.LOW_LEVEL)),
                     CLIENT_NAME);

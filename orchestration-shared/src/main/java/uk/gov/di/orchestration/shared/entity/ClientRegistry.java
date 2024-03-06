@@ -4,6 +4,7 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttri
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.LevelOfConfidence;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -397,8 +398,8 @@ public class ClientRegistry {
     public List<String> getClientLoCs() {
         if (clientLoCs.isEmpty()) {
             return identityVerificationSupported
-                    ? List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())
-                    : List.of(LevelOfConfidence.NONE.getValue());
+                    ? List.of(LevelOfConfidence.MEDIUM_LEVEL.toString())
+                    : List.of(LevelOfConfidence.NONE.toString());
         }
         return clientLoCs;
     }

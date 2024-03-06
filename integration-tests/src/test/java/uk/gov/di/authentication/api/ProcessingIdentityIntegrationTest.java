@@ -15,9 +15,10 @@ import uk.gov.di.authentication.ipv.entity.ProcessingIdentityStatus;
 import uk.gov.di.authentication.ipv.lambda.ProcessingIdentityHandler;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ClientType;
-import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.LevelOfConfidence;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VtrList;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.helper.SignedCredentialHelper;
@@ -99,7 +100,7 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
         identityStore.saveIdentityClaims(
                 pairwiseIdentifier,
                 emptyMap(),
-                LevelOfConfidence.MEDIUM_LEVEL.getValue(),
+                LevelOfConfidence.MEDIUM_LEVEL.toString(),
                 CORE_IDENTITY_CLAIM);
 
         Map<String, String> headers = new HashMap<>();
@@ -187,7 +188,7 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
                 new ClientSession(
                         authRequestBuilder.build().toParameters(),
                         LocalDateTime.now(),
-                        List.of(VectorOfTrust.getDefaults()),
+                        VtrList.of(VectorOfTrust.DEFAULT),
                         CLIENT_NAME);
         redis.createClientSession(CLIENT_SESSION_ID, clientSession);
         redis.addStateToRedis(STATE, SESSION_ID);

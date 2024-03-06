@@ -26,9 +26,9 @@ import uk.gov.di.authentication.oidc.lambda.UserInfoHandler;
 import uk.gov.di.orchestration.shared.entity.AccessTokenStore;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
-import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
@@ -446,7 +446,7 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             identityStore.saveIdentityClaims(
                     PUBLIC_SUBJECT.getValue(),
                     additionalClaims,
-                    LevelOfConfidence.MEDIUM_LEVEL.getValue(),
+                    LevelOfConfidence.MEDIUM_LEVEL.toString(),
                     CORE_IDENTITY_CLAIM);
         }
         if (Objects.nonNull(coreIdentityJWT)) {

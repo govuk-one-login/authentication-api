@@ -28,11 +28,12 @@ import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
-import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
-import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.CredentialTrustLevel;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.LevelOfConfidence;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VtrList;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.AccountInterventionService;
 import uk.gov.di.orchestration.shared.services.AuditService;
@@ -50,7 +51,6 @@ import uk.gov.di.orchestration.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -99,13 +99,13 @@ class IPVCallbackHelperTest {
     private static final String INTERNAL_PAIRWISE_ID = "internal-pairwise-id";
     private static final String INTERNAL_PAIRWISE_ID_WITH_INTERVENTION =
             "internal-pairwise-id-with-intervention";
-    private static final List<VectorOfTrust> VTR_LIST_P1_AND_P2 =
-            List.of(
+    private static final VtrList VTR_LIST_P1_AND_P2 =
+            VtrList.of(
                     VectorOfTrust.of(CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.NONE),
                     VectorOfTrust.of(
                             CredentialTrustLevel.MEDIUM_LEVEL, LevelOfConfidence.MEDIUM_LEVEL));
-    private static final List<VectorOfTrust> VTR_LIST_P2_ONLY =
-            List.of(
+    private static final VtrList VTR_LIST_P2_ONLY =
+            VtrList.of(
                     VectorOfTrust.of(
                             CredentialTrustLevel.LOW_LEVEL, LevelOfConfidence.MEDIUM_LEVEL),
                     VectorOfTrust.of(
@@ -210,8 +210,8 @@ class IPVCallbackHelperTest {
 
     @ParameterizedTest
     @MethodSource("validUserIdentities")
-    void shouldReturnEmptyErrorObjectIfUserIdentityVotInVtrList(
-            UserInfo userInfo, List<VectorOfTrust> vtrList) throws IpvCallbackException {
+    void shouldReturnEmptyErrorObjectIfUserIdentityVotInVtrList(UserInfo userInfo, VtrList vtrList)
+            throws IpvCallbackException {
         var response = helper.validateUserIdentityResponse(userInfo, vtrList);
 
         assertEquals(Optional.empty(), response);

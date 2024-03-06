@@ -30,13 +30,14 @@ import uk.gov.di.authentication.oidc.entity.AuthCodeResponse;
 import uk.gov.di.authentication.oidc.services.OrchestrationAuthorizationService;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
-import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
 import uk.gov.di.orchestration.shared.entity.MFAMethodType;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.CredentialTrustLevel;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VtrList;
 import uk.gov.di.orchestration.shared.exceptions.ClientNotFoundException;
 import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
@@ -87,11 +88,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static uk.gov.di.authentication.oidc.helper.RequestObjectTestHelper.generateSignedJWT;
-import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevel.LOW_LEVEL;
-import static uk.gov.di.orchestration.shared.entity.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.orchestration.shared.entity.Session.AccountState;
 import static uk.gov.di.orchestration.shared.entity.Session.AccountState.EXISTING;
 import static uk.gov.di.orchestration.shared.entity.Session.AccountState.EXISTING_DOC_APP_JOURNEY;
+import static uk.gov.di.orchestration.shared.entity.vectoroftrust.CredentialTrustLevel.LOW_LEVEL;
+import static uk.gov.di.orchestration.shared.entity.vectoroftrust.CredentialTrustLevel.MEDIUM_LEVEL;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.orchestration.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.orchestration.sharedtest.logging.LogEventMatcher.withMessageContaining;
@@ -272,7 +273,7 @@ class AuthCodeHandlerTest {
                         any(URI.class),
                         any(State.class)))
                 .thenReturn(authSuccessResponse);
-        when(clientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(requestedLevel)));
+        when(clientSession.getVtrList()).thenReturn(VtrList.of(VectorOfTrust.of(requestedLevel)));
         when(clientSession.getVtrLocsAsCommaSeparatedString()).thenReturn("P0");
 
         var response = generateApiRequest();
@@ -352,7 +353,7 @@ class AuthCodeHandlerTest {
                         authRequest.getResponseMode());
 
         when(clientSession.getDocAppSubjectId()).thenReturn(new Subject(DOC_APP_SUBJECT_ID));
-        when(clientSession.getVtrList()).thenReturn(List.of(new VectorOfTrust(requestedLevel)));
+        when(clientSession.getVtrList()).thenReturn(VtrList.of(VectorOfTrust.of(requestedLevel)));
         when(orchestrationAuthorizationService.isClientRedirectUriValid(CLIENT_ID, REDIRECT_URI))
                 .thenReturn(true);
         when(authorisationCodeService.generateAndSaveAuthorisationCode(

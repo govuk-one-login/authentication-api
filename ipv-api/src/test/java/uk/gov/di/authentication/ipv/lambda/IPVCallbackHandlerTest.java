@@ -44,14 +44,15 @@ import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
-import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
 import uk.gov.di.orchestration.shared.entity.IdentityClaims;
 import uk.gov.di.orchestration.shared.entity.NoSessionEntity;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.CredentialTrustLevel;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VtrList;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
 import uk.gov.di.orchestration.shared.exceptions.UnsuccessfulCredentialResponseException;
 import uk.gov.di.orchestration.shared.exceptions.UserNotFoundException;
@@ -84,7 +85,6 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
-import static java.util.Collections.EMPTY_LIST;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -149,10 +149,10 @@ class IPVCallbackHandlerTest {
     private static final Subject PUBLIC_SUBJECT =
             new Subject("TsEVC7vg0NPAmzB33vRUFztL2c0-fecKWKcc73fuDhc");
     private static final State STATE = new State();
-    private static final List<VectorOfTrust> VTR_LIST =
-            List.of(
-                    new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL),
-                    new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL));
+    private static final VtrList VTR_LIST =
+            VtrList.of(
+                    VectorOfTrust.of(CredentialTrustLevel.LOW_LEVEL),
+                    VectorOfTrust.of(CredentialTrustLevel.MEDIUM_LEVEL));
     private IPVCallbackHandler handler;
     private final byte[] salt =
             "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw=".getBytes(StandardCharsets.UTF_8);
@@ -183,9 +183,9 @@ class IPVCallbackHandlerTest {
             new ClientSession(
                     generateAuthRequest(new OIDCClaimsRequest()).toParameters(),
                     null,
-                    List.of(
-                            new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL),
-                            new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL)),
+                    VtrList.of(
+                            VectorOfTrust.of(CredentialTrustLevel.LOW_LEVEL),
+                            VectorOfTrust.of(CredentialTrustLevel.MEDIUM_LEVEL)),
                     CLIENT_NAME);
 
     private final Json objectMapper = SerializationService.getInstance();
@@ -369,9 +369,9 @@ class IPVCallbackHandlerTest {
                 new ClientSession(
                         generateAuthRequest(claimsRequest).toParameters(),
                         null,
-                        List.of(
-                                new VectorOfTrust(CredentialTrustLevel.LOW_LEVEL),
-                                new VectorOfTrust(CredentialTrustLevel.MEDIUM_LEVEL)),
+                        VtrList.of(
+                                VectorOfTrust.of(CredentialTrustLevel.LOW_LEVEL),
+                                VectorOfTrust.of(CredentialTrustLevel.MEDIUM_LEVEL)),
                         CLIENT_NAME);
         when(clientSessionService.getClientSession(CLIENT_SESSION_ID))
                 .thenReturn(Optional.of(clientSession));
@@ -425,7 +425,7 @@ class IPVCallbackHandlerTest {
                 new ClientSession(
                         generateAuthRequest(claimsRequest).toParameters(),
                         null,
-                        (List<VectorOfTrust>) EMPTY_LIST,
+                        VtrList.of(VectorOfTrust.of(CredentialTrustLevel.LOW_LEVEL)),
                         CLIENT_NAME);
 
         when(responseService.validateResponse(anyMap(), anyString())).thenReturn(Optional.empty());

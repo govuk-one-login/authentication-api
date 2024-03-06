@@ -37,11 +37,12 @@ import uk.gov.di.authentication.ipv.entity.IPVAuthorisationResponse;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
-import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
-import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.CredentialTrustLevel;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.LevelOfConfidence;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VtrList;
 import uk.gov.di.orchestration.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.helpers.PersistentIdHelper;
@@ -84,6 +85,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.orchestration.shared.entity.vectoroftrust.LevelOfConfidence.HMRC200;
+import static uk.gov.di.orchestration.shared.entity.vectoroftrust.LevelOfConfidence.MEDIUM_LEVEL;
 import static uk.gov.di.orchestration.shared.services.AuditService.MetadataPair.pair;
 import static uk.gov.di.orchestration.sharedtest.helper.RequestEventHelper.contextWithSourceIp;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -227,7 +230,7 @@ public class IPVAuthorisationHandlerTest {
                         any(),
                         eq(CLIENT_SESSION_ID),
                         eq(EMAIL_ADDRESS),
-                        eq(List.of("P0", "P2")),
+                        eq(List.of(HMRC200, MEDIUM_LEVEL)),
                         any());
         verify(auditService)
                 .submitAuditEvent(
@@ -272,11 +275,10 @@ public class IPVAuthorisationHandlerTest {
                 .thenReturn(withAuthenticationRequest().toParameters());
         when(clientSession.getVtrList())
                 .thenReturn(
-                        List.of(
+                        VtrList.of(
+                                VectorOfTrust.of(CredentialTrustLevel.MEDIUM_LEVEL, HMRC200),
                                 VectorOfTrust.of(
-                                        CredentialTrustLevel.LOW_LEVEL, LevelOfConfidence.NONE),
-                                VectorOfTrust.of(
-                                        CredentialTrustLevel.LOW_LEVEL,
+                                        CredentialTrustLevel.MEDIUM_LEVEL,
                                         LevelOfConfidence.MEDIUM_LEVEL)));
     }
 

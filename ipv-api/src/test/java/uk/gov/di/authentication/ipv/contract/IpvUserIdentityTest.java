@@ -33,7 +33,6 @@ public class IpvUserIdentityTest {
     private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
     private IPVTokenService ipvTokenService;
     private Tokens tokens;
-
     private final String IPV_USER_IDENTITY_PATH = "user-identity";
     private final String SUB_FIELD = "sub";
     private final String VOT_FIELD = "vot";
