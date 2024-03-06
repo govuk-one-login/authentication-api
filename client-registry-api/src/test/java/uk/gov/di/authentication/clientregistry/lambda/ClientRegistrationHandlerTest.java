@@ -58,7 +58,6 @@ class ClientRegistrationHandlerTest {
     private static final List<String> REDIRECT_URIS = List.of("http://localhost:8080/redirect-uri");
     private static final List<String> CONTACTS = List.of("joe.bloggs@test.com");
     private static final String SERVICE_TYPE = String.valueOf(MANDATORY);
-    private static final boolean CONSENT_REQUIRED_FIXED_VALUE = false;
     public static final TxmaAuditUser USER =
             user().withIpAddress("").withTransactionId("request-id");
     private final String clientId = IdGenerator.generate();
@@ -121,56 +120,10 @@ class ClientRegistrationHandlerTest {
                         SERVICE_TYPE,
                         SECTOR_IDENTIFIER,
                         SUBJECT_TYPE,
-                        CONSENT_REQUIRED_FIXED_VALUE,
                         false,
                         emptyList(),
                         ClientType.WEB.getValue(),
                         false,
-                        null,
-                        ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue(),
-                        emptyList());
-    }
-
-    @Test
-    void shouldSetConsentRequiredToFalseWhenIdentityVerificationIsRequired()
-            throws Json.JsonException {
-        when(configValidationService.validateClientRegistrationConfig(
-                        any(ClientRegistrationRequest.class)))
-                .thenReturn(Optional.empty());
-        when(clientService.generateClientID()).thenReturn(new ClientID(clientId));
-
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-
-        event.setBody(
-                "{ \"client_name\": \"test-client\", \"redirect_uris\": [\"http://localhost:8080/redirect-uri\"], \"contacts\": [\"joe.bloggs@test.com\"], \"scopes\": [\"openid\"],  \"public_key\": \"some-public-key\", \"post_logout_redirect_uris\": [\"http://localhost:8080/post-logout-redirect-uri\"], \"back_channel_logout_uri\": \"http://localhost:8080/back-channel-logout-uri\", \"sector_identifier_uri\": \"https://test.com\", \"subject_type\": \"pairwise\",  \"identity_verification_required\": \"true\"}");
-        APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
-
-        assertThat(result, hasStatus(200));
-        ClientRegistrationResponse clientRegistrationResponseResult =
-                objectMapper.readValue(result.getBody(), ClientRegistrationResponse.class);
-        assertThat(clientRegistrationResponseResult.getClientId(), equalTo(clientId));
-        assertThat(
-                clientRegistrationResponseResult.getTokenAuthMethod(), equalTo("private_key_jwt"));
-        assertThat(clientRegistrationResponseResult.getSubjectType(), equalTo(SUBJECT_TYPE));
-        assertThat(clientRegistrationResponseResult.getScopes(), equalTo(singletonList("openid")));
-        verify(clientService)
-                .addClient(
-                        clientId,
-                        CLIENT_NAME,
-                        REDIRECT_URIS,
-                        CONTACTS,
-                        singletonList("openid"),
-                        "some-public-key",
-                        singletonList("http://localhost:8080/post-logout-redirect-uri"),
-                        "http://localhost:8080/back-channel-logout-uri",
-                        SERVICE_TYPE,
-                        SECTOR_IDENTIFIER,
-                        SUBJECT_TYPE,
-                        CONSENT_REQUIRED_FIXED_VALUE,
-                        false,
-                        emptyList(),
-                        ClientType.WEB.getValue(),
-                        true,
                         null,
                         ClientAuthenticationMethod.PRIVATE_KEY_JWT.getValue(),
                         emptyList());
@@ -203,7 +156,6 @@ class ClientRegistrationHandlerTest {
                         SERVICE_TYPE,
                         SECTOR_IDENTIFIER,
                         SUBJECT_TYPE,
-                        CONSENT_REQUIRED_FIXED_VALUE,
                         false,
                         emptyList(),
                         ClientType.WEB.getValue(),
