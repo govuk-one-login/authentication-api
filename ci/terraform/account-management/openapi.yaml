@@ -84,7 +84,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SendOTPRequest'
+              $ref: '#/components/schemas/SendNotificationRequest'
       responses:
         '200':
           description: OTP Updated
@@ -105,7 +105,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DeleteAccountRequest'
+              $ref: '#/components/schemas/RemoveAccountRequest'
       responses:
         '200':
           description: Account Deleted
@@ -407,7 +407,48 @@ components:
       required:
         - email
         - newPassword
-
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+    SendNotificationRequest:
+      required:
+        - notificationType
+        - phoneNumber
+      properties:
+        notificationType:
+          type: string
+    RemoveAccountRequest:
+      required:
+        - email
+      properties:
+        email:
+          type: string
+    UpdateEmailRequest:
+      required:
+        - existingEmail
+        - replacementEmail
+        - otp
+      properties:
+        existingEmailAddress:
+          type: string
+        replacementEmailAddress:
+          type: string
+        otp:
+          type: string
+    UpdatePhoneNumberRequest:
+      required:
+        - email
+        - phoneNumber
+        - otp
+      properties:
+        email:
+          type: string
+        phoneNumber:
+          type: string
+        otp:
+          type: string
     ProblemDetail:
       type: object
       properties:
