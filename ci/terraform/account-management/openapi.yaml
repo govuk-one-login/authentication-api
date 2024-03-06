@@ -17,7 +17,15 @@ paths:
         uri: "${authenticate_module.integration_uri}"
         passthroughBehavior: "when_no_match"
         timeoutInMillis: 29000
-
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthenticateRequest'
+        required: true
+      responses:
+        '200':
+          description: Authentication Successful
   /update-password:
     post:
       summary: "Update password"
@@ -30,6 +38,14 @@ paths:
         httpMethod: "POST" # THIS SHOULD ALWAYS BE "POST" regardless of the actual method
         uri: "${update-password_module.integration_uri}"
         timeoutInMillis: 29000
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePasswordRequest'
+      responses:
+        '200':
+          description: Password Updated
 
   /update-email:
     post:
@@ -43,6 +59,14 @@ paths:
         httpMethod: "POST" # THIS SHOULD ALWAYS BE "POST" regardless of the actual method
         uri: "${update-email_module.integration_uri}"
         timeoutInMillis: 29000
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateEmailRequest'
+      responses:
+        '200':
+          description: Email Updated
 
   /send-otp-notification:
     post:
@@ -56,6 +80,14 @@ paths:
         httpMethod: "POST" # THIS SHOULD ALWAYS BE "POST" regardless of the actual method
         uri: "${send-otp-notification_module.integration_uri}"
         timeoutInMillis: 29000
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendOTPRequest'
+      responses:
+        '200':
+          description: OTP Updated
 
   /delete-account:
     post:
@@ -69,6 +101,14 @@ paths:
         httpMethod: "POST" # THIS SHOULD ALWAYS BE "POST" regardless of the actual method
         uri: "${delete-account_module.integration_uri}"
         timeoutInMillis: 29000
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteAccountRequest'
+      responses:
+        '200':
+          description: Account Deleted
 
   /update-phone-number:
     post:
@@ -82,6 +122,14 @@ paths:
         httpMethod: "POST" # THIS SHOULD ALWAYS BE "POST" regardless of the actual method
         uri: "${update-phone-number_module.integration_uri}"
         timeoutInMillis: 29000
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePhoneNumberRequest'
+      responses:
+        '200':
+          description: Phone Number Updated
 
   /mfa-methods:
     post:
@@ -96,6 +144,12 @@ paths:
         httpMethod: "POST" # THIS SHOULD ALWAYS BE "POST" regardless of the actual method
         uri: "${create-mfa-methods_module.integration_uri}"
         timeoutInMillis: 29000
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MfaMethodCreateOrUpdateRequest'
+        required: true
       responses:
         '200':
           description: MFA Method Updated
@@ -286,7 +340,7 @@ components:
         priorityIdentifier: SECONDARY
         mfaMethodType : SMS
         endPoint : PHONE
-        methodVerfied : true
+        methodVerified : true
     MfaSearchRequest:
       required:
         - email
@@ -313,7 +367,6 @@ components:
         email: "testdeleter@deleterdomain.com"
         otp: "12345"
         mfaMethodIdentifier: "123456789"
-
     MfaMethodCreateOrUpdateRequest:
       required:
         - email
@@ -339,7 +392,22 @@ components:
           priorityIdentifier: SECONDARY
           mfaMethodType : SMS
           endPoint : PHONE
-          methodVerfied : true
+          methodVerified : true
+    AuthenticateRequest:
+      required:
+        - email
+        - password
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+    UpdatePasswordRequest:
+      required:
+        - email
+        - newPassword
+
     ProblemDetail:
       type: object
       properties:
