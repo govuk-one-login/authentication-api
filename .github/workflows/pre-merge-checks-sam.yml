@@ -1,7 +1,9 @@
 name: Pre-merge checks for SAM
 on:
   pull_request:
-    paths: ['template.yaml']
+    paths:
+      - "template.yaml"
+      - ".github/workflows/pre-merge-checks-sam.yml"
     types:
       - opened
       - reopened
