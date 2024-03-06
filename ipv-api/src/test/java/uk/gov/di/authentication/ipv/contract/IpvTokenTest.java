@@ -46,11 +46,9 @@ public class IpvTokenTest {
     private final String ACCESS_TOKEN_FIELD = "access_token";
     private final String TOKEN_TYPE_FIELD = "token_type";
     private final String EXPIRES_IN_FIELD = "expires_in";
-    private final String URI_FIELD = "uri";
     private final String ACCESS_TOKEN_VALUE = "740e5834-3a29-46b4-9a6f-16142fde533a";
     private final String TOKEN_TYPE_VALUE = "Bearer";
     private final Integer EXPIRES_IN_VALUE = 3600;
-    private final String URI_VALUE = "https://localhost";
     private static final String KEY_ID = "14342354354353";
 
     private static final String PRIVATE_JWT_KEY =
@@ -177,7 +175,6 @@ public class IpvTokenTest {
                                             body.stringType(ACCESS_TOKEN_FIELD, ACCESS_TOKEN_VALUE);
                                             body.stringType(TOKEN_TYPE_FIELD, TOKEN_TYPE_VALUE);
                                             body.integerType(EXPIRES_IN_FIELD, EXPIRES_IN_VALUE);
-                                            body.stringType(URI_FIELD, URI_VALUE);
                                         })
                                 .build())
                 .toPact();
