@@ -145,7 +145,6 @@ public class IpvTokenTest {
     @Pact(consumer = "OrchTokenConsumer")
     RequestResponsePact validRequestReturnsValidAccessToken(PactDslWithProvider builder) {
         return builder.given("dummyAuthCode is a valid authorization code")
-                .given("localHost is a valid resource URI")
                 .given("the JWT is signed with " + PRIVATE_JWT_KEY)
                 .uponReceiving("Valid auth code")
                 .path("/" + IPV_TOKEN_PATH)
@@ -215,7 +214,6 @@ public class IpvTokenTest {
     @Pact(consumer = "OrchTokenConsumer")
     RequestResponsePact invalidAuthCodeReturnsInvalidRequest(PactDslWithProvider builder) {
         return builder.given("dummyInvalidAuthCode is a invalid authorization code")
-                .given("localHost is a valid resource URI")
                 .given("the JWT is signed with " + PRIVATE_JWT_KEY)
                 .uponReceiving("Invalid auth code")
                 .path("/" + IPV_TOKEN_PATH)
