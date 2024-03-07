@@ -1,13 +1,10 @@
 package uk.gov.di.orchestration.shared.services;
 
-import uk.gov.di.orchestration.shared.entity.ClientConsent;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
 
 import java.util.Optional;
 
 public interface AuthenticationService {
-
-    void updateConsent(String email, ClientConsent clientConsent);
 
     /**
      * Deprecated - use getUserProfileByEmailMaybe instead. Can't literally deprecate it, because

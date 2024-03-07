@@ -185,7 +185,6 @@ class DocAppUserHelperTest {
                 new ClientRegistry()
                         .withClientID(CLIENT_ID.getValue())
                         .withClientName(CLIENT_NAME)
-                        .withConsentRequired(false)
                         .withCookieConsentShared(false)
                         .withClientType(clientType.getValue());
         return UserContext.builder(SESSION)

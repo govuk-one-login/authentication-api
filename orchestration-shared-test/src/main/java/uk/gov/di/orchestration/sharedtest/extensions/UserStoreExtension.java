@@ -11,7 +11,6 @@ import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
 import software.amazon.awssdk.services.dynamodb.model.KeyType;
 import software.amazon.awssdk.services.dynamodb.model.ProjectionType;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
-import uk.gov.di.orchestration.shared.entity.ClientConsent;
 import uk.gov.di.orchestration.shared.entity.TermsAndConditions;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.services.DynamoService;
@@ -81,10 +80,6 @@ public class UserStoreExtension extends DynamoExtension implements AfterEachCall
         dynamoService.signUp(
                 email, password, subject, termsAndConditions, isTestUser, accountVerified);
         return dynamoService.getUserProfileByEmail(email).getPublicSubjectID();
-    }
-
-    public void updateConsent(String email, ClientConsent clientConsent) {
-        dynamoService.updateConsent(email, clientConsent);
     }
 
     public void addVerifiedPhoneNumber(String email, String phoneNumber) {
