@@ -179,7 +179,6 @@ class StartServiceTest {
         var userContext =
                 buildUserContext(
                         vtr,
-                        false,
                         true,
                         ClientType.WEB,
                         null,
@@ -197,7 +196,6 @@ class StartServiceTest {
 
         assertThat(userStartInfo.isUpliftRequired(), equalTo(false));
         assertThat(userStartInfo.isIdentityRequired(), equalTo(false));
-        assertThat(userStartInfo.isConsentRequired(), equalTo(false));
         assertThat(userStartInfo.cookieConsent(), equalTo(cookieConsent));
         assertThat(userStartInfo.gaCrossDomainTrackingId(), equalTo(gaTrackingId));
         assertThat(userStartInfo.isDocCheckingAppUser(), equalTo(false));
@@ -224,7 +222,6 @@ class StartServiceTest {
         var userContext =
                 buildUserContext(
                         vtr,
-                        false,
                         true,
                         ClientType.WEB,
                         null,
@@ -243,7 +240,6 @@ class StartServiceTest {
 
         assertThat(userStartInfo.isUpliftRequired(), equalTo(false));
         assertThat(userStartInfo.isIdentityRequired(), equalTo(expectedIdentityRequiredValue));
-        assertThat(userStartInfo.isConsentRequired(), equalTo(false));
         assertThat(userStartInfo.cookieConsent(), equalTo("some-cookie-consent"));
         assertThat(userStartInfo.gaCrossDomainTrackingId(), equalTo("some-ga-tracking-id"));
         assertThat(userStartInfo.isDocCheckingAppUser(), equalTo(false));
@@ -262,7 +258,6 @@ class StartServiceTest {
                 buildUserContext(
                         null,
                         false,
-                        false,
                         clientType,
                         generateSignedJWT(),
                         true,
@@ -277,7 +272,6 @@ class StartServiceTest {
         assertThat(userStartInfo.isUpliftRequired(), equalTo(false));
         assertThat(userStartInfo.isIdentityRequired(), equalTo(false));
         assertThat(userStartInfo.isAuthenticated(), equalTo(false));
-        assertThat(userStartInfo.isConsentRequired(), equalTo(false));
         assertThat(userStartInfo.cookieConsent(), equalTo("some-cookie-consent"));
         assertThat(userStartInfo.gaCrossDomainTrackingId(), equalTo("some-ga-tracking-id"));
         assertThat(userStartInfo.isDocCheckingAppUser(), equalTo(true));
@@ -414,7 +408,6 @@ class StartServiceTest {
                 buildUserContext(
                         null,
                         false,
-                        false,
                         ClientType.WEB,
                         generateSignedJWT(),
                         true,
@@ -442,7 +435,6 @@ class StartServiceTest {
         var userContext =
                 buildUserContext(
                         vtr,
-                        false,
                         true,
                         ClientType.WEB,
                         null,
@@ -461,7 +453,6 @@ class StartServiceTest {
 
         assertThat(userStartInfo.isUpliftRequired(), equalTo(expectedUpliftRequiredValue));
         assertThat(userStartInfo.isIdentityRequired(), equalTo(expectedIdentityRequiredValue));
-        assertThat(userStartInfo.isConsentRequired(), equalTo(false));
         assertThat(userStartInfo.cookieConsent(), equalTo("some-cookie-consent"));
         assertThat(userStartInfo.gaCrossDomainTrackingId(), equalTo("some-ga-tracking-id"));
         assertThat(userStartInfo.isDocCheckingAppUser(), equalTo(false));
@@ -479,7 +470,6 @@ class StartServiceTest {
         var userContext =
                 buildUserContext(
                         jsonArrayOf("Cl.Cm"),
-                        false,
                         cookieConsentShared,
                         clientType,
                         signedJWT,
@@ -601,7 +591,6 @@ class StartServiceTest {
 
     private UserContext buildUserContext(
             String vtrValue,
-            boolean consentRequired,
             boolean cookieConsentShared,
             ClientType clientType,
             SignedJWT requestObject,
@@ -648,7 +637,6 @@ class StartServiceTest {
                 new ClientRegistry()
                         .withClientID(CLIENT_ID.getValue())
                         .withClientName(CLIENT_NAME)
-                        .withConsentRequired(consentRequired)
                         .withCookieConsentShared(cookieConsentShared)
                         .withClientType(clientType.getValue())
                         .withIdentityVerificationSupported(identityVerificationSupport)

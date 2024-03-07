@@ -737,7 +737,6 @@ class LoginHandlerTest {
     private ClientRegistry generateClientRegistry() {
         return new ClientRegistry()
                 .withClientID(CLIENT_ID.getValue())
-                .withConsentRequired(false)
                 .withClientName(CLIENT_NAME)
                 .withSectorIdentifierUri("https://test.com")
                 .withSubjectType("public");

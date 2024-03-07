@@ -13,7 +13,6 @@ import uk.gov.di.authentication.frontendapi.entity.LoginResponse;
 import uk.gov.di.authentication.frontendapi.entity.PasswordResetType;
 import uk.gov.di.authentication.frontendapi.helpers.FrontendApiPhoneNumberHelper;
 import uk.gov.di.authentication.frontendapi.services.UserMigrationService;
-import uk.gov.di.authentication.shared.conditions.ConsentHelper;
 import uk.gov.di.authentication.shared.conditions.TermsAndConditionsHelper;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -258,7 +257,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                                 isSmokeTestClient);
             }
             sessionService.save(userContext.getSession().setNewAccount(EXISTING));
-            var consentRequired = ConsentHelper.userHasNotGivenConsent(userContext);
 
             var userMfaDetail =
                     getUserMFADetail(
@@ -309,7 +307,6 @@ public class LoginHandler extends BaseFrontendHandler<LoginRequest>
                             redactedPhoneNumber,
                             userMfaDetail.isMfaRequired(),
                             termsAndConditionsAccepted,
-                            consentRequired,
                             userMfaDetail.getMfaMethodType(),
                             userMfaDetail.isMfaMethodVerified(),
                             isPasswordChangeRequired));

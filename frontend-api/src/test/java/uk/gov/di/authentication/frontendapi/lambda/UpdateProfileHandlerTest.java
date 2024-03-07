@@ -15,13 +15,11 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.ClientRegistry;
 import uk.gov.di.authentication.shared.entity.ClientSession;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.Session;
 import uk.gov.di.authentication.shared.entity.UserProfile;
-import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.helpers.ClientSubjectHelper;
 import uk.gov.di.authentication.shared.helpers.PersistentIdHelper;
@@ -36,16 +34,13 @@ import uk.gov.di.authentication.sharedtest.logging.CaptureLoggingExtension;
 
 import java.net.URI;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 
 import static java.lang.String.format;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -53,14 +48,11 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_CONSENT_UPDATED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_REQUEST_ERROR;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_REQUEST_RECEIVED;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE;
-import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.CAPTURE_CONSENT;
 import static uk.gov.di.authentication.frontendapi.entity.UpdateProfileType.UPDATE_TERMS_CONDS;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID_HEADER;
-import static uk.gov.di.authentication.shared.helpers.CookieHelper.buildCookieString;
 import static uk.gov.di.authentication.sharedtest.logging.LogEventMatcher.withMessageContaining;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasJsonBody;
 import static uk.gov.di.authentication.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
@@ -70,7 +62,6 @@ class UpdateProfileHandlerTest {
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@digital.cabinet-office.gov.uk";
     private static final String PHONE_NUMBER = "07755551084";
     private static final boolean UPDATED_TERMS_AND_CONDITIONS_VALUE = true;
-    private static final boolean CONSENT_VALUE = true;
     private static final String SESSION_ID = "a-session-id";
     private static final String CLIENT_SESSION_ID = "client-session-id";
     private static final ClientID CLIENT_ID = new ClientID("client-one");
@@ -136,7 +127,7 @@ class UpdateProfileHandlerTest {
         usingValidSession();
         usingValidClientSession();
         when(authenticationService.getUserProfileFromEmail(TEST_EMAIL_ADDRESS))
-                .thenReturn(Optional.of(generateUserProfileWithConsent()));
+                .thenReturn(Optional.of(generateUserProfile()));
         when(clientService.getClient(CLIENT_ID.getValue())).thenReturn(Optional.of(clientRegistry));
         when(clientRegistry.getClientID()).thenReturn(CLIENT_ID.getValue());
 
@@ -161,48 +152,6 @@ class UpdateProfileHandlerTest {
         verify(auditService)
                 .submitAuditEvent(
                         UPDATE_PROFILE_TERMS_CONDS_ACCEPTANCE,
-                        CLIENT_ID.getValue(),
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "",
-                        PHONE_NUMBER,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        AuditService.RestrictedSection.empty);
-    }
-
-    @Test
-    void shouldReturn204WhenUpdatingProfileWithConsent() {
-        usingValidSession();
-        usingValidClientSession();
-        when(authenticationService.getUserProfileFromEmail(TEST_EMAIL_ADDRESS))
-                .thenReturn(Optional.of(generateUserProfileWithoutConsent()));
-
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(
-                Map.of(
-                        COOKIE,
-                        buildCookieString(
-                                "gs",
-                                SESSION_ID + "." + CLIENT_SESSION_ID,
-                                3600,
-                                "Secure; HttpOnly;",
-                                "domain"),
-                        CLIENT_SESSION_ID_HEADER,
-                        CLIENT_SESSION_ID));
-        event.setBody(
-                format(
-                        "{ \"email\": \"%s\", \"updateProfileType\": \"%s\", \"profileInformation\": \"%s\" }",
-                        TEST_EMAIL_ADDRESS, CAPTURE_CONSENT, CONSENT_VALUE));
-        APIGatewayProxyResponseEvent result = makeHandlerRequest(event);
-
-        assertThat(result, hasStatus(204));
-        verify(authenticationService)
-                .updateConsent(eq(TEST_EMAIL_ADDRESS), any(ClientConsent.class));
-        verify(auditService)
-                .submitAuditEvent(
-                        UPDATE_PROFILE_CONSENT_UPDATED,
                         CLIENT_ID.getValue(),
                         CLIENT_SESSION_ID,
                         session.getSessionId(),
@@ -293,7 +242,7 @@ class UpdateProfileHandlerTest {
         return response;
     }
 
-    private UserProfile generateUserProfileWithoutConsent() {
+    private UserProfile generateUserProfile() {
         return new UserProfile()
                 .withEmail(TEST_EMAIL_ADDRESS)
                 .withEmailVerified(true)
@@ -301,21 +250,5 @@ class UpdateProfileHandlerTest {
                 .withEmailVerified(true)
                 .withPublicSubjectID(new Subject().getValue())
                 .withSubjectID(INTERNAL_SUBJECT);
-    }
-
-    private UserProfile generateUserProfileWithConsent() {
-        Set<String> claims = ValidScopes.getClaimsForListOfScopes(SCOPES.toStringList());
-        return new UserProfile()
-                .withEmail(TEST_EMAIL_ADDRESS)
-                .withEmailVerified(true)
-                .withPhoneNumber(PHONE_NUMBER)
-                .withEmailVerified(true)
-                .withPublicSubjectID(new Subject().getValue())
-                .withSubjectID(INTERNAL_SUBJECT)
-                .withClientConsent(
-                        new ClientConsent(
-                                CLIENT_ID.getValue(),
-                                claims,
-                                LocalDateTime.now(ZoneId.of("UTC")).toString()));
     }
 }
