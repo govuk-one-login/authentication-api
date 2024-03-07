@@ -11,11 +11,13 @@ import software.amazon.awssdk.services.dynamodb.model.KeySchemaElement;
 import software.amazon.awssdk.services.dynamodb.model.KeyType;
 import software.amazon.awssdk.services.dynamodb.model.ProjectionType;
 import software.amazon.awssdk.services.dynamodb.model.ScalarAttributeType;
+import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
 import uk.gov.di.orchestration.sharedtest.basetest.DynamoTestConfiguration;
 
 import java.util.List;
+import java.util.Optional;
 
 import static java.util.Collections.emptyList;
 
@@ -408,6 +410,10 @@ public class ClientStoreExtension extends DynamoExtension implements AfterEachCa
 
     public boolean clientExists(String clientID) {
         return dynamoClientService.isValidClient(clientID);
+    }
+
+    public Optional<ClientRegistry> getClient(String clientId) {
+        return dynamoClientService.getClient(clientId);
     }
 
     @Override
