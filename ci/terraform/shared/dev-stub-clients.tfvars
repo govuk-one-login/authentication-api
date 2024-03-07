@@ -9,7 +9,6 @@ stub_rp_clients = [
       "https://di-auth-stub-relying-party-build-dev.london.cloudapps.digital/signed-out",
     ]
     test_client                     = "1"
-    consent_required                = "0"
     identity_verification_supported = "1"
     client_type                     = "web"
     scopes = [
