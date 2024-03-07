@@ -23,7 +23,6 @@ public class ClientRegistry {
     private String sectorIdentifierUri;
     private String subjectType;
     private boolean cookieConsentShared = false;
-    private boolean consentRequired = false;
     private boolean testClient = false;
     private List<String> testClientEmailAllowlist = new ArrayList<>();
     private List<String> claims = new ArrayList<>();
@@ -234,20 +233,6 @@ public class ClientRegistry {
 
     public ClientRegistry withTestClientEmailAllowlist(List<String> testClientEmailAllowlist) {
         this.testClientEmailAllowlist = testClientEmailAllowlist;
-        return this;
-    }
-
-    @DynamoDbAttribute("ConsentRequired")
-    public boolean isConsentRequired() {
-        return false;
-    }
-
-    public void setConsentRequired(boolean consentRequired) {
-        this.consentRequired = consentRequired;
-    }
-
-    public ClientRegistry withConsentRequired(boolean consentRequired) {
-        this.consentRequired = consentRequired;
         return this;
     }
 

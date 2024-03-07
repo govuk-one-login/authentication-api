@@ -34,9 +34,7 @@ import software.amazon.awssdk.services.kms.model.SignRequest;
 import software.amazon.awssdk.services.kms.model.SignResponse;
 import software.amazon.awssdk.services.kms.model.SigningAlgorithmSpec;
 import uk.gov.di.authentication.shared.entity.AccessTokenStore;
-import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.RefreshTokenStore;
-import uk.gov.di.authentication.shared.entity.ValidScopes;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.RequestBodyHelper;
@@ -51,7 +49,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -89,19 +86,12 @@ public class TokenService {
             Map<String, Object> additionalTokenClaims,
             Subject rpPairwiseSubject,
             Subject internalPairwiseSubject,
-            List<ClientConsent> clientConsents,
-            boolean isConsentRequired,
             OIDCClaimsRequest claimsRequest,
             boolean isDocAppJourney,
             JWSAlgorithm signingAlgorithm,
             String journeyId,
             String vot) {
-        List<String> scopesForToken;
-        if (isConsentRequired) {
-            scopesForToken = calculateScopesForToken(clientConsents, clientID, authRequestScopes);
-        } else {
-            scopesForToken = authRequestScopes.toStringList();
-        }
+        List<String> scopesForToken = authRequestScopes.toStringList();
         AccessToken accessToken =
                 segmentedFunctionCall(
                         "generateAndStoreAccessToken",
@@ -205,30 +195,6 @@ public class TokenService {
             return validateRefreshRequestParams(requestBody);
         }
         return Optional.empty();
-    }
-
-    private List<String> calculateScopesForToken(
-            List<ClientConsent> clientConsents, String clientID, Scope authRequestScopes) {
-        ClientConsent clientConsent =
-                clientConsents.stream()
-                        .filter(consent -> consent.getClientId().equals(clientID))
-                        .findFirst()
-                        .orElse(null);
-        if (clientConsent == null) {
-            LOG.warn("Client consent is empty for user");
-            throw new RuntimeException("Client consent is empty for user");
-        }
-        Set<String> claimsFromAuthnRequest =
-                ValidScopes.getClaimsForListOfScopes(authRequestScopes.toStringList());
-        Set<String> claims =
-                clientConsent.getClaims().stream()
-                        .filter(t -> claimsFromAuthnRequest.stream().anyMatch(t::equals))
-                        .collect(Collectors.toSet());
-        List<String> scopesForIdToken = ValidScopes.getScopesForListOfClaims(claims);
-        if (authRequestScopes.contains(OIDCScopeValue.OFFLINE_ACCESS.getValue())) {
-            scopesForIdToken.add(OIDCScopeValue.OFFLINE_ACCESS.getValue());
-        }
-        return scopesForIdToken;
     }
 
     private Optional<ErrorObject> validateRefreshRequestParams(Map<String, String> requestBody) {
