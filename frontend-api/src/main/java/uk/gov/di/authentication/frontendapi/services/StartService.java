@@ -9,7 +9,6 @@ import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.frontendapi.entity.ClientStartInfo;
 import uk.gov.di.authentication.frontendapi.entity.Features;
 import uk.gov.di.authentication.frontendapi.entity.UserStartInfo;
-import uk.gov.di.authentication.shared.conditions.ConsentHelper;
 import uk.gov.di.authentication.shared.conditions.DocAppUserHelper;
 import uk.gov.di.authentication.shared.conditions.IdentityHelper;
 import uk.gov.di.authentication.shared.conditions.UpliftHelper;
@@ -152,11 +151,9 @@ public class StartService {
             boolean reauthenticate) {
         var uplift = false;
         var identityRequired = false;
-        var consentRequired = false;
         MFAMethodType mfaMethodType = null;
         var docCheckingAppUser = DocAppUserHelper.isDocCheckingAppUser(userContext);
         if (Boolean.FALSE.equals(docCheckingAppUser)) {
-            consentRequired = ConsentHelper.userHasNotGivenConsent(userContext);
             uplift = UpliftHelper.upliftRequired(userContext);
             var clientRegistry = userContext.getClient().orElseThrow();
             identityRequired =
@@ -177,9 +174,8 @@ public class StartService {
                         && !reauthenticate;
 
         LOG.info(
-                "Found UserStartInfo for Authenticated: {} ConsentRequired: {} UpliftRequired: {} IdentityRequired: {}. CookieConsent: {}. GATrackingId: {}. DocCheckingAppUser: {}",
+                "Found UserStartInfo for Authenticated: {} UpliftRequired: {} IdentityRequired: {}. CookieConsent: {}. GATrackingId: {}. DocCheckingAppUser: {}",
                 userIsAuthenticated,
-                consentRequired,
                 uplift,
                 identityRequired,
                 cookieConsent,
@@ -187,7 +183,6 @@ public class StartService {
                 docCheckingAppUser);
 
         return new UserStartInfo(
-                consentRequired,
                 uplift,
                 identityRequired,
                 userIsAuthenticated,

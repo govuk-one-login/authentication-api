@@ -179,8 +179,6 @@ class StartHandlerTest {
         assertThat(response.getClient().getRedirectUri(), equalTo(REDIRECT_URL));
         assertFalse(response.getClient().isOneLoginService());
         assertThat(
-                response.getUser().isConsentRequired(), equalTo(userStartInfo.isConsentRequired()));
-        assertThat(
                 response.getUser().isIdentityRequired(),
                 equalTo(userStartInfo.isIdentityRequired()));
         assertThat(
@@ -213,7 +211,7 @@ class StartHandlerTest {
         when(userContext.getClientSession()).thenReturn(docAppClientSession);
         when(configurationService.getDocAppDomain()).thenReturn(URI.create("https://doc-app"));
         when(startService.validateSession(session, CLIENT_SESSION_ID)).thenReturn(session);
-        var userStartInfo = new UserStartInfo(false, false, false, false, null, null, true, null);
+        var userStartInfo = new UserStartInfo(false, false, false, null, null, true, null);
         when(startService.buildUserContext(session, docAppClientSession)).thenReturn(userContext);
         when(startService.buildClientStartInfo(userContext))
                 .thenReturn(
@@ -255,7 +253,6 @@ class StartHandlerTest {
         assertFalse(response.getUser().isIdentityRequired());
         assertFalse(response.getUser().isUpliftRequired());
         assertFalse(response.getUser().isAuthenticated());
-        assertFalse(response.getUser().isConsentRequired());
         assertThat(response.getUser().getCookieConsent(), equalTo(null));
         assertThat(response.getUser().getGaCrossDomainTrackingId(), equalTo(null));
         verify(clientSessionService).saveClientSession(anyString(), any());
@@ -284,7 +281,7 @@ class StartHandlerTest {
         when(startService.getGATrackingId(anyMap())).thenReturn(null);
         when(startService.getCookieConsentValue(anyMap(), anyString())).thenReturn(null);
         when(startService.buildUserStartInfo(userContext, null, null, true, true))
-                .thenReturn(new UserStartInfo(false, false, false, false, null, null, false, null));
+                .thenReturn(new UserStartInfo(false, false, false, null, null, false, null));
         usingValidSession();
         usingValidClientSession();
 
@@ -328,7 +325,7 @@ class StartHandlerTest {
         when(startService.getGATrackingId(anyMap())).thenReturn(null);
         when(startService.getCookieConsentValue(anyMap(), anyString())).thenReturn(null);
         when(startService.buildUserStartInfo(userContext, null, null, true, false))
-                .thenReturn(new UserStartInfo(false, false, false, true, null, null, false, null));
+                .thenReturn(new UserStartInfo(false, false, true, null, null, false, null));
         usingValidSession();
         usingValidClientSession();
 
@@ -500,6 +497,6 @@ class StartHandlerTest {
 
     private UserStartInfo getUserStartInfo(String cookieConsent, String gaCrossDomainTrackingId) {
         return new UserStartInfo(
-                true, false, false, true, cookieConsent, gaCrossDomainTrackingId, false, null);
+                false, false, true, cookieConsent, gaCrossDomainTrackingId, false, null);
     }
 }

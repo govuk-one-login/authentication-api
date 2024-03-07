@@ -6,12 +6,6 @@ import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.validation.Required;
 
 public class UserStartInfo {
-
-    @SerializedName("consentRequired")
-    @Expose
-    @Required
-    private boolean consentRequired;
-
     @SerializedName("upliftRequired")
     @Expose
     @Required
@@ -46,7 +40,6 @@ public class UserStartInfo {
     public UserStartInfo() {}
 
     public UserStartInfo(
-            boolean consentRequired,
             boolean upliftRequired,
             boolean identityRequired,
             boolean authenticated,
@@ -54,7 +47,6 @@ public class UserStartInfo {
             String gaCrossDomainTrackingId,
             boolean docCheckingAppUser,
             MFAMethodType mfaMethodType) {
-        this.consentRequired = consentRequired;
         this.upliftRequired = upliftRequired;
         this.identityRequired = identityRequired;
         this.authenticated = authenticated;
@@ -62,10 +54,6 @@ public class UserStartInfo {
         this.gaCrossDomainTrackingId = gaCrossDomainTrackingId;
         this.docCheckingAppUser = docCheckingAppUser;
         this.mfaMethodType = mfaMethodType;
-    }
-
-    public boolean isConsentRequired() {
-        return consentRequired;
     }
 
     public boolean isUpliftRequired() {
