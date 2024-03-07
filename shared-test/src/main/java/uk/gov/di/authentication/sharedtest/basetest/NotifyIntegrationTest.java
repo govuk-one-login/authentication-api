@@ -68,11 +68,12 @@ public abstract class NotifyIntegrationTest {
 
         private final NotifyStubExtension notifyStubExtension;
         private final String notifyApiKey;
+        private final SecureRandom secureRandom = new SecureRandom();
 
         public TestConfigurationService(NotifyStubExtension notifyStub) {
             this.notifyStubExtension = notifyStub;
             byte[] bytes = new byte[36];
-            new SecureRandom().nextBytes(bytes);
+            secureRandom.nextBytes(bytes);
             this.notifyApiKey = Hex.encodeHexString(bytes);
         }
 

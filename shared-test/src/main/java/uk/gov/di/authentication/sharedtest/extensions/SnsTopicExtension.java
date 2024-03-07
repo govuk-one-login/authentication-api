@@ -26,7 +26,7 @@ public class SnsTopicExtension extends HttpStubExtension implements BeforeEachCa
 
     private final String topicNameSuffix;
     private final SnsClient snsClient;
-
+    private final Random random = new Random();
     private String topicArn;
 
     public SnsTopicExtension(String topicNameSuffix) {
@@ -49,7 +49,7 @@ public class SnsTopicExtension extends HttpStubExtension implements BeforeEachCa
                         "{0}-{1}-{2}",
                         context.getTestClass().map(Class::getSimpleName).orElse("unknown"),
                         topicNameSuffix,
-                        Integer.toString(new Random().nextInt(99999)));
+                        Integer.toString(random.nextInt(99999)));
 
         topicArn = createTopic(topicName);
         initSubscriber();

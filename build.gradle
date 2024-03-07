@@ -71,6 +71,7 @@ subprojects {
         showStackTraces = true
         effort = Effort.valueOf('MAX')
         reportLevel = Confidence.valueOf('HIGH')
+        excludeFilter = file("$rootProject.projectDir/spotbugsExclude.xml")
     }
 
     configurations {
