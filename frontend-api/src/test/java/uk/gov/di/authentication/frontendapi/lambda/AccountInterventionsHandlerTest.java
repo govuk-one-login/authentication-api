@@ -169,8 +169,6 @@ public class AccountInterventionsHandlerTest {
     void
             shouldReturn200AndDefaultAccountInterventionsResponseWhenAccountInterventionsRequestUnsuccessfulAndAbortOnErrorIsFalse()
                     throws Json.JsonException, UnsuccessfulAccountInterventionsResponseException {
-        AccountInterventionsResponse defaultAccountInterventionsResponse =
-                new AccountInterventionsResponse(false, false, false);
         when(configurationService.abortOnAccountInterventionsErrorResponse()).thenReturn(false);
         when(authenticationService.getUserProfileByEmailMaybe(anyString()))
                 .thenReturn(Optional.of(generateUserProfile()));
