@@ -5,7 +5,6 @@ import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.orchestration.shared.entity.ClientConsent;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
 import uk.gov.di.orchestration.shared.entity.ValidScopes;
@@ -14,7 +13,6 @@ import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
 
 import java.security.KeyPair;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.Base64;
 import java.util.List;
 import java.util.Set;
@@ -408,9 +406,6 @@ class ClientSubjectHelperTest {
                 .withSubjectID(INTERNAL_SUBJECT.getValue())
                 .withCreated(LocalDateTime.now().toString())
                 .withUpdated(LocalDateTime.now().toString())
-                .withPublicSubjectID(PUBLIC_SUBJECT.getValue())
-                .withClientConsent(
-                        new ClientConsent(
-                                CLIENT_ID, claims, LocalDateTime.now(ZoneId.of("UTC")).toString()));
+                .withPublicSubjectID(PUBLIC_SUBJECT.getValue());
     }
 }
