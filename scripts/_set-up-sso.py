@@ -11,11 +11,22 @@ from datetime import datetime
 from pathlib import Path
 from time import sleep
 
+if os.getenv("FROM_WRAPPER", "false") != "true":
+    print(
+        "This script is intended to be run from the wrapper `scripts/set-up-sso.sh`. "
+        "Please use that instead."
+    )
+    sys.exit(1)
+
 try:
     import boto3
 except ImportError:
-    print("boto3 is not installed. Please install it using `pip3 install boto3`")
+    print(
+        "boto3 is not installed. Please refer to "
+        "https://govukverify.atlassian.net/wiki/x/IgFm5 for instructions."
+    )
     sys.exit(1)
+
 
 StrAnyDict = dict[str, object()]
 
