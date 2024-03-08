@@ -18,6 +18,7 @@ class UserCredentialsTest {
     private static final String SUBJECT_ID = new Subject("subject-id-3").getValue();
     private static final Date CREATED_DATE_TIME = NowHelper.nowMinus(30, ChronoUnit.SECONDS);
     private static final Date UPDATED_DATE_TIME = NowHelper.now();
+    private static final String PRIORITY_IDENTTIFER = "PRIMARY";
 
     @Test
     void shouldCreateUserCredentials() {
@@ -40,4 +41,29 @@ class UserCredentialsTest {
                 .withCreated(CREATED_DATE_TIME.toString())
                 .withUpdated(UPDATED_DATE_TIME.toString());
     }
+
+//    @Test
+//    public void testAdjustPriorityAndMovePrimaryToSecondary() {
+//        // Arrange
+//        UserCredentials userCredentials = new UserCredentials();
+//        MFAMethodV2 primaryMethod = PRIORITY_IDENTTIFER;
+//        MFAMethodV2 secondaryMethod = new MFAMethodV2()
+//                .withPriorityIdentifier("SECONDARY");
+//
+//        // Act
+//        userCredentials.adjustPriorityAndMovePrimaryToSecondary(primaryMethod);
+//        userCredentials.adjustPriorityAndMovePrimaryToSecondary(secondaryMethod);
+//
+//        // Assert
+//        assertNotNull(userCredentials.getMfaMethodV2s());
+//        assertEquals(2, userCredentials.getMfaMethodV2s().size());
+//
+//        // Check if the priority identifiers are adjusted as expected
+//        for (MFAMethodV2 method : userCredentials.getMfaMethodV2s()) {
+//            if ("PRIMARY".equals(method.getPriorityIdentifier())) {
+//                fail("Found 'PRIMARY' priority identifier when it should be 'SECONDARY'");
+//            }
+//
+//        }
+//    }
 }
