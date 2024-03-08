@@ -26,6 +26,7 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountInterventionsResponseException;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.*;
@@ -33,12 +34,15 @@ import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
+import static java.time.Clock.fixed;
+import static java.time.ZoneId.systemDefault;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -64,12 +68,16 @@ public class AccountInterventionsHandlerTest {
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final String TEST_ENVIRONMENT = "test-environment";
     private static final String APPLIED_AT_TIMESTAMP = "1696869005821";
-    private static final String DEFAULT_NO_INTERVENTIONS_RESPONSE =
-            String.format(
-                    "{\"passwordResetRequired\":%b,\"blocked\":%b,\"temporarilySuspended\":%b,\"appliedAt\":\"\"}",
-                    false, false, false);
-    private static final byte[] SALT = SaltHelper.generateNewSalt();
 
+    private static final Instant fixedDate = Instant.now();
+
+    private static final String fixedDateUnixTimestampString =
+            String.valueOf(fixedDate.toEpochMilli());
+    private final String DEFAULT_NO_INTERVENTIONS_RESPONSE =
+            String.format(
+                    "{\"passwordResetRequired\":%b,\"blocked\":%b,\"temporarilySuspended\":%b,\"appliedAt\":\"%s\"}",
+                    false, false, false, fixedDateUnixTimestampString);
+    private static final byte[] SALT = SaltHelper.generateNewSalt();
     private AccountInterventionsHandler handler;
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -112,6 +120,7 @@ public class AccountInterventionsHandlerTest {
         when(configurationService.getAccountInterventionsErrorMetricName())
                 .thenReturn("AISException");
         when(configurationService.getEnvironment()).thenReturn(TEST_ENVIRONMENT);
+        var fixedClock = new NowHelper.NowClock(fixed(fixedDate, systemDefault()));
         handler =
                 new AccountInterventionsHandler(
                         configurationService,
@@ -121,7 +130,8 @@ public class AccountInterventionsHandlerTest {
                         authenticationService,
                         accountInterventionsService,
                         auditService,
-                        cloudwatchMetricsService);
+                        cloudwatchMetricsService,
+                        fixedClock);
     }
 
     @Test
