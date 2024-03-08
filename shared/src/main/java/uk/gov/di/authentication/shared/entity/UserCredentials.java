@@ -17,6 +17,7 @@ public class UserCredentials {
     public static final String ATTRIBUTE_UPDATED = "Updated";
     public static final String ATTRIBUTE_MIGRATED_PASSWORD = "MigratedPassword";
     public static final String ATTRIBUTE_MFA_METHODS = "MfaMethods";
+    private static final String ATTRIBUTE_MFA_METHODS_V2 ="MfaMethodsV2" ;
     public static final String ATTRIBUTE_TEST_USER = "testUser";
 
     private String email;
@@ -26,6 +27,7 @@ public class UserCredentials {
     private String updated;
     private String migratedPassword;
     private List<MFAMethod> mfaMethods;
+    private List<MFAMethodV2> mfaMethodV2s;
     private int testUser;
 
     public UserCredentials() {}
@@ -140,6 +142,52 @@ public class UserCredentials {
         }
         return this;
     }
+    @DynamoDbAttribute(ATTRIBUTE_MFA_METHODS_V2)
+    public List<MFAMethodV2> getMfaMethodV2s() {
+        return mfaMethodV2s;
+    }
+
+    public UserCredentials withMfaMethodV2s(List<MFAMethodV2> mfaMethodV2s) {
+        this.mfaMethodV2s = mfaMethodV2s;
+        return this;
+    }
+
+    public UserCredentials setMfaMethodV2(MFAMethodV2 mfaMethodV2) {
+        if (this.mfaMethodV2s == null) {
+            this.mfaMethodV2s = List.of(mfaMethodV2);
+        } else {
+            this.mfaMethodV2s.removeIf(
+                    t -> t.getMfaMethodType().equals(mfaMethodV2.getMfaMethodType()));
+            this.mfaMethodV2s.add(mfaMethodV2);
+        }
+        return this;
+    }
+
+    public UserCredentials moveMfaMethodV2(MFAMethodV2 mfaMethodV2){
+        if (this.mfaMethodV2s == null) {
+            this.mfaMethodV2s = List.of(mfaMethodV2);
+        } else {
+            boolean primaryFound = false;
+
+            for (MFAMethodV2 existingMethod : this.mfaMethodV2s) {
+                if ("PRIMARY".equals(existingMethod.getPriorityIdentifier())) {
+                    // Replace the existing "PRIMARY" with the provided mfaMethodV2
+                    existingMethod.setPriorityIdentifier("SECONDARY");
+                    mfaMethodV2.setPriorityIdentifier("PRIMARY");
+                    primaryFound = true;
+                    break;
+                }
+            }
+
+            // If there is no existing "PRIMARY," add the provided mfaMethodV2 as "PRIMARY"
+            if (!primaryFound) {
+                mfaMethodV2.setPriorityIdentifier("PRIMARY");
+                this.mfaMethodV2s.add(mfaMethodV2);
+            }
+        }
+
+        return this;
+    }
 
     public UserCredentials removeAuthAppByCredentialIfPresent(String authAppCredential) {
         if (this.mfaMethods == null) {
@@ -149,6 +197,7 @@ public class UserCredentials {
             return this;
         }
     }
+
 
     @DynamoDbAttribute(ATTRIBUTE_TEST_USER)
     @DynamoDbSecondaryPartitionKey(indexNames = {"TestUserIndex"})
