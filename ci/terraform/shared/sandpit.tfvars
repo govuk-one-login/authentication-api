@@ -8,28 +8,6 @@ di_tools_signing_profile_version_arn         = "arn:aws:signer:eu-west-2:7066156
 
 stub_rp_clients = [
   {
-    client_name           = "di-auth-stub-relying-party-sandpit"
-    sector_identifier_uri = "https://di-auth-stub-relying-party-sandpit.london.cloudapps.digital"
-    callback_urls = [
-      "https://di-auth-stub-relying-party-sandpit.london.cloudapps.digital/oidc/authorization-code/callback",
-    ]
-    logout_urls = [
-      "https://di-auth-stub-relying-party-sandpit.london.cloudapps.digital/signed-out",
-    ]
-    test_client                     = "0"
-    consent_required                = "0"
-    client_type                     = "web"
-    identity_verification_supported = "0"
-    scopes = [
-      "openid",
-      "email",
-      "phone",
-      "wallet-subject-id",
-    ]
-    one_login_service = false
-    service_type      = "MANDATORY"
-  },
-  {
     client_name           = "relying-party-stub-sandpit"
     sector_identifier_uri = "https://rp-dev.build.stubs.account.gov.uk"
     callback_urls = [
