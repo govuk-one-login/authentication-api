@@ -37,7 +37,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
     private final CloudwatchMetricsService cloudwatchMetricsService;
 
     private final AccountInterventionsResponse noAccountInterventions =
-            new AccountInterventionsResponse(false, false, false);
+            new AccountInterventionsResponse(false, false, false, "");
 
     private static final Map<State, FrontendAuditableEvent>
             ACCOUNT_INTERVENTIONS_STATE_TO_AUDIT_EVENT =
@@ -152,7 +152,8 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
                 new AccountInterventionsResponse(
                         response.state().resetPassword(),
                         response.state().blocked(),
-                        response.state().suspended());
+                        response.state().suspended(),
+                        response.intervention().appliedAt());
         if (!configurationService.accountInterventionsServiceActionEnabled()) {
             LOG.info(
                     String.format(
