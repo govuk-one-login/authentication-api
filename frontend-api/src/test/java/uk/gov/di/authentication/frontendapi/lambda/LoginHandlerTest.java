@@ -141,7 +141,7 @@ class LoginHandlerTest {
 
     @BeforeEach
     void setUp() {
-        when(configurationService.getMaxPasswordRetries()).thenReturn(5);
+        when(configurationService.getMaxPasswordRetries()).thenReturn(6);
         when(configurationService.getTermsAndConditionsVersion()).thenReturn("1.0");
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(clientSession));
@@ -694,7 +694,7 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(codeStorageService.getIncorrectPasswordCountReauthJourney(EMAIL)).thenReturn(4);
+        when(codeStorageService.getIncorrectPasswordCountReauthJourney(EMAIL)).thenReturn(5);
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, false);
         usingDefaultVectorOfTrust();
@@ -726,7 +726,7 @@ class LoginHandlerTest {
         UserProfile userProfile = generateUserProfile(null);
         when(authenticationService.getUserProfileByEmailMaybe(EMAIL))
                 .thenReturn(Optional.of(userProfile));
-        when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(5);
+        when(codeStorageService.getIncorrectPasswordCount(EMAIL)).thenReturn(6);
         usingValidSession();
         usingApplicableUserCredentialsWithLogin(mfaMethodType, true);
         usingDefaultVectorOfTrust();
@@ -839,7 +839,7 @@ class LoginHandlerTest {
                         PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
                         pair("internalSubjectId", INTERNAL_SUBJECT_ID.getValue()),
                         incorrectPasswordCountPair,
-                        pair("attemptNoFailedAt", 5));
+                        pair("attemptNoFailedAt", 6));
 
         assertThat(result, hasStatus(401));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1008));
