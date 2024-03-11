@@ -200,12 +200,12 @@ public class VerifyCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest 
     }
 
     @Test
-    void shouldHaveMaxRetryCountANDSetBlockDuringRegistrationWithFeatureFlagOff()
+    void shouldHaveMaxRetryCountAndSetBlockDuringRegistrationWithFeatureFlagOff()
             throws Json.JsonException {
         String sessionId = redis.createSession();
         redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
         for (int i = 0; i < 5; i++) {
-            redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS);
+            redis.increaseMfaCodeAttemptsCount(EMAIL_ADDRESS, false);
         }
         var codeRequest = new VerifyCodeRequest(VERIFY_EMAIL, "123456");
 
