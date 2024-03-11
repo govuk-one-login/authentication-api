@@ -31,7 +31,7 @@ import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
 
@@ -149,7 +149,7 @@ public class IPVTokenService {
                     SignRequest.builder()
                             .message(
                                     SdkBytes.fromByteArray(
-                                            message.getBytes(Charset.forName("UTF-8"))))
+                                            message.getBytes(StandardCharsets.UTF_8)))
                             .keyId(configurationService.getIPVTokenSigningKeyAlias())
                             .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
                             .build();

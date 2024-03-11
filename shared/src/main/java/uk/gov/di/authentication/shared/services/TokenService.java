@@ -44,7 +44,7 @@ import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.serialization.Json.JsonException;
 
 import java.net.URI;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
@@ -416,7 +416,7 @@ public class TokenService {
                     SignRequest.builder()
                             .message(
                                     SdkBytes.fromByteArray(
-                                            message.getBytes(Charset.forName("UTF-8"))))
+                                            message.getBytes(StandardCharsets.UTF_8)))
                             .keyId(signingKeyId)
                             .signingAlgorithm(signingAlgorithm)
                             .build();

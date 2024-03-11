@@ -5,7 +5,7 @@ import uk.gov.di.orchestration.shared.entity.IdentityClaims;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
 
@@ -23,7 +23,7 @@ class SPOTRequestTest {
                 Base64.getEncoder()
                         .encodeToString(
                                 "Mmc48imEuO5kkVW7NtXVtx5h0mbCTfXsqXdWvbRMzdw="
-                                        .getBytes(Charset.forName("UTF-8")));
+                                        .getBytes(StandardCharsets.UTF_8));
         String spotRequestJson = buildSpotRequestJson("P2", "/trustmark", saltString);
 
         SPOTRequest spotRequest = objectMapper.readValue(spotRequestJson, SPOTRequest.class);
