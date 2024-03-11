@@ -36,17 +36,13 @@ public class MfaCodeProcessorFactory {
 
     public Optional<MfaCodeProcessor> getMfaCodeProcessor(
             MFAMethodType mfaMethodType, CodeRequest codeRequest, UserContext userContext) {
-
         switch (mfaMethodType) {
             case AUTH_APP:
                 int codeMaxRetries =
-                        List.of(
-                                                JourneyType.SIGN_IN,
-                                                JourneyType.PASSWORD_RESET_MFA,
-                                                JourneyType.REAUTHENTICATION)
+                        List.of(JourneyType.REGISTRATION, JourneyType.ACCOUNT_RECOVERY)
                                         .contains(codeRequest.getJourneyType())
-                                ? configurationService.getCodeMaxRetries()
-                                : configurationService.getCodeMaxRetriesRegistration();
+                                ? configurationService.getIncreasedCodeMaxRetries()
+                                : configurationService.getCodeMaxRetries();
                 return Optional.of(
                         new AuthAppCodeProcessor(
                                 userContext,
