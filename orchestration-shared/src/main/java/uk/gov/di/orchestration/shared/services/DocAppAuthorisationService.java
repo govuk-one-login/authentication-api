@@ -35,7 +35,7 @@ import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 
 import java.net.MalformedURLException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 import java.time.temporal.ChronoUnit;
@@ -189,7 +189,7 @@ public class DocAppAuthorisationService {
         var message = encodedHeader + "." + encodedClaims;
         var signRequest =
                 SignRequest.builder()
-                        .message(SdkBytes.fromByteArray(message.getBytes(Charset.forName("UTF-8"))))
+                        .message(SdkBytes.fromByteArray(message.getBytes(StandardCharsets.UTF_8)))
                         .keyId(docAppTokenSigningKeyAlias)
                         .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
                         .build();

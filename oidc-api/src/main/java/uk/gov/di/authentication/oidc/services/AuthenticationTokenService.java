@@ -35,7 +35,7 @@ import uk.gov.di.orchestration.shared.services.KmsConnectionService;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
 
@@ -166,7 +166,7 @@ public class AuthenticationTokenService {
             var encodedHeader = jwsHeader.toBase64URL();
             var encodedClaims = Base64URL.encode(claimsSet.toJWTClaimsSet().toString());
             var message = encodedHeader + "." + encodedClaims;
-            var messageToSign = ByteBuffer.wrap(message.getBytes(Charset.forName("UTF-8")));
+            var messageToSign = ByteBuffer.wrap(message.getBytes(StandardCharsets.UTF_8));
             var signRequest =
                     SignRequest.builder()
                             .message(SdkBytes.fromByteBuffer(messageToSign))

@@ -10,7 +10,7 @@ import software.amazon.awssdk.services.sns.model.SubscribeRequest;
 import uk.gov.di.orchestration.sharedtest.httpstub.HttpStubExtension;
 
 import java.net.URI;
-import java.util.Random;
+import java.security.SecureRandom;
 
 import static java.text.MessageFormat.format;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -26,7 +26,7 @@ public class SnsTopicExtension extends HttpStubExtension implements BeforeEachCa
 
     private final String topicNameSuffix;
     private final SnsClient snsClient;
-    private final Random random = new Random();
+    private final SecureRandom secureRandom = new SecureRandom();
     private String topicArn;
 
     public SnsTopicExtension(String topicNameSuffix) {
@@ -49,7 +49,7 @@ public class SnsTopicExtension extends HttpStubExtension implements BeforeEachCa
                         "{0}-{1}-{2}",
                         context.getTestClass().map(Class::getSimpleName).orElse("unknown"),
                         topicNameSuffix,
-                        Integer.toString(random.nextInt(99999)));
+                        Integer.toString(secureRandom.nextInt(99999)));
 
         topicArn = createTopic(topicName);
         initSubscriber();
