@@ -32,7 +32,8 @@ ext {
         nimbusds_oauth_version: "10.13.2",
         nimbusds_jwt_version: "9.29",
         junit: "5.10.2",
-        xray: "2.15.2"
+        xray: "2.15.2",
+        pact: "4.6.7"
     ]
 
     terraformEnvironment = project.properties["terraformEnvironment"] ?: "localstack"
@@ -99,6 +100,8 @@ subprojects {
         test_runtime
         xray
         pact_consumer
+        pact_provider
+        mockito
     }
 
     configurations.all {
@@ -159,7 +162,7 @@ subprojects {
 
         tests "org.junit.jupiter:junit-jupiter-api:${dependencyVersions.junit}",
                 "org.junit.jupiter:junit-jupiter-params:${dependencyVersions.junit}",
-                "org.mockito:mockito-core:5.11.0",
+                configurations.mockito,
                 "org.awaitility:awaitility:4.2.0",
                 "com.approvaltests:approvaltests:23.0.0",
                 configurations.hamcrest,
@@ -174,10 +177,14 @@ subprojects {
                 "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-v2:${dependencyVersions.xray}",
                 "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-v2-instrumentor:${dependencyVersions.xray}"
 
-        pact_consumer "au.com.dius.pact.consumer:junit5:4.6.7"
-
         spotbugs "com.github.spotbugs:spotbugs:4.8.3"
         spotbugsPlugins "software.amazon.lambda.snapstart:aws-lambda-snapstart-java-rules:0.2.0"
+
+        pact_consumer "au.com.dius.pact.consumer:junit5:${dependencyVersions.pact}"
+
+        pact_provider "au.com.dius.pact.provider:junit5:${dependencyVersions.pact}"
+
+        mockito "org.mockito:mockito-junit-jupiter:5.11.0"
     }
 }
 
