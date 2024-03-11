@@ -47,7 +47,8 @@ public enum FrontendAuditableEvent implements AuditableEvent {
     NO_INTERVENTION,
     PASSWORD_RESET_INTERVENTION,
     TEMP_SUSPENDED_INTERVENTION,
-    PERMANENTLY_BLOCKED_INTERVENTION;
+    PERMANENTLY_BLOCKED_INTERVENTION,
+    PASSWORD_RESET_INTERVENTION_COMPLETE;
 
     public AuditableEvent parseFromName(String name) {
         return valueOf(name);

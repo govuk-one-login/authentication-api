@@ -25,8 +25,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_ADDED;
-import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.PASSWORD_RESET_SUCCESSFUL;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.*;
 import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION;
 import static uk.gov.di.authentication.shared.entity.NotificationType.PASSWORD_RESET_CONFIRMATION_SMS;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
@@ -54,7 +53,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
         var response =
                 makeRequest(
-                        Optional.of(new ResetPasswordCompletionRequest(PASSWORD)),
+                        Optional.of(new ResetPasswordCompletionRequest(PASSWORD, false)),
                         constructFrontendHeaders(sessionId),
                         Map.of());
 
@@ -81,7 +80,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
         var response =
                 makeRequest(
-                        Optional.of(new ResetPasswordCompletionRequest(PASSWORD)),
+                        Optional.of(new ResetPasswordCompletionRequest(PASSWORD, false)),
                         constructFrontendHeaders(sessionId),
                         Map.of());
 
@@ -114,12 +113,38 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
                 makeRequest(
                         Optional.of(
                                 new ResetPasswordCompletionRequest(
-                                        CommonPasswordsExtension.TEST_COMMON_PASSWORD)),
+                                        CommonPasswordsExtension.TEST_COMMON_PASSWORD, false)),
                         constructFrontendHeaders(sessionId),
                         Map.of());
 
         assertThat(response, hasStatus(400));
         assertTrue(response.getBody().contains(ErrorResponse.ERROR_1040.getMessage()));
+    }
+
+    @Test
+    void shouldSendForcedResetJourneyAuditEventWhenForcedPasswordResetIsTrue()
+            throws Json.JsonException {
+        var sessionId = redis.createSession();
+        userStore.signUp(EMAIL_ADDRESS, "password-1", SUBJECT);
+        redis.addEmailToSession(sessionId, EMAIL_ADDRESS);
+
+        var response =
+                makeRequest(
+                        Optional.of(new ResetPasswordCompletionRequest(PASSWORD, true)),
+                        constructFrontendHeaders(sessionId),
+                        Map.of());
+
+        assertThat(response, hasStatus(204));
+
+        List<NotifyRequest> requests = notificationsQueue.getMessages(NotifyRequest.class);
+
+        assertThat(requests, hasSize(1));
+        assertThat(requests.get(0).getDestination(), equalTo(EMAIL_ADDRESS));
+        assertThat(requests.get(0).getNotificationType(), equalTo(PASSWORD_RESET_CONFIRMATION));
+
+        assertTxmaAuditEventsReceived(
+                txmaAuditQueue,
+                List.of(PASSWORD_RESET_INTERVENTION_COMPLETE, PASSWORD_RESET_SUCCESSFUL));
     }
 
     private static Stream<Boolean> phoneNumberVerified() {
@@ -140,7 +165,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
         var response =
                 makeRequest(
-                        Optional.of(new ResetPasswordCompletionRequest(PASSWORD)),
+                        Optional.of(new ResetPasswordCompletionRequest(PASSWORD, false)),
                         constructFrontendHeaders(sessionId),
                         Map.of());
 
@@ -189,7 +214,7 @@ public class ResetPasswordIntegrationTest extends ApiGatewayHandlerIntegrationTe
 
         var response =
                 makeRequest(
-                        Optional.of(new ResetPasswordCompletionRequest(PASSWORD)),
+                        Optional.of(new ResetPasswordCompletionRequest(PASSWORD, false)),
                         constructFrontendHeaders(sessionId),
                         Map.of());
 
