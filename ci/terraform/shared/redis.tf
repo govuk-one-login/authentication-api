@@ -35,6 +35,8 @@ resource "aws_elasticache_replication_group" "sessions_store" {
   multi_az_enabled            = true
   maintenance_window          = "wed:22:00-wed:23:00"
   notification_topic_arn      = aws_sns_topic.slack_events.arn
+  snapshot_retention_limit    = 5
+  snapshot_window             = "00:00-04:00"
 
   at_rest_encryption_enabled = true
   transit_encryption_enabled = true
