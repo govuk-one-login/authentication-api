@@ -8,6 +8,7 @@ import uk.gov.di.orchestration.shared.entity.BackChannelLogoutMessage;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
 
+import java.nio.charset.Charset;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -29,7 +30,8 @@ class BackChannelLogoutServiceTest {
 
         Mockito.when(authenticationService.getUserProfileByEmailMaybe("test@test.com"))
                 .thenReturn(Optional.of(user));
-        Mockito.when(authenticationService.getOrGenerateSalt(user)).thenReturn("salt".getBytes());
+        Mockito.when(authenticationService.getOrGenerateSalt(user))
+                .thenReturn("salt".getBytes(Charset.forName("UTF-8")));
 
         service.sendLogoutMessage(
                 new ClientRegistry()

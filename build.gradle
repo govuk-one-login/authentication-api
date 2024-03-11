@@ -1,4 +1,6 @@
 import java.util.stream.Collectors
+import com.github.spotbugs.snom.Confidence
+import com.github.spotbugs.snom.Effort
 
 buildscript {
     repositories {
@@ -13,6 +15,7 @@ plugins {
     id "com.avast.gradle.docker-compose" version "0.17.6"
     id "org.sonarqube" version "4.4.1.3373"
     id "jacoco-report-aggregation"
+    id 'com.github.spotbugs' version '6.0.8'
 }
 
 apply plugin: "java"
@@ -56,10 +59,19 @@ repositories {
 }
 
 subprojects {
+    apply plugin: "com.github.spotbugs"
     repositories {
         maven {
             url 'https://gds.jfrog.io/artifactory/di-allowed-repos'
         }
+    }
+
+    spotbugs {
+        ignoreFailures = false
+        showStackTraces = true
+        effort = Effort.valueOf('MAX')
+        reportLevel = Confidence.valueOf('HIGH')
+        excludeFilter = file("$rootProject.projectDir/spotbugsExclude.xml")
     }
 
     configurations {
@@ -163,6 +175,9 @@ subprojects {
                 "com.amazonaws:aws-xray-recorder-sdk-aws-sdk-v2-instrumentor:${dependencyVersions.xray}"
 
         pact_consumer "au.com.dius.pact.consumer:junit5:4.6.7"
+
+        spotbugs "com.github.spotbugs:spotbugs:4.8.3"
+        spotbugsPlugins "software.amazon.lambda.snapstart:aws-lambda-snapstart-java-rules:0.2.0"
     }
 }
 

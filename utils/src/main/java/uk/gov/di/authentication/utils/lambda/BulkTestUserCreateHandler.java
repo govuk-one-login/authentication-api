@@ -24,6 +24,7 @@ import uk.gov.di.authentication.shared.services.DynamoService;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.Charset;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -77,7 +78,8 @@ public class BulkTestUserCreateHandler implements RequestHandler<S3Event, Void> 
                     String line;
 
                     try (var bufferedReader =
-                            new BufferedReader(new InputStreamReader(fileContent))) {
+                            new BufferedReader(
+                                    new InputStreamReader(fileContent, Charset.forName("UTF-8")))) {
                         while ((line = bufferedReader.readLine()) != null) {
                             if (!line.isBlank() && !line.equals(CSV_HEADER_ROW_TEXT)) {
                                 batch.add(line.strip());

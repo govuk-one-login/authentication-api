@@ -58,9 +58,6 @@ public class AccountInterventionsApiStubHandler
                         .withReproveIdentity(false)
                         .withResetPassword(false);
 
-                InterventionsApiStubResponse noAccountInterventionStoreResponse =
-                        new InterventionsApiStubResponse(noAccountInterventionStore);
-
                 return generateApiGatewayProxyResponse(
                         200, new InterventionsApiStubResponse(noAccountInterventionStore));
             }

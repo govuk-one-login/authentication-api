@@ -279,8 +279,6 @@ public class MfaHandlerTest {
         when(authenticationService.getPhoneNumber(TEST_EMAIL_ADDRESS))
                 .thenReturn(Optional.of(PHONE_NUMBER));
         when(codeGeneratorService.sixDigitCode()).thenReturn(CODE);
-        NotifyRequest notifyRequest =
-                new NotifyRequest(PHONE_NUMBER, MFA_SMS, CODE, SupportedLanguage.EN);
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         event.setHeaders(
                 Map.of(

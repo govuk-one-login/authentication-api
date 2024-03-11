@@ -16,6 +16,7 @@ import uk.gov.di.authentication.shared.services.CommonPasswordsService;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -56,7 +57,8 @@ class S3ToDynamoDbHandlerTest {
         this.mockS3TextContent = Files.readString(path, StandardCharsets.UTF_8);
 
         var getObjectResponse = GetObjectResponse.builder().build();
-        var mockInputStream = new ByteArrayInputStream(mockS3TextContent.getBytes());
+        var mockInputStream =
+                new ByteArrayInputStream(mockS3TextContent.getBytes(Charset.forName("UTF-8")));
         var mockS3ObjectInputStream =
                 new ResponseInputStream<>(
                         getObjectResponse, AbortableInputStream.create(mockInputStream));
