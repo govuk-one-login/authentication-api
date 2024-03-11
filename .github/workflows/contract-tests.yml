@@ -9,16 +9,11 @@ env:
   PACT_BROKER_SOURCE_HEADER: ${{ secrets.PACT_BROKER_SOURCE_HEADER }}
 
 on:
-  pull_request:
-    types:
-      - opened
-      - reopened
-      - ready_for_review
-      - synchronize
-  merge_group:
-    # merge main
-    branches: [ main ]
-
+  workflow_dispatch:
+  push:
+    branches:
+      - PLAT-3567
+      
 jobs:
   contract-testing:
     runs-on: ubuntu-latest

@@ -62,6 +62,7 @@ pact {
     }
 }
 
+
 task buildZip(type: Zip) {
     from compileJava
     from processResources
