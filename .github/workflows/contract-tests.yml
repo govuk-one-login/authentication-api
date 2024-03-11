@@ -12,8 +12,8 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - PLAT-3567
-      
+      - PLAT-3567-1
+
 jobs:
   contract-testing:
     runs-on: ubuntu-latest
