@@ -16,7 +16,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
 import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsInboundResponse;
 import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsRequest;
-import uk.gov.di.authentication.frontendapi.entity.AccountInterventionsResponse;
 import uk.gov.di.authentication.frontendapi.entity.Intervention;
 import uk.gov.di.authentication.frontendapi.entity.State;
 import uk.gov.di.authentication.frontendapi.services.AccountInterventionsService;
@@ -27,6 +26,7 @@ import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.entity.VectorOfTrust;
 import uk.gov.di.authentication.shared.exceptions.UnsuccessfulAccountInterventionsResponseException;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
+import uk.gov.di.authentication.shared.helpers.NowHelper;
 import uk.gov.di.authentication.shared.helpers.SaltHelper;
 import uk.gov.di.authentication.shared.serialization.Json;
 import uk.gov.di.authentication.shared.services.*;
@@ -34,12 +34,15 @@ import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
+import static java.time.Clock.fixed;
+import static java.time.ZoneId.systemDefault;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -64,8 +67,17 @@ public class AccountInterventionsHandlerTest {
     private static final String TEST_SUBJECT_ID = "subject-id";
     private static final String INTERNAL_SECTOR_URI = "https://test.account.gov.uk";
     private static final String TEST_ENVIRONMENT = "test-environment";
-    private static final byte[] SALT = SaltHelper.generateNewSalt();
+    private static final String APPLIED_AT_TIMESTAMP = "1696869005821";
 
+    private static final Instant fixedDate = Instant.now();
+
+    private static final String fixedDateUnixTimestampString =
+            String.valueOf(fixedDate.toEpochMilli());
+    private final String DEFAULT_NO_INTERVENTIONS_RESPONSE =
+            String.format(
+                    "{\"passwordResetRequired\":%b,\"blocked\":%b,\"temporarilySuspended\":%b,\"appliedAt\":\"%s\"}",
+                    false, false, false, fixedDateUnixTimestampString);
+    private static final byte[] SALT = SaltHelper.generateNewSalt();
     private AccountInterventionsHandler handler;
     private final Context context = mock(Context.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
@@ -108,6 +120,7 @@ public class AccountInterventionsHandlerTest {
         when(configurationService.getAccountInterventionsErrorMetricName())
                 .thenReturn("AISException");
         when(configurationService.getEnvironment()).thenReturn(TEST_ENVIRONMENT);
+        var fixedClock = new NowHelper.NowClock(fixed(fixedDate, systemDefault()));
         handler =
                 new AccountInterventionsHandler(
                         configurationService,
@@ -117,7 +130,8 @@ public class AccountInterventionsHandlerTest {
                         authenticationService,
                         accountInterventionsService,
                         auditService,
-                        cloudwatchMetricsService);
+                        cloudwatchMetricsService,
+                        fixedClock);
     }
 
     @Test
@@ -168,7 +182,7 @@ public class AccountInterventionsHandlerTest {
     @Test
     void
             shouldReturn200AndDefaultAccountInterventionsResponseWhenAccountInterventionsRequestUnsuccessfulAndAbortOnErrorIsFalse()
-                    throws Json.JsonException, UnsuccessfulAccountInterventionsResponseException {
+                    throws UnsuccessfulAccountInterventionsResponseException {
         when(configurationService.abortOnAccountInterventionsErrorResponse()).thenReturn(false);
         when(authenticationService.getUserProfileByEmailMaybe(anyString()))
                 .thenReturn(Optional.of(generateUserProfile()));
@@ -178,11 +192,7 @@ public class AccountInterventionsHandlerTest {
                                 "Any 4xx/5xx error valid here", 404));
         var result = handler.handleRequest(apiRequestEventWithEmail(TEST_EMAIL_ADDRESS), context);
         assertThat(result, hasStatus(200));
-        assertEquals(
-                result.getBody(),
-                String.format(
-                        "{\"passwordResetRequired\":%b,\"blocked\":%b,\"temporarilySuspended\":%b}",
-                        false, false, false));
+        assertEquals(DEFAULT_NO_INTERVENTIONS_RESPONSE, result.getBody());
     }
 
     @Test
@@ -199,11 +209,7 @@ public class AccountInterventionsHandlerTest {
                                 "Any 4xx/5xx error valid here", 404));
         var result = handler.handleRequest(apiRequestEventWithEmail(TEST_EMAIL_ADDRESS), context);
         assertThat(result, hasStatus(200));
-        assertEquals(
-                result.getBody(),
-                String.format(
-                        "{\"passwordResetRequired\":%b,\"blocked\":%b,\"temporarilySuspended\":%b}",
-                        false, false, false));
+        assertEquals(DEFAULT_NO_INTERVENTIONS_RESPONSE, result.getBody());
     }
 
     @Test
@@ -214,14 +220,12 @@ public class AccountInterventionsHandlerTest {
         when(authenticationService.getUserProfileByEmailMaybe(anyString()))
                 .thenReturn(Optional.of(generateUserProfile()));
         when(accountInterventionsService.sendAccountInterventionsOutboundRequest(any()))
-                .thenReturn(generateAccountInterventionResponse(true, true, true, true));
+                .thenReturn(
+                        generateAccountInterventionResponse(
+                                true, true, true, true, APPLIED_AT_TIMESTAMP));
         var result = handler.handleRequest(apiRequestEventWithEmail(TEST_EMAIL_ADDRESS), context);
         assertThat(result, hasStatus(200));
-        assertEquals(
-                result.getBody(),
-                String.format(
-                        "{\"passwordResetRequired\":%b,\"blocked\":%b,\"temporarilySuspended\":%b}",
-                        false, false, false));
+        assertEquals(DEFAULT_NO_INTERVENTIONS_RESPONSE, result.getBody());
     }
 
     @Test
@@ -232,11 +236,7 @@ public class AccountInterventionsHandlerTest {
 
         verify(accountInterventionsService, never()).sendAccountInterventionsOutboundRequest(any());
         assertThat(result, hasStatus(200));
-        assertEquals(
-                result.getBody(),
-                String.format(
-                        "{\"passwordResetRequired\":%b,\"blocked\":%b,\"temporarilySuspended\":%b}",
-                        false, false, false));
+        assertEquals(DEFAULT_NO_INTERVENTIONS_RESPONSE, result.getBody());
     }
 
     static Stream<Arguments> accountInterventionResponseParameters() {
@@ -284,22 +284,21 @@ public class AccountInterventionsHandlerTest {
         when(accountInterventionsService.sendAccountInterventionsOutboundRequest(any()))
                 .thenReturn(
                         generateAccountInterventionResponse(
-                                blocked, suspended, reproveIdentity, resetPassword));
+                                blocked,
+                                suspended,
+                                reproveIdentity,
+                                resetPassword,
+                                APPLIED_AT_TIMESTAMP));
         var result =
                 handler.handleRequestWithUserContext(
                         event, context, new AccountInterventionsRequest("test"), userContext);
         assertThat(result, hasStatus(200));
 
-        var accountInterventionsResponse =
-                new AccountInterventionsResponse(resetPassword, blocked, suspended);
-        assertThat(
-                result,
-                hasBody(objectMapper.writeValueAsStringCamelCase(accountInterventionsResponse)));
         assertEquals(
-                result.getBody(),
                 String.format(
-                        "{\"passwordResetRequired\":%b,\"blocked\":%b,\"temporarilySuspended\":%b}",
-                        resetPassword, blocked, suspended));
+                        "{\"passwordResetRequired\":%b,\"blocked\":%b,\"temporarilySuspended\":%b,\"appliedAt\":\"%s\"}",
+                        resetPassword, blocked, suspended, APPLIED_AT_TIMESTAMP),
+                result.getBody());
         verify(auditService)
                 .submitAuditEvent(
                         expectedEvent,
@@ -323,11 +322,15 @@ public class AccountInterventionsHandlerTest {
     }
 
     private AccountInterventionsInboundResponse generateAccountInterventionResponse(
-            boolean blocked, boolean suspended, boolean reproveIdentity, boolean resetPassword) {
+            boolean blocked,
+            boolean suspended,
+            boolean reproveIdentity,
+            boolean resetPassword,
+            String appliedAtTimestamp) {
         return new AccountInterventionsInboundResponse(
                 new Intervention(
                         "1696969322935",
-                        "1696869005821",
+                        appliedAtTimestamp,
                         "1696869003456",
                         "AIS_USER_PASSWORD_RESET_AND_IDENTITY_VERIFIED",
                         "1696969322935",
