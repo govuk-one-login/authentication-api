@@ -134,6 +134,7 @@ public class VerifyCodeHandler extends BaseFrontendHandler<VerifyCodeRequest>
             var errorResponse =
                     ValidationHelper.validateVerificationCode(
                             notificationType,
+                            journeyType,
                             code,
                             codeRequest.getCode(),
                             codeStorageService,

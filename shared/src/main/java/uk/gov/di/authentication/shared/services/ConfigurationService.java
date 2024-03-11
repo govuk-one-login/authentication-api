@@ -84,6 +84,10 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
         return Long.parseLong(System.getenv().getOrDefault("LOCKOUT_DURATION", "900"));
     }
 
+    public long getReducedLockoutDuration() {
+        return Long.parseLong(System.getenv().getOrDefault("REDUCED_LOCKOUT_DURATION", "900"));
+    }
+
     public int getBulkUserEmailBatchQueryLimit() {
         return Integer.parseInt(
                 System.getenv().getOrDefault("BULK_USER_EMAIL_BATCH_QUERY_LIMIT", "25"));

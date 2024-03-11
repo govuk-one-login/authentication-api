@@ -83,6 +83,7 @@ public class PhoneNumberCodeProcessor extends MfaCodeProcessor {
         var errorResponse =
                 ValidationHelper.validateVerificationCode(
                         notificationType,
+                        codeRequest.getJourneyType(),
                         storedCode,
                         codeRequest.getCode(),
                         codeStorageService,
