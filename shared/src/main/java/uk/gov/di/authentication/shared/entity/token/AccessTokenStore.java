@@ -17,6 +17,7 @@ public class AccessTokenStore {
     private boolean used;
     private String sectorIdentifier;
     private boolean isNewAccount;
+    private Long passwordResetTime;
 
     @DynamoDbPartitionKey
     @DynamoDbAttribute("AccessToken")
@@ -114,6 +115,20 @@ public class AccessTokenStore {
 
     public AccessTokenStore withNewAccount(boolean isNewAccount) {
         this.isNewAccount = isNewAccount;
+        return this;
+    }
+
+    @DynamoDbAttribute("PasswordResetTime")
+    public Long getPasswordResetTime() {
+        return passwordResetTime;
+    }
+
+    public void setPasswordResetTime(Long passwordResetTime) {
+        this.passwordResetTime = passwordResetTime;
+    }
+
+    public AccessTokenStore withPasswordResetTime(Long passwordResetTime) {
+        this.passwordResetTime = passwordResetTime;
         return this;
     }
 }

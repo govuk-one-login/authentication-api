@@ -34,7 +34,8 @@ public class AccessTokenService extends BaseDynamoService<AccessTokenStore> {
             String subjectID,
             List<String> claims,
             boolean isNewAccount,
-            String sectorIdentifier) {
+            String sectorIdentifier,
+            Long passwordResetTime) {
         if (isAccessTokenStoreEnabled) {
             var tokenStore =
                     get(accessToken)
@@ -48,7 +49,8 @@ public class AccessTokenService extends BaseDynamoService<AccessTokenStore> {
                             .withTimeToExist(
                                     NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS)
                                             .toInstant()
-                                            .getEpochSecond());
+                                            .getEpochSecond())
+                            .withPasswordResetTime(passwordResetTime);
             update(tokenStore);
         }
     }

@@ -155,7 +155,8 @@ public class TokenHandler
                     authCodeStore.getSubjectID(),
                     authCodeStore.getClaims(),
                     authCodeStore.getIsNewAccount(),
-                    authCodeStore.getSectorIdentifier());
+                    authCodeStore.getSectorIdentifier(),
+                    authCodeStore.getPasswordResetTime());
 
             authorisationCodeService.updateHasBeenUsed(authCodeStore.getAuthCode(), true);
 
