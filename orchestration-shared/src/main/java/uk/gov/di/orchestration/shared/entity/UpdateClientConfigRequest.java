@@ -59,6 +59,10 @@ public class UpdateClientConfigRequest {
     @Expose
     private List<String> clientLoCs;
 
+    @SerializedName("back_channel_logout_uri")
+    @Expose
+    private String backChannelLogoutUri;
+
     public UpdateClientConfigRequest() {}
 
     public String getClientId() {
@@ -111,6 +115,10 @@ public class UpdateClientConfigRequest {
 
     public List<String> getClientLoCs() {
         return clientLoCs;
+    }
+
+    public String getBackChannelLogoutUri() {
+        return backChannelLogoutUri;
     }
 
     public UpdateClientConfigRequest setClientId(String clientId) {
@@ -176,5 +184,10 @@ public class UpdateClientConfigRequest {
 
     public void setSectorIdentifierUri(String sectorIdentifierUri) {
         this.sectorIdentifierUri = sectorIdentifierUri;
+    }
+
+    public UpdateClientConfigRequest setBackChannelLogoutUri(String backChannelLogoutUri) {
+        this.backChannelLogoutUri = backChannelLogoutUri;
+        return this;
     }
 }

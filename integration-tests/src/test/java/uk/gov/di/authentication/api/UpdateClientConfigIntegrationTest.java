@@ -5,11 +5,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationResponse;
 import uk.gov.di.authentication.clientregistry.lambda.UpdateClientConfigHandler;
+import uk.gov.di.orchestration.shared.entity.ClientType;
+import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.UpdateClientConfigRequest;
+import uk.gov.di.orchestration.shared.entity.ValidClaims;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -19,6 +23,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static uk.gov.di.authentication.clientregistry.domain.ClientRegistryAuditableEvent.UPDATE_CLIENT_REQUEST_RECEIVED;
 import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
+import static uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper.GENERATE_RSA_KEY_PAIR;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 public class UpdateClientConfigIntegrationTest extends ApiGatewayHandlerIntegrationTest {
@@ -34,7 +39,7 @@ public class UpdateClientConfigIntegrationTest extends ApiGatewayHandlerIntegrat
     }
 
     @Test
-    public void shouldUpdateClientNameSuccessfully() throws Json.JsonException {
+    void shouldUpdateClientSuccessfully() throws Json.JsonException {
         clientStore.registerClient(
                 CLIENT_ID,
                 "The test client",
@@ -50,7 +55,39 @@ public class UpdateClientConfigIntegrationTest extends ApiGatewayHandlerIntegrat
                 true);
 
         UpdateClientConfigRequest updateRequest = new UpdateClientConfigRequest();
-        updateRequest.setClientName("new-client-name");
+        var expectedClientName = "new-client-name";
+        updateRequest.setClientName(expectedClientName);
+        var expectedRedirectUris = List.of("https://example.com/1", "https://example.com/2");
+        updateRequest.setRedirectUris(expectedRedirectUris);
+        var expectedContacts = List.of("test1@example.com", "test2@example.com");
+        updateRequest.setContacts(expectedContacts);
+        var expectedPublicKey =
+                Base64.getMimeEncoder()
+                        .encodeToString(GENERATE_RSA_KEY_PAIR().getPublic().getEncoded());
+        updateRequest.setPublicKey(expectedPublicKey);
+        var expectedScopes = List.of("openid", "email");
+        updateRequest.setScopes(expectedScopes);
+        var expectedPostLogoutRedirectUris =
+                List.of("https://example.com/logout", "https://example.com/logged-out");
+        updateRequest.setPostLogoutRedirectUris(expectedPostLogoutRedirectUris);
+        var expectedServiceType = ServiceType.OPTIONAL.toString();
+        updateRequest.setServiceType(expectedServiceType);
+        var expectedJarValidationRequired = true;
+        updateRequest.setJarValidationRequired(expectedJarValidationRequired);
+        var expectedClaims =
+                List.of(ValidClaims.ADDRESS.toString(), ValidClaims.PASSPORT.toString());
+        updateRequest.setClaims(expectedClaims);
+        var expectedSectorIdentifierUri = "https://test.example.com";
+        updateRequest.setSectorIdentifierUri(expectedSectorIdentifierUri);
+        var expectedClientType = ClientType.WEB.getValue();
+        updateRequest.setClientType(expectedClientType);
+        var expectedAcceptedLevelsOfConfidence =
+                List.of(
+                        LevelOfConfidence.MEDIUM_LEVEL.getValue(),
+                        LevelOfConfidence.HMRC200.getValue());
+        updateRequest.setClientLoCs(expectedAcceptedLevelsOfConfidence);
+        var expectedBackchannelLogoutUri = "https://api.example.com/backchannel/logout";
+        updateRequest.setBackChannelLogoutUri(expectedBackchannelLogoutUri);
 
         var response =
                 makeRequest(
@@ -62,9 +99,42 @@ public class UpdateClientConfigIntegrationTest extends ApiGatewayHandlerIntegrat
         assertThat(response, hasStatus(200));
         ClientRegistrationResponse clientResponse =
                 objectMapper.readValue(response.getBody(), ClientRegistrationResponse.class);
-        assertThat(clientResponse.getClientName(), equalTo("new-client-name"));
+
         assertThat(clientResponse.getClientId(), equalTo(CLIENT_ID));
-        assertThat(clientResponse.getScopes(), equalTo(singletonList("openid")));
+
+        assertThat(clientResponse.getClientName(), equalTo(expectedClientName));
+        assertThat(clientResponse.getRedirectUris(), equalTo(expectedRedirectUris));
+        assertThat(clientResponse.getContacts(), equalTo(expectedContacts));
+        assertThat(clientResponse.getScopes(), equalTo(expectedScopes));
+        assertThat(
+                clientResponse.getPostLogoutRedirectUris(),
+                equalTo(expectedPostLogoutRedirectUris));
+        assertThat(clientResponse.getServiceType(), equalTo(expectedServiceType));
+        assertThat(
+                clientResponse.getJarValidationRequired(), equalTo(expectedJarValidationRequired));
+        assertThat(clientResponse.getClaims(), equalTo(expectedClaims));
+        assertThat(clientResponse.getSectorIdentifierUri(), equalTo(expectedSectorIdentifierUri));
+        assertThat(clientResponse.getClientType(), equalTo(expectedClientType));
+        assertThat(clientResponse.getBackChannelLogoutUri(), equalTo(expectedBackchannelLogoutUri));
+
+        var persistedClient = clientStore.getClient(CLIENT_ID).orElseThrow();
+        assertThat(persistedClient.getClientName(), equalTo(expectedClientName));
+        assertThat(persistedClient.getRedirectUrls(), equalTo(expectedRedirectUris));
+        assertThat(persistedClient.getContacts(), equalTo(expectedContacts));
+        assertThat(persistedClient.getPublicKey(), equalTo(expectedPublicKey));
+        assertThat(persistedClient.getScopes(), equalTo(expectedScopes));
+        assertThat(
+                persistedClient.getPostLogoutRedirectUrls(),
+                equalTo(expectedPostLogoutRedirectUris));
+        assertThat(persistedClient.getServiceType(), equalTo(expectedServiceType));
+        assertThat(
+                persistedClient.isJarValidationRequired(), equalTo(expectedJarValidationRequired));
+        assertThat(persistedClient.getClaims(), equalTo(expectedClaims));
+        assertThat(persistedClient.getSectorIdentifierUri(), equalTo(expectedSectorIdentifierUri));
+        assertThat(persistedClient.getClientType(), equalTo(expectedClientType));
+        assertThat(persistedClient.getClientLoCs(), equalTo(expectedAcceptedLevelsOfConfidence));
+        assertThat(
+                persistedClient.getBackChannelLogoutUri(), equalTo(expectedBackchannelLogoutUri));
 
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(UPDATE_CLIENT_REQUEST_RECEIVED));
     }
