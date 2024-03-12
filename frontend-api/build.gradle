@@ -33,7 +33,8 @@ dependencies {
             configurations.sqs,
             configurations.s3,
             configurations.kms,
-            configurations.dynamodb
+            configurations.dynamodb,
+            configurations.pact_consumer
 
     testRuntimeOnly configurations.test_runtime
 }
@@ -41,6 +42,7 @@ dependencies {
 test {
     useJUnitPlatform()
     environment "TRACING_ENABLED", "false"
+    systemProperties['pact.rootDir'] = "$buildDir/custom-pacts-directory"
 }
 
 task buildZip(type: Zip) {
