@@ -229,8 +229,6 @@ class ProcessingIdentityHandlerTest {
                 .thenReturn(
                         generateApiGatewayProxyResponse(
                                 302, "", Map.of(ResponseHeaders.LOCATION, redirectUrl), null));
-        when(configurationService.isAccountInterventionServiceCallEnabled()).thenReturn(true);
-        when(accountInterventionService.getAccountState(anyString(), any())).thenReturn(aisResult);
 
         var result = handler.handleRequest(event, context);
 
