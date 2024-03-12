@@ -369,16 +369,23 @@ public class AuthenticationCallbackHandler
                 Boolean reproveIdentity = null;
                 if (configurationService.isAccountInterventionServiceActionEnabled()) {
                     reproveIdentity = accountInterventionState.reproveIdentity();
-                    if (accountStatus.equals(AccountInterventionStatus.BLOCKED)
-                            || accountStatus.equals(
-                                    AccountInterventionStatus.SUSPENDED_RESET_PASSWORD)
-                            || accountStatus.equals(
-                                    AccountInterventionStatus.SUSPENDED_RESET_PASSWORD_REPROVE_ID)
-                            || (!identityRequired
-                                    && accountStatus.equals(
-                                            AccountInterventionStatus.SUSPENDED_NO_ACTION))) {
-                        return logoutService.handleAccountInterventionLogout(
-                                userSession, input, clientId, accountInterventionState);
+                    switch (accountStatus) {
+                        case BLOCKED,
+                                SUSPENDED_RESET_PASSWORD,
+                                SUSPENDED_RESET_PASSWORD_REPROVE_ID -> {
+                            return logoutService.handleAccountInterventionLogout(
+                                    userSession, input, clientId, accountInterventionState);
+                        }
+                        case SUSPENDED_NO_ACTION -> {
+                            if (!identityRequired) {
+                                return logoutService.handleAccountInterventionLogout(
+                                        userSession, input, clientId, accountInterventionState);
+                            }
+                            // continue
+                        }
+                        case NO_INTERVENTION, SUSPENDED_REPROVE_ID -> {
+                            // continue
+                        }
                     }
                 }
 
