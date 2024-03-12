@@ -8,9 +8,19 @@ import au.com.dius.pact.consumer.junit5.PactTestFor;
 import au.com.dius.pact.core.model.PactSpecVersion;
 import au.com.dius.pact.core.model.RequestResponsePact;
 import au.com.dius.pact.core.model.annotations.Pact;
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.crypto.ECDSASigner;
+import com.nimbusds.jose.crypto.impl.ECDSA;
+import com.nimbusds.jose.jwk.ECKey;
+import com.nimbusds.jose.util.Base64URL;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import com.nimbusds.oauth2.sdk.*;
 import com.nimbusds.oauth2.sdk.id.*;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
@@ -23,8 +33,10 @@ import uk.gov.di.orchestration.shared.helpers.*;
 import uk.gov.di.orchestration.shared.services.*;
 
 import java.net.URI;
+import java.text.ParseException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Base64;
 import java.util.Date;
 
 import static au.com.dius.pact.consumer.dsl.LambdaDsl.newJsonBody;
@@ -58,80 +70,9 @@ public class IpvTokenTest {
             "eyJraWQiOiIxNDM0MjM1NDM1NDM1MyIsImFsZyI6IkVTMjU2In0";
     private static final String CLIENT_ASSERTION_BODY =
             "eyJzdWIiOiJhdXRoT3JjaGVzdHJhdG9yIiwiYXVkIjoiaHR0cDovL2lwdi8iLCJuYmYiOjk0NjY4NDgwMCwiaXNzIjoiYXV0aE9yY2hlc3RyYXRvciIsImV4cCI6NDA3MDkwODgwMCwiaWF0Ijo5NDY2ODQ4MDAsImp0aSI6IjEifQ";
+    // Generated from debugging generationOfJwtSignature the signature in generatePrivateKeyJwt
     private static final String CLIENT_ASSERTION_SIGNATURE =
-            "L3h9FCeYLIUCpjMGjnBm6Ca8GmKqICHSGY5Aq0svbMNTmLP04dzh5V8E6N2InzbXC9_4Q7u6mAo3yubbYsVSdA";
-    private static final byte[] SIGNATURE_BYTES = {
-        (byte) 48,
-        (byte) 68,
-        (byte) 2,
-        (byte) 32,
-        (byte) 47,
-        (byte) 120,
-        (byte) 125,
-        (byte) 20,
-        (byte) 39,
-        (byte) -104,
-        (byte) 44,
-        (byte) -123,
-        (byte) 2,
-        (byte) -90,
-        (byte) 51,
-        (byte) 6,
-        (byte) -114,
-        (byte) 112,
-        (byte) 102,
-        (byte) -24,
-        (byte) 38,
-        (byte) -68,
-        (byte) 26,
-        (byte) 98,
-        (byte) -86,
-        (byte) 32,
-        (byte) 33,
-        (byte) -46,
-        (byte) 25,
-        (byte) -114,
-        (byte) 64,
-        (byte) -85,
-        (byte) 75,
-        (byte) 47,
-        (byte) 108,
-        (byte) -61,
-        (byte) 2,
-        (byte) 32,
-        (byte) 83,
-        (byte) -104,
-        (byte) -77,
-        (byte) -12,
-        (byte) -31,
-        (byte) -36,
-        (byte) -31,
-        (byte) -27,
-        (byte) 95,
-        (byte) 4,
-        (byte) -24,
-        (byte) -35,
-        (byte) -120,
-        (byte) -97,
-        (byte) 54,
-        (byte) -41,
-        (byte) 11,
-        (byte) -33,
-        (byte) -8,
-        (byte) 67,
-        (byte) -69,
-        (byte) -70,
-        (byte) -104,
-        (byte) 10,
-        (byte) 55,
-        (byte) -54,
-        (byte) -26,
-        (byte) -37,
-        (byte) 98,
-        (byte) -59,
-        (byte) 82,
-        (byte) 116
-    };
+            "Oe86h2qN7LGSSqBWW7m2nZOuPzvupvH6DBlrp5VyNkb4gScUuLk9xKQpXf3IPUM8oLnVV4IuDbcKFWLUynV9EA";
 
     @BeforeEach
     void setUp() {
@@ -270,9 +211,70 @@ public class IpvTokenTest {
         assertThat(tokenResponse.toHTTPResponse().getStatusCode(), equalTo(400));
     }
 
+    @Disabled
+    @Pact(consumer = "OrchTokenConsumer")
+    RequestResponsePact emptyRequestToGenerateSignedJwt(PactDslWithProvider builder) {
+        return builder.given("dummyAuthCode is a valid authorization code")
+                .given("the JWT is signed with " + PRIVATE_JWT_KEY)
+                .uponReceiving("Valid auth code")
+                .path("/" + IPV_TOKEN_PATH)
+                .method("POST")
+                .matchHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
+                .willRespondWith()
+                .status(200)
+                .body(
+                        newJsonBody(
+                                (body) -> {
+                                    body.stringType(ACCESS_TOKEN_FIELD, ACCESS_TOKEN_VALUE);
+                                    body.stringType(TOKEN_TYPE_FIELD, TOKEN_TYPE_VALUE);
+                                    body.integerType(EXPIRES_IN_FIELD, EXPIRES_IN_VALUE);
+                                })
+                                .build())
+                .toPact();
+    }
+
+    @Disabled
+    @Test
+    @PactTestFor(
+            providerName = "IpvCoreBackTokenProvider",
+            pactMethod = "emptyRequestToGenerateSignedJwt",
+            pactVersion = PactSpecVersion.V3)
+    void generationOfJwtSignature(MockServer mockServer) throws ParseException, JOSEException {
+        when(configService.getIPVBackendURI()).thenReturn(URI.create(mockServer.getUrl()));
+        signJWTWithKMS();
+
+        TokenResponse tokenResponse;
+        try (MockedStatic<NowHelper> mockedNowHelperClass = Mockito.mockStatic(NowHelper.class)) {
+            mockedNowHelperClass
+                    .when(NowHelper::now)
+                    .thenReturn(Date.from(Instant.parse("2000-01-01T00:00:00.00Z")));
+            mockedNowHelperClass
+                    .when(() -> NowHelper.nowPlus(5L, ChronoUnit.MINUTES))
+                    .thenReturn(Date.from(Instant.parse("2099-01-01T00:00:00.00Z")));
+            try (var mockJwtId =
+                         mockConstruction(
+                                 JWTID.class,
+                                 (mock, context) -> {
+                                     when(mock.getValue()).thenReturn("1");
+                                 })) {
+                tokenResponse = ipvTokenService.getToken("dummyAuthCode");
+            }
+        }
+
+        assertThat(tokenResponse.indicatesSuccess(), equalTo(true));
+    }
+
     private SignResponse mockKmsReturn() {
+        byte[] signature_bytes;
+
+        try {
+            signature_bytes = ECDSA.transcodeSignatureToDER(Base64.getDecoder().decode(CLIENT_ASSERTION_SIGNATURE));
+        } catch (JOSEException e) {
+            throw new RuntimeException(e);
+        }
+
         return SignResponse.builder()
-                .signature(SdkBytes.fromByteArray(SIGNATURE_BYTES))
+                .signature(SdkBytes.fromByteArray(signature_bytes))
                 .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
                 .keyId(KEY_ID)
                 .build();
@@ -295,5 +297,27 @@ public class IpvTokenTest {
                 + "\":"
                 + EXPIRES_IN_VALUE
                 + "}";
+    }
+
+    private void signJWTWithKMS() throws JOSEException, java.text.ParseException {
+        var ecSigningKey = ECKey.parse(PRIVATE_JWT_KEY);
+        // debug from generatePrivateKeyJwt on the encoded claims if claims change
+        var claimsSet = JWTClaimsSet.parse(Base64URL.from(CLIENT_ASSERTION_BODY).decodeToString());
+
+        var ecdsaSigner = new ECDSASigner(ecSigningKey);
+        var jwsHeader = new JWSHeader.Builder(JWSAlgorithm.ES256).keyID(KEY_ID).build();
+        var signedJWT = new SignedJWT(jwsHeader, claimsSet);
+        signedJWT.sign(ecdsaSigner);
+        byte[] idTokenSignatureDer =
+                ECDSA.transcodeSignatureToDER(signedJWT.getSignature().decode());
+
+        var signResult =
+                SignResponse.builder()
+                        .signature(SdkBytes.fromByteArray(idTokenSignatureDer))
+                        .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256)
+                        .keyId(KEY_ID)
+                        .build();
+
+        when(kmsConnectionService.sign(any(SignRequest.class))).thenReturn(signResult);
     }
 }
