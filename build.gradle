@@ -32,7 +32,7 @@ ext {
         nimbusds_oauth_version: "10.13.2",
         nimbusds_jwt_version: "9.29",
         junit: "5.10.2",
-        xray: "2.15.1"
+        xray: "2.15.2"
     ]
 
     terraformEnvironment = project.properties["terraformEnvironment"] ?: "localstack"
