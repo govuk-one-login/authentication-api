@@ -133,6 +133,7 @@ class CheckUserExistsIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         redis.incrementPasswordCount(emailAddress);
         redis.incrementPasswordCount(emailAddress);
         redis.incrementPasswordCount(emailAddress);
+        redis.incrementPasswordCount(emailAddress);
 
         BaseFrontendRequest request = new CheckUserExistsRequest(emailAddress);
 

@@ -204,7 +204,7 @@ public class ConfigurationService implements BaseLambdaConfiguration, AuditPubli
     }
 
     public int getMaxPasswordRetries() {
-        return Integer.parseInt(System.getenv().getOrDefault("PASSWORD_MAX_RETRIES", "5"));
+        return Integer.parseInt(System.getenv().getOrDefault("PASSWORD_MAX_RETRIES", "6"));
     }
 
     public int getMaxEmailReAuthRetries() {
