@@ -7,21 +7,20 @@ import com.nimbusds.oauth2.sdk.id.State;
 import com.nimbusds.openid.connect.sdk.AuthenticationRequest;
 import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.CredentialTrustLevel;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.LevelOfConfidence;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VtrList;
 
 import java.net.URI;
 import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.List;
 import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 class ClientSessionTest {
@@ -33,7 +32,7 @@ class ClientSessionTest {
     @ParameterizedTest
     @MethodSource("lowestCtrTestCases")
     void shouldCorrectlyFindVtrWithLowestCredentialTrustLevelFromList(
-            List<VectorOfTrust> vtrList, CredentialTrustLevel expectedCtl) {
+            VtrList vtrList, CredentialTrustLevel expectedCtl) {
 
         ClientSession clientSession =
                 new ClientSession(
@@ -42,15 +41,15 @@ class ClientSessionTest {
                         vtrList,
                         CLIENT_NAME);
 
-        var lowestVtr = VectorOfTrust.getLowestCredentialTrustLevel(clientSession.getVtrList());
+        var actualCtl = clientSession.getVtrList().getSelectedCredentialTrustLevel();
 
-        assertThat(lowestVtr.getValue(), equalTo(expectedCtl.getValue()));
+        assertThat(actualCtl, equalTo(expectedCtl));
     }
 
     @ParameterizedTest
     @MethodSource("locsCssTestCases")
     void shouldCorrectlyCreateVtrLevelsOfConfidenceAsCommaSeparatedString(
-            List<VectorOfTrust> vtrList, String expectedCss) {
+            VtrList vtrList, String expectedCss) {
 
         ClientSession clientSession =
                 new ClientSession(
@@ -64,130 +63,74 @@ class ClientSessionTest {
         assertThat(css, equalTo(expectedCss));
     }
 
-    @Test
-    void shouldThrowExceptionForEmptyVtrList() {
-        ClientSession clientSession =
-                new ClientSession(
-                        generateAuthRequest().toParameters(),
-                        LocalDateTime.now(),
-                        Collections.emptyList(),
-                        CLIENT_NAME);
-
-        IllegalArgumentException exception =
-                assertThrows(
-                        IllegalArgumentException.class,
-                        () ->
-                                VectorOfTrust.getLowestCredentialTrustLevel(
-                                        clientSession.getVtrList()));
-
-        assertEquals("Invalid VTR attribute", exception.getMessage());
-    }
-
-    @Test
-    void shouldReturnEmptyStringForEmptyVtrList() {
-        ClientSession clientSession =
-                new ClientSession(
-                        generateAuthRequest().toParameters(),
-                        LocalDateTime.now(),
-                        Collections.emptyList(),
-                        CLIENT_NAME);
-
-        assertEquals("", clientSession.getVtrLocsAsCommaSeparatedString());
-    }
-
     private static Stream<Arguments> lowestCtrTestCases() {
         return Stream.of(
                 arguments(
-                        List.of(
-                                VectorOfTrust.of(
-                                        CredentialTrustLevel.LOW_LEVEL,
-                                        LevelOfConfidence.getDefault()),
-                                VectorOfTrust.of(
-                                        CredentialTrustLevel.MEDIUM_LEVEL,
-                                        LevelOfConfidence.getDefault())),
+                        VtrList.of(
+                                VectorOfTrust.of(CredentialTrustLevel.LOW_LEVEL),
+                                VectorOfTrust.of(CredentialTrustLevel.MEDIUM_LEVEL)),
                         CredentialTrustLevel.LOW_LEVEL),
                 arguments(
-                        List.of(
-                                VectorOfTrust.of(
-                                        CredentialTrustLevel.LOW_LEVEL,
-                                        LevelOfConfidence.getDefault()),
-                                VectorOfTrust.of(
-                                        CredentialTrustLevel.LOW_LEVEL,
-                                        LevelOfConfidence.getDefault())),
+                        VtrList.of(
+                                VectorOfTrust.of(CredentialTrustLevel.LOW_LEVEL),
+                                VectorOfTrust.of(CredentialTrustLevel.LOW_LEVEL)),
                         CredentialTrustLevel.LOW_LEVEL),
                 arguments(
-                        List.of(
-                                VectorOfTrust.of(
-                                        CredentialTrustLevel.MEDIUM_LEVEL,
-                                        LevelOfConfidence.getDefault()),
-                                VectorOfTrust.of(
-                                        CredentialTrustLevel.MEDIUM_LEVEL,
-                                        LevelOfConfidence.getDefault())),
+                        VtrList.of(
+                                VectorOfTrust.of(CredentialTrustLevel.MEDIUM_LEVEL),
+                                VectorOfTrust.of(CredentialTrustLevel.MEDIUM_LEVEL)),
                         CredentialTrustLevel.MEDIUM_LEVEL),
                 arguments(
-                        List.of(
-                                VectorOfTrust.of(
-                                        CredentialTrustLevel.MEDIUM_LEVEL,
-                                        LevelOfConfidence.getDefault()),
-                                VectorOfTrust.of(
-                                        CredentialTrustLevel.LOW_LEVEL,
-                                        LevelOfConfidence.getDefault()),
-                                VectorOfTrust.of(
-                                        CredentialTrustLevel.MEDIUM_LEVEL,
-                                        LevelOfConfidence.getDefault()),
-                                VectorOfTrust.of(
-                                        CredentialTrustLevel.MEDIUM_LEVEL,
-                                        LevelOfConfidence.getDefault())),
+                        VtrList.of(
+                                VectorOfTrust.of(CredentialTrustLevel.MEDIUM_LEVEL),
+                                VectorOfTrust.of(CredentialTrustLevel.LOW_LEVEL),
+                                VectorOfTrust.of(CredentialTrustLevel.MEDIUM_LEVEL),
+                                VectorOfTrust.of(CredentialTrustLevel.MEDIUM_LEVEL)),
                         CredentialTrustLevel.LOW_LEVEL),
                 arguments(
-                        List.of(
-                                VectorOfTrust.of(
-                                        CredentialTrustLevel.MEDIUM_LEVEL,
-                                        LevelOfConfidence.getDefault()),
-                                VectorOfTrust.of(
-                                        CredentialTrustLevel.LOW_LEVEL,
-                                        LevelOfConfidence.getDefault()),
-                                VectorOfTrust.of(
-                                        CredentialTrustLevel.LOW_LEVEL,
-                                        LevelOfConfidence.getDefault()),
-                                VectorOfTrust.of(
-                                        CredentialTrustLevel.LOW_LEVEL,
-                                        LevelOfConfidence.getDefault())),
+                        VtrList.of(
+                                VectorOfTrust.of(CredentialTrustLevel.MEDIUM_LEVEL),
+                                VectorOfTrust.of(CredentialTrustLevel.LOW_LEVEL),
+                                VectorOfTrust.of(CredentialTrustLevel.LOW_LEVEL),
+                                VectorOfTrust.of(CredentialTrustLevel.LOW_LEVEL)),
                         CredentialTrustLevel.LOW_LEVEL));
     }
 
     private static Stream<Arguments> locsCssTestCases() {
         return Stream.of(
                 arguments(
-                        List.of(
+                        VtrList.of(
                                 VectorOfTrust.of(
-                                        CredentialTrustLevel.getDefault(),
+                                        CredentialTrustLevel.MEDIUM_LEVEL,
                                         LevelOfConfidence.HIGH_LEVEL)),
                         "P3"),
                 arguments(
-                        List.of(
+                        VtrList.of(
                                 VectorOfTrust.of(
-                                        CredentialTrustLevel.getDefault(),
-                                        LevelOfConfidence.getDefault()),
-                                VectorOfTrust.of(
-                                        CredentialTrustLevel.getDefault(),
-                                        LevelOfConfidence.getDefault())),
-                        "P2,P2"),
-                arguments(
-                        List.of(
-                                VectorOfTrust.of(
-                                        CredentialTrustLevel.getDefault(),
-                                        LevelOfConfidence.VERY_HIGH_LEVEL),
-                                VectorOfTrust.of(
-                                        CredentialTrustLevel.getDefault(),
-                                        LevelOfConfidence.LOW_LEVEL),
-                                VectorOfTrust.of(
-                                        CredentialTrustLevel.getDefault(),
+                                        CredentialTrustLevel.MEDIUM_LEVEL,
                                         LevelOfConfidence.MEDIUM_LEVEL),
                                 VectorOfTrust.of(
-                                        CredentialTrustLevel.getDefault(),
-                                        LevelOfConfidence.LOW_LEVEL)),
-                        "P1,P1,P2,P4"));
+                                        CredentialTrustLevel.MEDIUM_LEVEL,
+                                        LevelOfConfidence.MEDIUM_LEVEL)),
+                        "P2"),
+                arguments(
+                        VtrList.of(
+                                VectorOfTrust.of(
+                                        CredentialTrustLevel.MEDIUM_LEVEL,
+                                        LevelOfConfidence.VERY_HIGH_LEVEL),
+                                VectorOfTrust.of(
+                                        CredentialTrustLevel.MEDIUM_LEVEL,
+                                        LevelOfConfidence.LOW_LEVEL),
+                                VectorOfTrust.of(
+                                        CredentialTrustLevel.MEDIUM_LEVEL,
+                                        LevelOfConfidence.MEDIUM_LEVEL),
+                                VectorOfTrust.of(
+                                        CredentialTrustLevel.MEDIUM_LEVEL,
+                                        LevelOfConfidence.LOW_LEVEL),
+                                VectorOfTrust.of(
+                                        CredentialTrustLevel.MEDIUM_LEVEL,
+                                        LevelOfConfidence.HMRC200)),
+                        "P1,PCL200"));
     }
 
     private static AuthenticationRequest generateAuthRequest() {

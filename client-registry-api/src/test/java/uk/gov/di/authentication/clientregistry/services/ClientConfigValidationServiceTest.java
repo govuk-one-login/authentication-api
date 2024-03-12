@@ -8,9 +8,9 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.clientregistry.entity.ClientRegistrationRequest;
 import uk.gov.di.orchestration.shared.entity.ClientType;
-import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.UpdateClientConfigRequest;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.LevelOfConfidence;
 
 import java.util.List;
 import java.util.Optional;
@@ -275,7 +275,7 @@ class ClientConfigValidationServiceTest {
                                 false,
                                 "http://localhost/sector-id",
                                 ClientType.WEB.getValue(),
-                                List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
+                                List.of(LevelOfConfidence.MEDIUM_LEVEL.toString())));
         assertThat(errorResponse, equalTo(Optional.empty()));
     }
 
@@ -299,7 +299,7 @@ class ClientConfigValidationServiceTest {
                                 false,
                                 null,
                                 ClientType.WEB.getValue(),
-                                List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
+                                List.of(LevelOfConfidence.MEDIUM_LEVEL.toString())));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_POST_LOGOUT_URI)));
     }
 
@@ -316,7 +316,7 @@ class ClientConfigValidationServiceTest {
                                 false,
                                 null,
                                 ClientType.WEB.getValue(),
-                                List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
+                                List.of(LevelOfConfidence.MEDIUM_LEVEL.toString())));
         assertThat(errorResponse, equalTo(Optional.of(RegistrationError.INVALID_REDIRECT_URI)));
     }
 
@@ -333,7 +333,7 @@ class ClientConfigValidationServiceTest {
                                 false,
                                 null,
                                 ClientType.WEB.getValue(),
-                                List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
+                                List.of(LevelOfConfidence.MEDIUM_LEVEL.toString())));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_PUBLIC_KEY)));
     }
 
@@ -350,7 +350,7 @@ class ClientConfigValidationServiceTest {
                                 false,
                                 null,
                                 ClientType.WEB.getValue(),
-                                List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
+                                List.of(LevelOfConfidence.MEDIUM_LEVEL.toString())));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_SCOPE)));
     }
 
@@ -367,7 +367,7 @@ class ClientConfigValidationServiceTest {
                                 false,
                                 null,
                                 "rubbish-client-type",
-                                List.of(LevelOfConfidence.MEDIUM_LEVEL.getValue())));
+                                List.of(LevelOfConfidence.MEDIUM_LEVEL.toString())));
         assertThat(errorResponse, equalTo(Optional.of(INVALID_CLIENT_TYPE)));
     }
 

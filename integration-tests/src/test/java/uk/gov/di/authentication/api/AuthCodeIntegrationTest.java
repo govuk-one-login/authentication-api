@@ -22,7 +22,8 @@ import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CustomScopeValue;
 import uk.gov.di.orchestration.shared.entity.MFAMethodType;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VtrList;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.sharedtest.basetest.ApiGatewayHandlerIntegrationTest;
 import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
@@ -100,7 +101,7 @@ public class AuthCodeIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 new ClientSession(
                         authRequestParams,
                         LocalDateTime.now(ZoneId.of("UTC")),
-                        List.of(VectorOfTrust.getDefaults()),
+                        VtrList.of(VectorOfTrust.DEFAULT),
                         CLIENT_NAME);
         clientSession.setDocAppSubjectId(new Subject());
         redis.addAuthRequestToSession(clientSessionId, sessionID, authRequestParams, CLIENT_NAME);

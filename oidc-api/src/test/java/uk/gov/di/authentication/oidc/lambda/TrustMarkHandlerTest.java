@@ -6,8 +6,6 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.di.authentication.oidc.entity.TrustMarkResponse;
-import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
-import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.SerializationService;
@@ -19,6 +17,12 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.orchestration.shared.entity.vectoroftrust.CredentialTrustLevelCode.CL;
+import static uk.gov.di.orchestration.shared.entity.vectoroftrust.CredentialTrustLevelCode.CL_CM;
+import static uk.gov.di.orchestration.shared.entity.vectoroftrust.LevelOfConfidenceCode.P0;
+import static uk.gov.di.orchestration.shared.entity.vectoroftrust.LevelOfConfidenceCode.P2;
+import static uk.gov.di.orchestration.shared.entity.vectoroftrust.LevelOfConfidenceCode.PCL200;
+import static uk.gov.di.orchestration.shared.entity.vectoroftrust.LevelOfConfidenceCode.PCL250;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
 class TrustMarkHandlerTest {
@@ -42,10 +46,8 @@ class TrustMarkHandlerTest {
                 new TrustMarkResponse(
                         configurationService.getOidcApiBaseURL().orElseThrow(),
                         configurationService.getOidcApiBaseURL().orElseThrow(),
-                        List.of(
-                                CredentialTrustLevel.LOW_LEVEL.getValue(),
-                                CredentialTrustLevel.MEDIUM_LEVEL.getValue()),
-                        LevelOfConfidence.getAllSupportedLevelOfConfidenceValues());
+                        List.of(CL, CL_CM),
+                        List.of(P0, PCL200, PCL250, P2));
 
         APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
         APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);

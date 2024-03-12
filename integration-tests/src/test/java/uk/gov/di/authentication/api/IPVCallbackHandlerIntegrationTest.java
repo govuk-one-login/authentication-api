@@ -27,10 +27,10 @@ import uk.gov.di.authentication.ipv.entity.SPOTRequest;
 import uk.gov.di.authentication.ipv.lambda.IPVCallbackHandler;
 import uk.gov.di.authentication.testsupport.helpers.SpotQueueAssertionHelper;
 import uk.gov.di.orchestration.shared.entity.IdentityCredentials;
-import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.ValidClaims;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
@@ -158,7 +158,7 @@ class IPVCallbackHandlerIntegrationTest extends ApiGatewayHandlerIntegrationTest
                         new SPOTRequest(
                                 Map.of(
                                         VOT.getValue(),
-                                        LevelOfConfidence.MEDIUM_LEVEL.getValue(),
+                                        LevelOfConfidence.MEDIUM_LEVEL.toString(),
                                         VTM.getValue(),
                                         "/trustmark"),
                                 INTERNAL_SUBJECT.getValue(),

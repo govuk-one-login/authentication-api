@@ -48,7 +48,8 @@ import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.RefreshTokenStore;
 import uk.gov.di.orchestration.shared.entity.ServiceType;
 import uk.gov.di.orchestration.shared.entity.ValidScopes;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VtrList;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.helpers.NowHelper;
 import uk.gov.di.orchestration.shared.serialization.Json;
@@ -606,10 +607,10 @@ public class TokenIntegrationTest extends ApiGatewayHandlerIntegrationTest {
             Optional<String> clientId)
             throws Json.JsonException {
         String code = new AuthorizationCode().toString();
-        List<VectorOfTrust> vtrList = List.of(VectorOfTrust.getDefaults());
+        VtrList vtrList = VtrList.of(VectorOfTrust.DEFAULT);
         if (vtr.isPresent()) {
             vtrList =
-                    VectorOfTrust.parseFromAuthRequestAttribute(
+                    VtrList.parseFromAuthRequestAttribute(
                             singletonList(JsonArrayHelper.jsonArrayOf(vtr.get())));
         }
         redis.addAuthCodeAndCreateClientSession(

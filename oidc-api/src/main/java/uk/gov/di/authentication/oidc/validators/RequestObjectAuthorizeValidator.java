@@ -16,7 +16,7 @@ import uk.gov.di.authentication.oidc.services.IPVCapacityService;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientType;
 import uk.gov.di.orchestration.shared.entity.ValidScopes;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VtrList;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.DynamoClientService;
@@ -218,8 +218,8 @@ public class RequestObjectAuthorizeValidator extends BaseAuthorizeValidator {
         List<String> authRequestVtr = new ArrayList<>();
         try {
             authRequestVtr = getRequestObjectVtrAsList(jwtClaimsSet);
-            var vtrList = VectorOfTrust.parseFromAuthRequestAttribute(authRequestVtr);
-            if (vtrList.get(0).containsLevelOfConfidence()
+            var vtrList = VtrList.parseFromAuthRequestAttribute(authRequestVtr);
+            if (vtrList.requiresIdentityValidation()
                     && !ipvCapacityService.isIPVCapacityAvailable()) {
                 return errorResponse(redirectURI, OAuth2Error.TEMPORARILY_UNAVAILABLE);
             }

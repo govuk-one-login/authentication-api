@@ -59,6 +59,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static uk.gov.di.authentication.ipv.services.IPVAuthorisationService.STATE_STORAGE_PREFIX;
+import static uk.gov.di.orchestration.shared.entity.vectoroftrust.LevelOfConfidence.HMRC200;
+import static uk.gov.di.orchestration.shared.entity.vectoroftrust.LevelOfConfidence.MEDIUM_LEVEL;
 
 class IPVAuthorisationServiceTest {
 
@@ -263,7 +265,7 @@ class IPVAuthorisationServiceTest {
                                 claims,
                                 "journey-id",
                                 "test@test.com",
-                                List.of("P2", "PCL200"),
+                                List.of(MEDIUM_LEVEL, HMRC200),
                                 true);
             }
 

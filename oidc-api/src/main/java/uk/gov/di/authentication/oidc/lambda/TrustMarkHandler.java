@@ -8,8 +8,8 @@ import com.nimbusds.oauth2.sdk.OAuth2Error;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.authentication.oidc.entity.TrustMarkResponse;
-import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
-import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.CredentialTrustLevel;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.LevelOfConfidence;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
 import uk.gov.di.orchestration.shared.services.ConfigurationService;
 
@@ -57,9 +57,13 @@ public class TrustMarkHandler
         return new TrustMarkResponse(
                 configurationService.getOidcApiBaseURL().orElseThrow(),
                 configurationService.getOidcApiBaseURL().orElseThrow(),
-                Arrays.asList(
-                        CredentialTrustLevel.LOW_LEVEL.getValue(),
-                        CredentialTrustLevel.MEDIUM_LEVEL.getValue()),
-                LevelOfConfidence.getAllSupportedLevelOfConfidenceValues());
+                Arrays.stream(CredentialTrustLevel.values())
+                        .filter(CredentialTrustLevel::isSupported)
+                        .map(CredentialTrustLevel::getDefaultCode)
+                        .toList(),
+                Arrays.stream(LevelOfConfidence.values())
+                        .filter(LevelOfConfidence::isSupported)
+                        .map(LevelOfConfidence::getDefaultCode)
+                        .toList());
     }
 }

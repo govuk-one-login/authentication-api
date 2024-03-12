@@ -2,6 +2,8 @@ package uk.gov.di.authentication.oidc.entity;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.CredentialTrustLevelCode;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.LevelOfConfidenceCode;
 import uk.gov.di.orchestration.shared.validation.Required;
 
 import java.util.List;
@@ -17,16 +19,20 @@ public class TrustMarkResponse {
     @SerializedName("C")
     @Expose
     @Required
-    private List<String> c;
+    private List<CredentialTrustLevelCode> c;
 
     @SerializedName("P")
     @Expose
     @Required
-    private List<String> p;
+    private List<LevelOfConfidenceCode> p;
 
     public TrustMarkResponse() {}
 
-    public TrustMarkResponse(String idp, String trustMark, List<String> c, List<String> p) {
+    public TrustMarkResponse(
+            String idp,
+            String trustMark,
+            List<CredentialTrustLevelCode> c,
+            List<LevelOfConfidenceCode> p) {
         this.idp = idp;
         this.trustMark = trustMark;
         this.c = c;
@@ -41,11 +47,11 @@ public class TrustMarkResponse {
         return trustMark;
     }
 
-    public List<String> getC() {
+    public List<CredentialTrustLevelCode> getC() {
         return c;
     }
 
-    public List<String> getP() {
+    public List<LevelOfConfidenceCode> getP() {
         return p;
     }
 }

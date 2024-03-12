@@ -3,6 +3,7 @@ package uk.gov.di.orchestration.shared.entity;
 import com.google.gson.annotations.Expose;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.CredentialTrustLevel;
 
 import java.util.ArrayList;
 import java.util.EnumMap;

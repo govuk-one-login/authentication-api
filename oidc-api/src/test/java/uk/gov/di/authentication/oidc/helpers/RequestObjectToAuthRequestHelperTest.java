@@ -16,9 +16,9 @@ import com.nimbusds.openid.connect.sdk.OIDCClaimsRequest;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import com.nimbusds.openid.connect.sdk.claims.ClaimsSetRequest;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
-import uk.gov.di.orchestration.shared.entity.LevelOfConfidence;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.CredentialTrustLevel;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.LevelOfConfidence;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VtrList;
 import uk.gov.di.orchestration.sharedtest.helper.KeyPairHelper;
 
 import java.net.URI;
@@ -90,8 +90,9 @@ class RequestObjectToAuthRequestHelperTest {
         var transformedAuthRequest = RequestObjectToAuthRequestHelper.transform(authRequest);
 
         var vtr =
-                VectorOfTrust.parseFromAuthRequestAttribute(
+                VtrList.parseFromAuthRequestAttribute(
                                 transformedAuthRequest.getCustomParameter("vtr"))
+                        .getVtr()
                         .get(0);
         assertThat(vtr.getCredentialTrustLevel(), equalTo(CredentialTrustLevel.MEDIUM_LEVEL));
         assertThat(vtr.getLevelOfConfidence(), equalTo(LevelOfConfidence.MEDIUM_LEVEL));

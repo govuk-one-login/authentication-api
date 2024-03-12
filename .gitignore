@@ -17,6 +17,7 @@ ci/terraform/**/*.tfstate*
 logs/
 .vscode/
 .venv/
+**/.DS_Store
 
 # Approval Tests
 *.received.txt

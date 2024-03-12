@@ -3,7 +3,7 @@ package uk.gov.di.orchestration.shared.services;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
-import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
+import uk.gov.di.orchestration.shared.entity.vectoroftrust.VtrList;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.serialization.Json.JsonException;
@@ -51,7 +51,7 @@ public class ClientSessionService {
     public ClientSession generateClientSession(
             Map<String, List<String>> authRequestParams,
             LocalDateTime creationDate,
-            List<VectorOfTrust> vtrList,
+            VtrList vtrList,
             String clientName) {
         return new ClientSession(authRequestParams, creationDate, vtrList, clientName);
     }
