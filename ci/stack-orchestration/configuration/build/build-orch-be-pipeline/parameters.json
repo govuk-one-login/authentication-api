@@ -1,27 +1,35 @@
 [
   {
-    "ParameterKey": "Environment",
-    "ParameterValue": "build"
-  },
-  {
-    "ParameterKey": "OneLoginRepositoryName",
-    "ParameterValue": "authentication-api"
-  },
-  {
-    "ParameterKey": "SAMStackName",
-    "ParameterValue": "build-orch-be-deploy"
-  },
-  {
-    "ParameterKey": "IncludePromotion",
-    "ParameterValue": "Yes"
+    "ParameterKey": "AdditionalCodeSigningVersionArns",
+    "ParameterValue": "arn:aws:signer:eu-west-2:216552277552:/signing-profiles/DynatraceSigner/5uwzCCGTPq"
   },
   {
     "ParameterKey": "AllowedAccounts",
     "ParameterValue": "590183975515"
   },
   {
+    "ParameterKey": "CustomKmsKeyArns",
+    "ParameterValue": "arn:aws:kms:eu-west-2:216552277552:key/4bc58ab5-c9bb-4702-a2c3-5d339604a8fe"
+  },
+  {
+    "ParameterKey": "Environment",
+    "ParameterValue": "build"
+  },
+  {
+    "ParameterKey": "IncludePromotion",
+    "ParameterValue": "Yes"
+  },
+  {
+    "ParameterKey": "OneLoginRepositoryName",
+    "ParameterValue": "authentication-api"
+  },
+  {
     "ParameterKey": "RequireManualApproval",
     "ParameterValue": "No"
+  },
+  {
+    "ParameterKey": "SAMStackName",
+    "ParameterValue": "build-orch-be-deploy"
   },
   {
     "ParameterKey": "SigningProfileArn",
@@ -30,5 +38,9 @@
   {
     "ParameterKey": "SigningProfileVersionArn",
     "ParameterValue": "arn:aws:signer:eu-west-2:767397776536:/signing-profiles/SigningProfile_Lne9jMArpvlM/wnCsZmp8mO"
+  },
+  {
+    "ParameterKey": "VpcStackName",
+    "ParameterValue": "vpc"
   }
 ]
