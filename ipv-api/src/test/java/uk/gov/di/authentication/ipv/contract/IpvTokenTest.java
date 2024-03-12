@@ -52,7 +52,8 @@ public class IpvTokenTest {
     private final KmsConnectionService kmsConnectionService = mock(KmsConnectionService.class);
     private IPVTokenService ipvTokenService;
 
-    private static final URI IPV_URI = URI.create("http://ipv/");
+    private static final String IPV_AUD = "http://ipv/";
+    private static final URI IPV_URI = URI.create(IPV_AUD);
     private static final ClientID CLIENT_ID = new ClientID("authOrchestrator");
     private static final String IPV_TOKEN_PATH = "token";
     private final String ACCESS_TOKEN_FIELD = "access_token";
@@ -87,6 +88,7 @@ public class IpvTokenTest {
     RequestResponsePact validRequestReturnsValidAccessToken(PactDslWithProvider builder) {
         return builder.given("dummyAuthCode is a valid authorization code")
                 .given("the JWT is signed with " + PRIVATE_JWT_KEY)
+                .given("the audience is " + IPV_AUD)
                 .uponReceiving("Valid auth code")
                 .path("/" + IPV_TOKEN_PATH)
                 .method("POST")
@@ -156,6 +158,7 @@ public class IpvTokenTest {
     RequestResponsePact invalidAuthCodeReturnsInvalidRequest(PactDslWithProvider builder) {
         return builder.given("dummyInvalidAuthCode is a invalid authorization code")
                 .given("the JWT is signed with " + PRIVATE_JWT_KEY)
+                .given("the audience is " + IPV_AUD)
                 .uponReceiving("Invalid auth code")
                 .path("/" + IPV_TOKEN_PATH)
                 .method("POST")
@@ -214,9 +217,7 @@ public class IpvTokenTest {
     @Disabled
     @Pact(consumer = "OrchTokenConsumer")
     RequestResponsePact emptyRequestToGenerateSignedJwt(PactDslWithProvider builder) {
-        return builder.given("dummyAuthCode is a valid authorization code")
-                .given("the JWT is signed with " + PRIVATE_JWT_KEY)
-                .uponReceiving("Valid auth code")
+        return builder.uponReceiving("Valid auth code")
                 .path("/" + IPV_TOKEN_PATH)
                 .method("POST")
                 .matchHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
