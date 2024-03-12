@@ -43,7 +43,8 @@ public class DynamoAuthCodeService extends BaseDynamoService<AuthCodeStore> {
             List<String> claims,
             boolean hasBeenUsed,
             String sectorIdentifier,
-            boolean isNewAccount) {
+            boolean isNewAccount,
+            Long passwordResetTime) {
         if (isAuthOrchSplitEnabled) {
             var authCodeStore =
                     new AuthCodeStore()
@@ -56,7 +57,8 @@ public class DynamoAuthCodeService extends BaseDynamoService<AuthCodeStore> {
                             .withTimeToExist(
                                     NowHelper.nowPlus(timeToExist, ChronoUnit.SECONDS)
                                             .toInstant()
-                                            .getEpochSecond());
+                                            .getEpochSecond())
+                            .withPasswordResetTime(passwordResetTime);
 
             put(authCodeStore);
         }
