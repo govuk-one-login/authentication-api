@@ -9,7 +9,6 @@ import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import uk.gov.di.orchestration.shared.services.ConfigurationService;
 import uk.gov.di.orchestration.shared.services.JwksService;
 
 import java.util.List;
@@ -26,7 +25,6 @@ class StorageTokenJwkHandlerTest {
 
     private final Context context = mock(Context.class);
     private final JwksService jwksService = mock(JwksService.class);
-    private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private StorageTokenJwkHandler handler;
     private final ECKey storageTokenSigningKey =
             new ECKeyGenerator(Curve.P_256).keyID(UUID.randomUUID().toString()).generate();
@@ -35,7 +33,7 @@ class StorageTokenJwkHandlerTest {
 
     @BeforeEach
     public void setUp() {
-        handler = new StorageTokenJwkHandler(configurationService, jwksService);
+        handler = new StorageTokenJwkHandler(jwksService);
         when(jwksService.getPublicStorageTokenJwkWithOpaqueId()).thenReturn(storageTokenSigningKey);
     }
 

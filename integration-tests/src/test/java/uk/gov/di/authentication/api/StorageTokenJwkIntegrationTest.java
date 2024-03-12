@@ -14,7 +14,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static uk.gov.di.orchestration.sharedtest.helper.AuditAssertionsHelper.assertNoTxmaAuditEventsReceived;
 import static uk.gov.di.orchestration.sharedtest.matchers.APIGatewayProxyResponseEventMatcher.hasStatus;
 
-public class StorageTokenJwkIntegrationTest extends ApiGatewayHandlerIntegrationTest {
+class StorageTokenJwkIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldReturn200AndClientInfoResponseForValidClient() throws ParseException {

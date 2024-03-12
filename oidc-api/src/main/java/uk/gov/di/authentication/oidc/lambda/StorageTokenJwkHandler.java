@@ -23,10 +23,9 @@ public class StorageTokenJwkHandler
         implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private final JwksService jwksService;
-    private static final Logger LOG = LogManager.getLogger(JwksHandler.class);
+    private static final Logger LOG = LogManager.getLogger(StorageTokenJwkHandler.class);
 
-    public StorageTokenJwkHandler(
-            ConfigurationService configurationService, JwksService jwksService) {
+    public StorageTokenJwkHandler(JwksService jwksService) {
         this.jwksService = jwksService;
     }
 
@@ -44,12 +43,10 @@ public class StorageTokenJwkHandler
     public APIGatewayProxyResponseEvent handleRequest(
             APIGatewayProxyRequestEvent input, Context context) {
         return segmentedFunctionCall(
-                "oidc-api::" + getClass().getSimpleName(),
-                () -> storageTokenJwkRequestHandler(input, context));
+                "oidc-api::" + getClass().getSimpleName(), this::storageTokenJwkRequestHandler);
     }
 
-    public APIGatewayProxyResponseEvent storageTokenJwkRequestHandler(
-            APIGatewayProxyRequestEvent input, Context context) {
+    public APIGatewayProxyResponseEvent storageTokenJwkRequestHandler() {
         try {
             LOG.info("StorageTokenJwk request received");
 
