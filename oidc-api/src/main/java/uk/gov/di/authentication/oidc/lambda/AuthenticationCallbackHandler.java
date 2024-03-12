@@ -364,6 +364,10 @@ public class AuthenticationCallbackHandler
                         accountInterventionService.getAccountStatus(
                                 userInfo.getSubject().getValue(), auditContext);
 
+                Boolean ignoreResetPassword =
+                        accountStatus.getInfo().appliedAt()
+                                < (Long) userInfo.getClaim("password_reset_time");
+
                 Boolean reproveIdentity = null;
                 if (configurationService.isAccountInterventionServiceActionEnabled()) {
                     reproveIdentity = accountStatus.reproveIdentity();

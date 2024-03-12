@@ -196,6 +196,7 @@ public class AccountInterventionService {
                     SerializationService.getInstance()
                             .readValue(httpResponse.body(), AccountInterventionResponse.class);
             accountInterventionStatus = response.state();
+            accountInterventionStatus.setInfo(response.intervention());
         } catch (Exception e) {
             logAndThrowAccountInterventionException("Failed to serialize AIS response body.");
         }
