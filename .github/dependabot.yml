@@ -32,7 +32,7 @@ updates:
       interval: daily
 
   - package-ecosystem: pip
-    directory: /scripts
+    directory: /
     open-pull-requests-limit: 5
     target-branch: main
     labels:
