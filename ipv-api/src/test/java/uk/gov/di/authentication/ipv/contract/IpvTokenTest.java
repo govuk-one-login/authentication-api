@@ -225,11 +225,11 @@ public class IpvTokenTest {
                 .status(200)
                 .body(
                         newJsonBody(
-                                (body) -> {
-                                    body.stringType(ACCESS_TOKEN_FIELD, ACCESS_TOKEN_VALUE);
-                                    body.stringType(TOKEN_TYPE_FIELD, TOKEN_TYPE_VALUE);
-                                    body.integerType(EXPIRES_IN_FIELD, EXPIRES_IN_VALUE);
-                                })
+                                        (body) -> {
+                                            body.stringType(ACCESS_TOKEN_FIELD, ACCESS_TOKEN_VALUE);
+                                            body.stringType(TOKEN_TYPE_FIELD, TOKEN_TYPE_VALUE);
+                                            body.integerType(EXPIRES_IN_FIELD, EXPIRES_IN_VALUE);
+                                        })
                                 .build())
                 .toPact();
     }
@@ -253,11 +253,11 @@ public class IpvTokenTest {
                     .when(() -> NowHelper.nowPlus(5L, ChronoUnit.MINUTES))
                     .thenReturn(Date.from(Instant.parse("2099-01-01T00:00:00.00Z")));
             try (var mockJwtId =
-                         mockConstruction(
-                                 JWTID.class,
-                                 (mock, context) -> {
-                                     when(mock.getValue()).thenReturn("1");
-                                 })) {
+                    mockConstruction(
+                            JWTID.class,
+                            (mock, context) -> {
+                                when(mock.getValue()).thenReturn("1");
+                            })) {
                 tokenResponse = ipvTokenService.getToken("dummyAuthCode");
             }
         }
@@ -269,7 +269,9 @@ public class IpvTokenTest {
         byte[] signature_bytes;
 
         try {
-            signature_bytes = ECDSA.transcodeSignatureToDER(Base64.getDecoder().decode(CLIENT_ASSERTION_SIGNATURE));
+            signature_bytes =
+                    ECDSA.transcodeSignatureToDER(
+                            Base64.getDecoder().decode(CLIENT_ASSERTION_SIGNATURE));
         } catch (JOSEException e) {
             throw new RuntimeException(e);
         }
