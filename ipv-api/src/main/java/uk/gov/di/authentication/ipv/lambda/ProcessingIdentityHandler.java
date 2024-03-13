@@ -11,7 +11,7 @@ import uk.gov.di.authentication.ipv.entity.ProcessingIdentityRequest;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityResponse;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityStatus;
 import uk.gov.di.orchestration.audit.AuditContext;
-import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
+import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.entity.UserProfile;
@@ -165,9 +165,9 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
             if (processingStatus == ProcessingIdentityStatus.COMPLETED) {
                 var aisResult =
                         segmentedFunctionCall(
-                                "AIS: getAccountStatus",
+                                "AIS: getAccountState",
                                 () ->
-                                        accountInterventionService.getAccountStatus(
+                                        accountInterventionService.getAccountState(
                                                 internalPairwiseSubjectId, auditContext));
                 if (configurationService.isAccountInterventionServiceActionEnabled()
                         && (aisResult.suspended() || aisResult.blocked())) {
@@ -192,7 +192,7 @@ public class ProcessingIdentityHandler extends BaseFrontendHandler<ProcessingIde
             APIGatewayProxyRequestEvent input,
             UserContext userContext,
             ClientRegistry client,
-            AccountInterventionStatus aisResult)
+            AccountInterventionState aisResult)
             throws Json.JsonException {
         var logoutResult =
                 logoutService.handleAccountInterventionLogout(

@@ -27,6 +27,7 @@ import uk.gov.di.authentication.oidc.services.AuthenticationTokenService;
 import uk.gov.di.authentication.oidc.services.InitiateIPVAuthorisationService;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.shared.conditions.MfaHelper;
+import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
@@ -360,27 +361,30 @@ public class AuthenticationCallbackHandler
                                         : userInfo.getPhoneNumber(),
                                 persistentSessionId);
 
-                AccountInterventionStatus accountStatus =
-                        accountInterventionService.getAccountStatus(
+                AccountInterventionState accountInterventionState =
+                        accountInterventionService.getAccountState(
                                 userInfo.getSubject().getValue(), auditContext);
+                AccountInterventionStatus accountStatus = accountInterventionState.getStatus();
 
                 Boolean reproveIdentity = null;
                 if (configurationService.isAccountInterventionServiceActionEnabled()) {
-                    reproveIdentity = accountStatus.reproveIdentity();
-                    if (identityRequired) {
-                        if (accountStatus.blocked() || accountStatus.resetPassword()) {
+                    reproveIdentity = accountInterventionState.reproveIdentity();
+                    switch (accountStatus) {
+                        case BLOCKED,
+                                SUSPENDED_RESET_PASSWORD,
+                                SUSPENDED_RESET_PASSWORD_REPROVE_ID -> {
                             return logoutService.handleAccountInterventionLogout(
-                                    userSession, input, clientId, accountStatus);
+                                    userSession, input, clientId, accountInterventionState);
                         }
-                    } else {
-                        if (accountStatus.blocked() || accountStatus.suspended()) {
-                            // Handle case that there is no identity reproving on auth-only journey
-                            if (!(accountStatus.suspended()
-                                    && accountStatus.reproveIdentity()
-                                    && !accountStatus.resetPassword())) {
+                        case SUSPENDED_NO_ACTION -> {
+                            if (!identityRequired) {
                                 return logoutService.handleAccountInterventionLogout(
-                                        userSession, input, clientId, accountStatus);
+                                        userSession, input, clientId, accountInterventionState);
                             }
+                            // continue
+                        }
+                        case NO_INTERVENTION, SUSPENDED_REPROVE_ID -> {
+                            // continue
                         }
                     }
                 }

@@ -14,7 +14,7 @@ import software.amazon.awssdk.core.SdkBytes;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityInterventionResponse;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityResponse;
 import uk.gov.di.authentication.ipv.entity.ProcessingIdentityStatus;
-import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
+import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.ErrorResponse;
@@ -194,11 +194,11 @@ class ProcessingIdentityHandlerTest {
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(getClientSession()));
         when(configurationService.isAccountInterventionServiceActionEnabled()).thenReturn(true);
-        when(accountInterventionService.getAccountStatus(anyString(), any()))
-                .thenReturn(new AccountInterventionStatus(false, false, false, false));
+        when(accountInterventionService.getAccountState(anyString(), any()))
+                .thenReturn(new AccountInterventionState(false, false, false, false));
 
         var result = handler.handleRequest(event, context);
-        verify(accountInterventionService).getAccountStatus(eq(PAIRWISE_SUBJECT), any());
+        verify(accountInterventionService).getAccountState(eq(PAIRWISE_SUBJECT), any());
         assertThat(result, hasStatus(200));
         assertThat(
                 result,
@@ -217,13 +217,13 @@ class ProcessingIdentityHandlerTest {
                         .withSubjectID(PAIRWISE_SUBJECT)
                         .withAdditionalClaims(Collections.emptyMap())
                         .withCoreIdentityJWT("a-core-identity");
-        var aisResult = new AccountInterventionStatus(false, true, false, false);
+        var aisResult = new AccountInterventionState(false, true, false, false);
         when(dynamoIdentityService.getIdentityCredentials(anyString()))
                 .thenReturn(Optional.of(identityCredentials));
         when(clientSessionService.getClientSessionFromRequestHeaders(any()))
                 .thenReturn(Optional.of(getClientSession()));
         when(configurationService.isAccountInterventionServiceActionEnabled()).thenReturn(true);
-        when(accountInterventionService.getAccountStatus(anyString(), any())).thenReturn(aisResult);
+        when(accountInterventionService.getAccountState(anyString(), any())).thenReturn(aisResult);
         String redirectUrl = "https://example.com/intervention";
         when(logoutService.handleAccountInterventionLogout(any(), any(), any(), any()))
                 .thenReturn(
