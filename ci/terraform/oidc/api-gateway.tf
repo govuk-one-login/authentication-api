@@ -284,6 +284,75 @@ module "api-gateway" {
   waf_arn = aws_wafv2_web_acl.wafregional_web_acl_oidc_api.arn
 }
 
+moved {
+  from = aws_iam_role.api_gateway_logging_iam_role
+  to   = module.api-gateway.aws_iam_role.api_gateway_logging_iam_role
+}
+moved {
+  from = aws_iam_policy.api_gateway_logging_policy
+  to   = module.api-gateway.aws_iam_policy.api_gateway_logging_policy
+}
+moved {
+  from = aws_iam_role_policy_attachment.api_gateway_logging_logs
+  to   = module.api-gateway.aws_iam_role_policy_attachment.api_gateway_logging_logs
+}
+moved {
+  from = aws_api_gateway_rest_api.di_authentication_api
+  to   = module.api-gateway.aws_api_gateway_rest_api.api_gateway_rest_api
+}
+moved {
+  from = aws_api_gateway_deployment.deployment
+  to   = module.api-gateway.aws_api_gateway_deployment.deployment
+}
+moved {
+  from = aws_cloudwatch_log_group.oidc_stage_execution_logs
+  to   = module.api-gateway.aws_cloudwatch_log_group.stage_execution_logs
+}
+moved {
+  from = aws_cloudwatch_log_subscription_filter.oidc_api_execution_log_subscription
+  to   = module.api-gateway.aws_cloudwatch_log_subscription_filter.execution_log_subscription
+}
+moved {
+  from = aws_cloudwatch_log_group.oidc_stage_access_logs
+  to   = module.api-gateway.aws_cloudwatch_log_group.access_logs
+}
+moved {
+  from = aws_cloudwatch_log_subscription_filter.oidc_access_log_subscription
+  to   = module.api-gateway.aws_cloudwatch_log_subscription_filter.access_log_subscription
+}
+moved {
+  from = aws_cloudwatch_log_group.oidc_waf_logs
+  to   = module.api-gateway.aws_cloudwatch_log_group.waf_logs
+}
+moved {
+  from = aws_cloudwatch_log_subscription_filter.oidc_waf_log_subscription
+  to   = module.api-gateway.aws_cloudwatch_log_subscription_filter.waf_log_subscription
+}
+moved {
+  from = aws_api_gateway_stage.endpoint_stage
+  to   = module.api-gateway.aws_api_gateway_stage.stage
+}
+moved {
+  from = aws_api_gateway_account.api_gateway_logging_role
+  to   = module.api-gateway.aws_api_gateway_account.api_gateway_logging_role
+}
+moved {
+  from = aws_api_gateway_method_settings.api_gateway_logging_settings
+  to   = module.api-gateway.aws_api_gateway_method_settings.api_gateway_logging_settings
+}
+moved {
+  from = aws_api_gateway_base_path_mapping.api
+  to   = module.api-gateway.aws_api_gateway_base_path_mapping.api
+}
+moved {
+  from = aws_wafv2_web_acl_association.oidc_waf_association
+  to   = module.api-gateway.aws_wafv2_web_acl_association.waf_association
+}
+moved {
+  from = aws_wafv2_web_acl_logging_configuration.waf_logging_config_oidc_api
+  to   = module.api-gateway.aws_wafv2_web_acl_logging_configuration.waf_logging_config
+}
+
 resource "aws_api_gateway_api_key" "client_registry_api_key" {
   count = var.client_registry_api_enabled ? 1 : 0
   name  = "${var.environment}-client-registry-api-key"
