@@ -126,14 +126,22 @@ public class LogoutHandler
             return logoutService.generateErrorLogoutResponse(
                     Optional.empty(),
                     new ErrorObject(
-                            OAuth2Error.INVALID_REQUEST_CODE,
-                            "unable to validate id_token_hint"),
+                            OAuth2Error.INVALID_REQUEST_CODE, "unable to validate id_token_hint"),
                     input,
                     Optional.empty(),
                     Optional.empty());
-        } else {
+        }
+        try {
             SignedJWT idToken = SignedJWT.parse(idTokenHint.get());
             audience = idToken.getJWTClaimsSet().getAudience().stream().findFirst();
+        } catch (ParseException e) {
+            LOG.warn("Unable to extract JWTClaimsSet to get the audience");
+            return logoutService.generateErrorLogoutResponse(
+                    Optional.empty(),
+                    new ErrorObject(OAuth2Error.INVALID_REQUEST_CODE, "invalid id_token_hint"),
+                    input,
+                    Optional.empty(),
+                    Optional.empty());
         }
 
         if (audience.isEmpty()) {
@@ -159,9 +167,8 @@ public class LogoutHandler
             return logoutService.generateDefaultLogoutResponse(
                     state, input, Optional.of(clientID), Optional.empty());
         }
-        if (!checkPostLogoutRedirectUrlInClientReg(postLogoutRedirectUri, clientRegistry))  {
-            return errorLogoutWithSessionCheck(
-                    sessionFromSessionCookie, input, state, clientID);
+        if (!checkPostLogoutRedirectUrlInClientReg(postLogoutRedirectUri, clientRegistry)) {
+            return errorLogoutWithSessionCheck(sessionFromSessionCookie, input, state, clientID);
         }
 
         if (sessionFromSessionCookie.isPresent()) {
@@ -175,6 +182,7 @@ public class LogoutHandler
                                     postLogoutRedirectUri.get(),
                                     state,
                                     input));
+
         } else {
             return segmentedFunctionCall(
                     "generateDefaultLogoutResponse",
@@ -206,13 +214,12 @@ public class LogoutHandler
                 state, input, Optional.empty(), sessionResponse);
     }
 
-    private boolean checkPostLogoutRedirectUrlInClientReg(Optional<String> postLogoutRedirectUri, Optional<ClientRegistry> clientRegistry) {
-        return postLogoutRedirectUri.map(
+    private boolean checkPostLogoutRedirectUrlInClientReg(
+            Optional<String> postLogoutRedirectUri, Optional<ClientRegistry> clientRegistry) {
+        return postLogoutRedirectUri
+                .map(
                         uri -> {
-                            if (!clientRegistry
-                                    .get()
-                                    .getPostLogoutRedirectUrls()
-                                    .contains(uri)) {
+                            if (!clientRegistry.get().getPostLogoutRedirectUrls().contains(uri)) {
                                 LOG.warn(
                                         "Client registry does not contain PostLogoutRedirectUri which was sent in the logout request. Value is {}",
                                         uri);
@@ -280,8 +287,7 @@ public class LogoutHandler
             return logoutService.generateErrorLogoutResponse(
                     Optional.empty(),
                     new ErrorObject(
-                            OAuth2Error.INVALID_REQUEST_CODE,
-                            "unable to validate id_token_hint"),
+                            OAuth2Error.INVALID_REQUEST_CODE, "unable to validate id_token_hint"),
                     input,
                     Optional.empty(),
                     Optional.of(session.getSessionId()));

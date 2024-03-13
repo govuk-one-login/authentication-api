@@ -396,18 +396,13 @@ class LogoutHandlerTest {
 
             APIGatewayProxyRequestEvent event =
                     generateRequestEvent(
-                            Map.of(
-                                    "id_token_hint", idTokenHint,
-                                    "state", STATE.toString()));
+                            Map.of("id_token_hint", idTokenHint, "state", STATE.toString()));
 
             handler.handleRequest(event, context);
 
             verify(logoutService)
                     .generateDefaultLogoutResponse(
-                            Optional.of(STATE.toString()),
-                            event,
-                            audience,
-                            Optional.empty());
+                            Optional.of(STATE.toString()), event, audience, Optional.empty());
         }
 
         @Test

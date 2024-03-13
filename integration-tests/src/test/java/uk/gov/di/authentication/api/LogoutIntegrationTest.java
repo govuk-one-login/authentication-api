@@ -118,8 +118,7 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         var response =
                 makeRequest(
                         Optional.empty(),
-                        constructHeaders(
-                                Optional.empty()),
+                        constructHeaders(Optional.empty()),
                         Map.of(
                                 "id_token_hint",
                                 signedJWT.serialize(),
@@ -140,18 +139,15 @@ public class LogoutIntegrationTest extends ApiGatewayHandlerIntegrationTest {
     }
 
     @Test
-    void shouldReturn302AndRedirectToDefaultLogoutUriWhenNoIdTokenSpecified() throws Json.JsonException, ParseException {
+    void shouldReturn302AndRedirectToDefaultLogoutUriWhenNoIdTokenSpecified()
+            throws Json.JsonException, ParseException {
         setupClientAndSession(SESSION_ID, CLIENT_SESSION_ID);
         var response =
                 makeRequest(
                         Optional.empty(),
                         constructHeaders(
                                 Optional.of(buildSessionCookie(SESSION_ID, CLIENT_SESSION_ID))),
-                        Map.of(
-                                "post_logout_redirect_uri",
-                                REDIRECT_URL,
-                                "state",
-                                STATE));
+                        Map.of("post_logout_redirect_uri", REDIRECT_URL, "state", STATE));
 
         assertThat(response, isRedirect());
         assertThat(
