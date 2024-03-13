@@ -113,80 +113,55 @@ public class LogoutHandler
         Optional<String> audience;
         Optional<String> postLogoutRedirectUri =
                 Optional.ofNullable(queryStringParameters.get("post_logout_redirect_uri"));
-        if (idTokenHint.isPresent()) {
-            LOG.info("ID token hint is present");
-            boolean isTokenSignatureValid =
-                    segmentedFunctionCall(
-                            "isTokenSignatureValid",
-                            () -> tokenValidationService.isTokenSignatureValid(idTokenHint.get()));
-            if (!isTokenSignatureValid) {
-                LOG.warn("Unable to validate ID token signature");
-                return logoutService.generateErrorLogoutResponse(
-                        Optional.empty(),
-                        new ErrorObject(
-                                OAuth2Error.INVALID_REQUEST_CODE,
-                                "unable to validate id_token_hint"),
-                        input,
-                        Optional.empty(),
-                        Optional.empty());
-            } else {
-                SignedJWT idToken = SignedJWT.parse(idTokenHint.get());
-                audience = idToken.getJWTClaimsSet().getAudience().stream().findFirst();
-            }
-        } else {
+        if (idTokenHint.isEmpty()) {
             return defaultLogoutWithSessionCheck(sessionFromSessionCookie, input, state);
         }
-
-        final String clientID;
-        if (audience.isPresent()) {
-            clientID = audience.get();
-            LOG.info("Validating ClientID");
-            attachLogFieldToLogs(CLIENT_ID, clientID);
-            Optional<ClientRegistry> clientRegistry = dynamoClientService.getClient(clientID);
-            if (clientRegistry.isEmpty()) {
-                LOG.warn("Client not found in ClientRegistry");
-                return logoutService.generateErrorLogoutResponse(
-                        state,
-                        new ErrorObject(OAuth2Error.UNAUTHORIZED_CLIENT_CODE, "client not found"),
-                        input,
-                        Optional.of(clientID),
-                        Optional.empty());
-            }
-
-            if (postLogoutRedirectUri.isEmpty()) {
-                LOG.info(
-                        "post_logout_redirect_uri is NOT present in logout request. Generating default logout response");
-                return logoutService.generateDefaultLogoutResponse(
-                        state, input, Optional.of(clientID), Optional.empty());
-            } else {
-                var validatedPostLogoutRedirectUi =
-                        postLogoutRedirectUri
-                                .map(
-                                        uri -> {
-                                            if (!clientRegistry
-                                                    .get()
-                                                    .getPostLogoutRedirectUrls()
-                                                    .contains(uri)) {
-                                                LOG.warn(
-                                                        "Client registry does not contain PostLogoutRedirectUri which was sent in the logout request. Value is {}",
-                                                        uri);
-                                                return false;
-                                            } else {
-                                                LOG.info(
-                                                        "The post_logout_redirect_uri is present in logout request and client registry. Value is {}",
-                                                        uri);
-                                                return true;
-                                            }
-                                        })
-                                .orElseGet(() -> false);
-                if (!validatedPostLogoutRedirectUi) {
-                    return errorLogoutWithSessionCheck(
-                            sessionFromSessionCookie, input, state, clientID);
-                }
-            }
+        LOG.info("ID token hint is present");
+        boolean isTokenSignatureValid =
+                segmentedFunctionCall(
+                        "isTokenSignatureValid",
+                        () -> tokenValidationService.isTokenSignatureValid(idTokenHint.get()));
+        if (!isTokenSignatureValid) {
+            LOG.warn("Unable to validate ID token signature");
+            return logoutService.generateErrorLogoutResponse(
+                    Optional.empty(),
+                    new ErrorObject(
+                            OAuth2Error.INVALID_REQUEST_CODE,
+                            "unable to validate id_token_hint"),
+                    input,
+                    Optional.empty(),
+                    Optional.empty());
         } else {
+            SignedJWT idToken = SignedJWT.parse(idTokenHint.get());
+            audience = idToken.getJWTClaimsSet().getAudience().stream().findFirst();
+        }
+
+        if (audience.isEmpty()) {
             return logoutService.generateDefaultLogoutResponse(
                     state, input, audience, Optional.empty());
+        }
+        final String clientID = audience.get();
+        LOG.info("Validating ClientID");
+        attachLogFieldToLogs(CLIENT_ID, clientID);
+        Optional<ClientRegistry> clientRegistry = dynamoClientService.getClient(clientID);
+        if (clientRegistry.isEmpty()) {
+            LOG.warn("Client not found in ClientRegistry");
+            return logoutService.generateErrorLogoutResponse(
+                    state,
+                    new ErrorObject(OAuth2Error.UNAUTHORIZED_CLIENT_CODE, "client not found"),
+                    input,
+                    Optional.of(clientID),
+                    Optional.empty());
+        }
+        if (postLogoutRedirectUri.isEmpty()) {
+            LOG.info(
+                    "post_logout_redirect_uri is NOT present in logout request. Generating default logout response");
+            return logoutService.generateDefaultLogoutResponse(
+                    state, input, Optional.of(clientID), Optional.empty());
+        }
+        if (!checkPostLogoutRedirectUrlInClientReg(postLogoutRedirectUri, clientRegistry))  {
+            return errorLogoutWithSessionCheck(
+                    sessionFromSessionCookie, input, state, clientID);
         }
 
         if (sessionFromSessionCookie.isPresent()) {
@@ -229,6 +204,27 @@ public class LogoutHandler
         }
         return logoutService.generateDefaultLogoutResponse(
                 state, input, Optional.empty(), sessionResponse);
+    }
+
+    private boolean checkPostLogoutRedirectUrlInClientReg(Optional<String> postLogoutRedirectUri, Optional<ClientRegistry> clientRegistry) {
+        return postLogoutRedirectUri.map(
+                        uri -> {
+                            if (!clientRegistry
+                                    .get()
+                                    .getPostLogoutRedirectUrls()
+                                    .contains(uri)) {
+                                LOG.warn(
+                                        "Client registry does not contain PostLogoutRedirectUri which was sent in the logout request. Value is {}",
+                                        uri);
+                                return false;
+                            } else {
+                                LOG.info(
+                                        "The post_logout_redirect_uri is present in logout request and client registry. Value is {}",
+                                        uri);
+                                return true;
+                            }
+                        })
+                .orElseGet(() -> false);
     }
 
     private APIGatewayProxyResponseEvent errorLogoutWithSessionCheck(
