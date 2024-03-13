@@ -83,7 +83,7 @@ resource "aws_cloudwatch_log_group" "stage_execution_logs" {
   retention_in_days = var.cloudwatch_log_retention
   kms_key_id        = var.cloudwatch_encryption_key_arn
 }
-resource "aws_cloudwatch_log_subscription_filter" "account_management_execution_log_subscription" {
+resource "aws_cloudwatch_log_subscription_filter" "execution_log_subscription" {
   count           = length(var.logging_endpoint_arns)
   name            = "${var.environment}-${var.resource_prefix}-execution-log-subscription"
   log_group_name  = aws_cloudwatch_log_group.stage_execution_logs.name
@@ -103,7 +103,7 @@ resource "aws_cloudwatch_log_group" "access_logs" {
 resource "aws_cloudwatch_log_subscription_filter" "access_log_subscription" {
   count           = length(var.logging_endpoint_arns)
   name            = "${var.environment}-${var.resource_prefix}-access-logs-subscription"
-  log_group_name  = aws_cloudwatch_log_group.account_management_access_logs.name
+  log_group_name  = aws_cloudwatch_log_group.access_logs.name
   filter_pattern  = ""
   destination_arn = var.logging_endpoint_arns[count.index]
 
