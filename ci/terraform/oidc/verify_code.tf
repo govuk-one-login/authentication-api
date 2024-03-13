@@ -41,6 +41,8 @@ module "verify_code" {
     TEST_CLIENTS_ENABLED                       = var.test_clients_enabled
     INTERNAl_SECTOR_URI                        = var.internal_sector_uri
     REMOVE_RETRY_LIMIT_REGISTRATION_EMAIL_CODE = var.remove_retry_limit_registration_email_code
+    CODE_MAX_RETRIES_INCREASED                 = var.code_max_retries_increased
+    REDUCED_LOCKOUT_DURATION                   = var.reduced_lockout_duration
   }
   handler_function_name = "uk.gov.di.authentication.frontendapi.lambda.VerifyCodeHandler::handleRequest"
 
