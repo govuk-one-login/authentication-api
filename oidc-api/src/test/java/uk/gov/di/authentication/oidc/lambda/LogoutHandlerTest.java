@@ -289,7 +289,7 @@ class LogoutHandlerTest {
                             Optional.empty(),
                             new ErrorObject(
                                     OAuth2Error.INVALID_REQUEST_CODE,
-                                    "id_token_hint does not exist in session"),
+                                    "unable to validate id_token_hint"),
                             event,
                             Optional.empty(),
                             Optional.of(session.getSessionId()));
