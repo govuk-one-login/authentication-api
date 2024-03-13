@@ -68,7 +68,7 @@ public class AuthCodeExtension extends DynamoExtension implements AfterEachCallb
             boolean isNewAccount) {
 
         dynamoAuthCodeService.saveAuthCode(
-                subjectID, authCode, claims, hasBeenUsed, sectorIdentifier, isNewAccount);
+                subjectID, authCode, claims, hasBeenUsed, sectorIdentifier, isNewAccount, null);
     }
 
     private void createAuthCodeStoreTable() {

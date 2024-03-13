@@ -60,13 +60,19 @@ public class AccessTokenStoreExtension extends DynamoExtension implements AfterE
             String subjectID,
             List<String> claims,
             boolean isNewAccount,
-            String sectorIdentifier) {
+            String sectorIdentifier,
+            Long passwordResetTime) {
         dynamoService.addAccessTokenStore(
-                accessToken, subjectID, claims, isNewAccount, sectorIdentifier);
+                accessToken, subjectID, claims, isNewAccount, sectorIdentifier, passwordResetTime);
     }
 
     public void addAccessTokenStore(String accessToken, String subjectID, List<String> claims) {
-        this.addAccessTokenStore(accessToken, subjectID, claims, false, "any");
+        this.addAccessTokenStore(accessToken, subjectID, claims, false, "any", null);
+    }
+
+    public void addAccessTokenStore(String accessToken, Long passwordResetTime) {
+        this.addAccessTokenStore(
+                accessToken, "subjectId", List.of(), false, "any", passwordResetTime);
     }
 
     public void setAccessTokenStoreUsed(String accessToken, boolean used) {
