@@ -8,14 +8,7 @@ public class AccountIntervention {
     private final boolean ignoreResetPassword;
 
     public AccountIntervention(AccountInterventionState state) {
-        this.details =
-                new AccountInterventionDetails(
-                        Long.MIN_VALUE,
-                        Long.MIN_VALUE,
-                        Long.MIN_VALUE,
-                        "",
-                        Long.MIN_VALUE,
-                        Long.MIN_VALUE);
+        this.details = new AccountInterventionDetails(0L, 0L, 0L, "", 0L, 0L);
         this.state = state;
         this.ignoreResetPassword = false;
         this.status = deduceStatus();
