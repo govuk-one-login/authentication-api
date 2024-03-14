@@ -80,7 +80,7 @@ Globals:
         - SecretArn: !FindInMap [ EnvironmentConfiguration, !Ref Environment, dynatraceSecretArn ]
 
 Resources:
-  WellKnownFunction:
+  OpenIdConfigurationFunction:
     Type: AWS::Serverless::Function
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     # checkov:skip=CKV_AWS_117: Lambdas will migrate to our own VPC in future work
@@ -96,10 +96,18 @@ Resources:
           ENVIRONMENT: !Sub ${Environment}
           FRONTEND_BASE_URL: !Sub https://signin.${Environment}.account.gov.uk/
       Events:
-        WellKnown:
+        OpenIdConfiguration:
           Type: Api
           Properties:
             Path: /.well-known/openid-configuration
             Method: get
       Tags:
         CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+
+  OpenIdConfigurationFunctionCrossAccountPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref OpenIdConfigurationFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: "arn:aws:execute-api:eu-west-2:761723964695:aqyf5d32s2/*/GET/.well-known/openid-configuration"
