@@ -3,7 +3,7 @@ package uk.gov.di.orchestration.shared.services;
 import software.amazon.cloudwatchlogs.emf.logger.MetricsLogger;
 import software.amazon.cloudwatchlogs.emf.model.DimensionSet;
 import software.amazon.cloudwatchlogs.emf.model.Unit;
-import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
+import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.Session;
 
 import java.util.Map;
@@ -86,14 +86,13 @@ public class CloudwatchMetricsService {
     }
 
     public void incrementLogout(
-            Optional<String> clientId,
-            Optional<AccountInterventionState> accountInterventionState) {
+            Optional<String> clientId, Optional<AccountIntervention> intervention) {
         String accountInterventionStr = "unknown";
-        if (accountInterventionState.isPresent()) {
-            if (accountInterventionState.get().suspended()) {
+        if (intervention.isPresent()) {
+            if (intervention.get().getSuspended()) {
                 accountInterventionStr = "suspended";
             }
-            if (accountInterventionState.get().blocked()) {
+            if (intervention.get().getBlocked()) {
                 accountInterventionStr = "blocked";
             }
         }

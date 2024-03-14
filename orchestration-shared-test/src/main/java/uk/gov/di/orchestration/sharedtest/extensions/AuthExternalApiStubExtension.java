@@ -36,4 +36,30 @@ public class AuthExternalApiStubExtension extends HttpStubExtension {
 
         register("/userinfo", 200, "application/json", userInfoContent);
     }
+
+    public void init(Subject subjectId, Long passwordResetTime) {
+        register(
+                "/token",
+                200,
+                "application/json",
+                format(
+                        "{"
+                                + "  \"access_token\": \"740e5834-3a29-46b4-9a6f-16142fde533a\","
+                                + "  \"token_type\": \"bearer\","
+                                + "  \"expires_in\": \"3600\","
+                                + "  \"uri\": \"http://localhost:%1$d\""
+                                + "}",
+                        getHttpPort()));
+
+        String userInfoContent =
+                String.format(
+                        "{"
+                                + "\"sub\": \"%s\","
+                                + "\"new_account\": true,"
+                                + "\"password_reset_time\": %s"
+                                + "}",
+                        subjectId.getValue(), passwordResetTime.toString());
+
+        register("/userinfo", 200, "application/json", userInfoContent);
+    }
 }

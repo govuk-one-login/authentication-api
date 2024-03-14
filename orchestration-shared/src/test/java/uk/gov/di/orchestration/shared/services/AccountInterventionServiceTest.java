@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.shared.domain.AuditableEvent;
+import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.exceptions.AccountInterventionException;
 
 import java.io.IOException;
@@ -92,7 +93,7 @@ class AccountInterventionServiceTest {
         when(httpClient.send(any(), any())).thenReturn(httpResponse);
         when(httpResponse.body()).thenReturn(ACCOUNT_INTERVENTION_SERVICE_RESPONSE_SUSPEND_REPROVE);
 
-        ais.getAccountState(internalPairwiseSubjectId);
+        ais.getAccountIntervention(internalPairwiseSubjectId);
 
         verify(httpClient).send(httpRequestCaptor.capture(), any());
         var requestUri = httpRequestCaptor.getValue();
@@ -102,7 +103,7 @@ class AccountInterventionServiceTest {
     }
 
     @Test
-    void shouldReturnAccountStatus() throws IOException, InterruptedException {
+    void shouldReturnAccountIntervention() throws IOException, InterruptedException {
 
         var internalPairwiseSubjectId = "some-internal-subject-id";
         var accountInterventionService =
@@ -114,12 +115,13 @@ class AccountInterventionServiceTest {
         when(httpResponse.body()).thenReturn(ACCOUNT_INTERVENTION_SERVICE_RESPONSE_SUSPEND_REPROVE);
         when(httpResponse.statusCode()).thenReturn(200);
 
-        var status = accountInterventionService.getAccountState(internalPairwiseSubjectId);
+        AccountIntervention intervention =
+                accountInterventionService.getAccountIntervention(internalPairwiseSubjectId);
 
-        assertFalse(status.blocked());
-        assertTrue(status.suspended());
-        assertTrue(status.reproveIdentity());
-        assertFalse(status.resetPassword());
+        assertFalse(intervention.getBlocked());
+        assertTrue(intervention.getSuspended());
+        assertTrue(intervention.getReproveIdentity());
+        assertFalse(intervention.getResetPassword());
 
         verify(cloudwatchMetricsService)
                 .incrementCounter(
@@ -140,14 +142,14 @@ class AccountInterventionServiceTest {
         var ais =
                 new AccountInterventionService(
                         config, httpClient, cloudwatchMetricsService, auditService);
-        var status = ais.getAccountState(internalPairwiseSubjectId);
+        AccountIntervention intervention = ais.getAccountIntervention(internalPairwiseSubjectId);
 
         verifyNoInteractions(httpClient);
 
-        assertFalse(status.blocked());
-        assertFalse(status.suspended());
-        assertFalse(status.reproveIdentity());
-        assertFalse(status.resetPassword());
+        assertFalse(intervention.getBlocked());
+        assertFalse(intervention.getSuspended());
+        assertFalse(intervention.getReproveIdentity());
+        assertFalse(intervention.getResetPassword());
     }
 
     @Test
@@ -166,7 +168,7 @@ class AccountInterventionServiceTest {
         when(httpClient.send(any(), any())).thenThrow(new IOException("Test IO Exception"));
 
         assertDoesNotThrow(
-                () -> accountInterventionService.getAccountState(internalPairwiseSubjectId));
+                () -> accountInterventionService.getAccountIntervention(internalPairwiseSubjectId));
     }
 
     @Test
@@ -186,7 +188,7 @@ class AccountInterventionServiceTest {
 
         assertThrows(
                 AccountInterventionException.class,
-                () -> accountInterventionService.getAccountState(internalPairwiseSubjectId));
+                () -> accountInterventionService.getAccountIntervention(internalPairwiseSubjectId));
 
         verify(cloudwatchMetricsService)
                 .incrementCounter("AISException", Map.of("Environment", ENVIRONMENT));
@@ -210,7 +212,8 @@ class AccountInterventionServiceTest {
         when(httpResponse.body()).thenReturn(ACCOUNT_INTERVENTION_SERVICE_RESPONSE_SUSPEND_REPROVE);
         when(httpResponse.statusCode()).thenReturn(200);
 
-        accountInterventionService.getAccountState(internalPairwiseSubjectId, someAuditContext);
+        accountInterventionService.getAccountIntervention(
+                internalPairwiseSubjectId, someAuditContext);
 
         var expectedAuditContext =
                 new AuditContext(
@@ -246,7 +249,8 @@ class AccountInterventionServiceTest {
         when(httpClient.send(any(), any())).thenReturn(httpResponse);
         when(httpResponse.body()).thenReturn(ACCOUNT_INTERVENTION_SERVICE_RESPONSE_SUSPEND_REPROVE);
 
-        accountInterventionService.getAccountState(internalPairwiseSubjectId, someAuditContext);
+        accountInterventionService.getAccountIntervention(
+                internalPairwiseSubjectId, someAuditContext);
 
         verifyNoInteractions(auditService);
     }
@@ -269,7 +273,9 @@ class AccountInterventionServiceTest {
 
         assertThrows(
                 AccountInterventionException.class,
-                () -> accountInterventionService.getAccountState(internalPairwiseSubjectId, null));
+                () ->
+                        accountInterventionService.getAccountIntervention(
+                                internalPairwiseSubjectId, null));
     }
 
     private void assertMatchingAuditContext(AuditContext expected, AuditContext actual) {
