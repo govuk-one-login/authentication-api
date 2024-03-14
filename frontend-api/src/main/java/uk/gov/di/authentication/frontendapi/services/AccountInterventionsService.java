@@ -49,7 +49,6 @@ public class AccountInterventionsService {
 
     public AccountInterventionsInboundResponse sendAccountInterventionsOutboundRequest(
             String internalPairwiseId) throws UnsuccessfulAccountInterventionsResponseException {
-
         LOG.info("Sending account interventions outbound request");
         var response = sendAccountInterventionsRequest(internalPairwiseId);
         if (response.statusCode() < 200 || response.statusCode() > 299) {
@@ -73,8 +72,6 @@ public class AccountInterventionsService {
                                                 .getAccountInterventionServiceCallTimeout()))
                         .build();
         try {
-            System.out.println("request being sent through http client " );
-            System.out.println(request.headers());
             return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
         } catch (HttpTimeoutException e) {
             throw timeoutException(
