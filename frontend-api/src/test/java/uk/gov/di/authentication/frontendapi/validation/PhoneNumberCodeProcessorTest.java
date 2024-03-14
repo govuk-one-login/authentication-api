@@ -8,18 +8,22 @@ import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.di.authentication.entity.CodeRequest;
 import uk.gov.di.authentication.entity.VerifyMfaCodeRequest;
 import uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent;
+import uk.gov.di.authentication.frontendapi.entity.PhoneNumberRequest;
 import uk.gov.di.authentication.shared.entity.CodeRequestType;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
 import uk.gov.di.authentication.shared.entity.JourneyType;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.NotificationType;
 import uk.gov.di.authentication.shared.entity.Session;
+import uk.gov.di.authentication.shared.entity.UserProfile;
 import uk.gov.di.authentication.shared.helpers.IdGenerator;
 import uk.gov.di.authentication.shared.services.AuditService;
 import uk.gov.di.authentication.shared.services.AuthenticationService;
+import uk.gov.di.authentication.shared.services.AwsSqsClient;
 import uk.gov.di.authentication.shared.services.CodeStorageService;
 import uk.gov.di.authentication.shared.services.ConfigurationService;
 import uk.gov.di.authentication.shared.services.DynamoAccountModifiersService;
+import uk.gov.di.authentication.shared.services.SerializationService;
 import uk.gov.di.authentication.shared.state.UserContext;
 
 import java.util.Optional;
@@ -44,15 +48,18 @@ class PhoneNumberCodeProcessorTest {
     private final Session session = mock(Session.class);
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final UserContext userContext = mock(UserContext.class);
+    private final UserProfile userProfile = mock(UserProfile.class);
     private final AuditService auditService = mock(AuditService.class);
     private final AuthenticationService authenticationService = mock(AuthenticationService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
+    private final AwsSqsClient sqsClient = mock(AwsSqsClient.class);
     private final DynamoAccountModifiersService accountModifiersService =
             mock(DynamoAccountModifiersService.class);
     private static final String TEST_EMAIL_ADDRESS = "joe.bloggs@example.com";
     private static final String VALID_CODE = "123456";
     private static final String INVALID_CODE = "826272";
     private static final String PHONE_NUMBER = "+447700900000";
+    private static final String DIFFERENT_PHONE_NUMBER = "+447700900001";
     private static final String PERSISTENT_ID = "some-persistent-session-id";
     private static final String CLIENT_SESSION_ID = "a-client-session-id";
     private static final String SESSION_ID = "a-session-id";
@@ -271,12 +278,50 @@ class PhoneNumberCodeProcessorTest {
         verifyNoInteractions(auditService);
     }
 
+    @Test
+    void shouldSendPhoneNumberRequestToSqsClientIfFeatureSwitchIsOn() {
+        when(configurationService.isPhoneCheckerWithReplyEnabled()).thenReturn(true);
+        setupPhoneNumberCode(
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.SMS, VALID_CODE, JourneyType.REGISTRATION, PHONE_NUMBER),
+                CodeRequestType.SMS_REGISTRATION);
+
+        phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+
+        verify(sqsClient)
+                .send(
+                        SerializationService.getInstance()
+                                .writeValueAsString(
+                                        new PhoneNumberRequest(
+                                                true,
+                                                PHONE_NUMBER,
+                                                false,
+                                                JourneyType.REGISTRATION,
+                                                INTERNAL_SUB_ID)));
+    }
+
+    @Test
+    void shouldNotSendPhoneNumberRequestToSqsClientIfFeatureSwitchIsOff() {
+        when(configurationService.isPhoneCheckerWithReplyEnabled()).thenReturn(false);
+        setupPhoneNumberCode(
+                new VerifyMfaCodeRequest(
+                        MFAMethodType.SMS, VALID_CODE, JourneyType.REGISTRATION, PHONE_NUMBER),
+                CodeRequestType.SMS_REGISTRATION);
+
+        phoneNumberCodeProcessor.processSuccessfulCodeRequest(IP_ADDRESS, PERSISTENT_ID);
+
+        verifyNoInteractions(sqsClient);
+    }
+
     public void setupPhoneNumberCode(CodeRequest codeRequest, CodeRequestType codeRequestType) {
         when(session.getEmailAddress()).thenReturn(TEST_EMAIL_ADDRESS);
         when(session.getSessionId()).thenReturn(SESSION_ID);
         when(session.getInternalCommonSubjectIdentifier()).thenReturn(INTERNAL_SUB_ID);
         when(userContext.getClientSessionId()).thenReturn(CLIENT_SESSION_ID);
         when(userContext.getSession()).thenReturn(session);
+        when(userContext.getUserProfile()).thenReturn(Optional.of(userProfile));
+        when(userProfile.isPhoneNumberVerified()).thenReturn(true);
+        when(userProfile.getPhoneNumber()).thenReturn(DIFFERENT_PHONE_NUMBER);
         when(configurationService.isTestClientsEnabled()).thenReturn(false);
         when(codeStorageService.getOtpCode(
                         TEST_EMAIL_ADDRESS, NotificationType.VERIFY_PHONE_NUMBER))
@@ -294,7 +339,8 @@ class PhoneNumberCodeProcessorTest {
                         codeRequest,
                         authenticationService,
                         auditService,
-                        accountModifiersService);
+                        accountModifiersService,
+                        sqsClient);
     }
 
     public void setUpPhoneNumberCodeRetryLimitExceeded(CodeRequest codeRequest) {
@@ -315,7 +361,8 @@ class PhoneNumberCodeProcessorTest {
                         codeRequest,
                         authenticationService,
                         auditService,
-                        accountModifiersService);
+                        accountModifiersService,
+                        sqsClient);
     }
 
     public void setUpBlockedPhoneNumberCode(
@@ -337,7 +384,8 @@ class PhoneNumberCodeProcessorTest {
                         codeRequest,
                         authenticationService,
                         auditService,
-                        accountModifiersService);
+                        accountModifiersService,
+                        sqsClient);
     }
 
     private static Stream<Arguments> codeRequestTypes() {
