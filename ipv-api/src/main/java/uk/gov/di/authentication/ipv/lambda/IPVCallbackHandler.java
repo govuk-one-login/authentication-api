@@ -21,6 +21,7 @@ import uk.gov.di.authentication.ipv.helpers.IPVCallbackHelper;
 import uk.gov.di.authentication.ipv.services.IPVAuthorisationService;
 import uk.gov.di.authentication.ipv.services.IPVTokenService;
 import uk.gov.di.orchestration.audit.AuditContext;
+import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ResponseHeaders;
 import uk.gov.di.orchestration.shared.exceptions.NoSessionException;
@@ -248,17 +249,16 @@ public class IPVCallbackHandler
                             persistentId);
 
             if (errorObject.isPresent()) {
-                var accountInterventionState =
+                AccountIntervention intervention =
                         segmentedFunctionCall(
-                                "AIS: getAccountState",
+                                "AIS: getAccountIntervention",
                                 () ->
-                                        this.accountInterventionService.getAccountState(
+                                        this.accountInterventionService.getAccountIntervention(
                                                 internalPairwiseSubjectId, auditContext));
                 if (configurationService.isAccountInterventionServiceActionEnabled()
-                        && (accountInterventionState.blocked()
-                                || accountInterventionState.suspended())) {
+                        && (intervention.getBlocked() || intervention.getSuspended())) {
                     return logoutService.handleAccountInterventionLogout(
-                            session, input, clientId, accountInterventionState);
+                            session, input, clientId, intervention);
                 }
 
                 return ipvCallbackHelper.generateAuthenticationErrorResponse(
@@ -339,17 +339,16 @@ public class IPVCallbackHandler
             var userIdentityError =
                     ipvCallbackHelper.validateUserIdentityResponse(userIdentityUserInfo, vtrList);
             if (userIdentityError.isPresent()) {
-                var accountInterventionState =
+                AccountIntervention intervention =
                         segmentedFunctionCall(
-                                "AIS: getAccountState",
+                                "AIS: getAccountIntervention",
                                 () ->
-                                        this.accountInterventionService.getAccountState(
+                                        this.accountInterventionService.getAccountIntervention(
                                                 internalPairwiseSubjectId, auditContext));
                 if (configurationService.isAccountInterventionServiceActionEnabled()
-                        && (accountInterventionState.blocked()
-                                || accountInterventionState.suspended())) {
+                        && (intervention.getBlocked() || intervention.getSuspended())) {
                     return logoutService.handleAccountInterventionLogout(
-                            session, input, clientId, accountInterventionState);
+                            session, input, clientId, intervention);
                 }
 
                 var returnCode = userIdentityUserInfo.getClaim(RETURN_CODE.getValue());
