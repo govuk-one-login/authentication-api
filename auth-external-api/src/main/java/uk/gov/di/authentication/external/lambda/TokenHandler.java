@@ -113,9 +113,9 @@ public class TokenHandler
         }
 
         try {
-            var authenticationBackendURI = configurationService.getAuthenticationBackendURI();
-            var authExternalApiTokenEndpoint =
-                    buildURI(authenticationBackendURI.toString(), "token");
+            var authenticationBackendURI =
+                    configurationService.getAuthenticationBackendURI(input.getRequestContext());
+            var authExternalApiTokenEndpoint = buildURI(authenticationBackendURI, "token");
 
             tokenRequestValidator.validatePrivateKeyJwtClientAuth(
                     input.getBody(),

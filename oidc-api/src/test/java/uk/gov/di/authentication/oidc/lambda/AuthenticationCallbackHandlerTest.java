@@ -107,10 +107,10 @@ class AuthenticationCallbackHandlerTest {
     static void init() {
         when(configurationService.getEnvironment()).thenReturn("test-env");
         when(configurationService.getLoginURI()).thenReturn(URI.create(TEST_FRONTEND_BASE_URL));
-        when(configurationService.getAuthenticationBackendURI())
-                .thenReturn(URI.create(TEST_AUTH_BACKEND_BASE_URL));
         when(configurationService.isAccountInterventionServiceCallEnabled()).thenReturn(false);
         when(configurationService.isAccountInterventionServiceActionEnabled()).thenReturn(false);
+        when(configurationService.getAuthenticationBackendURI(any()))
+                .thenReturn(URI.create(TEST_AUTH_BACKEND_BASE_URL));
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
                         CLIENT_SESSION_ID, TEST_EMAIL_ADDRESS, clientSession))
                 .thenReturn(AUTH_CODE_RP_TO_ORCH);

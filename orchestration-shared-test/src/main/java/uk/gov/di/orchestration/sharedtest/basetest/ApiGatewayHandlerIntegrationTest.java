@@ -11,7 +11,6 @@ import java.util.UUID;
 
 public abstract class ApiGatewayHandlerIntegrationTest
         extends HandlerIntegrationTest<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
-
     protected APIGatewayProxyResponseEvent makeRequest(
             Optional<Object> body, Map<String, String> headers, Map<String, String> queryString) {
         return makeRequest(
@@ -63,6 +62,26 @@ public abstract class ApiGatewayHandlerIntegrationTest
             Map<String, String> pathParams,
             Map<String, Object> authorizerParams,
             Optional<String> httpMethod) {
+        return makeRequest(
+                body,
+                headers,
+                queryString,
+                pathParams,
+                authorizerParams,
+                API_GATEWAY_DOMAIN,
+                API_GATEWAY_STAGE_PATH,
+                httpMethod);
+    }
+
+    protected APIGatewayProxyResponseEvent makeRequest(
+            Optional<Object> body,
+            Map<String, String> headers,
+            Map<String, String> queryString,
+            Map<String, String> pathParams,
+            Map<String, Object> authorizerParams,
+            String apiGatewayDomain,
+            String apiGatewayPath,
+            Optional<String> httpMethod) {
         String requestId = UUID.randomUUID().toString();
         APIGatewayProxyRequestEvent request = new APIGatewayProxyRequestEvent();
         request.withHeaders(headers)
@@ -71,7 +90,9 @@ public abstract class ApiGatewayHandlerIntegrationTest
                 .withHttpMethod(httpMethod.orElse(null))
                 .withRequestContext(
                         new APIGatewayProxyRequestEvent.ProxyRequestContext()
-                                .withRequestId(requestId));
+                                .withRequestId(requestId)
+                                .withDomainName(apiGatewayDomain)
+                                .withPath(apiGatewayPath));
         request.getRequestContext().setAuthorizer(authorizerParams);
         body.ifPresent(
                 o -> {

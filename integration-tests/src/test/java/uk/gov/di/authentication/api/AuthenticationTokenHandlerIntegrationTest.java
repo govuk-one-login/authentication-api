@@ -47,7 +47,9 @@ class AuthenticationTokenHandlerIntegrationTest extends ApiGatewayHandlerIntegra
     public static final String INVALID_AUTH_CODE = "invalid-auth-code";
     private static final String ORCH_CLIENT_ID = "orch-client-id";
     private static final URI ORCH_REDIRECT_URI = URI.create("http://localhost/redirect");
-    private static final URI AUTH_BACKEND_URI = URI.create("http://auth-backend");
+    private static final String AUTH_BACKEND_DOMAIN = API_GATEWAY_DOMAIN;
+    private static final URI AUTH_BACKEND_URI =
+            buildURI(String.format("https://%s", AUTH_BACKEND_DOMAIN), API_GATEWAY_STAGE_PATH);
     private static final Subject TEST_SUBJECT = new Subject();
     private static final List<String> TEST_CLAIMS = List.of("test-claim-1");
     private static final String TEST_SECTOR_IDENTIFIER = "sectorIdentifier";
@@ -232,11 +234,6 @@ class AuthenticationTokenHandlerIntegrationTest extends ApiGatewayHandlerIntegra
         @Override
         public URI getAuthenticationAuthCallbackURI() {
             return ORCH_REDIRECT_URI;
-        }
-
-        @Override
-        public URI getAuthenticationBackendURI() {
-            return AUTH_BACKEND_URI;
         }
 
         @Override

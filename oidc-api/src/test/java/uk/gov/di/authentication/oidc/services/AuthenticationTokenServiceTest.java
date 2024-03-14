@@ -64,7 +64,9 @@ class AuthenticationTokenServiceTest {
     private final HTTPRequest httpRequest = mock(HTTPRequest.class);
     private static final String SIGNING_KID = "14342354354353";
     private static final ClientID CLIENT_ID = new ClientID("some-client-id");
-    private static final URI AUTH_BACKEND_URI = URI.create("https://auth.backend.uri/");
+    private static final String AUTH_BACKEND_DOMAIN = "auth.backend.uri";
+    private static final URI AUTH_BACKEND_URI =
+            URI.create(String.format("https://%s/", AUTH_BACKEND_DOMAIN));
     private static final URI ORCH_CALLBACK_URI = URI.create("https://orch.callback.uri/");
     private static final GetPublicKeyResponse PUBLIC_KEY_RESPONSE =
             GetPublicKeyResponse.builder().keyId("test").build();
@@ -76,7 +78,6 @@ class AuthenticationTokenServiceTest {
     @BeforeEach
     void setUp() {
         when(configurationService.getAuthenticationAuthCallbackURI()).thenReturn(ORCH_CALLBACK_URI);
-        when(configurationService.getAuthenticationBackendURI()).thenReturn(AUTH_BACKEND_URI);
         when(configurationService.getOrchestrationClientId()).thenReturn(CLIENT_ID.getValue());
         when(configurationService.getOrchestrationToAuthenticationTokenSigningKeyAlias())
                 .thenReturn("token-key-alias");
@@ -92,8 +93,10 @@ class AuthenticationTokenServiceTest {
         signJWTWithKMS();
         when(kmsService.getPublicKey(any(GetPublicKeyRequest.class)))
                 .thenReturn(GetPublicKeyResponse.builder().keyId("789789789789789").build());
+
         TokenRequest tokenRequest =
-                authenticationTokenService.constructTokenRequest(AUTH_CODE.getValue());
+                authenticationTokenService.constructTokenRequest(
+                        AUTH_CODE.getValue(), AUTH_BACKEND_URI);
         assertThat(tokenRequest.getEndpointURI().toString(), equalTo(AUTH_BACKEND_URI + "token"));
         assertThat(
                 tokenRequest.getClientAuthentication().getMethod().getValue(),

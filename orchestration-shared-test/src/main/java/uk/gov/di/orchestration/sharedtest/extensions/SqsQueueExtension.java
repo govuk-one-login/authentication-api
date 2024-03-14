@@ -5,20 +5,14 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.sqs.SqsClient;
-import software.amazon.awssdk.services.sqs.model.CreateQueueRequest;
-import software.amazon.awssdk.services.sqs.model.GetQueueAttributesRequest;
-import software.amazon.awssdk.services.sqs.model.GetQueueUrlRequest;
-import software.amazon.awssdk.services.sqs.model.Message;
-import software.amazon.awssdk.services.sqs.model.PurgeQueueRequest;
-import software.amazon.awssdk.services.sqs.model.QueueAttributeName;
-import software.amazon.awssdk.services.sqs.model.QueueDoesNotExistException;
-import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest;
+import software.amazon.awssdk.services.sqs.model.*;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.SerializationService;
 
 import java.net.URI;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static java.text.MessageFormat.format;
 
@@ -64,7 +58,9 @@ public class SqsQueueExtension extends BaseAwsResourceExtension implements Befor
     }
 
     public List<String> getRawMessages() {
-        return getMessages(DEFAULT_NUMBER_OF_MESSAGES).stream().map(Message::body).toList();
+        return getMessages(DEFAULT_NUMBER_OF_MESSAGES).stream()
+                .map(Message::body)
+                .collect(Collectors.toList());
     }
 
     public <T> List<T> getMessages(Class<T> messageClass, int numberOfMessages) {
@@ -77,7 +73,7 @@ public class SqsQueueExtension extends BaseAwsResourceExtension implements Befor
                                 throw new RuntimeException(e);
                             }
                         })
-                .toList();
+                .collect(Collectors.toList());
     }
 
     @Override

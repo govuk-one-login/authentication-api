@@ -15,45 +15,84 @@ data "aws_vpc_endpoint" "auth_api_vpc_endpoint" {
   }
 }
 
+# Define the modules that will be used to create the API
+# The names of the modules are used to refer to the integration_uri in the openapi.yaml
+locals {
+  endpoint_modules = {
+    auth_userinfo_module = module.auth_userinfo
+    auth_token_module    = module.auth_token
+  }
+}
+
 resource "aws_api_gateway_rest_api" "di_auth_ext_api" {
   name = "${var.environment}-di-auth-ext-api"
 
-  tags   = local.default_tags
-  policy = <<EOF
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Principal": "*",
-            "Action": "execute-api:Invoke",
-            "Resource": [
-                "execute-api:/*"
-            ]
-        },
-        {
-            "Effect": "Deny",
-            "Principal": "*",
-            "Action": "execute-api:Invoke",
-            "Resource": [
-                "execute-api:/*"
-            ],
-            "Condition" : {
-                "StringNotEquals": {
-                    "aws:SourceVpce": "${data.aws_vpc_endpoint.auth_api_vpc_endpoint.id}"
-                }
-            }
-        }
-    ]
-}
-EOF
+  body = templatefile(
+    "${path.module}/openapi.yaml",
+    merge({
+      environment = var.environment
+    }, local.endpoint_modules)
+  )
+
+  tags = local.default_tags
   endpoint_configuration {
     types            = ["PRIVATE"]
     vpc_endpoint_ids = [data.aws_vpc_endpoint.auth_api_vpc_endpoint.id]
   }
+
   lifecycle {
     create_before_destroy = true
   }
+}
+
+data "aws_iam_policy_document" "di_auth_ext_api_policy" {
+  statement {
+    effect = "Allow"
+    principals {
+      type        = "*"
+      identifiers = ["*"]
+    }
+    actions = [
+      "execute-api:Invoke"
+    ]
+    resources = [
+      "${aws_api_gateway_rest_api.di_auth_ext_api.execution_arn}/*"
+    ]
+  }
+  statement {
+    effect = "Deny"
+    principals {
+      type        = "*"
+      identifiers = ["*"]
+    }
+    actions = [
+      "execute-api:Invoke"
+    ]
+    resources = [
+      "${aws_api_gateway_rest_api.di_auth_ext_api.execution_arn}/*"
+    ]
+    condition {
+      test     = "StringNotEquals"
+      variable = "aws:SourceVpce"
+      values   = [data.aws_vpc_endpoint.auth_api_vpc_endpoint.id]
+    }
+  }
+
+}
+
+resource "aws_lambda_permission" "endpoint_execution_permission" {
+  for_each      = local.endpoint_modules
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = each.value.endpoint_lambda_function.function_name
+  principal     = "apigateway.amazonaws.com"
+  qualifier     = each.value.endpoint_lambda_alias.name
+  source_arn    = "${aws_api_gateway_rest_api.di_auth_ext_api.execution_arn}/*/*"
+}
+
+resource "aws_api_gateway_rest_api_policy" "di_auth_ext_api_policy" {
+  rest_api_id = aws_api_gateway_rest_api.di_auth_ext_api.id
+  policy      = data.aws_iam_policy_document.di_auth_ext_api_policy.json
 }
 
 resource "aws_api_gateway_usage_plan" "di_auth_ext_api_usage_plan" {
@@ -63,10 +102,6 @@ resource "aws_api_gateway_usage_plan" "di_auth_ext_api_usage_plan" {
     api_id = aws_api_gateway_rest_api.di_auth_ext_api.id
     stage  = aws_api_gateway_stage.di_auth_ext_stage.stage_name
   }
-  depends_on = [
-    aws_api_gateway_stage.di_auth_ext_stage,
-    aws_api_gateway_rest_api.di_auth_ext_api,
-  ]
   # checkov:skip=CKV_AWS_120:We do not want API caching on this Lambda
 }
 
@@ -82,10 +117,9 @@ resource "aws_api_gateway_stage" "di_auth_ext_stage" {
     format          = local.access_logging_template
   }
 
-  depends_on = [
-    module.auth_userinfo_role,
-    aws_api_gateway_deployment.auth_ext_api_deployment,
-  ]
+  lifecycle {
+    replace_triggered_by = [aws_api_gateway_deployment.auth_ext_api_deployment.id]
+  }
 
   tags = local.default_tags
   # checkov:skip=CKV_AWS_51:Client cert authentication is something we might want to consider in the future
@@ -105,9 +139,9 @@ resource "aws_api_gateway_method_settings" "di_auth_ext_api_logging_settings" {
     logging_level      = "INFO"
     caching_enabled    = false
   }
-  depends_on = [
-    aws_api_gateway_stage.di_auth_ext_stage
-  ]
+  lifecycle {
+    replace_triggered_by = [aws_api_gateway_stage.di_auth_ext_stage.id]
+  }
   # checkov:skip=CKV_AWS_225:We do not want API caching on this Lambda
   # checkov:skip=CKV_AWS_308:We do not want API caching on this Lambda
 }
@@ -116,16 +150,11 @@ resource "aws_api_gateway_deployment" "auth_ext_api_deployment" {
   rest_api_id = aws_api_gateway_rest_api.di_auth_ext_api.id
 
   triggers = {
-    redeployment = sha1(jsonencode([
-      module.auth_userinfo.integration_trigger_value,
-      module.auth_userinfo.method_trigger_value,
-    ]))
-  }
-  lifecycle {
-    create_before_destroy = true
+    redeployment = sha1(jsonencode(aws_api_gateway_rest_api.di_auth_ext_api.body))
   }
   depends_on = [
     module.auth_userinfo,
+    module.auth_token
   ]
 }
 

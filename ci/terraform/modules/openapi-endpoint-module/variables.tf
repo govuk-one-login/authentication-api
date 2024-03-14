@@ -133,3 +133,9 @@ variable "max_provisioned_concurrency" {
 variable "scaling_trigger" {
   default = 0.7
 }
+
+variable "api_gateway_timeout" {
+  type        = number
+  description = "The timeout for the API Gateway in millis"
+  default     = 29000
+}

@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.shared.services;
 
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -9,6 +10,7 @@ import software.amazon.awssdk.services.ssm.model.GetParameterRequest;
 import software.amazon.awssdk.services.ssm.model.GetParameterResponse;
 import uk.gov.di.authentication.shared.entity.DeliveryReceiptsNotificationType;
 
+import java.net.URI;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -138,6 +140,17 @@ class ConfigurationServiceTest {
         assertEquals(configurationService.getNotifyCallbackBearerToken(), ssmParamValue);
         assertEquals(configurationService.getNotifyCallbackBearerToken(), ssmParamValue);
         verify(mock, times(1)).getParameter(request);
+    }
+
+    @Test
+    void getAuthenticationBackendURIShouldCorrectlyExtractTheURIFromProxyRequestContext() {
+        ConfigurationService configurationService = new ConfigurationService();
+        var context =
+                new APIGatewayProxyRequestEvent.ProxyRequestContext()
+                        .withDomainName("localhost")
+                        .withPath("/test/");
+        var expectedURI = URI.create("https://localhost/test/");
+        assertEquals(expectedURI, configurationService.getAuthenticationBackendURI(context));
     }
 
     private GetParameterRequest parameterRequest(String name) {

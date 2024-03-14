@@ -1,5 +1,6 @@
 package uk.gov.di.orchestration.shared.services;
 
+import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -149,6 +150,17 @@ class ConfigurationServiceTest {
         configurationService.setSystemService(systemService);
 
         assertEquals(configurationService.getAccountInterventionServiceURI(), URI.create(""));
+    }
+
+    @Test
+    void getAuthenticationBackendURIShouldCorrectlyExtractTheURIFromProxyRequestContext() {
+        ConfigurationService configurationService = new ConfigurationService();
+        var context =
+                new APIGatewayProxyRequestEvent.ProxyRequestContext()
+                        .withDomainName("localhost")
+                        .withPath("/test/");
+        var expectedURI = URI.create("https://localhost/test/");
+        assertEquals(expectedURI, configurationService.getAuthenticationBackendURI(context));
     }
 
     private GetParameterRequest parameterRequest(String name) {
