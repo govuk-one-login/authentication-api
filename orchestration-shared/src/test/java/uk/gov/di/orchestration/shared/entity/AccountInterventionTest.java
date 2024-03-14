@@ -32,7 +32,8 @@ class AccountInterventionTest {
     @MethodSource("ignoreResetPasswordTestCases")
     void shouldHaveCorrectStatusWhenPasswordWasResetAfterInterventionWasApplied(
             AccountInterventionState state, AccountInterventionStatus status) {
-        AccountIntervention intervention = new AccountIntervention(state, Long.MAX_VALUE);
+        AccountInterventionDetails details = new AccountInterventionDetails(0L, 0L, 0L, "", 0L, 0L);
+        AccountIntervention intervention = new AccountIntervention(details, state, Long.MAX_VALUE);
         assertThat(intervention.getStatus(), equalTo(status));
     }
 

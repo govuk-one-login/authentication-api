@@ -31,20 +31,6 @@ public class AccountIntervention {
         this.status = deduceStatus();
     }
 
-    public AccountIntervention(AccountInterventionState state, Long passwordResetTime) {
-        this.details =
-                new AccountInterventionDetails(
-                        Long.MIN_VALUE,
-                        Long.MIN_VALUE,
-                        Long.MIN_VALUE,
-                        "",
-                        Long.MIN_VALUE,
-                        Long.MIN_VALUE);
-        this.state = state;
-        this.ignoreResetPassword = details.appliedAt() < passwordResetTime;
-        this.status = deduceStatus();
-    }
-
     public AccountInterventionStatus getStatus() {
         if (status == null) {
             return deduceStatus();
