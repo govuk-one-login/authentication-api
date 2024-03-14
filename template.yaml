@@ -107,7 +107,7 @@ Resources:
   OpenIdConfigurationFunctionCrossAccountPermission:
     Type: AWS::Lambda::Permission
     Properties:
-      FunctionName: !Ref OpenIdConfigurationFunction
+      FunctionName: !Ref OpenIdConfigurationFunction.Alias
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn: "arn:aws:execute-api:eu-west-2:761723964695:aqyf5d32s2/*/GET/.well-known/openid-configuration"
