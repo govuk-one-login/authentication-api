@@ -731,3 +731,38 @@ resource "aws_api_gateway_integration" "orch_frontend_nlb_integration" {
     "integration.request.path.proxy" = "method.request.path.proxy"
   }
 }
+
+resource "aws_api_gateway_resource" "orch_openid_configuration_resource" {
+  count       = var.orch_backend_api_gateway_integration_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  parent_id   = aws_api_gateway_resource.wellknown_resource.id
+  path_part   = "openid-configuration"
+  depends_on = [
+    aws_api_gateway_resource.wellknown_resource
+  ]
+}
+
+resource "aws_api_gateway_method" "orch_openid_configuration_method" {
+  count       = var.orch_backend_api_gateway_integration_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id = aws_api_gateway_resource.orch_openid_configuration_resource[0].id
+  http_method = "GET"
+
+  depends_on = [
+    aws_api_gateway_resource.orch_openid_configuration_resource
+  ]
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "orch_openid_configuration_integration" {
+  count       = var.orch_backend_api_gateway_integration_enabled ? 1 : 0
+  rest_api_id = aws_api_gateway_rest_api.di_authentication_api.id
+  resource_id = aws_api_gateway_resource.orch_openid_configuration_resource[0].id
+  http_method = aws_api_gateway_method.orch_openid_configuration_method[0].http_method
+  depends_on = [
+    aws_api_gateway_resource.orch_openid_configuration_resource
+  ]
+  type                    = "AWS_PROXY"
+  integration_http_method = "POST"
+  uri                     = var.orch_openid_configuration_uri
+}
