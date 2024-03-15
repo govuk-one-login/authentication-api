@@ -177,7 +177,7 @@ subprojects {
         pact_consumer "au.com.dius.pact.consumer:junit5:4.6.7"
 
         spotbugs "com.github.spotbugs:spotbugs:4.8.3"
-        spotbugsPlugins "software.amazon.lambda.snapstart:aws-lambda-snapstart-java-rules:0.2.0"
+        spotbugsPlugins "software.amazon.lambda.snapstart:aws-lambda-snapstart-java-rules:0.2.1"
     }
 }
 
