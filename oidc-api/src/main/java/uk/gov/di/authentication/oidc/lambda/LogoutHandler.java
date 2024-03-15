@@ -110,9 +110,6 @@ public class LogoutHandler
 
         Optional<String> idTokenHint =
                 Optional.ofNullable(queryStringParameters.get("id_token_hint"));
-        Optional<String> audience;
-        Optional<String> postLogoutRedirectUri =
-                Optional.ofNullable(queryStringParameters.get("post_logout_redirect_uri"));
         if (idTokenHint.isEmpty()) {
             return defaultLogoutWithSessionCheck(sessionFromSessionCookie, input, state);
         }
@@ -131,6 +128,7 @@ public class LogoutHandler
                     Optional.empty(),
                     Optional.empty());
         }
+        Optional<String> audience;
         try {
             SignedJWT idToken = SignedJWT.parse(idTokenHint.get());
             audience = idToken.getJWTClaimsSet().getAudience().stream().findFirst();
@@ -144,6 +142,8 @@ public class LogoutHandler
                     Optional.empty());
         }
 
+        Optional<String> postLogoutRedirectUri =
+                Optional.ofNullable(queryStringParameters.get("post_logout_redirect_uri"));
         if (audience.isEmpty()) {
             return logoutService.generateDefaultLogoutResponse(
                     state, input, audience, Optional.empty());
