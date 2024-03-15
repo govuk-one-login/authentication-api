@@ -92,8 +92,7 @@ public class LogoutHandler
                 "oidc-api::" + getClass().getSimpleName(), () -> logoutRequestHandler(input));
     }
 
-    public APIGatewayProxyResponseEvent logoutRequestHandler(APIGatewayProxyRequestEvent input)
-            throws ParseException {
+    public APIGatewayProxyResponseEvent logoutRequestHandler(APIGatewayProxyRequestEvent input) {
         LOG.info("Logout request received");
         Optional<Session> sessionFromSessionCookie =
                 segmentedFunctionCall(
