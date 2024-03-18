@@ -102,7 +102,8 @@ public class LogoutHandler
         Optional<String> state;
         if (queryStringParameters == null || queryStringParameters.isEmpty()) {
             LOG.info("Returning default logout as no input parameters");
-            return defaultLogoutWithSessionCheck(sessionFromSessionCookie, input, Optional.empty());
+            return defaultLogoutAndDestroySessionIfExists(
+                    sessionFromSessionCookie, input, Optional.empty());
         } else {
             state = Optional.ofNullable(queryStringParameters.get("state"));
         }
@@ -110,7 +111,7 @@ public class LogoutHandler
         Optional<String> idTokenHint =
                 Optional.ofNullable(queryStringParameters.get("id_token_hint"));
         if (idTokenHint.isEmpty()) {
-            return defaultLogoutWithSessionCheck(sessionFromSessionCookie, input, state);
+            return defaultLogoutAndDestroySessionIfExists(sessionFromSessionCookie, input, state);
         }
         LOG.info("ID token hint is present");
         boolean isTokenSignatureValid =
@@ -141,8 +142,6 @@ public class LogoutHandler
                     Optional.empty());
         }
 
-        Optional<String> postLogoutRedirectUri =
-                Optional.ofNullable(queryStringParameters.get("post_logout_redirect_uri"));
         if (audience.isEmpty()) {
             return logoutService.generateDefaultLogoutResponse(
                     state, input, audience, Optional.empty());
@@ -160,14 +159,17 @@ public class LogoutHandler
                     Optional.of(clientID),
                     Optional.empty());
         }
+        Optional<String> postLogoutRedirectUri =
+                Optional.ofNullable(queryStringParameters.get("post_logout_redirect_uri"));
         if (postLogoutRedirectUri.isEmpty()) {
             LOG.info(
                     "post_logout_redirect_uri is NOT present in logout request. Generating default logout response");
             return logoutService.generateDefaultLogoutResponse(
                     state, input, Optional.of(clientID), Optional.empty());
         }
-        if (!checkPostLogoutRedirectUrlInClientReg(postLogoutRedirectUri, clientRegistry)) {
-            return errorLogoutWithSessionCheck(sessionFromSessionCookie, input, state, clientID);
+        if (!postLogoutRedirectUriInClientReg(postLogoutRedirectUri, clientRegistry)) {
+            return errorLogoutAndDestroySessionIfExists(
+                    sessionFromSessionCookie, input, state, clientID);
         }
 
         if (sessionFromSessionCookie.isPresent()) {
@@ -196,7 +198,7 @@ public class LogoutHandler
         }
     }
 
-    private APIGatewayProxyResponseEvent defaultLogoutWithSessionCheck(
+    private APIGatewayProxyResponseEvent defaultLogoutAndDestroySessionIfExists(
             Optional<Session> sessionFromSessionCookie,
             APIGatewayProxyRequestEvent input,
             Optional<String> state) {
@@ -213,7 +215,7 @@ public class LogoutHandler
                 state, input, Optional.empty(), sessionResponse);
     }
 
-    private boolean checkPostLogoutRedirectUrlInClientReg(
+    private boolean postLogoutRedirectUriInClientReg(
             Optional<String> postLogoutRedirectUri, Optional<ClientRegistry> clientRegistry) {
         return postLogoutRedirectUri
                 .map(
@@ -233,7 +235,7 @@ public class LogoutHandler
                 .orElseGet(() -> false);
     }
 
-    private APIGatewayProxyResponseEvent errorLogoutWithSessionCheck(
+    private APIGatewayProxyResponseEvent errorLogoutAndDestroySessionIfExists(
             Optional<Session> sessionFromSessionCookie,
             APIGatewayProxyRequestEvent input,
             Optional<String> state,
