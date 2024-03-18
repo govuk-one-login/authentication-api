@@ -117,4 +117,4 @@ Resources:
       SourceArn: !Sub
         - 'arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/.well-known/openid-configuration'
         - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
-        - ApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authApiId ]
+          ApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authApiId ]
