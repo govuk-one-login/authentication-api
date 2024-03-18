@@ -102,8 +102,8 @@ public class LogoutHandler
         Optional<String> state;
         if (queryStringParameters == null || queryStringParameters.isEmpty()) {
             LOG.info("Returning default logout as no input parameters");
-            return defaultLogoutAndDestroySessionIfExists(
-                    sessionFromSessionCookie, input, Optional.empty());
+            return defaultLogout(
+                    sessionFromSessionCookie, Optional.empty(), input, Optional.empty());
         } else {
             state = Optional.ofNullable(queryStringParameters.get("state"));
         }
@@ -111,7 +111,8 @@ public class LogoutHandler
         Optional<String> idTokenHint =
                 Optional.ofNullable(queryStringParameters.get("id_token_hint"));
         if (idTokenHint.isEmpty()) {
-            return defaultLogoutAndDestroySessionIfExists(sessionFromSessionCookie, input, state);
+            return defaultLogout(
+                    sessionFromSessionCookie, state, input, Optional.empty());
         }
         LOG.info("ID token hint is present");
         boolean isTokenSignatureValid =
@@ -143,8 +144,8 @@ public class LogoutHandler
         }
 
         if (audience.isEmpty()) {
-            return logoutService.generateDefaultLogoutResponse(
-                    state, input, audience, Optional.empty());
+            return defaultLogout(
+                    sessionFromSessionCookie, state, input, Optional.empty());
         }
         final String clientID = audience.get();
         LOG.info("Validating ClientID");
@@ -152,31 +153,37 @@ public class LogoutHandler
         Optional<ClientRegistry> clientRegistry = dynamoClientService.getClient(clientID);
         if (clientRegistry.isEmpty()) {
             LOG.warn("Client not found in ClientRegistry");
-            return logoutService.generateErrorLogoutResponse(
+            return errorLogout(
+                    sessionFromSessionCookie,
                     state,
                     new ErrorObject(OAuth2Error.UNAUTHORIZED_CLIENT_CODE, "client not found"),
                     input,
-                    Optional.of(clientID),
-                    Optional.empty());
+                    clientID);
         }
         Optional<String> postLogoutRedirectUri =
                 Optional.ofNullable(queryStringParameters.get("post_logout_redirect_uri"));
         if (postLogoutRedirectUri.isEmpty()) {
             LOG.info(
                     "post_logout_redirect_uri is NOT present in logout request. Generating default logout response");
-            return logoutService.generateDefaultLogoutResponse(
-                    state, input, Optional.of(clientID), Optional.empty());
+            return defaultLogout(
+                    sessionFromSessionCookie, state, input, Optional.of(clientID));
         }
         if (!postLogoutRedirectUriInClientReg(postLogoutRedirectUri, clientRegistry)) {
-            return errorLogoutAndDestroySessionIfExists(
-                    sessionFromSessionCookie, input, state, clientID);
+            return errorLogout(
+                    sessionFromSessionCookie,
+                    state,
+                    new ErrorObject(
+                            OAuth2Error.INVALID_REQUEST_CODE,
+                            "client registry does not contain post_logout_redirect_uri"),
+                    input,
+                    clientID);
         }
 
         if (sessionFromSessionCookie.isPresent()) {
             return segmentedFunctionCall(
-                    "logoutWithSession",
+                    "logout",
                     () ->
-                            logoutWithSession(
+                            logout(
                                     idTokenHint.get(),
                                     sessionFromSessionCookie.get(),
                                     clientID,
@@ -198,10 +205,11 @@ public class LogoutHandler
         }
     }
 
-    private APIGatewayProxyResponseEvent defaultLogoutAndDestroySessionIfExists(
+    private APIGatewayProxyResponseEvent defaultLogout(
             Optional<Session> sessionFromSessionCookie,
+            Optional<String> state,
             APIGatewayProxyRequestEvent input,
-            Optional<String> state) {
+            Optional<String> clientID) {
         Session session;
         Optional<String> sessionResponse;
         if (sessionFromSessionCookie.isPresent()) {
@@ -211,8 +219,7 @@ public class LogoutHandler
         } else {
             sessionResponse = Optional.empty();
         }
-        return logoutService.generateDefaultLogoutResponse(
-                state, input, Optional.empty(), sessionResponse);
+        return logoutService.generateDefaultLogoutResponse(state, input, clientID, sessionResponse);
     }
 
     private boolean postLogoutRedirectUriInClientReg(
@@ -235,10 +242,11 @@ public class LogoutHandler
                 .orElseGet(() -> false);
     }
 
-    private APIGatewayProxyResponseEvent errorLogoutAndDestroySessionIfExists(
+    private APIGatewayProxyResponseEvent errorLogout(
             Optional<Session> sessionFromSessionCookie,
-            APIGatewayProxyRequestEvent input,
             Optional<String> state,
+            ErrorObject errorObject,
+            APIGatewayProxyRequestEvent input,
             String clientID) {
         Session session;
         Optional<String> sessionResponse;
@@ -250,16 +258,10 @@ public class LogoutHandler
             sessionResponse = Optional.empty();
         }
         return logoutService.generateErrorLogoutResponse(
-                state,
-                new ErrorObject(
-                        OAuth2Error.INVALID_REQUEST_CODE,
-                        "client registry does not contain post_logout_redirect_uri"),
-                input,
-                Optional.of(clientID),
-                sessionResponse);
+                state, errorObject, input, Optional.of(clientID), sessionResponse);
     }
 
-    private APIGatewayProxyResponseEvent logoutWithSession(
+    private APIGatewayProxyResponseEvent logout(
             String idTokenHint,
             Session session,
             String clientID,
