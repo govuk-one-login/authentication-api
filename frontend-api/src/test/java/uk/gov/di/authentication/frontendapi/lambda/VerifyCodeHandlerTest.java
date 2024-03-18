@@ -62,6 +62,10 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_REMOVED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CODE_VERIFIED;
+import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.INVALID_CODE_SENT;
 import static uk.gov.di.authentication.frontendapi.lambda.StartHandlerTest.CLIENT_SESSION_ID;
 import static uk.gov.di.authentication.shared.entity.NotificationType.MFA_SMS;
 import static uk.gov.di.authentication.shared.entity.NotificationType.RESET_PASSWORD_WITH_CODE;
@@ -97,9 +101,9 @@ class VerifyCodeHandlerTest {
     private final CodeStorageService codeStorageService = mock(CodeStorageService.class);
     private final ConfigurationService configurationService = mock(ConfigurationService.class);
     private final UserProfile userProfile = mock(UserProfile.class);
-    private final String expectedCommonSubject =
+    private static final String expectedCommonSubject =
             ClientSubjectHelper.calculatePairwiseIdentifier(TEST_SUBJECT_ID, SECTOR_HOST, SALT);
-    private final Session session =
+    private static final Session session =
             new Session("session-id")
                     .setEmailAddress(TEST_EMAIL_ADDRESS)
                     .setInternalCommonSubjectIdentifier(expectedCommonSubject);
@@ -192,17 +196,8 @@ class VerifyCodeHandlerTest {
         verify(codeStorageService).deleteOtpCode(TEST_EMAIL_ADDRESS, emailNotificationType);
         verify(sessionService).save(session);
         verifyNoInteractions(accountModifiersService);
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.CODE_VERIFIED,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+        var expectedMetadataPairs =
+                List.of(
                         pair("notification-type", emailNotificationType.name()),
                         pair(
                                 "account-recovery",
@@ -212,6 +207,7 @@ class VerifyCodeHandlerTest {
                                 emailNotificationType.equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES)
                                         ? "ACCOUNT_RECOVERY"
                                         : "REGISTRATION"));
+        assertAuditServiceCalledWithEvent(auditService, CODE_VERIFIED, expectedMetadataPairs);
     }
 
     @ParameterizedTest
@@ -234,17 +230,8 @@ class VerifyCodeHandlerTest {
         verify(accountModifiersService).removeAccountRecoveryBlockIfPresent(expectedCommonSubject);
         var saveSessionCount = journeyType == JourneyType.PASSWORD_RESET_MFA ? 3 : 2;
         verify(sessionService, times(saveSessionCount)).save(session);
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.CODE_VERIFIED,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+        var expectedMetadataPairsForCodeVerifiedEvent =
+                List.of(
                         pair("notification-type", MFA_SMS.name()),
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
                         pair("account-recovery", false),
@@ -253,18 +240,12 @@ class VerifyCodeHandlerTest {
                         pair(
                                 "journey-type",
                                 journeyType != null ? String.valueOf(journeyType) : "SIGN_IN"));
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.ACCOUNT_RECOVERY_BLOCK_REMOVED,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("mfa-type", MFAMethodType.SMS.getValue()));
+        assertAuditServiceCalledWithEvent(
+                auditService, CODE_VERIFIED, expectedMetadataPairsForCodeVerifiedEvent);
+        assertAuditServiceCalledWithEvent(
+                auditService,
+                ACCOUNT_RECOVERY_BLOCK_REMOVED,
+                List.of(pair("mfa-type", MFAMethodType.SMS.getValue())));
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
                         Session.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false, true);
@@ -285,23 +266,15 @@ class VerifyCodeHandlerTest {
         verify(codeStorageService).deleteOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS);
         verify(accountModifiersService, never()).removeAccountRecoveryBlockIfPresent(anyString());
         verify(sessionService, times(2)).save(session);
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.CODE_VERIFIED,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+        var expectedMetadataPairs =
+                List.of(
                         pair("notification-type", MFA_SMS.name()),
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
                         pair("account-recovery", false),
                         pair("loginFailureCount", 0),
                         pair("MFACodeEntered", "123456"),
                         pair("journey-type", "SIGN_IN"));
+        assertAuditServiceCalledWithEvent(auditService, CODE_VERIFIED, expectedMetadataPairs);
         verify(cloudwatchMetricsService)
                 .incrementAuthenticationSuccess(
                         Session.AccountState.EXISTING, CLIENT_ID, CLIENT_NAME, "P0", false, true);
@@ -331,20 +304,18 @@ class VerifyCodeHandlerTest {
         assertThat(result, hasStatus(204));
         verifyNoInteractions(accountModifiersService);
         verify(codeStorageService).deleteOtpCode(email, VERIFY_EMAIL);
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.CODE_VERIFIED,
-                        CLIENT_SESSION_ID,
-                        testSession.getSessionId(),
-                        TEST_CLIENT_ID,
-                        expectedCommonSubject,
-                        email,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+        var expectedMetadata =
+                List.of(
                         pair("notification-type", VERIFY_EMAIL.name()),
                         pair("account-recovery", false),
                         pair("journey-type", "REGISTRATION"));
+        assertAuditServiceCalledWithEvent(
+                auditService,
+                testSession.getSessionId(),
+                email,
+                TEST_CLIENT_ID,
+                CODE_VERIFIED,
+                expectedMetadata);
     }
 
     @ParameterizedTest
@@ -371,20 +342,18 @@ class VerifyCodeHandlerTest {
         assertThat(result, hasStatus(204));
         verifyNoInteractions(accountModifiersService);
         verify(codeStorageService).deleteOtpCode(email, VERIFY_EMAIL);
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.CODE_VERIFIED,
-                        CLIENT_SESSION_ID,
-                        testSession.getSessionId(),
-                        TEST_CLIENT_ID,
-                        expectedCommonSubject,
-                        email,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+        var expectedMetadata =
+                List.of(
                         pair("notification-type", VERIFY_EMAIL.name()),
                         pair("account-recovery", false),
                         pair("journey-type", "REGISTRATION"));
+        assertAuditServiceCalledWithEvent(
+                auditService,
+                testSession.getSessionId(),
+                email,
+                TEST_CLIENT_ID,
+                CODE_VERIFIED,
+                expectedMetadata);
     }
 
     @Test
@@ -460,22 +429,14 @@ class VerifyCodeHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1036));
         verifyNoInteractions(accountModifiersService);
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.INVALID_CODE_SENT,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+        var expectedMetadata =
+                List.of(
                         pair("notification-type", emailNotificationType.name()),
                         pair(
                                 "account-recovery",
                                 emailNotificationType.equals(VERIFY_CHANGE_HOW_GET_SECURITY_CODES)),
                         pair("journey-type", expectedJourneyType));
+        assertAuditServiceCalledWithEvent(auditService, INVALID_CODE_SENT, expectedMetadata);
     }
 
     @Test
@@ -495,20 +456,12 @@ class VerifyCodeHandlerTest {
         verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
         verify(codeStorageService, never())
                 .saveBlockedForEmail(TEST_EMAIL_ADDRESS, CODE_BLOCKED_KEY_PREFIX, LOCKOUT_DURATION);
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+        var expectedMetadata =
+                List.of(
                         pair("notification-type", VERIFY_EMAIL.name()),
                         pair("account-recovery", false),
                         pair("journey-type", "REGISTRATION"));
+        assertAuditServiceCalledWithEvent(auditService, CODE_MAX_RETRIES_REACHED, expectedMetadata);
     }
 
     @Test
@@ -575,20 +528,12 @@ class VerifyCodeHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1036));
         verifyNoInteractions(accountModifiersService);
         verify(configurationService, never()).getCodeMaxRetries();
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.INVALID_CODE_SENT,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+        var expectedMetadata =
+                List.of(
                         pair("notification-type", VERIFY_EMAIL.name()),
                         pair("account-recovery", false),
                         pair("journey-type", "REGISTRATION"));
+        assertAuditServiceCalledWithEvent(auditService, INVALID_CODE_SENT, expectedMetadata);
     }
 
     @Test
@@ -612,20 +557,12 @@ class VerifyCodeHandlerTest {
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1033));
         verifyNoInteractions(accountModifiersService);
         verify(configurationService, never()).getIncreasedCodeMaxRetries();
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+        var expectedMetadata =
+                List.of(
                         pair("notification-type", VERIFY_EMAIL.name()),
                         pair("account-recovery", false),
                         pair("journey-type", "REGISTRATION"));
+        assertAuditServiceCalledWithEvent(auditService, CODE_MAX_RETRIES_REACHED, expectedMetadata);
     }
 
     @Nested
@@ -654,20 +591,13 @@ class VerifyCodeHandlerTest {
                             TEST_EMAIL_ADDRESS, codeBlockedKeyPrefix, LOCKOUT_DURATION);
             verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
             verifyNoInteractions(accountModifiersService);
-            verify(auditService)
-                    .submitAuditEvent(
-                            FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
-                            CLIENT_SESSION_ID,
-                            session.getSessionId(),
-                            CLIENT_ID,
-                            expectedCommonSubject,
-                            TEST_EMAIL_ADDRESS,
-                            "123.123.123.123",
-                            AuditService.UNKNOWN,
-                            PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+            var expectedMetadataPairs =
+                    List.of(
                             pair("notification-type", VERIFY_CHANGE_HOW_GET_SECURITY_CODES.name()),
                             pair("account-recovery", true),
                             pair("journey-type", "ACCOUNT_RECOVERY"));
+            assertAuditServiceCalledWithEvent(
+                    auditService, CODE_MAX_RETRIES_REACHED, expectedMetadataPairs);
         }
 
         @ParameterizedTest
@@ -689,17 +619,8 @@ class VerifyCodeHandlerTest {
                             LOCKOUT_DURATION);
             verifyNoInteractions(accountModifiersService);
             verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
-            verify(auditService)
-                    .submitAuditEvent(
-                            FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
-                            CLIENT_SESSION_ID,
-                            session.getSessionId(),
-                            CLIENT_ID,
-                            expectedCommonSubject,
-                            TEST_EMAIL_ADDRESS,
-                            "123.123.123.123",
-                            AuditService.UNKNOWN,
-                            PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+            var expectedMetadataPairs =
+                    List.of(
                             pair("notification-type", MFA_SMS.name()),
                             pair("mfa-type", MFAMethodType.SMS.getValue()),
                             pair("account-recovery", false),
@@ -709,6 +630,8 @@ class VerifyCodeHandlerTest {
                             pair(
                                     "journey-type",
                                     journeyType != null ? String.valueOf(journeyType) : "SIGN_IN"));
+            assertAuditServiceCalledWithEvent(
+                    auditService, CODE_MAX_RETRIES_REACHED, expectedMetadataPairs);
         }
 
         @Test
@@ -729,20 +652,13 @@ class VerifyCodeHandlerTest {
                             LOCKOUT_DURATION);
             verifyNoInteractions(accountModifiersService);
             verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
-            verify(auditService)
-                    .submitAuditEvent(
-                            FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
-                            CLIENT_SESSION_ID,
-                            session.getSessionId(),
-                            CLIENT_ID,
-                            expectedCommonSubject,
-                            TEST_EMAIL_ADDRESS,
-                            "123.123.123.123",
-                            AuditService.UNKNOWN,
-                            PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+            var expectedMetadata =
+                    List.of(
                             pair("notification-type", RESET_PASSWORD_WITH_CODE.name()),
                             pair("account-recovery", false),
                             pair("journey-type", "PASSWORD_RESET"));
+            assertAuditServiceCalledWithEvent(
+                    auditService, CODE_MAX_RETRIES_REACHED, expectedMetadata);
         }
     }
 
@@ -756,17 +672,8 @@ class VerifyCodeHandlerTest {
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1035));
         verifyNoInteractions(accountModifiersService);
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.INVALID_CODE_SENT,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+        var expectedMetadata =
+                List.of(
                         pair("notification-type", MFA_SMS.name()),
                         pair("mfa-type", MFAMethodType.SMS.getValue()),
                         pair("account-recovery", false),
@@ -774,6 +681,7 @@ class VerifyCodeHandlerTest {
                         pair("MFACodeEntered", "6543221"),
                         pair("MaxSmsCount", configurationService.getCodeMaxRetries()),
                         pair("journey-type", "SIGN_IN"));
+        assertAuditServiceCalledWithEvent(auditService, INVALID_CODE_SENT, expectedMetadata);
     }
 
     private APIGatewayProxyResponseEvent makeCallWithCode(String code, String notificationType) {
@@ -842,5 +750,39 @@ class VerifyCodeHandlerTest {
                 Arguments.of(CodeRequestType.SMS_REAUTHENTICATION, JourneyType.REAUTHENTICATION),
                 Arguments.of(CodeRequestType.SMS_SIGN_IN, JourneyType.SIGN_IN),
                 Arguments.of(CodeRequestType.SMS_SIGN_IN, null));
+    }
+
+    static void assertAuditServiceCalledWithEvent(
+            AuditService auditService,
+            FrontendAuditableEvent event,
+            List<AuditService.MetadataPair> metadataPairs) {
+        assertAuditServiceCalledWithEvent(
+                auditService,
+                session.getSessionId(),
+                TEST_EMAIL_ADDRESS,
+                CLIENT_ID,
+                event,
+                metadataPairs);
+    }
+
+    static void assertAuditServiceCalledWithEvent(
+            AuditService auditService,
+            String sessionId,
+            String emailAddress,
+            String clientId,
+            FrontendAuditableEvent event,
+            List<AuditService.MetadataPair> metadataPairs) {
+        verify(auditService)
+                .submitAuditEvent(
+                        event,
+                        CLIENT_SESSION_ID,
+                        sessionId,
+                        clientId,
+                        expectedCommonSubject,
+                        emailAddress,
+                        "123.123.123.123",
+                        AuditService.UNKNOWN,
+                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                        metadataPairs.toArray(new AuditService.MetadataPair[0]));
     }
 }
