@@ -99,21 +99,19 @@ public class LogoutHandler
                         "getSessionFromSessionCookie",
                         () -> sessionService.getSessionFromSessionCookie(input.getHeaders()));
         Map<String, String> queryStringParameters = input.getQueryStringParameters();
-        Optional<String> state;
         if (queryStringParameters == null || queryStringParameters.isEmpty()) {
             LOG.info("Returning default logout as no input parameters");
             return defaultLogout(
                     sessionFromSessionCookie, Optional.empty(), input, Optional.empty());
-        } else {
-            state = Optional.ofNullable(queryStringParameters.get("state"));
         }
+        Optional<String> state = Optional.ofNullable(queryStringParameters.get("state"));
 
         Optional<String> idTokenHint =
                 Optional.ofNullable(queryStringParameters.get("id_token_hint"));
         if (idTokenHint.isEmpty()) {
-            return defaultLogout(
-                    sessionFromSessionCookie, state, input, Optional.empty());
+            return defaultLogout(sessionFromSessionCookie, state, input, Optional.empty());
         }
+
         LOG.info("ID token hint is present");
         boolean isTokenSignatureValid =
                 segmentedFunctionCall(
@@ -129,6 +127,7 @@ public class LogoutHandler
                     Optional.empty(),
                     Optional.empty());
         }
+
         Optional<String> audience;
         try {
             SignedJWT idToken = SignedJWT.parse(idTokenHint.get());
@@ -144,10 +143,10 @@ public class LogoutHandler
         }
 
         if (audience.isEmpty()) {
-            return defaultLogout(
-                    sessionFromSessionCookie, state, input, Optional.empty());
+            return defaultLogout(sessionFromSessionCookie, state, input, Optional.empty());
         }
         final String clientID = audience.get();
+
         LOG.info("Validating ClientID");
         attachLogFieldToLogs(CLIENT_ID, clientID);
         Optional<ClientRegistry> clientRegistry = dynamoClientService.getClient(clientID);
@@ -160,14 +159,15 @@ public class LogoutHandler
                     input,
                     clientID);
         }
+
         Optional<String> postLogoutRedirectUri =
                 Optional.ofNullable(queryStringParameters.get("post_logout_redirect_uri"));
         if (postLogoutRedirectUri.isEmpty()) {
             LOG.info(
                     "post_logout_redirect_uri is NOT present in logout request. Generating default logout response");
-            return defaultLogout(
-                    sessionFromSessionCookie, state, input, Optional.of(clientID));
+            return defaultLogout(sessionFromSessionCookie, state, input, Optional.of(clientID));
         }
+
         if (!postLogoutRedirectUriInClientReg(postLogoutRedirectUri, clientRegistry)) {
             return errorLogout(
                     sessionFromSessionCookie,
