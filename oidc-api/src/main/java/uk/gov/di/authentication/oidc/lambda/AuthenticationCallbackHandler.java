@@ -524,7 +524,7 @@ public class AuthenticationCallbackHandler
         Object passwordResetTimeClaim = userInfo.getClaim("password_reset_time");
         if (passwordResetTimeClaim == null) {
             LOG.info("password_reset_time claim not found");
-            return Long.MIN_VALUE;
+            return 0L;
         }
         LOG.info("password_reset_time claim found");
         Long passwordResetTimeLong;
@@ -532,7 +532,7 @@ public class AuthenticationCallbackHandler
             passwordResetTimeLong = (Long) passwordResetTimeClaim;
         } catch (ClassCastException e) {
             LOG.error("Failed to cast password_reset_time claim to Long", e);
-            passwordResetTimeLong = Long.MIN_VALUE;
+            passwordResetTimeLong = 0L;
         }
         return passwordResetTimeLong;
     }
