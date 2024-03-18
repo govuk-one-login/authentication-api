@@ -19,6 +19,7 @@ import uk.gov.di.authentication.shared.services.ConfigurationService;
 import java.net.URI;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(PactConsumerTestExt.class)
@@ -35,8 +36,8 @@ public class AccountInterventionsServicePactTest {
 
     private final String AIS_PATH = "/v1/ais/";
 
-    @Mock
-    private ConfigurationService configurationService;
+    @Mock private ConfigurationService configurationService;
+
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
@@ -47,8 +48,9 @@ public class AccountInterventionsServicePactTest {
     }
 
     @Pact(provider = "AccountInterventionsService", consumer = "AuthFrontendAPI")
-    public RequestResponsePact getAccountStatusSuccessfully(PactDslWithProvider builder){
-        String sampleAISResponse = "{\"intervention\":{\"updatedAt\":1696969322935,\"appliedAt\":1696869005821,\"sentAt\":1696869003456,\"description\":\"AIS_USER_PASSWORD_RESET_AND_IDENTITY_REVERIFIED\",\"reprovedIdentityAt\":1696969322935},\"state\":{\"blocked\":true,\"suspended\":false,\"reproveIdentity\":true,\"resetPassword\":false}}";
+    public RequestResponsePact getAccountStatusSuccessfully(PactDslWithProvider builder) {
+        String sampleAISResponse =
+                "{\"intervention\":{\"updatedAt\":1696969322935,\"appliedAt\":1696869005821,\"sentAt\":1696869003456,\"description\":\"AIS_USER_PASSWORD_RESET_AND_IDENTITY_REVERIFIED\",\"reprovedIdentityAt\":1696969322935},\"state\":{\"blocked\":true,\"suspended\":false,\"reproveIdentity\":true,\"resetPassword\":false}}";
         return builder.given("AIS Server is healthy")
                 .uponReceiving("GET Account Status Request")
                 .path(AIS_PATH + TEST_USER_ID)
@@ -59,14 +61,33 @@ public class AccountInterventionsServicePactTest {
                 .toPact();
     }
 
+    @Pact(provider = "AccountInterventionsService", consumer = "AuthFrontendAPI")
+    public RequestResponsePact getAccountStateUnsuccessfully(PactDslWithProvider builder) {
+        String sampleAISErrorResponse = "{ \"message\" : \"Internal Server Error.\"}";
+        return builder.given("AIS Server is unhealthy")
+                .uponReceiving("GET Account Status Request")
+                .path(AIS_PATH + TEST_USER_ID)
+                .method("GET")
+                .willRespondWith()
+                .status(500)
+                .body(sampleAISErrorResponse)
+                .toPact();
+    }
+
     @Test
     @PactTestFor(pactMethod = "getAccountStatusSuccessfully")
-    void callAIS() throws UnsuccessfulAccountInterventionsResponseException {
-        AccountInterventionsInboundResponse response = this.service.sendAccountInterventionsOutboundRequest("aTestUserId");
+    void callAISSuccessful() throws UnsuccessfulAccountInterventionsResponseException {
+        AccountInterventionsInboundResponse response =
+                this.service.sendAccountInterventionsOutboundRequest("aTestUserId");
         var expectedState = new State(true, false, true, false);
         assertEquals(expectedState, response.state());
     }
 
-
-
+    @Test
+    @PactTestFor(pactMethod = "getAccountStateUnsuccessfully")
+    void callAISUnsuccessful() throws UnsuccessfulAccountInterventionsResponseException {
+        assertThrows(
+                UnsuccessfulAccountInterventionsResponseException.class,
+                () -> service.sendAccountInterventionsOutboundRequest("aTestUserId"));
+    }
 }
