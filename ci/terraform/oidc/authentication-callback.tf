@@ -20,28 +20,6 @@ module "oidc_api_authentication_callback_role" {
   ]
 }
 
-data "aws_iam_policy_document" "storage_token_kms_signing_policy_document" {
-  statement {
-    sid    = "AllowAccessToVcTokenKmsSigningKey"
-    effect = "Allow"
-
-    actions = [
-      "kms:Sign",
-      "kms:GetPublicKey",
-    ]
-    resources = [
-      aws_kms_key.storage_token_signing_key_ecc.arn
-    ]
-  }
-}
-
-resource "aws_iam_policy" "storage_token_kms_signing_policy" {
-  name_prefix = "kms-signing-policy"
-  path        = "/${var.environment}/storage-token/"
-  description = "IAM policy for managing KMS connection for a lambda which allows signing of storage token payloads"
-
-  policy = data.aws_iam_policy_document.storage_token_kms_signing_policy_document.json
-}
 
 module "authentication_callback" {
   source = "../modules/endpoint-module"

@@ -59,7 +59,8 @@ resource "aws_iam_role_policy_attachment" "api_gateway_logging_logs" {
 }
 
 resource "aws_api_gateway_rest_api" "di_authentication_api" {
-  name = "${var.environment}-di-authentication-api"
+  name           = "${var.environment}-di-authentication-api"
+  api_key_source = "HEADER"
 
   tags = local.default_tags
 }
@@ -125,6 +126,8 @@ resource "aws_api_gateway_deployment" "deployment" {
       module.authorize.method_trigger_value,
       module.jwks.integration_trigger_value,
       module.jwks.method_trigger_value,
+      module.storage_token_jwk.integration_trigger_value,
+      module.storage_token_jwk.method_trigger_value,
       module.logout.integration_trigger_value,
       module.logout.method_trigger_value,
       module.openid_configuration_discovery.integration_trigger_value,
@@ -160,6 +163,7 @@ resource "aws_api_gateway_deployment" "deployment" {
     module.auth-code,
     module.authorize,
     module.jwks,
+    module.storage_token_jwk,
     module.logout,
     module.openid_configuration_discovery,
     module.register,
@@ -255,6 +259,7 @@ resource "aws_api_gateway_stage" "endpoint_stage" {
     module.auth-code,
     module.authorize,
     module.jwks,
+    module.storage_token_jwk,
     module.logout,
     module.openid_configuration_discovery,
     module.register,

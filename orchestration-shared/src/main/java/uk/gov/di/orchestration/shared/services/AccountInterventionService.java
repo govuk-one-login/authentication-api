@@ -3,8 +3,9 @@ package uk.gov.di.orchestration.shared.services;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import uk.gov.di.orchestration.audit.AuditContext;
+import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionResponse;
-import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
+import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.exceptions.AccountInterventionException;
 import uk.gov.di.orchestration.shared.serialization.Json;
 import uk.gov.di.orchestration.shared.services.AuditService.MetadataPair;
@@ -68,28 +69,36 @@ public class AccountInterventionService {
         this.configurationService = configService;
     }
 
-    public AccountInterventionStatus getAccountStatus(String internalPairwiseSubjectId)
+    public AccountIntervention getAccountIntervention(String internalPairwiseSubjectId)
             throws AccountInterventionException {
-        return getAccountStatus(internalPairwiseSubjectId, null);
+        return getAccountIntervention(internalPairwiseSubjectId, Long.MIN_VALUE, null);
     }
 
-    public AccountInterventionStatus getAccountStatus(
+    public AccountIntervention getAccountIntervention(
             String internalPairwiseSubjectId, AuditContext auditContext)
+            throws AccountInterventionException {
+        return getAccountIntervention(internalPairwiseSubjectId, Long.MIN_VALUE, auditContext);
+    }
+
+    public AccountIntervention getAccountIntervention(
+            String internalPairwiseSubjectId, Long passwordResetTime, AuditContext auditContext)
             throws AccountInterventionException {
 
         if (accountInterventionsCallEnabled) {
             try {
-                var status = retrieveAccountStatus(internalPairwiseSubjectId);
+                AccountIntervention accountIntervention =
+                        retrieveAccountIntervention(internalPairwiseSubjectId, passwordResetTime);
                 if (accountInterventionsActionEnabled) {
                     if (auditContext == null) {
                         throw new AccountInterventionException(
                                 "Account intervention Audit enabled, but no AuditContext provided");
                     }
                     auditService.submitAuditEvent(
-                            AIS_RESPONSE_RECEIVED, addStatusMetadata(auditContext, status));
+                            AIS_RESPONSE_RECEIVED,
+                            addStatusMetadata(auditContext, accountIntervention));
                 }
 
-                return status;
+                return accountIntervention;
 
             } catch (IOException | Json.JsonException | AccountInterventionException e) {
                 return handleException(e);
@@ -103,14 +112,14 @@ public class AccountInterventionService {
     }
 
     private static AuditContext addStatusMetadata(
-            AuditContext auditContext, AccountInterventionStatus status) {
+            AuditContext auditContext, AccountIntervention intervention) {
         var existingMetadataPairs = Arrays.stream(auditContext.metadataPairs());
         var statusMetadataPairs =
                 Stream.of(
-                        pair("blocked", status.blocked()),
-                        pair("suspended", status.suspended()),
-                        pair("resetPassword", status.resetPassword()),
-                        pair("reproveIdentity", status.reproveIdentity()));
+                        pair("blocked", intervention.getBlocked()),
+                        pair("suspended", intervention.getSuspended()),
+                        pair("resetPassword", intervention.getResetPassword()),
+                        pair("reproveIdentity", intervention.getReproveIdentity()));
         var metadataPairs =
                 Stream.concat(existingMetadataPairs, statusMetadataPairs)
                         .toArray(MetadataPair[]::new);
@@ -127,7 +136,7 @@ public class AccountInterventionService {
                 metadataPairs);
     }
 
-    private AccountInterventionStatus handleException(Exception e) {
+    private AccountIntervention handleException(Exception e) {
         cloudwatchMetricsService.incrementCounter(
                 configurationService.getAccountInterventionsErrorMetricName(),
                 Map.of("Environment", configurationService.getEnvironment()));
@@ -141,7 +150,8 @@ public class AccountInterventionService {
         return noInterventionResponse();
     }
 
-    private AccountInterventionStatus retrieveAccountStatus(String internalPairwiseSubjectId)
+    private AccountIntervention retrieveAccountIntervention(
+            String internalPairwiseSubjectId, Long passwordResetTime)
             throws IOException, InterruptedException, Json.JsonException {
 
         HttpRequest request =
@@ -158,10 +168,14 @@ public class AccountInterventionService {
                         .GET()
                         .build();
 
-        HttpResponse<String> response = sendRequestToAis(request);
-        AccountInterventionStatus accountInterventionStatus = serializeResponse(response);
-        incrementCloudwatchMetrics(accountInterventionStatus);
-        return accountInterventionStatus;
+        HttpResponse<String> httpResponse = sendRequestToAis(request);
+        AccountInterventionResponse response = serializeResponse(httpResponse);
+        AccountIntervention accountIntervention =
+                new AccountIntervention(
+                        response.intervention(), response.state(), passwordResetTime);
+
+        incrementCloudwatchMetrics(accountIntervention);
+        return accountIntervention;
     }
 
     private HttpResponse<String> sendRequestToAis(HttpRequest request) {
@@ -189,38 +203,37 @@ public class AccountInterventionService {
         }
     }
 
-    private AccountInterventionStatus serializeResponse(HttpResponse<String> httpResponse) {
-        AccountInterventionStatus accountInterventionStatus = null;
+    private AccountInterventionResponse serializeResponse(HttpResponse<String> httpResponse) {
+        AccountInterventionResponse accountInterventionResponse = null;
         try {
-            var response =
+            accountInterventionResponse =
                     SerializationService.getInstance()
                             .readValue(httpResponse.body(), AccountInterventionResponse.class);
-            accountInterventionStatus = response.state();
         } catch (Exception e) {
             logAndThrowAccountInterventionException("Failed to serialize AIS response body.");
         }
-        if (Objects.isNull(accountInterventionStatus)) {
+        if (Objects.isNull(accountInterventionResponse)) {
             logAndThrowAccountInterventionException("Account Intervention Status is null.");
         }
-        return accountInterventionStatus;
+        return accountInterventionResponse;
     }
 
-    private void incrementCloudwatchMetrics(AccountInterventionStatus accountInterventionStatus) {
+    private void incrementCloudwatchMetrics(AccountIntervention intervention) {
         cloudwatchMetricsService.incrementCounter(
                 "AISResult",
                 Map.of(
                         "blocked",
-                        String.valueOf(accountInterventionStatus.blocked()),
+                        String.valueOf(intervention.getBlocked()),
                         "suspended",
-                        String.valueOf(accountInterventionStatus.suspended()),
+                        String.valueOf(intervention.getSuspended()),
                         "resetPassword",
-                        String.valueOf(accountInterventionStatus.resetPassword()),
+                        String.valueOf(intervention.getResetPassword()),
                         "reproveIdentity",
-                        String.valueOf(accountInterventionStatus.reproveIdentity())));
+                        String.valueOf(intervention.getReproveIdentity())));
     }
 
-    private static AccountInterventionStatus noInterventionResponse() {
-        return new AccountInterventionStatus(false, false, false, false);
+    private static AccountIntervention noInterventionResponse() {
+        return new AccountIntervention(new AccountInterventionState(false, false, false, false));
     }
 
     private void logAndThrowAccountInterventionException(String message) {

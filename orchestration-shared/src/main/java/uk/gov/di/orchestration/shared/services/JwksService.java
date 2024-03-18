@@ -61,6 +61,11 @@ public class JwksService {
         return getPublicJWKWithKeyId(configurationService.getDocAppTokenSigningKeyAlias());
     }
 
+    public JWK getPublicStorageTokenJwkWithOpaqueId() {
+        LOG.info("Retrieving storage token public key");
+        return getPublicJWKWithKeyId(configurationService.getStorageTokenSigningKeyAlias());
+    }
+
     public JWK retrieveJwkFromURLWithKeyId(URL url, String keyId) {
         JWKSelector selector = new JWKSelector(new JWKMatcher.Builder().keyID(keyId).build());
         JWKSource<SecurityContext> jwkSource =

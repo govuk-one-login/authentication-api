@@ -49,6 +49,7 @@ public class UserInfoServiceTest {
     private static final String TEST_PHONE = "test-phone";
     private static final boolean TEST_PHONE_VERIFIED = true;
     private static final boolean TEST_IS_NEW_ACCOUNT = true;
+    private static final long TEST_PASSWORD_RESET_TIME = 1710255380L;
     private static final UserProfile TEST_USER_PROFILE =
             new UserProfile()
                     .withLegacySubjectID(TEST_LEGACY_SUBJECT_ID)
@@ -98,6 +99,7 @@ public class UserInfoServiceTest {
         assertEquals(expectedPhoneNumber, actual.getPhoneNumber());
         assertEquals(expectedPhoneNumberVerified, actual.getPhoneNumberVerified());
         assertEquals(expectedSalt, actual.getClaim("salt"));
+        assertEquals(TEST_PASSWORD_RESET_TIME, actual.getClaim("password_reset_time"));
     }
 
     private static Stream<Arguments> provideTestData() {
@@ -149,6 +151,7 @@ public class UserInfoServiceTest {
         when(accessTokenStore.getSubjectID()).thenReturn(TEST_SUBJECT.getValue());
         when(accessTokenStore.getSectorIdentifier()).thenReturn(TEST_RP_SECTOR_HOST);
         when(accessTokenStore.getIsNewAccount()).thenReturn(TEST_IS_NEW_ACCOUNT);
+        when(accessTokenStore.getPasswordResetTime()).thenReturn(TEST_PASSWORD_RESET_TIME);
         when(accessTokenStore.getClaims()).thenReturn(claims);
         return accessTokenStore;
     }

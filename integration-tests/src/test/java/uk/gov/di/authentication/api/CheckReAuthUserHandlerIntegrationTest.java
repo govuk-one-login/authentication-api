@@ -135,6 +135,30 @@ public class CheckReAuthUserHandlerIntegrationTest extends ApiGatewayHandlerInte
         assertThat(response, hasStatus(400));
     }
 
+    @Test
+    void shouldReturn400WhenUserProfileNotFoundAndHasEnteredInvalidEmailTooManyTimes() {
+        userStore.signUp(TEST_EMAIL, "password-1", SUBJECT);
+        registerClient("https://" + INTERNAl_SECTOR_HOST);
+
+        var randomEmail = "random_email@email.com";
+
+        redis.incrementEmailCount(randomEmail);
+        redis.incrementEmailCount(randomEmail);
+        redis.incrementEmailCount(randomEmail);
+        redis.incrementEmailCount(randomEmail);
+        redis.incrementEmailCount(randomEmail);
+
+        var request = new CheckReauthUserRequest(randomEmail, "random-pairwise-id");
+        var response =
+                makeRequest(
+                        Optional.of(request),
+                        headers,
+                        Collections.emptyMap(),
+                        Collections.emptyMap(),
+                        Map.of());
+        assertThat(response, hasStatus(400));
+    }
+
     private ClientSession createClientSession() {
         var authRequestBuilder =
                 new AuthenticationRequest.Builder(

@@ -157,6 +157,18 @@ output "stub_rp_client_credentials" {
   sensitive = true
 }
 
+output "stub_relying_party_client_credentials" {
+  value = [
+    for i, rp in var.stub_rp_clients : {
+      client_name = rp.client_name
+      client_id   = random_string.stub_relying_party_client_id[rp.client_name].result
+      private_key = tls_private_key.stub_relying_party_client_private_key[rp.client_name].private_key_pem_pkcs8
+      public_key  = tls_private_key.stub_relying_party_client_private_key[rp.client_name].public_key_pem
+    }
+  ]
+  sensitive = true
+}
+
 output "cloudwatch_encryption_key_arn" {
   value = aws_kms_key.cloudwatch_log_encryption.arn
 }

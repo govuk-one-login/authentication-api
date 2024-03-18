@@ -15,7 +15,6 @@ import uk.gov.di.authentication.shared.lambda.BaseFrontendHandler;
 import uk.gov.di.authentication.shared.services.*;
 import uk.gov.di.authentication.shared.state.UserContext;
 
-import java.util.List;
 import java.util.Optional;
 
 import static uk.gov.di.authentication.shared.entity.ErrorResponse.ERROR_1056;
@@ -101,12 +100,6 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
                                 configurationService.getInternalSectorUri())
                         .getValue();
 
-        if (List.of("build", "sandpit", "authdev1", "authdev2")
-                .contains(configurationService.getEnvironment())) {
-            LOG.info("calculatedPairwiseId {}", calculatedPairwiseId);
-            LOG.info("rpPairwiseId {}", rpPairwiseId);
-        }
-
         if (calculatedPairwiseId != null && calculatedPairwiseId.equals(rpPairwiseId)) {
             LOG.info("Successfully verified re-authentication");
             removeEmailCountLock(userProfile.getEmail());
@@ -125,6 +118,9 @@ public class CheckReAuthUserHandler extends BaseFrontendHandler<CheckReauthUserR
     }
 
     private APIGatewayProxyResponseEvent generateErrorResponse(String email) {
+        if (isAccountLocked(email)) {
+            throw new AccountLockedException("Account is locked due to too many failed attempts.");
+        }
         LOG.info("User not found or no match");
         codeStorageService.increaseIncorrectEmailCount(email);
         return generateApiGatewayProxyErrorResponse(404, ERROR_1056);

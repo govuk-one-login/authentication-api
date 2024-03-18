@@ -215,6 +215,11 @@ variable "lockout_duration" {
   default = 900
 }
 
+variable "reduced_lockout_duration" {
+  type    = number
+  default = 900
+}
+
 variable "otp_code_ttl_duration" {
   type    = number
   default = 900
@@ -328,6 +333,13 @@ variable "remove_retry_limit_registration_email_code" {
   type    = bool
   default = false
 }
+
+variable "code_max_retries_increased" {
+  type    = number
+  default = 999999
+}
+
+
 
 variable "endpoint_memory_size" {
   default = 1536
