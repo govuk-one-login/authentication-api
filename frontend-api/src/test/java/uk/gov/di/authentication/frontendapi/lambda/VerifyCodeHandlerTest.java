@@ -89,6 +89,7 @@ class VerifyCodeHandlerTest {
     private static final String TEST_SUBJECT_ID = "test-subject-id";
     private static final long CODE_EXPIRY_TIME = 900;
     private static final long LOCKOUT_DURATION = 799;
+    private static final Integer MAX_RETRIES = 5;
     private static final URI REDIRECT_URI = URI.create("http://localhost/redirect");
     private final Context context = mock(Context.class);
     private final SessionService sessionService = mock(SessionService.class);
@@ -215,7 +216,6 @@ class VerifyCodeHandlerTest {
     @ParameterizedTest
     @MethodSource("emailNotificationTypes")
     void shouldReturn204ForValidEmailCodeRequest(NotificationType emailNotificationType) {
-        when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, emailNotificationType))
                 .thenReturn(Optional.of(CODE));
         APIGatewayProxyResponseEvent result =
@@ -251,7 +251,6 @@ class VerifyCodeHandlerTest {
     @MethodSource("emailNotificationTypes")
     void shouldReturnEmailCodeNotValidStateIfRequestCodeDoesNotMatchStoredCode(
             NotificationType emailNotificationType) {
-        when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, emailNotificationType))
                 .thenReturn(Optional.of(CODE));
 
@@ -296,7 +295,6 @@ class VerifyCodeHandlerTest {
             })
     void shouldReturn204ForValidVerifyEmailRequestUsingTestClient(String email) {
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
-        when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(configurationService.getTestClientVerifyEmailOTP())
                 .thenReturn(Optional.of(TEST_CLIENT_CODE));
         when(codeStorageService.getOtpCode(email, VERIFY_EMAIL)).thenReturn(Optional.of(CODE));
@@ -339,7 +337,6 @@ class VerifyCodeHandlerTest {
             shouldReturn200AndUseDefaultCodeForVerifyEmailRequestUsingTestClientWhenEmailDoesNotMatchAllowlist(
                     String email) {
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
-        when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(configurationService.getTestClientVerifyEmailOTP())
                 .thenReturn(Optional.of(TEST_CLIENT_CODE));
         when(codeStorageService.getOtpCode(email, VERIFY_EMAIL)).thenReturn(Optional.of(CODE));
@@ -371,8 +368,9 @@ class VerifyCodeHandlerTest {
     @Test
     void
             shouldReturnMaxReachedAndNotSetBlockWhenRegistrationEmailCodeAttemptsExceedMaxRetryCount() {
-        when(configurationService.getCodeMaxRetries()).thenReturn(5);
-        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS)).thenReturn(6);
+        when(configurationService.getCodeMaxRetries()).thenReturn(MAX_RETRIES);
+        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS))
+                .thenReturn(MAX_RETRIES + 1);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, VERIFY_EMAIL))
                 .thenReturn(Optional.of(CODE));
         var result = makeCallWithCode(INVALID_CODE, VERIFY_EMAIL.name());
@@ -484,7 +482,7 @@ class VerifyCodeHandlerTest {
     void shouldReturnStandardRetryLimitForEmailOTPDuringRegistrationWithFlagOff() {
         when(configurationService.removeRetryLimitForRegistrationEmailCodeEntry())
                 .thenReturn(false);
-        when(configurationService.getCodeMaxRetries()).thenReturn(5);
+        when(configurationService.getCodeMaxRetries()).thenReturn(MAX_RETRIES);
         when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
         JourneyType journeyType = JourneyType.REGISTRATION;
         var codeBlockedKeyPrefix =
@@ -493,7 +491,7 @@ class VerifyCodeHandlerTest {
         when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, codeBlockedKeyPrefix))
                 .thenReturn(false);
         when(codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS))
-                .thenReturn(100);
+                .thenReturn(MAX_RETRIES + 1);
 
         var result = makeCallWithCode(CODE, VERIFY_EMAIL.toString(), journeyType);
 
@@ -520,13 +518,14 @@ class VerifyCodeHandlerTest {
     @Test
     void
             shouldReturnMaxReachedAndSetBlockWhenAccountRecoveryEmailCodeAttemptsExceedMaxRetryCount() {
-        when(configurationService.getCodeMaxRetries()).thenReturn(5);
+        when(configurationService.getCodeMaxRetries()).thenReturn(MAX_RETRIES);
         when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
 
         var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_ACCOUNT_RECOVERY;
         when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, codeBlockedKeyPrefix))
                 .thenReturn(false);
-        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS)).thenReturn(6);
+        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS))
+                .thenReturn(MAX_RETRIES + 1);
 
         var result = makeCallWithCode(CODE, VERIFY_CHANGE_HOW_GET_SECURITY_CODES.name());
 
@@ -556,7 +555,6 @@ class VerifyCodeHandlerTest {
     @MethodSource("codeRequestTypes")
     void shouldReturn204ForValidMfaSmsRequestAndRemoveAccountRecoveryBlockWhenPresent(
             CodeRequestType codeRequestType, JourneyType journeyType) {
-        when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS))
                 .thenReturn(Optional.of(CODE));
         when(accountModifiersService.isAccountRecoveryBlockPresent(anyString())).thenReturn(true);
@@ -611,7 +609,6 @@ class VerifyCodeHandlerTest {
 
     @Test
     void shouldReturn204ForValidMfaSmsRequestAndNotRemoveAccountRecoveryBlockWhenNotPresent() {
-        when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS))
                 .thenReturn(Optional.of(CODE));
         when(accountModifiersService.isAccountRecoveryBlockPresent(expectedCommonSubject))
@@ -649,7 +646,6 @@ class VerifyCodeHandlerTest {
 
     @Test
     void shouldReturnMfaCodeNotValidWhenCodeIsInvalid() {
-        when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS))
                 .thenReturn(Optional.of(CODE));
 
@@ -682,11 +678,12 @@ class VerifyCodeHandlerTest {
     @MethodSource("codeRequestTypes")
     void shouldReturnMaxReachedAndSetBlockedMfaCodeAttemptsWhenSignInExceedMaxRetryCount(
             CodeRequestType codeRequestType, JourneyType journeyType) {
-        when(configurationService.getCodeMaxRetries()).thenReturn(0);
+        when(configurationService.getCodeMaxRetries()).thenReturn(MAX_RETRIES);
         when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS))
                 .thenReturn(Optional.of(CODE));
-        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS)).thenReturn(1);
+        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS))
+                .thenReturn(MAX_RETRIES + 1);
 
         var result = makeCallWithCode(INVALID_CODE, MFA_SMS.toString(), journeyType);
 
@@ -724,11 +721,12 @@ class VerifyCodeHandlerTest {
 
     @Test
     void shouldReturnMaxReachedAndSetBlockedMfaCodeAttemptsWhenPasswordResetExceedMaxRetryCount() {
-        when(configurationService.getCodeMaxRetries()).thenReturn(0);
+        when(configurationService.getCodeMaxRetries()).thenReturn(MAX_RETRIES);
         when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
         when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, RESET_PASSWORD_WITH_CODE))
                 .thenReturn(Optional.of(CODE));
-        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS)).thenReturn(1);
+        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS))
+                .thenReturn(MAX_RETRIES + 1);
 
         var result = makeCallWithCode(INVALID_CODE, RESET_PASSWORD_WITH_CODE.toString());
 
@@ -761,7 +759,6 @@ class VerifyCodeHandlerTest {
     @Test
     void shouldReturn204ForValidResetPasswordRequestUsingTestClient() {
         when(configurationService.isTestClientsEnabled()).thenReturn(true);
-        when(configurationService.getCodeMaxRetries()).thenReturn(5);
         when(configurationService.getTestClientVerifyEmailOTP())
                 .thenReturn(Optional.of(TEST_CLIENT_CODE));
         when(codeStorageService.getOtpCode(TEST_CLIENT_EMAIL, RESET_PASSWORD_WITH_CODE))
