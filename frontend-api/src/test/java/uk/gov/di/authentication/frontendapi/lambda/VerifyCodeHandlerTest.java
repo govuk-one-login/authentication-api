@@ -377,13 +377,11 @@ class VerifyCodeHandlerTest {
 
     @Test
     void shouldReturn400IfRequestIsMissingNotificationType() {
-        APIGatewayProxyRequestEvent event = new APIGatewayProxyRequestEvent();
-        event.setHeaders(Map.of("Session-Id", "a-session-id"));
-        event.setBody(format("{ \"code\": \"%s\"}", CODE));
-        when(sessionService.getSessionFromRequestHeaders(event.getHeaders()))
-                .thenReturn(Optional.of(session));
+        var bodyWithoutNotificationType = format("{ \"code\": \"%s\"}", CODE);
 
-        APIGatewayProxyResponseEvent result = handler.handleRequest(event, context);
+        var result =
+                makeCallWithCode(
+                        bodyWithoutNotificationType, Optional.of(testSession), TEST_CLIENT_ID);
         assertThat(result, hasStatus(400));
         assertThat(result, hasJsonBody(ErrorResponse.ERROR_1001));
         verifyNoInteractions(accountModifiersService);
