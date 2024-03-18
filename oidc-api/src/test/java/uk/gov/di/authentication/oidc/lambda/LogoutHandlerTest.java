@@ -21,7 +21,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
-import uk.gov.di.orchestration.shared.entity.Session;
 import uk.gov.di.orchestration.shared.entity.VectorOfTrust;
 import uk.gov.di.orchestration.shared.helpers.CookieHelper;
 import uk.gov.di.orchestration.shared.helpers.IdGenerator;
@@ -86,7 +85,7 @@ class LogoutHandlerTest {
     private Optional<String> audience;
     private static final Subject SUBJECT = new Subject();
     private static final String EMAIL = "joe.bloggs@test.com";
-    private Session session;
+    private uk.gov.di.orchestration.shared.entity.Session session;
 
     @RegisterExtension
     public final CaptureLoggingExtension logging = new CaptureLoggingExtension(LogoutHandler.class);
@@ -132,7 +131,7 @@ class LogoutHandlerTest {
     }
 
     @Nested
-    class SessionExists {
+    class Session {
         String idTokenHint;
 
         @BeforeEach
@@ -301,6 +300,29 @@ class LogoutHandlerTest {
     class IdToken {
         @Test
         void shouldRedirectToDefaultLogoutUriForValidLogoutRequestWithNoTokenHint() {
+            session = generateSession().setEmailAddress(EMAIL);
+            APIGatewayProxyRequestEvent event =
+                    generateRequestEvent(
+                            Map.of(
+                                    "post_logout_redirect_uri", CLIENT_LOGOUT_URI.toString(),
+                                    "state", STATE.toString()));
+            session.getClientSessions().add(CLIENT_SESSION_ID);
+            generateSessionFromCookie(session);
+
+            handler.handleRequest(event, context);
+
+            verify(logoutService, times(1)).destroySessions(session);
+            verify(logoutService)
+                    .generateDefaultLogoutResponse(
+                            Optional.of(STATE.toString()),
+                            event,
+                            Optional.empty(),
+                            Optional.of(session.getSessionId()));
+        }
+
+        @Test
+        void
+                shouldNotTryToDeleteSessionWhenSessionDoesNotExistWhileValidLogoutRequestWithNoTokenHint() {
             APIGatewayProxyRequestEvent event =
                     generateRequestEvent(
                             Map.of(
@@ -309,6 +331,7 @@ class LogoutHandlerTest {
 
             handler.handleRequest(event, context);
 
+            verify(logoutService, times(0)).destroySessions(session);
             verify(logoutService)
                     .generateDefaultLogoutResponse(
                             Optional.of(STATE.toString()),
@@ -320,6 +343,7 @@ class LogoutHandlerTest {
         @Test
         void shouldRedirectToDefaultLogoutUriWithErrorMessageWhenSignatureIdTokenIsInvalid()
                 throws JOSEException {
+            session = generateSession().setEmailAddress(EMAIL);
             ECKey ecSigningKey =
                     new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
             SignedJWT signedJWT =
@@ -333,9 +357,12 @@ class LogoutHandlerTest {
                             Map.of(
                                     "id_token_hint", signedJWT.serialize(),
                                     "post_logout_redirect_uri", CLIENT_LOGOUT_URI.toString()));
+            session.getClientSessions().add(CLIENT_SESSION_ID);
+            generateSessionFromCookie(session);
 
             handler.handleRequest(event, context);
 
+            verify(logoutService, times(0)).destroySessions(session);
             verify(logoutService)
                     .generateErrorLogoutResponse(
                             Optional.empty(),
@@ -375,6 +402,40 @@ class LogoutHandlerTest {
 
             handler.handleRequest(event, context);
 
+            verify(logoutService, times(1)).destroySessions(session);
+            verify(logoutService)
+                    .generateErrorLogoutResponse(
+                            Optional.of(STATE.getValue()),
+                            new ErrorObject(
+                                    OAuth2Error.UNAUTHORIZED_CLIENT_CODE, "client not found"),
+                            event,
+                            signedJWT.getJWTClaimsSet().getAudience().stream().findFirst(),
+                            Optional.of(session.getSessionId()));
+            verifyNoInteractions(cloudwatchMetricsService);
+        }
+
+        @Test
+        void
+                shouldNotTryToDeleteSessionWhenSessionDoesNotExistWhileClientIsNotFoundInClientRegistry()
+                        throws JOSEException, ParseException {
+            ECKey ecSigningKey =
+                    new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
+            SignedJWT signedJWT =
+                    TokenGeneratorHelper.generateIDToken(
+                            "invalid-client-id", SUBJECT, "http://localhost-rp", ecSigningKey);
+            when(tokenValidationService.isTokenSignatureValid(signedJWT.serialize()))
+                    .thenReturn(true);
+            APIGatewayProxyRequestEvent event =
+                    generateRequestEvent(
+                            Map.of(
+                                    "id_token_hint", signedJWT.serialize(),
+                                    "post_logout_redirect_uri", CLIENT_LOGOUT_URI.toString(),
+                                    "state", STATE.toString()));
+            setupClientSessionToken(signedJWT);
+
+            handler.handleRequest(event, context);
+
+            verify(logoutService, times(0)).destroySessions(session);
             verify(logoutService)
                     .generateErrorLogoutResponse(
                             Optional.of(STATE.getValue()),
@@ -388,6 +449,32 @@ class LogoutHandlerTest {
 
         @Test
         void shouldRedirectToDefaultUriWhenLogoutRedirectUriIsMissing() {
+            session = generateSession().setEmailAddress(EMAIL);
+            var idTokenHint = signedIDToken.serialize();
+
+            session.getClientSessions().add(CLIENT_SESSION_ID);
+            generateSessionFromCookie(session);
+            when(dynamoClientService.getClient("client-id"))
+                    .thenReturn(Optional.of(createClientRegistry()));
+            when(tokenValidationService.isTokenSignatureValid(idTokenHint)).thenReturn(true);
+
+            APIGatewayProxyRequestEvent event =
+                    generateRequestEvent(
+                            Map.of("id_token_hint", idTokenHint, "state", STATE.toString()));
+
+            handler.handleRequest(event, context);
+
+            verify(logoutService, times(1)).destroySessions(session);
+            verify(logoutService)
+                    .generateDefaultLogoutResponse(
+                            Optional.of(STATE.toString()),
+                            event,
+                            audience,
+                            Optional.of(session.getSessionId()));
+        }
+
+        @Test
+        void shouldNotTryToDeleteSessionWhenSessionDoesNotExistWhileLogoutRedirectUriIsMissing() {
             var idTokenHint = signedIDToken.serialize();
 
             when(dynamoClientService.getClient("client-id"))
@@ -400,6 +487,7 @@ class LogoutHandlerTest {
 
             handler.handleRequest(event, context);
 
+            verify(logoutService, times(0)).destroySessions(session);
             verify(logoutService)
                     .generateDefaultLogoutResponse(
                             Optional.of(STATE.toString()), event, audience, Optional.empty());
@@ -442,6 +530,41 @@ class LogoutHandlerTest {
                             Optional.of(session.getSessionId()));
             verifyNoInteractions(cloudwatchMetricsService);
         }
+
+        @Test
+        void
+                shouldNotTryToDeleteSessionWhenSessionDoesNotExistWhileLogoutUriInRequestDoesNotMatchClientRegistry()
+                        throws JOSEException, ParseException {
+            ECKey ecSigningKey =
+                    new ECKeyGenerator(Curve.P_256).algorithm(JWSAlgorithm.ES256).generate();
+            SignedJWT signedJWT =
+                    TokenGeneratorHelper.generateIDToken(
+                            "client-id", SUBJECT, "http://localhost-rp", ecSigningKey);
+            when(tokenValidationService.isTokenSignatureValid(signedIDToken.serialize()))
+                    .thenReturn(true);
+            when(dynamoClientService.getClient("client-id"))
+                    .thenReturn(Optional.of(createClientRegistry()));
+            APIGatewayProxyRequestEvent event =
+                    generateRequestEvent(
+                            Map.of(
+                                    "id_token_hint", signedIDToken.serialize(),
+                                    "post_logout_redirect_uri", "http://localhost/invalidlogout",
+                                    "state", STATE.toString()));
+            setupClientSessionToken(signedIDToken);
+            handler.handleRequest(event, context);
+
+            verify(logoutService, times(0)).destroySessions(session);
+            verify(logoutService)
+                    .generateErrorLogoutResponse(
+                            Optional.of(STATE.getValue()),
+                            new ErrorObject(
+                                    OAuth2Error.INVALID_REQUEST_CODE,
+                                    "client registry does not contain post_logout_redirect_uri"),
+                            event,
+                            signedJWT.getJWTClaimsSet().getAudience().stream().findFirst(),
+                            Optional.empty());
+            verifyNoInteractions(cloudwatchMetricsService);
+        }
     }
 
     private void setupClientSessionToken(JWT idToken) {
@@ -466,11 +589,12 @@ class LogoutHandlerTest {
                 .thenReturn(Optional.of(clientSession));
     }
 
-    private Session generateSession() {
-        return new Session(SESSION_ID).addClientSession(CLIENT_SESSION_ID);
+    private uk.gov.di.orchestration.shared.entity.Session generateSession() {
+        return new uk.gov.di.orchestration.shared.entity.Session(SESSION_ID)
+                .addClientSession(CLIENT_SESSION_ID);
     }
 
-    private void generateSessionFromCookie(Session session) {
+    private void generateSessionFromCookie(uk.gov.di.orchestration.shared.entity.Session session) {
         when(sessionService.getSessionFromSessionCookie(anyMap())).thenReturn(Optional.of(session));
     }
 
