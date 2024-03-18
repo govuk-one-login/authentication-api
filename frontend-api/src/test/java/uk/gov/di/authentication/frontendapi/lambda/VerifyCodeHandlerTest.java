@@ -12,6 +12,7 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -627,122 +628,122 @@ class VerifyCodeHandlerTest {
                         pair("journey-type", "REGISTRATION"));
     }
 
-    @Test
-    void
-            shouldReturnMaxReachedAndSetBlockWhenAccountRecoveryEmailCodeAttemptsExceedMaxRetryCount() {
-        when(configurationService.getCodeMaxRetries()).thenReturn(MAX_RETRIES);
-        when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
+    @Nested
+    class WhenAttemptsExceedMaxRetryCount {
+        @BeforeEach
+        void setup() {
+            when(configurationService.getCodeMaxRetries()).thenReturn(MAX_RETRIES);
+            when(codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS))
+                    .thenReturn(MAX_RETRIES + 1);
+            when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
+        }
 
-        var codeBlockedKeyPrefix = CODE_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_ACCOUNT_RECOVERY;
-        when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, codeBlockedKeyPrefix))
-                .thenReturn(false);
-        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS))
-                .thenReturn(MAX_RETRIES + 1);
+        @Test
+        void
+                shouldReturnMaxReachedAndSetBlockWhenAccountRecoveryEmailCodeAttemptsExceedMaxRetryCount() {
+            var codeBlockedKeyPrefix =
+                    CODE_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_ACCOUNT_RECOVERY;
+            when(codeStorageService.isBlockedForEmail(TEST_EMAIL_ADDRESS, codeBlockedKeyPrefix))
+                    .thenReturn(false);
+            var result = makeCallWithCode(CODE, VERIFY_CHANGE_HOW_GET_SECURITY_CODES.name());
 
-        var result = makeCallWithCode(CODE, VERIFY_CHANGE_HOW_GET_SECURITY_CODES.name());
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1048));
+            verify(codeStorageService)
+                    .saveBlockedForEmail(
+                            TEST_EMAIL_ADDRESS, codeBlockedKeyPrefix, LOCKOUT_DURATION);
+            verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
+            verifyNoInteractions(accountModifiersService);
+            verify(auditService)
+                    .submitAuditEvent(
+                            FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
+                            CLIENT_SESSION_ID,
+                            session.getSessionId(),
+                            CLIENT_ID,
+                            expectedCommonSubject,
+                            TEST_EMAIL_ADDRESS,
+                            "123.123.123.123",
+                            AuditService.UNKNOWN,
+                            PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                            pair("notification-type", VERIFY_CHANGE_HOW_GET_SECURITY_CODES.name()),
+                            pair("account-recovery", true),
+                            pair("journey-type", "ACCOUNT_RECOVERY"));
+        }
 
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1048));
-        verify(codeStorageService)
-                .saveBlockedForEmail(TEST_EMAIL_ADDRESS, codeBlockedKeyPrefix, LOCKOUT_DURATION);
-        verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
-        verifyNoInteractions(accountModifiersService);
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("notification-type", VERIFY_CHANGE_HOW_GET_SECURITY_CODES.name()),
-                        pair("account-recovery", true),
-                        pair("journey-type", "ACCOUNT_RECOVERY"));
-    }
+        @ParameterizedTest
+        @MethodSource(
+                "uk.gov.di.authentication.frontendapi.lambda.VerifyCodeHandlerTest#codeRequestTypes")
+        void shouldReturnMaxReachedAndSetBlockedMfaCodeAttemptsWhenSignInExceedMaxRetryCount(
+                CodeRequestType codeRequestType, JourneyType journeyType) {
+            when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS))
+                    .thenReturn(Optional.of(CODE));
+            var result = makeCallWithCode(INVALID_CODE, MFA_SMS.toString(), journeyType);
 
-    @ParameterizedTest
-    @MethodSource("codeRequestTypes")
-    void shouldReturnMaxReachedAndSetBlockedMfaCodeAttemptsWhenSignInExceedMaxRetryCount(
-            CodeRequestType codeRequestType, JourneyType journeyType) {
-        when(configurationService.getCodeMaxRetries()).thenReturn(MAX_RETRIES);
-        when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
-        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, MFA_SMS))
-                .thenReturn(Optional.of(CODE));
-        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS))
-                .thenReturn(MAX_RETRIES + 1);
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1027));
+            assertThat(session.getRetryCount(), equalTo(0));
+            verify(codeStorageService)
+                    .saveBlockedForEmail(
+                            TEST_EMAIL_ADDRESS,
+                            CODE_BLOCKED_KEY_PREFIX + codeRequestType,
+                            LOCKOUT_DURATION);
+            verifyNoInteractions(accountModifiersService);
+            verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
+            verify(auditService)
+                    .submitAuditEvent(
+                            FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
+                            CLIENT_SESSION_ID,
+                            session.getSessionId(),
+                            CLIENT_ID,
+                            expectedCommonSubject,
+                            TEST_EMAIL_ADDRESS,
+                            "123.123.123.123",
+                            AuditService.UNKNOWN,
+                            PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                            pair("notification-type", MFA_SMS.name()),
+                            pair("mfa-type", MFAMethodType.SMS.getValue()),
+                            pair("account-recovery", false),
+                            pair("loginFailureCount", 0),
+                            pair("MFACodeEntered", "6543221"),
+                            pair("MaxSmsCount", configurationService.getCodeMaxRetries()),
+                            pair(
+                                    "journey-type",
+                                    journeyType != null ? String.valueOf(journeyType) : "SIGN_IN"));
+        }
 
-        var result = makeCallWithCode(INVALID_CODE, MFA_SMS.toString(), journeyType);
+        @Test
+        void
+                shouldReturnMaxReachedAndSetBlockedMfaCodeAttemptsWhenPasswordResetExceedMaxRetryCount() {
+            when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, RESET_PASSWORD_WITH_CODE))
+                    .thenReturn(Optional.of(CODE));
 
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1027));
-        assertThat(session.getRetryCount(), equalTo(0));
-        verify(codeStorageService)
-                .saveBlockedForEmail(
-                        TEST_EMAIL_ADDRESS,
-                        CODE_BLOCKED_KEY_PREFIX + codeRequestType,
-                        LOCKOUT_DURATION);
-        verifyNoInteractions(accountModifiersService);
-        verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("notification-type", MFA_SMS.name()),
-                        pair("mfa-type", MFAMethodType.SMS.getValue()),
-                        pair("account-recovery", false),
-                        pair("loginFailureCount", 0),
-                        pair("MFACodeEntered", "6543221"),
-                        pair("MaxSmsCount", configurationService.getCodeMaxRetries()),
-                        pair(
-                                "journey-type",
-                                journeyType != null ? String.valueOf(journeyType) : "SIGN_IN"));
-    }
+            var result = makeCallWithCode(INVALID_CODE, RESET_PASSWORD_WITH_CODE.toString());
 
-    @Test
-    void shouldReturnMaxReachedAndSetBlockedMfaCodeAttemptsWhenPasswordResetExceedMaxRetryCount() {
-        when(configurationService.getCodeMaxRetries()).thenReturn(MAX_RETRIES);
-        when(configurationService.getLockoutDuration()).thenReturn(LOCKOUT_DURATION);
-        when(codeStorageService.getOtpCode(TEST_EMAIL_ADDRESS, RESET_PASSWORD_WITH_CODE))
-                .thenReturn(Optional.of(CODE));
-        when(codeStorageService.getIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS))
-                .thenReturn(MAX_RETRIES + 1);
-
-        var result = makeCallWithCode(INVALID_CODE, RESET_PASSWORD_WITH_CODE.toString());
-
-        assertThat(result, hasStatus(400));
-        assertThat(result, hasJsonBody(ErrorResponse.ERROR_1039));
-        assertThat(session.getRetryCount(), equalTo(0));
-        verify(codeStorageService)
-                .saveBlockedForEmail(
-                        TEST_EMAIL_ADDRESS,
-                        CODE_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_PASSWORD_RESET,
-                        LOCKOUT_DURATION);
-        verifyNoInteractions(accountModifiersService);
-        verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
-        verify(auditService)
-                .submitAuditEvent(
-                        FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
-                        CLIENT_SESSION_ID,
-                        session.getSessionId(),
-                        CLIENT_ID,
-                        expectedCommonSubject,
-                        TEST_EMAIL_ADDRESS,
-                        "123.123.123.123",
-                        AuditService.UNKNOWN,
-                        PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
-                        pair("notification-type", RESET_PASSWORD_WITH_CODE.name()),
-                        pair("account-recovery", false),
-                        pair("journey-type", "PASSWORD_RESET"));
+            assertThat(result, hasStatus(400));
+            assertThat(result, hasJsonBody(ErrorResponse.ERROR_1039));
+            assertThat(session.getRetryCount(), equalTo(0));
+            verify(codeStorageService)
+                    .saveBlockedForEmail(
+                            TEST_EMAIL_ADDRESS,
+                            CODE_BLOCKED_KEY_PREFIX + CodeRequestType.EMAIL_PASSWORD_RESET,
+                            LOCKOUT_DURATION);
+            verifyNoInteractions(accountModifiersService);
+            verify(codeStorageService).deleteIncorrectMfaCodeAttemptsCount(TEST_EMAIL_ADDRESS);
+            verify(auditService)
+                    .submitAuditEvent(
+                            FrontendAuditableEvent.CODE_MAX_RETRIES_REACHED,
+                            CLIENT_SESSION_ID,
+                            session.getSessionId(),
+                            CLIENT_ID,
+                            expectedCommonSubject,
+                            TEST_EMAIL_ADDRESS,
+                            "123.123.123.123",
+                            AuditService.UNKNOWN,
+                            PersistentIdHelper.PERSISTENT_ID_UNKNOWN_VALUE,
+                            pair("notification-type", RESET_PASSWORD_WITH_CODE.name()),
+                            pair("account-recovery", false),
+                            pair("journey-type", "PASSWORD_RESET"));
+        }
     }
 
     @Test
