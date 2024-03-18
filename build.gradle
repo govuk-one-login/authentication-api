@@ -160,7 +160,7 @@ subprojects {
         tests "org.junit.jupiter:junit-jupiter-api:${dependencyVersions.junit}",
                 "org.junit.jupiter:junit-jupiter-params:${dependencyVersions.junit}",
                 "org.mockito:mockito-core:5.11.0",
-                "org.awaitility:awaitility:4.2.0",
+                "org.awaitility:awaitility:4.2.1",
                 "com.approvaltests:approvaltests:23.0.0",
                 configurations.hamcrest,
                 "org.reflections:reflections:0.10.2"
