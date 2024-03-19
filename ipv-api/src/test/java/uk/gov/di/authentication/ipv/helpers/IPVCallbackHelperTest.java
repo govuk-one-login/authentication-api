@@ -25,6 +25,7 @@ import uk.gov.di.authentication.ipv.domain.IPVAuditableEvent;
 import uk.gov.di.authentication.ipv.entity.IpvCallbackException;
 import uk.gov.di.authentication.ipv.entity.LogIds;
 import uk.gov.di.orchestration.audit.AuditContext;
+import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
@@ -157,11 +158,15 @@ class IPVCallbackHelperTest {
                         SerializationService.getInstance(),
                         sessionService,
                         sqsClient);
-        when(accountInterventionService.getAccountState(INTERNAL_PAIRWISE_ID, auditContext))
-                .thenReturn(new AccountInterventionState(false, false, false, false));
-        when(accountInterventionService.getAccountState(
+        when(accountInterventionService.getAccountIntervention(INTERNAL_PAIRWISE_ID, auditContext))
+                .thenReturn(
+                        new AccountIntervention(
+                                new AccountInterventionState(false, false, false, false)));
+        when(accountInterventionService.getAccountIntervention(
                         INTERNAL_PAIRWISE_ID_WITH_INTERVENTION, auditContext))
-                .thenReturn(new AccountInterventionState(false, true, false, false));
+                .thenReturn(
+                        new AccountIntervention(
+                                new AccountInterventionState(false, true, false, false)));
         when(authorisationCodeService.generateAndSaveAuthorisationCode(
                         anyString(), anyString(), any(ClientSession.class)))
                 .thenReturn(AUTH_CODE);

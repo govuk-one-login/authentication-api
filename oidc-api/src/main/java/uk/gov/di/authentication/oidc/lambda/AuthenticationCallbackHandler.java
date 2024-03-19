@@ -27,8 +27,7 @@ import uk.gov.di.authentication.oidc.services.AuthenticationTokenService;
 import uk.gov.di.authentication.oidc.services.InitiateIPVAuthorisationService;
 import uk.gov.di.orchestration.audit.AuditContext;
 import uk.gov.di.orchestration.shared.conditions.MfaHelper;
-import uk.gov.di.orchestration.shared.entity.AccountInterventionState;
-import uk.gov.di.orchestration.shared.entity.AccountInterventionStatus;
+import uk.gov.di.orchestration.shared.entity.AccountIntervention;
 import uk.gov.di.orchestration.shared.entity.ClientRegistry;
 import uk.gov.di.orchestration.shared.entity.ClientSession;
 import uk.gov.di.orchestration.shared.entity.CredentialTrustLevel;
@@ -361,25 +360,25 @@ public class AuthenticationCallbackHandler
                                         : userInfo.getPhoneNumber(),
                                 persistentSessionId);
 
-                AccountInterventionState accountInterventionState =
-                        accountInterventionService.getAccountState(
-                                userInfo.getSubject().getValue(), auditContext);
-                AccountInterventionStatus accountStatus = accountInterventionState.getStatus();
+                Long passwordResetTime = getPasswordResetTimeClaim(userInfo);
+                AccountIntervention intervention =
+                        accountInterventionService.getAccountIntervention(
+                                userInfo.getSubject().getValue(), passwordResetTime, auditContext);
 
                 Boolean reproveIdentity = null;
                 if (configurationService.isAccountInterventionServiceActionEnabled()) {
-                    reproveIdentity = accountInterventionState.reproveIdentity();
-                    switch (accountStatus) {
+                    reproveIdentity = intervention.getReproveIdentity();
+                    switch (intervention.getStatus()) {
                         case BLOCKED,
                                 SUSPENDED_RESET_PASSWORD,
                                 SUSPENDED_RESET_PASSWORD_REPROVE_ID -> {
                             return logoutService.handleAccountInterventionLogout(
-                                    userSession, input, clientId, accountInterventionState);
+                                    userSession, input, clientId, intervention);
                         }
                         case SUSPENDED_NO_ACTION -> {
                             if (!identityRequired) {
                                 return logoutService.handleAccountInterventionLogout(
-                                        userSession, input, clientId, accountInterventionState);
+                                        userSession, input, clientId, intervention);
                             }
                             // continue
                         }
@@ -560,5 +559,22 @@ public class AuthenticationCallbackHandler
                         authenticationRequest.getResponseMode());
         return generateApiGatewayProxyResponse(
                 302, "", Map.of(ResponseHeaders.LOCATION, errorResponse.toURI().toString()), null);
+    }
+
+    private Long getPasswordResetTimeClaim(UserInfo userInfo) {
+        Object passwordResetTimeClaim = userInfo.getClaim("password_reset_time");
+        if (passwordResetTimeClaim == null) {
+            LOG.info("password_reset_time claim not found");
+            return Long.MIN_VALUE;
+        }
+        LOG.info("password_reset_time claim found");
+        Long passwordResetTimeLong;
+        try {
+            passwordResetTimeLong = (Long) passwordResetTimeClaim;
+        } catch (ClassCastException e) {
+            LOG.error("Failed to cast password_reset_time claim to Long", e);
+            passwordResetTimeLong = Long.MIN_VALUE;
+        }
+        return passwordResetTimeLong;
     }
 }

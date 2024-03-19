@@ -29,14 +29,24 @@ Mappings:
   EnvironmentConfiguration:
     dev:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
+      authApiId: "aqyf5d32s2"
+      authAccountId: "761723964695"
     build:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
+      authApiId: "6of9f4amvg"
+      authAccountId: "761723964695"
     staging:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
+      authApiId: "1rvwudxmbk"
+      authAccountId: "758531536632"
     integration:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceNonProductionVariables
+      authApiId: "k2skqhxed6"
+      authAccountId: "761723964695"
     production:
       dynatraceSecretArn: arn:aws:secretsmanager:eu-west-2:216552277552:secret:DynatraceProductionVariables
+      authApiId: "s4gj268zy6"
+      authAccountId: "172348255554"
 
 Globals:
   Function:
@@ -80,7 +90,7 @@ Globals:
         - SecretArn: !FindInMap [ EnvironmentConfiguration, !Ref Environment, dynatraceSecretArn ]
 
 Resources:
-  WellKnownFunction:
+  OpenIdConfigurationFunction:
     Type: AWS::Serverless::Function
     # checkov:skip=CKV_AWS_116: DLQ is not appropriate for a Lambda invoked by an API
     # checkov:skip=CKV_AWS_117: Lambdas will migrate to our own VPC in future work
@@ -95,11 +105,16 @@ Resources:
           OIDC_API_BASE_URL: !Sub https://oidc.${Environment}.account.gov.uk/
           ENVIRONMENT: !Sub ${Environment}
           FRONTEND_BASE_URL: !Sub https://signin.${Environment}.account.gov.uk/
-      Events:
-        WellKnown:
-          Type: Api
-          Properties:
-            Path: /.well-known/openid-configuration
-            Method: get
       Tags:
         CheckovRulesToSkip: CKV_AWS_116.CKV_AWS_117.CKV_AWS_173
+
+  OpenIdConfigurationFunctionCrossAccountPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref OpenIdConfigurationFunction.Alias
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+        - 'arn:aws:execute-api:eu-west-2:${AccountId}:${ApiId}/*/GET/.well-known/openid-configuration'
+        - AccountId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authAccountId ]
+          ApiId: !FindInMap [ EnvironmentConfiguration, !Ref Environment, authApiId ]
