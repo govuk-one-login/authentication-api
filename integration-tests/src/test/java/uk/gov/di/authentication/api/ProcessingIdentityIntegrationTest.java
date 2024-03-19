@@ -210,8 +210,7 @@ public class ProcessingIdentityIntegrationTest extends ApiGatewayHandlerIntegrat
                 CLIENT_SECTOR,
                 "pairwise",
                 true,
-                ClientType.WEB,
-                true);
+                ClientType.WEB);
     }
 
     private byte[] setupUser() {

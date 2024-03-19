@@ -6,7 +6,6 @@ import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import software.amazon.awssdk.core.SdkBytes;
-import uk.gov.di.authentication.shared.entity.ClientConsent;
 import uk.gov.di.authentication.shared.entity.MFAMethod;
 import uk.gov.di.authentication.shared.entity.MFAMethodType;
 import uk.gov.di.authentication.shared.entity.UserCredentials;
@@ -37,8 +36,6 @@ class DynamoServiceIntegrationTest {
             new Scope(OIDCScopeValue.OPENID, OIDCScopeValue.EMAIL, OIDCScopeValue.OFFLINE_ACCESS);
     private static final Set<String> CLAIMS =
             ValidScopes.getClaimsForListOfScopes(SCOPES.toStringList());
-    private static final ClientConsent CLIENT_CONSENT =
-            new ClientConsent(CLIENT_ID, CLAIMS, CREATED_DATE_TIME.toString());
 
     private static final String TEST_MFA_APP_CREDENTIAL = "test-mfa-app-credential";
     private static final String ALTERNATIVE_TEST_MFA_APP_CREDENTIAL =
@@ -121,19 +118,6 @@ class DynamoServiceIntegrationTest {
     }
 
     @Test
-    void shouldUpdateEmailAndDeletePreviousItemsWithConsents() {
-        setUpDynamo();
-
-        dynamoService.updateConsent(TEST_EMAIL, CLIENT_CONSENT);
-        UserProfile userProfile =
-                dynamoService.getUserProfileByEmailMaybe(TEST_EMAIL).orElseThrow();
-
-        UserCredentials userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
-
-        testUpdateEmail(userProfile, userCredentials);
-    }
-
-    @Test
     void shouldUpdateEmailAndDeletePreviousItemsWithMfaMethods() {
         setUpDynamo();
 
@@ -145,14 +129,6 @@ class DynamoServiceIntegrationTest {
         UserCredentials userCredentials = dynamoService.getUserCredentialsFromEmail(TEST_EMAIL);
 
         testUpdateEmail(userProfile, userCredentials);
-    }
-
-    @Test
-    void shouldHaveZeroConsentsAfterSignUp() {
-        setUpDynamo();
-        UserProfile userProfile = dynamoService.getUserProfileByEmail(TEST_EMAIL);
-
-        assertThat(userProfile.getClientConsent(), equalTo(null));
     }
 
     @Test
@@ -438,7 +414,6 @@ class DynamoServiceIntegrationTest {
         assertThat(before.getLegacySubjectID(), equalTo(after.getLegacySubjectID()));
         assertThat(before.getPublicSubjectID(), equalTo(after.getPublicSubjectID()));
         assertThat(before.getSalt(), equalTo(after.getSalt()));
-        assertThat(before.getClientConsent(), equalTo(after.getClientConsent()));
         assertThat(before.getTermsAndConditions(), equalTo(after.getTermsAndConditions()));
     }
 

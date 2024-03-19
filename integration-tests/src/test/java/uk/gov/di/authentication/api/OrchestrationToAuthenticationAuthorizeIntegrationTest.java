@@ -261,7 +261,6 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
         assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("state")));
         assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("client_name")));
         assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("cookie_consent_shared")));
-        assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("consent_required")));
         assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("is_one_login_service")));
         assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("service_type")));
         assertTrue(Objects.nonNull(signedJWT.getJWTClaimsSet().getClaim("rp_client_id")));
@@ -288,8 +287,6 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
         assertThat(
                 (boolean) signedJWT.getJWTClaimsSet().getClaim("cookie_consent_shared"),
                 equalTo(false));
-        assertThat(
-                (boolean) signedJWT.getJWTClaimsSet().getClaim("consent_required"), equalTo(false));
         assertThat(
                 signedJWT.getJWTClaimsSet().getClaim("service_type"),
                 equalTo(ServiceType.MANDATORY.toString()));
@@ -320,9 +317,8 @@ class OrchestrationToAuthenticationAuthorizeIntegrationTest
                 String.valueOf(ServiceType.MANDATORY),
                 RP_SECTOR_URI,
                 "public",
-                false,
-                ClientType.WEB,
-                identitySupported);
+                identitySupported,
+                ClientType.WEB);
     }
 
     private SignedJWT decryptJWT(EncryptedJWT encryptedJWT) throws JOSEException {

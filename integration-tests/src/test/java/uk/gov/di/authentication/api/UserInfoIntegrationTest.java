@@ -467,9 +467,8 @@ public class UserInfoIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
                 "public",
-                true,
-                ClientType.WEB,
-                identitySupported);
+                identitySupported,
+                ClientType.WEB);
     }
 
     private void setUpAppClientInDynamo() {
