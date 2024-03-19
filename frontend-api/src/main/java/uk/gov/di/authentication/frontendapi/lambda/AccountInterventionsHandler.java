@@ -157,6 +157,7 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
                         response.state().resetPassword(),
                         response.state().blocked(),
                         response.state().suspended(),
+                        response.state().reproveIdentity(),
                         response.intervention().appliedAt());
         if (!configurationService.accountInterventionsServiceActionEnabled()) {
             LOG.info(
@@ -242,6 +243,6 @@ public class AccountInterventionsHandler extends BaseFrontendHandler<AccountInte
 
     private AccountInterventionsResponse noAccountInterventions() {
         return new AccountInterventionsResponse(
-                false, false, false, String.valueOf(clock.now().toInstant().toEpochMilli()));
+                false, false, false, false, String.valueOf(clock.now().toInstant().toEpochMilli()));
     }
 }

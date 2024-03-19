@@ -85,13 +85,14 @@ public class AccountInterventionsHandlerIntegrationTest extends ApiGatewayHandle
                         Map.of());
         assertThat(response, hasStatus(200));
         var accountInterventionsResponse =
-                new AccountInterventionsResponse(false, isUserBlocked, false, APPLIED_AT_TIMESTAMP);
+                new AccountInterventionsResponse(
+                        false, isUserBlocked, false, false, APPLIED_AT_TIMESTAMP);
         assertThat(
                 response,
                 hasBody(objectMapper.writeValueAsStringCamelCase(accountInterventionsResponse)));
         assertEquals(
                 String.format(
-                        "{\"passwordResetRequired\":false,\"blocked\":%b,\"temporarilySuspended\":false,\"appliedAt\":\"%s\"}",
+                        "{\"passwordResetRequired\":false,\"blocked\":%b,\"temporarilySuspended\":false,\"reproveIdentity\":false,\"appliedAt\":\"%s\"}",
                         isUserBlocked, APPLIED_AT_TIMESTAMP),
                 response.getBody());
         assertTxmaAuditEventsReceived(txmaAuditQueue, List.of(expectedAuditEvent));
