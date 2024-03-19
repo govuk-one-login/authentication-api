@@ -1,5 +1,6 @@
 package uk.gov.di.authentication.frontendapi.services;
 
+import au.com.dius.pact.consumer.dsl.PactDslJsonBody;
 import au.com.dius.pact.consumer.dsl.PactDslWithProvider;
 import au.com.dius.pact.consumer.junit.MockServerConfig;
 import au.com.dius.pact.consumer.junit5.PactConsumerTestExt;
@@ -49,28 +50,39 @@ public class AccountInterventionsServicePactTest {
 
     @Pact(provider = "AccountInterventionsService", consumer = "AuthFrontendAPI")
     public RequestResponsePact getAccountStatusSuccessfully(PactDslWithProvider builder) {
-        String sampleAISResponse =
-                "{\"intervention\":{\"updatedAt\":1696969322935,\"appliedAt\":1696869005821,\"sentAt\":1696869003456,\"description\":\"AIS_USER_PASSWORD_RESET_AND_IDENTITY_REVERIFIED\",\"reprovedIdentityAt\":1696969322935},\"state\":{\"blocked\":true,\"suspended\":false,\"reproveIdentity\":true,\"resetPassword\":false}}";
         return builder.given("AIS Server is healthy")
                 .uponReceiving("GET Account Status Request")
                 .path(AIS_PATH + TEST_USER_ID)
                 .method("GET")
                 .willRespondWith()
                 .status(200)
-                .body(sampleAISResponse)
+                .body(constructJSONBodySuccessfulRequest())
                 .toPact();
     }
 
     @Pact(provider = "AccountInterventionsService", consumer = "AuthFrontendAPI")
-    public RequestResponsePact getAccountStateUnsuccessfully(PactDslWithProvider builder) {
-        String sampleAISErrorResponse = "{ \"message\" : \"Internal Server Error.\"}";
+    public RequestResponsePact getAccountStateUnsuccessfully500(PactDslWithProvider builder) {
+
         return builder.given("AIS Server is unhealthy")
                 .uponReceiving("GET Account Status Request")
                 .path(AIS_PATH + TEST_USER_ID)
                 .method("GET")
                 .willRespondWith()
                 .status(500)
-                .body(sampleAISErrorResponse)
+                .body(constructJSONBodyUnsuccessfulRequest())
+                .toPact();
+    }
+
+    @Pact(provider = "AccountInterventionsService", consumer = "AuthFrontendAPI")
+    public RequestResponsePact getAccountStateUnsuccessfully400(PactDslWithProvider builder) {
+
+        return builder.given("AIS Server is healthy")
+                .uponReceiving("An invalid GET Account Status Request")
+                .path(AIS_PATH)
+                .method("GET")
+                .willRespondWith()
+                .status(400)
+                .body(constructJSONBodyUnsuccessfulRequest())
                 .toPact();
     }
 
@@ -79,15 +91,51 @@ public class AccountInterventionsServicePactTest {
     void callAISSuccessful() throws UnsuccessfulAccountInterventionsResponseException {
         AccountInterventionsInboundResponse response =
                 this.service.sendAccountInterventionsOutboundRequest("aTestUserId");
-        var expectedState = new State(true, false, true, false);
+        System.out.println("200");
+        var expectedState = new State(false, false, false, false);
         assertEquals(expectedState, response.state());
     }
 
     @Test
-    @PactTestFor(pactMethod = "getAccountStateUnsuccessfully")
-    void callAISUnsuccessful() throws UnsuccessfulAccountInterventionsResponseException {
+    @PactTestFor(pactMethod = "getAccountStateUnsuccessfully500")
+    void callAISUnsuccessful500() throws UnsuccessfulAccountInterventionsResponseException {
         assertThrows(
                 UnsuccessfulAccountInterventionsResponseException.class,
                 () -> service.sendAccountInterventionsOutboundRequest("aTestUserId"));
+        System.out.println("500");
+
+    }
+
+    @Test
+    @PactTestFor(pactMethod = "getAccountStateUnsuccessfully400")
+    void callAISUnsuccessful400() throws UnsuccessfulAccountInterventionsResponseException {
+        assertThrows(
+                UnsuccessfulAccountInterventionsResponseException.class,
+                () -> service.sendAccountInterventionsOutboundRequest(""));
+        System.out.println("400");
+
+    }
+
+
+    private PactDslJsonBody constructJSONBodySuccessfulRequest(){
+        return new PactDslJsonBody()
+//                .object("intervention")
+//                .numberType("updatedAt")
+//                .numberType("appliedAt")
+//                .numberType("sentAt")
+//                .stringType("description")
+//                .numberType("reprovedIdentityAt")
+//                .numberType("resetPasswordAt")
+//                .closeObject()
+                .object("state")
+                .booleanType("blocked", false)
+                .booleanType("suspended", false)
+                .booleanType("reproveIdentity", false)
+                .booleanType("resetPassword", false);
+    }
+
+    private PactDslJsonBody constructJSONBodyUnsuccessfulRequest(){
+        return new PactDslJsonBody()
+                .stringType("message");
     }
 }
