@@ -92,8 +92,7 @@ class IPVAuthorisationHandlerIntegrationTest extends ApiGatewayHandlerIntegratio
                 "https://test.com",
                 "pairwise",
                 true,
-                ClientType.WEB,
-                true);
+                ClientType.WEB);
 
         var response =
                 makeRequest(

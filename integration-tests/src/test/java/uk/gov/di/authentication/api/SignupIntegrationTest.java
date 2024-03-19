@@ -8,9 +8,6 @@ import com.nimbusds.openid.connect.sdk.Nonce;
 import com.nimbusds.openid.connect.sdk.OIDCScopeValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
-import uk.gov.di.authentication.frontendapi.entity.SignUpResponse;
 import uk.gov.di.authentication.frontendapi.entity.SignupRequest;
 import uk.gov.di.authentication.frontendapi.lambda.SignUpHandler;
 import uk.gov.di.authentication.shared.entity.ErrorResponse;
@@ -26,11 +23,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static uk.gov.di.authentication.frontendapi.domain.FrontendAuditableEvent.CREATE_ACCOUNT;
 import static uk.gov.di.authentication.sharedtest.helper.AuditAssertionsHelper.assertTxmaAuditEventsReceived;
@@ -51,14 +46,9 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         txmaAuditQueue.clear();
     }
 
-    private static Stream<Boolean> consentValues() {
-        return Stream.of(true, false);
-    }
-
-    @ParameterizedTest
-    @MethodSource("consentValues")
-    void shouldReturn200WhenValidSignUpRequest(boolean consentRequired) throws Json.JsonException {
-        setUpTest(consentRequired);
+    @Test
+    void shouldReturn200WhenValidSignUpRequest() throws Json.JsonException {
+        setUpTest();
         var sessionId = redis.createSession();
 
         Map<String, String> headers = new HashMap<>();
@@ -76,8 +66,6 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                         Map.of());
 
         assertThat(response, hasStatus(200));
-        var signUpResponse = objectMapper.readValue(response.getBody(), SignUpResponse.class);
-        assertFalse(signUpResponse.isConsentRequired());
         assertTrue(
                 Objects.nonNull(redis.getSession(sessionId).getInternalCommonSubjectIdentifier()));
         assertTrue(userStore.userExists("joe.bloggs+5@digital.cabinet-office.gov.uk"));
@@ -86,7 +74,7 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
 
     @Test
     void shouldReturn400WhenCommonPassword() throws Json.JsonException {
-        setUpTest(false);
+        setUpTest();
         var sessionId = redis.createSession();
 
         Map<String, String> headers = new HashMap<>();
@@ -107,7 +95,7 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
         assertTrue(response.getBody().contains(ErrorResponse.ERROR_1040.getMessage()));
     }
 
-    private void setUpTest(boolean consentRequired) throws Json.JsonException {
+    private void setUpTest() throws Json.JsonException {
         clientStore.registerClient(
                 CLIENT_ID,
                 "The test client",
@@ -120,8 +108,7 @@ public class SignupIntegrationTest extends ApiGatewayHandlerIntegrationTest {
                 "http://example.com",
                 String.valueOf(ServiceType.MANDATORY),
                 "https://test.com",
-                "public",
-                consentRequired);
+                "public");
         var authRequest =
                 new AuthenticationRequest.Builder(
                                 ResponseType.CODE,
