@@ -91,7 +91,6 @@ public class AccountInterventionsServicePactTest {
     void callAISSuccessful() throws UnsuccessfulAccountInterventionsResponseException {
         AccountInterventionsInboundResponse response =
                 this.service.sendAccountInterventionsOutboundRequest("aTestUserId");
-        System.out.println("200");
         var expectedState = new State(false, false, false, false);
         assertEquals(expectedState, response.state());
     }
@@ -102,8 +101,6 @@ public class AccountInterventionsServicePactTest {
         assertThrows(
                 UnsuccessfulAccountInterventionsResponseException.class,
                 () -> service.sendAccountInterventionsOutboundRequest("aTestUserId"));
-        System.out.println("500");
-
     }
 
     @Test
@@ -112,21 +109,16 @@ public class AccountInterventionsServicePactTest {
         assertThrows(
                 UnsuccessfulAccountInterventionsResponseException.class,
                 () -> service.sendAccountInterventionsOutboundRequest(""));
-        System.out.println("400");
-
     }
 
-
-    private PactDslJsonBody constructJSONBodySuccessfulRequest(){
+    private PactDslJsonBody constructJSONBodySuccessfulRequest() {
         return new PactDslJsonBody()
-//                .object("intervention")
-//                .numberType("updatedAt")
-//                .numberType("appliedAt")
-//                .numberType("sentAt")
-//                .stringType("description")
-//                .numberType("reprovedIdentityAt")
-//                .numberType("resetPasswordAt")
-//                .closeObject()
+                .object("intervention")
+                .numberType("updatedAt")
+                .numberType("appliedAt")
+                .numberType("sentAt")
+                .stringType("description")
+                .closeObject()
                 .object("state")
                 .booleanType("blocked", false)
                 .booleanType("suspended", false)
@@ -134,8 +126,7 @@ public class AccountInterventionsServicePactTest {
                 .booleanType("resetPassword", false);
     }
 
-    private PactDslJsonBody constructJSONBodyUnsuccessfulRequest(){
-        return new PactDslJsonBody()
-                .stringType("message");
+    private PactDslJsonBody constructJSONBodyUnsuccessfulRequest() {
+        return new PactDslJsonBody().stringType("message");
     }
 }
